@@ -85,7 +85,7 @@ func (b *Botanist) KeepManagedResourcesObjects(ctx context.Context) error {
 	}
 
 	for _, resource := range managedResources.Items {
-		if err := kutil.TryUpdate(ctx, k8sretry.DefaultRetry, b.K8sSeedClient.Client(), &resource, func() error {
+		if err := kutil.TryUpdate(ctx, k8sretry.DefaultBackoff, b.K8sSeedClient.DirectClient(), &resource, func() error {
 			keepObj := true
 			resource.Spec.KeepObjects = &keepObj
 			return nil

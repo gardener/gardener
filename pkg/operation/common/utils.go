@@ -768,7 +768,7 @@ func annotationRequiredError() error {
 
 // ConfirmDeletion adds Gardener's deletion confirmation annotation to the given object and sends an UPDATE request.
 func ConfirmDeletion(ctx context.Context, c client.Client, obj runtime.Object) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		key, err := client.ObjectKeyFromObject(obj)
 		if err != nil {
 			return err

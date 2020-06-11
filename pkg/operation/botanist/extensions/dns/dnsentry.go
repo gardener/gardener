@@ -20,15 +20,15 @@ import (
 	"path/filepath"
 	"time"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
-
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/sirupsen/logrus"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -107,6 +107,9 @@ func (d *dnsEntry) Wait(ctx context.Context) error {
 			crclient.ObjectKey{Name: d.values.Name, Namespace: d.shootNamespace},
 			entry,
 		); err != nil {
+			if apierrors.IsNotFound(err) {
+				return retry.MinorError(err)
+			}
 			return retry.SevereError(err)
 		}
 

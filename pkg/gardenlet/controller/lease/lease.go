@@ -15,15 +15,18 @@
 package lease
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	coordinationv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clientset "k8s.io/client-go/kubernetes"
 	coordclientset "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 )
 
 // Controller manages creating and renewing the lease for this Gardenlet.
@@ -32,21 +35,16 @@ type Controller interface {
 }
 
 type leaseController struct {
-	leaseClient          coordclientset.LeaseInterface
+	clientMap            clientmap.ClientMap
 	leaseDurationSeconds int32
 	namespace            string
 	nowFunc              func() time.Time
 }
 
 // NewLeaseController constructs and returns a controller.
-func NewLeaseController(client clientset.Interface, nowFunc func() time.Time, leaseDurationSeconds int32, namespace string) Controller {
-	var leaseClient coordclientset.LeaseInterface
-	if client != nil {
-		leaseClient = client.CoordinationV1().Leases(namespace)
-	}
-
+func NewLeaseController(nowFunc func() time.Time, clientMap clientmap.ClientMap, leaseDurationSeconds int32, namespace string) Controller {
 	return &leaseController{
-		leaseClient:          leaseClient,
+		clientMap:            clientMap,
 		leaseDurationSeconds: leaseDurationSeconds,
 		namespace:            namespace,
 		nowFunc:              nowFunc,
@@ -55,24 +53,28 @@ func NewLeaseController(client clientset.Interface, nowFunc func() time.Time, le
 
 // Sync updates the Lease
 func (c *leaseController) Sync(holderIdentity string, ownerReferences ...metav1.OwnerReference) error {
-	if c.leaseClient == nil {
-		return fmt.Errorf("lease controller has nil lease client, will not claim or renew leases")
+	ctx := context.TODO()
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return fmt.Errorf("failed to get garden client: %w", err)
 	}
-	return c.tryUpdateOrCreateLease(holderIdentity, ownerReferences...)
+	leaseClient := gardenClient.Kubernetes().CoordinationV1().Leases(c.namespace)
+
+	return c.tryUpdateOrCreateLease(leaseClient, holderIdentity, ownerReferences...)
 }
 
 // tryUpdateOrCreateLease updates or creates the lease if it does not exist.
-func (c *leaseController) tryUpdateOrCreateLease(holderIdentity string, ownerReferences ...metav1.OwnerReference) error {
-	lease, err := c.leaseClient.Get(holderIdentity, metav1.GetOptions{})
+func (c *leaseController) tryUpdateOrCreateLease(leaseClient coordclientset.LeaseInterface, holderIdentity string, ownerReferences ...metav1.OwnerReference) error {
+	lease, err := leaseClient.Get(holderIdentity, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			_, err2 := c.leaseClient.Create(c.newLease(nil, holderIdentity, ownerReferences...))
+			_, err2 := leaseClient.Create(c.newLease(nil, holderIdentity, ownerReferences...))
 			return err2
 		}
 		return err
 	}
 
-	_, err = c.leaseClient.Update(c.newLease(lease, holderIdentity, ownerReferences...))
+	_, err = leaseClient.Update(c.newLease(lease, holderIdentity, ownerReferences...))
 	return err
 }
 

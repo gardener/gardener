@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
@@ -85,9 +86,14 @@ var _ = Describe("dns", func() {
 		seedClient = fake.NewFakeClientWithScheme(s)
 
 		renderer := cr.NewWithServerVersion(&version.Info{})
-		b.ChartApplierSeed = kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(seedClient, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
-		Expect(b.ChartApplierSeed).NotTo(BeNil(), "should return chart applier")
+		chartApplier := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(seedClient, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
+		Expect(chartApplier).NotTo(BeNil(), "should return chart applier")
 
+		fakeClientSet := fakeclientset.NewClientSetBuilder().
+			WithChartApplier(chartApplier).
+			Build()
+
+		b.K8sSeedClient = fakeClientSet
 	})
 
 	Context("DefaultNginxIngressDNSEntry", func() {

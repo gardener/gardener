@@ -27,7 +27,11 @@ import (
 )
 
 func shootHibernatedConstraint(condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "ConstraintNotChecked", "Shoot cluster has been hibernated.")
+	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, "ConstraintNotChecked", "Shoot cluster has been hibernated.")
+}
+
+func shootControlPlaneNotRunningConstraint(condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
+	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, "ConstraintNotChecked", "Shoot control plane is not running at the moment.")
 }
 
 // ConstraintsChecks conducts the constraints checks on all the given constraints.
@@ -40,6 +44,18 @@ func (b *Botanist) ConstraintsChecks(ctx context.Context, initializeShootClients
 func (b *Botanist) constraintsChecks(ctx context.Context, initializeShootClients func() error, hibernationConstraint gardencorev1beta1.Condition) gardencorev1beta1.Condition {
 	if b.Shoot.HibernationEnabled || b.Shoot.Info.Status.IsHibernated {
 		return shootHibernatedConstraint(hibernationConstraint)
+	}
+
+	apiServerRunning, err := b.IsAPIServerRunning()
+	if err != nil {
+		message := fmt.Sprintf("Failed to check if control plane is currently running: %v", err)
+		b.Logger.Error(message)
+		return gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(hibernationConstraint, message)
+	}
+
+	// don't check constraints if API server has already been deleted or has not been created yet
+	if !apiServerRunning {
+		return shootControlPlaneNotRunningConstraint(hibernationConstraint)
 	}
 
 	if err := initializeShootClients(); err != nil {

@@ -24,6 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
@@ -63,11 +64,10 @@ type Operation struct {
 	Shoot                     *shoot.Shoot
 	ShootState                *gardencorev1alpha1.ShootState
 	ShootedSeed               *gardencorev1beta1helper.ShootedSeed
+	ClientMap                 clientmap.ClientMap
 	K8sGardenClient           kubernetes.Interface
 	K8sSeedClient             kubernetes.Interface
 	K8sShootClient            kubernetes.Interface
-	ChartApplierSeed          kubernetes.ChartApplier
-	ChartApplierShoot         kubernetes.ChartApplier
 	ChartsRootPath            string
 	APIServerAddress          string
 	APIServerClusterIP        string

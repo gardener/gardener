@@ -23,6 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -53,13 +54,13 @@ type Actuator interface {
 }
 
 type actuator struct {
-	gardenClient client.Client
-	seedClient   client.Client
+	gardenClient kubernetes.Interface
+	seedClient   kubernetes.Interface
 	logger       *logrus.Entry
 	backupEntry  *gardencorev1beta1.BackupEntry
 }
 
-func newActuator(gardenClient, seedClient client.Client, be *gardencorev1beta1.BackupEntry, logger logrus.FieldLogger) Actuator {
+func newActuator(gardenClient, seedClient kubernetes.Interface, be *gardencorev1beta1.BackupEntry, logger logrus.FieldLogger) Actuator {
 	return &actuator{
 		logger:       logger.WithField("backupentry", be.Name),
 		backupEntry:  be,
@@ -119,13 +120,16 @@ func (a *actuator) Delete(ctx context.Context) error {
 // reportBackupEntryProgress will update the phase and error in the BackupEntry manifest `status` section
 // by the current progress of the Flow execution.
 func (a *actuator) reportBackupEntryProgress(ctx context.Context, stats *flow.Stats) {
-	if err := kutil.TryUpdateStatus(ctx, kretry.DefaultRetry, a.gardenClient, a.backupEntry, func() error {
+	if err := kutil.TryUpdateStatus(ctx, kretry.DefaultBackoff, a.gardenClient.DirectClient(), a.backupEntry, func() error {
+		if a.backupEntry.Status.LastOperation == nil {
+			return fmt.Errorf("last operation of BackupEntry %s/%s is unset", a.backupEntry.Namespace, a.backupEntry.Name)
+		}
 		a.backupEntry.Status.LastOperation.Description = makeDescription(stats)
 		a.backupEntry.Status.LastOperation.Progress = stats.ProgressPercent()
 		a.backupEntry.Status.LastOperation.LastUpdateTime = metav1.Now()
 		return nil
 	}); err != nil {
-		a.logger.Warnf("could not report backupEntry progress with description: %s", makeDescription(stats))
+		a.logger.Warnf("could not report backupEntry progress with description: %s, %v", makeDescription(stats), err)
 	}
 }
 
@@ -140,7 +144,7 @@ func makeDescription(stats *flow.Stats) string {
 func (a *actuator) waitUntilCoreBackupBucketReconciled(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) error {
 	return common.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
-		a.gardenClient,
+		a.gardenClient.DirectClient(),
 		a.logger,
 		health.CheckBackupBucket,
 		func() runtime.Object { return &gardencorev1beta1.BackupBucket{} },
@@ -174,7 +178,7 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 		coreSecretRef = bb.Status.GeneratedSecretRef
 	}
 
-	coreSecret, err := common.GetSecretFromSecretRef(ctx, a.gardenClient, coreSecretRef)
+	coreSecret, err := common.GetSecretFromSecretRef(ctx, a.gardenClient.Client(), coreSecretRef)
 	if err != nil {
 		return errors.Wrapf(err, "could not get secret referred in core backup bucket")
 	}
@@ -187,7 +191,7 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 		},
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, a.seedClient, extensionSecret, func() error {
+	if _, err := controllerutil.CreateOrUpdate(ctx, a.seedClient.Client(), extensionSecret, func() error {
 		extensionSecret.Data = coreSecret.DeepCopy().Data
 		return nil
 	}); err != nil {
@@ -201,7 +205,7 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 		},
 	}
 
-	_, err = controllerutil.CreateOrUpdate(ctx, a.seedClient, extensionBackupEntry, func() error {
+	_, err = controllerutil.CreateOrUpdate(ctx, a.seedClient.Client(), extensionBackupEntry, func() error {
 		metav1.SetMetaDataAnnotation(&extensionBackupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		metav1.SetMetaDataAnnotation(&extensionBackupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
 
@@ -227,7 +231,7 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 func (a *actuator) waitUntilBackupEntryExtensionReconciled(ctx context.Context) error {
 	return common.WaitUntilExtensionCRReady(
 		ctx,
-		a.seedClient,
+		a.seedClient.DirectClient(),
 		a.logger,
 		func() runtime.Object { return &extensionsv1alpha1.BackupEntry{} },
 		"BackupEntry",
@@ -248,7 +252,7 @@ func (a *actuator) deleteBackupEntryExtension(ctx context.Context) error {
 
 	return common.DeleteExtensionCR(
 		ctx,
-		a.seedClient,
+		a.seedClient.DirectClient(),
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupEntry{} },
 		a.backupEntry.Namespace,
 		a.backupEntry.Name,
@@ -259,7 +263,7 @@ func (a *actuator) deleteBackupEntryExtension(ctx context.Context) error {
 func (a *actuator) waitUntilBackupEntryExtensionDeleted(ctx context.Context) error {
 	return common.WaitUntilExtensionCRDeleted(
 		ctx,
-		a.seedClient,
+		a.seedClient.DirectClient(),
 		a.logger,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupEntry{} },
 		"BackupEntry",
@@ -278,7 +282,7 @@ func (a *actuator) deleteBackupEntryExtensionSecret(ctx context.Context) error {
 			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
-	return client.IgnoreNotFound(a.seedClient.Delete(ctx, extensionSecret))
+	return client.IgnoreNotFound(a.seedClient.Client().Delete(ctx, extensionSecret))
 }
 
 func generateBackupEntrySecretName(backupEntryName string) string {

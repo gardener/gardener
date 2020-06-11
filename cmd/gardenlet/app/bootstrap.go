@@ -56,7 +56,7 @@ func bootstrapKubeconfig(
 	}
 
 	kubeconfigSecret := &corev1.Secret{}
-	if err := k8sSeedClient.Client().Get(ctx, kutil.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), kubeconfigSecret); client.IgnoreNotFound(err) != nil {
+	if err := k8sSeedClient.DirectClient().Get(ctx, kutil.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), kubeconfigSecret); client.IgnoreNotFound(err) != nil {
 		return nil, "", "", err
 	}
 
@@ -74,7 +74,7 @@ func bootstrapKubeconfig(
 
 	// check if we got a kubeconfig for bootstrapping
 	bootstrapKubeconfigSecret := &corev1.Secret{}
-	if err := k8sSeedClient.Client().Get(ctx, kutil.Key(gardenClientConnection.BootstrapKubeconfig.Namespace, gardenClientConnection.BootstrapKubeconfig.Name), bootstrapKubeconfigSecret); err != nil {
+	if err := k8sSeedClient.DirectClient().Get(ctx, kutil.Key(gardenClientConnection.BootstrapKubeconfig.Namespace, gardenClientConnection.BootstrapKubeconfig.Name), bootstrapKubeconfigSecret); err != nil {
 		return nil, "", "", err
 	}
 	if len(bootstrapKubeconfigSecret.Data[kubernetes.KubeConfig]) == 0 {
@@ -124,7 +124,7 @@ func bootstrapKubeconfig(
 		Name:      gardenClientConnection.KubeconfigSecret.Name,
 		Namespace: gardenClientConnection.KubeconfigSecret.Namespace,
 	}
-	if _, err := controllerutil.CreateOrUpdate(ctx, k8sSeedClient.Client(), kubeconfigSecret, func() error {
+	if _, err := controllerutil.CreateOrUpdate(ctx, k8sSeedClient.DirectClient(), kubeconfigSecret, func() error {
 		kubeconfigSecret.Data = map[string][]byte{kubernetes.KubeConfig: kubeconfig}
 		return nil
 	}); err != nil {
@@ -133,7 +133,7 @@ func bootstrapKubeconfig(
 
 	logger.Infof("Deleting secret %s/%s holding bootstrap kubeconfig", gardenClientConnection.BootstrapKubeconfig.Namespace, gardenClientConnection.BootstrapKubeconfig.Name)
 
-	if err := k8sSeedClient.Client().Delete(ctx, bootstrapKubeconfigSecret); client.IgnoreNotFound(err) != nil {
+	if err := k8sSeedClient.DirectClient().Delete(ctx, bootstrapKubeconfigSecret); client.IgnoreNotFound(err) != nil {
 		return nil, "", "", err
 	}
 

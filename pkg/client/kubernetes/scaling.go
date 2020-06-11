@@ -25,6 +25,8 @@ import (
 
 // ScaleStatefulSet scales a StatefulSet.
 func ScaleStatefulSet(ctx context.Context, c client.Client, key client.ObjectKey, replicas int32) error {
+	// TODO: replace this with call to scale subresource once controller-runtime supports it
+	// see: https://github.com/kubernetes-sigs/controller-runtime/issues/172
 	statefulset := &appsv1.StatefulSet{}
 	if err := c.Get(ctx, key, statefulset); err != nil {
 		return err
@@ -36,6 +38,8 @@ func ScaleStatefulSet(ctx context.Context, c client.Client, key client.ObjectKey
 
 // ScaleEtcd scales a Etcd resource.
 func ScaleEtcd(ctx context.Context, c client.Client, key client.ObjectKey, replicas int) error {
+	// TODO: replace this with call to scale subresource once controller-runtime supports it
+	// see: https://github.com/kubernetes-sigs/controller-runtime/issues/172
 	etcd := &druidv1alpha1.Etcd{}
 	if err := c.Get(ctx, key, etcd); err != nil {
 		return err
@@ -47,6 +51,8 @@ func ScaleEtcd(ctx context.Context, c client.Client, key client.ObjectKey, repli
 
 // ScaleDeployment scales a Deployment.
 func ScaleDeployment(ctx context.Context, c client.Client, key client.ObjectKey, replicas int32) error {
+	// TODO: replace this with call to scale subresource once controller-runtime supports it
+	// see: https://github.com/kubernetes-sigs/controller-runtime/issues/172
 	deployment := &appsv1.Deployment{}
 	if err := c.Get(ctx, key, deployment); err != nil {
 		return err

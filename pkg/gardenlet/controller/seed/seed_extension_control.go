@@ -15,17 +15,20 @@
 package seed
 
 import (
+	"context"
 	"fmt"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 func (c *Controller) controllerInstallationOfSeedAdd(obj interface{}) {
@@ -77,24 +80,31 @@ type ExtensionCheckControlInterface interface {
 // implements the documented semantics for Seeds. You should use an instance returned from NewDefaultExtensionCheckControl() for any
 // scenario other than testing.
 func NewDefaultExtensionCheckControl(
-	gardenCoreClient gardencoreclientset.Interface,
+	clientMap clientmap.ClientMap,
 	controllerInstallationLister gardencorelisters.ControllerInstallationLister,
 	nowFunc func() metav1.Time,
 ) ExtensionCheckControlInterface {
 	return &defaultExtensionCheckControl{
-		gardenCoreClient,
+		clientMap,
 		controllerInstallationLister,
 		nowFunc,
 	}
 }
 
 type defaultExtensionCheckControl struct {
-	gardenCoreClient             gardencoreclientset.Interface
+	clientMap                    clientmap.ClientMap
 	controllerInstallationLister gardencorelisters.ControllerInstallationLister
 	nowFunc                      func() metav1.Time
 }
 
 func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencorev1beta1.Seed) error {
+	ctx := context.TODO()
+
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return fmt.Errorf("failed to get garden client: %w", err)
+	}
+
 	controllerInstallationList, err := c.controllerInstallationLister.List(labels.Everything())
 	if err != nil {
 		return err
@@ -195,6 +205,6 @@ func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencor
 	}
 	seed.Status.Conditions = helper.MergeConditions(seed.Status.Conditions, newCondition)
 
-	_, err = c.gardenCoreClient.CoreV1beta1().Seeds().UpdateStatus(seed)
+	_, err = gardenClient.GardenCore().CoreV1beta1().Seeds().UpdateStatus(seed)
 	return err
 }

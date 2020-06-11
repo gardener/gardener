@@ -32,7 +32,7 @@ import (
 
 // EnsureFinalizer ensure the <finalizer> is present for the object.
 func EnsureFinalizer(ctx context.Context, c client.Client, obj kutil.Object, finalizer string) error {
-	if err := kutil.TryUpdate(ctx, retry.DefaultRetry, c, obj, func() error {
+	if err := kutil.TryUpdate(ctx, retry.DefaultBackoff, c, obj, func() error {
 		finalizers := sets.NewString(obj.GetFinalizers()...)
 		finalizers.Insert(finalizer)
 		obj.SetFinalizers(finalizers.UnsortedList())
@@ -50,7 +50,7 @@ func RemoveGardenerFinalizer(ctx context.Context, c client.Client, obj kutil.Obj
 
 // RemoveFinalizer removes the <finalizer> from the object.
 func RemoveFinalizer(ctx context.Context, c client.Client, obj kutil.Object, finalizer string) error {
-	if err := kutil.TryUpdate(ctx, retry.DefaultRetry, c, obj, func() error {
+	if err := kutil.TryUpdate(ctx, retry.DefaultBackoff, c, obj, func() error {
 		finalizers := sets.NewString(obj.GetFinalizers()...)
 		finalizers.Delete(finalizer)
 		obj.SetFinalizers(finalizers.UnsortedList())

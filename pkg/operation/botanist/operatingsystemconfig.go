@@ -358,7 +358,7 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, ma
 }
 
 func (b *Botanist) applyAndWaitForShootOperatingSystemConfig(ctx context.Context, chartPath, name string, values map[string]interface{}) (*shoot.OperatingSystemConfigData, error) {
-	if err := b.ChartApplierSeed.Apply(ctx, chartPath, b.Shoot.SeedNamespace, name, kubernetes.Values(values)); err != nil {
+	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, chartPath, b.Shoot.SeedNamespace, name, kubernetes.Values(values)); err != nil {
 		return nil, err
 	}
 
@@ -448,7 +448,7 @@ func (b *Botanist) getGenerateCloudConfigExecutionChartFunc(releaseName string, 
 		if err != nil {
 			return nil, err
 		}
-		return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-cloud-config"), releaseName, metav1.NamespaceSystem, config)
+		return b.K8sShootClient.ChartRenderer().Render(filepath.Join(common.ChartPath, "shoot-cloud-config"), releaseName, metav1.NamespaceSystem, config)
 	}
 }
 
@@ -461,7 +461,7 @@ func (b *Botanist) generateCloudConfigRBACChart() (*chartrenderer.RenderedChart,
 	config := map[string]interface{}{
 		"secretNames": secretNames,
 	}
-	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-cloud-config-rbac"), "shoot-cloud-config-rbac", metav1.NamespaceSystem, config)
+	return b.K8sShootClient.ChartRenderer().Render(filepath.Join(common.ChartPath, "shoot-cloud-config-rbac"), "shoot-cloud-config-rbac", metav1.NamespaceSystem, config)
 }
 
 // DeleteStaleOperatingSystemConfigs deletes all unused operating system configs in the shoot seed namespace

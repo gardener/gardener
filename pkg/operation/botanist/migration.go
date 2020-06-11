@@ -40,7 +40,7 @@ import (
 // AnnotateExtensionCRsForMigration annotates extension CRs with migrate operation annotation
 func (b *Botanist) AnnotateExtensionCRsForMigration(ctx context.Context) (err error) {
 	var fns []flow.TaskFn
-	fns, err = b.applyFuncToAllExtensionCRs(ctx, annotateObjectForMigrationFunc(ctx, b.K8sSeedClient.Client()))
+	fns, err = b.applyFuncToAllExtensionCRs(ctx, annotateObjectForMigrationFunc(ctx, b.K8sSeedClient.DirectClient()))
 	if err != nil {
 		return err
 	}

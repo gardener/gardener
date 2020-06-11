@@ -27,10 +27,11 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
-	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -110,12 +111,12 @@ type ControlInterface interface {
 // NewDefaultControllerInstallationControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for ControllerInstallations. You should use an instance returned from
 // NewDefaultControllerInstallationControl() for any scenario other than testing.
-func NewDefaultControllerInstallationControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, config *config.GardenletConfiguration, seedLister gardencorelisters.SeedLister, controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, controllerInstallationLister gardencorelisters.ControllerInstallationLister, gardenNamespace *corev1.Namespace) ControlInterface {
-	return &defaultControllerInstallationControl{k8sGardenClient, k8sGardenCoreInformers, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace}
+func NewDefaultControllerInstallationControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, config *config.GardenletConfiguration, seedLister gardencorelisters.SeedLister, controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, controllerInstallationLister gardencorelisters.ControllerInstallationLister, gardenNamespace *corev1.Namespace) ControlInterface {
+	return &defaultControllerInstallationControl{clientMap, k8sGardenCoreInformers, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace}
 }
 
 type defaultControllerInstallationControl struct {
-	k8sGardenClient              kubernetes.Interface
+	clientMap                    clientmap.ClientMap
 	k8sGardenCoreInformers       gardencoreinformers.SharedInformerFactory
 	recorder                     record.EventRecorder
 	config                       *config.GardenletConfiguration
@@ -143,8 +144,12 @@ func (c *defaultControllerInstallationControl) Reconcile(obj *gardencorev1beta1.
 
 func (c *defaultControllerInstallationControl) reconcile(controllerInstallation *gardencorev1beta1.ControllerInstallation, logger logrus.FieldLogger) error {
 	ctx := context.TODO()
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return fmt.Errorf("failed to get garden client: %w", err)
+	}
 
-	if err := controllerutils.EnsureFinalizer(ctx, c.k8sGardenClient.Client(), controllerInstallation, FinalizerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, gardenClient.Client(), controllerInstallation, FinalizerName); err != nil {
 		return err
 	}
 
@@ -154,7 +159,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	)
 
 	defer func() {
-		if _, err := c.updateConditions(controllerInstallation, conditionValid, conditionInstalled); err != nil {
+		if _, err := updateConditions(gardenClient, controllerInstallation, conditionValid, conditionInstalled); err != nil {
 			logger.Errorf("Failed to update the conditions : %+v", err)
 		}
 	}()
@@ -171,17 +176,18 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 
 	seed, err := c.seedLister.Get(controllerInstallation.Spec.SeedRef.Name)
 	if err != nil {
-		return err
-	}
-
-	k8sSeedClient, err := seedpkg.GetSeedClient(ctx, c.k8sGardenClient.Client(), c.config.SeedClientConnection.ClientConnectionConfiguration, c.config.SeedSelector == nil, seed.Name)
-	if err != nil {
 		if apierrors.IsNotFound(err) {
 			conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
 		} else {
 			conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Referenced Seed cannot be read: %+v", err))
 		}
 		return err
+	}
+
+	seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeedWithName(seed.Name))
+	if err != nil {
+		conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Failed to get Seed client for referenced Seed: %+v", err))
+		return fmt.Errorf("failed to get seed client: %w", err)
 	}
 
 	var helmDeployment HelmDeployment
@@ -191,7 +197,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	}
 
 	namespace := getNamespaceForControllerInstallation(controllerInstallation)
-	if _, err := controllerutil.CreateOrUpdate(ctx, k8sSeedClient.Client(), namespace, func() error {
+	if _, err := controllerutil.CreateOrUpdate(ctx, seedClient.Client(), namespace, func() error {
 		kutil.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.GardenRole, v1beta1constants.GardenRoleExtension)
 		kutil.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelControllerRegistrationName, controllerRegistration.Name)
 		return nil
@@ -236,7 +242,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		},
 	}
 
-	release, err := k8sSeedClient.ChartRenderer().RenderArchive(helmDeployment.Chart, controllerRegistration.Name, namespace.Name, utils.MergeMaps(helmDeployment.Values, gardenerValues))
+	release, err := seedClient.ChartRenderer().RenderArchive(helmDeployment.Chart, controllerRegistration.Name, namespace.Name, utils.MergeMaps(helmDeployment.Values, gardenerValues))
 	if err != nil {
 		conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "ChartCannotBeRendered", fmt.Sprintf("Chart rendering process failed: %+v", err))
 		return err
@@ -248,7 +254,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 
 	var secretName = controllerInstallation.Name
 	if err := manager.
-		NewSecret(k8sSeedClient.Client()).
+		NewSecret(seedClient.Client()).
 		WithNamespacedName(v1beta1constants.GardenNamespace, secretName).
 		WithKeyValues(data).
 		Reconcile(ctx); err != nil {
@@ -257,7 +263,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	}
 
 	if err := manager.
-		NewManagedResource(k8sSeedClient.Client()).
+		NewManagedResource(seedClient.Client()).
 		WithNamespacedName(v1beta1constants.GardenNamespace, controllerInstallation.Name).
 		WithSecretRef(secretName).
 		WithClass(v1beta1constants.SeedResourceManagerClass).
@@ -283,18 +289,18 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 		conditionInstalled = newConditions[1]
 	)
 
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return fmt.Errorf("failed to get garden client: %w", err)
+	}
+
 	defer func() {
-		if _, err := c.updateConditions(controllerInstallation, conditionValid, conditionInstalled); client.IgnoreNotFound(err) != nil {
+		if _, err := updateConditions(gardenClient, controllerInstallation, conditionValid, conditionInstalled); client.IgnoreNotFound(err) != nil {
 			logger.Errorf("Failed to update the conditions when trying to delete: %+v", err)
 		}
 	}()
 
 	seed, err := c.seedLister.Get(controllerInstallation.Spec.SeedRef.Name)
-	if err != nil {
-		return err
-	}
-
-	k8sSeedClient, err := seedpkg.GetSeedClient(ctx, c.k8sGardenClient.Client(), c.config.SeedClientConnection.ClientConnectionConfiguration, c.config.SeedSelector == nil, seed.Name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
@@ -304,13 +310,19 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 		return err
 	}
 
+	seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeedWithName(seed.Name))
+	if err != nil {
+		conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Failed to get Seed client for referenced Seed: %+v", err))
+		return fmt.Errorf("failed to get seed client: %w", err)
+	}
+
 	mr := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      controllerInstallation.Name,
 			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
-	err = k8sSeedClient.Client().Delete(ctx, mr)
+	err = seedClient.Client().Delete(ctx, mr)
 	if err == nil {
 		message := fmt.Sprintf("Deletion of ManagedResource %q is still pending.", controllerInstallation.Name)
 		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionPending", message)
@@ -326,20 +338,20 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
-	if err := k8sSeedClient.Client().Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
+	if err := seedClient.Client().Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
 		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ManagedResource secret %q failed: %+v", controllerInstallation.Name, err))
 	}
 
-	if err := k8sSeedClient.Client().Delete(ctx, getNamespaceForControllerInstallation(controllerInstallation)); client.IgnoreNotFound(err) != nil {
+	if err := seedClient.Client().Delete(ctx, getNamespaceForControllerInstallation(controllerInstallation)); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 	conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionSuccessful", "Deletion of old resources succeeded.")
 
-	return controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), controllerInstallation.DeepCopy(), FinalizerName)
+	return controllerutils.RemoveFinalizer(ctx, gardenClient.Client(), controllerInstallation.DeepCopy(), FinalizerName)
 }
 
-func (c *defaultControllerInstallationControl) updateConditions(controllerInstallation *gardencorev1beta1.ControllerInstallation, conditions ...gardencorev1beta1.Condition) (*gardencorev1beta1.ControllerInstallation, error) {
-	return kutil.TryUpdateControllerInstallationStatusWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
+func updateConditions(gardenClient kubernetes.Interface, controllerInstallation *gardencorev1beta1.ControllerInstallation, conditions ...gardencorev1beta1.Condition) (*gardencorev1beta1.ControllerInstallation, error) {
+	return kutil.TryUpdateControllerInstallationStatusWithEqualFunc(gardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
 		func(controllerInstallation *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
 			controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, conditions...)
 			return controllerInstallation, nil

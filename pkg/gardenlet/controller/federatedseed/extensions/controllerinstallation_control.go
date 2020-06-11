@@ -184,7 +184,7 @@ func (c *controllerInstallationControl) createControllerInstallationRequiredReco
 			message = fmt.Sprintf("extension objects still exist in the seed: %+v", requiredKindTypes.UnsortedList())
 		}
 
-		if err := updateControllerInstallationRequiredCondition(ctx, c.k8sGardenClient.Client(), controllerInstallation, *required, message); err != nil {
+		if err := updateControllerInstallationRequiredCondition(ctx, c.k8sGardenClient.DirectClient(), controllerInstallation, *required, message); err != nil {
 			c.log.Error(err)
 			return reconcile.Result{}, err
 		}

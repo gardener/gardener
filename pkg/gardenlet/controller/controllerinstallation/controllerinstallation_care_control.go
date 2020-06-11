@@ -16,14 +16,15 @@ package controllerinstallation
 
 import (
 	"context"
+	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
-	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
@@ -80,13 +81,13 @@ type CareControlInterface interface {
 // NewDefaultCareControl returns a new instance of the default implementation CareControlInterface that
 // implements the documented semantics for caring for ControllerInstallations. You should use an instance returned from NewDefaultCareControl()
 // for any scenario other than testing.
-func NewDefaultCareControl(k8sGardenClient kubernetes.Interface, config *config.GardenletConfiguration) CareControlInterface {
-	return &defaultCareControl{k8sGardenClient, config}
+func NewDefaultCareControl(clientMap clientmap.ClientMap, config *config.GardenletConfiguration) CareControlInterface {
+	return &defaultCareControl{clientMap, config}
 }
 
 type defaultCareControl struct {
-	k8sGardenClient kubernetes.Interface
-	config          *config.GardenletConfiguration
+	clientMap clientmap.ClientMap
+	config    *config.GardenletConfiguration
 }
 
 func (c *defaultCareControl) Care(controllerInstallationObj *gardencorev1beta1.ControllerInstallation, key string) error {
@@ -101,16 +102,41 @@ func (c *defaultCareControl) Care(controllerInstallationObj *gardencorev1beta1.C
 	)
 
 	controllerInstallationLogger.Debugf("[CONTROLLERINSTALLATION CARE] %s", key)
-
-	k8sSeedClient, err := seedpkg.GetSeedClient(ctx, c.k8sGardenClient.Client(), c.config.SeedClientConnection.ClientConnectionConfiguration, c.config.SeedSelector == nil, controllerInstallation.Spec.SeedRef.Name)
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
-		controllerInstallationLogger.Errorf(err.Error())
+		return fmt.Errorf("failed to get garden client: %w", err)
+	}
+
+	defer func() {
+		if _, err := kutil.TryUpdateControllerInstallationStatusWithEqualFunc(gardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
+			func(controllerInstallation *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
+				controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, conditionControllerInstallationHealthy, conditionControllerInstallationInstalled)
+				return controllerInstallation, nil
+			}, func(cur, updated *gardencorev1beta1.ControllerInstallation) bool {
+				return equality.Semantic.DeepEqual(cur.Status.Conditions, updated.Status.Conditions)
+			},
+		); err != nil {
+			controllerInstallationLogger.Errorf("Failed to update ControllerInstallation status: %v", err.Error())
+		}
+	}()
+
+	seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeedWithName(controllerInstallation.Spec.SeedRef.Name))
+	if err != nil {
+		msg := fmt.Sprintf("Failed to get seed client: %s", err.Error())
+		controllerInstallationLogger.Errorf(msg)
+
+		conditionControllerInstallationInstalled = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationInstalled, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
+		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
 	managedResource := &resourcesv1alpha1.ManagedResource{}
-	if err := k8sSeedClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, controllerInstallation.Name), managedResource); err != nil {
-		controllerInstallationLogger.Errorf(err.Error())
+	if err := seedClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, controllerInstallation.Name), managedResource); err != nil {
+		msg := fmt.Sprintf("Failed to get ManagedResource for ControllerInstallation: %s", err.Error())
+		controllerInstallationLogger.Errorf(msg)
+
+		conditionControllerInstallationInstalled = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationInstalled, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
+		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
@@ -126,17 +152,5 @@ func (c *defaultCareControl) Care(controllerInstallationObj *gardencorev1beta1.C
 		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionTrue, "ControllerHealthy", "The controller running in the seed cluster is healthy.")
 	}
 
-	if _, err := kutil.TryUpdateControllerInstallationStatusWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
-		func(controllerInstallation *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
-			controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, conditionControllerInstallationHealthy, conditionControllerInstallationInstalled)
-			return controllerInstallation, nil
-		}, func(cur, updated *gardencorev1beta1.ControllerInstallation) bool {
-			return equality.Semantic.DeepEqual(cur.Status.Conditions, updated.Status.Conditions)
-		},
-	); err != nil {
-		controllerInstallationLogger.Errorf(err.Error())
-		return nil // We do not want to run in the exponential backoff for the condition checks.
-	}
-
-	return nil // We do not want to run in the exponential backoff for the condition checks.
+	return nil
 }

@@ -20,19 +20,19 @@ import (
 	"time"
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 // Controller controls BackupEntries.
@@ -44,8 +44,6 @@ type Controller struct {
 	backupEntryQueue  workqueue.RateLimitingInterface
 	backupEntrySynced cache.InformerSynced
 
-	seedLister gardencorelisters.SeedLister
-
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
@@ -53,7 +51,7 @@ type Controller struct {
 // NewBackupEntryController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <backupEntryInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewBackupEntryController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder) *Controller {
+func NewBackupEntryController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder) *Controller {
 	var (
 		gardencorev1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
 		backupEntryInformer       = gardencorev1beta1Informer.BackupEntries()
@@ -64,10 +62,9 @@ func NewBackupEntryController(k8sGardenClient kubernetes.Interface, gardenCoreIn
 
 	backupEntryController := &Controller{
 		config:           config,
-		reconciler:       newReconciler(context.TODO(), k8sGardenClient.Client(), recorder, config),
+		reconciler:       newReconciler(context.TODO(), clientMap, recorder, config),
 		recorder:         recorder,
 		backupEntryQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupEntry"),
-		seedLister:       seedLister,
 		workerCh:         make(chan int),
 	}
 

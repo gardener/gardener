@@ -16,13 +16,15 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -56,7 +58,7 @@ type GardenletControllerFactory struct {
 	cfg                    *config.GardenletConfiguration
 	identity               *gardencorev1beta1.Gardener
 	gardenNamespace        string
-	k8sGardenClient        kubernetes.Interface
+	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	k8sInformers           kubeinformers.SharedInformerFactory
 	recorder               record.EventRecorder
@@ -65,7 +67,7 @@ type GardenletControllerFactory struct {
 
 // NewGardenletControllerFactory creates a new factory for controllers for the Garden API group.
 func NewGardenletControllerFactory(
-	k8sGardenClient kubernetes.Interface,
+	clientMap clientmap.ClientMap,
 	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	cfg *config.GardenletConfiguration, identity *gardencorev1beta1.Gardener,
@@ -76,7 +78,7 @@ func NewGardenletControllerFactory(
 		cfg:                    cfg,
 		identity:               identity,
 		gardenNamespace:        gardenNamespace,
-		k8sGardenClient:        k8sGardenClient,
+		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenCoreInformerFactory,
 		k8sInformers:           kubeInformerFactory,
 		recorder:               recorder,
@@ -103,6 +105,15 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) {
 		configMapInformer = f.k8sInformers.Core().V1().ConfigMaps().Informer()
 	)
 
+	if err := f.clientMap.Start(ctx.Done()); err != nil {
+		panic(fmt.Errorf("failed to start ClientMap: %+v", err))
+	}
+
+	k8sGardenClient, err := f.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		panic(fmt.Errorf("failed to get garden client: %+v", err))
+	}
+
 	f.k8sGardenCoreInformers.Start(ctx.Done())
 	if !cache.WaitForCacheSync(ctx.Done(), backupBucketInformer.HasSynced, backupEntryInformer.HasSynced, cloudProfileInformer.HasSynced, controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, projectInformer.HasSynced, secretBindingInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
 		panic("Timed out waiting for Garden core caches to sync")
@@ -119,7 +130,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) {
 	if secret, ok := secrets[common.GardenRoleInternalDomain]; ok {
 		shootList, err := f.k8sGardenCoreInformers.Core().V1beta1().Shoots().Lister().List(labels.Everything())
 		runtime.Must(err)
-		runtime.Must(garden.VerifyInternalDomainSecret(f.k8sGardenClient, len(shootList), secret))
+		runtime.Must(garden.VerifyInternalDomainSecret(k8sGardenClient, len(shootList), secret))
 	}
 
 	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(common.ChartPath, DefaultImageVector))
@@ -132,18 +143,18 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) {
 	}
 
 	gardenNamespace := &corev1.Namespace{}
-	runtime.Must(f.k8sGardenClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace))
+	runtime.Must(k8sGardenClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace))
 
 	// Initialize the workqueue metrics collection.
 	gardenmetrics.RegisterWorkqueMetrics()
 
 	var (
-		backupBucketController           = backupbucketcontroller.NewBackupBucketController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
-		backupEntryController            = backupentrycontroller.NewBackupEntryController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
-		controllerInstallationController = controllerinstallationcontroller.NewController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace)
-		seedController                   = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.healthManager, secrets, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
-		shootController                  = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.identity, secrets, imageVector, f.recorder)
-		federatedSeedController          = federatedseedcontroller.NewFederatedSeedController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.cfg, f.recorder)
+		backupBucketController           = backupbucketcontroller.NewBackupBucketController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder)
+		backupEntryController            = backupentrycontroller.NewBackupEntryController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder)
+		controllerInstallationController = controllerinstallationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace)
+		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.healthManager, secrets, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
+		shootController                  = shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.identity, secrets, imageVector, f.recorder)
+		federatedSeedController          = federatedseedcontroller.NewFederatedSeedController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 	)
 
 	// Initialize the Controller metrics collection.

@@ -27,6 +27,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -120,12 +121,19 @@ func (b *Botanist) deleteNamespace(ctx context.Context, name string) error {
 
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
 func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
+	// invalidate shoot client here before deleting API server
+	if err := b.ClientMap.InvalidateClient(keys.ForShoot(b.Shoot.Info)); err != nil {
+		return err
+	}
+	b.K8sShootClient = nil
+
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      v1beta1constants.DeploymentNameKubeAPIServer,
 			Namespace: b.Shoot.SeedNamespace,
 		},
 	}
+
 	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptions...))
 }
 
@@ -183,7 +191,7 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 		return err
 	}
 
-	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameClusterAutoscaler), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameClusterAutoscaler, kubernetes.Values(values))
+	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameClusterAutoscaler), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameClusterAutoscaler, kubernetes.Values(values))
 }
 
 // DeleteClusterAutoscaler deletes the cluster-autoscaler deployment in the Seed cluster which holds the Shoot's control plane.
@@ -203,7 +211,9 @@ func (b *Botanist) DeleteClusterAutoscaler(ctx context.Context) error {
 // * kube-apiserver
 // * kube-controller-manager
 func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
-	client := b.K8sSeedClient.Client()
+	// use direct client here, as cached client sometimes causes scale functions not to work properly
+	// e.g. Deployments not scaled down/up
+	client := b.K8sSeedClient.DirectClient()
 
 	for _, etcd := range []string{v1beta1constants.ETCDEvents, v1beta1constants.ETCDMain} {
 		if err := kubernetes.ScaleEtcd(ctx, client, kutil.Key(b.Shoot.SeedNamespace, etcd), 1); err != nil {
@@ -274,8 +284,6 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 
 // HibernateControlPlane hibernates the entire control plane if the shoot shall be hibernated.
 func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
-	c := b.K8sSeedClient.Client()
-
 	if b.K8sShootClient != nil {
 		ctxWithTimeOut, cancel := context.WithTimeout(ctx, 10*time.Minute)
 		defer cancel()
@@ -300,6 +308,16 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 			return err
 		}
 	}
+
+	// invalidate shoot client here before scaling down API server
+	if err := b.ClientMap.InvalidateClient(keys.ForShoot(b.Shoot.Info)); err != nil {
+		return err
+	}
+	b.K8sShootClient = nil
+
+	// use direct client here, as cached client sometimes causes scale functions not to work properly
+	// e.g. Deployments not scaled down/up
+	c := b.K8sSeedClient.DirectClient()
 
 	deployments := []string{
 		v1beta1constants.DeploymentNameGardenerResourceManager,
@@ -363,21 +381,6 @@ func (b *Botanist) PrepareKubeAPIServerForMigration(ctx context.Context) error {
 	}
 
 	return b.DeleteKubeAPIServer(ctx)
-}
-
-func (b *Botanist) scaleControlPlaneDeploymentsToZero(ctx context.Context, c client.Client) error {
-	deployments := []string{
-		v1beta1constants.DeploymentNameGardenerResourceManager,
-		v1beta1constants.DeploymentNameKubeControllerManager,
-		v1beta1constants.DeploymentNameKubeAPIServer,
-	}
-	for _, deployment := range deployments {
-		if err := kubernetes.ScaleDeployment(ctx, c, kutil.Key(b.Shoot.SeedNamespace, deployment), 0); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // ControlPlaneDefaultTimeout is the default timeout and defines how long Gardener should wait
@@ -527,7 +530,7 @@ func (b *Botanist) WaitUntilControlPlaneReady(ctx context.Context) error {
 func (b *Botanist) waitUntilControlPlaneReady(ctx context.Context, name string) error {
 	return common.WaitUntilExtensionCRReady(
 		ctx,
-		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.DirectClient(),
 		b.Logger,
 		func() runtime.Object { return &extensionsv1alpha1.ControlPlane{} },
 		"ControlPlane",
@@ -591,7 +594,7 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 		return err
 	}
 
-	return b.ChartApplierSeed.Apply(ctx, filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), b.Shoot.SeedNamespace, name, kubernetes.Values(values))
+	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), b.Shoot.SeedNamespace, name, kubernetes.Values(values))
 }
 
 // DeployBackupEntryInGarden deploys the BackupEntry resource in garden.
@@ -766,7 +769,7 @@ func (b *Botanist) deployNetworkPolicies(ctx context.Context, denyAll bool) erro
 	globalNetworkPoliciesValues["privateNetworks"] = privateNetworks
 	values["global-network-policies"] = globalNetworkPoliciesValues
 
-	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, "network-policies"), b.Shoot.SeedNamespace, "network-policies", kubernetes.Values(values))
+	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, "network-policies"), b.Shoot.SeedNamespace, "network-policies", kubernetes.Values(values))
 }
 
 // DeployNetworkPolicies creates a network policies in a Shoot cluster's namespace that
@@ -1065,7 +1068,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return err
 	}
 
-	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, kubernetes.Values(values))
+	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, kubernetes.Values(values))
 }
 
 func (b *Botanist) getAuditPolicy(name, namespace string) (string, error) {
@@ -1158,7 +1161,7 @@ func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
 		return err
 	}
 
-	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeControllerManager), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager, kubernetes.Values(values))
+	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeControllerManager), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager, kubernetes.Values(values))
 }
 
 // DeployKubeScheduler deploys kube-scheduler deployment.
@@ -1194,7 +1197,7 @@ func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
 		return err
 	}
 
-	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeScheduler), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeScheduler, kubernetes.Values(values))
+	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeScheduler), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeScheduler, kubernetes.Values(values))
 }
 
 // DefaultKubeAPIServerService returns a deployer for kube-apiserver service.
@@ -1212,7 +1215,7 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 		},
 		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
 		sniService,
-		b.ChartApplierSeed,
+		b.K8sSeedClient.ChartApplier(),
 		b.ChartsRootPath,
 		b.Logger,
 		b.K8sSeedClient.Client(),
@@ -1235,7 +1238,7 @@ func (b *Botanist) DefaultKubeAPIServersNI() component.DeployWaiter {
 			IstioIngressNamespace: common.IstioIngressGatewayNamespace,
 		},
 		b.Shoot.SeedNamespace,
-		b.ChartApplierSeed,
+		b.K8sSeedClient.ChartApplier(),
 		b.ChartsRootPath,
 		b.K8sSeedClient.Client(),
 	))
@@ -1261,7 +1264,7 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 			EnableKonnectivityTunnel: gardenletfeatures.FeatureGate.Enabled(features.KonnectivityTunnel),
 		},
 		b.Shoot.SeedNamespace,
-		b.ChartApplierSeed,
+		b.K8sSeedClient.ChartApplier(),
 		b.ChartsRootPath,
 		b.K8sSeedClient.Client(),
 	)
@@ -1280,10 +1283,10 @@ func (b *Botanist) setAPIServerAddress(address string) {
 				Targets: []string{b.APIServerAddress},
 			},
 			b.Shoot.SeedNamespace,
-			b.ChartApplierSeed,
+			b.K8sSeedClient.ChartApplier(),
 			b.ChartsRootPath,
 			b.Logger,
-			b.K8sSeedClient.Client(),
+			b.K8sSeedClient.DirectClient(),
 			nil,
 		)
 	}
@@ -1296,10 +1299,10 @@ func (b *Botanist) setAPIServerAddress(address string) {
 				Targets: []string{b.APIServerAddress},
 			},
 			b.Shoot.SeedNamespace,
-			b.ChartApplierSeed,
+			b.K8sSeedClient.ChartApplier(),
 			b.ChartsRootPath,
 			b.Logger,
-			b.K8sSeedClient.Client(),
+			b.K8sSeedClient.DirectClient(),
 			nil,
 		)
 	}
@@ -1454,7 +1457,7 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 		values["hvpa"] = hvpaValues
 		values["podAnnotations"] = podAnnotations
 
-		if err := b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, name, kubernetes.Values(values)); err != nil {
+		if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, name, kubernetes.Values(values)); err != nil {
 			return err
 		}
 	}

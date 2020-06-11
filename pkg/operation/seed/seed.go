@@ -26,7 +26,6 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -49,7 +48,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/util/retry"
-	componentbaseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -130,46 +128,6 @@ var wantedCertificateAuthorities = map[string]*secretsutils.CertificateSecretCon
 		CommonName: "kubernetes",
 		CertType:   secretsutils.CACert,
 	},
-}
-
-// GetSeedClient returns the Kubernetes client for the seed cluster. If `inCluster` is set to true then
-// the in-cluster client is returned, otherwise the secret reference of the given `seedName` is read
-// and a client with the stored kubeconfig is created.
-func GetSeedClient(ctx context.Context, gardenClient client.Client, clientConnection componentbaseconfig.ClientConnectionConfiguration, inCluster bool, seedName string) (kubernetes.Interface, error) {
-	if inCluster {
-		return kubernetes.NewClientFromFile(
-			"",
-			clientConnection.Kubeconfig,
-			kubernetes.WithClientConnectionOptions(clientConnection),
-			kubernetes.WithClientOptions(
-				client.Options{
-					Scheme: kubernetes.SeedScheme,
-				},
-			),
-		)
-	}
-
-	seed := &gardencorev1beta1.Seed{}
-	if err := gardenClient.Get(ctx, kutil.Key(seedName), seed); err != nil {
-		return nil, err
-	}
-
-	if seed.Spec.SecretRef == nil {
-		return nil, fmt.Errorf("seed has no secret reference pointing to a kubeconfig - cannot create client")
-	}
-
-	seedSecret, err := common.GetSecretFromSecretRef(ctx, gardenClient, seed.Spec.SecretRef)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetes.NewClientFromSecretObject(
-		seedSecret,
-		kubernetes.WithClientConnectionOptions(clientConnection),
-		kubernetes.WithClientOptions(client.Options{
-			Scheme: kubernetes.SeedScheme,
-		}),
-	)
 }
 
 const (
@@ -323,20 +281,15 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 }
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
-func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *config.GardenletConfiguration, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, componentImageVectors imagevector.ComponentImageVectors) error {
+func BootstrapCluster(k8sSeedClient kubernetes.Interface, seed *Seed, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, componentImageVectors imagevector.ComponentImageVectors) error {
 	const chartName = "seed-bootstrap"
-
-	k8sSeedClient, err := GetSeedClient(context.TODO(), k8sGardenClient.Client(), config.SeedClientConnection.ClientConnectionConfiguration, config.SeedSelector == nil, seed.Info.Name)
-	if err != nil {
-		return err
-	}
 
 	gardenNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: v1beta1constants.GardenNamespace,
 		},
 	}
-	if err = k8sSeedClient.Client().Create(context.TODO(), gardenNamespace); err != nil && !apierrors.IsAlreadyExists(err) {
+	if err := k8sSeedClient.Client().Create(context.TODO(), gardenNamespace); err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
 	}
 
@@ -632,6 +585,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 			return err
 		}
 
+		chartApplier := k8sSeedClient.ChartApplier()
 		istioCRDs := istio.NewIstioCRD(chartApplier, "charts", k8sSeedClient.Client())
 		istiod := istio.NewIstiod(
 			&istio.IstiodValues{
@@ -833,16 +787,11 @@ func (s *Seed) GetIngressFQDN(subDomain string) string {
 }
 
 // CheckMinimumK8SVersion checks whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
-func (s *Seed) CheckMinimumK8SVersion(ctx context.Context, k8sGardenClient client.Client, clientConnection componentbaseconfig.ClientConnectionConfiguration, inCluster bool) (string, error) {
+func (s *Seed) CheckMinimumK8SVersion(seedClient kubernetes.Interface) (string, error) {
 	// We require CRD status subresources for the extension controllers that we install into the seeds.
 	minSeedVersion := "1.11"
 
-	k8sSeedClient, err := GetSeedClient(ctx, k8sGardenClient, clientConnection, inCluster, s.Info.Name)
-	if err != nil {
-		return "<unknown>", err
-	}
-
-	version := k8sSeedClient.Version()
+	version := seedClient.Version()
 
 	seedVersionOK, err := versionutils.CompareVersions(version, ">=", minSeedVersion)
 	if err != nil {

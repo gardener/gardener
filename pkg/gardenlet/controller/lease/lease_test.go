@@ -31,6 +31,10 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
+
+	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 )
 
 var _ = Describe("LeaseController", func() {
@@ -38,8 +42,9 @@ var _ = Describe("LeaseController", func() {
 		fakeNowFunc = func() time.Time {
 			return time.Date(2020, time.April, 1, 1, 1, 1, 1, time.Local)
 		}
-		ctrl         *gomock.Controller
-		k8sClientSet *fake.Clientset
+		ctrl          *gomock.Controller
+		k8sClientSet  *fake.Clientset
+		fakeClientMap *fakeclientmap.ClientMap
 
 		holderUID          types.UID = "test-holderUID"
 		holderName                   = "test-holderName"
@@ -63,6 +68,7 @@ var _ = Describe("LeaseController", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		k8sClientSet = fake.NewSimpleClientset()
+		fakeClientMap = fakeclientmap.NewClientMap().AddClient(keys.ForGarden(), fakeclientset.NewClientSetBuilder().WithKubernetes(k8sClientSet).Build())
 	})
 
 	AfterEach(func() {
@@ -70,23 +76,24 @@ var _ = Describe("LeaseController", func() {
 	})
 
 	Describe("#leaseSync", func() {
-		It("should fail if clientset is nil on sync", func() {
-			leaseController := NewLeaseController(nil, fakeNowFunc, 2, testLeaseNamespace)
+		It("should fail if get garden client fails", func() {
+			fakeClientMap = fakeclientmap.NewClientMap()
+
+			leaseController := NewLeaseController(fakeNowFunc, fakeClientMap, 2, testLeaseNamespace)
 			err := leaseController.Sync(holderName)
 
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should not fail as clientset is set", func() {
-
-			leaseController := NewLeaseController(k8sClientSet, fakeNowFunc, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(fakeNowFunc, fakeClientMap, 2, testLeaseNamespace)
 			err := leaseController.Sync(holderName)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should create new lease without ownerRef", func() {
-			leaseController := NewLeaseController(k8sClientSet, fakeNowFunc, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(fakeNowFunc, fakeClientMap, 2, testLeaseNamespace)
 
 			Expect(leaseController.Sync(holderName)).NotTo(HaveOccurred())
 
@@ -98,7 +105,7 @@ var _ = Describe("LeaseController", func() {
 		})
 
 		It("should create new lease with ownerRef", func() {
-			leaseController := NewLeaseController(k8sClientSet, fakeNowFunc, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(fakeNowFunc, fakeClientMap, 2, testLeaseNamespace)
 			Expect(leaseController.Sync(holderName, ownerRef)).NotTo(HaveOccurred())
 
 			lease, err := k8sClientSet.CoordinationV1().Leases(testLeaseNamespace).Get(holderName, v1.GetOptions{})
@@ -113,7 +120,7 @@ var _ = Describe("LeaseController", func() {
 				return true, nil, fmt.Errorf("error")
 			})
 
-			leaseController := NewLeaseController(k8sClientSet, fakeNowFunc, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(fakeNowFunc, fakeClientMap, 2, testLeaseNamespace)
 
 			Expect(leaseController.Sync(holderName)).To(HaveOccurred())
 		})
@@ -123,7 +130,7 @@ var _ = Describe("LeaseController", func() {
 				return true, nil, fmt.Errorf("error")
 			})
 
-			leaseController := NewLeaseController(k8sClientSet, fakeNowFunc, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(fakeNowFunc, fakeClientMap, 2, testLeaseNamespace)
 
 			Expect(leaseController.Sync(holderName)).To(HaveOccurred())
 		})
@@ -133,7 +140,7 @@ var _ = Describe("LeaseController", func() {
 			lease.Spec.RenewTime = fakeTime
 			Expect(k8sClientSet.Tracker().Add(lease)).NotTo(HaveOccurred())
 
-			leaseController := NewLeaseController(k8sClientSet, fakeNowFunc, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(fakeNowFunc, fakeClientMap, 2, testLeaseNamespace)
 			Expect(leaseController.Sync(holderName)).NotTo(HaveOccurred())
 
 			actualLease, err := k8sClientSet.CoordinationV1().Leases(testLeaseNamespace).Get(holderName, v1.GetOptions{})
@@ -149,7 +156,7 @@ var _ = Describe("LeaseController", func() {
 				return true, nil, fmt.Errorf("error")
 			})
 
-			leaseController := NewLeaseController(k8sClientSet, fakeNowFunc, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(fakeNowFunc, fakeClientMap, 2, testLeaseNamespace)
 			err := leaseController.Sync(holderName)
 
 			Expect(err).To(HaveOccurred())
@@ -163,7 +170,7 @@ var _ = Describe("LeaseController", func() {
 				return true, nil, apierrors.NewConflict(schema.GroupResource{}, holderName, fmt.Errorf("error conflict"))
 			})
 
-			leaseController := NewLeaseController(k8sClientSet, fakeNowFunc, 2, testLeaseNamespace)
+			leaseController := NewLeaseController(fakeNowFunc, fakeClientMap, 2, testLeaseNamespace)
 			err := leaseController.Sync(holderName)
 
 			Expect(err).To(HaveOccurred())

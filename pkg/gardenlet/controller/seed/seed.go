@@ -26,7 +26,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -34,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/lease"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
-	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
@@ -45,16 +45,13 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	componentbaseconfig "k8s.io/component-base/config"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // Controller controls Seeds.
 type Controller struct {
-	k8sGardenClient        kubernetes.Interface
+	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	getSeedClient          getSeedClient
 
 	config        *config.GardenletConfiguration
 	healthManager healthz.Manager
@@ -86,7 +83,7 @@ type Controller struct {
 // holding information about the acting Gardener, a <seedInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
 func NewSeedController(
-	k8sGardenClient kubernetes.Interface,
+	clientMap clientmap.ClientMap,
 	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	healthManager healthz.Manager,
@@ -111,15 +108,14 @@ func NewSeedController(
 	)
 
 	seedController := &Controller{
-		k8sGardenClient:         k8sGardenClient,
+		clientMap:               clientMap,
 		k8sGardenCoreInformers:  gardenCoreInformerFactory,
-		getSeedClient:           seedpkg.GetSeedClient,
 		config:                  config,
 		healthManager:           healthManager,
 		recorder:                recorder,
-		control:                 NewDefaultControl(k8sGardenClient, gardenCoreInformerFactory, secrets, imageVector, componentImageVectors, identity, recorder, config, secretLister, shootLister),
-		extensionCheckControl:   NewDefaultExtensionCheckControl(k8sGardenClient.GardenCore(), controllerInstallationLister, metav1.Now),
-		seedLeaseControl:        lease.NewLeaseController(k8sGardenClient.Kubernetes(), time.Now, LeaseResyncSeconds, gardencorev1beta1.GardenerSeedLeaseNamespace),
+		control:                 NewDefaultControl(clientMap, gardenCoreInformerFactory, secrets, imageVector, componentImageVectors, identity, recorder, config, secretLister, shootLister),
+		extensionCheckControl:   NewDefaultExtensionCheckControl(clientMap, controllerInstallationLister, metav1.Now),
+		seedLeaseControl:        lease.NewLeaseController(time.Now, clientMap, LeaseResyncSeconds, gardencorev1beta1.GardenerSeedLeaseNamespace),
 		seedLister:              seedLister,
 		seedQueue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
 		seedLeaseQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second), "seed-lease"),
@@ -181,7 +177,13 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	// Register Seed object if desired
 	if c.config.SeedConfig != nil {
 		seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: c.config.SeedConfig.Name}}
-		if _, err := controllerutil.CreateOrUpdate(ctx, c.k8sGardenClient.Client(), seed, func() error {
+
+		gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+		if err != nil {
+			panic(fmt.Errorf("could not register seed %q: failed to get garden client: %+v", seed.Name, err))
+		}
+
+		if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient.Client(), seed, func() error {
 			seed.Labels = utils.MergeStringMaps(map[string]string{
 				v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleSeed,
 				v1beta1constants.GardenRole:           v1beta1constants.GardenRoleSeed,
@@ -289,5 +291,3 @@ func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
 	}
 	ch <- metric
 }
-
-type getSeedClient func(ctx context.Context, gardenClient client.Client, clientConnection componentbaseconfig.ClientConnectionConfiguration, inCluster bool, seedName string) (kubernetes.Interface, error)

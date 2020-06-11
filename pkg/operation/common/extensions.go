@@ -91,6 +91,9 @@ func WaitUntilObjectReadyWithHealthFunction(
 
 		obj := newObjFunc()
 		if err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj); err != nil {
+			if apierrors.IsNotFound(err) {
+				return retry.MinorError(err)
+			}
 			return retry.SevereError(err)
 		}
 
