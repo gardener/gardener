@@ -104,8 +104,8 @@ func (d *DefaultStatus) GetState() *runtime.RawExtension {
 }
 
 // SetState implements Status.
-func (d *DefaultStatus) SetState(state runtime.RawExtension) {
-	d.State = &state
+func (d *DefaultStatus) SetState(state *runtime.RawExtension) {
+	d.State = state
 }
 
 // GetResources implements Status.

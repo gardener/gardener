@@ -40,7 +40,7 @@ type Status interface {
 	// GetState retrieves the State of the extension
 	GetState() *runtime.RawExtension
 	// SetState sets the State of the extension
-	SetState(state runtime.RawExtension)
+	SetState(state *runtime.RawExtension)
 	// GetResources retrieves the list of named resource references referred to in the State by their names.
 	GetResources() []gardencorev1beta1.NamedResourceReference
 	// SetResources sets a list of named resource references in the Status, that are referred by

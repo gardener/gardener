@@ -181,8 +181,8 @@ func (u unstructuredStatusAccessor) GetState() *runtime.RawExtension {
 }
 
 // SetState implements Status.
-func (u unstructuredStatusAccessor) SetState(state runtime.RawExtension) {
-	unstrc, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&state)
+func (u unstructuredStatusAccessor) SetState(state *runtime.RawExtension) {
+	unstrc, err := runtime.DefaultUnstructuredConverter.ToUnstructured(state)
 	if err != nil {
 		return
 	}
