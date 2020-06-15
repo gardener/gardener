@@ -22,6 +22,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -123,9 +124,8 @@ func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1be
 	if err != nil {
 		return err
 	}
-	shootList, err := c.k8sGardenClient.GardenCore().CoreV1beta1().Shoots(metav1.NamespaceAll).List(metav1.ListOptions{
-		FieldSelector: fields.SelectorFromSet(fields.Set{core.ShootSeedName: seed.Name}).String(),
-	})
+
+	shootList, err := getShoots(ctx, c.k8sGardenClient, seed)
 	if err != nil {
 		return err
 	}
@@ -226,7 +226,7 @@ func computeKindTypesForShoots(
 	ctx context.Context,
 	logger *logrus.Entry,
 	client client.Client,
-	shootList *gardencorev1beta1.ShootList,
+	shootList []gardencorev1beta1.Shoot,
 	seed *gardencorev1beta1.Seed,
 	controllerRegistrationList []*gardencorev1beta1.ControllerRegistration,
 	internalDomain *gardenpkg.Domain,
@@ -239,8 +239,8 @@ func computeKindTypesForShoots(
 		out = make(chan sets.String)
 	)
 
-	for _, shoot := range shootList.Items {
-		if shoot.Spec.SeedName == nil || *shoot.Spec.SeedName != seed.Name {
+	for _, shoot := range shootList {
+		if (shoot.Spec.SeedName == nil || *shoot.Spec.SeedName != seed.Name) && (shoot.Status.SeedName == nil || *shoot.Status.SeedName != seed.Name) {
 			continue
 		}
 
@@ -513,4 +513,28 @@ func controllerRegistrationNamesWithMatchingSeedLabelSelector(
 	}
 
 	return matchingNames, nil
+}
+
+func getShoots(ctx context.Context, k8sGardenClient kubernetes.Interface, seed *gardencorev1beta1.Seed) ([]gardencorev1beta1.Shoot, error) {
+	var (
+		shootList  *gardencorev1beta1.ShootList
+		shootList2 *gardencorev1beta1.ShootList
+		err        error
+	)
+
+	if shootList, err = k8sGardenClient.GardenCore().CoreV1beta1().Shoots(metav1.NamespaceAll).List(metav1.ListOptions{
+		FieldSelector: fields.SelectorFromSet(fields.Set{core.ShootSeedName: seed.Name}).String(),
+	}); err != nil {
+		return nil, err
+	}
+
+	if shootList2, err = k8sGardenClient.GardenCore().CoreV1beta1().Shoots(metav1.NamespaceAll).List(metav1.ListOptions{
+		FieldSelector: fields.SelectorFromSet(fields.Set{core.ShootStatusSeedName: seed.Name}).String(),
+	}); err != nil {
+		return nil, err
+	}
+
+	shootListAsItems := v1beta1helper.ShootItems(*shootList)
+	shootListAsItems2 := v1beta1helper.ShootItems(*shootList2)
+	return shootListAsItems.Union(&shootListAsItems2), nil
 }

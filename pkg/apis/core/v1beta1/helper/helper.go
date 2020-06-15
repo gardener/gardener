@@ -953,3 +953,29 @@ func DeleteLastErrorByTaskID(lastErrors []gardencorev1beta1.LastError, taskID st
 	}
 	return out
 }
+
+// ShootItems provides helper functions with ShootLists
+type ShootItems gardencorev1beta1.ShootList
+
+// Union returns a set of Shoots that presents either in s or shootList
+func (s *ShootItems) Union(shootItems *ShootItems) []gardencorev1beta1.Shoot {
+	unionedShoots := make(map[string]gardencorev1beta1.Shoot)
+	for _, s := range s.Items {
+		unionedShoots[objectKey(s.Namespace, s.Name)] = s
+	}
+
+	for _, s := range shootItems.Items {
+		unionedShoots[objectKey(s.Namespace, s.Name)] = s
+	}
+
+	shoots := make([]gardencorev1beta1.Shoot, 0, len(unionedShoots))
+	for _, v := range unionedShoots {
+		shoots = append(shoots, v)
+	}
+
+	return shoots
+}
+
+func objectKey(namesapce, name string) string {
+	return fmt.Sprintf("%s/%s", namesapce, name)
+}

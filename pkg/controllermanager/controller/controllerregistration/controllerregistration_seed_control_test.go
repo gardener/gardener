@@ -329,12 +329,10 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				},
 			},
 		}
-		shootList = &gardencorev1beta1.ShootList{
-			Items: []gardencorev1beta1.Shoot{
-				*shoot1,
-				*shoot2,
-				*shoot3,
-			},
+		shootList = []gardencorev1beta1.Shoot{
+			*shoot1,
+			*shoot2,
+			*shoot3,
 		}
 
 		internalDomain = &gardenpkg.Domain{
@@ -614,6 +612,60 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				extensionsv1alpha1.ControlPlaneResource+"/"+type6,
 				extensionsv1alpha1.InfrastructureResource+"/"+type6,
 				extensionsv1alpha1.WorkerResource+"/"+type6,
+
+				// globally enabled extensions
+				extensionsv1alpha1.ExtensionResource+"/"+type10,
+			)))
+		})
+
+		It("should correctly compute types for shoot that has the Seed`s name as status not spec", func() {
+			shootList := []gardencorev1beta1.Shoot{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "s4",
+					},
+					Spec: gardencorev1beta1.ShootSpec{
+						SeedName: pointer.StringPtr("anotherSeed"),
+						Provider: gardencorev1beta1.Provider{
+							Type: type2,
+							Workers: []gardencorev1beta1.Worker{
+								{
+									Machine: gardencorev1beta1.Machine{
+										Image: &gardencorev1beta1.ShootMachineImage{
+											Name: type5,
+										},
+									},
+								},
+							},
+						},
+						Networking: gardencorev1beta1.Networking{
+							Type: type3,
+						},
+						Extensions: []gardencorev1beta1.Extension{
+							{Type: type4},
+						},
+					},
+					Status: gardencorev1beta1.ShootStatus{
+						SeedName: &seedName,
+					},
+				},
+			}
+
+			kindTypes := computeKindTypesForShoots(ctx, nopLogger, nil, shootList, seedWithShootDNSDisabled, controllerRegistrationList, internalDomain, nil)
+
+			Expect(kindTypes).To(Equal(sets.NewString(
+				// seedWithShootDNSDisabled types
+				extensionsv1alpha1.BackupBucketResource+"/"+type8,
+				extensionsv1alpha1.BackupEntryResource+"/"+type8,
+				extensionsv1alpha1.ControlPlaneResource+"/"+type11,
+
+				// shoot4 types
+				extensionsv1alpha1.ControlPlaneResource+"/"+type2,
+				extensionsv1alpha1.InfrastructureResource+"/"+type2,
+				extensionsv1alpha1.WorkerResource+"/"+type2,
+				extensionsv1alpha1.OperatingSystemConfigResource+"/"+type5,
+				extensionsv1alpha1.NetworkResource+"/"+type3,
+				extensionsv1alpha1.ExtensionResource+"/"+type4,
 
 				// globally enabled extensions
 				extensionsv1alpha1.ExtensionResource+"/"+type10,

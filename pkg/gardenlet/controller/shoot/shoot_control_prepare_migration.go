@@ -170,22 +170,22 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleETCDToOne),
 		})
 		wakeUpKubeAPIServer = g.Add(flow.Task{
-			Name:         "Scales Kubernetes API Server up and waits until ready",
+			Name:         "Scaling Kubernetes API Server up and waiting until ready",
 			Fn:           flow.TaskFn(botanist.WakeUpKubeAPIServer).DoIf(wakeupRequired),
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleETCDToOne),
 		})
 		ensureResourceManagerScaledUp = g.Add(flow.Task{
-			Name:         "Ensure that the gardener resource manager is scaled to 1",
+			Name:         "Ensuring that the gardener resource manager is scaled to 1",
 			Fn:           flow.TaskFn(botanist.ScaleGardenerResourceManagerToOne).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(wakeUpKubeAPIServer),
 		})
 		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
-			Name:         "Keep Managed Resources objects in the Shoot",
+			Name:         "Configuring Managed Resources objects to be kept in the Shoot",
 			Fn:           flow.TaskFn(botanist.KeepManagedResourcesObjects).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
 		})
 		deleteAllManagedResourcesFromShootNamespace = g.Add(flow.Task{
-			Name:         "Deletes all Managed Resources  from the Shoot's namespace",
+			Name:         "Deleting all Managed Resources from the Shoot's namespace",
 			Fn:           flow.TaskFn(botanist.DeleteAllManagedResourcesObjects),
 			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot),
 		})
@@ -195,7 +195,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 			Dependencies: flow.NewTaskIDs(deleteAllManagedResourcesFromShootNamespace),
 		})
 		prepareKubeAPIServerForMigration = g.Add(flow.Task{
-			Name:         "Prepare kube-apiserver in Shoot's namespace for migration, by deleting it and its respective hvpa",
+			Name:         "Preparing kube-apiserver in Shoot's namespace for migration, by deleting it and its respective hvpa",
 			Fn:           flow.TaskFn(botanist.PrepareKubeAPIServerForMigration).SkipIf(o.Shoot.HibernationEnabled || !kubeAPIServerDeploymentFound),
 			Dependencies: flow.NewTaskIDs(waitForManagedResourcesDeletion, waitUntilEtcdReady),
 		})
@@ -205,7 +205,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 			Dependencies: flow.NewTaskIDs(prepareKubeAPIServerForMigration),
 		})
 		annotateExtensionCRsForMigration = g.Add(flow.Task{
-			Name:         "Annotate Extensions CRs with operation - migration",
+			Name:         "Annotating Extensions CRs with operation - migration",
 			Fn:           botanist.AnnotateExtensionCRsForMigration,
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
@@ -215,7 +215,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 			Dependencies: flow.NewTaskIDs(annotateExtensionCRsForMigration),
 		})
 		annotateBackupEntryInSeedForMigration = g.Add(flow.Task{
-			Name:         "Annotate BackupEntry in Seed with operation - migration",
+			Name:         "Annotating BackupEntry in Seed with operation - migration",
 			Fn:           botanist.AnnotateBackupEntryInSeedForMigration,
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
@@ -225,44 +225,49 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 			Dependencies: flow.NewTaskIDs(annotateBackupEntryInSeedForMigration),
 		})
 		deleteBackupEntryFromSeed = g.Add(flow.Task{
-			Name:         "Deletes BackupEntry from Seed",
+			Name:         "Deleting BackupEntry from Seed",
 			Fn:           botanist.DeleteBackupEntryFromSeed,
 			Dependencies: flow.NewTaskIDs(waitForBackupEntryOperationMigrateToSucceed),
 		})
 		deleteAllExtensionCRs = g.Add(flow.Task{
-			Name:         "Deletes all extension CRs from the Shoot namespace",
-			Fn:           botanist.DeleteAllExtensionCRs,
+			Name:         "Deleting all extension CRs from the Shoot namespace",
 			Dependencies: flow.NewTaskIDs(waitForExtensionCRsOperationMigrateToSucceed),
+			Fn:           botanist.DeleteAllExtensionCRs,
 		})
-		_ = g.Add(flow.Task{
+		destroyIngressDNSEntries = g.Add(flow.Task{
 			Name:         "Destroying ingress DNS record",
 			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.DNS.NginxEntry).Destroy),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
-		_ = g.Add(flow.Task{
+		destroyExternalDNSEntries = g.Add(flow.Task{
 			Name:         "Destroying external domain DNS record",
 			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.DNS.ExternalEntry).Destroy),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
-		_ = g.Add(flow.Task{
+		destroyInternalDNSEntries = g.Add(flow.Task{
 			Name:         "Destroying internal domain DNS record",
 			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.DNS.InternalEntry).Destroy),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
+		destroyDNSProviders = g.Add(flow.Task{
+			Name:         "Deleting DNS providers",
+			Fn:           flow.TaskFn(botanist.DeleteDNSProviders),
+			Dependencies: flow.NewTaskIDs(destroyIngressDNSEntries, destroyExternalDNSEntries, destroyInternalDNSEntries),
+		})
 		createETCDSnapshot = g.Add(flow.Task{
-			Name:         "Create ETCD Snapshot",
+			Name:         "Creating ETCD Snapshot",
 			Fn:           flow.TaskFn(botanist.CreateETCDSnapshot).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
 		scaleETCDToZero = g.Add(flow.Task{
-			Name:         "Scale ETCD to zero",
+			Name:         "Scaling ETCD to zero",
 			Fn:           flow.TaskFn(botanist.ScaleETCDToZero).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(createETCDSnapshot),
 		})
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteNamespace).Retry(defaultInterval),
-			Dependencies: flow.NewTaskIDs(deleteAllExtensionCRs, deleteBackupEntryFromSeed, waitForManagedResourcesDeletion, scaleETCDToZero),
+			Dependencies: flow.NewTaskIDs(deleteAllExtensionCRs, deleteBackupEntryFromSeed, waitForManagedResourcesDeletion, scaleETCDToZero, destroyDNSProviders),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace in Seed has been deleted",

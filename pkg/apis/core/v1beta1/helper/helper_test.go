@@ -1354,4 +1354,111 @@ var _ = Describe("helper", func() {
 			),
 		)
 	})
+
+	Describe("ShootItems", func() {
+		Describe("#Union", func() {
+			It("tests if provided two sets of shoot slices will return ", func() {
+				shootList1 := gardencorev1beta1.ShootList{
+					Items: []gardencorev1beta1.Shoot{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot1",
+								Namespace: "namespace1",
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot2",
+								Namespace: "namespace1",
+							},
+						}, {
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot3",
+								Namespace: "namespace2",
+							},
+						},
+					},
+				}
+
+				shootList2 := gardencorev1beta1.ShootList{
+					Items: []gardencorev1beta1.Shoot{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot2",
+								Namespace: "namespace2",
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot1",
+								Namespace: "namespace1",
+							},
+						}, {
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot3",
+								Namespace: "namespace3",
+							},
+						},
+					},
+				}
+
+				s := ShootItems(shootList1)
+				s2 := ShootItems(shootList2)
+				shootSet := s.Union(&s2)
+
+				Expect(len(shootSet)).To(Equal(5))
+			})
+
+			It("should not fail if one of the lists is empty", func() {
+				shootList1 := gardencorev1beta1.ShootList{
+					Items: []gardencorev1beta1.Shoot{},
+				}
+
+				shootList2 := gardencorev1beta1.ShootList{
+					Items: []gardencorev1beta1.Shoot{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot2",
+								Namespace: "namespace2",
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot1",
+								Namespace: "namespace1",
+							},
+						}, {
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "shoot3",
+								Namespace: "namespace3",
+							},
+						},
+					},
+				}
+
+				s := ShootItems(shootList1)
+				s2 := ShootItems(shootList2)
+				shootSet := s.Union(&s2)
+				Expect(len(shootSet)).To(Equal(3))
+
+				shootSet2 := s2.Union(&s)
+				Expect(len(shootSet)).To(Equal(3))
+				Expect(shootSet).To(Equal(shootSet2))
+
+			})
+		})
+
+		It("should not fail if no items", func() {
+			shootList1 := gardencorev1beta1.ShootList{}
+
+			shootList2 := gardencorev1beta1.ShootList{}
+
+			s := ShootItems(shootList1)
+			s2 := ShootItems(shootList2)
+			shootSet := s.Union(&s2)
+			Expect(len(shootSet)).To(Equal(0))
+		})
+
+	})
+
 })
