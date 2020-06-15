@@ -29,7 +29,6 @@ import (
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -42,9 +41,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (c *defaultControl) reconcile(project *gardencorev1beta1.Project, projectLogger logrus.FieldLogger) error {
+func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1beta1.Project) error {
 	var (
-		ctx        = context.TODO()
 		generation = project.Generation
 		err        error
 	)
