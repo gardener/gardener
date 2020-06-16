@@ -271,7 +271,7 @@ func (g *GardenerScheduler) startScheduler(ctx context.Context) {
 		// backupBucketScheduler,
 	)
 
-	go shootScheduler.Run(ctx, g.K8sGardenCoreInformers)
+	go shootScheduler.Run(ctx)
 	// TODO: Enable later
 	// go backupBucketScheduler.Run(ctx, g.K8sGardenCoreInformers)
 

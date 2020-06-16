@@ -61,7 +61,7 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 	}
 
 	seedSecretRef := seed.Spec.SecretRef
-	seedClient, err := kubernetes.NewClientFromSecret(f.GardenClient, seedSecretRef.Namespace, seedSecretRef.Name, kubernetes.WithClientOptions(client.Options{
+	seedClient, err := kubernetes.NewClientFromSecret(ctx, f.GardenClient.DirectClient(), seedSecretRef.Namespace, seedSecretRef.Name, kubernetes.WithClientOptions(client.Options{
 		Scheme: kubernetes.SeedScheme,
 	}))
 	if err != nil {
