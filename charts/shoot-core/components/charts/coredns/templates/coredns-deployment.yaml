@@ -26,6 +26,18 @@ spec:
         k8s-app: kube-dns
       # we won't be using the checksum of the configmap since coredns provides the "reload" plugins that does the reload if config changes.
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchExpressions:
+                    - key: k8s-app
+                      operator: In
+                      values:
+                        - kube-dns
       priorityClassName: system-cluster-critical
       securityContext:
         runAsNonRoot: true
