@@ -182,7 +182,7 @@ func (t *terraformer) prepare(ctx context.Context) (int, error) {
 	}
 
 	// Clean up possible existing pod artifacts from previous runs
-	if err := t.ensureCleanedUp(ctx); err != nil {
+	if err := t.EnsureCleanedUp(ctx); err != nil {
 		return -1, err
 	}
 
@@ -241,8 +241,8 @@ func (t *terraformer) CleanupConfiguration(ctx context.Context) error {
 	return nil
 }
 
-// ensureCleanedUp deletes the Terraformer pods, and waits until everything has been cleaned up.
-func (t *terraformer) ensureCleanedUp(ctx context.Context) error {
+// EnsureCleanedUp deletes the Terraformer pods, and waits until everything has been cleaned up.
+func (t *terraformer) EnsureCleanedUp(ctx context.Context) error {
 	podList, err := t.listTerraformerPods(ctx)
 	if err != nil {
 		return err
@@ -251,7 +251,7 @@ func (t *terraformer) ensureCleanedUp(ctx context.Context) error {
 		return err
 	}
 
-	return t.waitForCleanEnvironment(ctx)
+	return t.WaitForCleanEnvironment(ctx)
 }
 
 // GenerateVariablesEnvironment takes a <secret> and a <keyValueMap> and builds an environment which

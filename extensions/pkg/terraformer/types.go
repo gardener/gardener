@@ -102,6 +102,8 @@ type Terraformer interface {
 	GetStateOutputVariables(variables ...string) (map[string]string, error)
 	ConfigExists() (bool, error)
 	NumberOfResources(context.Context) (int, error)
+	EnsureCleanedUp(ctx context.Context) error
+	WaitForCleanEnvironment(ctx context.Context) error
 }
 
 // Initializer can initialize a Terraformer.
