@@ -19,6 +19,8 @@ spec:
         name: guestbook
         ports:
         - containerPort: 8080
+        securityContext:
+          runAsUser: 1001
         env:
         - name: REDIS_SERVICE_NAME
           value: redis-master
