@@ -205,14 +205,14 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.Kubernetes.Kubelet.FailSwapOn == nil {
 		obj.Spec.Kubernetes.Kubelet.FailSwapOn = &trueVar
 	}
+
+	if obj.Spec.Maintenance == nil {
+		obj.Spec.Maintenance = &Maintenance{}
+	}
 }
 
 // SetDefaults_Maintenance sets default values for Maintenance objects.
 func SetDefaults_Maintenance(obj *Maintenance) {
-	if obj == nil {
-		obj = &Maintenance{}
-	}
-
 	if obj.AutoUpdate == nil {
 		obj.AutoUpdate = &MaintenanceAutoUpdate{
 			KubernetesVersion:   true,
