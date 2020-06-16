@@ -69,6 +69,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNS":                                   schema_pkg_apis_core_v1alpha1_DNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude":                     schema_pkg_apis_core_v1alpha1_DNSIncludeExclude(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSProvider":                           schema_pkg_apis_core_v1alpha1_DNSProvider(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DataVolume":                            schema_pkg_apis_core_v1alpha1_DataVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Endpoint":                              schema_pkg_apis_core_v1alpha1_Endpoint(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExpirableVersion":                      schema_pkg_apis_core_v1alpha1_ExpirableVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Extension":                             schema_pkg_apis_core_v1alpha1_Extension(ref),
@@ -192,6 +193,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS":                                    schema_pkg_apis_core_v1beta1_DNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude":                      schema_pkg_apis_core_v1beta1_DNSIncludeExclude(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSProvider":                            schema_pkg_apis_core_v1beta1_DNSProvider(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume":                             schema_pkg_apis_core_v1beta1_DataVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Endpoint":                               schema_pkg_apis_core_v1beta1_Endpoint(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                       schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension":                              schema_pkg_apis_core_v1beta1_Extension(ref),
@@ -2100,6 +2102,48 @@ func schema_pkg_apis_core_v1alpha1_DNSProvider(ref common.ReferenceCallback) com
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_DataVolume(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "DataVolume contains information about a data volume.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the volume to make it referencable.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the type of the volume.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"size": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VolumeSize is the size of the volume.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"encrypted": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Encrypted determines if the volume should be encrypted.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name", "size"},
+			},
+		},
 	}
 }
 
@@ -6070,7 +6114,7 @@ func schema_pkg_apis_core_v1alpha1_Worker(ref common.ReferenceCallback) common.O
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Volume"),
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.DataVolume"),
 									},
 								},
 							},
@@ -6102,7 +6146,7 @@ func schema_pkg_apis_core_v1alpha1_Worker(ref common.ReferenceCallback) common.O
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerKubernetes", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/runtime.RawExtension", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.DataVolume", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerKubernetes", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/runtime.RawExtension", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 
@@ -7656,6 +7700,48 @@ func schema_pkg_apis_core_v1beta1_DNSProvider(ref common.ReferenceCallback) comm
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_DataVolume(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "DataVolume contains information about a data volume.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the volume to make it referencable.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the type of the volume.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"size": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VolumeSize is the size of the volume.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"encrypted": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Encrypted determines if the volume should be encrypted.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name", "size"},
+			},
+		},
 	}
 }
 
@@ -11135,7 +11221,7 @@ func schema_pkg_apis_core_v1beta1_Volume(ref common.ReferenceCallback) common.Op
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Volume contains information about the volume type and size.",
+				Description: "Volume contains information about the volume type, size, and encryption.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"name": {
@@ -11335,7 +11421,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume"),
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume"),
 									},
 								},
 							},
@@ -11367,7 +11453,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/runtime.RawExtension", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/runtime.RawExtension", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 

@@ -46,6 +46,13 @@ spec:
       volume:
         type: gp2
         size: 20Gi
+    #   encrypted: true
+    # dataVolumes:
+    # - name: kubelet-dir
+    #   type: gp2
+    #   size: 25Gi
+    #   encrypted: false
+    # kubeletDataVolumeName: kubelet-dir
     # providerConfig:
     #   <some-provider-specific-worker-config>
     # labels:

@@ -3211,6 +3211,71 @@ DNSIncludeExclude
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.DataVolume">DataVolume
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
+</p>
+<p>
+<p>DataVolume contains information about a data volume.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the volume to make it referencable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Type is the type of the volume.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>size</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>VolumeSize is the size of the volume.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>encrypted</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Encrypted determines if the volume should be encrypted.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.Endpoint">Endpoint
 </h3>
 <p>
@@ -7656,7 +7721,7 @@ string
 <a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
 </p>
 <p>
-<p>Volume contains information about the volume type and size.</p>
+<p>Volume contains information about the volume type, size, and encryption.</p>
 </p>
 <table>
 <thead>
@@ -7969,8 +8034,8 @@ Volume
 <td>
 <code>dataVolumes</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.Volume">
-[]Volume
+<a href="#core.gardener.cloud/v1beta1.DataVolume">
+[]DataVolume
 </a>
 </em>
 </td>

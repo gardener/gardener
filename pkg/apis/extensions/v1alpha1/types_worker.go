@@ -121,7 +121,7 @@ type WorkerPool struct {
 	Volume *Volume `json:"volume,omitempty"`
 	// DataVolumes contains a list of additional worker volumes.
 	// +optional
-	DataVolumes []Volume `json:"dataVolumes,omitempty"`
+	DataVolumes []DataVolume `json:"dataVolumes,omitempty"`
 	// KubeletDataVolumeName contains the name of a dataVolume that should be used for storing kubelet state.
 	// +optional
 	KubeletDataVolumeName *string `json:"kubeletDataVolumeName,omitempty"`
@@ -145,6 +145,20 @@ type Volume struct {
 	// Name of the volume to make it referencable.
 	// +optional
 	Name *string `json:"name,omitempty"`
+	// Type is the type of the volume.
+	// +optional
+	Type *string `json:"type,omitempty"`
+	// Size is the of the root volume.
+	Size string `json:"size"`
+	// Encrypted determines if the volume should be encrypted.
+	// +optional
+	Encrypted *bool `json:"encrypted,omitempty"`
+}
+
+// DataVolume contains information about a data volume.
+type DataVolume struct {
+	// Name of the volume to make it referencable.
+	Name string `json:"name"`
 	// Type is the type of the volume.
 	// +optional
 	Type *string `json:"type,omitempty"`

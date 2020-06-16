@@ -417,8 +417,7 @@ func (b *Botanist) getGenerateCloudConfigExecutionChartFunc(releaseName string, 
 		if worker.KubeletDataVolumeName != nil && worker.DataVolumes != nil {
 			kubeletDataVolName := worker.KubeletDataVolumeName
 			for _, dataVolume := range worker.DataVolumes {
-				volName := dataVolume.Name
-				if *volName == *kubeletDataVolName {
+				if dataVolume.Name == *kubeletDataVolName {
 					size, err := resource.ParseQuantity(dataVolume.VolumeSize)
 					if err != nil {
 						return nil, err
@@ -431,7 +430,7 @@ func (b *Botanist) getGenerateCloudConfigExecutionChartFunc(releaseName string, 
 						}
 					}
 					w["kubeletDataVolume"] = map[string]interface{}{
-						"name": volName,
+						"name": dataVolume.Name,
 						"type": dataVolume.Type,
 						"size": fmt.Sprintf("%d", sizeInBytes),
 					}

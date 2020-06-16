@@ -888,32 +888,30 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 		}
 		for idx, volume := range worker.DataVolumes {
 			idxPath := fldPath.Child("dataVolumes").Index(idx)
-			if volume.Name == nil {
-				allErrs = append(allErrs, field.Required(idxPath.Child("name"), "data volume name is required"))
+			if len(volume.Name) == 0 {
+				allErrs = append(allErrs, field.Required(idxPath.Child("name"), "must specify a name"))
 			} else {
-				volName := *volume.Name
-				allErrs = append(allErrs, validateDNS1123Label(volName, idxPath.Child("name"))...)
-				if len(volName) > maxVolumeNameLength {
-					allErrs = append(allErrs, field.TooLong(idxPath.Child("name"), volName, maxVolumeNameLength))
-				}
-				if _, keyExist := volumeNames[volName]; keyExist {
-					volumeNames[volName]++
-					allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), volName))
-				} else {
-					volumeNames[volName] = 1
-				}
-				if !volumeSizeRegex.MatchString(volume.VolumeSize) {
-					allErrs = append(allErrs, field.Invalid(idxPath.Child("size"), volume.VolumeSize, fmt.Sprintf("data volume size must match the regex %s", volumeSizeRegex)))
-				}
+				allErrs = append(allErrs, validateDNS1123Label(volume.Name, idxPath.Child("name"))...)
+			}
+			if len(volume.Name) > maxVolumeNameLength {
+				allErrs = append(allErrs, field.TooLong(idxPath.Child("name"), volume.Name, maxVolumeNameLength))
+			}
+			if _, keyExist := volumeNames[volume.Name]; keyExist {
+				volumeNames[volume.Name]++
+				allErrs = append(allErrs, field.Duplicate(idxPath.Child("name"), volume.Name))
+			} else {
+				volumeNames[volume.Name] = 1
+			}
+			if !volumeSizeRegex.MatchString(volume.VolumeSize) {
+				allErrs = append(allErrs, field.Invalid(idxPath.Child("size"), volume.VolumeSize, fmt.Sprintf("data volume size must match the regex %s", volumeSizeRegex)))
 			}
 		}
-
 	}
 
 	if worker.KubeletDataVolumeName != nil {
 		found := false
 		for _, volume := range worker.DataVolumes {
-			if *volume.Name == *worker.KubeletDataVolumeName {
+			if volume.Name == *worker.KubeletDataVolumeName {
 				found = true
 			}
 		}

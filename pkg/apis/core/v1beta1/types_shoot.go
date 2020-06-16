@@ -847,7 +847,7 @@ type Worker struct {
 	Volume *Volume `json:"volume,omitempty" protobuf:"bytes,14,opt,name=volume"`
 	// DataVolumes contains a list of additional worker volumes.
 	// +optional
-	DataVolumes []Volume `json:"dataVolumes,omitempty" protobuf:"bytes,15,rep,name=dataVolumes"`
+	DataVolumes []DataVolume `json:"dataVolumes,omitempty" protobuf:"bytes,15,rep,name=dataVolumes"`
 	// KubeletDataVolumeName contains the name of a dataVolume that should be used for storing kubelet state.
 	// +optional
 	KubeletDataVolumeName *string `json:"kubeletDataVolumeName,omitempty" protobuf:"bytes,16,opt,name=kubeletDataVolumeName"`
@@ -888,11 +888,25 @@ type ShootMachineImage struct {
 	Version *string `json:"version,omitempty" protobuf:"bytes,3,opt,name=version"`
 }
 
-// Volume contains information about the volume type and size.
+// Volume contains information about the volume type, size, and encryption.
 type Volume struct {
 	// Name of the volume to make it referencable.
 	// +optional
 	Name *string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+	// Type is the type of the volume.
+	// +optional
+	Type *string `json:"type,omitempty" protobuf:"bytes,2,opt,name=type"`
+	// VolumeSize is the size of the volume.
+	VolumeSize string `json:"size" protobuf:"bytes,3,opt,name=size"`
+	// Encrypted determines if the volume should be encrypted.
+	// +optional
+	Encrypted *bool `json:"encrypted,omitempty" protobuf:"varint,4,opt,name=encrypted"`
+}
+
+// DataVolume contains information about a data volume.
+type DataVolume struct {
+	// Name of the volume to make it referencable.
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Type is the type of the volume.
 	// +optional
 	Type *string `json:"type,omitempty" protobuf:"bytes,2,opt,name=type"`
