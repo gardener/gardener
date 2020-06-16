@@ -80,7 +80,7 @@ func (t *terraformer) GetStateOutputVariables(variables ...string) (map[string]s
 
 	for _, variable := range variables {
 		if outputVariable, ok := outputVariables[variable]; ok {
-			output[variable] = outputVariable.Value.(string)
+			output[variable] = fmt.Sprint(outputVariable.Value)
 			foundVariables.Insert(variable)
 		}
 	}
