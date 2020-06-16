@@ -25,9 +25,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
-// waitForCleanEnvironment waits until no Terraform Pod(s) exist for the current instance
+// WaitForCleanEnvironment waits until no Terraform Pod(s) exist for the current instance
 // of the Terraformer.
-func (t *terraformer) waitForCleanEnvironment(ctx context.Context) error {
+func (t *terraformer) WaitForCleanEnvironment(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, t.deadlineCleaning)
 	defer cancel()
 
