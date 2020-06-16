@@ -307,5 +307,35 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Spec.Kubernetes.Kubelet.FailSwapOn).To(PointTo(BeFalse()))
 		})
+
+		It("should set the maintenance field", func() {
+			obj.Spec.Maintenance = nil
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Maintenance).To(Equal(&Maintenance{}))
+		})
+	})
+
+	Describe("#SetDefaults_Maintenance", func() {
+		var obj *Maintenance
+
+		BeforeEach(func() {
+			obj = &Maintenance{}
+		})
+
+		It("should correctly default the maintenance", func() {
+			obj.AutoUpdate = nil
+			obj.TimeWindow = nil
+
+			SetDefaults_Maintenance(obj)
+
+			Expect(obj.AutoUpdate).NotTo(BeNil())
+			Expect(obj.AutoUpdate.KubernetesVersion).To(BeTrue())
+			Expect(obj.AutoUpdate.MachineImageVersion).To(BeTrue())
+			Expect(obj.TimeWindow).NotTo(BeNil())
+			Expect(obj.TimeWindow.Begin).To(HaveSuffix("0000+0000"))
+			Expect(obj.TimeWindow.End).To(HaveSuffix("0000+0000"))
+		})
 	})
 })
