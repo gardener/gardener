@@ -96,6 +96,20 @@ func (mr *MockTerraformerMockRecorder) Destroy() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockTerraformer)(nil).Destroy))
 }
 
+// EnsureCleanedUp mocks base method
+func (m *MockTerraformer) EnsureCleanedUp(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureCleanedUp", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureCleanedUp indicates an expected call of EnsureCleanedUp
+func (mr *MockTerraformerMockRecorder) EnsureCleanedUp(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureCleanedUp", reflect.TypeOf((*MockTerraformer)(nil).EnsureCleanedUp), arg0)
+}
+
 // GetRawState mocks base method
 func (m *MockTerraformer) GetRawState(arg0 context.Context) (*terraformer.RawState, error) {
 	m.ctrl.T.Helper()
@@ -242,6 +256,20 @@ func (m *MockTerraformer) SetVariablesEnvironment(arg0 map[string]string) terraf
 func (mr *MockTerraformerMockRecorder) SetVariablesEnvironment(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetVariablesEnvironment", reflect.TypeOf((*MockTerraformer)(nil).SetVariablesEnvironment), arg0)
+}
+
+// WaitForCleanEnvironment mocks base method
+func (m *MockTerraformer) WaitForCleanEnvironment(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitForCleanEnvironment", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitForCleanEnvironment indicates an expected call of WaitForCleanEnvironment
+func (mr *MockTerraformerMockRecorder) WaitForCleanEnvironment(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForCleanEnvironment", reflect.TypeOf((*MockTerraformer)(nil).WaitForCleanEnvironment), arg0)
 }
 
 // MockInitializer is a mock of Initializer interface
