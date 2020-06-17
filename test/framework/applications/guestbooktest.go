@@ -125,8 +125,6 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 	shoot := t.framework.Shoot
 	if !shoot.Spec.Addons.NginxIngress.Enabled {
 		ginkgo.Fail("The test requires .spec.addons.nginxIngress.enabled to be true")
-	} else if shoot.Spec.Kubernetes.AllowPrivilegedContainers == nil || !*shoot.Spec.Kubernetes.AllowPrivilegedContainers {
-		ginkgo.Fail("The test requires .spec.kubernetes.allowPrivilegedContainers to be true")
 	}
 
 	ginkgo.By("Applying redis chart")
@@ -134,6 +132,12 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 	chartOverrides := map[string]interface{}{
 		"cluster": map[string]interface{}{
 			"enabled": false,
+		},
+		"podSecurityPolicy": map[string]interface{}{
+			"create": true,
+		},
+		"rbac": map[string]interface{}{
+			"create": true,
 		},
 	}
 	if shoot.Spec.Provider.Type == "alicloud" {
