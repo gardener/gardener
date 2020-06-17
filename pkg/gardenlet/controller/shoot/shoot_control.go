@@ -361,7 +361,7 @@ func (c *Controller) deleteShoot(logger *logrus.Entry, shoot *gardencorev1beta1.
 	// At this point the deletion is allowed, hence, check if the seed is up-to-date, then sync the Cluster resource
 	// initialize a new operation and, eventually, start the deletion flow.
 	if err := c.checkSeedAndSyncClusterResource(ctx, o.Shoot.Info, project, cloudProfile, seed); err != nil {
-		return c.updateShootStatusAndRequeueOnSyncError(shoot, err)
+		return c.updateShootStatusAndRequeueOnSyncError(o.Shoot.Info, err)
 	}
 
 	if flowErr := c.runDeleteShootFlow(o); flowErr != nil {
@@ -475,8 +475,8 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 
 	// At this point the reconciliation is allowed, hence, check if the seed is up-to-date, then sync the Cluster resource
 	// initialize a new operation and, eventually, start the reconciliation flow.
-	if err := c.checkSeedAndSyncClusterResource(ctx, shoot, project, cloudProfile, seed); err != nil {
-		return c.updateShootStatusAndRequeueOnSyncError(shoot, err)
+	if err := c.checkSeedAndSyncClusterResource(ctx, o.Shoot.Info, project, cloudProfile, seed); err != nil {
+		return c.updateShootStatusAndRequeueOnSyncError(o.Shoot.Info, err)
 	}
 
 	var dnsEnabled = !o.Shoot.DisableDNS
