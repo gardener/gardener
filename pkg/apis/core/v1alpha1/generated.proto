@@ -545,6 +545,23 @@ message DNSProvider {
   optional DNSIncludeExclude zones = 5;
 }
 
+// DataVolume contains information about a data volume.
+message DataVolume {
+  // Name of the volume to make it referencable.
+  optional string name = 1;
+
+  // Type is the type of the volume.
+  // +optional
+  optional string type = 2;
+
+  // VolumeSize is the size of the volume.
+  optional string size = 3;
+
+  // Encrypted determines if the volume should be encrypted.
+  // +optional
+  optional bool encrypted = 4;
+}
+
 // Endpoint is an endpoint for monitoring, logging and other services around the plant.
 message Endpoint {
   // Name is the name of the endpoint
@@ -2036,7 +2053,7 @@ message Worker {
 
   // DataVolumes contains a list of additional worker volumes.
   // +optional
-  repeated Volume dataVolumes = 15;
+  repeated DataVolume dataVolumes = 15;
 
   // KubeletDataVolumeName contains the name of a dataVolume that should be used for storing kubelet state.
   // +optional

@@ -2118,8 +2118,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		It("should reject if volume is undefined and data volumes are defined", func() {
 			maxSurge := intstr.FromInt(1)
 			maxUnavailable := intstr.FromInt(0)
-			name1 := "vol1-name"
-			dataVolumes := []core.Volume{{Name: &name1, VolumeSize: "75Gi"}}
+			dataVolumes := []core.DataVolume{{Name: "vol1-name", VolumeSize: "75Gi"}}
 			worker := core.Worker{
 				Name: "worker-name",
 				Machine: core.Machine{
@@ -2143,10 +2142,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 		It("should reject if data volume size does not match size regex", func() {
 			maxSurge := intstr.FromInt(1)
 			maxUnavailable := intstr.FromInt(0)
-			name1 := "vol1-name"
-			name2 := "vol2-name"
-			vol := core.Volume{Name: &name1, VolumeSize: "75Gi"}
-			dataVolumes := []core.Volume{{Name: &name1, VolumeSize: "75Gi"}, {Name: &name2, VolumeSize: "12MiB"}}
+			name := "vol1-name"
+			vol := core.Volume{Name: &name, VolumeSize: "75Gi"}
+			dataVolumes := []core.DataVolume{{Name: name, VolumeSize: "75Gi"}, {Name: "vol2-name", VolumeSize: "12MiB"}}
 			worker := core.Worker{
 				Name: "worker-name",
 				Machine: core.Machine{
@@ -2175,7 +2173,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			name1 := "vol1-name-is-too-long-for-test"
 			name2 := "not%dns/1123"
 			vol := core.Volume{Name: &name1, VolumeSize: "75Gi"}
-			dataVolumes := []core.Volume{{VolumeSize: "75Gi"}, {Name: &name1, VolumeSize: "75Gi"}, {Name: &name2, VolumeSize: "75Gi"}}
+			dataVolumes := []core.DataVolume{{VolumeSize: "75Gi"}, {Name: name1, VolumeSize: "75Gi"}, {Name: name2, VolumeSize: "75Gi"}}
 			worker := core.Worker{
 				Name: "worker-name",
 				Machine: core.Machine{
@@ -2210,9 +2208,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 		It("should accept if kubeletDataVolumeName refers to defined data volume", func() {
 			maxSurge := intstr.FromInt(1)
 			maxUnavailable := intstr.FromInt(0)
-			name1 := "vol1-name"
-			vol := core.Volume{Name: &name1, VolumeSize: "75Gi"}
-			dataVolumes := []core.Volume{{Name: &name1, VolumeSize: "75Gi"}}
+			name := "vol1-name"
+			vol := core.Volume{Name: &name, VolumeSize: "75Gi"}
+			dataVolumes := []core.DataVolume{{Name: name, VolumeSize: "75Gi"}}
 			worker := core.Worker{
 				Name: "worker-name",
 				Machine: core.Machine{
@@ -2226,7 +2224,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				MaxUnavailable:        &maxUnavailable,
 				Volume:                &vol,
 				DataVolumes:           dataVolumes,
-				KubeletDataVolumeName: &name1,
+				KubeletDataVolumeName: &name,
 			}
 			errList := ValidateWorker(worker, nil)
 			Expect(errList).To(ConsistOf())
@@ -2239,7 +2237,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			name2 := "vol2-name"
 			name3 := "vol3-name"
 			vol := core.Volume{Name: &name1, VolumeSize: "75Gi"}
-			dataVolumes := []core.Volume{{Name: &name1, VolumeSize: "75Gi"}, {Name: &name2, VolumeSize: "75Gi"}}
+			dataVolumes := []core.DataVolume{{Name: name1, VolumeSize: "75Gi"}, {Name: name2, VolumeSize: "75Gi"}}
 			worker := core.Worker{
 				Name: "worker-name",
 				Machine: core.Machine{
@@ -2270,7 +2268,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			name1 := "vol1-name"
 			name2 := "vol2-name"
 			vol := core.Volume{Name: &name1, VolumeSize: "75Gi"}
-			dataVolumes := []core.Volume{{Name: &name1, VolumeSize: "75Gi"}, {Name: &name1, VolumeSize: "75Gi"}, {Name: &name2, VolumeSize: "75Gi"}, {Name: &name1, VolumeSize: "75Gi"}}
+			dataVolumes := []core.DataVolume{{Name: name1, VolumeSize: "75Gi"}, {Name: name1, VolumeSize: "75Gi"}, {Name: name2, VolumeSize: "75Gi"}, {Name: name1, VolumeSize: "75Gi"}}
 			worker := core.Worker{
 				Name: "worker-name",
 				Machine: core.Machine{

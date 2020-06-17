@@ -1920,6 +1920,71 @@ DefaultStatus
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.DataVolume">DataVolume
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.WorkerPool">WorkerPool</a>)
+</p>
+<p>
+<p>DataVolume contains information about a data volume.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the volume to make it referencable.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Type is the type of the volume.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>size</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Size is the of the root volume.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>encrypted</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Encrypted determines if the volume should be encrypted.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="extensions.gardener.cloud/v1alpha1.DefaultSpec">DefaultSpec
 </h3>
 <p>
@@ -3243,8 +3308,8 @@ Volume
 <td>
 <code>dataVolumes</code></br>
 <em>
-<a href="#extensions.gardener.cloud/v1alpha1.Volume">
-[]Volume
+<a href="#extensions.gardener.cloud/v1alpha1.DataVolume">
+[]DataVolume
 </a>
 </em>
 </td>

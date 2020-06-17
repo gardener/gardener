@@ -67,10 +67,10 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 			}
 		}
 
-		var dataVolumes []extensionsv1alpha1.Volume
+		var dataVolumes []extensionsv1alpha1.DataVolume
 		if len(workerPool.DataVolumes) > 0 {
 			for _, dataVolume := range workerPool.DataVolumes {
-				dataVolumes = append(dataVolumes, extensionsv1alpha1.Volume{
+				dataVolumes = append(dataVolumes, extensionsv1alpha1.DataVolume{
 					Name:      dataVolume.Name,
 					Type:      dataVolume.Type,
 					Size:      dataVolume.VolumeSize,
