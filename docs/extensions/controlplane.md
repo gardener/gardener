@@ -56,6 +56,12 @@ The second one contains the output of the [`Infrastructure` resource](infrastruc
 In order to support a new control plane provider you need to write a controller that watches all `ControlPlane`s with `.spec.type=<my-provider-name>`.
 You can take a look at the below referenced example implementation for the Alicloud provider.
 
+The control plane controller as part of the `ControlPlane` reconciliation, often deploys resources (e.g. pods/deployments) into the Shoot namespace in the `Seed` as part of its `ControlPlane` reconciliation loop.
+Because the namespace contains [network policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/) that per default [deny all ingress and egress traffic](https://kubernetes.io/docs/concepts/services-networking/network-policies/#default-deny-all-ingress-and-all-egress-traffic), 
+the pods may need to have proper labels matching to the selectors of the network policies in order to allow the required network traffic. 
+Otherwise, they won't be allowed to talk to certain other components (e.g., the kube-apiserver of the shoot).
+Please [see this document](https://github.com/gardener/gardener/tree/master/docs/development/seed_network_policies.md) for more information.
+
 ## Non-provider specific information required for infrastructure creation
 
 Most providers might require further information that is not provider specific but already part of the shoot resource.
