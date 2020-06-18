@@ -20,11 +20,11 @@ checkPrereqs() {
 }
 
 createOrUpdateWebhookSVC(){
-providerName=${1:-}
-[[ -z $providerName ]] && echo "Please specify the provider name (aws,gcp,azure,..etc.)!" && exit 1
-
-namespace=${2:-}
+namespace=${1:-}
 [[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
+
+providerName=${2:-}
+[[ -z $providerName ]] && echo "Please specify the provider name (aws,gcp,azure,..etc.)!" && exit 1
 
 tmpService=$(mktemp)
 kubectl get svc gardener-extension-provider-$providerName -o yaml --export > $tmpService
@@ -239,7 +239,7 @@ usage(){
 
   echo "========================================================USAGE======================================================================"
   echo "> ./hack/hook-me.sh <extension namespace e.g. extension-provider-aws-fpr6w> <provider e.g., aws>  <webhookserver port e.g., 8443>"
-  echo "> \`make EXTENSION_NAMESPACE=<extension namespace e.g. extension-provider-aws-fpr6w> start-provider-<provider-name e.g.,aws>-local\`"
+  echo "> \`make EXTENSION_NAMESPACE=<extension namespace e.g. extension-provider-aws-fpr6w> start\`"
   echo "=================================================================================================================================="
 
   echo ""
@@ -280,7 +280,8 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
             createInletsLB $namespace && sleep 2s
 
             echo "[STEP 3] Waiting for Inlets LB Service to be created..!";
-            loadbalancerIPOrHostName=$(waitForInletsLBToBeReady $namespace $providerName)
+            output=$(waitForInletsLBToBeReady $namespace $providerName)
+            loadbalancerIPOrHostName=$(echo "$output" | tail -n1)
             echo "[Info] LB IP is $loadbalancerIPOrHostName"
 
             echo "[STEP 4] Creating the server Pod for TLS Termination and Tunneling connection..!";
@@ -293,7 +294,7 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
             createOrUpdateWebhookSVC $namespace $providerName
 
             echo "[STEP 7] Initializing the inlets client";
-            echo "[Info] Inlets initialized, you are ready to go ahead and run \"make EXTENSION_NAMESPACE=$namespace start-provider-$providerName-local\""
+            echo "[Info] Inlets initialized, you are ready to go ahead and run \"make EXTENSION_NAMESPACE=$namespace start\""
             echo "[Info] It will take about 5 seconds for the connection to succeeed!"
 
             inlets client --remote ws://$loadbalancerIPOrHostName:8000 --upstream https://localhost:$webhookServerPort --token=21d809ed61915c9177fbceeaa87e307e766be5f2
