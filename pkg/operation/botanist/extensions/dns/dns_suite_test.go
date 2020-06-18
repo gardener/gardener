@@ -21,14 +21,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gardener/gardener/pkg/utils/retry"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 func TestDns(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Dns Suite")
+	RunSpecs(t, "Botanist Extensions DNS Suite")
 }
 
 var _ retry.Ops = &fakeOps{}
@@ -55,6 +56,6 @@ func (o *fakeOps) UntilTimeout(ctx context.Context, interval, timeout time.Durat
 }
 
 func chartsRoot() string {
-	return filepath.Join("../", "../", "../", "../", "charts")
+	return filepath.Join("../", "../", "../", "../", "../", "charts")
 
 }

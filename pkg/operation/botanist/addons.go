@@ -21,14 +21,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener-resource-manager/pkg/manager"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	botanistconstants "github.com/gardener/gardener/pkg/operation/botanist/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/dns"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -36,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/gardener/gardener-resource-manager/pkg/manager"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -73,7 +73,7 @@ func (b *Botanist) EnsureIngressDNSRecord(ctx context.Context) error {
 	return component.OpWaiter(b.Shoot.Components.DNS.NginxEntry).Deploy(ctx)
 }
 
-// DefaultNginxIngressDNSEntry returns a Deployer which removes existing nginx ingress DNSEtnry.
+// DefaultNginxIngressDNSEntry returns a Deployer which removes existing nginx ingress DNSEntry.
 func (b *Botanist) DefaultNginxIngressDNSEntry(seedClient client.Client) component.DeployWaiter {
 	return component.OpDestroy(dns.NewDNSEntry(
 		&dns.EntryValues{

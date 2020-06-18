@@ -23,7 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	. "github.com/gardener/gardener/pkg/operation/botanist/dns"
+	. "github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	. "github.com/gardener/gardener/test/gomega"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"

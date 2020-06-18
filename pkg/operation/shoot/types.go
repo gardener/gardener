@@ -77,7 +77,8 @@ type Shoot struct {
 
 // Components contains different components deployed
 type Components struct {
-	DNS *DNS
+	DNS     *DNS
+	Network component.DeployWaiter
 }
 
 // DNS contains references to internal and external DNSProvider and DNSEntry deployers.

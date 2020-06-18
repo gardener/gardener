@@ -23,7 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	. "github.com/gardener/gardener/pkg/operation/botanist/dns"
+	. "github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	. "github.com/gardener/gardener/test/gomega"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
@@ -158,7 +158,7 @@ var _ = Describe("#DNSEntry", func() {
 			Expect(defaultDepWaiter.Destroy(ctx)).ToNot(HaveOccurred())
 		})
 
-		It("should not return error when it's deleted successfully", func() {
+		It("should return error when it's not deleted successfully", func() {
 			mc := mockclient.NewMockClient(ctrl)
 			mc.EXPECT().Delete(ctx, &dnsv1alpha1.DNSEntry{
 				ObjectMeta: metav1.ObjectMeta{
