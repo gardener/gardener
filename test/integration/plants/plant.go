@@ -60,7 +60,7 @@ const (
 )
 
 func cleanPlant(ctx context.Context, f *framework.ShootFramework, plant *gardencorev1beta1.Plant, secret *corev1.Secret) error {
-	if err := f.GardenClient.Client().Delete(ctx, secret); err != nil {
+	if err := f.GardenClient.DirectClient().Delete(ctx, secret); err != nil {
 		return err
 	}
 	return f.DeletePlant(ctx, plant)

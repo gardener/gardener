@@ -55,7 +55,7 @@ var _ = ginkgo.Describe("Shoot Care testing", func() {
 		gomega.Expect(cond.Status).To(gomega.Equal(gardencorev1beta1.ConditionTrue))
 
 		zero := int32(0)
-		origReplicas, err = framework.ScaleDeployment(timeout, f.SeedClient.Client(), &zero, gardencorev1beta1constants.DeploymentNameKubeAPIServer, f.ShootSeedNamespace())
+		origReplicas, err = framework.ScaleDeployment(timeout, f.SeedClient.DirectClient(), &zero, gardencorev1beta1constants.DeploymentNameKubeAPIServer, f.ShootSeedNamespace())
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 		// wait for unhealthy condition
@@ -64,7 +64,7 @@ var _ = ginkgo.Describe("Shoot Care testing", func() {
 	}, timeout, framework.WithCAfterTest(func(ctx context.Context) {
 		if origReplicas != nil {
 			f.Logger.Infof("Test cleanup: Scale API Server to '%d' replicas again", *origReplicas)
-			origReplicas, err = framework.ScaleDeployment(timeout, f.SeedClient.Client(), origReplicas, gardencorev1beta1constants.DeploymentNameKubeAPIServer, f.ShootSeedNamespace())
+			origReplicas, err = framework.ScaleDeployment(timeout, f.SeedClient.DirectClient(), origReplicas, gardencorev1beta1constants.DeploymentNameKubeAPIServer, f.ShootSeedNamespace())
 			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 			// wait for healthy condition

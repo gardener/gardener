@@ -53,7 +53,7 @@ var _ = ginkgo.Describe("Operating system testing", func() {
 
 			// choose random node
 			nodes := &corev1.NodeList{}
-			err := f.ShootClient.Client().List(ctx, nodes)
+			err := f.ShootClient.DirectClient().List(ctx, nodes)
 			framework.ExpectNoError(err)
 
 			if len(nodes.Items) == 0 {

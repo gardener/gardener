@@ -57,7 +57,7 @@ var _ = Describe("Shoot deletion testing", func() {
 		validateFlags()
 
 		shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: f.ProjectNamespace, Name: *shootName}}
-		if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.ProjectNamespace, Name: *shootName}, shoot); err != nil {
+		if err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: f.ProjectNamespace, Name: *shootName}, shoot); err != nil {
 			if apierrors.IsNotFound(err) {
 				Skip("shoot is already deleted")
 			}

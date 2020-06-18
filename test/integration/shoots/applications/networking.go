@@ -69,11 +69,11 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 		err := f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.NginxDaemonSetName, templateParams)
 		framework.ExpectNoError(err)
 
-		err = f.WaitUntilDaemonSetIsRunning(ctx, f.ShootClient.Client(), name, f.Namespace)
+		err = f.WaitUntilDaemonSetIsRunning(ctx, f.ShootClient.DirectClient(), name, f.Namespace)
 		framework.ExpectNoError(err)
 
 		pods := &corev1.PodList{}
-		err = f.ShootClient.Client().List(ctx, pods, client.InNamespace(f.Namespace), client.MatchingLabels{"app": "net-nginx"})
+		err = f.ShootClient.DirectClient().List(ctx, pods, client.InNamespace(f.Namespace), client.MatchingLabels{"app": "net-nginx"})
 		framework.ExpectNoError(err)
 
 		podExecutor := framework.NewPodExecutor(f.ShootClient)
@@ -100,7 +100,7 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 		framework.ExpectNoError(err)
 	}, networkTestTimeout, framework.WithCAfterTest(func(ctx context.Context) {
 		ginkgo.By("cleanup network test daemonset")
-		err := f.ShootClient.Client().Delete(ctx, &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: f.Namespace}})
+		err := f.ShootClient.DirectClient().Delete(ctx, &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: f.Namespace}})
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
 				framework.ExpectNoError(err)

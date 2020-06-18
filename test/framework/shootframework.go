@@ -77,11 +77,11 @@ func NewShootFramework(cfg *ShootConfig) *ShootFramework {
 		Config:            cfg,
 	}
 
-	ginkgo.BeforeEach(func() {
+	CBeforeEach(func(ctx context.Context) {
 		f.CommonFramework.BeforeEach()
 		f.GardenerFramework.BeforeEach()
-		f.BeforeEach()
-	})
+		f.BeforeEach(ctx)
+	}, 8*time.Minute)
 	CAfterEach(f.AfterEach, 10*time.Minute)
 	return f
 }
@@ -108,9 +108,7 @@ func NewShootFrameworkFromConfig(cfg *ShootConfig) (*ShootFramework, error) {
 
 // BeforeEach should be called in ginkgo's BeforeEach.
 // It sets up the shoot framework.
-func (f *ShootFramework) BeforeEach() {
-	ctx := context.Background()
-	defer ctx.Done()
+func (f *ShootFramework) BeforeEach(ctx context.Context) {
 	f.Config = mergeShootConfig(f.Config, shootCfg)
 	validateShootConfig(f.Config)
 	err := f.AddShoot(ctx, f.Config.ShootName, f.ProjectNamespace)
@@ -132,7 +130,7 @@ func (f *ShootFramework) AfterEach(ctx context.Context) {
 		ns := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: f.Namespace},
 		}
-		err := f.ShootClient.Client().Delete(ctx, ns)
+		err := f.ShootClient.DirectClient().Delete(ctx, ns)
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
 				ExpectNoError(err)
@@ -153,7 +151,7 @@ func (f *ShootFramework) CreateNewNamespace(ctx context.Context) (string, error)
 			GenerateName: "gardener-e2e-",
 		},
 	}
-	if err := f.ShootClient.Client().Create(ctx, ns); err != nil {
+	if err := f.ShootClient.DirectClient().Create(ctx, ns); err != nil {
 		return "", err
 	}
 
@@ -173,7 +171,7 @@ func (f *ShootFramework) AddShoot(ctx context.Context, shootName, shootNamespace
 		err         error
 	)
 
-	if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shootNamespace, Name: shootName}, shoot); err != nil {
+	if err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: shootNamespace, Name: shootName}, shoot); err != nil {
 		return errors.Wrapf(err, "could not get shoot")
 	}
 
@@ -294,7 +292,7 @@ func (f *ShootFramework) UpdateShoot(ctx context.Context, update func(shoot *gar
 // GetCloudProfile returns the cloudprofile of the shoot
 func (f *ShootFramework) GetCloudProfile(ctx context.Context) (*gardencorev1beta1.CloudProfile, error) {
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: f.Shoot.Spec.CloudProfileName}, cloudProfile); err != nil {
+	if err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: f.Shoot.Spec.CloudProfileName}, cloudProfile); err != nil {
 		return nil, errors.Wrap(err, "could not get Seed's CloudProvider in Garden cluster")
 	}
 	return cloudProfile, nil
@@ -304,7 +302,7 @@ func (f *ShootFramework) GetCloudProfile(ctx context.Context) (*gardencorev1beta
 func (f *ShootFramework) WaitForShootCondition(ctx context.Context, interval, timeout time.Duration, conditionType gardencorev1beta1.ConditionType, conditionStatus gardencorev1beta1.ConditionStatus) error {
 	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
 		shoot := &gardencorev1beta1.Shoot{}
-		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: f.Shoot.Name}, shoot)
+		err = f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: f.Shoot.Name}, shoot)
 		if err != nil {
 			f.Logger.Infof("Error while waiting for shoot to have expected condition: %s", err.Error())
 			return retry.MinorError(err)

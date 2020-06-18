@@ -59,7 +59,7 @@ var _ = Describe("Shoot reconciliation testing", func() {
 
 		err := retry.UntilTimeout(ctx, 30*time.Second, ReconcileShootsTimeout, func(ctx context.Context) (bool, error) {
 			shoots := &gardencorev1beta1.ShootList{}
-			err := f.GardenClient.Client().List(ctx, shoots)
+			err := f.GardenClient.DirectClient().List(ctx, shoots)
 			if err != nil {
 				f.Logger.Debug(err.Error())
 				return retry.MinorError(err)
