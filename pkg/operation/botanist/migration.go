@@ -152,7 +152,8 @@ func (b *Botanist) AnnotateBackupEntryInSeedForMigration(ctx context.Context) er
 		name        = common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
 		backupEntry = &extensionsv1alpha1.BackupEntry{}
 	)
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(name), backupEntry); err != nil {
+
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(name), backupEntry); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 

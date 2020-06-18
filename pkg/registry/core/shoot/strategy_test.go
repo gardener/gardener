@@ -388,11 +388,13 @@ var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
 		result := shootregistry.ToSelectableFields(newShoot("foo"))
 
-		Expect(result).To(HaveLen(4))
+		Expect(result).To(HaveLen(5))
 		Expect(result.Has(core.ShootSeedName)).To(BeTrue())
 		Expect(result.Get(core.ShootSeedName)).To(Equal("foo"))
 		Expect(result.Has(core.ShootCloudProfileName)).To(BeTrue())
 		Expect(result.Get(core.ShootCloudProfileName)).To(Equal("baz"))
+		Expect(result.Has(core.ShootStatusSeedName)).To(BeTrue())
+		Expect(result.Get(core.ShootStatusSeedName)).To(Equal("foo"))
 	})
 })
 
@@ -442,6 +444,9 @@ func newShoot(seedName string) *core.Shoot {
 		Spec: core.ShootSpec{
 			CloudProfileName: "baz",
 			SeedName:         &seedName,
+		},
+		Status: core.ShootStatus{
+			SeedName: &seedName,
 		},
 	}
 }
