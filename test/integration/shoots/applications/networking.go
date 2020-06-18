@@ -27,22 +27,19 @@
 package applications
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"io/ioutil"
+	"time"
+
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
-	"io/ioutil"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"text/template"
-	"time"
 
 	"github.com/onsi/ginkgo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,20 +61,12 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 	)
 
 	f.Beta().CIt("should reach all webservers on all nodes", func(ctx context.Context) {
-		templateFilepath := filepath.Join(f.TemplatesDir, templates.NginxDaemonSetName)
-		nettestTmpl, err := template.ParseFiles(templateFilepath)
-		framework.ExpectNoError(err)
-
-		ginkgo.By("Deploy the net test daemon set")
-		var writer bytes.Buffer
-		err = nettestTmpl.Execute(&writer, map[string]string{
+		templateParams := map[string]string{
 			"name":      name,
 			"namespace": f.Namespace,
-		})
-		framework.ExpectNoError(err)
-
-		manifestReader := kubernetes.NewManifestReader(writer.Bytes())
-		err = f.ShootClient.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultMergeFuncs)
+		}
+		ginkgo.By("Deploy the net test daemon set")
+		err := f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.NginxDaemonSetName, templateParams)
 		framework.ExpectNoError(err)
 
 		err = f.WaitUntilDaemonSetIsRunning(ctx, f.ShootClient.Client(), name, f.Namespace)

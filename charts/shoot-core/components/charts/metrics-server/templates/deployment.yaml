@@ -53,6 +53,7 @@ spec:
         # The kube-apiserver and the kubelet use different CAs, however, the metrics-server assumes the CAs are the same.
         # We should remove this flag once it is possible to specify the CA of the kubelet.
         - --kubelet-insecure-tls
+        - --kubelet-preferred-address-types=[Hostname,InternalDNS,InternalIP,ExternalDNS,ExternalIP]
         - --tls-cert-file=/srv/metrics-server/tls/tls.crt
         - --tls-private-key-file=/srv/metrics-server/tls/tls.key
         - --v=2

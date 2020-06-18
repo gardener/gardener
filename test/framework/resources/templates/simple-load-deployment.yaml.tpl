@@ -17,6 +17,8 @@ spec:
       - image: alpine:3.11
         name: load
         command: ["sh", "-c"]
+        {{ if .nodeName }}
         nodeName: {{ .nodeName }}
+        {{ end }}
         args:
         - while true; do echo "testing"; done;
