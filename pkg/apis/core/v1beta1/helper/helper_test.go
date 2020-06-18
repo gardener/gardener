@@ -1443,7 +1443,7 @@ var _ = Describe("helper", func() {
 
 				shootSet2 := s2.Union(&s)
 				Expect(len(shootSet)).To(Equal(3))
-				Expect(shootSet).To(Equal(shootSet2))
+				Expect(shootSet).To(ConsistOf(shootSet2))
 
 			})
 		})
