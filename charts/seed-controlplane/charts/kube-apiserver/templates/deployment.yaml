@@ -279,10 +279,8 @@ spec:
         ports:
           - name: agentport
             containerPort: {{ .Values.konnectivityTunnel.agentPort }}
-            hostPort: {{ .Values.konnectivityTunnel.agentPort }}
           - name: adminport
             containerPort: {{ .Values.konnectivityTunnel.adminPort }}
-            hostPort: {{ .Values.konnectivityTunnel.adminPort }}
         volumeMounts:
           - name: konnectivity-server-certs
             mountPath: /certs/konnectivity-server
