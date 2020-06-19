@@ -80,3 +80,6 @@ spec:
 {{- else }}
   volumeClaimTemplate: etcd-{{ .Values.role }}
 {{- end }}
+{{- if .Values.volumeRetentionPolicy }}
+  volumeRetentionPolicy: {{ .Values.volumeRetentionPolicy }}
+{{- end }}

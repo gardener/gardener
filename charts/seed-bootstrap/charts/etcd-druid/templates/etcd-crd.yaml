@@ -343,6 +343,13 @@ spec:
               description: VolumeClaimTemplate defines the volume claim template to
                 be created
               type: string
+            volumeRetentionPolicy:
+              description: VolumeRetentionPolicy defines the policy for retaining
+                volumes on etcd scale-down and deletion
+              enum:
+              - Delete
+              - Retain
+              type: string
           required:
           - backup
           - etcd

@@ -30,6 +30,7 @@ rules:
   resources:
   - services
   - configmaps
+  - persistentvolumeclaims
   verbs:
   - get
   - list
