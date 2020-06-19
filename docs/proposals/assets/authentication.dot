@@ -1,0 +1,126 @@
+digraph autheflow {
+    graph [overlap=false, splines=line, nodesep=1.2, ordering=out];
+    edge [arrowhead=none];
+    node [shape=none, width=0, height=0, label=""];
+
+    {
+        rank=same
+        node[shape=rectangle, height=0.7]
+        user[label="User"]
+        idp[label="Custom IDP"]
+        k8suath[label="Kube API Server\nfor authentication"]
+        k8s[label="Kube API Server\n(Shoot cluster)"]
+        auth[label="OIDC Authenticator"]
+    }
+
+    // Draw vertical lines
+    {
+        edge [style=dashed,weight=6]
+        user -> aa1
+        aa1 -> aa2
+        aa2 -> aa3[penwidth=5,style=solid]
+        aa3 -> aa4
+        aa4 -> aa5
+        aa5 -> aa6
+        aa6 -> aa7
+        aa7 -> aa8
+        aa8 -> aa9
+        aa9 -> aa10
+        aa10 -> aa11
+    }
+    {
+        edge [style=dashed, weight=6]
+        idp -> ba1
+        ba1 -> ba2[penwidth=5,style=solid]
+        ba2 -> ba3
+        ba3 -> ba4
+        ba4 -> ba5
+        ba5 -> ba6
+        ba6 -> ba7
+        ba7 -> ba8
+        ba8 -> ba9
+        ba9 -> ba10
+        ba10 -> ba11
+    }
+    {
+        edge [style=dashed, weight=6]
+        k8suath -> ca1
+        ca1 -> ca2
+        ca2 -> ca3
+        ca3 -> ca4
+        ca4 -> ca5
+        ca5 -> ca6 [penwidth=5,style=solid]
+        ca6 -> ca7
+        ca7 -> ca8 [penwidth=5,style=solid]
+        ca8 -> ca9
+        ca9 -> ca10
+        ca10 -> ca11
+    }
+
+    {
+        edge [style=dashed,weight=7]
+        k8s -> da1
+        da1 -> da2
+        da2 -> da3
+        da3 -> da4 [penwidth=5,style=solid]
+        da4 -> da5
+        da5 -> da6
+        da6 -> da7
+        da7 -> da8
+        da8 -> da9
+        da9 -> da10[penwidth=5,style=solid]
+        da10 -> da11
+    }
+    {
+        edge [style=dashed,weight=6]
+        auth -> ea1
+        ea1 -> ea2
+        ea2 -> ea3
+        ea3 -> ea4
+        ea4 -> ea5 [penwidth=5,style=solid]
+        ea5 -> ea6
+        ea6 -> ea7[penwidth=5,style=solid]
+        ea7 -> ea8
+        ea8 -> ea9 [penwidth=5,arrowhead=normal,style=solid,label="  validate\n   id_token"]
+        ea9 -> ea10
+        ea10 -> ea11
+    }
+
+    // Draws activations
+    { rank=same; aa1 -> ba1 [label="authenticate"arrowhead=normal] }
+    { rank=same; aa2 -> ba2 [label="id_token"arrowhead=normal;dir=back] }
+    {
+        rank=same
+        aa3 -> ba3 [label="API call with\nid_token"]
+        ba3 -> ca3
+        ca3 -> da3 [arrowhead=normal]
+    }
+    { rank=same; da4 -> ea4 [label="TokenReview-1 for\nid_token"arrowhead=normal] }
+    {
+        rank=same
+        ca5 -> da5 [arrowhead=normal,dir=back]
+        da5 -> ea5 [label="TokenReview-2 for\nAPI Server Identity"]
+    }
+    {
+        rank=same
+        ca6 -> da6 [label="TokenReview-2\nresponse"]
+        da6 -> ea6 [arrowhead=normal]
+    }
+    {
+        rank=same
+        ca7 -> da7 [arrowhead=normal,dir=back]
+        da7 -> ea7 [label="SubjectAccessReview for\nAPI Server Identity"]
+    }
+    {
+        rank=same
+        ca8 -> da8 [label="SubjectAccessReview\nresponse"]
+        da8 -> ea8 [arrowhead=normal]
+    }
+    { rank=same; da9 -> ea9 [label="TokenReview-1\nresponse",arrowhead=normal,dir=back] }
+    {
+        rank=same
+        aa10 -> ba10 [arrowhead=normal,dir=back]
+        ba10 -> ca10
+        ca10 -> da10[label="API call\nresponse"]
+    }
+}
