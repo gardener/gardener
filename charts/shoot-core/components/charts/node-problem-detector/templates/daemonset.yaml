@@ -67,7 +67,17 @@ spec:
             - containerPort: {{ .Values.settings.prometheus_port }}
               name: exporter
           resources:
-{{ toYaml .Values.resources | indent 12 }}
+            requests:
+              cpu: 20m
+              memory: 20Mi
+            limits:
+            {{- if .Values.global.vpaEnabled }}
+              cpu: 80m
+              memory: 80Mi
+            {{- else }}
+              cpu: 200m
+              memory: 100Mi
+            {{- end }}
     {{- with .Values.affinity }}
       affinity:
 {{ toYaml . | indent 8 }}

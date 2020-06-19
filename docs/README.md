@@ -19,10 +19,14 @@
 
 ## Usage
 
+* [Add a Shooted Seed](usage/shooted_seed.md)
+* [API Server Network Proxy Reverse Tunneling](usage/reverse-tunnel.md)
 * [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
+* [Auto-Scaling for shoot clusters](usage/shoot_autoscaling.md)
 * [Custom `CoreDNS` configuration](usage/custom-dns.md)
 * [Gardener configuration and usage](usage/configuration.md)
 * [OpenIDConnect presets](usage/openidconnect-presets.md)
+* [Network Policies in the Shoot Cluster](usage/shoot_network_policies.md)
 * [Shoot cluster purposes](usage/shoot_purposes.md)
 * [Shoot Kubernetes and Operating System versioning](usage/shoot_versions.md)
 * [Shoot Maintenance](usage/shoot_maintenance.md)
@@ -32,9 +36,6 @@
 * [Troubleshooting guide](usage/trouble_shooting_guide.md)
 * [`ManagedIstio` feature](usage/istio.md)
 * [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
-* [API Server Network Proxy Reverse Tunneling](usage/reverse-tunnel.md)
-* [Network Policies in the Shoot Cluster](usage/shoot_network_policies.md)
-* [Add a Shooted Seed](usage/shooted_seed.md)
 
 ## Proposals
 

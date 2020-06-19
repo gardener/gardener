@@ -125,19 +125,6 @@ func (b *Botanist) GenerateNginxIngressConfig() (map[string]interface{}, error) 
 				},
 			},
 		}
-
-		if b.ShootedSeed != nil {
-			values = utils.MergeMaps(values, map[string]interface{}{
-				"controller": map[string]interface{}{
-					"resources": map[string]interface{}{
-						"limits": map[string]interface{}{
-							"cpu":    "1500m",
-							"memory": "2048Mi",
-						},
-					},
-				},
-			})
-		}
 	}
 
 	return common.GenerateAddonConfig(values, enabled), nil
@@ -316,6 +303,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		global          = map[string]interface{}{
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 			"podNetwork":        b.Shoot.Networks.Pods.String(),
+			"vpaEnabled":        b.Shoot.WantsVerticalPodAutoscaler,
 		}
 		coreDNSConfig = map[string]interface{}{
 			"service": map[string]interface{}{
@@ -345,6 +333,12 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			"secret": map[string]interface{}{
 				"data": b.Secrets["metrics-server"].Data,
 			},
+		}
+		verticalPodAutoscaler = map[string]interface{}{
+			"admissionController": map[string]interface{}{"enableServiceAccount": false},
+			"exporter":            map[string]interface{}{"enableServiceAccount": false},
+			"recommender":         map[string]interface{}{"enableServiceAccount": false},
+			"updater":             map[string]interface{}{"enableServiceAccount": false},
 		}
 
 		shootInfo = map[string]interface{}{
@@ -437,10 +431,11 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
 		}, b.Shoot.GetPurpose() != gardencorev1beta1.ShootPurposeTesting),
-		"network-policies":      common.GenerateAddonConfig(networkPolicyConfig, true),
-		"node-problem-detector": common.GenerateAddonConfig(nodeProblemDetector, true),
-		"podsecuritypolicies":   common.GenerateAddonConfig(podSecurityPolicies, true),
-		"shoot-info":            common.GenerateAddonConfig(shootInfo, true),
+		"network-policies":        common.GenerateAddonConfig(networkPolicyConfig, true),
+		"node-problem-detector":   common.GenerateAddonConfig(nodeProblemDetector, true),
+		"podsecuritypolicies":     common.GenerateAddonConfig(podSecurityPolicies, true),
+		"shoot-info":              common.GenerateAddonConfig(shootInfo, true),
+		"vertical-pod-autoscaler": common.GenerateAddonConfig(verticalPodAutoscaler, b.Shoot.WantsVerticalPodAutoscaler),
 	}
 
 	var shootClient = b.K8sShootClient.Client()
@@ -524,6 +519,10 @@ func (b *Botanist) generateCoreNamespacesChart() (*chartrenderer.RenderedChart, 
 // generateOptionalAddonsChart renders the gardener-resource-manager chart for the optional addons. After that it
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *Botanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, error) {
+	global := map[string]interface{}{
+		"vpaEnabled": b.Shoot.WantsVerticalPodAutoscaler,
+	}
+
 	kubernetesDashboardConfig, err := b.GenerateKubernetesDashboardConfig()
 	if err != nil {
 		return nil, err
@@ -553,6 +552,7 @@ func (b *Botanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, 
 	}
 
 	return b.K8sShootClient.ChartRenderer().Render(filepath.Join(common.ChartPath, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
+		"global":               global,
 		"kubernetes-dashboard": kubernetesDashboard,
 		"nginx-ingress":        nginxIngress,
 	})

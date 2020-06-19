@@ -1,0 +1,74 @@
+{{- if .Values.recommender.enabled }}
+---
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: vpa-recommender
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: vpa-recommender
+{{ toYaml .Values.labels | indent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpa-recommender
+{{ toYaml .Values.labels | indent 6 }}
+  template:
+    metadata:
+{{- if .Values.recommender.podAnnotations }}
+      annotations:
+{{ toYaml .Values.recommender.podAnnotations | indent 8 }}
+{{- end }}
+      labels:
+        app: vpa-recommender
+{{ toYaml .Values.labels | indent 8 }}
+{{- if .Values.admissionController.podLabels }}
+{{ toYaml .Values.admissionController.podLabels | indent 8 }}
+{{- end }}
+    spec:
+{{- if .Values.recommender.enableServiceAccount }}
+      serviceAccountName: vpa-recommender
+{{- else }}
+      automountServiceAccountToken: false
+{{- end }}
+      containers:
+      - name: recommender
+        image: {{ index .Values.global.images "vpa-recommender" }}
+        command:
+        - ./recommender
+        args:
+        - --v=2
+        - --stderrthreshold=info
+        - --pod-recommendation-min-cpu-millicores=5
+        - --pod-recommendation-min-memory-mb=10
+        - --recommendation-margin-fraction={{ .Values.recommender.recommendationMarginFraction }}
+        - --recommender-interval={{ .Values.recommender.interval }}
+{{- if not .Values.recommender.enableServiceAccount }}
+        env:
+        - name: KUBERNETES_SERVICE_HOST
+          value: kube-apiserver
+        - name: KUBERNETES_SERVICE_PORT
+          value: "443"
+        volumeMounts:
+        - name: vpa-recommender
+          mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          readOnly: true
+{{- end }}
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            cpu: 200m
+            memory: 1000Mi
+          requests:
+            cpu: 50m
+            memory: 500Mi
+        ports:
+        - containerPort: 8080
+{{- if not .Values.recommender.enableServiceAccount }}
+      volumes:
+      - name: vpa-recommender
+        secret:
+          secretName: vpa-recommender
+{{- end }}
+{{- end }}

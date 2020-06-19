@@ -465,10 +465,6 @@ func BootstrapCluster(k8sSeedClient kubernetes.Interface, seed *Seed, secrets ma
 		return err
 	}
 
-	vpaPodAnnotations := map[string]interface{}{
-		"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),
-	}
-
 	// AlertManager configuration
 	alertManagerConfig := map[string]interface{}{
 		"storage": seed.GetValidVolumeSize("1Gi"),
@@ -712,7 +708,11 @@ func BootstrapCluster(k8sSeedClient kubernetes.Interface, seed *Seed, secrets ma
 		},
 		"alertmanager": alertManagerConfig,
 		"vpa": map[string]interface{}{
-			"podAnnotations": vpaPodAnnotations,
+			"admissionController": map[string]interface{}{
+				"podAnnotations": map[string]interface{}{
+					"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),
+				},
+			},
 		},
 		"hvpa": map[string]interface{}{
 			"enabled": hvpaEnabled,

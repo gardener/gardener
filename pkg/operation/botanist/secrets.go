@@ -162,6 +162,12 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		return err
 	}
 
+	if b.Shoot.WantsVerticalPodAutoscaler {
+		if err := b.storeStaticTokenAsSecrets(ctx, secretsManager.StaticToken, existingSecrets[v1beta1constants.SecretNameCACluster].Data[secrets.DataKeyCertificateCA], vpaSecrets); err != nil {
+			return err
+		}
+	}
+
 	func() {
 		b.mutex.Lock()
 		defer b.mutex.Unlock()
@@ -280,6 +286,37 @@ func (b *Botanist) storeAPIServerHealthCheckToken(staticToken *secrets.StaticTok
 	}
 
 	b.APIServerHealthCheckToken = kubeAPIServerHealthCheckToken.Token
+	return nil
+}
+
+func (b *Botanist) storeStaticTokenAsSecrets(ctx context.Context, staticToken *secrets.StaticToken, caCert []byte, secretNameToUsername map[string]string) error {
+	for secretName, username := range secretNameToUsername {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secretName,
+				Namespace: b.Shoot.SeedNamespace,
+			},
+			Type: corev1.SecretTypeOpaque,
+		}
+
+		token, err := staticToken.GetTokenForUsername(username)
+		if err != nil {
+			return err
+		}
+
+		if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), secret, func() error {
+			secret.Data = map[string][]byte{
+				secrets.DataKeyToken:         []byte(token.Token),
+				secrets.DataKeyCertificateCA: caCert,
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+
+		b.CheckSums[secretName] = common.ComputeSecretCheckSum(secret.Data)
+	}
+
 	return nil
 }
 

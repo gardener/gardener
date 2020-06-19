@@ -152,6 +152,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootStateSpec":                        schema_pkg_apis_core_v1alpha1_ShootStateSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootStatus":                           schema_pkg_apis_core_v1alpha1_ShootStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Toleration":                            schema_pkg_apis_core_v1alpha1_Toleration(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.VerticalPodAutoscaler":                 schema_pkg_apis_core_v1alpha1_VerticalPodAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Volume":                                schema_pkg_apis_core_v1alpha1_Volume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.VolumeType":                            schema_pkg_apis_core_v1alpha1_VolumeType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Worker":                                schema_pkg_apis_core_v1alpha1_Worker(ref),
@@ -271,6 +272,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec":                              schema_pkg_apis_core_v1beta1_ShootSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStatus":                            schema_pkg_apis_core_v1beta1_ShootStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration":                             schema_pkg_apis_core_v1beta1_Toleration(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler":                  schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume":                                 schema_pkg_apis_core_v1beta1_Volume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType":                             schema_pkg_apis_core_v1beta1_VolumeType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker":                                 schema_pkg_apis_core_v1beta1_Worker(ref),
@@ -1423,7 +1425,7 @@ func schema_pkg_apis_core_v1alpha1_ClusterAutoscaler(ref common.ReferenceCallbac
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.",
+				Description: "ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"scaleDownDelayAfterAdd": {
@@ -2988,7 +2990,7 @@ func schema_pkg_apis_core_v1alpha1_Kubernetes(ref common.ReferenceCallback) comm
 					},
 					"clusterAutoscaler": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.",
+							Description: "ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ClusterAutoscaler"),
 						},
 					},
@@ -3029,12 +3031,18 @@ func schema_pkg_apis_core_v1alpha1_Kubernetes(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"verticalPodAutoscaler": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.VerticalPodAutoscaler"),
+						},
+					},
 				},
 				Required: []string{"version"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ClusterAutoscaler", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeAPIServerConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeProxyConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeSchedulerConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfig"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ClusterAutoscaler", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeAPIServerConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeProxyConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeSchedulerConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.VerticalPodAutoscaler"},
 	}
 }
 
@@ -5912,6 +5920,75 @@ func schema_pkg_apis_core_v1alpha1_Toleration(ref common.ReferenceCallback) comm
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_VerticalPodAutoscaler(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled specifies whether the Kubernetes VPA shall be enabled for the shoot cluster.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"evictAfterOOMThreshold": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EvictAfterOOMThreshold defines the threshold that will lead to pod eviction in case it OOMed in less than the given threshold since its start and if it has only one container (default: 10m0s).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"evictionRateBurst": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EvictionRateBurst defines the burst of pods that can be evicted (default: 1)",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"evictionRateLimit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EvictionRateLimit defines the number of pods that can be evicted per second. A rate limit set to 0 or -1 will disable the rate limiter (default: -1).",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
+					"evictionTolerance": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EvictionTolerance defines the fraction of replica count that can be evicted for update in case more than one pod can be evicted (default: 0.5).",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
+					"recommendationMarginFraction": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RecommendationMarginFraction is the fraction of usage added as the safety margin to the recommended request (default: 0.15).",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
+					"updaterInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UpdaterInterval is the interval how often the updater should run (default: 1m0s).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"recommenderInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_Volume(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -7048,7 +7125,7 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.",
+				Description: "ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"scaleDownDelayAfterAdd": {
@@ -8521,7 +8598,7 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 					},
 					"clusterAutoscaler": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.",
+							Description: "ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler"),
 						},
 					},
@@ -8562,12 +8639,18 @@ func schema_pkg_apis_core_v1beta1_Kubernetes(ref common.ReferenceCallback) commo
 							Format:      "",
 						},
 					},
+					"verticalPodAutoscaler": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler"),
+						},
+					},
 				},
 				Required: []string{"version"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeProxyConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeSchedulerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeProxyConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeSchedulerConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler"},
 	}
 }
 
@@ -11243,6 +11326,75 @@ func schema_pkg_apis_core_v1beta1_Toleration(ref common.ReferenceCallback) commo
 				Required: []string{"key"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled specifies whether the Kubernetes VPA shall be enabled for the shoot cluster.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"evictAfterOOMThreshold": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EvictAfterOOMThreshold defines the threshold that will lead to pod eviction in case it OOMed in less than the given threshold since its start and if it has only one container (default: 10m0s).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"evictionRateBurst": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EvictionRateBurst defines the burst of pods that can be evicted (default: 1)",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"evictionRateLimit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EvictionRateLimit defines the number of pods that can be evicted per second. A rate limit set to 0 or -1 will disable the rate limiter (default: -1).",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
+					"evictionTolerance": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EvictionTolerance defines the fraction of replica count that can be evicted for update in case more than one pod can be evicted (default: 0.5).",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
+					"recommendationMarginFraction": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RecommendationMarginFraction is the fraction of usage added as the safety margin to the recommended request (default: 0.15).",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
+					"updaterInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UpdaterInterval is the interval how often the updater should run (default: 1m0s).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"recommenderInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 

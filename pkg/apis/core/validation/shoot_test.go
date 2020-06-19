@@ -1645,6 +1645,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)
 		})
 
+		var negativeDuration = metav1.Duration{Duration: -time.Second}
+
+		Context("VerticalPodAutoscaler validation", func() {
+			DescribeTable("verticalPod autoscaler values",
+				func(verticalPodAutoscaler core.VerticalPodAutoscaler, matcher gomegatypes.GomegaMatcher) {
+					Expect(ValidateVerticalPodAutoscaler(verticalPodAutoscaler, nil)).To(matcher)
+				},
+				Entry("valid", core.VerticalPodAutoscaler{}, BeEmpty()),
+				Entry("invalid negative durations", core.VerticalPodAutoscaler{
+					EvictAfterOOMThreshold: &negativeDuration,
+					UpdaterInterval:        &negativeDuration,
+					RecommenderInterval:    &negativeDuration,
+				}, ConsistOf(
+					field.Invalid(field.NewPath("evictAfterOOMThreshold"), negativeDuration, "can not be negative"),
+					field.Invalid(field.NewPath("updaterInterval"), negativeDuration, "can not be negative"),
+					field.Invalid(field.NewPath("recommenderInterval"), negativeDuration, "can not be negative"),
+				)),
+			)
+		})
+
 		Context("AuditConfig validation", func() {
 			It("should forbid empty name", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name = ""

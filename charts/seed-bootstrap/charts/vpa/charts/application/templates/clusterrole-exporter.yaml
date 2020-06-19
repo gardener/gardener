@@ -1,0 +1,18 @@
+{{- if .Values.exporter.enabled }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: system:vpa-exporter-role
+  labels:
+{{ toYaml .Values.labels | indent 4 }}
+rules:
+- apiGroups:
+  - "autoscaling.k8s.io"
+  resources:
+  - verticalpodautoscalers
+  verbs:
+  - get
+  - watch
+  - list
+{{- end }}

@@ -55,12 +55,13 @@ type Shoot struct {
 	ExternalClusterDomain *string
 	ExternalDomain        *garden.Domain
 
-	WantsClusterAutoscaler    bool
-	WantsAlertmanager         bool
-	IgnoreAlerts              bool
-	HibernationEnabled        bool
-	KonnectivityTunnelEnabled bool
-	Networks                  *Networks
+	WantsClusterAutoscaler     bool
+	WantsVerticalPodAutoscaler bool
+	WantsAlertmanager          bool
+	IgnoreAlerts               bool
+	HibernationEnabled         bool
+	KonnectivityTunnelEnabled  bool
+	Networks                   *Networks
 
 	Components *Components
 

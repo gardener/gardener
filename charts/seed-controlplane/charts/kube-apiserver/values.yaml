@@ -9,6 +9,7 @@ konnectivityTunnel:
   adminPort: 8133
   agentNamespace: kube-system
 probeCredentials: base64(user:pass)
+vpaEnabled: false
 shootNetworks:
   services: 10.0.1.0/24
   pods: 192.168.0.0/1

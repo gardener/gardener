@@ -5,7 +5,39 @@ global:
     vpa-updater: image-repository:image-tag
     vpa-exporter: image-repository:image-tag
 
-enabled: true
-podAnnotations: {}
 labels:
   garden.sapcloud.io/role: vpa
+
+admissionController:
+  enabled: true
+  podAnnotations: {}
+  podLabels: {}
+  enableServiceAccount: true
+  registerByURL: false
+
+exporter:
+  enabled: true
+  podAnnotations: {}
+  podLabels: {}
+  enableServiceAccount: true
+  enableVPA: true
+  enableService: true
+
+recommender:
+  enabled: true
+  podAnnotations: {}
+  podLabels: {}
+  enableServiceAccount: true
+  interval: 1m0s
+  recommendationMarginFraction: 0.05
+
+updater:
+  enabled: true
+  podAnnotations: {}
+  podLabels: {}
+  enableServiceAccount: true
+  evictAfterOOMThreshold: 48h
+  evictionRateBurst: 1
+  evictionRateLimit: -1
+  evictionTolerance: 1
+  interval: 1m0s

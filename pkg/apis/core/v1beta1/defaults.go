@@ -229,6 +229,38 @@ func SetDefaults_Maintenance(obj *Maintenance) {
 	}
 }
 
+// SetDefaults_VerticalPodAutoscaler sets default values for VerticalPodAutoscaler objects.
+func SetDefaults_VerticalPodAutoscaler(obj *VerticalPodAutoscaler) {
+	if obj.EvictAfterOOMThreshold == nil {
+		v := DefaultEvictAfterOOMThreshold
+		obj.EvictAfterOOMThreshold = &v
+	}
+	if obj.EvictionRateBurst == nil {
+		v := DefaultEvictionRateBurst
+		obj.EvictionRateBurst = &v
+	}
+	if obj.EvictionRateLimit == nil {
+		v := DefaultEvictionRateLimit
+		obj.EvictionRateLimit = &v
+	}
+	if obj.EvictionTolerance == nil {
+		v := DefaultEvictionTolerance
+		obj.EvictionTolerance = &v
+	}
+	if obj.RecommendationMarginFraction == nil {
+		v := DefaultRecommendationMarginFraction
+		obj.RecommendationMarginFraction = &v
+	}
+	if obj.UpdaterInterval == nil {
+		v := DefaultUpdaterInterval
+		obj.UpdaterInterval = &v
+	}
+	if obj.RecommenderInterval == nil {
+		v := DefaultRecommenderInterval
+		obj.RecommenderInterval = &v
+	}
+}
+
 // SetDefaults_Worker sets default values for Worker objects.
 func SetDefaults_Worker(obj *Worker) {
 	if obj.MaxSurge == nil {

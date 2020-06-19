@@ -8,11 +8,3 @@ images:
   kubernetes-dashboard-metrics-scraper: image-repository:image-tag
 
 authenticationMode: basic
-
-resources:
-  requests:
-    cpu: 50m
-    memory: 50Mi
-  limits:
-    cpu: 100m
-    memory: 256Mi

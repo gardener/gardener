@@ -205,6 +205,15 @@ spec:
   #   scaleDownDelayAfterFailure: 10m
   #   scaleDownDelayAfterDelete: 10s
   #   scanInterval: 10s
+  # verticalPodAutoscaler:
+  #   enabled: true
+  #   evictAfterOOMThreshold: 10m0s
+  #   evictionRateBurst: 1
+  #   evictionRateLimit: -1
+  #   evictionTolerance: 0.5
+  #   recommendationMarginFraction: 0.15
+  #   updaterInterval: 1m0s
+  #   recommenderInterval: 1m0s
   dns:
     # When the shoot shall use a cluster domain no domain and no providers need to be provided - Gardener will
     # automatically compute a correct domain based on the default domains in the garden cluster.

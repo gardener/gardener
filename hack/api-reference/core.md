@@ -2420,7 +2420,7 @@ string
 <a href="#core.gardener.cloud/v1beta1.Kubernetes">Kubernetes</a>)
 </p>
 <p>
-<p>ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.</p>
+<p>ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.</p>
 </p>
 <table>
 <thead>
@@ -4524,7 +4524,7 @@ ClusterAutoscaler
 </td>
 <td>
 <em>(Optional)</em>
-<p>ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.</p>
+<p>ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.</p>
 </td>
 </tr>
 <tr>
@@ -4606,6 +4606,20 @@ string
 </td>
 <td>
 <p>Version is the semantic Kubernetes version to use for the Shoot cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>verticalPodAutoscaler</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.VerticalPodAutoscaler">
+VerticalPodAutoscaler
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.</p>
 </td>
 </tr>
 </tbody>
@@ -7714,6 +7728,130 @@ string
 <p>
 <p>VersionClassification is the logical state of a version according to <a href="https://github.com/gardener/gardener/blob/master/docs/operations/versioning.md">https://github.com/gardener/gardener/blob/master/docs/operations/versioning.md</a></p>
 </p>
+<h3 id="core.gardener.cloud/v1beta1.VerticalPodAutoscaler">VerticalPodAutoscaler
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Kubernetes">Kubernetes</a>)
+</p>
+<p>
+<p>VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled specifies whether the Kubernetes VPA shall be enabled for the shoot cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>evictAfterOOMThreshold</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EvictAfterOOMThreshold defines the threshold that will lead to pod eviction in case it OOMed in less than the given
+threshold since its start and if it has only one container (default: 10m0s).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>evictionRateBurst</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EvictionRateBurst defines the burst of pods that can be evicted (default: 1)</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>evictionRateLimit</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EvictionRateLimit defines the number of pods that can be evicted per second. A rate limit set to 0 or -1 will
+disable the rate limiter (default: -1).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>evictionTolerance</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EvictionTolerance defines the fraction of replica count that can be evicted for update in case more than one
+pod can be evicted (default: 0.5).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>recommendationMarginFraction</code></br>
+<em>
+float64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RecommendationMarginFraction is the fraction of usage added as the safety margin to the recommended request
+(default: 0.15).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>updaterInterval</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UpdaterInterval is the interval how often the updater should run (default: 1m0s).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>recommenderInterval</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.Volume">Volume
 </h3>
 <p>

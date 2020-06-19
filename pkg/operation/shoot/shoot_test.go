@@ -66,7 +66,6 @@ var _ = Describe("shoot", func() {
 		})
 
 		Describe("#ToNetworks", func() {
-
 			var shoot *gardencorev1beta1.Shoot
 
 			BeforeEach(func() {

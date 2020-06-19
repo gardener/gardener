@@ -15,6 +15,8 @@
 package v1alpha1_test
 
 import (
+	"time"
+
 	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
@@ -23,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -352,6 +355,27 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_Worker(obj)
 
 			Expect(obj.SystemComponents.Allow).To(BeTrue())
+		})
+	})
+
+	Describe("#SetDefaults_VerticalPodAutoscaler", func() {
+		var obj *VerticalPodAutoscaler
+
+		BeforeEach(func() {
+			obj = &VerticalPodAutoscaler{}
+		})
+
+		It("should correctly default the VerticalPodAutoscaler", func() {
+			SetDefaults_VerticalPodAutoscaler(obj)
+
+			Expect(obj.Enabled).To(BeFalse())
+			Expect(obj.EvictAfterOOMThreshold).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
+			Expect(obj.EvictionRateBurst).To(PointTo(Equal(int32(1))))
+			Expect(obj.EvictionRateLimit).To(PointTo(Equal(float64(-1))))
+			Expect(obj.EvictionTolerance).To(PointTo(Equal(0.5)))
+			Expect(obj.RecommendationMarginFraction).To(PointTo(Equal(0.15)))
+			Expect(obj.UpdaterInterval).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
+			Expect(obj.RecommenderInterval).To(PointTo(Equal(metav1.Duration{Duration: time.Minute})))
 		})
 	})
 })

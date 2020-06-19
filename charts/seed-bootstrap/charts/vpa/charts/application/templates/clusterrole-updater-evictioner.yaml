@@ -1,0 +1,23 @@
+{{- if .Values.updater.enabled }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: system:evictioner
+  labels:
+  {{ toYaml .Values.labels | indent 4 }}
+rules:
+  - apiGroups:
+      - "apps"
+      - "extensions"
+    resources:
+      - replicasets
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - pods/eviction
+    verbs:
+      - create
+{{- end }}

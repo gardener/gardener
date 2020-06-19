@@ -271,7 +271,7 @@ type HibernationSchedule struct {
 type Kubernetes struct {
 	// AllowPrivilegedContainers indicates whether privileged containers are allowed in the Shoot (default: true).
 	AllowPrivilegedContainers *bool
-	// ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.
+	// ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
 	ClusterAutoscaler *ClusterAutoscaler
 	// KubeAPIServer contains configuration settings for the kube-apiserver.
 	KubeAPIServer *KubeAPIServerConfig
@@ -285,9 +285,11 @@ type Kubernetes struct {
 	Kubelet *KubeletConfig
 	// Version is the semantic Kubernetes version to use for the Shoot cluster.
 	Version string
+	// VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
+	VerticalPodAutoscaler *VerticalPodAutoscaler
 }
 
-// ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.
+// ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
 type ClusterAutoscaler struct {
 	// ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 1 hour).
 	ScaleDownDelayAfterAdd *metav1.Duration
@@ -301,6 +303,30 @@ type ClusterAutoscaler struct {
 	ScaleDownUtilizationThreshold *float64
 	// ScanInterval how often cluster is reevaluated for scale up or down (default: 10 secs).
 	ScanInterval *metav1.Duration
+}
+
+// VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
+type VerticalPodAutoscaler struct {
+	// Enabled specifies whether the Kubernetes VPA shall be enabled for the shoot cluster.
+	Enabled bool
+	// EvictAfterOOMThreshold defines the threshold that will lead to pod eviction in case it OOMed in less than the given
+	// threshold since its start and if it has only one container (default: 10m0s).
+	EvictAfterOOMThreshold *metav1.Duration
+	// EvictionRateBurst defines the burst of pods that can be evicted (default: 1)
+	EvictionRateBurst *int32
+	// EvictionRateLimit defines the number of pods that can be evicted per second. A rate limit set to 0 or -1 will
+	// disable the rate limiter (default: -1).
+	EvictionRateLimit *float64
+	// EvictionTolerance defines the fraction of replica count that can be evicted for update in case more than one
+	// pod can be evicted (default: 0.5).
+	EvictionTolerance *float64
+	// RecommendationMarginFraction is the fraction of usage added as the safety margin to the recommended request
+	// (default: 0.15).
+	RecommendationMarginFraction *float64
+	// UpdaterInterval is the interval how often the updater should run (default: 1m0s).
+	UpdaterInterval *metav1.Duration
+	// RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).
+	RecommenderInterval *metav1.Duration
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.

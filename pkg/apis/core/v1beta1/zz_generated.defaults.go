@@ -118,6 +118,9 @@ func SetObjectDefaults_Shoot(in *Shoot) {
 			SetDefaults_NginxIngress(in.Spec.Addons.NginxIngress)
 		}
 	}
+	if in.Spec.Kubernetes.VerticalPodAutoscaler != nil {
+		SetDefaults_VerticalPodAutoscaler(in.Spec.Kubernetes.VerticalPodAutoscaler)
+	}
 	if in.Spec.Maintenance != nil {
 		SetDefaults_Maintenance(in.Spec.Maintenance)
 	}

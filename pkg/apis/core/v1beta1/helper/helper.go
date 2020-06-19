@@ -606,6 +606,11 @@ func ShootWantsClusterAutoscaler(shoot *gardencorev1beta1.Shoot) (bool, error) {
 	return false, nil
 }
 
+// ShootWantsVerticalPodAutoscaler checks if the given Shoot needs a VPA.
+func ShootWantsVerticalPodAutoscaler(shoot *gardencorev1beta1.Shoot) bool {
+	return shoot.Spec.Kubernetes.VerticalPodAutoscaler != nil && shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled
+}
+
 // ShootIgnoresAlerts checks if the alerts for the annotated shoot cluster should be ignored.
 func ShootIgnoresAlerts(shoot *gardencorev1beta1.Shoot) bool {
 	ignore := false

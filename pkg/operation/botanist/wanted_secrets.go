@@ -63,6 +63,12 @@ var wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
 	},
 }
 
+var vpaSecrets = map[string]string{
+	common.VpaAdmissionControllerImageName: common.VpaAdmissionControllerName,
+	common.VpaRecommenderImageName:         common.VpaRecommenderName,
+	common.VpaUpdaterImageName:             common.VpaUpdaterName,
+}
+
 func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig {
 	staticTokenConfig := &secrets.StaticTokenSecretConfig{
 		Name: common.StaticTokenSecretName,
@@ -83,6 +89,15 @@ func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig 
 		staticTokenConfig.Tokens[common.KonnectivityServerUserName] = secrets.TokenConfig{
 			Username: common.KonnectivityServerUserName,
 			UserID:   common.KonnectivityServerUserName,
+		}
+	}
+
+	if b.Shoot.WantsVerticalPodAutoscaler {
+		for secretName, username := range vpaSecrets {
+			staticTokenConfig.Tokens[secretName] = secrets.TokenConfig{
+				Username: username,
+				UserID:   secretName,
+			}
 		}
 	}
 
@@ -653,12 +668,12 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		)
 	}
 
-	loggingEnabled := gardenletfeatures.FeatureGate.Enabled(features.Logging)
-	if loggingEnabled {
+	if gardenletfeatures.FeatureGate.Enabled(features.Logging) {
 		elasticsearchHosts := []string{"elasticsearch-logging",
 			fmt.Sprintf("elasticsearch-logging.%s", b.Shoot.SeedNamespace),
 			fmt.Sprintf("elasticsearch-logging.%s.svc", b.Shoot.SeedNamespace),
 		}
+
 		secretList = append(secretList,
 			&secrets.CertificateSecretConfig{
 				Name: common.KibanaTLS,
@@ -740,5 +755,25 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			},
 		)
 	}
+
+	if b.Shoot.WantsVerticalPodAutoscaler {
+		var (
+			commonName = fmt.Sprintf("vpa-webhook.%s.svc", b.Shoot.SeedNamespace)
+			dnsNames   = []string{
+				"vpa-webhook",
+				fmt.Sprintf("vpa-webhook.%s", b.Shoot.SeedNamespace),
+				commonName,
+			}
+		)
+
+		secretList = append(secretList, &secrets.CertificateSecretConfig{
+			Name:       "vpa-tls-certs",
+			CommonName: commonName,
+			DNSNames:   dnsNames,
+			CertType:   secrets.ServerCert,
+			SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
+		})
+	}
+
 	return secretList, nil
 }

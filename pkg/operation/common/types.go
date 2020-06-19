@@ -528,15 +528,20 @@ const (
 
 	// VpaAdmissionControllerImageName is the name of the vpa-admission-controller image
 	VpaAdmissionControllerImageName = "vpa-admission-controller"
-
 	// VpaRecommenderImageName is the name of the vpa-recommender image
 	VpaRecommenderImageName = "vpa-recommender"
-
 	// VpaUpdaterImageName is the name of the vpa-updater image
 	VpaUpdaterImageName = "vpa-updater"
-
 	// VpaExporterImageName is the name of the vpa-exporter image
 	VpaExporterImageName = "vpa-exporter"
+	// VpaAdmissionControllerName is the name of the vpa-admission-controller name.
+	VpaAdmissionControllerName = "gardener.cloud:vpa:admission-controller"
+	// VpaRecommenderName is the name of the vpa-recommender name.
+	VpaRecommenderName = "gardener.cloud:vpa:recommender"
+	// VpaUpdaterName is the name of the vpa-updater name.
+	VpaUpdaterName = "gardener.cloud:vpa:updater"
+	// VpaExporterName is the name of the vpa-exporter name.
+	VpaExporterName = "gardener.cloud:vpa:exporter"
 
 	// HvpaControllerImageName is the name of the hvpa-controller image
 	HvpaControllerImageName = "hvpa-controller"
