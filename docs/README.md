@@ -38,6 +38,8 @@
 
 ## Proposals
 
+* [GEP: Gardener Enhancement Proposal Description](proposals/README.md)
+* [GEP: Template](proposals/00-template.md)
 * [GEP-1: Gardener extensibility and extraction of cloud-specific/OS-specific knowledge](proposals/01-extensibility.md)
 * [GEP-2: `BackupInfrastructure` CRD and Controller Redesign](proposals/02-backupinfra.md)
 * [GEP-3: Network extensibility](proposals/03-networking-extensibility.md)
