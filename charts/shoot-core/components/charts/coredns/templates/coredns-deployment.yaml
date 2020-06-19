@@ -39,6 +39,8 @@ spec:
                       values:
                         - kube-dns
       priorityClassName: system-cluster-critical
+      nodeSelector:
+        worker.gardener.cloud/system-components: "true"
       securityContext:
         runAsNonRoot: true
         runAsUser: 65534

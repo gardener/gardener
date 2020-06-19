@@ -338,4 +338,20 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.TimeWindow.End).To(HaveSuffix("0000+0000"))
 		})
 	})
+
+	Describe("#SetDefaults_Worker", func() {
+		var obj *Worker
+
+		BeforeEach(func() {
+			obj = &Worker{}
+		})
+
+		It("should set the allowSystemComponents field", func() {
+			obj.SystemComponents = nil
+
+			SetDefaults_Worker(obj)
+
+			Expect(obj.SystemComponents.Allow).To(BeTrue())
+		})
+	})
 })

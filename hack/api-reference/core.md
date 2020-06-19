@@ -8069,6 +8069,20 @@ string
 as not every provider may support availability zones.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>systemComponents</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.WorkerSystemComponents">
+WorkerSystemComponents
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SystemComponents contains configuration for system components related to this worker pool</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.WorkerKubernetes">WorkerKubernetes
@@ -8100,6 +8114,36 @@ KubeletConfig
 <td>
 <em>(Optional)</em>
 <p>Kubelet contains configuration settings for all kubelets of this worker pool.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.WorkerSystemComponents">WorkerSystemComponents
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
+</p>
+<p>
+<p>WorkerSystemComponents contains configuration for system components related to this worker pool</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>allow</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Allow determines whether the pool should be allowed to host system components or not (defaults to true)</p>
 </td>
 </tr>
 </tbody>

@@ -674,6 +674,11 @@ func GetLatestQualifyingShootMachineImage(image gardencorev1beta1.MachineImage, 
 	return true, &gardencorev1beta1.ShootMachineImage{Name: image.Name, Version: &latestImageVersion.Version}, nil
 }
 
+// SystemComponentsAllowed checks if the given worker allows system components to be scheduled onto it
+func SystemComponentsAllowed(worker *gardencorev1beta1.Worker) bool {
+	return worker.SystemComponents == nil || worker.SystemComponents.Allow
+}
+
 // UpdateMachineImages updates the machine images in place.
 func UpdateMachineImages(workers []gardencorev1beta1.Worker, machineImages []*gardencorev1beta1.ShootMachineImage) {
 	for _, machineImage := range machineImages {

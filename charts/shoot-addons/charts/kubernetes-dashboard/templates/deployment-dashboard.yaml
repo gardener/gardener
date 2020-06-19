@@ -25,6 +25,8 @@ spec:
         origin: gardener
         k8s-app: kubernetes-dashboard
     spec:
+      nodeSelector:
+        worker.gardener.cloud/system-components: "true"
       securityContext:
         {{- if semverCompare ">= 1.16" .Capabilities.KubeVersion.GitVersion }}
         allowPrivilegeEscalation: false

@@ -2063,6 +2063,10 @@ message Worker {
   // as not every provider may support availability zones.
   // +optional
   repeated string zones = 17;
+
+  // SystemComponents contains configuration for system components related to this worker pool
+  // +optional
+  optional WorkerSystemComponents systemComponents = 18;
 }
 
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.
@@ -2070,5 +2074,11 @@ message WorkerKubernetes {
   // Kubelet contains configuration settings for all kubelets of this worker pool.
   // +optional
   optional KubeletConfig kubelet = 1;
+}
+
+// WorkerSystemComponents contains configuration for system components related to this worker pool
+message WorkerSystemComponents {
+  // Allow determines whether the pool should be allowed to host system components or not (defaults to true)
+  optional bool allow = 1;
 }
 
