@@ -34,6 +34,7 @@
 * [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
 * [API Server Network Proxy Reverse Tunneling](usage/reverse-tunnel.md)
 * [Network Policies in the Shoot Cluster](usage/shoot_network_policies.md)
+* [Add a Shooted Seed](usage/shooted_seed.md)
 
 ## Proposals
 
