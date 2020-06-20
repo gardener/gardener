@@ -1,0 +1,31 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-proxy-start-script
+  namespace: kube-system
+  labels:
+    app: kubernetes
+    gardener.cloud/role: system-component
+    origin: gardener
+    role: proxy
+data:
+  start.sh: |
+    #!/bin/sh -e
+    {{ if (semverCompare "~1.16.11" .Values.kubernetesVersion) }}
+    update-alternatives --set iptables /usr/sbin/iptables-legacy
+    update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+    update-alternatives --set ebtables /usr/sbin/ebtables-legacy
+    {{ end }}
+    {{ if semverCompare "< 1.17" .Values.kubernetesVersion }}
+    /hyperkube \
+    {{- if semverCompare "< 1.15" .Values.kubernetesVersion }}
+    proxy \
+    {{- else }}
+    kube-proxy \
+    {{- end }}
+    {{- else }}
+    /usr/local/bin/kube-proxy \
+    {{- end }}
+    --config=/var/lib/kube-proxy-config/config.yaml \
+    --v=2
