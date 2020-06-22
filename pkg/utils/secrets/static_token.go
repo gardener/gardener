@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/util/sets"
+
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -95,15 +97,15 @@ func (s *StaticTokenSecretConfig) GenerateStaticToken() (*StaticToken, error) {
 	}, nil
 }
 
-// GenerateStaticToken computes a random token of length 64.
-func (s *StaticTokenSecretConfig) AppendStaticToken(staticToken *StaticToken) (*StaticToken, error) {
+// GenerateAndAppend appends required tokens to the existing static tokens list.
+func (b *StaticToken) GenerateAndAppend(s *StaticTokenSecretConfig) (*StaticToken, error) {
 	for _, tokenConfig := range s.Tokens {
 		token, err := utils.GenerateRandomString(128)
 		if err != nil {
 			return nil, err
 		}
 
-		staticToken.Tokens = append(staticToken.Tokens, Token{
+		b.Tokens = append(b.Tokens, Token{
 			Username: tokenConfig.Username,
 			UserID:   tokenConfig.UserID,
 			Groups:   tokenConfig.Groups,
@@ -111,7 +113,17 @@ func (s *StaticTokenSecretConfig) AppendStaticToken(staticToken *StaticToken) (*
 		})
 	}
 
-	return staticToken, nil
+	return b, nil
+}
+
+// RemoveTokens removes outdated tokens from the existing static tokens list.
+func (b *StaticToken) RemoveTokens(userIDs ...string) {
+	userIDsSet := sets.NewString(userIDs...)
+	for i := len(b.Tokens) - 1; i >= 0; i-- {
+		if userIDsSet.Has(b.Tokens[i].UserID) {
+			b.Tokens = append(b.Tokens[:i], b.Tokens[i+1:]...)
+		}
+	}
 }
 
 // SecretData computes the data map which can be used in a Kubernetes secret.

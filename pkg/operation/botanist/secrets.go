@@ -811,13 +811,18 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 	}
 
 	if b.Shoot.KonnectivityTunnelEnabled {
-		err = b.cleanupVPNSecrets(ctx)
-	} else {
-		err = b.deployOpenVPNTLSAuthSecret(ctx, existingSecretsMap)
-	}
+		if err := b.cleanupTunnelSecrets(ctx, "vpn-seed", "vpn-seed-tlsauth", "vpn-shoot"); err != nil {
+			return err
+		}
 
-	if err != nil {
-		return err
+	} else {
+		if err = b.cleanupTunnelSecrets(ctx, common.KonnectivityServerKubeconfig, common.KonnectivityServerCertName); err != nil {
+			return err
+		}
+
+		if err = b.deployOpenVPNTLSAuthSecret(ctx, existingSecretsMap); err != nil {
+			return err
+		}
 	}
 
 	wantedSecretsList, err := b.generateWantedSecrets(basicAuthAPIServer, staticToken, certificateAuthorities)
@@ -1016,9 +1021,8 @@ func (b *Botanist) generateBasicAuthAPIServer(ctx context.Context, existingSecre
 }
 
 func (b *Botanist) generateStaticToken(ctx context.Context, existingSecretsMap map[string]*corev1.Secret) (*secrets.StaticToken, error) {
-	staticTokenConfig := &secrets.StaticTokenSecretConfig{
-		Name: common.StaticTokenSecretName,
-		Tokens: map[string]secrets.TokenConfig{
+	var (
+		staticTokenConfigTokens = map[string]secrets.TokenConfig{
 			common.KubecfgUsername: {
 				Username: common.KubecfgUsername,
 				UserID:   common.KubecfgUsername,
@@ -1028,19 +1032,26 @@ func (b *Botanist) generateStaticToken(ctx context.Context, existingSecretsMap m
 				Username: common.KubeAPIServerHealthCheck,
 				UserID:   common.KubeAPIServerHealthCheck,
 			},
-			common.KonnectivityServerUserName: {
-				Username: common.KonnectivityServerUserName,
-				UserID:   common.KonnectivityServerUserName,
-			},
-		}}
-
-	var (
+		}
 		newStaticTokenConfig = secrets.StaticTokenSecretConfig{
 			Name:   common.StaticTokenSecretName,
 			Tokens: make(map[string]secrets.TokenConfig),
 		}
-		staticToken *secrets.StaticToken
+		staticToken       *secrets.StaticToken
+		outdatedTokenKeys []string
 	)
+
+	if b.Shoot.KonnectivityTunnelEnabled {
+		staticTokenConfigTokens[common.KonnectivityServerUserName] = secrets.TokenConfig{
+			Username: common.KonnectivityServerUserName,
+			UserID:   common.KonnectivityServerUserName,
+		}
+	}
+
+	staticTokenConfig := &secrets.StaticTokenSecretConfig{
+		Name:   common.StaticTokenSecretName,
+		Tokens: staticTokenConfigTokens,
+	}
 	if existingSecret, ok := existingSecretsMap[staticTokenConfig.Name]; ok {
 		var err error
 		staticToken, err = secrets.LoadStaticTokenFromCSV(staticTokenConfig.Name, existingSecret.Data[secrets.DataKeyStaticTokenCSV])
@@ -1050,16 +1061,18 @@ func (b *Botanist) generateStaticToken(ctx context.Context, existingSecretsMap m
 
 		var tokenConfigSet, tokenSet = sets.NewString(), sets.NewString()
 		for _, t := range staticTokenConfig.Tokens {
-			tokenConfigSet.Insert(t.Username)
+			tokenConfigSet.Insert(t.UserID)
 		}
 		for _, t := range staticToken.Tokens {
-			tokenSet.Insert(t.Username)
+			tokenSet.Insert(t.UserID)
 		}
 
 		if diff := tokenConfigSet.Difference(tokenSet); diff.Len() > 0 {
 			for _, tokenKey := range diff.UnsortedList() {
 				newStaticTokenConfig.Tokens[tokenKey] = staticTokenConfig.Tokens[tokenKey]
 			}
+		} else if diff := tokenSet.Difference(tokenConfigSet); diff.Len() > 0 {
+			outdatedTokenKeys = append(outdatedTokenKeys, diff.UnsortedList()...)
 		} else {
 			b.mutex.Lock()
 			defer b.mutex.Unlock()
@@ -1075,9 +1088,12 @@ func (b *Botanist) generateStaticToken(ctx context.Context, existingSecretsMap m
 	}
 
 	var err error
-	if len(newStaticTokenConfig.Tokens) > 0 {
-		staticToken, err = newStaticTokenConfig.AppendStaticToken(staticToken)
-	} else {
+	switch {
+	case len(newStaticTokenConfig.Tokens) > 0:
+		staticToken, err = staticToken.GenerateAndAppend(&newStaticTokenConfig)
+	case len(outdatedTokenKeys) > 0:
+		staticToken.RemoveTokens(outdatedTokenKeys...)
+	default:
 		staticToken, err = staticTokenConfig.GenerateStaticToken()
 	}
 
@@ -1215,10 +1231,9 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 	return nil
 }
 
-func (b *Botanist) cleanupVPNSecrets(ctx context.Context) error {
+func (b *Botanist) cleanupTunnelSecrets(ctx context.Context, secretNames ...string) error {
 	// TODO: remove when all Gardener supported versions are >= 1.18
-	vpnSecretNamesToDelete := []string{"vpn-seed", "vpn-seed-tlsauth", "vpn-shoot"}
-	for _, secret := range vpnSecretNamesToDelete {
+	for _, secret := range secretNames {
 		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secret, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
 			return err
 		}
