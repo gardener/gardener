@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -28,12 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	machineDeploymentKind = "MachineDeployment"
-	nameLabel             = "name"
-	machineSetKind        = "MachineSet"
 )
 
 type genericStateActuator struct {
@@ -132,21 +127,7 @@ func (a *genericStateActuator) getExistingMachineSetsMap(ctx context.Context, na
 		return nil, err
 	}
 
-	machineSets := make(map[string][]machinev1alpha1.MachineSet)
-	for index, machineSet := range existingMachineSets.Items {
-		if len(machineSet.OwnerReferences) > 0 {
-			for _, referant := range machineSet.OwnerReferences {
-				if referant.Kind == machineDeploymentKind {
-					machineSets[referant.Name] = append(machineSets[referant.Name], existingMachineSets.Items[index])
-				}
-			}
-		} else if len(machineSet.Labels) > 0 {
-			if machineDeploymentName, ok := machineSet.Labels[nameLabel]; ok {
-				machineSets[machineDeploymentName] = append(machineSets[machineDeploymentName], existingMachineSets.Items[index])
-			}
-		}
-	}
-	return machineSets, nil
+	return workerhelper.BuildOwnerToMachineSetsMap(existingMachineSets.Items), nil
 }
 
 // getExistingMachinesMap returns a map of the existing Machines as values and the name of their owner
@@ -159,21 +140,7 @@ func (a *genericStateActuator) getExistingMachinesMap(ctx context.Context, names
 		return nil, err
 	}
 
-	machines := make(map[string][]machinev1alpha1.Machine)
-	for index, machine := range existingMachines.Items {
-		if len(machine.OwnerReferences) > 0 {
-			for _, referant := range machine.OwnerReferences {
-				if referant.Kind == machineSetKind {
-					machines[referant.Name] = append(machines[referant.Name], existingMachines.Items[index])
-				}
-			}
-		} else if len(machine.Labels) > 0 {
-			if machineDeploymentName, ok := machine.Labels[nameLabel]; ok {
-				machines[machineDeploymentName] = append(machines[machineDeploymentName], existingMachines.Items[index])
-			}
-		}
-	}
-	return machines, nil
+	return workerhelper.BuildOwnerToMachinesMap(existingMachines.Items), nil
 }
 
 func addMachineSetToMachineDeploymentState(machineSets []machinev1alpha1.MachineSet, machineDeploymentState *MachineDeploymentState) {

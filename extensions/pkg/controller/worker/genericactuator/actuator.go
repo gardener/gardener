@@ -16,22 +16,27 @@ package genericactuator
 
 import (
 	"context"
+	"fmt"
 	"strings"
+	"time"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
+	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	"github.com/gardener/gardener/extensions/pkg/util"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -156,6 +161,7 @@ func (a *genericActuator) cleanupMachineClasses(ctx context.Context, namespace s
 		}
 
 		if !wantedMachineDeployments.HasClass(accessor.GetName()) {
+			a.logger.V(6).Info("Deleting machine class", "name", accessor.GetName(), "namespace", accessor.GetNamespace())
 			if err := a.client.Delete(ctx, machineClass); err != nil {
 				return err
 			}
@@ -279,6 +285,58 @@ func (a *genericActuator) shallowDeleteAllObjects(ctx context.Context, namespace
 		}
 		return nil
 	})
+}
+
+// IsMachineControllerStuck determines if the machine controller pod is stuck.
+func (a *genericActuator) IsMachineControllerStuck(ctx context.Context, worker *extensionsv1alpha1.Worker) (bool, *string, error) {
+	machineDeployments := &machinev1alpha1.MachineDeploymentList{}
+	if err := a.client.List(ctx, machineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+		return false, nil, err
+	}
+
+	machineSets := &machinev1alpha1.MachineSetList{}
+	if err := a.client.List(ctx, machineSets, client.InNamespace(worker.Namespace)); err != nil {
+		return false, nil, err
+	}
+
+	isStuck, msg := isMachineControllerStuck(machineSets.Items, machineDeployments.Items)
+	return isStuck, msg, nil
+}
+
+const (
+	// stuckMCMThreshold defines that the machine deployment set has to be created more than
+	// this duration ago to be considered for the check whether a machine controller manager pod is stuck
+	stuckMCMThreshold = 2 * time.Minute
+	// mcmFinalizer is the finalizer used by the machine controller manager
+	// not imported from the MCM to reduce dependencies
+	mcmFinalizer = "machine.sapcloud.io/machine-controller-manager"
+)
+
+// isMachineControllerStuck determines if the machine controller pod is stuck.
+// A pod is assumed to be stuck if
+//  - a machine deployment exists that does not have a machine set with the correct machine class
+//  - the machine set does not have a status that indicates (attempted) machine creation
+func isMachineControllerStuck(machineSets []machinev1alpha1.MachineSet, machineDeployments []machinev1alpha1.MachineDeployment) (bool, *string) {
+	// map the owner reference to the existing machine sets
+	ownerReferenceToMachineSet := workerhelper.BuildOwnerToMachineSetsMap(machineSets)
+
+	for _, machineDeployment := range machineDeployments {
+		if !controllerutils.HasFinalizer(&machineDeployment, mcmFinalizer) {
+			continue
+		}
+
+		// do not consider machine deployments that have just recently been created
+		if time.Now().UTC().Sub(machineDeployment.ObjectMeta.CreationTimestamp.UTC()) < stuckMCMThreshold {
+			continue
+		}
+
+		machineSet := workerhelper.GetMachineSetWithMachineClass(machineDeployment.Name, machineDeployment.Spec.Template.Spec.Class.Name, ownerReferenceToMachineSet)
+		if machineSet == nil {
+			msg := fmt.Sprintf("missing machine set for machine deployment (%s/%s)", machineDeployment.Namespace, machineDeployment.Name)
+			return true, &msg
+		}
+	}
+	return false, nil
 }
 
 // CleanupLeakedClusterRoles cleans up leaked ClusterRoles from the system that were created earlier without

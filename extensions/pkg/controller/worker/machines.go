@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
+
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -79,6 +80,17 @@ func (m MachineDeployments) HasDeployment(name string) bool {
 		}
 	}
 	return false
+}
+
+// FindByName finds the deployment with the <name> from the <machineDeployments>
+// returns the machine deployment or nil
+func (m MachineDeployments) FindByName(name string) *MachineDeployment {
+	for _, deployment := range m {
+		if name == deployment.Name {
+			return &deployment
+		}
+	}
+	return nil
 }
 
 // HasClass checks whether the <className> is part of the <machineDeployments>
