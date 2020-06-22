@@ -6696,6 +6696,39 @@ This is useful for environments where DNS is not required.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingVerticalPodAutoscaler">SeedSettingVerticalPodAutoscaler
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettings">SeedSettings</a>)
+</p>
+<p>
+<p>SeedSettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
+seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled controls whether the VPA components shall be deployed into the garden namespace in the seed cluster. It
+is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if
+your seed cluster already has another, manually/custom managed VPA deployment.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettings">SeedSettings
 </h3>
 <p>
@@ -6768,6 +6801,20 @@ SeedSettingLoadBalancerServices
 <em>(Optional)</em>
 <p>LoadBalancerServices controls certain settings for services of type load balancer that are created in the
 seed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>verticalPodAutoscaler</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingVerticalPodAutoscaler">
+SeedSettingVerticalPodAutoscaler
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.</p>
 </td>
 </tr>
 </tbody>

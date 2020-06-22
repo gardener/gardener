@@ -173,6 +173,9 @@ type SeedSettings struct {
 	// seed.
 	// +optional
 	LoadBalancerServices *SeedSettingLoadBalancerServices `json:"loadBalancerServices,omitempty" protobuf:"bytes,4,opt,name=loadBalancerServices"`
+	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
+	// +optional
+	VerticalPodAutoscaler *SeedSettingVerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty" protobuf:"bytes,5,opt,name=verticalPodAutoscaler"`
 }
 
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
@@ -204,6 +207,15 @@ type SeedSettingLoadBalancerServices struct {
 	// Annotations is a map of annotations that will be injected/merged into every load balancer service object.
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,1,rep,name=annotations"`
+}
+
+// SeedSettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
+// seed.
+type SeedSettingVerticalPodAutoscaler struct {
+	// Enabled controls whether the VPA components shall be deployed into the garden namespace in the seed cluster. It
+	// is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if
+	// your seed cluster already has another, manually/custom managed VPA deployment.
+	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
 }
 
 // SeedTaint describes a taint on a seed.

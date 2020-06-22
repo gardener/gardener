@@ -190,6 +190,9 @@ alertmanager:
 hvpa:
   enabled: false
 
+vpa:
+  enabled: true
+
 global-network-policies:
   denyAll: false
 

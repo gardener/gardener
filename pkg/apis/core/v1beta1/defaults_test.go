@@ -230,6 +230,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
 		})
 
 		It("should default the seed settings (w/ taints)", func() {
@@ -244,6 +245,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeFalse())
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeFalse())
 			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeFalse())
+			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
 		})
 
 		It("should not default the seed settings because they were provided", func() {
@@ -251,12 +253,14 @@ var _ = Describe("Defaults", func() {
 				excessCapacityReservation = false
 				scheduling                = true
 				shootDNS                  = false
+				vpaEnabled                = false
 			)
 
 			obj.Spec.Settings = &SeedSettings{
 				ExcessCapacityReservation: &SeedSettingExcessCapacityReservation{Enabled: excessCapacityReservation},
 				Scheduling:                &SeedSettingScheduling{Visible: scheduling},
 				ShootDNS:                  &SeedSettingShootDNS{Enabled: shootDNS},
+				VerticalPodAutoscaler:     &SeedSettingVerticalPodAutoscaler{Enabled: vpaEnabled},
 			}
 
 			SetDefaults_Seed(obj)
@@ -264,6 +268,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(Equal(excessCapacityReservation))
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(Equal(scheduling))
 			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(Equal(shootDNS))
+			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(Equal(vpaEnabled))
 		})
 	})
 

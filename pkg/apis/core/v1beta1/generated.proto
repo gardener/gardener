@@ -1577,6 +1577,15 @@ message SeedSettingShootDNS {
   optional bool enabled = 1;
 }
 
+// SeedSettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
+// seed.
+message SeedSettingVerticalPodAutoscaler {
+  // Enabled controls whether the VPA components shall be deployed into the garden namespace in the seed cluster. It
+  // is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if
+  // your seed cluster already has another, manually/custom managed VPA deployment.
+  optional bool enabled = 1;
+}
+
 // SeedSettings contains certain settings for this seed cluster.
 message SeedSettings {
   // ExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.
@@ -1595,6 +1604,10 @@ message SeedSettings {
   // seed.
   // +optional
   optional SeedSettingLoadBalancerServices loadBalancerServices = 4;
+
+  // VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
+  // +optional
+  optional SeedSettingVerticalPodAutoscaler verticalPodAutoscaler = 5;
 }
 
 // SeedSpec is the specification of a Seed.

@@ -438,10 +438,16 @@ func BootstrapCluster(k8sSeedClient kubernetes.Interface, seed *Seed, secrets ma
 	}
 
 	// HVPA feature gate
-	var hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
-
+	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 	if !hvpaEnabled {
 		if err := common.DeleteHvpa(k8sSeedClient, v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	vpaEnabled := seed.Info.Spec.Settings == nil || seed.Info.Spec.Settings.VerticalPodAutoscaler == nil || seed.Info.Spec.Settings.VerticalPodAutoscaler.Enabled
+	if !vpaEnabled {
+		if err := common.DeleteVpa(context.TODO(), k8sSeedClient.Client(), v1beta1constants.GardenNamespace, false); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -708,6 +714,7 @@ func BootstrapCluster(k8sSeedClient kubernetes.Interface, seed *Seed, secrets ma
 		},
 		"alertmanager": alertManagerConfig,
 		"vpa": map[string]interface{}{
+			"enabled": vpaEnabled,
 			"admissionController": map[string]interface{}{
 				"podAnnotations": map[string]interface{}{
 					"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),

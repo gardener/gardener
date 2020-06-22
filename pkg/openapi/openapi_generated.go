@@ -135,6 +135,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices":       schema_pkg_apis_core_v1alpha1_SeedSettingLoadBalancerServices(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling":                 schema_pkg_apis_core_v1alpha1_SeedSettingScheduling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS":                   schema_pkg_apis_core_v1alpha1_SeedSettingShootDNS(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingVerticalPodAutoscaler":      schema_pkg_apis_core_v1alpha1_SeedSettingVerticalPodAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettings":                          schema_pkg_apis_core_v1alpha1_SeedSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSpec":                              schema_pkg_apis_core_v1alpha1_SeedSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedStatus":                            schema_pkg_apis_core_v1alpha1_SeedStatus(ref),
@@ -258,6 +259,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices":        schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling":                  schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS":                    schema_pkg_apis_core_v1beta1_SeedSettingShootDNS(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler":       schema_pkg_apis_core_v1beta1_SeedSettingVerticalPodAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings":                           schema_pkg_apis_core_v1beta1_SeedSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSpec":                               schema_pkg_apis_core_v1beta1_SeedSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedStatus":                             schema_pkg_apis_core_v1beta1_SeedStatus(ref),
@@ -5006,6 +5008,27 @@ func schema_pkg_apis_core_v1alpha1_SeedSettingShootDNS(ref common.ReferenceCallb
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_SeedSettingVerticalPodAutoscaler(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled controls whether the VPA components shall be deployed into the garden namespace in the seed cluster. It is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if your seed cluster already has another, manually/custom managed VPA deployment.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_SeedSettings(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -5037,11 +5060,17 @@ func schema_pkg_apis_core_v1alpha1_SeedSettings(ref common.ReferenceCallback) co
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices"),
 						},
 					},
+					"verticalPodAutoscaler": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingVerticalPodAutoscaler"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingVerticalPodAutoscaler"},
 	}
 }
 
@@ -10585,6 +10614,27 @@ func schema_pkg_apis_core_v1beta1_SeedSettingShootDNS(ref common.ReferenceCallba
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_SeedSettingVerticalPodAutoscaler(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled controls whether the VPA components shall be deployed into the garden namespace in the seed cluster. It is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if your seed cluster already has another, manually/custom managed VPA deployment.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -10616,11 +10666,17 @@ func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) com
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices"),
 						},
 					},
+					"verticalPodAutoscaler": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"},
 	}
 }
 

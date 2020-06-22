@@ -50,3 +50,11 @@ In most cases, the cloud-controller-manager (responsible for managing these load
 [This document](https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer) provides a good overview and many examples.
 
 By setting the `.spec.settings.loadBalancerServices.annotations` field the Gardener administrator can specify a list of annotations which will be injected into the `Service`s of type `LoadBalancer`.
+
+## Vertical Pod Autoscaler
+
+Gardener heavily relies on the Kubernetes [`vertical-pod-autoscaler` component](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler).
+By default, the seed controller deploys the VPA components into the `garden` namespace of the respective seed clusters.
+In case you want to manage the VPA deployment on your own or have a custom one then you might want to disable the automatic deployment of Gardener.
+Otherwise, you might end up with two VPAs which will cause erratic behaviour.
+By setting the `.spec.settings.verticalPodAutoscaler.enabled=false` you can disable the automatic deployment.

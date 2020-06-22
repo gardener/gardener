@@ -130,6 +130,10 @@ func SetDefaults_Seed(obj *Seed) {
 		}
 		obj.Spec.Settings.ShootDNS = &SeedSettingShootDNS{Enabled: enabled}
 	}
+
+	if obj.Spec.Settings.VerticalPodAutoscaler == nil {
+		obj.Spec.Settings.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
+	}
 }
 
 // SetDefaults_Shoot sets default values for Shoot objects.

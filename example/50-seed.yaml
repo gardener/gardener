@@ -45,6 +45,8 @@ spec:
   # loadBalancerServices:
   #   annotations:
   #     foo: bar
+    verticalPodAutoscaler:
+      enabled: true # a Gardener-managed VPA deployment is enabled
 # taints:
 # - key: seed.gardener.cloud/protected # only shoots in the `garden` namespace can use this seed
 # - key: <some-key>
