@@ -21,6 +21,7 @@ import (
 
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
@@ -55,7 +56,7 @@ var _ = Describe("#DNSEntry", func() {
 		c                client.Client
 		expected         *dnsv1alpha1.DNSEntry
 		vals             *EntryValues
-		logger           *logrus.Entry
+		log              *logrus.Entry
 		defaultDepWaiter component.DeployWaiter
 	)
 
@@ -63,7 +64,7 @@ var _ = Describe("#DNSEntry", func() {
 		ctrl = gomock.NewController(GinkgoT())
 
 		ctx = context.TODO()
-		logger = logrus.NewEntry(logrus.New())
+		log = logrus.NewEntry(logger.NewNopLogger())
 
 		s := runtime.NewScheme()
 		Expect(dnsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
@@ -91,7 +92,7 @@ var _ = Describe("#DNSEntry", func() {
 		ca = kubernetes.NewChartApplier(cr.NewWithServerVersion(&version.Info{}), kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
 		Expect(ca).NotTo(BeNil(), "should return chart applier")
 
-		defaultDepWaiter = NewDNSEntry(vals, deployNS, ca, chartsRoot(), logger, c, &fakeOps{})
+		defaultDepWaiter = NewDNSEntry(vals, deployNS, ca, chartsRoot(), log, c, &fakeOps{})
 	})
 
 	AfterEach(func() {
@@ -141,7 +142,7 @@ var _ = Describe("#DNSEntry", func() {
 		})
 
 		It("should set a default waiter", func() {
-			wrt := NewDNSEntry(vals, deployNS, ca, chartsRoot(), logger, c, nil)
+			wrt := NewDNSEntry(vals, deployNS, ca, chartsRoot(), log, c, nil)
 			Expect(reflect.ValueOf(wrt).Elem().FieldByName("waiter").IsNil()).ToNot(BeTrue())
 		})
 
@@ -166,7 +167,7 @@ var _ = Describe("#DNSEntry", func() {
 					Namespace: deployNS,
 				}}).Times(1).Return(fmt.Errorf("some random error"))
 
-			defaultDepWaiter = NewDNSEntry(vals, deployNS, ca, chartsRoot(), logger, mc, &fakeOps{})
+			defaultDepWaiter = NewDNSEntry(vals, deployNS, ca, chartsRoot(), log, mc, &fakeOps{})
 
 			Expect(defaultDepWaiter.Destroy(ctx)).To(HaveOccurred())
 		})

@@ -23,6 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -60,7 +61,7 @@ var _ = Describe("#Network", func() {
 		c                client.Client
 		expected         *extensionsv1alpha1.Network
 		vals             *network.Values
-		logger           *logrus.Entry
+		log              *logrus.Entry
 		defaultDepWaiter component.DeployWaiter
 
 		mockNow *mocktime.MockNow
@@ -76,7 +77,7 @@ var _ = Describe("#Network", func() {
 		mockNow = mocktime.NewMockNow(ctrl)
 
 		ctx = context.TODO()
-		logger = logrus.NewEntry(logrus.New())
+		log = logrus.NewEntry(logger.NewNopLogger())
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
@@ -121,7 +122,7 @@ var _ = Describe("#Network", func() {
 			},
 		}
 
-		defaultDepWaiter = network.New(logger, c, vals)
+		defaultDepWaiter = network.New(log, c, vals)
 	})
 
 	AfterEach(func() {
@@ -220,7 +221,7 @@ var _ = Describe("#Network", func() {
 
 			mc.EXPECT().Delete(ctx, &expected).Times(1).Return(fmt.Errorf("some random error"))
 
-			defaultDepWaiter = network.New(logger, mc, &network.Values{
+			defaultDepWaiter = network.New(log, mc, &network.Values{
 				Namespace: networkNs,
 				Name:      networkName,
 			})

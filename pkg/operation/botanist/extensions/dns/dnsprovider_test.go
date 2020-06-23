@@ -21,6 +21,7 @@ import (
 
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
@@ -58,7 +59,7 @@ var _ = Describe("#DNSProvider", func() {
 		expectedSecret   *corev1.Secret
 		expectedDNS      *dnsv1alpha1.DNSProvider
 		vals             *ProviderValues
-		logger           *logrus.Entry
+		log              *logrus.Entry
 		defaultDepWaiter component.DeployWaiter
 	)
 
@@ -66,7 +67,7 @@ var _ = Describe("#DNSProvider", func() {
 		ctrl = gomock.NewController(GinkgoT())
 
 		ctx = context.TODO()
-		logger = logrus.NewEntry(logrus.New())
+		log = logrus.NewEntry(logger.NewNopLogger())
 
 		s := runtime.NewScheme()
 		Expect(corev1.AddToScheme(s)).NotTo(HaveOccurred())
@@ -129,7 +130,7 @@ var _ = Describe("#DNSProvider", func() {
 		ca = kubernetes.NewChartApplier(cr.NewWithServerVersion(&version.Info{}), kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
 		Expect(ca).NotTo(BeNil(), "should return chart applier")
 
-		defaultDepWaiter = NewDNSProvider(vals, deployNS, ca, chartsRoot(), logger, c, &fakeOps{})
+		defaultDepWaiter = NewDNSProvider(vals, deployNS, ca, chartsRoot(), log, c, &fakeOps{})
 	})
 
 	AfterEach(func() {
@@ -212,7 +213,7 @@ var _ = Describe("#DNSProvider", func() {
 					Namespace: deployNS,
 				}}).Times(1).Return(fmt.Errorf("some random error"))
 
-			Expect(NewDNSProvider(vals, deployNS, ca, chartsRoot(), logger, mc, &fakeOps{}).Destroy(ctx)).To(HaveOccurred())
+			Expect(NewDNSProvider(vals, deployNS, ca, chartsRoot(), log, mc, &fakeOps{}).Destroy(ctx)).To(HaveOccurred())
 		})
 	})
 
@@ -239,7 +240,7 @@ var _ = Describe("#DNSProvider", func() {
 		})
 
 		It("should set a default waiter", func() {
-			wrt := NewDNSProvider(vals, deployNS, ca, chartsRoot(), logger, c, nil)
+			wrt := NewDNSProvider(vals, deployNS, ca, chartsRoot(), log, c, nil)
 			Expect(reflect.ValueOf(wrt).Elem().FieldByName("waiter").IsNil()).ToNot(BeTrue())
 		})
 	})
