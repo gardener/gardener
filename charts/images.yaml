@@ -237,11 +237,11 @@ images:
 - name: istio-proxy
   sourceRepository: github.com/istio/istio
   repository: docker.io/istio/proxyv2
-  tag: "1.6.0"
+  tag: "1.6.3"
 - name: istio-istiod
   sourceRepository: github.com/istio/istio
   repository: docker.io/istio/pilot
-  tag: "1.6.0"
+  tag: "1.6.3"
 
 # API Server SNI
 - name: apiserver-proxy
