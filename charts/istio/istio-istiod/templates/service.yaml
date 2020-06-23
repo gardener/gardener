@@ -6,6 +6,7 @@ metadata:
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
 spec:
+  type: ClusterIP
   ports:
   - name: https-sds # mTLS with k8s-signed cert
     port: 15012

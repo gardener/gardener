@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -611,6 +613,79 @@ spec:
 				)
 			})
 
+			Context("DeploymentKeepReplicasMergeFunc", func() {
+				var (
+					old      *appsv1.Deployment
+					new      *appsv1.Deployment
+					expected *appsv1.Deployment
+				)
+
+				BeforeEach(func() {
+					old = &appsv1.Deployment{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "Deployment",
+							APIVersion: "apps/v1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-deploy",
+							Namespace: "test-ns",
+						},
+					}
+
+					new = old.DeepCopy()
+					expected = old.DeepCopy()
+					expected.ResourceVersion = "2"
+				})
+
+				DescribeTable("Existing Deployment",
+					func(mutator func()) {
+						mutator()
+						Expect(c.Create(context.TODO(), old)).ToNot(HaveOccurred())
+
+						manifest := mkManifest(new)
+						manifestReader := kubernetes.NewManifestReader(manifest)
+
+						err := applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.MergeFuncs{appsv1.SchemeGroupVersion.WithKind("Deployment").GroupKind(): kubernetes.DeploymentKeepReplicasMergeFunc})
+						Expect(err).NotTo(HaveOccurred())
+
+						result := &appsv1.Deployment{}
+						err = c.Get(context.TODO(), client.ObjectKey{Name: "test-deploy", Namespace: "test-ns"}, result)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(result).To(Equal(expected))
+					},
+
+					Entry(
+						"old without replicas, new without replicas", func() {
+							old.Spec.Replicas = nil
+							new.Spec.Replicas = nil
+							expected.Spec.Replicas = nil
+						},
+					),
+					Entry(
+						"old without replicas, new with replicas", func() {
+							old.Spec.Replicas = nil
+							new.Spec.Replicas = pointer.Int32Ptr(2)
+							expected.Spec.Replicas = pointer.Int32Ptr(2)
+						},
+					),
+					Entry(
+						"old with replicas, new without replicas", func() {
+							old.Spec.Replicas = pointer.Int32Ptr(3)
+							new.Spec.Replicas = nil
+							expected.Spec.Replicas = pointer.Int32Ptr(3)
+						},
+					),
+					Entry(
+						"old with replicas, new with replicas", func() {
+							old.Spec.Replicas = pointer.Int32Ptr(3)
+							new.Spec.Replicas = pointer.Int32Ptr(4)
+							expected.Spec.Replicas = pointer.Int32Ptr(3)
+						},
+					),
+				)
+			})
+
 			It("should create objects with namespace", func() {
 				cm := corev1.ConfigMap{
 					TypeMeta:   configMapTypeMeta,
@@ -626,7 +701,6 @@ spec:
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actualCMWithNamespace.Namespace).To(Equal("b"))
 			})
-
 		})
 
 		Context("#DeleteManifest", func() {
