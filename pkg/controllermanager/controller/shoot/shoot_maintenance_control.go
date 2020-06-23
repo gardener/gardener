@@ -286,14 +286,14 @@ func shouldKubernetesVersionBeUpdated(shoot *gardencorev1beta1.Shoot, profile *g
 		return true, &updateReason, true, nil
 	}
 
-	if shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion {
-		updateReason = "AutoUpdate of Kubernetes version configured"
-		return true, &updateReason, false, nil
-	}
-
 	if ExpirationDateExpired(version.ExpirationDate) {
 		updateReason = "Kubernetes version expired - force update required"
 		return true, &updateReason, true, nil
+	}
+
+	if shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion {
+		updateReason = "AutoUpdate of Kubernetes version configured"
+		return true, &updateReason, false, nil
 	}
 
 	return false, nil, false, nil

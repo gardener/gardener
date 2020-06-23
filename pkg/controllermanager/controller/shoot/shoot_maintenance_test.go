@@ -371,6 +371,18 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(*version).To(Equal("1.1.2"))
 		})
 
+		It("should determine that the shoot kubernetes version must be maintained - ForceUpdate to latest qualifying patch version of next minor version", func() {
+			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
+			cloudProfile.Spec.Kubernetes.Versions[3].ExpirationDate = &expirationDateInThePast
+			shoot.Spec.Kubernetes = gardencorev1beta1.Kubernetes{Version: "1.0.2"}
+
+			version, _, err := MaintainKubernetesVersion(shoot, cloudProfile, shootLogger)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(version).NotTo(BeNil())
+			Expect(*version).To(Equal("1.1.2"))
+		})
+
 		// special case when all the patch versions of the consecutive minor versions are expired
 		It("should determine that the shoot kubernetes version must be maintained - ForceUpdate to latest qualifying patch version (is expired) of next minor version.", func() {
 			shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
