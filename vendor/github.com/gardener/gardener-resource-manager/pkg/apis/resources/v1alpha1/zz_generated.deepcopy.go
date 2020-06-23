@@ -148,6 +148,11 @@ func (in *ManagedResourceSpec) DeepCopyInto(out *ManagedResourceSpec) {
 			}
 		}
 	}
+	if in.DeletePersistentVolumeClaims != nil {
+		in, out := &in.DeletePersistentVolumeClaims, &out.DeletePersistentVolumeClaims
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

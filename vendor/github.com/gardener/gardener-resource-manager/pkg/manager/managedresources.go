@@ -93,6 +93,11 @@ func (m *ManagedResource) KeepObjects(v bool) *ManagedResource {
 	return m
 }
 
+func (m *ManagedResource) DeletePersistentVolumeClaims(v bool) *ManagedResource {
+	m.resource.Spec.DeletePersistentVolumeClaims = &v
+	return m
+}
+
 func (m *ManagedResource) Reconcile(ctx context.Context) error {
 	resource := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{Name: m.resource.Name, Namespace: m.resource.Namespace},

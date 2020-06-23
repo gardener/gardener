@@ -69,6 +69,10 @@ type ManagedResourceSpec struct {
 	// Equivalences specifies possible group/kind equivalences for objects.
 	// +optional
 	Equivalences [][]metav1.GroupKind `json:"equivalences,omitempty"`
+	// DeletePersistentVolumeClaims specifies if PersistentVolumeClaims created by StatefulSets, which are managed by this
+	// resource, should also be deleted when the corresponding StatefulSet is deleted (defaults to false).
+	// +optional
+	DeletePersistentVolumeClaims *bool `json:"deletePersistentVolumeClaims,omitempty"`
 }
 
 // ManagedResourceStatus is the status of a managed resource.
@@ -110,6 +114,33 @@ const (
 	ConditionFalse ConditionStatus = "False"
 	// ConditionUnknown means that the controller can't decide if a resource is in the condition or not
 	ConditionUnknown ConditionStatus = "Unknown"
+	// ConditionProgressing means that the controller is currently acting on the resource and the condition is therefore progressing.
+	ConditionProgressing ConditionStatus = "Progressing"
+)
+
+// These are well-known reasons for ManagedResourceConditions.
+const (
+	// ConditionApplySucceeded indicates that the `ResourcesApplied` condition is `True`,
+	// because all resources have been applied successfully.
+	ConditionApplySucceeded = "ApplySucceeded"
+	// ConditionApplyFailed indicates that the `ResourcesApplied` condition is `False`,
+	// because applying the resources failed.
+	ConditionApplyFailed = "ApplyFailed"
+	// ConditionDecodingFailed indicates that the `ResourcesApplied` condition is `False`,
+	// because decoding the resources of the ManagedResource failed.
+	ConditionDecodingFailed = "DecodingFailed"
+	// ConditionApplyProgressing indicates that the `ResourcesApplied` condition is `Progressing`,
+	// because the resources are currently being reconciled.
+	ConditionApplyProgressing = "ApplyProgressing"
+	// ConditionDeletionFailed indicates that the `ResourcesApplied` condition is `False`,
+	// because deleting the resources failed.
+	ConditionDeletionFailed = "DeletionFailed"
+	// ConditionDeletionPending indicates that the `ResourcesApplied` condition is `Progressing`,
+	// because the deletion of some resources are still pending.
+	ConditionDeletionPending = "DeletionPending"
+	// ConditionHealthChecksPending indicates that the `ResourcesHealthy` condition is `Unknown`,
+	// because the health checks have not been completely executed yet for the current set of resources.
+	ConditionHealthChecksPending = "HealthChecksPending"
 )
 
 // ManagedResourceCondition describes the state of a deployment at a certain period.
