@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"time"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -28,15 +29,16 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/version"
-
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -212,12 +214,14 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 		return err
 	}
 
-	if err := b.DeployKubeAPIServerService(ctx); err != nil {
+	if err := component.OpWaiter(b.Shoot.Components.ControlPlane.KubeAPIServerService).Deploy(ctx); err != nil {
 		return err
 	}
 
-	if err := b.WaitUntilKubeAPIServerServiceIsReady(ctx); err != nil {
-		return err
+	if b.APIServerSNIEnabled() {
+		if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
+			return err
+		}
 	}
 
 	if err := b.DeployInternalDNS(ctx); err != nil {
@@ -249,10 +253,13 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 
 // WakeUpKubeAPIServer creates a service and ensures API Server is scaled up
 func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
-	if err := b.DeployKubeAPIServerService(ctx); err != nil {
+	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Deploy(ctx); err != nil {
 		return err
 	}
-	if err := b.WaitUntilKubeAPIServerServiceIsReady(ctx); err != nil {
+	if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
+		return err
+	}
+	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Wait(ctx); err != nil {
 		return err
 	}
 	if err := kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
@@ -312,10 +319,13 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	}
 
 	if !b.Shoot.DisableDNS {
-		if err := c.Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
+		if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Destroy(ctx); err != nil {
 			return err
 		}
+	}
 
+	if err := b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Destroy(ctx); err != nil {
+		return err
 	}
 
 	return client.IgnoreNotFound(b.ScaleETCDToZero(ctx))
@@ -716,6 +726,7 @@ func (b *Botanist) deployNetworkPolicies(ctx context.Context, denyAll bool) erro
 		globalNetworkPoliciesValues = map[string]interface{}{
 			"blockedAddresses": b.Seed.Info.Spec.Networks.BlockCIDRs,
 			"denyAll":          denyAll,
+			"sniEnabled":       b.APIServerSNIEnabled(),
 		}
 		excludeNets = []string{}
 
@@ -763,20 +774,6 @@ func (b *Botanist) deployNetworkPolicies(ctx context.Context, denyAll bool) erro
 // to transmit/receive traffic to/from other Pods/IP addresses.
 func (b *Botanist) DeployNetworkPolicies(ctx context.Context) error {
 	return b.deployNetworkPolicies(ctx, true)
-}
-
-// DeployKubeAPIServerService deploys kube-apiserver service.
-func (b *Botanist) DeployKubeAPIServerService(ctx context.Context) error {
-	var (
-		name   = "kube-apiserver-service"
-		values = map[string]interface{}{
-			"annotations": b.Seed.LoadBalancerServiceAnnotations,
-			"konnectivityTunnel": map[string]interface{}{
-				"enabled": b.Shoot.KonnectivityTunnelEnabled,
-			},
-		}
-	)
-	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name, kubernetes.Values(values))
 }
 
 // DeployKubeAPIServer deploys kube-apiserver deployment.
@@ -841,6 +838,13 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		shootNetworks["nodes"] = *v
 	}
 	defaultValues["shootNetworks"] = shootNetworks
+
+	if b.APIServerSNIEnabled() {
+		defaultValues["sni"] = map[string]interface{}{
+			"enabled":     true,
+			"advertiseIP": b.APIServerClusterIP,
+		}
+	}
 
 	enableEtcdEncryption, err := version.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
 	if err != nil {
@@ -1193,8 +1197,79 @@ func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
 	return b.ChartApplierSeed.Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeScheduler), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeScheduler, kubernetes.Values(values))
 }
 
-// SetAPIServerAddress sets the IP address of the API server's LoadBalancer.
-func (b *Botanist) SetAPIServerAddress(address string) {
+// DefaultKubeAPIServerService returns a deployer for kube-apiserver service.
+func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
+	var sniService *client.ObjectKey
+
+	if b.APIServerSNIEnabled() {
+		sniService = &client.ObjectKey{Name: common.IstioIngressGatewayServiceName, Namespace: common.IstioIngressGatewayNamespace}
+	}
+
+	return controlplane.NewKubeAPIService(
+		&controlplane.KubeAPIServiceValues{
+			Annotations:               b.Seed.LoadBalancerServiceAnnotations,
+			KonnectivityTunnelEnabled: b.Shoot.KonnectivityTunnelEnabled,
+		},
+		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
+		sniService,
+		b.ChartApplierSeed,
+		b.ChartsRootPath,
+		b.Logger,
+		b.K8sSeedClient.Client(),
+		nil,
+		b.setAPIServerServiceClusterIP,
+		b.setAPIServerAddress,
+	)
+}
+
+// DeployInternalDNS deploys the internal DNSProvider and DNSEntry.
+func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
+	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
+}
+
+// DefaultKubeAPIServersNI returns a deployer for kube-apiserver SNI.
+func (b *Botanist) DefaultKubeAPIServersNI() component.DeployWaiter {
+	return component.OpDestroy(controlplane.NewKubeAPIServerSNI(
+		&controlplane.KubeAPIServerSNIValues{
+			Name:                  v1beta1constants.DeploymentNameKubeAPIServer,
+			IstioIngressNamespace: common.IstioIngressGatewayNamespace,
+		},
+		b.Shoot.SeedNamespace,
+		b.ChartApplierSeed,
+		b.ChartsRootPath,
+		b.K8sSeedClient.Client(),
+	))
+}
+
+func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
+	if !b.APIServerSNIEnabled() {
+		return
+	}
+
+	b.APIServerClusterIP = clusterIP
+
+	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = controlplane.NewKubeAPIServerSNI(
+		&controlplane.KubeAPIServerSNIValues{
+			ApiserverClusterIP: clusterIP,
+			NamespaceUID:       b.SeedNamespaceObject.UID,
+			Hosts: []string{
+				common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
+				common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+			},
+			Name:                     v1beta1constants.DeploymentNameKubeAPIServer,
+			IstioIngressNamespace:    common.IstioIngressGatewayNamespace,
+			EnableKonnectivityTunnel: gardenletfeatures.FeatureGate.Enabled(features.KonnectivityTunnel),
+		},
+		b.Shoot.SeedNamespace,
+		b.ChartApplierSeed,
+		b.ChartsRootPath,
+		b.K8sSeedClient.Client(),
+	)
+
+}
+
+// setAPIServerAddress sets the IP address of the API server's LoadBalancer.
+func (b *Botanist) setAPIServerAddress(address string) {
 	b.Operation.APIServerAddress = address
 
 	if b.NeedsInternalDNS() {

@@ -1,6 +1,7 @@
 # a list of CIDRs that should be blocked
 blockedAddresses: []
 
+sniEnabled: false
 # this controls if by default all Egress and Ingress is denied for all Pods
 # in the namespace
 # If set to false, only pods labeled with 'networking.gardener.cloud/to-all: disallowed'

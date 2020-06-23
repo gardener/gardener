@@ -82,6 +82,7 @@ featureGates:
   HVPAForShootedSeed: true
   ManagedIstio: false
   KonnectivityTunnel: false
+  APIServerSNI: false
 seedSelector: {} # selects all seeds, only use for development purposes
 # seedConfig:
 #   metadata:

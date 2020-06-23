@@ -1,0 +1,30 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: {{ .Values.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kubernetes
+    role: apiserver
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+{{ toYaml .Values.hosts | indent 4 }}
+    port:
+      number: 443
+      name: tls
+      protocol: TLS
+    tls:
+      mode: PASSTHROUGH
+{{- if .Values.enableKonnectivityTunnel }}
+  - hosts:
+{{ toYaml .Values.hosts | indent 4 }}
+    port:
+      number: 8132
+      name: tls-tunnel
+      protocol: TLS
+    tls:
+      mode: PASSTHROUGH
+{{- end }}

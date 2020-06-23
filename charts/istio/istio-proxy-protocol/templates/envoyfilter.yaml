@@ -1,0 +1,24 @@
+# this adds "envoy.listener.proxy_protocol" filter to the listener.
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: proxy-protocol
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+spec:
+  workloadSelector:
+    labels:
+{{ .Values.labels | toYaml | indent 6 }}
+  configPatches:
+  - applyTo: LISTENER
+    match:
+      context: GATEWAY
+      listener:
+        portNumber: 8443
+        name: 0.0.0.0_8443
+    patch:
+      operation: MERGE
+      value:
+        listener_filters:
+        - name: envoy.listener.proxy_protocol

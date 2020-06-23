@@ -1,7 +1,6 @@
-type: LoadBalancer
 targetPort: 443
+enableSNI: false
 # nodePort: 31443
 annotations: {}
-konnectivityTunnel:
-  enabled: false
-
+enableKonnectivityTunnel: false
+name: kube-apiserver

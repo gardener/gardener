@@ -83,6 +83,8 @@ func New(o *operation.Operation) (*Botanist, error) {
 	}
 
 	o.Shoot.Components.DNS.NginxEntry = b.DefaultNginxIngressDNSEntry(b.K8sSeedClient.Client())
+	o.Shoot.Components.ControlPlane.KubeAPIServerService = b.DefaultKubeAPIServerService()
+	o.Shoot.Components.ControlPlane.KubeAPIServerSNI = b.DefaultKubeAPIServersNI()
 
 	// Extension CRD components
 	o.Shoot.Components.Network = b.DefaultNetwork(b.K8sSeedClient.Client())

@@ -1,7 +1,5 @@
 replicas: 1
 kubernetesVersion: 1.11.2
-# advertiseAddress: 127.0.0.1
-# endpointReconcilerType: none
 securePort: 443
 konnectivityTunnel:
   enabled: true
@@ -152,3 +150,7 @@ limitsRequestsGapScaleParams:
   memory:
     value: "5G"
     percentage: 80
+
+sni:
+  enabled: false
+  advertiseIP: 1.1.1.1

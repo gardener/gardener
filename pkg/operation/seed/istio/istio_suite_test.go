@@ -30,7 +30,7 @@ const (
 	chartsRootPath = "../../../../charts"
 )
 
-// This entire test is commended out because istio requires K8S API 1.18
+// This entire test is commented out because istio requires K8S API 1.18
 // TODO (mvladev): once we update to 1.18 enable this.
 
 // // can't use https://pkg.go.dev/github.com/envoyproxy/go-control-plane/pkg/conversion

@@ -75,10 +75,11 @@ type Shoot struct {
 	ResourceRefs map[string]autoscalingv1.CrossVersionObjectReference
 }
 
-// Components contains different components deployed
+// Components contains different components deployed in the Shoot cluster.
 type Components struct {
-	DNS     *DNS
-	Network component.DeployWaiter
+	DNS          *DNS
+	Network      component.DeployWaiter
+	ControlPlane *ControlPlane
 }
 
 // DNS contains references to internal and external DNSProvider and DNSEntry deployers.
@@ -89,6 +90,12 @@ type DNS struct {
 	InternalEntry       component.DeployWaiter
 	AdditionalProviders map[string]component.DeployWaiter
 	NginxEntry          component.DeployWaiter
+}
+
+// ControlPlane contains references to K8S control plane components.
+type ControlPlane struct {
+	KubeAPIServerService component.DeployWaiter
+	KubeAPIServerSNI     component.DeployWaiter
 }
 
 // Networks contains pre-calculated subnets and IP address for various components.

@@ -46,6 +46,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/util/retry"
 	componentbaseconfig "k8s.io/component-base/config"
@@ -642,13 +643,29 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 			"charts",
 			k8sSeedClient.Client(),
 		)
+
+		igwConfig := &istio.IngressValues{
+			TrustDomain:     "cluster.local",
+			Image:           igwImage.String(),
+			IstiodNamespace: common.IstioNamespace,
+			Annotations:     seed.LoadBalancerServiceAnnotations,
+		}
+
+		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
+			ports := []corev1.ServicePort{
+				{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
+				{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(443)},
+			}
+
+			if gardenletfeatures.FeatureGate.Enabled(features.KonnectivityTunnel) {
+				ports = append(ports, corev1.ServicePort{Name: "tls-tunnel", Port: 8132, TargetPort: intstr.FromInt(8132)})
+			}
+
+			igwConfig.Ports = ports
+		}
+
 		igw := istio.NewIngressGateway(
-			&istio.IngressValues{
-				TrustDomain:     "cluster.local",
-				Image:           igwImage.String(),
-				IstiodNamespace: common.IstioNamespace,
-				Annotations:     seed.LoadBalancerServiceAnnotations,
-			},
+			igwConfig,
 			common.IstioIngressGatewayNamespace,
 			chartApplier,
 			"charts",
@@ -656,6 +673,18 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		)
 
 		if err := component.OpWaiter(istioCRDs, istiod, igw).Deploy(context.TODO()); err != nil {
+			return err
+		}
+	}
+
+	proxy := istio.NewProxyProtocolGateway(common.IstioIngressGatewayNamespace, chartApplier, "charts")
+
+	if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
+		if err := proxy.Deploy(context.TODO()); err != nil {
+			return err
+		}
+	} else {
+		if err := proxy.Destroy(context.TODO()); err != nil {
 			return err
 		}
 	}
@@ -737,6 +766,7 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, seed *Seed, config *
 		"global-network-policies": map[string]interface{}{
 			"denyAll":         false,
 			"privateNetworks": privateNetworks,
+			"sniEnabled":      gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI),
 		},
 		"gardenerResourceManager": map[string]interface{}{
 			"resourceClass": v1beta1constants.SeedResourceManagerClass,

@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -499,6 +500,28 @@ var _ = Describe("dns", func() {
 				},
 			}
 			Expect(b.NeedsAdditionalDNSProviders()).To(BeTrue())
+		})
+	})
+
+	Context("APIServerSNIEnabled", func() {
+		BeforeEach(func() {
+			gardenletfeatures.RegisterFeatureGates()
+		})
+
+		It("returns false when feature gate is disabled", func() {
+			Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=false")).ToNot(HaveOccurred())
+
+			Expect(b.APIServerSNIEnabled()).To(BeFalse())
+		})
+
+		It("returns true when feature gate is enabled", func() {
+			Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
+			b.Garden.InternalDomain = &garden.Domain{Provider: "some-provider"}
+			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.StringPtr("foo")}
+			b.Shoot.ExternalClusterDomain = pointer.StringPtr("baz")
+			b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
+
+			Expect(b.APIServerSNIEnabled()).To(BeTrue())
 		})
 	})
 })

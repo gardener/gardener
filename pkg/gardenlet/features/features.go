@@ -30,6 +30,7 @@ var (
 		features.HVPAForShootedSeed: {Default: false, PreRelease: featuregate.Alpha},
 		features.ManagedIstio:       {Default: false, PreRelease: featuregate.Alpha},
 		features.KonnectivityTunnel: {Default: false, PreRelease: featuregate.Alpha},
+		features.APIServerSNI:       {Default: false, PreRelease: featuregate.Alpha},
 	}
 )
 

@@ -55,3 +55,7 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: konnectivity-agent.enabled
+- name: apiserver-proxy
+  repository: http://localhost:10191
+  version: 0.1.0
+  condition: apiserver-proxy.enabled

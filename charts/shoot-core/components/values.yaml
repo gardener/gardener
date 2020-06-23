@@ -63,3 +63,10 @@ konnectivity-agent:
   podAnnotations: {}
   images:
     konnectivity-agent: image-repository:image-tag
+apiserver-proxy:
+  enabled: false
+  images:
+    apiserver-proxy: image-repository
+    apiserver-proxy-sidecar: image-repository
+  advertiseIPAddress: 1.1.1.1
+  proxySeedServer: dummy.127.0.0.1.nip.io
