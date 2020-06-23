@@ -282,7 +282,7 @@ const (
 
 	// LabelWorkerPool is a constant for a label that indicates the worker pool the node belongs to
 	LabelWorkerPool = "worker.gardener.cloud/pool"
-	// LabelWorkerPool is a deprecated constant for a label that indicates the worker pool the node belongs to
+	// LabelWorkerPoolDeprecated is a deprecated constant for a label that indicates the worker pool the node belongs to
 	LabelWorkerPoolDeprecated = "worker.garden.sapcloud.io/group"
 
 	// LabelWorkerPoolSystemComponents is a constant that indicates whether the worker pool should host system components
@@ -291,4 +291,7 @@ const (
 	// ReferencedResourcesPrefix is the prefix used when copying referenced resources to the Shoot namespace in the Seed,
 	// to avoid naming collisions with resources managed by Gardener.
 	ReferencedResourcesPrefix = "ref-"
+
+	// ClusterIdentity is a constant equal to the name and data key (that stores the identity) of the cluster-identity ConfigMap
+	ClusterIdentity = "cluster-identity"
 )

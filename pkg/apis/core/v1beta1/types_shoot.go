@@ -147,6 +147,9 @@ type ShootStatus struct {
 	// UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
 	// It is used to compute unique hashes.
 	UID types.UID `json:"uid" protobuf:"bytes,11,opt,name=uid,casttype=k8s.io/apimachinery/pkg/types.UID"`
+	// ClusterIdentity is the identity of the Shoot cluster
+	// +optional
+	ClusterIdentity *string `json:"clusterIdentity,omitempty" protobuf:"bytes,12,opt,name=clusterIdentity"`
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

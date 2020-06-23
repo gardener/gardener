@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Seed Validation Tests", func() {
@@ -447,6 +448,34 @@ var _ = Describe("Seed Validation Tests", func() {
 					"Field":  Equal("spec.backup"),
 					"Detail": Equal(`field is immutable`),
 				}))
+			})
+		})
+	})
+
+	Describe("#ValidateSeedStatusUpdate", func() {
+		Context("validate .status.clusterIdentity updates", func() {
+			newSeed := &core.Seed{
+				Status: core.SeedStatus{
+					ClusterIdentity: pointer.StringPtr("newClusterIdentity"),
+				},
+			}
+
+			It("should fail to update seed status cluster identity if it already exists", func() {
+				oldSeed := &core.Seed{Status: core.SeedStatus{
+					ClusterIdentity: pointer.StringPtr("clusterIdentityExists"),
+				}}
+				allErrs := ValidateSeedStatusUpdate(newSeed, oldSeed)
+				Expect(allErrs).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.clusterIdentity"),
+					"Detail": Equal(`field is immutable`),
+				}))
+			})
+
+			It("should not fail to update seed status cluster identity if it is missing", func() {
+				oldSeed := &core.Seed{}
+				allErrs := ValidateSeedStatusUpdate(newSeed, oldSeed)
+				Expect(allErrs).To(BeEmpty())
 			})
 		})
 	})

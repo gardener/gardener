@@ -40,15 +40,16 @@ import (
 
 // Builder is an object that builds Operation objects.
 type Builder struct {
-	configFunc         func() (*config.GardenletConfiguration, error)
-	gardenFunc         func(map[string]*corev1.Secret) (*garden.Garden, error)
-	gardenerInfoFunc   func() (*gardencorev1beta1.Gardener, error)
-	imageVectorFunc    func() (imagevector.ImageVector, error)
-	loggerFunc         func() (*logrus.Entry, error)
-	secretsFunc        func() (map[string]*corev1.Secret, error)
-	seedFunc           func(context.Context, client.Client) (*seed.Seed, error)
-	shootFunc          func(context.Context, client.Client, *garden.Garden, *seed.Seed) (*shoot.Shoot, error)
-	chartsRootPathFunc func() string
+	configFunc                func() (*config.GardenletConfiguration, error)
+	gardenFunc                func(map[string]*corev1.Secret) (*garden.Garden, error)
+	gardenerInfoFunc          func() (*gardencorev1beta1.Gardener, error)
+	gardenClusterIdentityFunc func() (string, error)
+	imageVectorFunc           func() (imagevector.ImageVector, error)
+	loggerFunc                func() (*logrus.Entry, error)
+	secretsFunc               func() (map[string]*corev1.Secret, error)
+	seedFunc                  func(context.Context, client.Client) (*seed.Seed, error)
+	shootFunc                 func(context.Context, client.Client, *garden.Garden, *seed.Seed) (*shoot.Shoot, error)
+	chartsRootPathFunc        func() string
 }
 
 // Operation contains all data required to perform an operation on a Shoot cluster.
@@ -56,6 +57,7 @@ type Operation struct {
 	Config                    *config.GardenletConfiguration
 	Logger                    *logrus.Entry
 	GardenerInfo              *gardencorev1beta1.Gardener
+	GardenClusterIdentity     string
 	Secrets                   map[string]*corev1.Secret
 	CheckSums                 map[string]string
 	ImageVector               imagevector.ImageVector

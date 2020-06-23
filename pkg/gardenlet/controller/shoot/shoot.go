@@ -47,6 +47,7 @@ type Controller struct {
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
 	config                        *config.GardenletConfiguration
+	gardenClusterIdentity         string
 	identity                      *gardencorev1beta1.Gardener
 	careControl                   CareControlInterface
 	controllerInstallationControl ControllerInstallationControlInterface
@@ -76,7 +77,8 @@ type Controller struct {
 // NewShootController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <shootInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, identity *gardencorev1beta1.Gardener, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
+func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, identity *gardencorev1beta1.Gardener,
+	gardenClusterIdentity string, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
 	var (
 		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
 
@@ -96,7 +98,8 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 
 		config:                        config,
 		identity:                      identity,
-		careControl:                   NewDefaultCareControl(clientMap, gardenCoreV1beta1Informer, secrets, imageVector, identity, config),
+		gardenClusterIdentity:         gardenClusterIdentity,
+		careControl:                   NewDefaultCareControl(clientMap, gardenCoreV1beta1Informer, secrets, imageVector, identity, gardenClusterIdentity, config),
 		controllerInstallationControl: NewDefaultControllerInstallationControl(clientMap, gardenCoreV1beta1Informer, recorder),
 		seedRegistrationControl:       NewDefaultSeedRegistrationControl(clientMap, gardenCoreV1beta1Informer, imageVector, config, recorder),
 		recorder:                      recorder,

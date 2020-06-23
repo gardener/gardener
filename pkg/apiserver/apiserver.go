@@ -15,8 +15,11 @@
 package apiserver
 
 import (
+	"fmt"
+
 	corerest "github.com/gardener/gardener/pkg/registry/core/rest"
 	settingsrest "github.com/gardener/gardener/pkg/registry/settings/rest"
+	"github.com/spf13/pflag"
 
 	genericapiserver "k8s.io/apiserver/pkg/server"
 )
@@ -73,4 +76,24 @@ func (c completedConfig) New() (*GardenerServer, error) {
 	}
 
 	return s, nil
+}
+
+// ExtraOptions is used for providing additional options to the Gardener API Server
+type ExtraOptions struct {
+	ClusterIdentity string
+}
+
+// Validate checks if the required flags are set
+func (o *ExtraOptions) Validate() []error {
+	allErrors := []error{}
+	if len(o.ClusterIdentity) == 0 {
+		allErrors = append(allErrors, fmt.Errorf("--cluster-identity must be specified"))
+	}
+
+	return allErrors
+}
+
+// AddFlags adds flags related to cluster identity to the options
+func (o *ExtraOptions) AddFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&o.ClusterIdentity, "cluster-identity", o.ClusterIdentity, "This flag is used for specifying the identity of the Garden cluster")
 }

@@ -66,6 +66,9 @@ func NewBuilder() *Builder {
 		gardenerInfoFunc: func() (*gardencorev1beta1.Gardener, error) {
 			return nil, fmt.Errorf("gardener info is required but not set")
 		},
+		gardenClusterIdentityFunc: func() (string, error) {
+			return "", fmt.Errorf("garden cluster identity is required but not set")
+		},
 		imageVectorFunc: func() (imagevector.ImageVector, error) {
 			return nil, fmt.Errorf("image vector is required but not set")
 		},
@@ -115,6 +118,12 @@ func (b *Builder) WithGardenFrom(k8sGardenCoreInformers gardencoreinformers.Inte
 // WithGardenerInfo sets the gardenerInfoFunc attribute at the Builder.
 func (b *Builder) WithGardenerInfo(gardenerInfo *gardencorev1beta1.Gardener) *Builder {
 	b.gardenerInfoFunc = func() (*gardencorev1beta1.Gardener, error) { return gardenerInfo, nil }
+	return b
+}
+
+// WithGardenClusterIdentity sets the identity of the Garden cluster as attribute at the Builder.
+func (b *Builder) WithGardenClusterIdentity(gardenClusterIdentity string) *Builder {
+	b.gardenClusterIdentityFunc = func() (string, error) { return gardenClusterIdentity, nil }
 	return b
 }
 
@@ -226,6 +235,12 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 		return nil, err
 	}
 	operation.GardenerInfo = gardenerInfo
+
+	gardenClusterIdentity, err := b.gardenClusterIdentityFunc()
+	if err != nil {
+		return nil, err
+	}
+	operation.GardenClusterIdentity = gardenClusterIdentity
 
 	imageVector, err := b.imageVectorFunc()
 	if err != nil {

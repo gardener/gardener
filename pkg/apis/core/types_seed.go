@@ -86,6 +86,8 @@ type SeedStatus struct {
 	// ObservedGeneration is the most recent generation observed for this Seed. It corresponds to the
 	// Seed's generation, which is updated on mutation by the API Server.
 	ObservedGeneration int64
+	// ClusterIdentity is the identity of Seed cluster
+	ClusterIdentity *string
 }
 
 // SeedBackup contains the object store configuration for backups for shoot (currently only etcd).

@@ -19,6 +19,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -164,7 +165,16 @@ func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *fi
 
 // ValidateSeedStatusUpdate validates the status field of a Seed object.
 func ValidateSeedStatusUpdate(newSeed, oldSeed *core.Seed) field.ErrorList {
-	allErrs := field.ErrorList{}
+	var (
+		allErrs   = field.ErrorList{}
+		fldPath   = field.NewPath("status")
+		oldStatus = oldSeed.Status
+		newStatus = newSeed.Status
+	)
+
+	if oldStatus.ClusterIdentity != nil && !apiequality.Semantic.DeepEqual(oldStatus.ClusterIdentity, newStatus.ClusterIdentity) {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newStatus.ClusterIdentity, oldStatus.ClusterIdentity, fldPath.Child("clusterIdentity"))...)
+	}
 
 	return allErrs
 }

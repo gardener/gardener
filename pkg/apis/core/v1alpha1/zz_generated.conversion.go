@@ -4065,6 +4065,7 @@ func autoConvert_v1alpha1_SeedStatus_To_core_SeedStatus(in *SeedStatus, out *cor
 	out.Gardener = (*core.Gardener)(unsafe.Pointer(in.Gardener))
 	out.KubernetesVersion = (*string)(unsafe.Pointer(in.KubernetesVersion))
 	out.ObservedGeneration = in.ObservedGeneration
+	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	return nil
 }
 
@@ -4078,6 +4079,7 @@ func autoConvert_core_SeedStatus_To_v1alpha1_SeedStatus(in *core.SeedStatus, out
 	out.KubernetesVersion = (*string)(unsafe.Pointer(in.KubernetesVersion))
 	out.Conditions = *(*[]Condition)(unsafe.Pointer(&in.Conditions))
 	out.ObservedGeneration = in.ObservedGeneration
+	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	return nil
 }
 
@@ -4449,6 +4451,7 @@ func autoConvert_v1alpha1_ShootStatus_To_core_ShootStatus(in *ShootStatus, out *
 	// WARNING: in.Seed requires manual conversion: does not exist in peer-type
 	out.TechnicalID = in.TechnicalID
 	out.UID = types.UID(in.UID)
+	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	return nil
 }
 
@@ -4466,6 +4469,7 @@ func autoConvert_core_ShootStatus_To_v1alpha1_ShootStatus(in *core.ShootStatus, 
 	// WARNING: in.SeedName requires manual conversion: does not exist in peer-type
 	out.TechnicalID = in.TechnicalID
 	out.UID = types.UID(in.UID)
+	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	return nil
 }
 

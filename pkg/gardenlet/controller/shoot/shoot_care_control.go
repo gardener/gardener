@@ -94,8 +94,8 @@ type CareControlInterface interface {
 // NewDefaultCareControl returns a new instance of the default implementation CareControlInterface that
 // implements the documented semantics for caring for Shoots. You should use an instance returned from NewDefaultCareControl()
 // for any scenario other than testing.
-func NewDefaultCareControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardencorev1beta1.Gardener, config *config.GardenletConfiguration) CareControlInterface {
-	return &defaultCareControl{clientMap, k8sGardenCoreInformers, secrets, imageVector, identity, config}
+func NewDefaultCareControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardencorev1beta1.Gardener, gardenClusterIdentity string, config *config.GardenletConfiguration) CareControlInterface {
+	return &defaultCareControl{clientMap, k8sGardenCoreInformers, secrets, imageVector, identity, gardenClusterIdentity, config}
 }
 
 type defaultCareControl struct {
@@ -104,6 +104,7 @@ type defaultCareControl struct {
 	secrets                map[string]*corev1.Secret
 	imageVector            imagevector.ImageVector
 	identity               *gardencorev1beta1.Gardener
+	gardenClusterIdentity  string
 	config                 *config.GardenletConfiguration
 }
 
@@ -147,6 +148,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		WithLogger(shootLogger).
 		WithConfig(c.config).
 		WithGardenerInfo(c.identity).
+		WithGardenClusterIdentity(c.gardenClusterIdentity).
 		WithSecrets(c.secrets).
 		WithImageVector(c.imageVector).
 		WithGardenFrom(c.k8sGardenCoreInformers, shoot.Namespace).

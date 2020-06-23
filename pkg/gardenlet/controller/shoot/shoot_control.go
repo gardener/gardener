@@ -256,6 +256,7 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 		WithLogger(logger).
 		WithConfig(c.config).
 		WithGardenerInfo(c.identity).
+		WithGardenClusterIdentity(c.gardenClusterIdentity).
 		WithSecrets(c.secrets).
 		WithImageVector(c.imageVector).
 		WithGarden(gardenObj).

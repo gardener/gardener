@@ -3083,6 +3083,11 @@ func (in *SeedStatus) DeepCopyInto(out *SeedStatus) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.ClusterIdentity != nil {
+		in, out := &in.ClusterIdentity, &out.ClusterIdentity
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
@@ -3514,6 +3519,11 @@ func (in *ShootStatus) DeepCopyInto(out *ShootStatus) {
 	}
 	if in.Seed != nil {
 		in, out := &in.Seed, &out.Seed
+		*out = new(string)
+		**out = **in
+	}
+	if in.ClusterIdentity != nil {
+		in, out := &in.ClusterIdentity, &out.ClusterIdentity
 		*out = new(string)
 		**out = **in
 	}

@@ -47,6 +47,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/version"
 
@@ -54,6 +55,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/informers"
@@ -223,6 +226,7 @@ type Gardenlet struct {
 	Config                 *config.GardenletConfiguration
 	Identity               *gardencorev1beta1.Gardener
 	GardenNamespace        string
+	GardenClusterIdentity  string
 	ClientMap              clientmap.ClientMap
 	K8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	KubeInformerFactory    informers.SharedInformerFactory
@@ -339,8 +343,19 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		return nil, err
 	}
 
+	gardenClusterIdentity := &corev1.ConfigMap{}
+	if err := k8sGardenClient.DirectClient().Get(ctx, kutil.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), gardenClusterIdentity); err != nil {
+		return nil, fmt.Errorf("unable to get Gardener`s cluster-identity ConfigMap: %v", err)
+	}
+
+	clusterIdentity, ok := gardenClusterIdentity.Data[v1beta1constants.ClusterIdentity]
+	if !ok {
+		return nil, errors.New("unable to extract Gardener`s cluster identity from cluster-identity ConfigMap")
+	}
+
 	return &Gardenlet{
 		Identity:               identity,
+		GardenClusterIdentity:  clusterIdentity,
 		GardenNamespace:        gardenNamespace,
 		Config:                 cfg,
 		Logger:                 logger,
@@ -438,6 +453,7 @@ func (g *Gardenlet) startControllers(ctx context.Context) {
 		g.KubeInformerFactory,
 		g.Config,
 		g.Identity,
+		g.GardenClusterIdentity,
 		g.GardenNamespace,
 		g.Recorder,
 		g.HealthManager,

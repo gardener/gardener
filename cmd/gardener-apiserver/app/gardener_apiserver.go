@@ -22,6 +22,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
@@ -100,12 +101,14 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 	flags := cmd.Flags()
 	utilfeature.DefaultMutableFeatureGate.AddFlag(flags)
 	opts.Recommended.AddFlags(flags)
+	opts.ExtraOptions.AddFlags(flags)
 	return cmd
 }
 
 // Options has all the context and parameters needed to run a Gardener API server.
 type Options struct {
 	Recommended                 *genericoptions.RecommendedOptions
+	ExtraOptions                *apiserver.ExtraOptions
 	CoreInformerFactory         gardencoreinformers.SharedInformerFactory
 	ExternalCoreInformerFactory gardenexternalcoreinformers.SharedInformerFactory
 	KubeInformerFactory         kubeinformers.SharedInformerFactory
@@ -125,8 +128,9 @@ func NewOptions(out, errOut io.Writer) *Options {
 			),
 			genericoptions.NewProcessInfo("gardener-apiserver", "garden"),
 		),
-		StdOut: out,
-		StdErr: errOut,
+		ExtraOptions: &apiserver.ExtraOptions{},
+		StdOut:       out,
+		StdErr:       errOut,
 	}
 	o.Recommended.Etcd.StorageConfig.EncodeVersioner = runtime.NewMultiGroupVersioner(
 		gardencorev1beta1.SchemeGroupVersion,
@@ -140,6 +144,7 @@ func NewOptions(out, errOut io.Writer) *Options {
 func (o Options) validate(args []string) error {
 	errs := []error{}
 	errs = append(errs, o.Recommended.Validate()...)
+	errs = append(errs, o.ExtraOptions.Validate()...)
 
 	// Require server certificate specification
 	keyCert := &o.Recommended.SecureServing.ServerCert.CertKey
@@ -291,6 +296,28 @@ func (o Options) run(stopCh <-chan struct{}) error {
 		_, err = kubeClient.CoreV1().Namespaces().Create(&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: gardencorev1beta1.GardenerSeedLeaseNamespace,
+			},
+		})
+		return err
+	}); err != nil {
+		return err
+	}
+
+	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-cluster-identity", func(context genericapiserver.PostStartHookContext) error {
+		if _, err := kubeClient.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(v1beta1constants.ClusterIdentity, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
+			return err
+		} else if err == nil {
+			// Cluster identity ConfigMap already exists
+			return nil
+		}
+
+		_, err = kubeClient.CoreV1().ConfigMaps(metav1.NamespaceSystem).Create(&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      v1beta1constants.ClusterIdentity,
+				Namespace: metav1.NamespaceSystem,
+			},
+			Data: map[string]string{
+				v1beta1constants.ClusterIdentity: o.ExtraOptions.ClusterIdentity,
 			},
 		})
 		return err

@@ -5219,6 +5219,13 @@ func schema_pkg_apis_core_v1alpha1_SeedStatus(ref common.ReferenceCallback) comm
 							Format:      "int64",
 						},
 					},
+					"clusterIdentity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ClusterIdentity is the identity of the Seed cluster",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -5922,6 +5929,13 @@ func schema_pkg_apis_core_v1alpha1_ShootStatus(ref common.ReferenceCallback) com
 					"uid": {
 						SchemaProps: spec.SchemaProps{
 							Description: "UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters. It is used to compute unique hashes.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"clusterIdentity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ClusterIdentity is the identity of the Shoot cluster",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -10825,6 +10839,13 @@ func schema_pkg_apis_core_v1beta1_SeedStatus(ref common.ReferenceCallback) commo
 							Format:      "int64",
 						},
 					},
+					"clusterIdentity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ClusterIdentity is the identity of the Seed cluster",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -11372,6 +11393,13 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 					"uid": {
 						SchemaProps: spec.SchemaProps{
 							Description: "UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters. It is used to compute unique hashes.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"clusterIdentity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ClusterIdentity is the identity of the Shoot cluster",
 							Type:        []string{"string"},
 							Format:      "",
 						},
