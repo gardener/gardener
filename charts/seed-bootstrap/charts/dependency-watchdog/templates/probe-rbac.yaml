@@ -38,6 +38,8 @@ rules:
   - deployments
   - deployments/scale
   verbs:
+  - list
+  - watch
   - get
   - update
 ---
@@ -65,7 +67,9 @@ rules:
   - ""
   resources:
   - endpoints
+  - events
   verbs:
   - get
   - create
   - update
+  - patch
