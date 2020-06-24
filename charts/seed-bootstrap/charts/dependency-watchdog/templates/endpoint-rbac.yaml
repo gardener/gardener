@@ -65,7 +65,9 @@ rules:
   - ""
   resources:
   - endpoints
+  - events
   verbs:
   - get
   - create
   - update
+  - patch
