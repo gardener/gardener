@@ -4,7 +4,9 @@ FROM golang:1.14.4 AS builder
 WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
 
-RUN make install
+ARG EFFECTIVE_VERSION
+
+RUN EFFECTIVE_VERSION=$EFFECTIVE_VERSION make install
 
 ############# base
 FROM alpine:3.12.0 AS base

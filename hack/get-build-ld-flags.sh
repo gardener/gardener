@@ -16,8 +16,10 @@
 
 SOURCE_REPOSITORY="${1:-github.com/gardener/gardener}"
 VERSION_PATH="${2:-$(dirname $0)/../VERSION}"
+VERSION_VERSIONFILE="$(cat "$VERSION_PATH")"
+VERSION="${EFFECTIVE_VERSION:-$VERSION_VERSIONFILE}"
 
-echo "-X $SOURCE_REPOSITORY/pkg/version.gitVersion=$(cat "$VERSION_PATH")
+echo "-X $SOURCE_REPOSITORY/pkg/version.gitVersion=$VERSION
       -X $SOURCE_REPOSITORY/pkg/version.gitTreeState=$([ -z git status --porcelain 2>/dev/null ] && echo clean || echo dirty)
       -X $SOURCE_REPOSITORY/pkg/version.gitCommit=$(git rev-parse --verify HEAD)
       -X $SOURCE_REPOSITORY/pkg/version.buildDate=$(date '+%Y-%m-%dT%H:%M:%S%z' | sed 's/\([0-9][0-9]\)$/:\1/g')"
