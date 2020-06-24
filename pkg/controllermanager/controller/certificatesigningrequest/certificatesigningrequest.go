@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
@@ -34,7 +34,7 @@ import (
 
 // Controller controls CertificateSigningRequests.
 type Controller struct {
-	k8sGardenClient kubernetes.Interface
+	clientMap clientmap.ClientMap
 
 	control  ControlInterface
 	recorder record.EventRecorder
@@ -50,7 +50,7 @@ type Controller struct {
 // NewCSRController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <kubeInformerFactory>, and a <recorder> for
 // event recording. It creates a new CSR controller.
-func NewCSRController(k8sGardenClient kubernetes.Interface, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
+func NewCSRController(clientMap clientmap.ClientMap, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
 		certificatesV1beta1Informer = kubeInformerFactory.Certificates().V1beta1()
 		csrInformer                 = certificatesV1beta1Informer.CertificateSigningRequests()
@@ -58,12 +58,12 @@ func NewCSRController(k8sGardenClient kubernetes.Interface, kubeInformerFactory 
 	)
 
 	csrController := &Controller{
-		k8sGardenClient: k8sGardenClient,
-		control:         NewDefaultControl(k8sGardenClient),
-		recorder:        recorder,
-		csrLister:       csrLister,
-		csrQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CertificateSigningRequest"),
-		workerCh:        make(chan int),
+		clientMap: clientMap,
+		control:   NewDefaultControl(clientMap),
+		recorder:  recorder,
+		csrLister: csrLister,
+		csrQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CertificateSigningRequest"),
+		workerCh:  make(chan int),
 	}
 
 	csrInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{

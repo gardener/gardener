@@ -21,6 +21,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
@@ -424,7 +425,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 	}
 
 	// Remove completed tasks from Shoot if they were executed.
-	newShoot, err := kutil.TryUpdateShootAnnotations(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+	newShoot, err := kutil.TryUpdateShootAnnotations(o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			controllerutils.RemoveTasks(shoot.Annotations, allTasks...)
 			return shoot, nil
@@ -434,6 +435,14 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
 	}
 	o.Shoot.Info = newShoot
+
+	// ensure that shoot client is invalidated after it has been hibernated
+	if o.Shoot.HibernationEnabled {
+		if err := o.ClientMap.InvalidateClient(keys.ForShoot(o.Shoot.Info)); err != nil {
+			err = fmt.Errorf("failed to invalidate shoot client: %w", err)
+			return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
+		}
+	}
 
 	o.Logger.Infof("Successfully reconciled Shoot %q", o.Shoot.Info.Name)
 	return nil

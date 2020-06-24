@@ -22,6 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/logger"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -46,6 +47,8 @@ const (
 )
 
 func (c *Controller) reconcileSeedLeaseKey(key string) error {
+	ctx := context.TODO()
+
 	_, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return err
@@ -62,7 +65,7 @@ func (c *Controller) reconcileSeedLeaseKey(key string) error {
 		return err
 	}
 
-	if err := c.checkSeedConnection(seed); err != nil {
+	if err := c.checkSeedConnection(ctx, seed); err != nil {
 		c.lock.Lock()
 		c.leaseMap[seed.Name] = false
 		c.lock.Unlock()
@@ -79,6 +82,11 @@ func (c *Controller) reconcileSeedLeaseKey(key string) error {
 		c.leaseMap[seed.Name] = false
 		c.lock.Unlock()
 		return err
+	}
+
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return fmt.Errorf("failed to get garden client: %w", err)
 	}
 
 	c.lock.Lock()
@@ -101,7 +109,7 @@ func (c *Controller) reconcileSeedLeaseKey(key string) error {
 
 	if newCondition, update := bldr.WithNowFunc(metav1.Now).Build(); update {
 		seed.Status.Conditions = helper.MergeConditions(seedCopy.Status.Conditions, newCondition)
-		if err := c.k8sGardenClient.Client().Status().Update(context.TODO(), seed); err != nil {
+		if err := gardenClient.Client().Status().Update(context.TODO(), seed); err != nil {
 			return err
 		}
 	}
@@ -119,11 +127,12 @@ func buildSeedOwnerReference(seed *gardencorev1beta1.Seed) *metav1.OwnerReferenc
 	}
 }
 
-func (c *Controller) checkSeedConnection(seed *gardencorev1beta1.Seed) error {
-	client, err := c.getSeedClient(context.TODO(), c.k8sGardenClient.Client(), c.config.SeedClientConnection.ClientConnectionConfiguration, c.config.SeedSelector == nil, seed.Name)
+func (c *Controller) checkSeedConnection(ctx context.Context, seed *gardencorev1beta1.Seed) error {
+	client, err := c.clientMap.GetClient(ctx, keys.ForSeed(seed))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get seed client: %w", err)
 	}
+
 	result := client.RESTClient().Get().AbsPath("/healthz").Do()
 	if result.Error() != nil {
 		return fmt.Errorf("failed to execute call to Kubernetes API Server: %v", result.Error())

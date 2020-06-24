@@ -16,13 +16,16 @@ package seed
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -63,7 +66,7 @@ func (c *Controller) reconcileSeedKey(key string) error {
 		return err
 	}
 
-	fastRequeue, err := c.control.Reconcile(seed, key)
+	fastRequeue, err := c.control.Reconcile(seed)
 	if err != nil {
 		return err
 	}
@@ -80,24 +83,24 @@ func (c *Controller) reconcileSeedKey(key string) error {
 // ControlInterface implements the control logic for managing the lifecycle for Seeds. It is implemented as an interface to allow
 // for extensions that provide different semantics. Currently, there is only one implementation.
 type ControlInterface interface {
-	Reconcile(seed *gardencorev1beta1.Seed, key string) (bool, error)
+	Reconcile(seed *gardencorev1beta1.Seed) (bool, error)
 }
 
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for checking the lifecycle for Seeds. You should use an instance returned from NewDefaultControl()
 // for any scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Interface, leaseLister coordinationlister.LeaseLister, shootLister gardencorelisters.ShootLister, config *config.ControllerManagerConfiguration) ControlInterface {
-	return &defaultControl{k8sGardenClient, leaseLister, shootLister, config}
+func NewDefaultControl(clientMap clientmap.ClientMap, leaseLister coordinationlister.LeaseLister, shootLister gardencorelisters.ShootLister, config *config.ControllerManagerConfiguration) ControlInterface {
+	return &defaultControl{clientMap, leaseLister, shootLister, config}
 }
 
 type defaultControl struct {
-	k8sGardenClient kubernetes.Interface
-	leaseLister     coordinationlister.LeaseLister
-	shootLister     gardencorelisters.ShootLister
-	config          *config.ControllerManagerConfiguration
+	clientMap   clientmap.ClientMap
+	leaseLister coordinationlister.LeaseLister
+	shootLister gardencorelisters.ShootLister
+	config      *config.ControllerManagerConfiguration
 }
 
-func (c *defaultControl) Reconcile(seedObj *gardencorev1beta1.Seed, key string) (fastRequeue bool, err error) {
+func (c *defaultControl) Reconcile(seedObj *gardencorev1beta1.Seed) (fastRequeue bool, err error) {
 	var (
 		ctx        = context.TODO()
 		seed       = seedObj.DeepCopy()
@@ -107,6 +110,11 @@ func (c *defaultControl) Reconcile(seedObj *gardencorev1beta1.Seed, key string) 
 	// New seeds don't have conditions - gardenlet never reported anything yet. Wait for grace period.
 	if len(seed.Status.Conditions) == 0 {
 		return true, nil
+	}
+
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return false, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
 	observedSeedLease, err := c.leaseLister.Leases(gardencorev1beta1.GardenerSeedLeaseNamespace).Get(seed.Name)
@@ -121,7 +129,7 @@ func (c *defaultControl) Reconcile(seedObj *gardencorev1beta1.Seed, key string) 
 
 		// Get the latest Lease object in cases which the LeaseLister cache is outdated, to ensure that the lease is really expired
 		latestLeaseObject := &coordinationv1.Lease{}
-		if err := c.k8sGardenClient.Client().Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), latestLeaseObject); err != nil {
+		if err := gardenClient.Client().Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), latestLeaseObject); err != nil {
 			return false, err
 		}
 
@@ -147,7 +155,7 @@ func (c *defaultControl) Reconcile(seedObj *gardencorev1beta1.Seed, key string) 
 	bldr.WithMessage("Gardenlet stopped posting seed status.")
 	if newCondition, update := bldr.WithNowFunc(metav1.Now).Build(); update {
 		seed.Status.Conditions = helper.MergeConditions(seed.Status.Conditions, newCondition)
-		if err := c.k8sGardenClient.Client().Status().Update(ctx, seed); err != nil {
+		if err := gardenClient.Client().Status().Update(ctx, seed); err != nil {
 			return false, err
 		}
 	}
@@ -175,7 +183,7 @@ func (c *defaultControl) Reconcile(seedObj *gardencorev1beta1.Seed, key string) 
 		}
 
 		fns = append(fns, func(ctx context.Context) error {
-			return c.setStatusToUnknown(shoot)
+			return setShootStatusToUnknown(gardenClient.GardenCore(), shoot)
 		})
 	}
 
@@ -186,7 +194,7 @@ func (c *defaultControl) Reconcile(seedObj *gardencorev1beta1.Seed, key string) 
 	return false, nil
 }
 
-func (c *defaultControl) setStatusToUnknown(shoot *gardencorev1beta1.Shoot) error {
+func setShootStatusToUnknown(g gardencore.Interface, shoot *gardencorev1beta1.Shoot) error {
 	var (
 		reason = "StatusUnknown"
 		msg    = "Gardenlet stopped sending heartbeats."
@@ -215,7 +223,7 @@ func (c *defaultControl) setStatusToUnknown(shoot *gardencorev1beta1.Shoot) erro
 		constraints[conditionType] = c
 	}
 
-	_, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, shoot.ObjectMeta,
+	_, err := kutil.TryUpdateShootStatus(g, retry.DefaultBackoff, shoot.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			shoot.Status.Conditions = gardencorev1beta1helper.MergeConditions(shoot.Status.Conditions, conditionMapToConditions(conditions)...)
 			shoot.Status.Constraints = gardencorev1beta1helper.MergeConditions(shoot.Status.Constraints, conditionMapToConditions(constraints)...)

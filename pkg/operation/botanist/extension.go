@@ -89,7 +89,7 @@ func (b *Botanist) WaitUntilExtensionResourcesReady(ctx context.Context) error {
 		fns = append(fns, func(ctx context.Context) error {
 			return common.WaitUntilExtensionCRReady(
 				ctx,
-				b.K8sSeedClient.Client(),
+				b.K8sSeedClient.DirectClient(),
 				b.Logger,
 				func() runtime.Object { return &extensionsv1alpha1.Extension{} },
 				"Extension",
@@ -137,7 +137,7 @@ func (b *Botanist) deleteExtensionResources(ctx context.Context, wantedExtension
 func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error {
 	return common.WaitUntilExtensionCRsDeleted(
 		ctx,
-		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.DirectClient(),
 		b.Logger,
 		&extensionsv1alpha1.ExtensionList{},
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Extension{} },

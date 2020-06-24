@@ -136,7 +136,7 @@ func run(ctx context.Context, bindAddress string, port int, certPath, keyPath, k
 
 	seedAdmissionController := &GardenerSeedAdmissionController{
 		deserializer,
-		k8sClient.Client(),
+		k8sClient.DirectClient(),
 	}
 
 	mux.HandleFunc("/webhooks/validate-extension-crd-deletion", seedAdmissionController.validateExtensionCRDDeletion)

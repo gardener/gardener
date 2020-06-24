@@ -23,7 +23,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -42,7 +43,7 @@ import (
 
 // Controller controls Shoots.
 type Controller struct {
-	k8sGardenClient        kubernetes.Interface
+	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
 	config                        *config.GardenletConfiguration
@@ -75,7 +76,7 @@ type Controller struct {
 // NewShootController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <shootInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, identity *gardencorev1beta1.Gardener, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
+func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, identity *gardencorev1beta1.Gardener, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
 	var (
 		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
 
@@ -90,14 +91,14 @@ func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInfor
 	)
 
 	shootController := &Controller{
-		k8sGardenClient:        k8sGardenClient,
+		clientMap:              clientMap,
 		k8sGardenCoreInformers: k8sGardenCoreInformers,
 
 		config:                        config,
 		identity:                      identity,
-		careControl:                   NewDefaultCareControl(k8sGardenClient, gardenCoreV1beta1Informer, secrets, imageVector, identity, config),
-		controllerInstallationControl: NewDefaultControllerInstallationControl(k8sGardenClient, gardenCoreV1beta1Informer, recorder),
-		seedRegistrationControl:       NewDefaultSeedRegistrationControl(k8sGardenClient, gardenCoreV1beta1Informer, imageVector, config, recorder),
+		careControl:                   NewDefaultCareControl(clientMap, gardenCoreV1beta1Informer, secrets, imageVector, identity, config),
+		controllerInstallationControl: NewDefaultControllerInstallationControl(clientMap, gardenCoreV1beta1Informer, recorder),
+		seedRegistrationControl:       NewDefaultSeedRegistrationControl(clientMap, gardenCoreV1beta1Informer, imageVector, config, recorder),
 		recorder:                      recorder,
 		secrets:                       secrets,
 		imageVector:                   imageVector,
@@ -171,6 +172,11 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers int
 		}
 	}()
 
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		panic(fmt.Errorf("failed to get garden client: %v", err))
+	}
+
 	// Update Shoots before starting the workers.
 	shootFilterFunc := controllerutils.ShootFilterFunc(confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.seedLister, c.config.SeedSelector)
 	shoots, err := c.shootLister.List(labels.Everything())
@@ -187,7 +193,7 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers int
 		if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateProcessing {
 			newShoot := shoot.DeepCopy()
 			newShoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateAborted
-			if _, err := c.k8sGardenClient.GardenCore().CoreV1beta1().Shoots(newShoot.Namespace).UpdateStatus(newShoot); err != nil {
+			if _, err := gardenClient.GardenCore().CoreV1beta1().Shoots(newShoot.Namespace).UpdateStatus(newShoot); err != nil {
 				panic(fmt.Sprintf("Failed to update shoot status [%v]: %v ", newShoot.Name, err.Error()))
 			}
 		}

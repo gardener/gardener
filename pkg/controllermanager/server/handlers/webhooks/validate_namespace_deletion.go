@@ -19,12 +19,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
+
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -114,6 +115,9 @@ func (h *namespaceDeletionHandler) ValidateNamespaceDeletion(w http.ResponseWrit
 // admitNamespaces does only allow the request if no Shoots  exist in this
 // specific namespace anymore.
 func (h *namespaceDeletionHandler) admitNamespaces(request *admissionv1beta1.AdmissionRequest) *admissionv1beta1.AdmissionResponse {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	namespaceResource := metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
 	if request.Resource != namespaceResource {
 		return errToAdmissionResponse(fmt.Errorf("expect resource to be %s", namespaceResource))
@@ -131,7 +135,7 @@ func (h *namespaceDeletionHandler) admitNamespaces(request *admissionv1beta1.Adm
 
 	// We do not receive the namespace object in the `.object` field of the admission request. Hence, we need to get it ourselves.
 	namespace := &corev1.Namespace{}
-	err = h.k8sGardenClient.Client().Get(context.TODO(), client.ObjectKey{Name: request.Name}, namespace)
+	err = h.k8sGardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: request.Name}, namespace)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return admissionResponse(true, "")

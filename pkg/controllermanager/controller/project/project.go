@@ -21,7 +21,7 @@ import (
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
@@ -36,7 +36,7 @@ import (
 
 // Controller controls Projects.
 type Controller struct {
-	k8sGardenClient        kubernetes.Interface
+	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
 	control  ControlInterface
@@ -58,7 +58,7 @@ type Controller struct {
 // NewProjectController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <projectInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewProjectController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
+func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
 		gardenCoreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
 		corev1Informer            = kubeInformerFactory.Core().V1()
@@ -71,14 +71,12 @@ func NewProjectController(k8sGardenClient kubernetes.Interface, gardenCoreInform
 		namespaceLister   = namespaceInformer.Lister()
 
 		rolebindingInformer = rbacv1Informer.RoleBindings()
-
-		projectUpdater = NewRealUpdater(k8sGardenClient, projectLister)
 	)
 
 	projectController := &Controller{
-		k8sGardenClient:        k8sGardenClient,
+		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenCoreInformerFactory,
-		control:                NewDefaultControl(k8sGardenClient, gardenCoreInformerFactory, recorder, projectUpdater, namespaceLister),
+		control:                NewDefaultControl(clientMap, gardenCoreInformerFactory, recorder, namespaceLister),
 		recorder:               recorder,
 		projectLister:          projectLister,
 		projectQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),

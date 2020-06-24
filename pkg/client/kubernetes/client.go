@@ -32,64 +32,19 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	componentbaseconfig "k8s.io/component-base/config"
 	apiserviceclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+)
+
+var (
+	// UseCachedRuntimeClients is a flag for enabling cached controller-runtime clients (defaults to false).
+	// If enabled, the client returned by Interface.Client() will be backed by a cache, otherwise it will be the same
+	// client that will be returned by Interface.DirectClient().
+	UseCachedRuntimeClients = false
 )
 
 // KubeConfig is the key to the kubeconfig
 const KubeConfig = "kubeconfig"
-
-// NewRuntimeClientFromSecret creates a new controller runtime Client struct for a given secret.
-func NewRuntimeClientFromSecret(secret *corev1.Secret, fns ...ConfigFunc) (client.Client, error) {
-	if kubeconfig, ok := secret.Data[KubeConfig]; ok {
-		return NewRuntimeClientFromBytes(kubeconfig, fns...)
-	}
-	return nil, errors.New("no valid kubeconfig found")
-}
-
-// NewRuntimeClientFromBytes creates a new controller runtime Client struct for a given kubeconfig byte slice.
-func NewRuntimeClientFromBytes(kubeconfig []byte, fns ...ConfigFunc) (client.Client, error) {
-	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := validateClientConfig(clientConfig); err != nil {
-		return nil, err
-	}
-
-	config, err := clientConfig.ClientConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	opts := append([]ConfigFunc{WithRESTConfig(config)}, fns...)
-	return NewRuntimeClientForConfig(opts...)
-}
-
-// NewRuntimeClientForConfig returns a new controller runtime client from a config.
-func NewRuntimeClientForConfig(fns ...ConfigFunc) (client.Client, error) {
-	conf := &config{}
-	for _, f := range fns {
-		if err := f(conf); err != nil {
-			return nil, err
-		}
-	}
-	return client.New(conf.restConfig, conf.clientOptions)
-}
-
-// NewDirectClient creates a new client.Client which can be used to talk to the API directly (without a cache).
-func NewDirectClient(config *rest.Config, options client.Options) (client.Client, error) {
-	if err := setClientOptionsDefaults(config, &options); err != nil {
-		return nil, err
-	}
-
-	return newDirectClient(config, options)
-}
-
-func newDirectClient(config *rest.Config, options client.Options) (client.Client, error) {
-	return client.New(config, options)
-}
 
 // NewClientFromFile creates a new Client struct for a given kubeconfig. The kubeconfig will be
 // read from the filesystem at location <kubeconfigPath>. If given, <masterURL> overrides the
@@ -138,9 +93,9 @@ func NewClientFromBytes(kubeconfig []byte, fns ...ConfigFunc) (Interface, error)
 // Secret in an existing Kubernetes cluster. This cluster will be accessed by the <k8sClient>. It will
 // read the Secret <secretName> in <namespace>. The Secret must contain a field "kubeconfig" which will
 // be used.
-func NewClientFromSecret(k8sClient Interface, namespace, secretName string, fns ...ConfigFunc) (Interface, error) {
+func NewClientFromSecret(ctx context.Context, c client.Client, namespace, secretName string, fns ...ConfigFunc) (Interface, error) {
 	secret := &corev1.Secret{}
-	if err := k8sClient.Client().Get(context.TODO(), kutil.Key(namespace, secretName), secret); err != nil {
+	if err := c.Get(ctx, kutil.Key(namespace, secretName), secret); err != nil {
 		return nil, err
 	}
 	return NewClientFromSecretObject(secret, fns...)
@@ -270,17 +225,36 @@ func NewWithConfig(fns ...ConfigFunc) (Interface, error) {
 		}
 	}
 
-	return new(conf)
+	return newClientSet(conf)
 }
 
-func new(conf *config) (Interface, error) {
+func newClientSet(conf *config) (Interface, error) {
 	if err := setConfigDefaults(conf); err != nil {
 		return nil, err
 	}
 
-	c, err := newDirectClient(conf.restConfig, conf.clientOptions)
+	runtimeCache, err := NewRuntimeCache(conf.restConfig, cache.Options{
+		Scheme: conf.clientOptions.Scheme,
+		Mapper: conf.clientOptions.Mapper,
+		Resync: conf.cacheResync,
+	})
 	if err != nil {
 		return nil, err
+	}
+
+	directClient, err := client.New(conf.restConfig, conf.clientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	var runtimeClient client.Client
+	if UseCachedRuntimeClients {
+		runtimeClient, err = newRuntimeClientWithCache(conf.restConfig, conf.clientOptions, runtimeCache)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		runtimeClient = directClient
 	}
 
 	kubernetes, err := kubernetesclientset.NewForConfig(conf.restConfig)
@@ -312,11 +286,15 @@ func new(conf *config) (Interface, error) {
 		return nil, err
 	}
 
-	applier := NewApplier(c, conf.clientOptions.Mapper)
+	applier := NewApplier(runtimeClient, conf.clientOptions.Mapper)
 	chartRenderer := chartrenderer.NewWithServerVersion(serverVersion)
 	chartApplier := NewChartApplier(chartRenderer, applier)
 
-	clientSet := &Clientset{
+	if err := checkIfSupportedKubernetesVersion(serverVersion.GitVersion); err != nil {
+		return nil, err
+	}
+
+	cs := &clientSet{
 		config:     conf.restConfig,
 		restMapper: conf.clientOptions.Mapper,
 		restClient: kubernetes.Discovery().RESTClient(),
@@ -325,7 +303,9 @@ func new(conf *config) (Interface, error) {
 		chartRenderer: chartRenderer,
 		chartApplier:  chartApplier,
 
-		client: c,
+		client:       runtimeClient,
+		directClient: directClient,
+		cache:        runtimeCache,
 
 		kubernetes:      kubernetes,
 		gardenCore:      gardenCore,
@@ -335,22 +315,9 @@ func new(conf *config) (Interface, error) {
 		version: serverVersion.GitVersion,
 	}
 
-	return clientSet, nil
+	return cs, nil
 }
 
 func setConfigDefaults(conf *config) error {
 	return setClientOptionsDefaults(conf.restConfig, &conf.clientOptions)
-}
-
-func setClientOptionsDefaults(config *rest.Config, options *client.Options) error {
-	if options.Mapper == nil {
-		// default the client's REST mapper to a dynamic REST mapper (automatically rediscovers resources on NoMatchErrors)
-		mapper, err := apiutil.NewDynamicRESTMapper(config, apiutil.WithLazyDiscovery)
-		if err != nil {
-			return fmt.Errorf("failed to create new DynamicRESTMapper: %w", err)
-		}
-		options.Mapper = mapper
-	}
-
-	return nil
 }

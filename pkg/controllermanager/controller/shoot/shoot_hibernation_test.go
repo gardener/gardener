@@ -17,6 +17,9 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 	"github.com/gardener/gardener/pkg/logger"
 	mockgardencore "github.com/gardener/gardener/pkg/mock/gardener/client/core/clientset/versioned"
@@ -78,7 +81,8 @@ var _ = Describe("Shoot Hibernation", func() {
 		Describe("#ComputeHibernationSchedule", func() {
 			It("should compute a correct hibernation schedule", func() {
 				var (
-					c   = mockgardencore.NewMockInterface(ctrl)
+					clientMap = fakeclientmap.NewClientMap()
+
 					log = logger.NewNopLogger()
 					now time.Time
 
@@ -120,11 +124,11 @@ var _ = Describe("Shoot Hibernation", func() {
 				gomock.InOrder(
 					newCronWithLocation.EXPECT().Do(location).Return(cr),
 
-					cr.EXPECT().Schedule(startSched, NewHibernationJob(c, LocationLogger(log, location), &shoot, trueVar)),
-					cr.EXPECT().Schedule(endSched, NewHibernationJob(c, LocationLogger(log, location), &shoot, false)),
+					cr.EXPECT().Schedule(startSched, NewHibernationJob(clientMap, LocationLogger(log, location), &shoot, trueVar)),
+					cr.EXPECT().Schedule(endSched, NewHibernationJob(clientMap, LocationLogger(log, location), &shoot, false)),
 				)
 
-				actualSched, err := ComputeHibernationSchedule(c, log, &shoot)
+				actualSched, err := ComputeHibernationSchedule(clientMap, log, &shoot)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actualSched).To(Equal(HibernationSchedule{locationString: cr}))
 			})
@@ -225,6 +229,7 @@ var _ = Describe("Shoot Hibernation", func() {
 					c           = mockgardencore.NewMockInterface(ctrl)
 					gardenIface = mockgardencorev1beta1.NewMockCoreV1beta1Interface(ctrl)
 					shootIface  = mockgardencorev1beta1.NewMockShootInterface(ctrl)
+					clientMap   = fakeclientmap.NewClientMap().AddClient(keys.ForGarden(), fakeclientset.NewClientSetBuilder().WithGardenCore(c).Build())
 					log         = logger.NewNopLogger()
 					enabled     = trueVar
 
@@ -239,7 +244,7 @@ var _ = Describe("Shoot Hibernation", func() {
 							Hibernation: &gardencorev1beta1.Hibernation{},
 						},
 					}
-					job = NewHibernationJob(c, log, &shoot, enabled)
+					job = NewHibernationJob(clientMap, log, &shoot, enabled)
 				)
 
 				gomock.InOrder(

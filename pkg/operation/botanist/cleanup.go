@@ -213,7 +213,7 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 // It will return an error in case it has not finished yet, and nil if all resources are gone.
 func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 	var (
-		c       = b.K8sShootClient.Client()
+		c       = b.K8sShootClient.DirectClient()
 		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.Info.GetDeletionTimestamp().Time)
 		ops     = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
 	)
@@ -244,7 +244,9 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 // It assumes that all workload resources are cleaned up in previous step(s).
 func (b *Botanist) CleanShootNamespaces(ctx context.Context) error {
 	var (
-		c                 = b.K8sShootClient.Client()
+		// use direct client here, as cached client does not support field selector with multiple requirements
+		// see https://github.com/kubernetes-sigs/controller-runtime/blob/ca25c1f1014d6db6eba745e04f180d272a854e9a/pkg/cache/internal/cache_reader.go#L98-L103
+		c                 = b.K8sShootClient.DirectClient()
 		namespaceCleaner  = utilclient.NewNamespaceCleaner(b.K8sShootClient.Kubernetes().CoreV1().Namespaces())
 		namespaceCleanOps = utilclient.NewCleanOps(namespaceCleaner, utilclient.DefaultGoneEnsurer())
 	)

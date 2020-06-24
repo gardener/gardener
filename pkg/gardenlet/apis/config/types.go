@@ -49,7 +49,7 @@ type GardenletConfiguration struct {
 	Server *ServerConfiguration
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
 	// features. This field modifies piecemeal the built-in default values from
-	// "github.com/gardener/gardener/pkg/features/gardener_features.go".
+	// "github.com/gardener/gardener/pkg/gardenlet/features/features.go".
 	// Default: nil
 	FeatureGates map[string]bool
 	// SeedConfig contains configuration for the seed cluster. May not be set if seed selector is set.

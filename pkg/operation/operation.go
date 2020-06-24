@@ -18,7 +18,6 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
-	"net"
 	"strings"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -28,7 +27,8 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
@@ -46,6 +46,7 @@ import (
 	prometheusapi "github.com/prometheus/client_golang/api"
 	prometheusclient "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/sirupsen/logrus"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -148,7 +149,7 @@ func (b *Builder) WithSeedFrom(k8sGardenCoreInformers gardencoreinformers.Interf
 		return seed.
 			NewBuilder().
 			WithSeedObjectFromLister(k8sGardenCoreInformers.Seeds().Lister(), seedName).
-			WithSeedSecretFromClient(context.TODO(), c).
+			WithSeedSecretFromClient(ctx, c).
 			Build()
 	}
 	return b
@@ -187,11 +188,17 @@ func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Inter
 }
 
 // Build initializes a new Operation object.
-func (b *Builder) Build(ctx context.Context, k8sGardenClient kubernetes.Interface) (*Operation, error) {
+func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Operation, error) {
 	operation := &Operation{
-		K8sGardenClient: k8sGardenClient,
-		CheckSums:       make(map[string]string),
+		ClientMap: clientMap,
+		CheckSums: make(map[string]string),
 	}
+
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get garden client: %w", err)
+	}
+	operation.K8sGardenClient = gardenClient
 
 	config, err := b.configFunc()
 	if err != nil {
@@ -233,13 +240,13 @@ func (b *Builder) Build(ctx context.Context, k8sGardenClient kubernetes.Interfac
 	}
 	operation.Logger = logger
 
-	seed, err := b.seedFunc(ctx, k8sGardenClient.Client())
+	seed, err := b.seedFunc(ctx, gardenClient.Client())
 	if err != nil {
 		return nil, err
 	}
 	operation.Seed = seed
 
-	shoot, err := b.shootFunc(ctx, k8sGardenClient.Client(), garden, seed)
+	shoot, err := b.shootFunc(ctx, gardenClient.Client(), garden, seed)
 	if err != nil {
 		return nil, err
 	}
@@ -262,16 +269,15 @@ func (b *Builder) Build(ctx context.Context, k8sGardenClient kubernetes.Interfac
 // a Kubernetes client as well as a Chart renderer for the Seed cluster will be initialized and attached to
 // the already existing Operation object.
 func (o *Operation) InitializeSeedClients() error {
-	if o.K8sSeedClient != nil && o.ChartApplierSeed != nil {
+	if o.K8sSeedClient != nil {
 		return nil
 	}
 
-	k8sSeedClient, err := seed.GetSeedClient(context.TODO(), o.K8sGardenClient.Client(), o.Config.SeedClientConnection.ClientConnectionConfiguration, o.Config.SeedSelector == nil, o.Seed.Info.Name)
+	seedClient, err := o.ClientMap.GetClient(context.TODO(), keys.ForSeed(o.Seed.Info))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get seed client: %w", err)
 	}
-	o.K8sSeedClient = k8sSeedClient
-	o.ChartApplierSeed = k8sSeedClient.ChartApplier()
+	o.K8sSeedClient = seedClient
 	return nil
 }
 
@@ -280,65 +286,47 @@ func (o *Operation) InitializeSeedClients() error {
 // a Kubernetes client as well as a Chart renderer for the Shoot cluster will be initialized and attached to
 // the already existing Operation object.
 func (o *Operation) InitializeShootClients() error {
-	if o.K8sShootClient != nil && o.ChartApplierShoot != nil {
+	if o.K8sShootClient != nil {
 		return nil
 	}
 
-	if o.Shoot.HibernationEnabled {
-		controlPlaneHibernated, err := o.controlPlaneHibernated()
-		if err != nil {
-			return err
-		}
-		// Do not initialize Shoot clients for already hibernated shoots.
-		if controlPlaneHibernated {
-			return nil
-		}
-	}
-
-	secretName := v1beta1constants.SecretNameGardener
-	// If the gardenlet runs in the same cluster like the API server of the shoot then use the internal kubeconfig
-	// and communicate internally. Otherwise, fall back to the "external" kubeconfig and communicate via the
-	// load balancer of the shoot API server.
-	addr, err := net.LookupHost(o.Shoot.ComputeInClusterAPIServerAddress(false))
-	if err != nil {
-		o.Logger.Warnf("service DNS name lookup of kube-apiserver failed (%+v), falling back to external kubeconfig", err)
-	} else if len(addr) > 0 {
-		secretName = v1beta1constants.SecretNameGardenerInternal
-	}
-
-	k8sShootClient, err := kubernetes.NewClientFromSecret(o.K8sSeedClient, o.Shoot.SeedNamespace, secretName,
-		kubernetes.WithClientConnectionOptions(o.Config.ShootClientConnection.ClientConnectionConfiguration),
-		kubernetes.WithClientOptions(client.Options{
-			Scheme: kubernetes.ShootScheme,
-		}),
-	)
-	// TODO: This if-condition can be removed in a future version when all shoots were reconciled with Gardener v1.1 version.
-	if secretName == v1beta1constants.SecretNameGardenerInternal && err != nil && apierrors.IsNotFound(err) {
-		k8sShootClient, err = kubernetes.NewClientFromSecret(o.K8sSeedClient, o.Shoot.SeedNamespace, v1beta1constants.SecretNameGardener,
-			kubernetes.WithClientConnectionOptions(o.Config.ShootClientConnection.ClientConnectionConfiguration),
-			kubernetes.WithClientOptions(client.Options{
-				Scheme: kubernetes.ShootScheme,
-			}),
-		)
-	}
+	apiServerRunning, err := o.IsAPIServerRunning()
 	if err != nil {
 		return err
 	}
-	o.K8sShootClient = k8sShootClient
+	// Don't initialize clients for Shoots, that have are currently hibernated or in the process of being created or deleted.
+	if !apiServerRunning {
+		return nil
+	}
 
-	o.ChartApplierShoot = k8sShootClient.ChartApplier()
+	shootClient, err := o.ClientMap.GetClient(context.TODO(), keys.ForShoot(o.Shoot.Info))
+	if err != nil {
+		return err
+	}
+	o.K8sShootClient = shootClient
+
 	return nil
 }
 
-func (o *Operation) controlPlaneHibernated() (bool, error) {
-	replicaCount, err := common.CurrentReplicaCount(o.K8sSeedClient.Client(), o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer)
-	if err != nil {
+// IsAPIServerRunning checks if the API server of the Shoot currently running (not scaled-down/deleted).
+func (o *Operation) IsAPIServerRunning() (bool, error) {
+	deployment := &appsv1.Deployment{}
+	// use direct client here to make sure, we're not reading from a stale cache, when checking if we should initialize a shoot client (e.g. from within the care controller)
+	if err := o.K8sSeedClient.DirectClient().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
 		return false, err
 	}
-	if replicaCount > 0 {
+
+	if deployment.GetDeletionTimestamp() != nil {
 		return false, nil
 	}
-	return true, nil
+
+	if deployment.Spec.Replicas == nil {
+		return false, nil
+	}
+	return *deployment.Spec.Replicas > 0, nil
 }
 
 // InitializeMonitoringClient will read the Prometheus ingress auth and tls
@@ -513,7 +501,7 @@ func (o *Operation) SwitchBackupEntryToTargetSeed(ctx context.Context) error {
 		}
 	)
 
-	return kutil.TryUpdate(ctx, retry.DefaultBackoff, o.K8sGardenClient.Client(), gardenBackupEntry, func() error {
+	return kutil.TryUpdate(ctx, retry.DefaultBackoff, o.K8sGardenClient.DirectClient(), gardenBackupEntry, func() error {
 		gardenBackupEntry.Spec.SeedName = o.Shoot.Info.Spec.SeedName
 		return nil
 	})

@@ -16,7 +16,20 @@ package federatedseed
 
 import (
 	"context"
+	"fmt"
 	"sync"
+
+	dnsclientset "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned"
+	dnsinformers "github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	kubeinformers "k8s.io/client-go/informers"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -24,31 +37,20 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	extensionsclientset "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned"
 	extensionsinformers "github.com/gardener/gardener/pkg/client/extensions/informers/externalversions"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/extensions"
 	seedapiservernetworkpolicy "github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy"
 	"github.com/gardener/gardener/pkg/logger"
-	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
-
-	dnsclientset "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned"
-	dnsinformers "github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions"
-	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Controller is responsible for maintaining multiple federated Seeds' controllers
 type Controller struct {
 	federatedSeedControllerManager *federatedSeedControllerManager
-	k8sGardenClient                kubernetes.Interface
+	clientMap                      clientmap.ClientMap
 
 	config *config.GardenletConfiguration
 
@@ -65,19 +67,20 @@ type Controller struct {
 }
 
 // NewFederatedSeedController creates new controller that reconciles extension resources.
-func NewFederatedSeedController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder) *Controller {
+func NewFederatedSeedController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder) *Controller {
 	var seedInformer = gardenCoreInformerFactory.Core().V1beta1().Seeds()
 
 	controller := &Controller{
-		k8sGardenClient: k8sGardenClient,
-		seedLister:      seedInformer.Lister(),
-		seedQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-controllers"),
-		config:          config,
-		workerCh:        make(chan int),
-		recorder:        recorder,
+		clientMap:  clientMap,
+		seedLister: seedInformer.Lister(),
+		seedQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-controllers"),
+		config:     config,
+		workerCh:   make(chan int),
+		recorder:   recorder,
 	}
 
 	controller.federatedSeedControllerManager = &federatedSeedControllerManager{
+		clientMap:            clientMap,
 		extensionControllers: make(map[string]*extensionsController),
 		namespaceControllers: make(map[string]*namespaceController),
 	}
@@ -181,11 +184,11 @@ func (c *Controller) createReconcileSeedRequestFunc(ctx context.Context) reconci
 		}
 
 		seedLogger := logger.Logger.WithField("Seed", seed.GetName())
-		if err := c.federatedSeedControllerManager.createExtensionControllers(ctx, seedLogger, seed.GetName(), c.k8sGardenClient, c.config, c.recorder); err != nil {
+		if err := c.federatedSeedControllerManager.createExtensionControllers(ctx, seedLogger, seed.GetName(), c.clientMap, c.config, c.recorder); err != nil {
 			return reconcile.Result{}, err
 		}
 
-		if err := c.federatedSeedControllerManager.createNamespaceControllers(ctx, seedLogger, seed.GetName(), c.k8sGardenClient, c.config, c.recorder); err != nil {
+		if err := c.federatedSeedControllerManager.createNamespaceControllers(ctx, seedLogger, seed.GetName(), c.clientMap, c.config, c.recorder); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -194,6 +197,7 @@ func (c *Controller) createReconcileSeedRequestFunc(ctx context.Context) reconci
 }
 
 type federatedSeedControllerManager struct {
+	clientMap                clientmap.ClientMap
 	extensionControllers     map[string]*extensionsController
 	namespaceControllers     map[string]*namespaceController
 	extensionControllersLock sync.RWMutex
@@ -221,7 +225,7 @@ func (s *namespaceController) Stop() {
 	s.controller.Stop()
 }
 
-func (f *federatedSeedControllerManager) createExtensionControllers(ctx context.Context, seedLogger *logrus.Entry, seedName string, k8sGardenClient kubernetes.Interface, config *config.GardenletConfiguration, recorder record.EventRecorder) error {
+func (f *federatedSeedControllerManager) createExtensionControllers(ctx context.Context, seedLogger *logrus.Entry, seedName string, clientMap clientmap.ClientMap, config *config.GardenletConfiguration, recorder record.EventRecorder) error {
 	f.extensionControllersLock.Lock()
 	if _, found := f.extensionControllers[seedName]; found {
 		f.extensionControllersLock.Unlock()
@@ -230,16 +234,21 @@ func (f *federatedSeedControllerManager) createExtensionControllers(ctx context.
 	}
 	f.extensionControllersLock.Unlock()
 
-	k8sSeedClient, err := seedpkg.GetSeedClient(ctx, k8sGardenClient.Client(), config.SeedClientConnection.ClientConnectionConfiguration, config.SeedSelector == nil, seedName)
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	dnsClient, err := dnsclientset.NewForConfig(k8sSeedClient.RESTConfig())
+	seedClient, err := clientMap.GetClient(ctx, keys.ForSeedWithName(seedName))
+	if err != nil {
+		return fmt.Errorf("failed to get seed client: %w", err)
+	}
+
+	dnsClient, err := dnsclientset.NewForConfig(seedClient.RESTConfig())
 	if err != nil {
 		return err
 	}
-	extensionsClient, err := extensionsclientset.NewForConfig(k8sSeedClient.RESTConfig())
+	extensionsClient, err := extensionsclientset.NewForConfig(seedClient.RESTConfig())
 	if err != nil {
 		return err
 	}
@@ -248,7 +257,7 @@ func (f *federatedSeedControllerManager) createExtensionControllers(ctx context.
 		extensionCtx, extensionCancelFunc = context.WithCancel(ctx)
 		dnsInformers                      = dnsinformers.NewSharedInformerFactory(dnsClient, 0)
 		extensionsInformers               = extensionsinformers.NewSharedInformerFactory(extensionsClient, 0)
-		extensionsController              = extensions.NewController(ctx, k8sGardenClient, k8sSeedClient, seedName, dnsInformers, extensionsInformers, seedLogger, recorder)
+		extensionsController              = extensions.NewController(ctx, gardenClient, seedClient, seedName, dnsInformers, extensionsInformers, seedLogger, recorder)
 	)
 
 	seedLogger.Info("Run extensions controller")
@@ -262,7 +271,7 @@ func (f *federatedSeedControllerManager) createExtensionControllers(ctx context.
 	return nil
 }
 
-func (f *federatedSeedControllerManager) createNamespaceControllers(ctx context.Context, seedLogger *logrus.Entry, seedName string, k8sGardenClient kubernetes.Interface, config *config.GardenletConfiguration, recorder record.EventRecorder) error {
+func (f *federatedSeedControllerManager) createNamespaceControllers(ctx context.Context, seedLogger *logrus.Entry, seedName string, clientMap clientmap.ClientMap, config *config.GardenletConfiguration, recorder record.EventRecorder) error {
 	f.namespaceControllersLock.Lock()
 	if _, found := f.namespaceControllers[seedName]; found {
 		f.namespaceControllersLock.Unlock()
@@ -271,18 +280,18 @@ func (f *federatedSeedControllerManager) createNamespaceControllers(ctx context.
 	}
 	f.namespaceControllersLock.Unlock()
 
-	k8sSeedClient, err := seedpkg.GetSeedClient(ctx, k8sGardenClient.Client(), config.SeedClientConnection.ClientConnectionConfiguration, config.SeedSelector == nil, seedName)
+	seedClient, err := clientMap.GetClient(ctx, keys.ForSeedWithName(seedName))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get seed client: %w", err)
 	}
 
 	var (
 		namespaceCtx, namespaceCancelFunc = context.WithCancel(ctx)
-		seedKubeInformerFactory           = kubeinformers.NewSharedInformerFactory(k8sSeedClient.Kubernetes(), 0)
+		seedKubeInformerFactory           = kubeinformers.NewSharedInformerFactory(seedClient.Kubernetes(), 0)
 		// if another controller also needs to work with endpoint resources in the Seed cluster, consider replacing this informer factory with a reusable informer factory.
 		// if this informer factory is not bound to the default namespace, make sure that the endpoint event handlers FilterFunc() also filters for the default namespace.
-		seedDefaultNamespaceKubeInformer = kubeinformers.NewSharedInformerFactoryWithOptions(k8sSeedClient.Kubernetes(), 0, kubeinformers.WithNamespace(corev1.NamespaceDefault))
-		namespaceController              = seedapiservernetworkpolicy.NewController(ctx, k8sSeedClient, seedDefaultNamespaceKubeInformer, seedKubeInformerFactory, seedLogger, recorder, seedName)
+		seedDefaultNamespaceKubeInformer = kubeinformers.NewSharedInformerFactoryWithOptions(seedClient.Kubernetes(), 0, kubeinformers.WithNamespace(corev1.NamespaceDefault))
+		namespaceController              = seedapiservernetworkpolicy.NewController(ctx, seedClient, seedDefaultNamespaceKubeInformer, seedKubeInformerFactory, seedLogger, recorder, seedName)
 	)
 
 	seedLogger.Info("Run namespace controller")
@@ -330,6 +339,10 @@ func (f *federatedSeedControllerManager) removeController(seedName string) {
 		f.namespaceControllersLock.Lock()
 		defer f.namespaceControllersLock.Unlock()
 		delete(f.namespaceControllers, seedName)
+	}
+
+	if err := f.clientMap.InvalidateClient(keys.ForSeedWithName(seedName)); err != nil {
+		logger.Logger.Errorf("Failed to invalidate seed client: %v", err)
 	}
 }
 

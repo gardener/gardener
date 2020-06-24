@@ -21,7 +21,7 @@ import (
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -40,9 +40,6 @@ const FinalizerName = "core.gardener.cloud/controllerinstallation"
 
 // Controller controls ControllerInstallation.
 type Controller struct {
-	k8sGardenClient        kubernetes.Interface
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-
 	config *config.GardenletConfiguration
 
 	controllerInstallationControl ControlInterface
@@ -67,7 +64,7 @@ type Controller struct {
 }
 
 // NewController instantiates a new ControllerInstallation controller.
-func NewController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder, gardenNamespace *corev1.Namespace) *Controller {
+func NewController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder, gardenNamespace *corev1.Namespace) *Controller {
 	var (
 		gardenCoreInformer = gardenCoreInformerFactory.Core().V1beta1()
 
@@ -86,11 +83,8 @@ func NewController(k8sGardenClient kubernetes.Interface, gardenCoreInformerFacto
 	)
 
 	controller := &Controller{
-		k8sGardenClient:        k8sGardenClient,
-		k8sGardenCoreInformers: gardenCoreInformerFactory,
-
-		controllerInstallationControl: NewDefaultControllerInstallationControl(k8sGardenClient, gardenCoreInformerFactory, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace),
-		careControl:                   NewDefaultCareControl(k8sGardenClient, config),
+		controllerInstallationControl: NewDefaultControllerInstallationControl(clientMap, gardenCoreInformerFactory, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace),
+		careControl:                   NewDefaultCareControl(clientMap, config),
 
 		config:   config,
 		recorder: recorder,

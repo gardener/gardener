@@ -24,7 +24,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -93,12 +94,12 @@ type ControlInterface interface {
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for SecretBindings. You should use an instance returned from NewDefaultControl()
 // for any scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, secretBindingLister gardencorelisters.SecretBindingLister, secretLister kubecorev1listers.SecretLister, shootLister gardencorelisters.ShootLister) ControlInterface {
-	return &defaultControl{k8sGardenClient, k8sGardenCoreInformers, recorder, secretBindingLister, secretLister, shootLister}
+func NewDefaultControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, secretBindingLister gardencorelisters.SecretBindingLister, secretLister kubecorev1listers.SecretLister, shootLister gardencorelisters.ShootLister) ControlInterface {
+	return &defaultControl{clientMap, k8sGardenCoreInformers, recorder, secretBindingLister, secretLister, shootLister}
 }
 
 type defaultControl struct {
-	k8sGardenClient        kubernetes.Interface
+	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	recorder               record.EventRecorder
 	secretBindingLister    gardencorelisters.SecretBindingLister
@@ -117,6 +118,11 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1beta1.SecretBin
 		secretBindingLogger = logger.NewFieldLogger(logger.Logger, "secretbinding", fmt.Sprintf("%s/%s", secretBinding.Namespace, secretBinding.Name))
 		ctx                 = context.TODO()
 	)
+
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return fmt.Errorf("failed to get garden client: %w", err)
+	}
 
 	// The deletionTimestamp labels a SecretBinding as intended to get deleted. Before deletion,
 	// it has to be ensured that no Shoots are depending on the SecretBinding anymore.
@@ -145,17 +151,9 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1beta1.SecretBin
 				// Remove finalizer from referenced secret
 				secret, err := c.secretLister.Secrets(secretBinding.SecretRef.Namespace).Get(secretBinding.SecretRef.Name)
 				if err == nil {
-					if err2 := controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), secret.DeepCopy(), gardencorev1beta1.ExternalGardenerName); err2 != nil {
+					if err2 := controllerutils.RemoveFinalizer(ctx, gardenClient.Client(), secret.DeepCopy(), gardencorev1beta1.ExternalGardenerName); err2 != nil {
 						secretBindingLogger.Error(err2.Error())
 						return err2
-					}
-
-					// TODO: This code can be removed in a future version.
-					if controllerutils.HasFinalizer(secret, gardencorev1beta1.ExternalGardenerNameDeprecated) {
-						if err2 := controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), secret.DeepCopy(), gardencorev1beta1.ExternalGardenerNameDeprecated); err2 != nil {
-							secretBindingLogger.Errorf("Could not remove deprecated finalizer from Secret referenced in SecretBinding: %s", err2.Error())
-							return err2
-						}
 					}
 				} else if !apierrors.IsNotFound(err) {
 					return err
@@ -163,7 +161,7 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1beta1.SecretBin
 			}
 
 			// Remove finalizer from SecretBinding
-			if err := controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), secretBinding, gardencorev1beta1.GardenerName); err != nil {
+			if err := controllerutils.RemoveFinalizer(ctx, gardenClient.Client(), secretBinding, gardencorev1beta1.GardenerName); err != nil {
 				secretBindingLogger.Error(err.Error())
 				return err
 			}
@@ -178,7 +176,7 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1beta1.SecretBin
 		return errors.New("SecretBinding still has references")
 	}
 
-	if err := controllerutils.EnsureFinalizer(ctx, c.k8sGardenClient.Client(), secretBinding, gardencorev1beta1.GardenerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, gardenClient.Client(), secretBinding, gardencorev1beta1.GardenerName); err != nil {
 		secretBindingLogger.Errorf("Could not add finalizer to SecretBinding: %s", err.Error())
 		return err
 	}
@@ -191,17 +189,9 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1beta1.SecretBin
 		return err
 	}
 
-	if err := controllerutils.EnsureFinalizer(ctx, c.k8sGardenClient.Client(), secret.DeepCopy(), gardencorev1beta1.ExternalGardenerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, gardenClient.Client(), secret.DeepCopy(), gardencorev1beta1.ExternalGardenerName); err != nil {
 		secretBindingLogger.Errorf("Could not add finalizer to Secret referenced in SecretBinding: %s", err.Error())
 		return err
-	}
-
-	// TODO: This code can be removed in a future version.
-	if controllerutils.HasFinalizer(secret, gardencorev1beta1.ExternalGardenerNameDeprecated) {
-		if err := controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), secret.DeepCopy(), gardencorev1beta1.ExternalGardenerNameDeprecated); err != nil {
-			secretBindingLogger.Errorf("Could not remove deprecated finalizer from Secret referenced in SecretBinding: %s", err.Error())
-			return err
-		}
 	}
 
 	return nil

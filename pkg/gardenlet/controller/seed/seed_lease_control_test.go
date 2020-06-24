@@ -15,7 +15,6 @@
 package seed
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,7 +23,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorescheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	gardencorev1beta1lister "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	mockrest "github.com/gardener/gardener/pkg/mock/client-go/rest"
@@ -40,7 +40,6 @@ import (
 	fakerestclient "k8s.io/client-go/rest/fake"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
-	componentbaseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -108,19 +107,17 @@ var _ = Describe("SeedLeaseControlReconcile", func() {
 		k8sClient = fake.NewFakeClientWithScheme(gardencorescheme.Scheme, seed)
 		k8sGardenClient.EXPECT().Client().Return(k8sClient).AnyTimes()
 
-		var fakeClientSeedFunc = func(ctx context.Context, gardenClient client.Client, clientConnection componentbaseconfig.ClientConnectionConfiguration, inCluster bool, seedName string) (kubernetes.Interface, error) {
-			return k8sGardenClient, nil
-		}
-
 		seedLeaseControl := &fakeLeaseController{
 			err: syncFail,
 		}
 
+		clientMap := fakeclientmap.NewClientMap().
+			AddClient(keys.ForGarden(), k8sGardenClient).
+			AddClient(keys.ForSeed(seed), k8sGardenClient)
 		controller = Controller{
-			k8sGardenClient:  k8sGardenClient,
+			clientMap:        clientMap,
 			seedLister:       lister,
 			seedLeaseQueue:   seedLeaseQueue,
-			getSeedClient:    fakeClientSeedFunc,
 			config:           gardenletConfig,
 			seedLeaseControl: seedLeaseControl,
 			leaseMap:         make(map[string]bool),

@@ -173,6 +173,7 @@ func autoConvert_v1alpha1_SchedulerConfiguration_To_config_SchedulerConfiguratio
 	if err := Convert_v1alpha1_SchedulerControllerConfiguration_To_config_SchedulerControllerConfiguration(&in.Schedulers, &out.Schedulers, s); err != nil {
 		return err
 	}
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 
@@ -195,6 +196,7 @@ func autoConvert_config_SchedulerConfiguration_To_v1alpha1_SchedulerConfiguratio
 	if err := Convert_config_SchedulerControllerConfiguration_To_v1alpha1_SchedulerControllerConfiguration(&in.Schedulers, &out.Schedulers, s); err != nil {
 		return err
 	}
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 

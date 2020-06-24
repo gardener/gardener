@@ -72,22 +72,22 @@ func New(o *operation.Operation) (*Botanist, error) {
 		return nil, err
 	}
 
-	o.Shoot.Components.DNS.ExternalProvider = b.DefaultExternalDNSProvider(b.K8sSeedClient.Client())
-	o.Shoot.Components.DNS.ExternalEntry = b.DefaultExternalDNSEntry(b.K8sSeedClient.Client())
-	o.Shoot.Components.DNS.InternalProvider = b.DefaultInternalDNSProvider(b.K8sSeedClient.Client())
-	o.Shoot.Components.DNS.InternalEntry = b.DefaultInternalDNSEntry(b.K8sSeedClient.Client())
+	o.Shoot.Components.DNS.ExternalProvider = b.DefaultExternalDNSProvider(b.K8sSeedClient.DirectClient())
+	o.Shoot.Components.DNS.ExternalEntry = b.DefaultExternalDNSEntry(b.K8sSeedClient.DirectClient())
+	o.Shoot.Components.DNS.InternalProvider = b.DefaultInternalDNSProvider(b.K8sSeedClient.DirectClient())
+	o.Shoot.Components.DNS.InternalEntry = b.DefaultInternalDNSEntry(b.K8sSeedClient.DirectClient())
 
-	o.Shoot.Components.DNS.AdditionalProviders, err = b.AdditionalDNSProviders(context.TODO(), b.K8sGardenClient.Client(), b.K8sSeedClient.Client())
+	o.Shoot.Components.DNS.AdditionalProviders, err = b.AdditionalDNSProviders(context.TODO(), b.K8sGardenClient.Client(), b.K8sSeedClient.DirectClient())
 	if err != nil {
 		return nil, err
 	}
 
-	o.Shoot.Components.DNS.NginxEntry = b.DefaultNginxIngressDNSEntry(b.K8sSeedClient.Client())
+	o.Shoot.Components.DNS.NginxEntry = b.DefaultNginxIngressDNSEntry(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.ControlPlane.KubeAPIServerService = b.DefaultKubeAPIServerService()
 	o.Shoot.Components.ControlPlane.KubeAPIServerSNI = b.DefaultKubeAPIServersNI()
 
 	// Extension CRD components
-	o.Shoot.Components.Network = b.DefaultNetwork(b.K8sSeedClient.Client())
+	o.Shoot.Components.Network = b.DefaultNetwork(b.K8sSeedClient.DirectClient())
 
 	return b, nil
 }

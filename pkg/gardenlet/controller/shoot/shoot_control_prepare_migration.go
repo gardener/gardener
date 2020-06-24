@@ -23,6 +23,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
@@ -57,25 +59,30 @@ func (c *Controller) prepareShootForMigration(logger *logrus.Entry, shoot *garde
 		return reconcile.Result{}, fmt.Errorf("shoot %s is failed or ignored, will skip migration preparation", shoot.GetName())
 	}
 
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
+	}
+
 	o, operationErr := c.initializeOperation(ctx, logger, shoot, project, cloudProfile, seed)
 	if operationErr != nil {
-		_, updateErr := c.updateShootStatusOperationError(shoot, fmt.Sprintf("Could not initialize a new operation for preparation of Shoot Control Plane migration: %s", operationErr.Error()), gardencorev1beta1.LastOperationTypeMigrate, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
+		_, updateErr := c.updateShootStatusOperationError(gardenClient.GardenCore(), shoot, fmt.Sprintf("Could not initialize a new operation for preparation of Shoot Control Plane migration: %s", operationErr.Error()), gardencorev1beta1.LastOperationTypeMigrate, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
 	}
 
 	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventPrepareMigration, "Prepare Shoot cluster for migration")
-	o.Shoot.Info, err = c.updateShootStatusOperationStart(o.Shoot.Info, o.Shoot.SeedNamespace, gardencorev1beta1.LastOperationTypeMigrate)
+	o.Shoot.Info, err = c.updateShootStatusOperationStart(gardenClient.GardenCore(), o.Shoot.Info, o.Shoot.SeedNamespace, gardencorev1beta1.LastOperationTypeMigrate)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if flowErr := c.runPrepareShootControlPlaneMigration(o); flowErr != nil {
 		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventMigrationPreparationFailed, flowErr.Description)
-		_, updateErr := c.updateShootStatusOperationError(o.Shoot.Info, flowErr.Description, gardencorev1beta1.LastOperationTypeMigrate, flowErr.LastErrors...)
+		_, updateErr := c.updateShootStatusOperationError(gardenClient.GardenCore(), o.Shoot.Info, flowErr.Description, gardencorev1beta1.LastOperationTypeMigrate, flowErr.LastErrors...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(flowErr.Description), updateErr)
 	}
 
-	return c.finalizeShootPrepareForMigration(shoot, o)
+	return c.finalizeShootPrepareForMigration(gardenClient.GardenCore(), shoot, o)
 }
 
 func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
@@ -287,12 +294,12 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 	return nil
 }
 
-func (c *Controller) finalizeShootPrepareForMigration(shoot *gardencorev1beta1.Shoot, o *operation.Operation) (reconcile.Result, error) {
+func (c *Controller) finalizeShootPrepareForMigration(g gardencore.Interface, shoot *gardencorev1beta1.Shoot, o *operation.Operation) (reconcile.Result, error) {
 	if len(o.Shoot.Info.Status.UID) > 0 {
 		if err := o.DeleteClusterResourceFromSeed(context.TODO()); err != nil {
 			lastErr := gardencorev1beta1helper.LastError(fmt.Sprintf("Could not delete Cluster resource in seed: %s", err))
 			c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastErr.Description)
-			_, updateErr := c.updateShootStatusOperationError(shoot, lastErr.Description, gardencorev1beta1.LastOperationTypeMigrate, *lastErr)
+			_, updateErr := c.updateShootStatusOperationError(g, shoot, lastErr.Description, gardencorev1beta1.LastOperationTypeMigrate, *lastErr)
 			return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(lastErr.Description), updateErr)
 		}
 	}
@@ -300,12 +307,12 @@ func (c *Controller) finalizeShootPrepareForMigration(shoot *gardencorev1beta1.S
 	if err := o.SwitchBackupEntryToTargetSeed(context.TODO()); err != nil {
 		lastErr := gardencorev1beta1helper.LastError(fmt.Sprintf("Could not switch BackupEntry resource in Garden to new Seed: %s", err))
 		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastErr.Description)
-		_, updateErr := c.updateShootStatusOperationError(shoot, lastErr.Description, gardencorev1beta1.LastOperationTypeMigrate, *lastErr)
+		_, updateErr := c.updateShootStatusOperationError(g, shoot, lastErr.Description, gardencorev1beta1.LastOperationTypeMigrate, *lastErr)
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(lastErr.Description), updateErr)
 	}
 
 	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventMigrationPrepared, "Shoot Control Plane prepared for migration, successfully")
-	newShoot, err := kutil.TryUpdateShootAnnotations(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+	newShoot, err := kutil.TryUpdateShootAnnotations(g, retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			controllerutils.RemoveAllTasks(shoot.Annotations)
 			return shoot, nil
@@ -316,12 +323,12 @@ func (c *Controller) finalizeShootPrepareForMigration(shoot *gardencorev1beta1.S
 	}
 
 	o.Shoot.Info = newShoot
-	_, err = kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		c.updateShootRestorePendingStatusFunc(o.Shoot.Info, "Shoot cluster state has been successfully prepared for migration."))
+	_, err = kutil.TryUpdateShootStatus(g, retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+		c.updateShootRestorePendingStatusFunc("Shoot cluster state has been successfully prepared for migration."))
 	return reconcile.Result{}, err
 }
 
-func (c *Controller) updateShootRestorePendingStatusFunc(shoot *gardencorev1beta1.Shoot, successDescription string) func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+func (c *Controller) updateShootRestorePendingStatusFunc(successDescription string) func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 	return func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 		shoot.Status.RetryCycleStartTime = nil
 		shoot.Status.SeedName = nil

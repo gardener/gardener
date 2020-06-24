@@ -20,7 +20,8 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -89,12 +90,12 @@ type ControlInterface interface {
 // NewDefaultControllerRegistrationControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for ControllerRegistrations. You should use an instance returned from NewDefaultControllerRegistrationControl()
 // for any scenario other than testing.
-func NewDefaultControllerRegistrationControl(k8sGardenClient kubernetes.Interface, controllerInstallationLister gardencorelisters.ControllerInstallationLister) ControlInterface {
-	return &defaultControllerRegistrationControl{k8sGardenClient, controllerInstallationLister}
+func NewDefaultControllerRegistrationControl(clientMap clientmap.ClientMap, controllerInstallationLister gardencorelisters.ControllerInstallationLister) ControlInterface {
+	return &defaultControllerRegistrationControl{clientMap, controllerInstallationLister}
 }
 
 type defaultControllerRegistrationControl struct {
-	k8sGardenClient              kubernetes.Interface
+	clientMap                    clientmap.ClientMap
 	controllerInstallationLister gardencorelisters.ControllerInstallationLister
 }
 
@@ -103,6 +104,11 @@ func (c *defaultControllerRegistrationControl) Reconcile(obj *gardencorev1beta1.
 		ctx                    = context.TODO()
 		controllerRegistration = obj.DeepCopy()
 	)
+
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return fmt.Errorf("failed to get garden client: %w", err)
+	}
 
 	if controllerRegistration.DeletionTimestamp != nil {
 		if !controllerutils.HasFinalizer(controllerRegistration, FinalizerName) {
@@ -120,8 +126,8 @@ func (c *defaultControllerRegistrationControl) Reconcile(obj *gardencorev1beta1.
 			}
 		}
 
-		return controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), controllerRegistration, FinalizerName)
+		return controllerutils.RemoveFinalizer(ctx, gardenClient.Client(), controllerRegistration, FinalizerName)
 	}
 
-	return controllerutils.EnsureFinalizer(ctx, c.k8sGardenClient.Client(), controllerRegistration, FinalizerName)
+	return controllerutils.EnsureFinalizer(ctx, gardenClient.Client(), controllerRegistration, FinalizerName)
 }

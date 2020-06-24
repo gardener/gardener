@@ -83,6 +83,7 @@ featureGates:
   ManagedIstio: false
   KonnectivityTunnel: false
   APIServerSNI: false
+  CachedRuntimeClients: true
 seedSelector: {} # selects all seeds, only use for development purposes
 # seedConfig:
 #   metadata:

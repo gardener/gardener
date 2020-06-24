@@ -21,7 +21,7 @@ import (
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
@@ -34,7 +34,7 @@ import (
 
 // Controller controls CloudProfiles.
 type Controller struct {
-	k8sGardenClient        kubernetes.Interface
+	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
 	control ControlInterface
@@ -51,7 +51,7 @@ type Controller struct {
 
 // NewCloudProfileController takes a Kubernetes client <k8sGardenClient> and a <k8sGardenCoreInformers> for the Garden clusters.
 // It creates and return a new Garden controller to control CloudProfiles.
-func NewCloudProfileController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
+func NewCloudProfileController(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
 		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
 		cloudProfileInformer      = gardenCoreV1beta1Informer.CloudProfiles()
@@ -59,12 +59,12 @@ func NewCloudProfileController(k8sGardenClient kubernetes.Interface, k8sGardenCo
 	)
 
 	cloudProfileController := &Controller{
-		k8sGardenClient:        k8sGardenClient,
+		clientMap:              clientMap,
 		k8sGardenCoreInformers: k8sGardenCoreInformers,
 		cloudProfileLister:     cloudProfileInformer.Lister(),
 		cloudProfileQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "cloudprofile"),
 		shootLister:            shootLister,
-		control:                NewDefaultControl(k8sGardenClient, shootLister, recorder),
+		control:                NewDefaultControl(clientMap, shootLister, recorder),
 		workerCh:               make(chan int),
 	}
 

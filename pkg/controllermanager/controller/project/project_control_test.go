@@ -15,14 +15,15 @@
 package project
 
 import (
-	gardenercore "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
+
+	gardenercore "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	"github.com/gardener/gardener/pkg/logger"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

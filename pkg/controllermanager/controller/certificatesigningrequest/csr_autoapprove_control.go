@@ -30,7 +30,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/logger"
 
 	authorizationv1beta1 "k8s.io/api/authorization/v1beta1"
@@ -84,12 +87,12 @@ type ControlInterface interface {
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for checking the lifecycle for certificate signing requests. You should
 // use an instance returned from NewDefaultControl() for any scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Interface) ControlInterface {
-	return &defaultControl{k8sGardenClient}
+func NewDefaultControl(clientMap clientmap.ClientMap) ControlInterface {
+	return &defaultControl{clientMap}
 }
 
 type defaultControl struct {
-	k8sGardenClient kubernetes.Interface
+	clientMap clientmap.ClientMap
 }
 
 func (c *defaultControl) Reconcile(csrObj *certificatesv1beta1.CertificateSigningRequest, key string) error {
@@ -123,7 +126,12 @@ func (c *defaultControl) Reconcile(csrObj *certificatesv1beta1.CertificateSignin
 
 	csrLogger.Infof("[CSR APPROVER] %s", csr.Name)
 
-	approved, err := c.authorize(ctx, csr, authorizationv1beta1.ResourceAttributes{Group: "certificates.k8s.io", Resource: "certificatesigningrequests", Verb: "create", Subresource: "seedclient"})
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return fmt.Errorf("failed to get garden client: %w", err)
+	}
+
+	approved, err := authorize(ctx, gardenClient.Client(), csr, authorizationv1beta1.ResourceAttributes{Group: "certificates.k8s.io", Resource: "certificatesigningrequests", Verb: "create", Subresource: "seedclient"})
 	if err != nil {
 		return err
 	}
@@ -136,7 +144,7 @@ func (c *defaultControl) Reconcile(csrObj *certificatesv1beta1.CertificateSignin
 			Reason:  "AutoApproved",
 			Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
 		})
-		_, err := c.k8sGardenClient.Kubernetes().CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(csr)
+		_, err := gardenClient.Kubernetes().CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(csr)
 		return err
 	}
 
@@ -145,7 +153,7 @@ func (c *defaultControl) Reconcile(csrObj *certificatesv1beta1.CertificateSignin
 	return fmt.Errorf(message)
 }
 
-func (c *defaultControl) authorize(ctx context.Context, csr *certificatesv1beta1.CertificateSigningRequest, resourceAttributes authorizationv1beta1.ResourceAttributes) (bool, error) {
+func authorize(ctx context.Context, c client.Client, csr *certificatesv1beta1.CertificateSigningRequest, resourceAttributes authorizationv1beta1.ResourceAttributes) (bool, error) {
 	extra := make(map[string]authorizationv1beta1.ExtraValue)
 	for k, v := range csr.Spec.Extra {
 		extra[k] = authorizationv1beta1.ExtraValue(v)
@@ -161,7 +169,7 @@ func (c *defaultControl) authorize(ctx context.Context, csr *certificatesv1beta1
 		},
 	}
 
-	if err := c.k8sGardenClient.Client().Create(ctx, sar); err != nil {
+	if err := c.Create(ctx, sar); err != nil {
 		return false, err
 	}
 	return sar.Status.Allowed, nil

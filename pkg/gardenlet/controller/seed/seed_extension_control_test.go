@@ -21,6 +21,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	seedctrl "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -82,7 +85,9 @@ var _ = Describe("ExtensionControlReconcile", func() {
 	})
 
 	JustBeforeEach(func() {
-		controller = seedctrl.NewDefaultExtensionCheckControl(fakeClient, lister, defaultTimeFunc)
+		fakeClientSet := fakeclientset.NewClientSetBuilder().WithGardenCore(fakeClient).Build()
+		fakeClientMap := fakeclientmap.NewClientMap().AddClient(keys.ForGarden(), fakeClientSet)
+		controller = seedctrl.NewDefaultExtensionCheckControl(fakeClientMap, lister, defaultTimeFunc)
 	})
 
 	AfterEach(func() {

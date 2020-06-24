@@ -80,7 +80,7 @@ func (b *Botanist) DefaultNginxIngressDNSEntry(seedClient client.Client) compone
 			Name: DNSIngressName,
 		},
 		b.Shoot.SeedNamespace,
-		b.ChartApplierSeed,
+		b.K8sSeedClient.ChartApplier(),
 		b.ChartsRootPath,
 		b.Logger,
 		seedClient,
@@ -98,7 +98,7 @@ func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Clie
 				Targets: []string{address},
 			},
 			b.Shoot.SeedNamespace,
-			b.ChartApplierSeed,
+			b.K8sSeedClient.ChartApplier(),
 			b.ChartsRootPath,
 			b.Logger,
 			seedClient,
@@ -508,13 +508,13 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		values["vpn-shoot"] = common.GenerateAddonConfig(vpnShoot, true)
 	}
 
-	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, values)
+	return b.K8sShootClient.ChartRenderer().Render(filepath.Join(common.ChartPath, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, values)
 }
 
 // generateCoreNamespacesChart renders the gardener-resource-manager configuration for the core namespaces. After that it
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *Botanist) generateCoreNamespacesChart() (*chartrenderer.RenderedChart, error) {
-	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-core", "namespaces"), "shoot-core-namespaces", metav1.NamespaceSystem, map[string]interface{}{
+	return b.K8sShootClient.ChartRenderer().Render(filepath.Join(common.ChartPath, "shoot-core", "namespaces"), "shoot-core-namespaces", metav1.NamespaceSystem, map[string]interface{}{
 		"labels": map[string]string{
 			v1beta1constants.GardenerPurpose: metav1.NamespaceSystem,
 		},
@@ -552,7 +552,7 @@ func (b *Botanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, 
 		return nil, err
 	}
 
-	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
+	return b.K8sShootClient.ChartRenderer().Render(filepath.Join(common.ChartPath, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
 		"kubernetes-dashboard": kubernetesDashboard,
 		"nginx-ingress":        nginxIngress,
 	})
@@ -562,7 +562,7 @@ func (b *Botanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, 
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
 // TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
 func (b *Botanist) generateTemporaryKymaAddonsChart() (*chartrenderer.RenderedChart, error) {
-	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-addons-kyma"), "kyma", "kyma-installer", map[string]interface{}{
+	return b.K8sShootClient.ChartRenderer().Render(filepath.Join(common.ChartPath, "shoot-addons-kyma"), "kyma", "kyma-installer", map[string]interface{}{
 		"kyma": common.GenerateAddonConfig(nil, metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, common.ShootExperimentalAddonKyma)),
 	})
 }

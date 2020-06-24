@@ -193,7 +193,7 @@ func (b *Botanist) DestroyWorker(ctx context.Context) error {
 func (b *Botanist) WaitUntilWorkerReady(ctx context.Context) error {
 	return common.WaitUntilExtensionCRReady(
 		ctx,
-		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.DirectClient(),
 		b.Logger,
 		func() runtime.Object { return &extensionsv1alpha1.Worker{} },
 		"Worker",

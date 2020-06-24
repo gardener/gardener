@@ -202,7 +202,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		"kube-state-metrics-shoot": kubeStateMetricsShoot,
 	}
 
-	if err := b.ChartApplierSeed.Apply(ctx, filepath.Join(common.ChartPath, "seed-monitoring", "charts", "core"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(coreValues)); err != nil {
+	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-monitoring", "charts", "core"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(coreValues)); err != nil {
 		return err
 	}
 
@@ -270,7 +270,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if err := b.ChartApplierSeed.Apply(ctx, filepath.Join(common.ChartPath, "seed-monitoring", "charts", "alertmanager"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(alertManagerValues)); err != nil {
+		if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-monitoring", "charts", "alertmanager"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(alertManagerValues)); err != nil {
 			return err
 		}
 	} else {
@@ -393,7 +393,7 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 	if err != nil {
 		return err
 	}
-	return b.ChartApplierSeed.Apply(ctx, filepath.Join(common.ChartPath, "seed-monitoring", "charts", "grafana"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values))
+	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-monitoring", "charts", "grafana"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values))
 }
 
 // DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts

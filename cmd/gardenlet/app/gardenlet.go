@@ -32,13 +32,17 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	configvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
-	"github.com/gardener/gardener/pkg/gardenlet/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
@@ -57,7 +61,6 @@ import (
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Options has all the context and parameters needed to run a Gardenlet.
@@ -167,9 +170,10 @@ func run(ctx context.Context, o *Options) error {
 	}
 
 	// Add feature flags
-	if err := features.FeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
+	if err := gardenletfeatures.FeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
 		return err
 	}
+	kubernetes.UseCachedRuntimeClients = gardenletfeatures.FeatureGate.Enabled(features.CachedRuntimeClients)
 
 	gardenlet, err := NewGardenlet(ctx, o.config)
 	if err != nil {
@@ -219,7 +223,7 @@ type Gardenlet struct {
 	Config                 *config.GardenletConfiguration
 	Identity               *gardencorev1beta1.Gardener
 	GardenNamespace        string
-	K8sGardenClient        kubernetes.Interface
+	ClientMap              clientmap.ClientMap
 	K8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	KubeInformerFactory    informers.SharedInformerFactory
 	Logger                 *logrus.Logger
@@ -237,7 +241,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	// Initialize logger
 	logger := logger.NewLogger(*cfg.LogLevel)
 	logger.Info("Starting Gardenlet...")
-	logger.Infof("Feature Gates: %s", features.FeatureGate.String())
+	logger.Infof("Feature Gates: %s", gardenletfeatures.FeatureGate.String())
 
 	if flag := flag.Lookup("v"); flag != nil {
 		if err := flag.Value.Set(fmt.Sprintf("%d", cfg.KubernetesLogLevel)); err != nil {
@@ -278,20 +282,33 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		return nil, err
 	}
 
-	k8sGardenClient, err := kubernetes.NewWithConfig(
-		kubernetes.WithRESTConfig(restCfg),
-		kubernetes.WithClientOptions(client.Options{
-			Scheme: kubernetes.GardenScheme,
-		}),
-	)
+	gardenClientMapBuilder := clientmapbuilder.NewGardenClientMapBuilder().
+		WithRESTConfig(restCfg)
+	seedClientMapBuilder := clientmapbuilder.NewSeedClientMapBuilder().
+		WithInCluster(cfg.SeedSelector == nil).
+		WithClientConnectionConfig(&cfg.SeedClientConnection.ClientConnectionConfiguration)
+	shootClientMapBuilder := clientmapbuilder.NewShootClientMapBuilder().
+		WithClientConnectionConfig(&cfg.ShootClientConnection.ClientConnectionConfiguration)
+
+	clientMap, err := clientmapbuilder.NewDelegatingClientMapBuilder().
+		WithGardenClientMapBuilder(gardenClientMapBuilder).
+		WithSeedClientMapBuilder(seedClientMapBuilder).
+		WithShootClientMapBuilder(shootClientMapBuilder).
+		WithLogger(logger).
+		Build()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to build ClientMap: %w", err)
+	}
+
+	k8sGardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
 	// Delete bootstrap auth data if certificate was freshly acquired
 	if len(csrName) > 0 {
 		logger.Infof("Deleting bootstrap authentication data used to request a certificate")
-		if err := bootstrap.DeleteBootstrapAuth(ctx, k8sGardenClient.Client(), csrName, seedName); err != nil {
+		if err := bootstrap.DeleteBootstrapAuth(ctx, k8sGardenClient.DirectClient(), csrName, seedName); err != nil {
 			return nil, err
 		}
 	}
@@ -328,7 +345,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		Config:                 cfg,
 		Logger:                 logger,
 		Recorder:               recorder,
-		K8sGardenClient:        k8sGardenClient,
+		ClientMap:              clientMap,
 		K8sGardenCoreInformers: gardencoreinformers.NewSharedInformerFactory(k8sGardenClient.GardenCore(), 0),
 		KubeInformerFactory:    kubeinformers.NewSharedInformerFactory(k8sGardenClient.Kubernetes(), 0),
 		LeaderElection:         leaderElectionConfig,
@@ -416,7 +433,7 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 
 func (g *Gardenlet) startControllers(ctx context.Context) {
 	controller.NewGardenletControllerFactory(
-		g.K8sGardenClient,
+		g.ClientMap,
 		g.K8sGardenCoreInformers,
 		g.KubeInformerFactory,
 		g.Config,

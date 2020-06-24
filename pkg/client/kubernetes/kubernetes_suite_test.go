@@ -23,5 +23,5 @@ import (
 
 func TestKubernetes(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Kubernetes Suite")
+	RunSpecs(t, "Client Kubernetes Suite")
 }

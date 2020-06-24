@@ -24,6 +24,7 @@ import (
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
+
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -232,6 +233,18 @@ func (b *HealthChecker) checkDaemonSets(condition gardencorev1beta1.Condition, o
 
 func shootHibernatedCondition(condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
 	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "ConditionNotChecked", "Shoot cluster has been hibernated.")
+}
+
+func shootControlPlaneNotRunningCondition(lastOperation *gardencorev1beta1.LastOperation, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
+	message := "Shoot control plane is not running at the moment."
+	switch {
+	case lastOperation == nil || lastOperation.Type == gardencorev1beta1.LastOperationTypeCreate:
+		message = "Shoot control plane has not been fully created yet."
+	case lastOperation.Type == gardencorev1beta1.LastOperationTypeDelete:
+		message = "Shoot control plane has already been or is about to be deleted."
+	}
+
+	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "ConditionNotChecked", message)
 }
 
 // This is a hack to quickly do a cloud provider specific check for the required control plane deployments.
@@ -811,6 +824,25 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 		return shootHibernatedCondition(apiserverAvailability), shootHibernatedCondition(controlPlane), shootHibernatedCondition(nodes), shootHibernatedCondition(systemComponents)
 	}
 
+	apiServerRunning, err := b.IsAPIServerRunning()
+	if err != nil {
+		message := fmt.Sprintf("Failed to check if control plane is currently running: %v", err)
+		b.Logger.Error(message)
+		return gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(apiserverAvailability, message),
+			gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(controlPlane, message),
+			gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(nodes, message),
+			gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(systemComponents, message)
+	}
+
+	// don't execute health checks if API server has already been deleted or has not been created yet
+	if !apiServerRunning {
+		lastOp := b.Shoot.Info.Status.LastOperation
+		return shootControlPlaneNotRunningCondition(lastOp, apiserverAvailability),
+			shootControlPlaneNotRunningCondition(lastOp, controlPlane),
+			shootControlPlaneNotRunningCondition(lastOp, nodes),
+			shootControlPlaneNotRunningCondition(lastOp, systemComponents)
+	}
+
 	var (
 		seedDeploymentLister  = makeDeploymentLister(b.K8sSeedClient.Kubernetes(), b.Shoot.SeedNamespace, seedDeploymentListOptions)
 		seedStatefulSetLister = makeStatefulSetLister(b.K8sSeedClient.Kubernetes(), b.Shoot.SeedNamespace, seedStatefulSetListOptions)
@@ -883,7 +915,7 @@ func isUnstableOperationType(lastOperationType gardencorev1beta1.LastOperationTy
 
 // PardonCondition pardons the given condition if the Shoot is either in create (except successful create) or delete state.
 func PardonCondition(lastOp *gardencorev1beta1.LastOperation, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	if (lastOp == nil || (lastOp != nil && isUnstableLastOperation(lastOp))) && condition.Status == gardencorev1beta1.ConditionFalse {
+	if (lastOp == nil || isUnstableLastOperation(lastOp)) && condition.Status == gardencorev1beta1.ConditionFalse {
 		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, condition.Reason, condition.Message, condition.Codes...)
 	}
 	return condition

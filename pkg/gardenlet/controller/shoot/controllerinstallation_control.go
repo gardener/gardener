@@ -20,7 +20,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 
@@ -111,12 +111,12 @@ type ControllerInstallationControlInterface interface {
 // NewDefaultControllerInstallationControl returns a new instance of the default implementation ControllerInstallationControlInterface that
 // implements the documented semantics for maintaining Shoots. You should use an instance returned from
 // NewDefaultControllerInstallationControl() for any scenario other than testing.
-func NewDefaultControllerInstallationControl(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.Interface, recorder record.EventRecorder) ControllerInstallationControlInterface {
-	return &defaultControllerInstallationControl{k8sGardenClient, k8sGardenCoreInformers, recorder}
+func NewDefaultControllerInstallationControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.Interface, recorder record.EventRecorder) ControllerInstallationControlInterface {
+	return &defaultControllerInstallationControl{clientMap, k8sGardenCoreInformers, recorder}
 }
 
 type defaultControllerInstallationControl struct {
-	k8sGardenClient        kubernetes.Interface
+	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.Interface
 	recorder               record.EventRecorder
 }

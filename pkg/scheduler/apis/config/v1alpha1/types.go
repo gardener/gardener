@@ -62,6 +62,12 @@ type SchedulerConfiguration struct {
 	Server ServerConfiguration `json:"server,omitempty"`
 	// Scheduler defines the configuration of the schedulers.
 	Schedulers SchedulerControllerConfiguration `json:"schedulers"`
+	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
+	// features. This field modifies piecemeal the built-in default values from
+	// "github.com/gardener/gardener/pkg/scheduler/features/features.go".
+	// Default: nil
+	// +optional
+	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 }
 
 // SchedulerControllerConfiguration defines the configuration of the controllers.

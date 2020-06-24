@@ -20,19 +20,19 @@ import (
 	"time"
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 const (
@@ -49,8 +49,6 @@ type Controller struct {
 	backupBucketQueue  workqueue.RateLimitingInterface
 	backupBucketSynced cache.InformerSynced
 
-	seedLister gardencorelisters.SeedLister
-
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
@@ -58,7 +56,7 @@ type Controller struct {
 // NewBackupBucketController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <backupBucketInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewBackupBucketController(k8sGardenClient kubernetes.Interface, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder) *Controller {
+func NewBackupBucketController(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder) *Controller {
 	var (
 		gardencorev1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
 		backupBucketInformer      = gardencorev1beta1Informer.BackupBuckets()
@@ -69,9 +67,8 @@ func NewBackupBucketController(k8sGardenClient kubernetes.Interface, k8sGardenCo
 
 	backupBucketController := &Controller{
 		config:            config,
-		reconciler:        newReconciler(context.TODO(), k8sGardenClient.Client(), recorder, config),
+		reconciler:        newReconciler(context.TODO(), clientMap, recorder, config),
 		recorder:          recorder,
-		seedLister:        seedLister,
 		backupBucketQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupBucket"),
 		workerCh:          make(chan int),
 	}

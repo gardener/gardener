@@ -21,7 +21,7 @@ import (
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -59,7 +59,7 @@ type Controller struct {
 }
 
 // NewController instantiates a new Plant controller.
-func NewController(k8sGardenClient kubernetes.Interface,
+func NewController(clientMap clientmap.ClientMap,
 	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	config *config.ControllerManagerConfiguration,
@@ -86,7 +86,7 @@ func NewController(k8sGardenClient kubernetes.Interface,
 		secretLister: secretLister,
 		plantLister:  plantLister,
 		plantQueue:   plantQueue,
-		plantControl: NewDefaultPlantControl(k8sGardenClient, recorder, config, plantLister, secretLister),
+		plantControl: NewDefaultPlantControl(clientMap, recorder, config, secretLister),
 
 		workerCh: make(chan int),
 	}

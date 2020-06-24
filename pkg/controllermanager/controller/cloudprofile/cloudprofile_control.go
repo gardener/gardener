@@ -23,7 +23,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -91,14 +92,14 @@ type ControlInterface interface {
 
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for CloudProfiles.
-func NewDefaultControl(k8sGardenClient kubernetes.Interface, shootLister gardencorelisters.ShootLister, recorder record.EventRecorder) ControlInterface {
-	return &defaultControl{k8sGardenClient, shootLister, recorder}
+func NewDefaultControl(clientMap clientmap.ClientMap, shootLister gardencorelisters.ShootLister, recorder record.EventRecorder) ControlInterface {
+	return &defaultControl{clientMap, shootLister, recorder}
 }
 
 type defaultControl struct {
-	k8sGardenClient kubernetes.Interface
-	shootLister     gardencorelisters.ShootLister
-	recorder        record.EventRecorder
+	clientMap   clientmap.ClientMap
+	shootLister gardencorelisters.ShootLister
+	recorder    record.EventRecorder
 }
 
 func (c *defaultControl) ReconcileCloudProfile(obj *gardencorev1beta1.CloudProfile, key string) error {
@@ -108,9 +109,15 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardencorev1beta1.CloudProfi
 	}
 
 	var (
+		ctx                = context.TODO()
 		cloudProfile       = obj.DeepCopy()
 		cloudProfileLogger = logger.NewFieldLogger(logger.Logger, "cloudprofile", cloudProfile.Name)
 	)
+
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return fmt.Errorf("failed to get garden client: %w", err)
+	}
 
 	// The deletionTimestamp labels the CloudProfile as intended to get deleted. Before deletion, it has to be ensured that
 	// no Shoots and Seed are assigned to the CloudProfile anymore. If this is the case then the controller will remove
@@ -129,12 +136,8 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardencorev1beta1.CloudProfi
 		if len(associatedShoots) == 0 {
 			cloudProfileLogger.Infof("No Shoots are referencing the CloudProfile. Deletion accepted.")
 
-			finalizers := sets.NewString(cloudProfile.Finalizers...)
-			finalizers.Delete(gardencorev1beta1.GardenerName)
-			cloudProfile.Finalizers = finalizers.UnsortedList()
-
-			if _, err := c.k8sGardenClient.GardenCore().CoreV1beta1().CloudProfiles().Update(cloudProfile); client.IgnoreNotFound(err) != nil {
-				logger.Logger.Error(err)
+			if err := controllerutils.RemoveGardenerFinalizer(ctx, gardenClient.Client(), cloudProfile); client.IgnoreNotFound(err) != nil {
+				logger.Logger.Errorf("could not remove finalizer from CloudProfile: %s", err.Error())
 				return err
 			}
 			return nil
@@ -147,7 +150,7 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardencorev1beta1.CloudProfi
 		return errors.New("CloudProfile still has references")
 	}
 
-	if err := controllerutils.EnsureFinalizer(context.TODO(), c.k8sGardenClient.Client(), cloudProfile, gardencorev1beta1.GardenerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, gardenClient.Client(), cloudProfile, gardencorev1beta1.GardenerName); err != nil {
 		logger.Logger.Errorf("could not add finalizer to CloudProfile: %s", err.Error())
 		return err
 	}

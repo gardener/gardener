@@ -20,7 +20,8 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -77,12 +78,12 @@ type SeedControlInterface interface {
 // NewDefaultSeedControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for Seeds. You should use an instance returned from NewDefaultSeedControl()
 // for any scenario other than testing.
-func NewDefaultSeedControl(k8sGardenClient kubernetes.Interface, controllerInstallationLister gardencorelisters.ControllerInstallationLister) SeedControlInterface {
-	return &defaultSeedControl{k8sGardenClient, controllerInstallationLister}
+func NewDefaultSeedControl(clientMap clientmap.ClientMap, controllerInstallationLister gardencorelisters.ControllerInstallationLister) SeedControlInterface {
+	return &defaultSeedControl{clientMap, controllerInstallationLister}
 }
 
 type defaultSeedControl struct {
-	k8sGardenClient              kubernetes.Interface
+	clientMap                    clientmap.ClientMap
 	controllerInstallationLister gardencorelisters.ControllerInstallationLister
 }
 
@@ -91,6 +92,11 @@ func (c *defaultSeedControl) Reconcile(obj *gardencorev1beta1.Seed) error {
 		ctx  = context.TODO()
 		seed = obj.DeepCopy()
 	)
+
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return fmt.Errorf("failed to get garden client: %w", err)
+	}
 
 	if seed.DeletionTimestamp != nil {
 		if !controllerutils.HasFinalizer(seed, FinalizerName) {
@@ -108,8 +114,8 @@ func (c *defaultSeedControl) Reconcile(obj *gardencorev1beta1.Seed) error {
 			}
 		}
 
-		return controllerutils.RemoveFinalizer(ctx, c.k8sGardenClient.Client(), seed, FinalizerName)
+		return controllerutils.RemoveFinalizer(ctx, gardenClient.Client(), seed, FinalizerName)
 	}
 
-	return controllerutils.EnsureFinalizer(ctx, c.k8sGardenClient.Client(), seed, FinalizerName)
+	return controllerutils.EnsureFinalizer(ctx, gardenClient.Client(), seed, FinalizerName)
 }
