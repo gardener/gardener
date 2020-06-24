@@ -234,8 +234,8 @@ Create Shoot test is meant to test shoot creation.
 **Example Run**
 
 ```console
-go test -mod=vendor -timeout=0 -ginkgo.v -ginkgo.progress \
-  ./test/system/shoot_creation \
+go test -mod=vendor -timeout=0 ./test/system/shoot_creation \
+  --v -ginkgo.v -ginkgo.progress \
   -kubecfg=$HOME/.kube/config \
   -shoot-name=$SHOOT_NAME \
   -cloud-profile=$CLOUDPROFILE \
@@ -278,8 +278,8 @@ If there is no available newer version this test is a noop.
 **Example Run**
 
 ```console
-go test -mod=vendor -timeout=0 -ginkgo.v -ginkgo.progress \
-  ./test/system/shoot_update \
+go test -mod=vendor -timeout=0 ./test/system/shoot_update \
+  --v -ginkgo.v -ginkgo.progress \
   -kubecfg=$HOME/.kube/config \
   -shoot-name=$SHOOT_NAME \
   -project-namespace=$PROJECT_NAMESPACE \
@@ -293,8 +293,8 @@ The Gardener Full Reconcile test is meant to test if all shoots of a gardener in
 **Example Run**
 
 ```console
-go test -mod=vendor -timeout=0 -ginkgo.v -ginkgo.progress \
-  ./test/system/complete_reconcile \
+go test -mod=vendor -timeout=0 ./test/system/complete_reconcile \
+  --v -ginkgo.v -ginkgo.progress \
   -kubecfg=$HOME/.kube/config \
   -project-namespace=$PROJECT_NAMESPACE \
   -gardenerVersion=$GARDENER_VERSION # needed to validate the last acted gardener version of a shoot

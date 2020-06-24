@@ -133,7 +133,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("scaling up reserve-capacity deployment")
-		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, origMinWorkers+1)
+		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.DirectClient(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, origMinWorkers+1)
 		framework.ExpectNoError(err)
 
 		ginkgo.By("one node should be added to the worker pool")
@@ -145,7 +145,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("scaling down reserve-capacity deployment")
-		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, origMinWorkers)
+		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.DirectClient(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, origMinWorkers)
 		framework.ExpectNoError(err)
 
 		ginkgo.By("one node should be removed from the worker pool")
@@ -252,7 +252,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("scaling up reserve-capacity deployment")
-		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, 1)
+		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.DirectClient(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, 1)
 		framework.ExpectNoError(err)
 
 		ginkgo.By("one node should be added to the worker pool")
@@ -264,7 +264,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("scaling down reserve-capacity deployment")
-		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.Client(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, 0)
+		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.DirectClient(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, 0)
 		framework.ExpectNoError(err)
 
 		ginkgo.By("worker pool should be scaled-down to 0")
