@@ -71,7 +71,7 @@ var _ = Describe("Proxy protocol", func() {
 		ca := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
 		Expect(ca).NotTo(BeNil(), "should return chart applier")
 
-		proxy = NewProxyProtocolGateway(deployNS, ca, chartsRootPath)
+		proxy = NewProxyProtocolGateway(deployNS, ca, c, chartsRootPath)
 
 		// expectedGW = &networkingv1beta1.Gateway{
 		// 	ObjectMeta: metav1.ObjectMeta{
