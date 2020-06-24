@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -72,7 +73,7 @@ var _ = Describe("dns", func() {
 					},
 				},
 				Garden:         &garden.Garden{},
-				Logger:         logrus.NewEntry(logrus.New()),
+				Logger:         logrus.NewEntry(logger.NewNopLogger()),
 				ChartsRootPath: "../../../charts",
 			},
 		}

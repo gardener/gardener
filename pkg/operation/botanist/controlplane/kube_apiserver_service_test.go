@@ -19,6 +19,7 @@ import (
 
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane"
 	"github.com/sirupsen/logrus"
@@ -48,7 +49,7 @@ var _ = Describe("#KubeAPIServerService", func() {
 		ctx                context.Context
 		c                  client.Client
 		expected           *corev1.Service
-		logger             *logrus.Entry
+		log                *logrus.Entry
 		defaultDepWaiter   component.DeployWaiter
 		ingressIP          string
 		clusterIP          string
@@ -61,9 +62,8 @@ var _ = Describe("#KubeAPIServerService", func() {
 	)
 
 	BeforeEach(func() {
-
 		ctx = context.TODO()
-		logger = logrus.NewEntry(logrus.New())
+		log = logrus.NewEntry(logger.NewNopLogger())
 
 		s := runtime.NewScheme()
 		Expect(corev1.AddToScheme(s)).NotTo(HaveOccurred())
@@ -123,7 +123,7 @@ var _ = Describe("#KubeAPIServerService", func() {
 				sniServiceObjKey,
 				ca,
 				chartsRoot(),
-				logger,
+				log,
 				c,
 				&fakeOps{},
 				clusterIPFunc,
@@ -139,7 +139,7 @@ var _ = Describe("#KubeAPIServerService", func() {
 				nil,
 				ca,
 				chartsRoot(),
-				logger,
+				log,
 				c,
 				&fakeOps{},
 				clusterIPFunc,
