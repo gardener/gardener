@@ -38,7 +38,13 @@ spec:
         - probe
         - --config-file=/etc/dependency-watchdog/config/dep-config.yaml
         - --deployed-namespace={{ .Release.Namespace }}
+        - --qps=20.0
+        - --burst=100
         - --v=4
+        ports:
+        - name: metrics
+          containerPort: 9643
+          protocol: TCP
         resources:
           requests:
             cpu: 200m
