@@ -1240,7 +1240,6 @@ func (b *Botanist) DefaultKubeAPIServersNI() component.DeployWaiter {
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),
 		b.ChartsRootPath,
-		b.K8sSeedClient.Client(),
 	))
 }
 
@@ -1266,7 +1265,6 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),
 		b.ChartsRootPath,
-		b.K8sSeedClient.Client(),
 	)
 
 }

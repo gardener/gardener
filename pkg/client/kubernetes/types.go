@@ -103,7 +103,7 @@ type MergeFunc func(newObj, oldObj *unstructured.Unstructured)
 // Kubernetes objects.
 type Applier interface {
 	ApplyManifest(ctx context.Context, unstructured UnstructuredReader, options MergeFuncs) error
-	DeleteManifest(ctx context.Context, unstructured UnstructuredReader) error
+	DeleteManifest(ctx context.Context, unstructured UnstructuredReader, opts ...DeleteManifestOption) error
 }
 
 // Interface is used to wrap the interactions with a Kubernetes cluster

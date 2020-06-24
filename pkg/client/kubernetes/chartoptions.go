@@ -14,7 +14,9 @@
 
 package kubernetes
 
-import "k8s.io/apimachinery/pkg/runtime/schema"
+import (
+	"k8s.io/apimachinery/pkg/runtime/schema"
+)
 
 // ApplyOption is some configuration that modifies options for a apply request.
 type ApplyOption interface {
@@ -98,4 +100,26 @@ type DeleteOptions struct {
 	// Forces the namespace for chart objects when applying the chart, this is because sometimes native chart
 	// objects do not come with a Release.Namespace option and leave the namespace field empty
 	ForceNamespace bool
+
+	// TolerateErrorFuncs are functions for which errors are tolerated.
+	TolerateErrorFuncs []TolerateErrorFunc
+}
+
+// TolerateErrorFunc is a function for which err is tolerated.
+type TolerateErrorFunc func(err error) bool
+
+func (t TolerateErrorFunc) MutateDeleteOptions(opts *DeleteOptions) {
+	if opts.TolerateErrorFuncs == nil {
+		opts.TolerateErrorFuncs = []TolerateErrorFunc{}
+	}
+
+	opts.TolerateErrorFuncs = append(opts.TolerateErrorFuncs, t)
+}
+
+func (t TolerateErrorFunc) MutateDeleteManifestOptions(opts *DeleteManifestOptions) {
+	if opts.TolerateErrorFuncs == nil {
+		opts.TolerateErrorFuncs = []TolerateErrorFunc{}
+	}
+
+	opts.TolerateErrorFuncs = append(opts.TolerateErrorFuncs, t)
 }

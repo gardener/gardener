@@ -104,7 +104,15 @@ func (c *chartApplier) Delete(ctx context.Context, chartPath, namespace, name st
 		manifestReader = NewNamespaceSettingReader(manifestReader, namespace)
 	}
 
-	return c.DeleteManifest(ctx, manifestReader)
+	deleteManifestOpts := []DeleteManifestOption{}
+
+	for _, tf := range deleteOpts.TolerateErrorFuncs {
+		if tf != nil {
+			deleteManifestOpts = append(deleteManifestOpts, tf)
+		}
+	}
+
+	return c.DeleteManifest(ctx, manifestReader, deleteManifestOpts...)
 }
 
 func (c *chartApplier) manifestReader(chartPath, namespace, name string, values interface{}) (UnstructuredReader, error) {

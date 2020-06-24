@@ -631,7 +631,7 @@ func BootstrapCluster(k8sSeedClient kubernetes.Interface, seed *Seed, secrets ma
 		}
 	}
 
-	proxy := istio.NewProxyProtocolGateway(common.IstioIngressGatewayNamespace, chartApplier, k8sSeedClient.Client(), "charts")
+	proxy := istio.NewProxyProtocolGateway(common.IstioIngressGatewayNamespace, chartApplier, "charts")
 
 	if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
 		if err := proxy.Deploy(context.TODO()); err != nil {

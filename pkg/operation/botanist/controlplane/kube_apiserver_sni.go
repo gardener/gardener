@@ -21,11 +21,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
-	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // kubeAPIServiceValues configure the kube-apiserver service SNI.
@@ -45,7 +42,6 @@ func NewKubeAPIServerSNI(
 	namespace string,
 	applier kubernetes.ChartApplier,
 	chartsRootPath string,
-	client crclient.Client,
 
 ) component.DeployWaiter {
 	if values == nil {
@@ -55,7 +51,6 @@ func NewKubeAPIServerSNI(
 	return &kubeAPIServerSNI{
 		ChartApplier: applier,
 		chartPath:    filepath.Join(chartsRootPath, "seed-controlplane", "charts", "kube-apiserver-sni"),
-		client:       client,
 		values:       values,
 		namespace:    namespace,
 	}
@@ -66,7 +61,6 @@ type kubeAPIServerSNI struct {
 	namespace string
 	kubernetes.ChartApplier
 	chartPath string
-	client    crclient.Client
 }
 
 func (k *kubeAPIServerSNI) Deploy(ctx context.Context) error {
@@ -80,58 +74,14 @@ func (k *kubeAPIServerSNI) Deploy(ctx context.Context) error {
 }
 
 func (k *kubeAPIServerSNI) Destroy(ctx context.Context) error {
-	objs := []*unstructured.Unstructured{
-		{
-			Object: map[string]interface{}{
-				"apiVersion": "networking.istio.io/v1beta1",
-				"kind":       "DestinationRule",
-				"metadata": map[string]interface{}{
-					"name":      k.values.Name,
-					"namespace": k.namespace,
-				},
-			},
-		},
-		{
-			Object: map[string]interface{}{
-				"apiVersion": "networking.istio.io/v1beta1",
-				"kind":       "Gateway",
-				"metadata": map[string]interface{}{
-					"name":      k.values.Name,
-					"namespace": k.namespace,
-				},
-			},
-		},
-		{
-			Object: map[string]interface{}{
-				"apiVersion": "networking.istio.io/v1beta1",
-				"kind":       "VirtualService",
-				"metadata": map[string]interface{}{
-					"name":      k.values.Name,
-					"namespace": k.namespace,
-				},
-			},
-		},
-		{
-			Object: map[string]interface{}{
-				"apiVersion": "networking.istio.io/v1alpha3",
-				"kind":       "EnvoyFilter",
-				"metadata": map[string]interface{}{
-					"name":      k.namespace,
-					"namespace": k.values.IstioIngressNamespace,
-				},
-			},
-		},
-	}
-
-	for _, obj := range objs {
-		if err := k.client.Delete(ctx, obj); err != nil {
-			if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
-				return err
-			}
-		}
-	}
-
-	return nil
+	return k.Delete(
+		ctx,
+		k.chartPath,
+		k.namespace,
+		k.values.Name,
+		kubernetes.Values(k.values),
+		kubernetes.TolerateErrorFunc(meta.IsNoMatchError),
+	)
 }
 
 func (k *kubeAPIServerSNI) Wait(ctx context.Context) error        { return nil }

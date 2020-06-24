@@ -49,15 +49,20 @@ func (mr *MockApplierMockRecorder) ApplyManifest(arg0, arg1, arg2 interface{}) *
 }
 
 // DeleteManifest mocks base method
-func (m *MockApplier) DeleteManifest(arg0 context.Context, arg1 kubernetes.UnstructuredReader) error {
+func (m *MockApplier) DeleteManifest(arg0 context.Context, arg1 kubernetes.UnstructuredReader, arg2 ...kubernetes.DeleteManifestOption) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteManifest", arg0, arg1)
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteManifest", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteManifest indicates an expected call of DeleteManifest
-func (mr *MockApplierMockRecorder) DeleteManifest(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockApplierMockRecorder) DeleteManifest(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteManifest", reflect.TypeOf((*MockApplier)(nil).DeleteManifest), arg0, arg1)
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteManifest", reflect.TypeOf((*MockApplier)(nil).DeleteManifest), varargs...)
 }
