@@ -693,6 +693,8 @@ type Worker struct {
 	MaxUnavailable *intstr.IntOrString
 	// ProviderConfig is the provider-specific configuration for this worker pool.
 	ProviderConfig *runtime.RawExtension
+	// SystemComponents contains configuration for system components related to this worker pool
+	SystemComponents *WorkerSystemComponents
 	// Taints is a list of taints for all the `Node` objects in this worker pool.
 	Taints []corev1.Taint
 	// Volume contains information about the volume type and size.
@@ -704,6 +706,12 @@ type Worker struct {
 	// Zones is a list of availability zones that are used to evenly distribute this worker pool. Optional
 	// as not every provider may support availability zones.
 	Zones []string
+}
+
+// WorkerSystemComponents contains configuration for system components related to this worker pool
+type WorkerSystemComponents struct {
+	// Allow determines whether the pool should be allowed to host system components or not (defaults to true)
+	Allow bool
 }
 
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.

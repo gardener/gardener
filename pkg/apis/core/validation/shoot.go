@@ -1065,14 +1065,20 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 	var (
 		allErrs = field.ErrorList{}
 
-		workerNames                        = make(map[string]bool)
-		atLeastOneActivePool               = false
-		atLeastOnePoolWithCompatibleTaints = len(workers) == 0
+		workerNames                               = make(map[string]bool)
+		atLeastOneActivePool                      = false
+		atLeastOnePoolWithCompatibleTaints        = len(workers) == 0
+		atLeastOnePoolWithAllowedSystemComponents = false
 	)
 
 	for i, worker := range workers {
+		var (
+			poolIsActive            = false
+			poolHasCompatibleTaints = false
+		)
+
 		if worker.Minimum != 0 && worker.Maximum != 0 {
-			atLeastOneActivePool = true
+			poolIsActive = true
 		}
 
 		if workerNames[worker.Name] {
@@ -1081,9 +1087,8 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 		workerNames[worker.Name] = true
 
 		switch {
-		case atLeastOnePoolWithCompatibleTaints:
 		case len(worker.Taints) == 0:
-			atLeastOnePoolWithCompatibleTaints = true
+			poolHasCompatibleTaints = true
 		case !atLeastOnePoolWithCompatibleTaints:
 			onlyPreferNoScheduleEffectTaints := true
 			for _, taint := range worker.Taints {
@@ -1093,8 +1098,20 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 				}
 			}
 			if onlyPreferNoScheduleEffectTaints {
-				atLeastOnePoolWithCompatibleTaints = true
+				poolHasCompatibleTaints = true
 			}
+		}
+
+		if poolIsActive && poolHasCompatibleTaints && helper.SystemComponentsAllowed(&worker) {
+			atLeastOnePoolWithAllowedSystemComponents = true
+		}
+
+		if !atLeastOneActivePool {
+			atLeastOneActivePool = poolIsActive
+		}
+
+		if !atLeastOnePoolWithCompatibleTaints {
+			atLeastOnePoolWithCompatibleTaints = poolHasCompatibleTaints
 		}
 	}
 
@@ -1104,6 +1121,10 @@ func ValidateWorkers(workers []core.Worker, fldPath *field.Path) field.ErrorList
 
 	if !atLeastOnePoolWithCompatibleTaints {
 		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("at least one worker pool must exist having either no taints or only the %q taint", corev1.TaintEffectPreferNoSchedule)))
+	}
+
+	if !atLeastOnePoolWithAllowedSystemComponents {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "at least one active worker pool with allowSystemComponents=true needed"))
 	}
 
 	return allErrs

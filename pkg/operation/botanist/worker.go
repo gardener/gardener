@@ -17,9 +17,11 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -89,6 +91,10 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 			workerPool.Labels["node-role.kubernetes.io/node"] = ""
 		} else {
 			workerPool.Labels["node.kubernetes.io/role"] = "node"
+		}
+
+		if v1beta1helper.SystemComponentsAllowed(&workerPool) {
+			workerPool.Labels[v1beta1constants.LabelWorkerPoolSystemComponents] = strconv.FormatBool(workerPool.SystemComponents.Allow)
 		}
 
 		// worker pool name labels

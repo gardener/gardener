@@ -46,6 +46,8 @@ spec:
           runAsUser: 1001
           runAsGroup: 2001
       serviceAccountName: kubernetes-dashboard
+      nodeSelector:
+        worker.gardener.cloud/system-components: "true"
       volumes:
       - name: tmp-volume
         emptyDir: {}

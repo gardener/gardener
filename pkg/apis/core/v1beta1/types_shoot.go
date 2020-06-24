@@ -855,6 +855,15 @@ type Worker struct {
 	// as not every provider may support availability zones.
 	// +optional
 	Zones []string `json:"zones,omitempty" protobuf:"bytes,17,rep,name=zones"`
+	// SystemComponents contains configuration for system components related to this worker pool
+	// +optional
+	SystemComponents *WorkerSystemComponents `json:"systemComponents,omitempty" protobuf:"bytes,18,opt,name=systemComponents"`
+}
+
+// WorkerSystemComponents contains configuration for system components related to this worker pool
+type WorkerSystemComponents struct {
+	// Allow determines whether the pool should be allowed to host system components or not (defaults to true)
+	Allow bool `json:"allow" protobuf:"bytes,1,name=allow"`
 }
 
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.
@@ -948,6 +957,8 @@ var (
 	DefaultWorkerMaxSurge = intstr.FromInt(1)
 	// DefaultWorkerMaxUnavailable is the default value for Worker MaxUnavailable.
 	DefaultWorkerMaxUnavailable = intstr.FromInt(0)
+	// DefaultWorkerSystemComponentsAllow is the default value for Worker AllowSystemComponents
+	DefaultWorkerSystemComponentsAllow = true
 )
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

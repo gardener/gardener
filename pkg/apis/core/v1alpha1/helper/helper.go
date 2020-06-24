@@ -587,6 +587,11 @@ func ShootUsesUnmanagedDNS(shoot *gardencorev1alpha1.Shoot) bool {
 	return shoot.Spec.DNS != nil && len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == "unmanaged"
 }
 
+// SystemComponentsAllowed checks if the given worker allows system components to be scheduled onto it
+func SystemComponentsAllowed(worker *gardencorev1alpha1.Worker) bool {
+	return worker.SystemComponents == nil || worker.SystemComponents.Allow
+}
+
 // GetMachineImagesFor returns a list of all machine images for a given shoot.
 func GetMachineImagesFor(shoot *gardencorev1alpha1.Shoot) []*gardencorev1alpha1.ShootMachineImage {
 	var workerMachineImages []*gardencorev1alpha1.ShootMachineImage

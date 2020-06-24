@@ -285,3 +285,8 @@ func FindVersionsWithSameMajorMinor(versions []core.ExpirableVersion, version se
 func HibernationIsEnabled(shoot *core.Shoot) bool {
 	return shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil && *shoot.Spec.Hibernation.Enabled
 }
+
+// SystemComponentsAllowed checks if the given worker allows system components to be scheduled onto it
+func SystemComponentsAllowed(worker *core.Worker) bool {
+	return worker.SystemComponents == nil || worker.SystemComponents.Allow
+}

@@ -25,6 +25,13 @@ This kubeconfig is stored as a `Secret` with name [`gardener`](https://github.co
 Extension controllers may use this kubeconfig to interact with the shoot cluster if desired (it has full administrator privileges and no further RBAC rules are required).
 Instead, they could also create their own kubeconfig for every shoot (which, of course, is better for auditing reasons, but not yet enforced at this point in time).
 
+If you need to deploy a non-DaemonSet resource you need to ensure that it only runs on nodes that are allowed to host system components and extensions.
+To do that you need to configure a `nodeSelector` as following:
+ ```yaml
+nodeSelector:
+  worker.gardener.cloud/system-components: "true"
+```
+
 ## How to create certificates/kubeconfigs for the shoot cluster?
 
 Gardener creates several certificate authorities (CA) that are used to create server/client certificates for various components.

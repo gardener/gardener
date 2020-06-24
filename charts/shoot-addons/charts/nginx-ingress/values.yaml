@@ -65,7 +65,8 @@ controller:
   ## Node labels for controller pod assignment
   ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
   ##
-  nodeSelector: {}
+  nodeSelector:
+    worker.gardener.cloud/system-components: "true"
 
   ## Annotations to be added to controller pods
   ##
@@ -147,7 +148,9 @@ defaultBackend:
   ## Node labels for default backend pod assignment
   ## Ref: https://kubernetes.io/docs/user-guide/node-selection/
   ##
-  nodeSelector: {}
+  nodeSelector:
+    worker.gardener.cloud/system-components: "true"
+
 
   ## Annotations to be added to default backend pods
   ##

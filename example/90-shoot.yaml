@@ -55,6 +55,8 @@ spec:
     # kubeletDataVolumeName: kubelet-dir
     # providerConfig:
     #   <some-provider-specific-worker-config>
+    # systemComponents:
+    #   allow: true
     # labels:
     #   key: value
     # annotations:

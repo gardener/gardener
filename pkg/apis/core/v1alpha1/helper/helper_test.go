@@ -503,6 +503,15 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	DescribeTable("#SystemComponentsAllowed",
+		func(worker *gardencorev1alpha1.Worker, allowsSystemComponents bool) {
+			Expect(SystemComponentsAllowed(worker)).To(Equal(allowsSystemComponents))
+		},
+		Entry("no systemComponents section", &gardencorev1alpha1.Worker{}, true),
+		Entry("systemComponents.allowed = false", &gardencorev1alpha1.Worker{SystemComponents: &gardencorev1alpha1.WorkerSystemComponents{Allow: false}}, false),
+		Entry("systemComponents.allowed = true", &gardencorev1alpha1.Worker{SystemComponents: &gardencorev1alpha1.WorkerSystemComponents{Allow: true}}, true),
+	)
+
 	DescribeTable("#HibernationIsEnabled",
 		func(shoot *gardencorev1alpha1.Shoot, hibernated bool) {
 			Expect(HibernationIsEnabled(shoot)).To(Equal(hibernated))

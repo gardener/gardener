@@ -53,9 +53,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Enabled: true,
 			}
 
-			maxSurge       = intstr.FromInt(1)
-			maxUnavailable = intstr.FromInt(0)
-			worker         = core.Worker{
+			maxSurge         = intstr.FromInt(1)
+			maxUnavailable   = intstr.FromInt(0)
+			systemComponents = &core.WorkerSystemComponents{
+				Allow: true,
+			}
+			worker = core.Worker{
 				Name: "worker-name",
 				Machine: core.Machine{
 					Type: "large",
@@ -64,20 +67,22 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Version: "1.0.0",
 					},
 				},
-				Minimum:        1,
-				Maximum:        1,
-				MaxSurge:       &maxSurge,
-				MaxUnavailable: &maxUnavailable,
+				Minimum:          1,
+				Maximum:          1,
+				MaxSurge:         &maxSurge,
+				MaxUnavailable:   &maxUnavailable,
+				SystemComponents: systemComponents,
 			}
 			invalidWorker = core.Worker{
 				Name: "",
 				Machine: core.Machine{
 					Type: "",
 				},
-				Minimum:        -1,
-				Maximum:        -2,
-				MaxSurge:       &maxSurge,
-				MaxUnavailable: &maxUnavailable,
+				Minimum:          -1,
+				Maximum:          -2,
+				MaxSurge:         &maxSurge,
+				MaxUnavailable:   &maxUnavailable,
+				SystemComponents: systemComponents,
 			}
 			invalidWorkerName = core.Worker{
 				Name: "not_compliant",
@@ -88,10 +93,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Version: "1.0.0",
 					},
 				},
-				Minimum:        1,
-				Maximum:        1,
-				MaxSurge:       &maxSurge,
-				MaxUnavailable: &maxUnavailable,
+				Minimum:          1,
+				Maximum:          1,
+				MaxSurge:         &maxSurge,
+				MaxUnavailable:   &maxUnavailable,
+				SystemComponents: systemComponents,
 			}
 			invalidWorkerTooLongName = core.Worker{
 				Name: "worker-name-is-too-long",
@@ -102,10 +108,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Version: "1.0.0",
 					},
 				},
-				Minimum:        1,
-				Maximum:        1,
-				MaxSurge:       &maxSurge,
-				MaxUnavailable: &maxUnavailable,
+				Minimum:          1,
+				Maximum:          1,
+				MaxSurge:         &maxSurge,
+				MaxUnavailable:   &maxUnavailable,
+				SystemComponents: systemComponents,
 			}
 			workerAutoScalingMinZero = core.Worker{
 				Name: "cpu-worker",
@@ -116,10 +123,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Version: "1.0.0",
 					},
 				},
-				Minimum:        0,
-				Maximum:        2,
-				MaxSurge:       &maxSurge,
-				MaxUnavailable: &maxUnavailable,
+				Minimum:          0,
+				Maximum:          2,
+				MaxSurge:         &maxSurge,
+				MaxUnavailable:   &maxUnavailable,
+				SystemComponents: systemComponents,
 			}
 			workerAutoScalingMinMaxZero = core.Worker{
 				Name: "cpu-worker",
@@ -130,10 +138,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Version: "1.0.0",
 					},
 				},
-				Minimum:        0,
-				Maximum:        0,
-				MaxSurge:       &maxSurge,
-				MaxUnavailable: &maxUnavailable,
+				Minimum:          0,
+				Maximum:          0,
+				MaxSurge:         &maxSurge,
+				MaxUnavailable:   &maxUnavailable,
+				SystemComponents: systemComponents,
 			}
 		)
 
@@ -289,6 +298,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.provider.type"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.provider.workers"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
@@ -690,10 +703,16 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.provider.workers"),
-				}))))
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.provider.workers"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.provider.workers"),
+					})),
+				))
 			})
 
 			It("should enforce unique worker names", func() {
@@ -2355,16 +2374,21 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		DescribeTable("validate that at least one active worker pool is configured",
 			func(min1, max1, min2, max2 int32, matcher gomegatypes.GomegaMatcher) {
+				systemComponents := &core.WorkerSystemComponents{
+					Allow: true,
+				}
 				workers := []core.Worker{
 					{
-						Name:    "one",
-						Minimum: min1,
-						Maximum: max1,
+						Name:             "one",
+						Minimum:          min1,
+						Maximum:          max1,
+						SystemComponents: systemComponents,
 					},
 					{
-						Name:    "two",
-						Minimum: min2,
-						Maximum: max2,
+						Name:             "two",
+						Minimum:          min2,
+						Maximum:          max2,
+						SystemComponents: systemComponents,
 					},
 				}
 
@@ -2372,20 +2396,73 @@ var _ = Describe("Shoot Validation Tests", func() {
 			},
 
 			Entry("at least one worker pool min>0, max>0", zero, zero, one, one, HaveLen(0)),
-			Entry("all worker pools min=max=0", zero, zero, zero, zero, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type": Equal(field.ErrorTypeForbidden),
-			})))),
+			Entry("all worker pools min=max=0", zero, zero, zero, zero, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(field.ErrorTypeForbidden),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(field.ErrorTypeForbidden),
+				})),
+			)),
+		)
+
+		DescribeTable("validate that at least one worker pool is able to host system components",
+			func(min1, max1, min2, max2 int32, allowSystemComponents1, allowSystemComponents2 bool, taints1, taints2 []corev1.Taint, matcher gomegatypes.GomegaMatcher) {
+				workers := []core.Worker{
+					{
+						Name:    "one-active",
+						Minimum: min1,
+						Maximum: max1,
+						SystemComponents: &core.WorkerSystemComponents{
+							Allow: allowSystemComponents1,
+						},
+						Taints: taints1,
+					},
+					{
+						Name:    "two-active",
+						Minimum: min2,
+						Maximum: max2,
+						SystemComponents: &core.WorkerSystemComponents{
+							Allow: allowSystemComponents2,
+						},
+						Taints: taints2,
+					},
+				}
+
+				Expect(ValidateWorkers(workers, field.NewPath("workers"))).To(matcher)
+			},
+
+			Entry("all worker pools min=max=0", zero, zero, zero, zero, true, true, nil, nil, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(field.ErrorTypeForbidden),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(field.ErrorTypeForbidden),
+				})),
+			)),
+			Entry("at least one worker pool allows system components", zero, zero, one, one, true, true, nil, nil, HaveLen(0)),
+			Entry("one active but taints prevent scheduling", one, one, zero, zero, true, true, []corev1.Taint{{Effect: corev1.TaintEffectNoSchedule}}, nil, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(field.ErrorTypeForbidden),
+				})),
+			)),
 		)
 
 		DescribeTable("ensure that at least one worker pool exists that either has no taints or only those with `PreferNoSchedule` effect",
 			func(matcher gomegatypes.GomegaMatcher, taints ...[]corev1.Taint) {
-				var workers []core.Worker
+				var (
+					workers          []core.Worker
+					systemComponents = &core.WorkerSystemComponents{
+						Allow: true,
+					}
+				)
+
 				for i, t := range taints {
 					workers = append(workers, core.Worker{
-						Name:    "pool-" + strconv.Itoa(i),
-						Minimum: 1,
-						Maximum: 2,
-						Taints:  t,
+						Name:             "pool-" + strconv.Itoa(i),
+						Minimum:          1,
+						Maximum:          2,
+						Taints:           t,
+						SystemComponents: systemComponents,
 					})
 				}
 
@@ -2416,23 +2493,38 @@ var _ = Describe("Shoot Validation Tests", func() {
 			),
 			Entry(
 				"all pools with NoSchedule taints",
-				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type": Equal(field.ErrorTypeForbidden),
-				}))),
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type": Equal(field.ErrorTypeForbidden),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type": Equal(field.ErrorTypeForbidden),
+					})),
+				),
 				[]corev1.Taint{{Effect: corev1.TaintEffectNoSchedule}},
 			),
 			Entry(
 				"all pools with NoExecute taints",
-				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type": Equal(field.ErrorTypeForbidden),
-				}))),
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type": Equal(field.ErrorTypeForbidden),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type": Equal(field.ErrorTypeForbidden),
+					})),
+				),
 				[]corev1.Taint{{Effect: corev1.TaintEffectNoExecute}},
 			),
 			Entry(
 				"all pools with either NoSchedule or NoExecute taints",
-				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type": Equal(field.ErrorTypeForbidden),
-				}))),
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type": Equal(field.ErrorTypeForbidden),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type": Equal(field.ErrorTypeForbidden),
+					})),
+				),
 				[]corev1.Taint{{Effect: corev1.TaintEffectNoExecute}},
 				[]corev1.Taint{{Effect: corev1.TaintEffectNoSchedule}},
 			),

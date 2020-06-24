@@ -237,6 +237,11 @@ func SetDefaults_Worker(obj *Worker) {
 	if obj.MaxUnavailable == nil {
 		obj.MaxUnavailable = &DefaultWorkerMaxUnavailable
 	}
+	if obj.SystemComponents == nil {
+		obj.SystemComponents = &WorkerSystemComponents{
+			Allow: DefaultWorkerSystemComponentsAllow,
+		}
+	}
 }
 
 // SetDefaults_NginxIngress sets default values for NginxIngress objects.

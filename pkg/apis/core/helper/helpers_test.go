@@ -391,6 +391,15 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	DescribeTable("#SystemComponentsAllowed",
+		func(worker *core.Worker, allowsSystemComponents bool) {
+			Expect(SystemComponentsAllowed(worker)).To(Equal(allowsSystemComponents))
+		},
+		Entry("no systemComponents section", &core.Worker{}, true),
+		Entry("systemComponents.allowed = false", &core.Worker{SystemComponents: &core.WorkerSystemComponents{Allow: false}}, false),
+		Entry("systemComponents.allowed = true", &core.Worker{SystemComponents: &core.WorkerSystemComponents{Allow: true}}, true),
+	)
+
 	DescribeTable("#HibernationIsEnabled",
 		func(shoot *core.Shoot, hibernated bool) {
 			Expect(HibernationIsEnabled(shoot)).To(Equal(hibernated))
