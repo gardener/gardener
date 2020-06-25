@@ -67,9 +67,6 @@ spec:
                     values:
                     - apiserver
       priorityClassName: gardener-shoot-controlplane
-      tolerations:
-      - effect: NoExecute
-        operator: Exists
       {{- if not .Values.konnectivityTunnel.enabled }}
       initContainers:
       - name: set-iptable-rules

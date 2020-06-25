@@ -31,9 +31,6 @@ spec:
 {{ toYaml .Values.podLabels | indent 8 }}
 {{- end }}
     spec:
-      tolerations:
-      - effect: NoExecute
-        operator: Exists
       containers:
       - name: kube-controller-manager
         image: {{ index .Values.images "kube-controller-manager" }}
