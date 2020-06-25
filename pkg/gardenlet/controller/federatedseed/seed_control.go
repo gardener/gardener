@@ -18,9 +18,8 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
-	dnsclientset "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned"
-	dnsinformers "github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -35,8 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	extensionsclientset "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned"
-	extensionsinformers "github.com/gardener/gardener/pkg/client/extensions/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -81,6 +78,7 @@ func NewFederatedSeedController(clientMap clientmap.ClientMap, gardenCoreInforme
 
 	controller.federatedSeedControllerManager = &federatedSeedControllerManager{
 		clientMap:            clientMap,
+		errs:                 make(chan string),
 		extensionControllers: make(map[string]*extensionsController),
 		namespaceControllers: make(map[string]*namespaceController),
 	}
@@ -149,6 +147,15 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		}
 	}()
 
+	// Listen on federated error channel, remove controllers in case an error was detected and requeue Seed.
+	go func() {
+		for seedName := range c.federatedSeedControllerManager.errs {
+			logger.Logger.Errorf("Detected error in federated controllers for seed %s. Stopping controllers now.", seedName)
+			c.federatedSeedControllerManager.removeController(seedName)
+			c.seedQueue.AddAfter(seedName, 5*time.Second)
+		}
+	}()
+
 	logger.Logger.Infof("Starting federated controllers")
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.createReconcileSeedRequestFunc(ctx), &waitGroup, c.workerCh)
@@ -198,6 +205,7 @@ func (c *Controller) createReconcileSeedRequestFunc(ctx context.Context) reconci
 
 type federatedSeedControllerManager struct {
 	clientMap                clientmap.ClientMap
+	errs                     chan string
 	extensionControllers     map[string]*extensionsController
 	namespaceControllers     map[string]*namespaceController
 	extensionControllersLock sync.RWMutex
@@ -244,30 +252,19 @@ func (f *federatedSeedControllerManager) createExtensionControllers(ctx context.
 		return fmt.Errorf("failed to get seed client: %w", err)
 	}
 
-	dnsClient, err := dnsclientset.NewForConfig(seedClient.RESTConfig())
-	if err != nil {
-		return err
-	}
-	extensionsClient, err := extensionsclientset.NewForConfig(seedClient.RESTConfig())
-	if err != nil {
-		return err
-	}
+	extensionCtx, extensionCancelFunc := context.WithCancel(ctx)
 
-	var (
-		extensionCtx, extensionCancelFunc = context.WithCancel(ctx)
-		dnsInformers                      = dnsinformers.NewSharedInformerFactory(dnsClient, 0)
-		extensionsInformers               = extensionsinformers.NewSharedInformerFactory(extensionsClient, 0)
-		extensionsController              = extensions.NewController(ctx, gardenClient, seedClient, seedName, dnsInformers, extensionsInformers, seedLogger, recorder)
-	)
-
-	seedLogger.Info("Run extensions controller")
-	if err := extensionsController.Run(extensionCtx, *config.Controllers.ControllerInstallationRequired.ConcurrentSyncs, *config.Controllers.ShootStateSync.ConcurrentSyncs); err != nil {
-		seedLogger.Infof("There was an error running the extension controllers: %v", err)
+	extensionsController, err := extensions.NewController(ctx, gardenClient, seedClient, seedName, seedLogger, recorder, *config.Controllers.ControllerInstallationRequired.ConcurrentSyncs, *config.Controllers.ShootStateSync.ConcurrentSyncs)
+	if err != nil {
+		seedLogger.Infof("There was an error creating the extension controllers: %v", err)
 		extensionCancelFunc()
 		return err
 	}
 
-	f.addExtensionController(seedName, extensionsController, extensionCancelFunc)
+	seedLogger.Info("Run extensions controller")
+	errs := extensionsController.Run(extensionCtx)
+
+	f.addExtensionController(extensionCtx, seedName, seedLogger, extensionsController, extensionCancelFunc, errs)
 	return nil
 }
 
@@ -305,7 +302,7 @@ func (f *federatedSeedControllerManager) createNamespaceControllers(ctx context.
 	return nil
 }
 
-func (f *federatedSeedControllerManager) addExtensionController(seedName string, controller *extensions.Controller, cancelFunc context.CancelFunc) {
+func (f *federatedSeedControllerManager) addExtensionController(ctx context.Context, seedName string, log *logrus.Entry, controller *extensions.Controller, cancelFunc context.CancelFunc, errs <-chan error) {
 	logger.Logger.Debugf("Adding extension controllers for seed %s", seedName)
 	f.extensionControllersLock.Lock()
 	defer f.extensionControllersLock.Unlock()
@@ -313,6 +310,18 @@ func (f *federatedSeedControllerManager) addExtensionController(seedName string,
 		controller: controller,
 		cancelFunc: cancelFunc,
 	}
+
+	// Add seed name to federated error channel in case an error occurred in one of the extension controllers.
+	go func() {
+		select {
+		case err := <-errs:
+			if err != nil {
+				log.Errorf("There was an error running the extension controllers for seed %s: %v", seedName, err)
+				f.errs <- seedName
+			}
+		case <-ctx.Done():
+		}
+	}()
 }
 
 func (f *federatedSeedControllerManager) addNamespaceController(seedName string, controller *seedapiservernetworkpolicy.Controller, cancelFunc context.CancelFunc) {
@@ -348,6 +357,7 @@ func (f *federatedSeedControllerManager) removeController(seedName string) {
 
 func (f *federatedSeedControllerManager) ShutDownControllers() {
 	logger.Logger.Infof("Federated controllers are being stopped")
+	close(f.errs)
 	for _, controller := range f.extensionControllers {
 		controller.Stop()
 	}
