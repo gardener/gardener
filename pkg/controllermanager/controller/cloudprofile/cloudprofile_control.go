@@ -136,7 +136,7 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardencorev1beta1.CloudProfi
 		if len(associatedShoots) == 0 {
 			cloudProfileLogger.Infof("No Shoots are referencing the CloudProfile. Deletion accepted.")
 
-			if err := controllerutils.RemoveGardenerFinalizer(ctx, gardenClient.Client(), cloudProfile); client.IgnoreNotFound(err) != nil {
+			if err := controllerutils.RemoveGardenerFinalizer(ctx, gardenClient.DirectClient(), cloudProfile); client.IgnoreNotFound(err) != nil {
 				logger.Logger.Errorf("could not remove finalizer from CloudProfile: %s", err.Error())
 				return err
 			}

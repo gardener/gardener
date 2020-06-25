@@ -347,7 +347,7 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 	}
 	conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionSuccessful", "Deletion of old resources succeeded.")
 
-	return controllerutils.RemoveFinalizer(ctx, gardenClient.Client(), controllerInstallation.DeepCopy(), FinalizerName)
+	return controllerutils.RemoveFinalizer(ctx, gardenClient.DirectClient(), controllerInstallation.DeepCopy(), FinalizerName)
 }
 
 func updateConditions(gardenClient kubernetes.Interface, controllerInstallation *gardencorev1beta1.ControllerInstallation, conditions ...gardencorev1beta1.Condition) (*gardencorev1beta1.ControllerInstallation, error) {

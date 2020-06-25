@@ -24,9 +24,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mock "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
@@ -272,7 +272,6 @@ var _ = Describe("ControllerRegistrationControl", func() {
 	var (
 		ctrl                   *gomock.Controller
 		clientMap              clientmap.ClientMap
-		k8sGardenClient        *mock.MockInterface
 		k8sGardenRuntimeClient *mockclient.MockClient
 
 		gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
@@ -286,8 +285,8 @@ var _ = Describe("ControllerRegistrationControl", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		k8sGardenClient = mock.NewMockInterface(ctrl)
 		k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
+		k8sGardenClient := fakeclientset.NewClientSetBuilder().WithClient(k8sGardenRuntimeClient).WithDirectClient(k8sGardenRuntimeClient).Build()
 
 		clientMap = fake.NewClientMap().AddClient(keys.ForGarden(), k8sGardenClient)
 
@@ -312,14 +311,12 @@ var _ = Describe("ControllerRegistrationControl", func() {
 			It("should ensure the finalizer (error)", func() {
 				err := apierrors.NewNotFound(schema.GroupResource{}, controllerRegistrationName)
 
-				k8sGardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient)
 				k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(err)
 
 				Expect(d.Reconcile(obj)).To(HaveOccurred())
 			})
 
 			It("should ensure the finalizer (no error)", func() {
-				k8sGardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient)
 				k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(nil)
 				k8sGardenRuntimeClient.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(nil)
 
@@ -369,7 +366,6 @@ var _ = Describe("ControllerRegistrationControl", func() {
 				err := errors.New("some err")
 				d.controllerInstallationLister = newFakeControllerInstallationLister(d.controllerInstallationLister, nil, nil)
 
-				k8sGardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient)
 				k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(err)
 
 				Expect(d.Reconcile(obj)).To(HaveOccurred())
@@ -378,7 +374,6 @@ var _ = Describe("ControllerRegistrationControl", func() {
 			It("should remove the finalizer (no error)", func() {
 				d.controllerInstallationLister = newFakeControllerInstallationLister(d.controllerInstallationLister, nil, nil)
 
-				k8sGardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient)
 				k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(nil)
 				k8sGardenRuntimeClient.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(nil)
 				k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(nil)

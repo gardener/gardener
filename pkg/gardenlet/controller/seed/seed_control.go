@@ -220,14 +220,14 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 						Namespace: seed.Spec.SecretRef.Namespace,
 					},
 				}
-				if err := controllerutils.RemoveFinalizer(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+				if err := controllerutils.RemoveFinalizer(ctx, gardenClient.DirectClient(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 					seedLogger.Error(err.Error())
 					return err
 				}
 			}
 
 			// Remove finalizer from Seed
-			if err := controllerutils.RemoveGardenerFinalizer(ctx, gardenClient.Client(), seed); err != nil {
+			if err := controllerutils.RemoveGardenerFinalizer(ctx, gardenClient.DirectClient(), seed); err != nil {
 				seedLogger.Error(err.Error())
 				return err
 			}
