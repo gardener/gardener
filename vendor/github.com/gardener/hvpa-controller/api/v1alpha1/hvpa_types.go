@@ -38,21 +38,30 @@ type VpaTemplateSpec struct {
 // UpdatePolicy describes the rules on how changes are applied.
 type UpdatePolicy struct {
 	// Controls when autoscaler applies changes to the resources.
-	// The default is 'On'.
+	// The default is 'Auto'.
 	// +optional
 	UpdateMode *string `json:"updateMode,omitempty" protobuf:"bytes,1,opt,name=updateMode"`
 }
 
 const (
-	// UpdateModePurge means that HPA/VPA will not be created.
-	UpdateModePurge string = "Purge"
 	// UpdateModeOff means that autoscaler never changes resources.
 	UpdateModeOff string = "Off"
 	// UpdateModeAuto means that autoscaler can update resources during the lifetime of the resource.
 	UpdateModeAuto string = "Auto"
-	// UpdateModeScaleUp means that HPA/VPA will never scale down resources vertically.
-	UpdateModeScaleUp string = "ScaleUp"
+	// UpdateModeMaintenanceWindow means that HPA/VPA will only act during maintenance window.
+	UpdateModeMaintenanceWindow string = "MaintenanceWindow"
+
+	// UpdateModeDefault is the default update mode
+	UpdateModeDefault = UpdateModeAuto
 )
+
+// MaintenanceTimeWindow contains information about the time window for maintenance operations.
+type MaintenanceTimeWindow struct {
+	// Begin is the beginning of the time window in the format HHMMSS+ZONE, e.g. "220000+0100".
+	Begin string `json:"begin"`
+	// End is the end of the time window in the format HHMMSS+ZONE, e.g. "220000+0100".
+	End string `json:"end"`
+}
 
 // HpaTemplateSpec defines the spec for HPA
 type HpaTemplateSpec struct {
@@ -93,19 +102,6 @@ type WeightBasedScalingInterval struct {
 	LastReplicaCount int32 `json:"lastReplicaCount,omitempty"`
 }
 
-// ScaleStabilization defines stabilization parameters after last scaling
-type ScaleStabilization struct {
-	// Duration defines the minimum delay in minutes between 2 consecutive scale operations
-	// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h"
-	Duration *string `json:"duration,omitempty"`
-	// MinCpuChange is the minimum change in CPU on which HVPA acts
-	// HVPA uses minimum of the Value and Percentage value
-	MinCPUChange *ChangeThreshold `json:"minCpuChange,omitempty"`
-	// MinMemChange is the minimum change in memory on which HVPA acts
-	// HVPA uses minimum of the Value and Percentage value
-	MinMemChange *ChangeThreshold `json:"minMemChange,omitempty"`
-}
-
 // VpaSpec defines spec for VPA
 type VpaSpec struct {
 	// Selector is a label query that should match VPA.
@@ -115,15 +111,48 @@ type VpaSpec struct {
 	// +optional
 	Selector *metav1.LabelSelector `json:"selector,omitempty"`
 
-	// Describes the rules on how changes are applied.
-	// If not specified, all fields in the `UpdatePolicy` are set to their
-	// default values.
-	// +optional
-	UpdatePolicy *UpdatePolicy `json:"updatePolicy,omitempty"`
+	// Deploy defines whether the VPA is deployed or not
+	Deploy bool `json:"deploy,omitempty"`
+
+	// ScaleUp defines the parameters for scale up
+	ScaleUp ScaleType `json:"scaleUp,omitempty"`
+
+	// ScaleDown defines the parameters for scale down
+	ScaleDown ScaleType `json:"scaleDown,omitempty"`
 
 	// Template is the object that describes the VPA that will be created.
 	// +optional
 	Template VpaTemplate `json:"template,omitempty"`
+
+	// LimitsRequestsGapScaleParams is the scaling thresholds for limits
+	LimitsRequestsGapScaleParams ScaleParams `json:"limitsRequestsGapScaleParams,omitempty"`
+}
+
+// ScaleType defines parameters for scaling
+type ScaleType struct {
+	// Describes the rules on when changes are applied.
+	// If not specified, all fields in the `UpdatePolicy` are set to their
+	// default values.
+	// +optional
+	UpdatePolicy UpdatePolicy `json:"updatePolicy,omitempty"`
+
+	// MinChange is the minimum change in the resource on which HVPA acts
+	// HVPA uses minimum of the Value and Percentage value
+	MinChange ScaleParams `json:"minChange,omitempty"`
+
+	// StabilizationDuration defines the minimum delay in minutes between 2 consecutive scale operations
+	// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h"
+	StabilizationDuration *string `json:"stabilizationDuration,omitempty"`
+}
+
+// ScaleParams defines the scaling parameters for the limits
+type ScaleParams struct {
+	// Scale parameters for CPU
+	CPU ChangeParams `json:"cpu,omitempty"`
+	// Scale parameters for memory
+	Memory ChangeParams `json:"memory,omitempty"`
+	// Scale patameters for replicas
+	Replicas ChangeParams `json:"replicas,omitempty"`
 }
 
 // VpaTemplate defines the template for VPA
@@ -157,11 +186,14 @@ type HpaSpec struct {
 	// +optional
 	Selector *metav1.LabelSelector `json:"selector,omitempty"`
 
-	// Describes the rules on how changes are applied.
-	// If not specified, all fields in the `UpdatePolicy` are set to their
-	// default values.
-	// +optional
-	UpdatePolicy *UpdatePolicy `json:"updatePolicy,omitempty"`
+	// Deploy defines whether the HPA is deployed or not
+	Deploy bool `json:"deploy,omitempty"`
+
+	// ScaleUp defines the parameters for scale up
+	ScaleUp ScaleType `json:"scaleUp,omitempty"`
+
+	// ScaleDown defines the parameters for scale down
+	ScaleDown ScaleType `json:"scaleDown,omitempty"`
 
 	// Template is the object that describes the HPA that will be created.
 	// +optional
@@ -186,19 +218,17 @@ type HvpaSpec struct {
 	// TargetRef points to the controller managing the set of pods for the autoscaler to control
 	TargetRef *autoscaling.CrossVersionObjectReference `json:"targetRef"`
 
-	// ScaleUpStabilization defines stabilization parameters after last scaling
-	ScaleUpStabilization *ScaleStabilization `json:"scaleUpStabilization,omitempty"`
-
-	// ScaleDownStabilization defines stabilization parameters after last scaling
-	ScaleDownStabilization *ScaleStabilization `json:"scaleDownStabilization,omitempty"`
+	// MaintenanceTimeWindow contains information about the time window for maintenance operations.
+	// +optional
+	MaintenanceTimeWindow *MaintenanceTimeWindow `json:"maintenanceTimeWindow,omitempty"`
 }
 
-// ChangeThreshold defines the thresholds for HVPA to apply VPA's recommendations
-type ChangeThreshold struct {
-	// Value is the absolute value of the threshold
+// ChangeParams defines the parameters for scaling
+type ChangeParams struct {
+	// Value is the absolute value of the scaling
 	// +optional
 	Value *string `json:"value,omitempty"`
-	// Percentage is the percentage of currently allocated value to be used as threshold
+	// Percentage is the percentage of currently allocated value to be used for scaling
 	// +optional
 	Percentage *int32 `json:"percentage,omitempty"`
 }
@@ -232,9 +262,13 @@ type HvpaStatus struct {
 	// TargetSelector is the string form of the label selector of HPA. This is required for HPA to work with scale subresource.
 	TargetSelector *string `json:"targetSelector,omitempty"`
 	// Current HPA UpdatePolicy set in the spec
-	HpaUpdatePolicy *UpdatePolicy `json:"hpaUpdatePolicy,omitempty"`
+	HpaScaleUpUpdatePolicy *UpdatePolicy `json:"hpaScaleUpUpdatePolicy,omitempty"`
+	// Current HPA UpdatePolicy set in the spec
+	HpaScaleDownUpdatePolicy *UpdatePolicy `json:"hpaScaleDownUpdatePolicy,omitempty"`
 	// Current VPA UpdatePolicy set in the spec
-	VpaUpdatePolicy *UpdatePolicy `json:"vpaUpdatePolicy,omitempty"`
+	VpaScaleUpUpdatePolicy *UpdatePolicy `json:"vpaScaleUpUpdatePolicy,omitempty"`
+	// Current VPA UpdatePolicy set in the spec
+	VpaScaleDownUpdatePolicy *UpdatePolicy `json:"vpaScaleDownUpdatePolicy,omitempty"`
 
 	HpaWeight VpaWeight `json:"hpaWeight,omitempty"`
 	VpaWeight VpaWeight `json:"vpaWeight,omitempty"`
@@ -264,6 +298,15 @@ const (
 	// BlockingReasonMinChange - Min change doesn't support scaling
 	BlockingReasonMinChange BlockingReason = "MinChange"
 )
+
+// BlockingReasons lists all the blocking reasons
+var BlockingReasons = [...]BlockingReason{
+	BlockingReasonMaintenanceWindow,
+	BlockingReasonMinChange,
+	BlockingReasonStabilizationWindow,
+	BlockingReasonUpdatePolicy,
+	BlockingReasonWeight,
+}
 
 // BlockedScaling defines the details for blocked scaling
 type BlockedScaling struct {

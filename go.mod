@@ -9,8 +9,8 @@ require (
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
 	github.com/gardener/etcd-druid v0.3.0
 	github.com/gardener/external-dns-management v0.7.7
-	github.com/gardener/gardener-resource-manager v0.10.0
-	github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25
+	github.com/gardener/gardener-resource-manager v0.13.1
+	github.com/gardener/hvpa-controller v0.2.5
 	github.com/gardener/machine-controller-manager v0.27.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.1.0
@@ -37,7 +37,6 @@ require (
 	golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
 	golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
-	golang.org/x/tools v0.0.0-20200422205258-72e4a01eba43 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.0.1
 	google.golang.org/grpc v1.26.0
 	gopkg.in/yaml.v2 v2.2.8
