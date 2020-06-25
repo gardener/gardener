@@ -105,6 +105,10 @@ func NewClientFromSecret(ctx context.Context, c client.Client, namespace, secret
 // contain a field "kubeconfig" which will be used.
 func NewClientFromSecretObject(secret *corev1.Secret, fns ...ConfigFunc) (Interface, error) {
 	if kubeconfig, ok := secret.Data[KubeConfig]; ok {
+		if len(kubeconfig) == 0 {
+			return nil, errors.New("the secret's field 'kubeconfig' is empty")
+		}
+
 		return NewClientFromBytes(kubeconfig, fns...)
 	}
 	return nil, errors.New("the secret does not contain a field with name 'kubeconfig'")
