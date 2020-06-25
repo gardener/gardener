@@ -27,18 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// TypeVersion is the potentially versioned type name of an InfoData representation.
-type TypeVersion string
-
-// Unmarshaller is a factory to create a dedicated InfoData object from a byte stream
-type Unmarshaller func(data []byte) (InfoData, error)
-
-// InfoData is an interface
-type InfoData interface {
-	TypeVersion() TypeVersion
-	Marshal() ([]byte, error)
-}
-
 var lock sync.Mutex
 var types = map[TypeVersion]Unmarshaller{}
 

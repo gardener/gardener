@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/infodata"
 	"k8s.io/apiserver/pkg/authentication/user"
 
 	"golang.org/x/crypto/bcrypt"
@@ -43,7 +44,7 @@ const (
 	DataKeyPasswordBcryptHash = "bcryptPasswordHash"
 )
 
-// BasicAuthSecretConfig contains the specification a to-be-generated basic authentication secret.
+// BasicAuthSecretConfig contains the specification for a to-be-generated basic authentication secret.
 type BasicAuthSecretConfig struct {
 	Name   string
 	Format formatType
@@ -73,6 +74,45 @@ func (s *BasicAuthSecretConfig) Generate() (Interface, error) {
 	return s.GenerateBasicAuth()
 }
 
+// GenerateInfoData implements ConfigInterface.
+func (s *BasicAuthSecretConfig) GenerateInfoData() (infodata.InfoData, error) {
+	password, err := utils.GenerateRandomString(s.PasswordLength)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewBasicAuthInfoData(password), nil
+}
+
+// GenerateFromInfoData implements ConfigInteface
+func (s *BasicAuthSecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (Interface, error) {
+	data, ok := infoData.(*BasicAuthInfoData)
+	if !ok {
+		return nil, fmt.Errorf("could not convert InfoData entry %s to BasicAuthInfoData", s.Name)
+	}
+
+	password := data.Password
+	return s.generateWithPassword(password)
+}
+
+// LoadFromSecretData implements infodata.Loader
+func (s *BasicAuthSecretConfig) LoadFromSecretData(secretData map[string][]byte) (infodata.InfoData, error) {
+	var password string
+
+	switch s.Format {
+	case BasicAuthFormatNormal:
+		password = string(secretData[DataKeyPassword])
+	case BasicAuthFormatCSV:
+		csv := strings.Split(string(secretData[DataKeyCSV]), ",")
+		if len(csv) < 2 {
+			return nil, fmt.Errorf("invalid CSV for loading basic auth data: %s", string(secretData[DataKeyCSV]))
+		}
+		password = csv[0]
+	}
+
+	return NewBasicAuthInfoData(password), nil
+}
+
 // GenerateBasicAuth computes a username,password and the hash of the password keypair. It uses "admin" as username and generates a
 // random password of length 32.
 func (s *BasicAuthSecretConfig) GenerateBasicAuth() (*BasicAuth, error) {
@@ -81,6 +121,11 @@ func (s *BasicAuthSecretConfig) GenerateBasicAuth() (*BasicAuth, error) {
 		return nil, err
 	}
 
+	return s.generateWithPassword(password)
+}
+
+// generateWithPassword returns a BasicAuth secret Interface with the given password.
+func (s *BasicAuthSecretConfig) generateWithPassword(password string) (*BasicAuth, error) {
 	basicAuth := &BasicAuth{
 		Name:   s.Name,
 		Format: s.Format,
@@ -123,7 +168,7 @@ func (b *BasicAuth) SecretData() map[string][]byte {
 	return data
 }
 
-// LoadBasicAuthFromCSV loads the basic auth. username and the password from the given CSV-formatted <data>.
+// LoadBasicAuthFromCSV loads the basic auth username and the password from the given CSV-formatted <data>.
 func LoadBasicAuthFromCSV(name string, data []byte) (*BasicAuth, error) {
 	csv := strings.Split(string(data), ",")
 	if len(csv) < 2 {
