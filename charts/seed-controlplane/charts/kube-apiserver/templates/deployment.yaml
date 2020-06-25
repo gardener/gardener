@@ -259,6 +259,29 @@ spec:
           mountPath: /etc/kubernetes/etcd-encryption-secret
           readOnly: true
         {{- end }}
+        {{- if semverCompare ">= 1.17" .Values.kubernetesVersion }}
+        # All those locations are taken from
+        # https://github.com/golang/go/blob/1bb247a469e306c57a5e0eaba788efb8b3b1acef/src/crypto/x509/root_linux.go#L7-L15
+        # we cannot be sure on which Seed Cluster Node OS is running so, it's safer to mount them all
+        - name: debian-family-cabundle
+          mountPath: /etc/ssl/certs/ca-certificates.crt
+          readOnly: true
+        - name: fedora-rhel6-cabundle
+          mountPath: /etc/pki/tls/certs/ca-bundle.crt
+          readOnly: true
+        - name: opensuse-cabundle
+          mountPath: /etc/ssl/ca-bundle.pem
+          readOnly: true
+        - name: openelec-cabundle
+          mountPath: /etc/pki/tls/cacert.pem
+          readOnly: true
+        - name: centos-rhel7-cabundle
+          mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+          readOnly: true
+        - name:  alpine-linux-cabundle
+          mountPath: /etc/ssl/cert.pem
+          readOnly: true
+        {{- end }}
       {{- if .Values.konnectivityTunnel.enabled }}
       - name: konnectivity-server
         image: {{ index .Values.images "konnectivity-server" }}
@@ -430,4 +453,27 @@ spec:
         secret:
           defaultMode: 420
           secretName: etcd-encryption-secret
+      {{- end }}
+      {{- if semverCompare ">= 1.17" .Values.kubernetesVersion }}
+      # All those locations are taken from
+      # https://github.com/golang/go/blob/1bb247a469e306c57a5e0eaba788efb8b3b1acef/src/crypto/x509/root_linux.go#L7-L15
+      # we cannot be sure on which Seed Cluster Node OS is running so, it's safer to mount them all
+      - name: debian-family-cabundle
+        hostPath:
+          path: /etc/ssl/certs/ca-certificates.crt
+      - name: fedora-rhel6-cabundle
+        hostPath:
+          path: /etc/pki/tls/certs/ca-bundle.crt
+      - name: opensuse-cabundle
+        hostPath:
+          path: /etc/ssl/ca-bundle.pem
+      - name: openelec-cabundle
+        hostPath:
+          path: /etc/pki/tls/cacert.pem
+      - name: centos-rhel7-cabundle
+        hostPath:
+          path: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+      - name: alpine-linux-cabundle
+        hostPath:
+          path: /etc/ssl/cert.pem
       {{- end }}
