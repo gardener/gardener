@@ -27,9 +27,6 @@ spec:
         networking.gardener.cloud/to-seed-apiserver: allowed
         networking.gardener.cloud/to-shoot-apiserver: allowed
     spec:
-      tolerations:
-      - effect: NoExecute
-        operator: Exists
       serviceAccountName: gardener-resource-manager
       containers:
       - name: gardener-resource-manager

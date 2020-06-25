@@ -48,9 +48,6 @@ spec:
         networking.gardener.cloud/to-shoot-apiserver: allowed
         networking.gardener.cloud/from-prometheus: allowed
     spec:
-      tolerations:
-      - effect: NoExecute
-        operator: Exists
       containers:
       - name: kube-scheduler
         image: {{ index .Values.images "kube-scheduler" }}
