@@ -39,6 +39,9 @@ func (b *Botanist) DefaultNetwork(seedClient client.Client) component.DeployWait
 			PodCIDR:                                 b.Shoot.Networks.Pods,
 			ServiceCIDR:                             b.Shoot.Networks.Services,
 		},
+		network.DefaultInterval,
+		network.DefaultSevereThreshold,
+		network.DefaultTimeout,
 	)
 }
 

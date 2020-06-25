@@ -60,7 +60,7 @@ var _ = Describe("#Network", func() {
 		ctx              context.Context
 		c                client.Client
 		expected         *extensionsv1alpha1.Network
-		vals             *network.Values
+		values           *network.Values
 		log              *logrus.Entry
 		defaultDepWaiter component.DeployWaiter
 
@@ -93,7 +93,7 @@ var _ = Describe("#Network", func() {
 			Mask: net.CIDRMask(networkServiceMask, 32),
 		}
 
-		vals = &network.Values{
+		values = &network.Values{
 			Name:                                    "test-deploy",
 			Namespace:                               networkNs,
 			IsInRestorePhaseOfControlPlaneMigration: false,
@@ -122,7 +122,7 @@ var _ = Describe("#Network", func() {
 			},
 		}
 
-		defaultDepWaiter = network.New(log, c, vals)
+		defaultDepWaiter = network.New(log, c, values, time.Second, 2*time.Second, 3*time.Second)
 	})
 
 	AfterEach(func() {
@@ -148,7 +148,7 @@ var _ = Describe("#Network", func() {
 		},
 			Entry("with no modification", func() {}),
 			Entry("during restore phase", func() {
-				vals.IsInRestorePhaseOfControlPlaneMigration = true
+				values.IsInRestorePhaseOfControlPlaneMigration = true
 				expected.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationWaitForState
 			}),
 		)
@@ -224,7 +224,7 @@ var _ = Describe("#Network", func() {
 			defaultDepWaiter = network.New(log, mc, &network.Values{
 				Namespace: networkNs,
 				Name:      networkName,
-			})
+			}, time.Second, 2*time.Second, 3*time.Second)
 
 			err := defaultDepWaiter.Destroy(ctx)
 			Expect(err).To(HaveOccurred())

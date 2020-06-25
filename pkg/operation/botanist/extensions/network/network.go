@@ -19,27 +19,26 @@ import (
 	"net"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	crclient "sigs.k8s.io/controller-runtime/pkg/client"
-
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
+
+	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
-	// NetworkDefaultTimeout is the default timeout and defines how long Gardener should wait
-	// for a successful reconciliation of a network resource.
-	NetworkDefaultTimeout = 3 * time.Minute
 	// DefaultInterval is the default interval for retry operations.
 	DefaultInterval = 5 * time.Second
-	// DefaultSevereThreshold  is the default threshold until an error reported by another component is treated as 'severe'.
+	// DefaultSevereThreshold is the default threshold until an error reported by another component is treated as 'severe'.
 	DefaultSevereThreshold = 30 * time.Second
+	// DefaultTimeout is the default timeout and defines how long Gardener should wait
+	// for a successful reconciliation of a network resource.
+	DefaultTimeout = 3 * time.Minute
 )
 
 // TimeNow returns the current time. Exposed for testing.
@@ -69,18 +68,27 @@ func New(
 	logger *logrus.Entry,
 	client crclient.Client,
 	values *Values,
+	waitInterval time.Duration,
+	waitSevereThreshold time.Duration,
+	waitTimeout time.Duration,
 ) component.DeployWaiter {
 	return &network{
-		client: client,
-		logger: logger,
-		values: values,
+		client:              client,
+		logger:              logger,
+		values:              values,
+		waitInterval:        waitInterval,
+		waitSevereThreshold: waitSevereThreshold,
+		waitTimeout:         waitTimeout,
 	}
 }
 
 type network struct {
-	values *Values
-	logger *logrus.Entry
-	client crclient.Client
+	values              *Values
+	logger              *logrus.Entry
+	client              crclient.Client
+	waitInterval        time.Duration
+	waitSevereThreshold time.Duration
+	waitTimeout         time.Duration
 }
 
 // Deploy uses the seed client to create or update the Network custom resource in the Shoot namespace in the Seed
@@ -139,9 +147,9 @@ func (d *network) Wait(ctx context.Context) error {
 		"Network",
 		d.values.Namespace,
 		d.values.Name,
-		DefaultInterval,
-		DefaultSevereThreshold,
-		NetworkDefaultTimeout,
+		d.waitInterval,
+		d.waitSevereThreshold,
+		d.waitTimeout,
 		nil,
 	)
 }
