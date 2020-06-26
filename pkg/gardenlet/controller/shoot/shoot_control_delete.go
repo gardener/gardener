@@ -513,7 +513,7 @@ func (c *Controller) removeFinalizerFrom(ctx context.Context, gardenClient kuber
 	}
 
 	// Remove finalizer with retry on conflict
-	if err := controllerutils.RemoveGardenerFinalizer(ctx, gardenClient.Client(), newShoot); err != nil {
+	if err := controllerutils.RemoveGardenerFinalizer(ctx, gardenClient.DirectClient(), newShoot); err != nil {
 		return fmt.Errorf("could not remove finalizer from Shoot: %s", err.Error())
 	}
 

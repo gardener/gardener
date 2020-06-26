@@ -52,7 +52,7 @@ func (c *defaultControl) delete(ctx context.Context, project *gardencorev1beta1.
 		}
 	}
 
-	return false, controllerutils.RemoveFinalizer(ctx, gardenClient.Client(), project, gardencorev1beta1.GardenerName)
+	return false, controllerutils.RemoveFinalizer(ctx, gardenClient.DirectClient(), project, gardencorev1beta1.GardenerName)
 }
 
 func (c *defaultControl) releaseNamespace(ctx context.Context, gardenClient kubernetes.Interface, project *gardencorev1beta1.Project, namespaceName string) (bool, error) {

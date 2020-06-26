@@ -151,7 +151,7 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1beta1.SecretBin
 				// Remove finalizer from referenced secret
 				secret, err := c.secretLister.Secrets(secretBinding.SecretRef.Namespace).Get(secretBinding.SecretRef.Name)
 				if err == nil {
-					if err2 := controllerutils.RemoveFinalizer(ctx, gardenClient.Client(), secret.DeepCopy(), gardencorev1beta1.ExternalGardenerName); err2 != nil {
+					if err2 := controllerutils.RemoveFinalizer(ctx, gardenClient.DirectClient(), secret.DeepCopy(), gardencorev1beta1.ExternalGardenerName); err2 != nil {
 						secretBindingLogger.Error(err2.Error())
 						return err2
 					}
@@ -161,7 +161,7 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1beta1.SecretBin
 			}
 
 			// Remove finalizer from SecretBinding
-			if err := controllerutils.RemoveFinalizer(ctx, gardenClient.Client(), secretBinding, gardencorev1beta1.GardenerName); err != nil {
+			if err := controllerutils.RemoveFinalizer(ctx, gardenClient.DirectClient(), secretBinding, gardencorev1beta1.GardenerName); err != nil {
 				secretBindingLogger.Error(err.Error())
 				return err
 			}
