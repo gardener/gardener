@@ -438,6 +438,16 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				Name: "cr6",
 			},
 		}
+		controllerRegistration7 = &gardencorev1beta1.ControllerRegistration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "cr7",
+			},
+			Spec: gardencorev1beta1.ControllerRegistrationSpec{
+				Deployment: &gardencorev1beta1.ControllerDeployment{
+					Policy: &onDemandPolicy,
+				},
+			},
+		}
 		controllerRegistrationList = []*gardencorev1beta1.ControllerRegistration{
 			controllerRegistration1,
 			controllerRegistration2,
@@ -445,6 +455,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 			controllerRegistration4,
 			controllerRegistration5,
 			controllerRegistration6,
+			controllerRegistration7,
 		}
 		controllerRegistrations = map[string]controllerRegistration{
 			controllerRegistration1.Name: {obj: controllerRegistration1, deployAlways: false},
@@ -453,6 +464,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 			controllerRegistration4.Name: {obj: controllerRegistration4, deployAlways: true},
 			controllerRegistration5.Name: {obj: controllerRegistration5, deployAlways: true},
 			controllerRegistration6.Name: {obj: controllerRegistration6, deployAlways: false},
+			controllerRegistration7.Name: {obj: controllerRegistration7, deployAlways: false},
 		}
 
 		controllerInstallation1 = &gardencorev1beta1.ControllerInstallation{
@@ -506,6 +518,19 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 					Name: controllerRegistration4.Name,
 				},
 			},
+		}
+		controllerInstallation7 = &gardencorev1beta1.ControllerInstallation{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "ci7",
+			},
+			Spec: gardencorev1beta1.ControllerInstallationSpec{
+				SeedRef: corev1.ObjectReference{
+					Name: seedName,
+				},
+				RegistrationRef: corev1.ObjectReference{
+					Name: controllerRegistration7.Name,
+				},
+			},
 			Status: gardencorev1beta1.ControllerInstallationStatus{
 				Conditions: []gardencorev1beta1.Condition{
 					{
@@ -521,6 +546,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				*controllerInstallation2,
 				*controllerInstallation3,
 				*controllerInstallation4,
+				*controllerInstallation7,
 			},
 		}
 	)
@@ -636,9 +662,9 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				extensionsv1alpha1.ControlPlaneResource+"/"+type3,
 			)
 
-			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerRegistrations, seedLabels)
+			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, seedLabels, seedName)
 
-			Expect(names).To(Equal(sets.NewString(controllerRegistration1.Name, controllerRegistration2.Name, controllerRegistration3.Name, controllerRegistration4.Name)))
+			Expect(names).To(Equal(sets.NewString(controllerRegistration1.Name, controllerRegistration2.Name, controllerRegistration3.Name, controllerRegistration4.Name, controllerRegistration7.Name)))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -647,7 +673,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				extensionsv1alpha1.ExtensionResource + "/foo",
 			)
 
-			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerRegistrations, seedLabels)
+			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, seedLabels, seedName)
 
 			Expect(names).To(BeNil())
 			Expect(err).To(HaveOccurred())
@@ -663,6 +689,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				controllerRegistration2.Name: controllerInstallation2.Name,
 				controllerRegistration3.Name: controllerInstallation3.Name,
 				controllerRegistration4.Name: controllerInstallation4.Name,
+				controllerRegistration7.Name: controllerInstallation7.Name,
 			}))
 		})
 
