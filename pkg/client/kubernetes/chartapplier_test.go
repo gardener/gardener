@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/test/gomega"
 
 	"github.com/golang/mock/gomock"
@@ -49,6 +50,8 @@ var _ = Describe("chart applier", func() {
 		ctx        context.Context
 		c          client.Client
 		expectedCM *corev1.ConfigMap
+		mapper     *meta.DefaultRESTMapper
+		renderer   chartrenderer.Interface
 	)
 
 	BeforeEach(func() {
@@ -57,7 +60,7 @@ var _ = Describe("chart applier", func() {
 
 		c = fake.NewFakeClientWithScheme(scheme.Scheme)
 
-		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion})
+		mapper = meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion})
 		mapper.Add(corev1.SchemeGroupVersion.WithKind("ConfigMap"), meta.RESTScopeNamespace)
 
 		expectedCM = &corev1.ConfigMap{
@@ -71,7 +74,10 @@ var _ = Describe("chart applier", func() {
 			Data: map[string]string{"key": "valz"},
 		}
 
-		renderer := chartrenderer.NewWithServerVersion(&version.Info{})
+		renderer = chartrenderer.NewWithServerVersion(&version.Info{})
+	})
+
+	JustBeforeEach(func() {
 		ca = kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, mapper))
 		Expect(ca).NotTo(BeNil(), "should return chart applier")
 	})
@@ -203,6 +209,38 @@ var _ = Describe("chart applier", func() {
 			err := c.Get(context.TODO(), client.ObjectKey{Name: cmName, Namespace: cns}, actual)
 
 			Expect(err).To(BeNotFoundError())
+		})
+
+		Context("when object is not mapped", func() {
+
+			var (
+				ctrl *gomock.Controller
+				mc   *mockclient.MockClient
+			)
+
+			BeforeEach(func() {
+				ctrl = gomock.NewController(GinkgoT())
+				mc = mockclient.NewMockClient(ctrl)
+
+				c = mc
+				mapper = meta.NewDefaultRESTMapper([]schema.GroupVersion{})
+
+				mc.EXPECT().Delete(gomock.Any(), gomock.Any()).AnyTimes().Return(
+					&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}},
+				)
+			})
+
+			AfterEach(func() {
+				ctrl.Finish()
+			})
+
+			It("no error when IgnoreNoMatch is set", func() {
+				Expect(ca.Delete(ctx, cp, cns, cn, kubernetes.TolerateErrorFunc(meta.IsNoMatchError))).ToNot(HaveOccurred())
+			})
+
+			It("error when IgnoreNoMatch is not set", func() {
+				Expect(ca.Delete(ctx, cp, cns, cn)).To(HaveOccurred())
+			})
 		})
 	})
 })

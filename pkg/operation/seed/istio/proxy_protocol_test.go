@@ -19,9 +19,11 @@ package istio_test
 
 import (
 	"context"
+	"fmt"
 
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/seed/istio"
 
@@ -36,6 +38,8 @@ import (
 	// networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	// networkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/golang/mock/gomock"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -66,12 +70,6 @@ var _ = Describe("Proxy protocol", func() {
 		// Expect(networkingv1alpha3.AddToScheme(s)).NotTo(HaveOccurred())
 
 		c = fake.NewFakeClientWithScheme(s)
-
-		renderer := cr.NewWithServerVersion(&version.Info{})
-		ca := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
-		Expect(ca).NotTo(BeNil(), "should return chart applier")
-
-		proxy = NewProxyProtocolGateway(deployNS, ca, c, chartsRootPath)
 
 		// expectedGW = &networkingv1beta1.Gateway{
 		// 	ObjectMeta: metav1.ObjectMeta{
@@ -159,6 +157,17 @@ var _ = Describe("Proxy protocol", func() {
 		// }
 
 	})
+
+	JustBeforeEach(func() {
+		ca := kubernetes.NewChartApplier(
+			cr.NewWithServerVersion(&version.Info{}),
+			kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})),
+		)
+		Expect(ca).NotTo(BeNil(), "should return chart applier")
+
+		proxy = NewProxyProtocolGateway(deployNS, ca, chartsRootPath)
+	})
+
 	// JustBeforeEach(func() {
 	// 	Expect(proxy.Deploy(ctx)).ToNot(HaveOccurred(), "proxy deploy succeeds")
 	// })
@@ -167,8 +176,48 @@ var _ = Describe("Proxy protocol", func() {
 		Expect(proxy.Deploy(ctx)).ToNot(HaveOccurred(), "proxy deploy succeeds")
 	})
 
-	It("destroy succeeds", func() {
-		Expect(proxy.Deploy(ctx)).ToNot(HaveOccurred(), "proxy destroy succeeds")
+	Context("destroy", func() {
+		Context("applier returns an error", func() {
+			var (
+				ctrl *gomock.Controller
+				mc   *mockclient.MockClient
+			)
+
+			BeforeEach(func() {
+				ctrl = gomock.NewController(GinkgoT())
+				mc = mockclient.NewMockClient(ctrl)
+				c = mc
+			})
+
+			AfterEach(func() {
+				ctrl.Finish()
+			})
+
+			It("destroy succeeds when returning no match error", func() {
+				mc.EXPECT().Delete(gomock.Any(), gomock.Any()).AnyTimes().Return(
+					&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}},
+				)
+				Expect(proxy.Destroy(ctx)).ToNot(HaveOccurred())
+			})
+
+			It("destroy succeeds when returning not found error", func() {
+				mc.EXPECT().Delete(gomock.Any(), gomock.Any()).AnyTimes().Return(
+					apierrors.NewNotFound(schema.GroupResource{}, "foo"),
+				)
+				Expect(proxy.Destroy(ctx)).ToNot(HaveOccurred())
+			})
+
+			It("destroy fails when returning internal server error", func() {
+				mc.EXPECT().Delete(gomock.Any(), gomock.Any()).AnyTimes().Return(
+					apierrors.NewInternalError(fmt.Errorf("bad")),
+				)
+				Expect(proxy.Destroy(ctx)).To(HaveOccurred())
+			})
+		})
+
+		It("succeeds", func() {
+			Expect(proxy.Deploy(ctx)).ToNot(HaveOccurred(), "proxy destroy succeeds")
+		})
 	})
 
 	// It("should deploy blackhole virtual service", func() {

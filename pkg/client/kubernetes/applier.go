@@ -110,7 +110,7 @@ func (a *defaultApplier) applyObject(ctx context.Context, desired *unstructured.
 	return a.client.Update(ctx, desired)
 }
 
-func (a *defaultApplier) deleteObject(ctx context.Context, desired *unstructured.Unstructured) error {
+func (a *defaultApplier) deleteObject(ctx context.Context, desired *unstructured.Unstructured, opts *DeleteManifestOptions) error {
 	if desired.GetNamespace() == "" {
 		desired.SetNamespace(metav1.NamespaceDefault)
 	}
@@ -119,11 +119,20 @@ func (a *defaultApplier) deleteObject(ctx context.Context, desired *unstructured
 	}
 
 	err := a.client.Delete(ctx, desired)
-	if err != nil && apierrors.IsNotFound(err) {
-		return nil
-	}
-	return err
+	if err != nil {
+		// this is kept for backwards compatibility.
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 
+		for _, tf := range opts.TolerateErrorFuncs {
+			if tf != nil && tf(err) {
+				return nil
+			}
+		}
+	}
+
+	return err
 }
 
 // DefaultMergeFuncs contains options for common k8s objects, e.g. Service, ServiceAccount.
@@ -302,9 +311,17 @@ func (a *defaultApplier) ApplyManifest(ctx context.Context, r UnstructuredReader
 // DeleteManifest is a function which does the same like `kubectl delete -f <file>`. It takes a bunch of manifests <m>,
 // all concatenated in a byte slice, and sends them one after the other to the API server for deletion.
 // It returns an error as soon as the first error occurs.
-func (a *defaultApplier) DeleteManifest(ctx context.Context, r UnstructuredReader) error {
+func (a *defaultApplier) DeleteManifest(ctx context.Context, r UnstructuredReader, opts ...DeleteManifestOption) error {
 	allErrs := &multierror.Error{
 		ErrorFormat: utilerrors.NewErrorFormatFuncWithPrefix("failed to delete manifests"),
+	}
+
+	deleteOps := &DeleteManifestOptions{}
+
+	for _, o := range opts {
+		if o != nil {
+			o.MutateDeleteManifestOptions(deleteOps)
+		}
 	}
 
 	for {
@@ -320,7 +337,7 @@ func (a *defaultApplier) DeleteManifest(ctx context.Context, r UnstructuredReade
 			continue
 		}
 
-		if err := a.deleteObject(ctx, obj); err != nil {
+		if err := a.deleteObject(ctx, obj, deleteOps); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("could not delete object of kind %q \"%s/%s\": %+v", obj.GetKind(), obj.GetNamespace(), obj.GetName(), err))
 			continue
 		}

@@ -16,12 +16,16 @@ package controlplane_test
 
 import (
 	"context"
+	"fmt"
 
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane"
 
+	"github.com/golang/mock/gomock"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -47,15 +51,16 @@ var _ = Describe("#KubeAPIServerSNI", func() {
 	)
 
 	BeforeEach(func() {
-
 		ctx = context.TODO()
-
 		s := runtime.NewScheme()
-
 		c = fake.NewFakeClientWithScheme(s)
+	})
 
-		renderer := cr.NewWithServerVersion(&version.Info{})
-		ca = kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
+	JustBeforeEach(func() {
+		ca = kubernetes.NewChartApplier(
+			cr.NewWithServerVersion(&version.Info{}),
+			kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})),
+		)
 
 		defaultDepWaiter = NewKubeAPIServerSNI(&KubeAPIServerSNIValues{
 			Hosts:                 []string{"foo.bar"},
@@ -63,7 +68,7 @@ var _ = Describe("#KubeAPIServerSNI", func() {
 			IstioIngressNamespace: "istio-foo",
 			Name:                  deployName,
 			NamespaceUID:          types.UID("123456"),
-		}, deployNS, ca, chartsRoot(), c)
+		}, deployNS, ca, chartsRoot())
 	})
 
 	It("deploys succeeds", func() {
@@ -80,9 +85,50 @@ var _ = Describe("#KubeAPIServerSNI", func() {
 		Expect(defaultDepWaiter.Wait(ctx)).ToNot(HaveOccurred())
 	})
 
-	It("destroy succeeds", func() {
-		Expect(defaultDepWaiter.Deploy(ctx)).ToNot(HaveOccurred())
-		Expect(defaultDepWaiter.Destroy(ctx)).ToNot(HaveOccurred())
-		Expect(defaultDepWaiter.WaitCleanup(ctx)).ToNot(HaveOccurred())
+	Context("destroy", func() {
+
+		Context("applier returns an error", func() {
+			var (
+				ctrl *gomock.Controller
+				mc   *mockclient.MockClient
+			)
+
+			BeforeEach(func() {
+				ctrl = gomock.NewController(GinkgoT())
+				mc = mockclient.NewMockClient(ctrl)
+				c = mc
+			})
+
+			AfterEach(func() {
+				ctrl.Finish()
+			})
+
+			It("destroy succeeds when returning no match error", func() {
+				mc.EXPECT().Delete(gomock.Any(), gomock.Any()).AnyTimes().Return(
+					&meta.NoResourceMatchError{PartialResource: schema.GroupVersionResource{}},
+				)
+				Expect(defaultDepWaiter.Destroy(ctx)).ToNot(HaveOccurred())
+			})
+
+			It("destroy succeeds when returning not found error", func() {
+				mc.EXPECT().Delete(gomock.Any(), gomock.Any()).AnyTimes().Return(
+					apierrors.NewNotFound(schema.GroupResource{}, "foo"),
+				)
+				Expect(defaultDepWaiter.Destroy(ctx)).ToNot(HaveOccurred())
+			})
+
+			It("destroy fails when returning internal server error", func() {
+				mc.EXPECT().Delete(gomock.Any(), gomock.Any()).AnyTimes().Return(
+					apierrors.NewInternalError(fmt.Errorf("bad")),
+				)
+				Expect(defaultDepWaiter.Destroy(ctx)).To(HaveOccurred())
+			})
+		})
+
+		It("destroy succeeds", func() {
+			Expect(defaultDepWaiter.Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(defaultDepWaiter.Destroy(ctx)).ToNot(HaveOccurred())
+			Expect(defaultDepWaiter.WaitCleanup(ctx)).ToNot(HaveOccurred())
+		})
 	})
 })

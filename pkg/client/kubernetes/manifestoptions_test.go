@@ -16,77 +16,27 @@ package kubernetes_test
 
 import (
 	. "github.com/gardener/gardener/pkg/client/kubernetes"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("chart options", func() {
+var _ = Describe("chart manifest options", func() {
 	var (
-		aopts *ApplyOptions
-		dopts *DeleteOptions
+		dopts *DeleteManifestOptions
 	)
 
 	BeforeEach(func() {
-		aopts = &ApplyOptions{}
-		dopts = &DeleteOptions{}
-	})
-
-	Describe("Values", func() {
-		var vals ValueOption
-
-		BeforeEach(func() {
-			vals = Values("foo")
-		})
-
-		It("sets ApplyOptions", func() {
-			vals.MutateApplyOptions(aopts)
-
-			Expect(aopts.Values).To(Equal("foo"))
-		})
-
-		It("sets DeleteOptions", func() {
-			vals.MutateDeleteOptions(dopts)
-
-			Expect(dopts.Values).To(Equal("foo"))
-		})
-	})
-
-	It("MergeFuncs sets ApplyOptions", func() {
-		funcs := MergeFuncs{
-			schema.GroupKind{}: func(n, o *unstructured.Unstructured) {
-				n.SetName("baz")
-			},
-		}
-		funcs.MutateApplyOptions(aopts)
-
-		Expect(aopts.MergeFuncs).To(Equal(funcs))
-	})
-
-	Context("ForceNamespace", func() {
-		It("sets ApplyOptions", func() {
-			ForceNamespace.MutateApplyOptions(aopts)
-
-			Expect(aopts.ForceNamespace).To(BeTrue())
-		})
-
-		It("sets DeleteOptions", func() {
-			ForceNamespace.MutateDeleteOptions(dopts)
-
-			Expect(dopts.ForceNamespace).To(BeTrue())
-		})
+		dopts = &DeleteManifestOptions{}
 	})
 
 	Context("TolerateErrorFunc", func() {
 		It("sets DeleteOptions", func() {
 			var tTrue TolerateErrorFunc = func(_ error) bool { return true }
-			tTrue.MutateDeleteOptions(dopts)
+			tTrue.MutateDeleteManifestOptions(dopts)
 
 			Expect(dopts.TolerateErrorFuncs).To(HaveLen(1))
 			Expect(dopts.TolerateErrorFuncs[0](nil)).To(BeTrue())
-
 		})
 	})
 })
