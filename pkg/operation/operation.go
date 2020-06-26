@@ -331,7 +331,7 @@ func (o *Operation) InitializeShootClients() error {
 }
 
 func (o *Operation) controlPlaneHibernated() (bool, error) {
-	replicaCount, err := common.CurrentReplicaCount(o.K8sSeedClient.Client(), o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer)
+	replicaCount, err := common.CurrentReplicaCount(context.TODO(), o.K8sSeedClient.Client(), o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer)
 	if err != nil {
 		return false, err
 	}

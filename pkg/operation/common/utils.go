@@ -538,9 +538,9 @@ func GetDomainInfoFromAnnotations(annotations map[string]string) (provider strin
 }
 
 // CurrentReplicaCount returns the current replicaCount for the given deployment.
-func CurrentReplicaCount(client client.Client, namespace, deploymentName string) (int32, error) {
+func CurrentReplicaCount(ctx context.Context, client client.Client, namespace, deploymentName string) (int32, error) {
 	deployment := &appsv1.Deployment{}
-	if err := client.Get(context.TODO(), kutil.Key(namespace, deploymentName), deployment); err != nil && !apierrors.IsNotFound(err) {
+	if err := client.Get(ctx, kutil.Key(namespace, deploymentName), deployment); err != nil && !apierrors.IsNotFound(err) {
 		return 0, err
 	}
 	if deployment.Spec.Replicas == nil {

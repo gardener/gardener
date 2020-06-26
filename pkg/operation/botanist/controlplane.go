@@ -1126,14 +1126,28 @@ func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
 		},
 	}
 
-	if b.Shoot.HibernationEnabled == b.Shoot.Info.Status.IsHibernated {
-		// Keep the replica count same if the shoot is not transitioning from/to hibernation state
-		// otherwise this may interfere with dependency-watchdog
-		replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager)
-		if err != nil {
-			return err
+	if b.Shoot.Info.Status.LastOperation != nil && b.Shoot.Info.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate {
+		if b.Shoot.HibernationEnabled {
+			// shoot is being created with .spec.hibernation.enabled=true, don't deploy KCM at all
+			defaultValues["replicas"] = 0
+		} else {
+			// shoot is being created with .spec.hibernation.enabled=false, deploy KCM
+			defaultValues["replicas"] = 1
 		}
-		defaultValues["replicas"] = replicaCount
+	} else {
+		if b.Shoot.HibernationEnabled == b.Shoot.Info.Status.IsHibernated {
+			// shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated, so keep the replicas which
+			// are controlled by the dependency-watchdog
+			replicaCount, err := common.CurrentReplicaCount(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager)
+			if err != nil {
+				return err
+			}
+			defaultValues["replicas"] = replicaCount
+		} else {
+			// shoot is being reconciled with .spec.hibernation.enabled!=.status.isHibernated, so deploy KCM. in case the
+			// shoot is being hibernated then it will be scaled down to zero later after all machines are gone
+			defaultValues["replicas"] = 1
+		}
 	}
 
 	controllerManagerConfig := b.Shoot.Info.Spec.Kubernetes.KubeControllerManager
