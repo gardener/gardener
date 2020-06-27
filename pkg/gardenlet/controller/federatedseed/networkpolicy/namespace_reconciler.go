@@ -65,7 +65,7 @@ func (r *namespaceReconciler) Reconcile(request reconcile.Request) (reconcile.Re
 		if client.IgnoreNotFound(err) != nil {
 			return reconcile.Result{}, err
 		}
-		r.log.Debugf("namespace %q is not found, not trying to reconcile", namespace.Name)
+		r.log.Debugf("namespace %q is not found, not trying to reconcile", request.Name)
 		return reconcile.Result{}, nil
 	}
 
