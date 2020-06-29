@@ -27,6 +27,7 @@
 * [Gardener configuration and usage](usage/configuration.md)
 * [OpenIDConnect presets](usage/openidconnect-presets.md)
 * [Network Policies in the Shoot Cluster](usage/shoot_network_policies.md)
+* [Seed Bootstrapping](usage/seed_bootstrapping.md)
 * [Seed Settings](usage/seed_settings.md)
 * [Shoot cluster purposes](usage/shoot_purposes.md)
 * [Shoot Kubernetes and Operating System versioning](usage/shoot_versions.md)
