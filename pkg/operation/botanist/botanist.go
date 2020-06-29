@@ -21,12 +21,15 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/client-go/util/retry"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -163,6 +166,22 @@ func (b *Botanist) CreateETCDSnapshot(ctx context.Context) error {
 
 	_, err := executor.Execute(ctx, b.Shoot.SeedNamespace, etcdMainPod.GetName(), "backup-restore", "/bin/sh", "curl -k https://etcd-main-local:8080/snapshot/full")
 	return err
+}
+
+// UpdateShootAndCluster updates the given `core.gardener.cloud/v1beta1.Shoot` resource in the garden cluster after
+// applying the given transform function to it. It will also update the `shoot` field in the
+// extensions.gardener.cloud/v1alpha1.Cluster` resource in the seed cluster with the updated shoot information.
+func (b *Botanist) UpdateShootAndCluster(ctx context.Context, shoot *gardencorev1beta1.Shoot, transform func() error) error {
+	if err := kutil.TryUpdate(ctx, retry.DefaultRetry, b.K8sGardenClient.DirectClient(), shoot, transform); err != nil {
+		return err
+	}
+
+	if err := common.SyncClusterResourceToSeed(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, shoot, nil, nil); err != nil {
+		return err
+	}
+
+	b.Shoot.Info = shoot
+	return nil
 }
 
 func getETCDMainLabelSelector() labels.Selector {
