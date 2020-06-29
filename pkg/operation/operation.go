@@ -289,13 +289,15 @@ func (o *Operation) InitializeShootClients() error {
 		return nil
 	}
 
-	apiServerRunning, err := o.IsAPIServerRunning()
-	if err != nil {
-		return err
-	}
-	// Don't initialize clients for Shoots, that have are currently hibernated or in the process of being created or deleted.
-	if !apiServerRunning {
-		return nil
+	if o.Shoot.HibernationEnabled {
+		// Don't initialize clients for Shoots, that are currently hibernated and their API server is not running
+		apiServerRunning, err := o.IsAPIServerRunning()
+		if err != nil {
+			return err
+		}
+		if !apiServerRunning {
+			return nil
+		}
 	}
 
 	shootClient, err := o.ClientMap.GetClient(context.TODO(), keys.ForShoot(o.Shoot.Info))
