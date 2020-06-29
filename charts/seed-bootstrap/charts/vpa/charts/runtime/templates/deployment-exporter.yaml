@@ -1,0 +1,71 @@
+{{- if .Values.exporter.enabled }}
+---
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  labels:
+    app: vpa-exporter
+{{ toYaml .Values.labels | indent 4 }}
+  name: vpa-exporter
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpa-exporter
+{{ toYaml .Values.labels | indent 6 }}
+  template:
+    metadata:
+{{- if .Values.exporter.podAnnotations }}
+      annotations:
+{{ toYaml .Values.exporter.podAnnotations | indent 8 }}
+{{- end }}
+      labels:
+        app: vpa-exporter
+{{ toYaml .Values.labels | indent 8 }}
+{{- if .Values.exporter.podLabels }}
+{{ toYaml .Values.exporter.podLabels | indent 8 }}
+{{- end }}
+    spec:
+{{- if .Values.exporter.enableServiceAccount }}
+      serviceAccountName: vpa-exporter
+{{- else }}
+      automountServiceAccountToken: false
+{{- end }}
+      containers:
+      - command:
+        - /usr/local/bin/vpa-exporter
+        image: {{ index .Values.global.images "vpa-exporter" }}
+        imagePullPolicy: IfNotPresent
+        name: exporter
+{{- if not .Values.exporter.enableServiceAccount }}
+        env:
+        - name: KUBERNETES_SERVICE_HOST
+          value: kube-apiserver
+        - name: KUBERNETES_SERVICE_PORT
+          value: "443"
+        volumeMounts:
+        - name: vpa-exporter
+          mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          readOnly: true
+{{- end }}
+        ports:
+        - name: metrics
+          containerPort: 9570
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 50m
+            memory: 200Mi
+{{ if not .Values.exporter.enableVPA }}
+          limits:
+            cpu: 500m
+            memory: 1Gi
+{{ end }}
+{{- if not .Values.exporter.enableServiceAccount }}
+      volumes:
+      - name: vpa-exporter
+        secret:
+          secretName: vpa-exporter
+{{- end }}
+{{- end }}

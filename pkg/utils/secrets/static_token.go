@@ -76,16 +76,15 @@ func (s *StaticTokenSecretConfig) Generate() (Interface, error) {
 func (s *StaticTokenSecretConfig) GenerateInfoData() (infodata.InfoData, error) {
 	tokens := make(map[string]string)
 
-	for tokenID := range s.Tokens {
+	for username := range s.Tokens {
 		token, err := utils.GenerateRandomString(128)
 		if err != nil {
 			return nil, err
 		}
-		tokens[tokenID] = token
+		tokens[username] = token
 	}
 
 	return NewStaticTokenInfoData(tokens), nil
-
 }
 
 // GenerateFromInfoData implements ConfigInterface.
@@ -94,13 +93,14 @@ func (s *StaticTokenSecretConfig) GenerateFromInfoData(infoData infodata.InfoDat
 	if !ok {
 		return nil, fmt.Errorf("could not convert InfoData entry %s to StaticTokenInfoData", s.Name)
 	}
+
 	tokens := make([]Token, 0, len(s.Tokens))
 
-	for tokenID, token := range data.Tokens {
+	for username, token := range data.Tokens {
 		tokens = append(tokens, Token{
-			Username: s.Tokens[tokenID].Username,
-			UserID:   s.Tokens[tokenID].UserID,
-			Groups:   s.Tokens[tokenID].Groups,
+			Username: s.Tokens[username].Username,
+			UserID:   s.Tokens[username].UserID,
+			Groups:   s.Tokens[username].Groups,
 			Token:    token,
 		})
 	}
@@ -120,7 +120,7 @@ func (s *StaticTokenSecretConfig) LoadFromSecretData(secretData map[string][]byt
 
 	tokens := make(map[string]string)
 	for _, token := range staticToken.Tokens {
-		tokens[token.UserID] = token.Token
+		tokens[token.Username] = token.Token
 	}
 
 	return NewStaticTokenInfoData(tokens), nil

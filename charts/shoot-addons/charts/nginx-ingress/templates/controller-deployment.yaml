@@ -123,7 +123,17 @@ spec:
             successThreshold: 1
             timeoutSeconds: 1
           resources:
-{{ toYaml .Values.controller.resources | indent 12 }}
+            requests:
+              cpu: 100m
+              memory: 100Mi
+            limits:
+            {{- if .Values.global.vpaEnabled }}
+              cpu: 400m
+              memory: 400Mi
+            {{- else }}
+              cpu: 2000m
+              memory: 2048Mi
+            {{- end }}
       hostNetwork: {{ .Values.controller.hostNetwork }}
     {{- if .Values.controller.nodeSelector }}
       nodeSelector:

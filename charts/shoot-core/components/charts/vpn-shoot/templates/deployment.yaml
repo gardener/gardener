@@ -62,8 +62,13 @@ spec:
             cpu: 100m
             memory: 100Mi
           limits:
-            cpu: 1000m
-            memory: 1000Mi
+          {{- if .Values.global.vpaEnabled }}
+            cpu: 400m
+            memory: 400Mi
+          {{- else }}
+            cpu: "1"
+            memory: 1Gi
+          {{- end }}
         volumeMounts:
         - mountPath: /srv/secrets/vpn-shoot
           name: vpn-shoot

@@ -1,3 +1,5 @@
+global:
+  vpaEnabled: false
 kubernetes-dashboard:
   enabled: false
   images:

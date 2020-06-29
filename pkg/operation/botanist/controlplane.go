@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -192,6 +193,93 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 	}
 
 	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameClusterAutoscaler), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameClusterAutoscaler, kubernetes.Values(values))
+}
+
+// DeployVerticalPodAutoscaler deploys the VPA into the shoot namespace in the seed.
+func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
+	if !b.Shoot.WantsVerticalPodAutoscaler {
+		return common.DeleteVpa(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, true)
+	}
+
+	var (
+		podLabels = map[string]interface{}{
+			v1beta1constants.LabelNetworkPolicyToDNS:            "allowed",
+			v1beta1constants.LabelNetworkPolicyToShootAPIServer: "allowed",
+		}
+		admissionController = map[string]interface{}{
+			"podAnnotations": map[string]interface{}{
+				"checksum/secret-vpa-tls-certs":            b.CheckSums["vpa-tls-certs"],
+				"checksum/secret-vpa-admission-controller": b.CheckSums["vpa-admission-controller"],
+			},
+			"podLabels": utils.MergeMaps(podLabels, map[string]interface{}{
+				v1beta1constants.LabelNetworkPolicyFromShootAPIServer: "allowed",
+			}),
+			"enableServiceAccount": false,
+			"registerByURL":        true,
+		}
+		exporter = map[string]interface{}{
+			"enabled": false,
+		}
+		recommender = map[string]interface{}{
+			"podAnnotations": map[string]interface{}{
+				"checksum/secret-vpa-recommender": b.CheckSums["vpa-recommender"],
+			},
+			"podLabels":                    podLabels,
+			"enableServiceAccount":         false,
+			"recommendationMarginFraction": gardencorev1beta1.DefaultRecommendationMarginFraction,
+			"interval":                     gardencorev1beta1.DefaultRecommenderInterval,
+		}
+		updater = map[string]interface{}{
+			"podAnnotations": map[string]interface{}{
+				"checksum/secret-vpa-updater": b.CheckSums["vpa-updater"],
+			},
+			"podLabels":              podLabels,
+			"enableServiceAccount":   false,
+			"evictAfterOOMThreshold": gardencorev1beta1.DefaultEvictAfterOOMThreshold,
+			"evictionRateBurst":      gardencorev1beta1.DefaultEvictionRateBurst,
+			"evictionRateLimit":      gardencorev1beta1.DefaultEvictionRateLimit,
+			"evictionTolerance":      gardencorev1beta1.DefaultEvictionTolerance,
+			"interval":               gardencorev1beta1.DefaultUpdaterInterval,
+		}
+		defaultValues = map[string]interface{}{
+			"admissionController": admissionController,
+			"exporter":            exporter,
+			"recommender":         recommender,
+			"updater":             updater,
+		}
+	)
+
+	if verticalPodAutoscaler := b.Shoot.Info.Spec.Kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
+		if val := verticalPodAutoscaler.EvictAfterOOMThreshold; val != nil {
+			updater["evictAfterOOMThreshold"] = *val
+		}
+		if val := verticalPodAutoscaler.EvictionRateBurst; val != nil {
+			updater["evictionRateBurst"] = *val
+		}
+		if val := verticalPodAutoscaler.EvictionRateLimit; val != nil {
+			updater["evictionRateLimit"] = *val
+		}
+		if val := verticalPodAutoscaler.EvictionTolerance; val != nil {
+			updater["evictionTolerance"] = *val
+		}
+		if val := verticalPodAutoscaler.UpdaterInterval; val != nil {
+			updater["interval"] = *val
+		}
+		if val := verticalPodAutoscaler.RecommendationMarginFraction; val != nil {
+			recommender["recommendationMarginFraction"] = *val
+		}
+		if val := verticalPodAutoscaler.RecommenderInterval; val != nil {
+			recommender["interval"] = *val
+		}
+	}
+
+	values, err := b.InjectSeedShootImages(defaultValues, common.VpaAdmissionControllerImageName, common.VpaExporterImageName, common.VpaRecommenderImageName, common.VpaUpdaterImageName)
+	if err != nil {
+		return err
+	}
+	values["global"] = map[string]interface{}{"images": values["images"]}
+
+	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-bootstrap", "charts", "vpa", "charts", "runtime"), b.Shoot.SeedNamespace, "vpa", kubernetes.Values(values))
 }
 
 // DeleteClusterAutoscaler deletes the cluster-autoscaler deployment in the Seed cluster which holds the Shoot's control plane.
@@ -803,6 +891,8 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"checksum/secret-service-account-key":    b.CheckSums["service-account-key"],
 			"checksum/secret-etcd-ca":                b.CheckSums[v1beta1constants.SecretNameCAETCD],
 			"checksum/secret-etcd-client-tls":        b.CheckSums["etcd-client-tls"],
+			"networkpolicy/vpa-enabled":              strconv.FormatBool(b.Shoot.WantsVerticalPodAutoscaler),
+			"networkpolicy/konnectivity-enabled":     strconv.FormatBool(b.Shoot.KonnectivityTunnelEnabled),
 		}
 		defaultValues = map[string]interface{}{
 			"etcdServicePort":           2379,
@@ -811,11 +901,12 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"probeCredentials":          b.APIServerHealthCheckToken,
 			"securePort":                443,
 			"podAnnotations":            podAnnotations,
-			"hvpa": map[string]interface{}{
-				"enabled": hvpaEnabled,
-			},
 			"konnectivityTunnel": map[string]interface{}{
 				"enabled": b.Shoot.KonnectivityTunnelEnabled,
+			},
+			"vpaEnabled": b.Shoot.WantsVerticalPodAutoscaler,
+			"hvpa": map[string]interface{}{
+				"enabled": hvpaEnabled,
 			},
 			"hpa": map[string]interface{}{
 				"memoryMetricForHpaEnabled": memoryMetricForHpaEnabled,

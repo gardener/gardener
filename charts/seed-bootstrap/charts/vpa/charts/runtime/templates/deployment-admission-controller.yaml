@@ -1,23 +1,4 @@
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: vpa-webhook
-  namespace: {{ .Release.Namespace }}
-spec:
-  ports:
-    - port: 443
-      targetPort: 443
-  selector:
-    app: vpa-admission-controller
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: vpa-admission-controller
-  namespace: {{ .Release.Namespace }}
-  labels:
-{{ toYaml .Values.labels | indent 4 }}
+{{- if .Values.admissionController.enabled }}
 ---
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
@@ -35,15 +16,22 @@ spec:
 {{ toYaml .Values.labels | indent 6 }}
   template:
     metadata:
+{{- if .Values.admissionController.podAnnotations }}
       annotations:
-{{- if .Values.podAnnotations }}
-{{ toYaml .Values.podAnnotations | indent 8 }}
+{{ toYaml .Values.admissionController.podAnnotations | indent 8 }}
 {{- end }}
       labels:
         app: vpa-admission-controller
 {{ toYaml .Values.labels | indent 8 }}
+{{- if .Values.admissionController.podLabels }}
+{{ toYaml .Values.admissionController.podLabels | indent 8 }}
+{{- end }}
     spec:
+{{- if .Values.admissionController.enableServiceAccount }}
       serviceAccountName: vpa-admission-controller
+{{- else }}
+      automountServiceAccountToken: false
+{{- end }}
       containers:
       - name: admission-controller
         command:
@@ -56,6 +44,11 @@ spec:
         - --tls-private-key=/etc/tls-certs/tls.key
         - --address=:8944
         - --port=443
+        {{- if .Values.admissionController.registerByURL }}
+        - --register-by-url=true
+        - --webhook-address=https://vpa-webhook.{{.Release.Namespace}}
+        - --webhook-port=443
+        {{- end }}
         image: {{ index .Values.global.images "vpa-admission-controller" }}
         imagePullPolicy: IfNotPresent
         env:
@@ -63,10 +56,21 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+{{- if not .Values.admissionController.enableServiceAccount }}
+        - name: KUBERNETES_SERVICE_HOST
+          value: kube-apiserver
+        - name: KUBERNETES_SERVICE_PORT
+          value: "443"
+{{- end }}
         volumeMounts:
           - name: vpa-tls-certs
             mountPath: "/etc/tls-certs"
             readOnly: true
+{{- if not .Values.admissionController.enableServiceAccount }}
+          - name: vpa-admission-controller
+            mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+            readOnly: true
+{{- end }}
         resources:
           limits:
             cpu: 200m
@@ -80,3 +84,9 @@ spec:
         - name: vpa-tls-certs
           secret:
             secretName: vpa-tls-certs
+{{- if not .Values.admissionController.enableServiceAccount }}
+        - name: vpa-admission-controller
+          secret:
+            secretName: vpa-admission-controller
+{{- end }}
+{{- end }}

@@ -64,7 +64,17 @@ spec:
           initialDelaySeconds: 30
           timeoutSeconds: 30
         resources:
-{{ toYaml .Values.resources | indent 10 }}
+          requests:
+            cpu: 50m
+            memory: 50Mi
+          limits:
+          {{- if .Values.global.vpaEnabled }}
+            cpu: 200m
+            memory: 200Mi
+          {{- else }}
+            cpu: 300m
+            memory: 256Mi
+          {{- end }}
       volumes:
       - name: kubernetes-dashboard-certs
         secret:

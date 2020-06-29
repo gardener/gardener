@@ -304,7 +304,7 @@ message CloudProfileSpec {
   repeated VolumeType volumeTypes = 9;
 }
 
-// ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.
+// ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
 message ClusterAutoscaler {
   // ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 1 hour).
   // +optional
@@ -935,7 +935,7 @@ message Kubernetes {
   // +optional
   optional bool allowPrivilegedContainers = 1;
 
-  // ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.
+  // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
   // +optional
   optional ClusterAutoscaler clusterAutoscaler = 2;
 
@@ -961,6 +961,10 @@ message Kubernetes {
 
   // Version is the semantic Kubernetes version to use for the Shoot cluster.
   optional string version = 8;
+
+  // VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
+  // +optional
+  optional VerticalPodAutoscaler verticalPodAutoscaler = 9;
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.
@@ -1612,6 +1616,15 @@ message SeedSettingShootDNS {
   optional bool enabled = 1;
 }
 
+// SeedSettingVerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the
+// seed.
+message SeedSettingVerticalPodAutoscaler {
+  // Enabled controls whether the VPA components shall be deployed into the garden namespace in the seed cluster. It
+  // is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if
+  // your seed cluster already has another, manually/custom managed VPA deployment.
+  optional bool enabled = 1;
+}
+
 // SeedSettings contains certain settings for this seed cluster.
 message SeedSettings {
   // ExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.
@@ -1630,6 +1643,10 @@ message SeedSettings {
   // seed.
   // +optional
   optional SeedSettingLoadBalancerServices loadBalancerServices = 4;
+
+  // VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
+  // +optional
+  optional SeedSettingVerticalPodAutoscaler verticalPodAutoscaler = 5;
 }
 
 // SeedSpec is the specification of a Seed.
@@ -1964,6 +1981,44 @@ message Toleration {
   // Value is the toleration value corresponding to the toleration key.
   // +optional
   optional string value = 2;
+}
+
+// VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
+message VerticalPodAutoscaler {
+  // Enabled specifies whether the Kubernetes VPA shall be enabled for the shoot cluster.
+  optional bool enabled = 1;
+
+  // EvictAfterOOMThreshold defines the threshold that will lead to pod eviction in case it OOMed in less than the given
+  // threshold since its start and if it has only one container (default: 10m0s).
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration evictAfterOOMThreshold = 2;
+
+  // EvictionRateBurst defines the burst of pods that can be evicted (default: 1)
+  // +optional
+  optional int32 evictionRateBurst = 3;
+
+  // EvictionRateLimit defines the number of pods that can be evicted per second. A rate limit set to 0 or -1 will
+  // disable the rate limiter (default: -1).
+  // +optional
+  optional double evictionRateLimit = 4;
+
+  // EvictionTolerance defines the fraction of replica count that can be evicted for update in case more than one
+  // pod can be evicted (default: 0.5).
+  // +optional
+  optional double evictionTolerance = 5;
+
+  // RecommendationMarginFraction is the fraction of usage added as the safety margin to the recommended request
+  // (default: 0.15).
+  // +optional
+  optional double recommendationMarginFraction = 6;
+
+  // UpdaterInterval is the interval how often the updater should run (default: 1m0s).
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration updaterInterval = 7;
+
+  // RecommenderInterval is the interval how often metrics should be fetched (default: 1m0s).
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration recommenderInterval = 8;
 }
 
 // Volume contains information about the volume type and size.

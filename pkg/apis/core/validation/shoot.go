@@ -587,6 +587,9 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 	if clusterAutoscaler := kubernetes.ClusterAutoscaler; clusterAutoscaler != nil {
 		allErrs = append(allErrs, ValidateClusterAutoscaler(*clusterAutoscaler, fldPath.Child("clusterAutoscaler"))...)
 	}
+	if verticalPodAutoscaler := kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
+		allErrs = append(allErrs, ValidateVerticalPodAutoscaler(*verticalPodAutoscaler, fldPath.Child("verticalPodAutoscaler"))...)
+	}
 
 	return allErrs
 }
@@ -640,6 +643,23 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, fldPath *field
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("scaleDownUtilizationThreshold"), *threshold, "can not be greater than 1.0"))
 		}
 	}
+	return allErrs
+}
+
+// ValidateVerticalPodAutoscaler validates the given VerticalPodAutoscaler fields.
+func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if threshold := autoScaler.EvictAfterOOMThreshold; threshold != nil && threshold.Duration < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("evictAfterOOMThreshold"), *threshold, "can not be negative"))
+	}
+	if interval := autoScaler.UpdaterInterval; interval != nil && interval.Duration < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("updaterInterval"), *interval, "can not be negative"))
+	}
+	if interval := autoScaler.RecommenderInterval; interval != nil && interval.Duration < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("recommenderInterval"), *interval, "can not be negative"))
+	}
+
 	return allErrs
 }
 

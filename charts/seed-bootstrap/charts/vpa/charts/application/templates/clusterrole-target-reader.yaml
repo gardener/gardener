@@ -1,0 +1,54 @@
+{{- if or .Values.admissionController.enabled .Values.recommender.enabled .Values.updater.enabled }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: system:vpa-target-reader
+  labels:
+  {{ toYaml .Values.labels | indent 4 }}
+rules:
+  - apiGroups:
+      - '*'
+    resources:
+      - '*/scale'
+    verbs:
+      - get
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - replicationcontrollers
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - daemonsets
+      - deployments
+      - replicasets
+      - statefulsets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - batch
+    resources:
+      - jobs
+      - cronjobs
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - "druid.gardener.cloud"
+    resources:
+      - etcds
+      - etcds/scale
+    verbs:
+      - get
+      - list
+      - watch
+{{- end }}

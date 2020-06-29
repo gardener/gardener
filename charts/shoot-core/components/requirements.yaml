@@ -1,4 +1,8 @@
 dependencies:
+- name: apiserver-proxy
+  repository: http://localhost:10191
+  version: 0.1.0
+  condition: apiserver-proxy.enabled
 - name: cluster-autoscaler
   repository: http://localhost:10191
   version: 0.1.0
@@ -7,6 +11,10 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: coredns.enabled
+- name: konnectivity-agent
+  repository: http://localhost:10191
+  version: 0.1.0
+  condition: konnectivity-agent.enabled
 - name: kube-apiserver-kubelet
   repository: http://localhost:10191
   version: 0.1.0
@@ -51,11 +59,7 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: vpn-shoot.enabled
-- name: konnectivity-agent
+- name: vertical-pod-autoscaler
   repository: http://localhost:10191
   version: 0.1.0
-  condition: konnectivity-agent.enabled
-- name: apiserver-proxy
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: apiserver-proxy.enabled
+  condition: vertical-pod-autoscaler.enabled

@@ -1,0 +1,23 @@
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: system:vpa-exporter-role-binding
+  labels:
+  {{ toYaml .Values.labels | indent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:vpa-exporter-role
+{{- if .Values.exporter.enabled }}
+subjects:
+{{- if .Values.exporter.enableServiceAccount }}
+- kind: ServiceAccount
+  name: vpa-exporter
+  namespace: {{ .Release.Namespace }}
+{{- else }}
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: gardener.cloud:vpa:exporter
+{{- end }}
+{{- end }}

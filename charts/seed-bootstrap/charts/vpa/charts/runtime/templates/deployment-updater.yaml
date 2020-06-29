@@ -1,0 +1,75 @@
+{{- if .Values.updater.enabled }}
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: vpa-updater
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: vpa-updater
+{{ toYaml .Values.labels | indent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpa-updater
+{{ toYaml .Values.labels | indent 6 }}
+  template:
+    metadata:
+{{- if .Values.updater.podAnnotations }}
+      annotations:
+{{ toYaml .Values.updater.podAnnotations | indent 8 }}
+{{- end }}
+      labels:
+        app: vpa-updater
+{{ toYaml .Values.labels | indent 8 }}
+{{- if .Values.updater.podLabels }}
+{{ toYaml .Values.updater.podLabels | indent 8 }}
+{{- end }}
+    spec:
+{{- if .Values.updater.enableServiceAccount }}
+      serviceAccountName: vpa-updater
+{{- else }}
+      automountServiceAccountToken: false
+{{- end }}
+      containers:
+      - name: updater
+        image: {{ index .Values.global.images "vpa-updater" }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - ./updater
+        args:
+        - --min-replicas=1
+        - --eviction-tolerance={{ .Values.updater.evictionTolerance }}
+        - --eviction-rate-burst={{ .Values.updater.evictionRateBurst }}
+        - --eviction-rate-limit={{ .Values.updater.evictionRateLimit }}
+        - --evict-after-oom-threshold={{ .Values.updater.evictAfterOOMThreshold }}
+        - --updater-interval={{ .Values.updater.interval }}
+        - --stderrthreshold=info
+        - --v=2
+{{- if not .Values.updater.enableServiceAccount }}
+        env:
+        - name: KUBERNETES_SERVICE_HOST
+          value: kube-apiserver
+        - name: KUBERNETES_SERVICE_PORT
+          value: "443"
+        volumeMounts:
+        - name: vpa-updater
+          mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          readOnly: true
+{{- end }}
+        resources:
+          limits:
+            cpu: 200m
+            memory: 1000Mi
+          requests:
+            cpu: 50m
+            memory: 500Mi
+        ports:
+        - containerPort: 8080
+{{- if not .Values.updater.enableServiceAccount }}
+      volumes:
+      - name: vpa-updater
+        secret:
+          secretName: vpa-updater
+{{- end }}
+{{- end }}

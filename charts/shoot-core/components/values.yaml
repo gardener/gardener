@@ -1,10 +1,23 @@
 global:
   kubernetesVersion: 1.12.1
   podNetwork: 100.96.0.0/11
+  vpaEnabled: false
+apiserver-proxy:
+  enabled: false
+  images:
+    apiserver-proxy: image-repository
+    apiserver-proxy-sidecar: image-repository
+  advertiseIPAddress: 1.1.1.1
+  proxySeedServer: dummy.127.0.0.1.nip.io
 cluster-autoscaler:
   enabled: false
 coredns:
   enabled: true
+konnectivity-agent:
+  enabled: false
+  podAnnotations: {}
+  images:
+    konnectivity-agent: image-repository:image-tag
 kube-apiserver-kubelet:
   enabled: true
 kube-controller-manager:
@@ -58,15 +71,5 @@ vpn-shoot:
   podAnnotations: {}
   images:
     vpn-shoot: image-repository:image-tag
-konnectivity-agent:
+vertical-pod-autoscaler:
   enabled: false
-  podAnnotations: {}
-  images:
-    konnectivity-agent: image-repository:image-tag
-apiserver-proxy:
-  enabled: false
-  images:
-    apiserver-proxy: image-repository
-    apiserver-proxy-sidecar: image-repository
-  advertiseIPAddress: 1.1.1.1
-  proxySeedServer: dummy.127.0.0.1.nip.io

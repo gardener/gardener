@@ -1,0 +1,4 @@
+apiVersion: v1
+description: A Helm chart to deploy the VPA application related resources
+name: application
+version: 0.1.0

@@ -1,0 +1,17 @@
+{{- if .Values.recommender.enabled }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: system:metrics-reader
+  labels:
+  {{ toYaml .Values.labels | indent 4 }}
+rules:
+  - apiGroups:
+      - "metrics.k8s.io"
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+{{- end }}

@@ -38,9 +38,9 @@ func UnmarshalStaticToken(bytes []byte) (infodata.InfoData, error) {
 	if bytes == nil {
 		return nil, fmt.Errorf("no data given")
 	}
+
 	data := &StaticTokenJSONData{}
-	err := json.Unmarshal(bytes, data)
-	if err != nil {
+	if err := json.Unmarshal(bytes, data); err != nil {
 		return nil, err
 	}
 
@@ -64,19 +64,19 @@ func (s *StaticTokenInfoData) Marshal() ([]byte, error) {
 
 // Append appends the tokens from the provided StaticTokenInfoData to this StaticTokenInfoData.
 func (s *StaticTokenInfoData) Append(staticTokenInfoData *StaticTokenInfoData) {
-	for id, token := range staticTokenInfoData.Tokens {
-		s.Tokens[id] = token
+	for username, token := range staticTokenInfoData.Tokens {
+		s.Tokens[username] = token
 	}
 }
 
-// RemoveTokens removes tokens with the provided tokenIDs from this SticTokenInfoData
-func (s *StaticTokenInfoData) RemoveTokens(tokenIDs ...string) {
-	for _, tokenID := range tokenIDs {
-		delete(s.Tokens, tokenID)
+// RemoveTokens removes tokens with the provided usernames from this StaticTokenInfoData.
+func (s *StaticTokenInfoData) RemoveTokens(usernames ...string) {
+	for _, username := range usernames {
+		delete(s.Tokens, username)
 	}
 }
 
-// NewStaticTokenInfoData creates a new StaticTokenInfoData with the provided tokens
+// NewStaticTokenInfoData creates a new StaticTokenInfoData with the provided tokens.
 func NewStaticTokenInfoData(tokens map[string]string) *StaticTokenInfoData {
 	return &StaticTokenInfoData{tokens}
 }

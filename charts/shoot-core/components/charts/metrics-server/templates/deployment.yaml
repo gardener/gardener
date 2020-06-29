@@ -64,8 +64,13 @@ spec:
             cpu: 20m
             memory: 100Mi
           limits:
+          {{- if .Values.global.vpaEnabled }}
+            cpu: 80m
+            memory: 400Mi
+          {{- else }}
             cpu: 100m
             memory: 1Gi
+          {{- end }}
         volumeMounts:
         - name: metrics-server
           mountPath: /srv/metrics-server/tls

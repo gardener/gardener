@@ -710,6 +710,29 @@ var _ = Describe("helper", func() {
 			true),
 	)
 
+	Describe("#ShootWantsVerticalPodAutoscaler", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{}
+		})
+
+		It("should return false", func() {
+			shoot.Spec.Kubernetes.VerticalPodAutoscaler = nil
+			Expect(ShootWantsVerticalPodAutoscaler(shoot)).To(BeFalse())
+		})
+
+		It("should return false", func() {
+			shoot.Spec.Kubernetes.VerticalPodAutoscaler = &gardencorev1beta1.VerticalPodAutoscaler{Enabled: false}
+			Expect(ShootWantsVerticalPodAutoscaler(shoot)).To(BeFalse())
+		})
+
+		It("should return true", func() {
+			shoot.Spec.Kubernetes.VerticalPodAutoscaler = &gardencorev1beta1.VerticalPodAutoscaler{Enabled: true}
+			Expect(ShootWantsVerticalPodAutoscaler(shoot)).To(BeTrue())
+		})
+	})
+
 	var (
 		unmanagedType = "unmanaged"
 		differentType = "foo"

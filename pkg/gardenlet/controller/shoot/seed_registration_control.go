@@ -346,6 +346,9 @@ func prepareSeedConfig(ctx context.Context, c client.Client, shoot *gardencorev1
 			ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
 				Enabled: shootedSeedConfig.DisableDNS == nil || !*shootedSeedConfig.DisableDNS,
 			},
+			VerticalPodAutoscaler: &gardencorev1beta1.SeedSettingVerticalPodAutoscaler{
+				Enabled: !gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(shoot),
+			},
 		},
 		Taints: taints,
 		Backup: backupProfile,

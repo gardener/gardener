@@ -74,14 +74,6 @@ controller:
 
   replicaCount: 1
 
-  resources:
-    requests:
-      cpu: 100m
-      memory: 100Mi
-    limits:
-      cpu: 2000m
-      memory: 1024Mi
-
   service:
     annotations:
       service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: '*'

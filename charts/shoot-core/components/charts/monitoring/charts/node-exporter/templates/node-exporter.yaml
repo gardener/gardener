@@ -100,8 +100,13 @@ spec:
             cpu: 5m
             memory: 10Mi
           limits:
+          {{- if .Values.global.vpaEnabled }}
+            cpu: 20m
+            memory: 40Mi
+          {{- else }}
             cpu: 25m
             memory: 100Mi
+          {{- end }}
         volumeMounts:
         - name: proc
           readOnly:  true

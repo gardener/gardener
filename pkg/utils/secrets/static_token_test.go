@@ -27,16 +27,16 @@ var _ = Describe("Static Token Secrets", func() {
 		var (
 			staticTokenConfig   *StaticTokenSecretConfig
 			staticTokenInfoData *StaticTokenInfoData
-			userID              = "bar"
+			username            = "bar"
 		)
 
 		BeforeEach(func() {
 			staticTokenConfig = &StaticTokenSecretConfig{
 				Name: common.StaticTokenSecretName,
 				Tokens: map[string]TokenConfig{
-					userID: {
-						Username: "foo",
-						UserID:   userID,
+					username: {
+						Username: username,
+						UserID:   "foo",
 						Groups:   []string{"group"},
 					},
 				},
@@ -44,7 +44,7 @@ var _ = Describe("Static Token Secrets", func() {
 
 			staticTokenInfoData = &StaticTokenInfoData{
 				Tokens: map[string]string{
-					userID: "foo",
+					username: "foo",
 				},
 			}
 		})
@@ -59,9 +59,9 @@ var _ = Describe("Static Token Secrets", func() {
 
 				Expect(len(staticToken.Tokens)).To(Equal(1))
 				Expect(staticToken.Tokens[0].Token).ToNot(Equal(""))
-				Expect(staticToken.Tokens[0].Username).To(Equal(staticTokenConfig.Tokens[userID].Username))
-				Expect(staticToken.Tokens[0].UserID).To(Equal(staticTokenConfig.Tokens[userID].UserID))
-				Expect(staticToken.Tokens[0].Groups).To(Equal(staticTokenConfig.Tokens[userID].Groups))
+				Expect(staticToken.Tokens[0].Username).To(Equal(staticTokenConfig.Tokens[username].Username))
+				Expect(staticToken.Tokens[0].UserID).To(Equal(staticTokenConfig.Tokens[username].UserID))
+				Expect(staticToken.Tokens[0].Groups).To(Equal(staticTokenConfig.Tokens[username].Groups))
 			})
 		})
 
@@ -76,7 +76,7 @@ var _ = Describe("Static Token Secrets", func() {
 				Expect(ok).To(BeTrue())
 
 				Expect(len(currentStaticTokenInfoData.Tokens)).To(Equal(1))
-				Expect(currentStaticTokenInfoData.Tokens[userID]).ToNot(Equal(""))
+				Expect(currentStaticTokenInfoData.Tokens[username]).ToNot(Equal(""))
 			})
 		})
 
@@ -89,17 +89,17 @@ var _ = Describe("Static Token Secrets", func() {
 				Expect(ok).To(BeTrue())
 
 				Expect(len(staticToken.Tokens)).To(Equal(1))
-				Expect(staticToken.Tokens[0].Token).To(Equal(staticTokenInfoData.Tokens[userID]))
-				Expect(staticToken.Tokens[0].Username).To(Equal(staticTokenConfig.Tokens[userID].Username))
-				Expect(staticToken.Tokens[0].UserID).To(Equal(staticTokenConfig.Tokens[userID].UserID))
-				Expect(staticToken.Tokens[0].Groups).To(Equal(staticTokenConfig.Tokens[userID].Groups))
+				Expect(staticToken.Tokens[0].Token).To(Equal(staticTokenInfoData.Tokens[username]))
+				Expect(staticToken.Tokens[0].Username).To(Equal(staticTokenConfig.Tokens[username].Username))
+				Expect(staticToken.Tokens[0].UserID).To(Equal(staticTokenConfig.Tokens[username].UserID))
+				Expect(staticToken.Tokens[0].Groups).To(Equal(staticTokenConfig.Tokens[username].Groups))
 			})
 		})
 
 		Describe("#LoadFromSecretData", func() {
 			It("should properly load StaticTokenInfoData from secret data", func() {
 				secretData := map[string][]byte{
-					DataKeyStaticTokenCSV: []byte("foo,foo,bar,group"),
+					DataKeyStaticTokenCSV: []byte("foo,bar,foo,group"),
 				}
 				obj, err := staticTokenConfig.LoadFromSecretData(secretData)
 				Expect(err).NotTo(HaveOccurred())
@@ -113,9 +113,8 @@ var _ = Describe("Static Token Secrets", func() {
 	})
 
 	Describe("StaticToken Object", func() {
-		var (
-			staticToken *StaticToken
-		)
+		var staticToken *StaticToken
+
 		BeforeEach(func() {
 			staticToken = &StaticToken{
 				Tokens: []Token{
