@@ -30,6 +30,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -153,7 +154,10 @@ func (b *Botanist) AnnotateBackupEntryInSeedForMigration(ctx context.Context) er
 		backupEntry = &extensionsv1alpha1.BackupEntry{}
 	)
 
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(name), backupEntry); client.IgnoreNotFound(err) != nil {
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(name), backupEntry); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 
@@ -170,6 +174,9 @@ func (b *Botanist) WaitForBackupEntryOperationMigrateToSucceed(ctx context.Conte
 		)
 
 		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(name), backupEntry); err != nil {
+			if apierrors.IsNotFound(err) {
+				return retry.Ok()
+			}
 			return retry.SevereError(fmt.Errorf("waiting for lastOperation to be Migrate Succeeded for BackupEntry %q failed with: %v", name, err))
 		}
 
