@@ -20,7 +20,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -140,12 +139,12 @@ func (c *defaultControl) Reconcile(seedObj *gardencorev1beta1.Seed) (fastRequeue
 
 	seedLogger.Debugf("Setting status for seed %q to 'Unknown' as gardenlet stopped reporting seed status.", seed.Name)
 
-	bldr, err := helper.NewConditionBuilder(gardencorev1beta1.SeedGardenletReady)
+	bldr, err := gardencorev1beta1helper.NewConditionBuilder(gardencorev1beta1.SeedGardenletReady)
 	if err != nil {
 		return false, err
 	}
 
-	conditionGardenletReady := helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
+	conditionGardenletReady := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
 	if conditionGardenletReady != nil {
 		bldr.WithOldCondition(*conditionGardenletReady)
 	}
@@ -154,7 +153,7 @@ func (c *defaultControl) Reconcile(seedObj *gardencorev1beta1.Seed) (fastRequeue
 	bldr.WithReason("SeedStatusUnknown")
 	bldr.WithMessage("Gardenlet stopped posting seed status.")
 	if newCondition, update := bldr.WithNowFunc(metav1.Now).Build(); update {
-		seed.Status.Conditions = helper.MergeConditions(seed.Status.Conditions, newCondition)
+		seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, newCondition)
 		if err := gardenClient.Client().Status().Update(ctx, seed); err != nil {
 			return false, err
 		}

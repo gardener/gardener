@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -554,7 +553,7 @@ func getShoots(ctx context.Context, g gardencoreclientset.Interface, seed *garde
 		return nil, err
 	}
 
-	shootListAsItems := v1beta1helper.ShootItems(*shootList)
-	shootListAsItems2 := v1beta1helper.ShootItems(*shootList2)
+	shootListAsItems := gardencorev1beta1helper.ShootItems(*shootList)
+	shootListAsItems2 := gardencorev1beta1helper.ShootItems(*shootList2)
 	return shootListAsItems.Union(&shootListAsItems2), nil
 }

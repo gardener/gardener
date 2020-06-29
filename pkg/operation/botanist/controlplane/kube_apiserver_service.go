@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -51,7 +50,7 @@ func NewKubeAPIService(
 	applier kubernetes.ChartApplier,
 	chartsRootPath string,
 	logger *logrus.Entry,
-	client crclient.Client,
+	client client.Client,
 	waiter retry.Ops,
 	clusterIPFunc func(clusterIP string),
 	ingressFunc func(ingressIP string),
@@ -173,7 +172,7 @@ type kubeAPIService struct {
 	kubernetes.ChartApplier
 	chartPath     string
 	logger        *logrus.Entry
-	client        crclient.Client
+	client        client.Client
 	waiter        retry.Ops
 	clusterIPFunc func(clusterIP string)
 	ingressFunc   func(ingressIP string)

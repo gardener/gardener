@@ -30,7 +30,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -82,7 +81,7 @@ func (r *reconciler) InjectStopChannel(stopCh <-chan struct{}) error {
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	cluster := &extensionsv1alpha1.Cluster{}
 	if err := r.client.Get(r.ctx, request.NamespacedName, cluster); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err

@@ -423,7 +423,7 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 	for _, list := range lists {
 		if err := k8sClient.List(ctx, list,
 			client.InNamespace(namespace),
-			client.MatchingLabels(map[string]string{v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleLogging})); err != nil {
+			client.MatchingLabels{v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleLogging}); err != nil {
 			return err
 		}
 

@@ -31,7 +31,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // EntryValues contains the values used to create a DNSEntry
@@ -50,7 +49,7 @@ func NewDNSEntry(
 	applier kubernetes.ChartApplier,
 	chartsRootPath string,
 	logger *logrus.Entry,
-	client crclient.Client,
+	client client.Client,
 	waiter retry.Ops,
 
 ) component.DeployWaiter {
@@ -75,7 +74,7 @@ type dnsEntry struct {
 	kubernetes.ChartApplier
 	chartPath string
 	logger    *logrus.Entry
-	client    crclient.Client
+	client    client.Client
 	waiter    retry.Ops
 }
 
@@ -104,7 +103,7 @@ func (d *dnsEntry) Wait(ctx context.Context) error {
 		entry := &dnsv1alpha1.DNSEntry{}
 		if err := d.client.Get(
 			ctx,
-			crclient.ObjectKey{Name: d.values.Name, Namespace: d.shootNamespace},
+			client.ObjectKey{Name: d.values.Name, Namespace: d.shootNamespace},
 			entry,
 		); err != nil {
 			if apierrors.IsNotFound(err) {

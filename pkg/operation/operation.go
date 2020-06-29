@@ -35,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -173,7 +172,7 @@ func (b *Builder) WithChartsRootPath(chartsRootPath string) *Builder {
 // WithShootFrom sets the shootFunc attribute at the Builder which will build a new Shoot object.
 func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Interface, s *gardencorev1beta1.Shoot) *Builder {
 	b.shootFunc = func(ctx context.Context, c client.Client, gardenObj *garden.Garden, seedObj *seed.Seed) (*shoot.Shoot, error) {
-		return shootpkg.
+		return shoot.
 			NewBuilder().
 			WithShootObject(s).
 			WithCloudProfileObjectFromLister(k8sGardenCoreInformers.CloudProfiles().Lister()).

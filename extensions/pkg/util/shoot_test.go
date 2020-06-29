@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/util"
-	. "github.com/gardener/gardener/extensions/pkg/util"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -184,7 +183,7 @@ var _ = Describe("Shoot", func() {
 
 	Describe("#VersionMajorMinor", func() {
 		It("should return an error due to an invalid version format", func() {
-			v, err := VersionMajorMinor("invalid-semver")
+			v, err := util.VersionMajorMinor("invalid-semver")
 
 			Expect(v).To(BeEmpty())
 			Expect(err).To(HaveOccurred())
@@ -198,7 +197,7 @@ var _ = Describe("Shoot", func() {
 				expectedVersion = fmt.Sprintf("%d.%d", major, minor)
 			)
 
-			v, err := VersionMajorMinor(fmt.Sprintf("%s.88", expectedVersion))
+			v, err := util.VersionMajorMinor(fmt.Sprintf("%s.88", expectedVersion))
 
 			Expect(v).To(Equal(expectedVersion))
 			Expect(err).NotTo(HaveOccurred())
@@ -207,7 +206,7 @@ var _ = Describe("Shoot", func() {
 
 	Describe("#VersionInfo", func() {
 		It("should return an error due to an invalid version format", func() {
-			v, err := VersionInfo("invalid-semver")
+			v, err := util.VersionInfo("invalid-semver")
 
 			Expect(v).To(BeNil())
 			Expect(err).To(HaveOccurred())
@@ -222,7 +221,7 @@ var _ = Describe("Shoot", func() {
 				}
 			)
 
-			v, err := VersionInfo("14.123.42")
+			v, err := util.VersionInfo("14.123.42")
 
 			Expect(v).To(Equal(expectedVersionInfo))
 			Expect(err).NotTo(HaveOccurred())

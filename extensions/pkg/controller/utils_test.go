@@ -31,7 +31,6 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -112,8 +111,8 @@ var _ = Describe("Utils", func() {
 
 	Describe("#DeleteAllFinalizers", func() {
 		It("should delete all finalizers", func() {
-			creationTimestamp := v1.Now()
-			deletionTimestamp := v1.Now()
+			creationTimestamp := metav1.Now()
+			deletionTimestamp := metav1.Now()
 			labels := make(map[string]string)
 			labels["test-label-key"] = "test-label-value"
 			annotation := make(map[string]string)

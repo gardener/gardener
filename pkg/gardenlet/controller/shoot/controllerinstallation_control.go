@@ -25,7 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
@@ -134,7 +133,7 @@ func (c *defaultControllerInstallationControl) Reconcile(controllerInstallationO
 		resources[resource.Kind] = resource.Type
 	}
 
-	shootList, err := c.k8sGardenCoreInformers.Shoots().Lister().Shoots(metav1.NamespaceAll).List(labels.Everything())
+	shootList, err := c.k8sGardenCoreInformers.Shoots().Lister().Shoots(corev1.NamespaceAll).List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
