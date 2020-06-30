@@ -16,6 +16,7 @@ package secrets
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/gardener/gardener/pkg/utils"
@@ -94,14 +95,19 @@ func (s *StaticTokenSecretConfig) GenerateFromInfoData(infoData infodata.InfoDat
 		return nil, fmt.Errorf("could not convert InfoData entry %s to StaticTokenInfoData", s.Name)
 	}
 
-	tokens := make([]Token, 0, len(s.Tokens))
+	var usernames []string
+	for username := range data.Tokens {
+		usernames = append(usernames, username)
+	}
+	sort.Strings(usernames)
 
-	for username, token := range data.Tokens {
+	tokens := make([]Token, 0, len(s.Tokens))
+	for _, username := range usernames {
 		tokens = append(tokens, Token{
 			Username: s.Tokens[username].Username,
 			UserID:   s.Tokens[username].UserID,
 			Groups:   s.Tokens[username].Groups,
-			Token:    token,
+			Token:    data.Tokens[username],
 		})
 	}
 
