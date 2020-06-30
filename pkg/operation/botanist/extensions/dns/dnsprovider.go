@@ -20,17 +20,16 @@ import (
 	"path/filepath"
 	"time"
 
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
-	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	crclient "sigs.k8s.io/controller-runtime/pkg/client"
-
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
+
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ProviderValues contains the values used to create a DNSProvider.
@@ -58,7 +57,7 @@ func NewDNSProvider(
 	applier kubernetes.ChartApplier,
 	chartsRootPath string,
 	logger *logrus.Entry,
-	client crclient.Client,
+	client client.Client,
 	waiter retry.Ops,
 ) component.DeployWaiter {
 	if waiter == nil {
@@ -82,7 +81,7 @@ type dnsProvider struct {
 	kubernetes.ChartApplier
 	chartPath string
 	logger    *logrus.Entry
-	client    crclient.Client
+	client    client.Client
 	waiter    retry.Ops
 }
 
@@ -109,7 +108,7 @@ func (d *dnsProvider) Wait(ctx context.Context) error {
 		provider := &dnsv1alpha1.DNSProvider{}
 		if err := d.client.Get(
 			ctx,
-			crclient.ObjectKey{Name: d.values.Name, Namespace: d.shootNamespace},
+			client.ObjectKey{Name: d.values.Name, Namespace: d.shootNamespace},
 			provider,
 		); err != nil {
 			return retry.SevereError(err)

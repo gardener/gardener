@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/garden"
 	. "github.com/gardener/gardener/pkg/operation/garden"
 
 	. "github.com/onsi/ginkgo"
@@ -155,7 +154,7 @@ var _ = Describe("Garden", func() {
 	var (
 		defaultDomainProvider   = "default-domain-provider"
 		defaultDomainSecretData = map[string][]byte{"default": []byte("domain")}
-		defaultDomain           = &garden.Domain{
+		defaultDomain           = &Domain{
 			Domain:     "bar.com",
 			Provider:   defaultDomainProvider,
 			SecretData: defaultDomainSecretData,
@@ -163,12 +162,12 @@ var _ = Describe("Garden", func() {
 	)
 
 	DescribeTable("#DomainIsDefaultDomain",
-		func(domain string, defaultDomains []*garden.Domain, expected gomegatypes.GomegaMatcher) {
+		func(domain string, defaultDomains []*Domain, expected gomegatypes.GomegaMatcher) {
 			Expect(DomainIsDefaultDomain(domain, defaultDomains)).To(expected)
 		},
 
 		Entry("no default domain", "foo.bar.com", nil, BeNil()),
-		Entry("default domain", "foo.bar.com", []*garden.Domain{defaultDomain}, Equal(defaultDomain)),
-		Entry("no default domain but with same suffix", "foo.foobar.com", []*garden.Domain{defaultDomain}, BeNil()),
+		Entry("default domain", "foo.bar.com", []*Domain{defaultDomain}, Equal(defaultDomain)),
+		Entry("no default domain but with same suffix", "foo.foobar.com", []*Domain{defaultDomain}, BeNil()),
 	)
 })

@@ -1330,13 +1330,13 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 	)
 }
 
-// DeployInternalDNS deploys the internal DNSProvider and DNSEntry.
+// DeployKubeAPIServerSNI deploys the kube-apiserver-sni chart.
 func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
 }
 
-// DefaultKubeAPIServersNI returns a deployer for kube-apiserver SNI.
-func (b *Botanist) DefaultKubeAPIServersNI() component.DeployWaiter {
+// DefaultKubeAPIServerSNI returns a deployer for kube-apiserver SNI.
+func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 	return component.OpDestroy(controlplane.NewKubeAPIServerSNI(
 		&controlplane.KubeAPIServerSNIValues{
 			Name:                  v1beta1constants.DeploymentNameKubeAPIServer,

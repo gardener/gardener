@@ -126,7 +126,7 @@ func (s *StaticTokenSecretConfig) LoadFromSecretData(secretData map[string][]byt
 	return NewStaticTokenInfoData(tokens), nil
 }
 
-// GenerateStaticToken computes a random token of length 64.
+// GenerateStaticToken computes a random token of length 128.
 func (s *StaticTokenSecretConfig) GenerateStaticToken() (*StaticToken, error) {
 	tokens := make([]Token, 0, len(s.Tokens))
 

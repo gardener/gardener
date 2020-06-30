@@ -16,7 +16,6 @@ package secrets_test
 
 import (
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	. "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/onsi/ginkgo"
@@ -40,7 +39,7 @@ var _ = Describe("Certificate Secrets", func() {
 			certificateConfig = &CertificateSecretConfig{
 				Name:       "ca",
 				CommonName: "metrics-server",
-				CertType:   secrets.CACert,
+				CertType:   CACert,
 			}
 
 			var err error

@@ -842,7 +842,7 @@ func GetWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secre
 		ctx,
 		wildcardCerts,
 		client.InNamespace(v1beta1constants.GardenNamespace),
-		client.MatchingLabels(map[string]string{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert}),
+		client.MatchingLabels{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert},
 	); err != nil {
 		return nil, err
 	}

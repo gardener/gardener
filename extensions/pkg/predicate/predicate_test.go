@@ -21,7 +21,6 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -65,9 +64,9 @@ var _ = Describe("Predicate", func() {
 
 		BeforeEach(func() {
 			extensionType = "extension-type"
-			object = &v1alpha1.Extension{
-				Spec: v1alpha1.ExtensionSpec{
-					DefaultSpec: v1alpha1.DefaultSpec{
+			object = &extensionsv1alpha1.Extension{
+				Spec: extensionsv1alpha1.ExtensionSpec{
+					DefaultSpec: extensionsv1alpha1.DefaultSpec{
 						Type: extensionType,
 					},
 				},

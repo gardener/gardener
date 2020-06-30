@@ -24,7 +24,6 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -61,7 +60,7 @@ var _ = Describe("LeaseController", func() {
 			},
 		}
 
-		ownerRef = v1.OwnerReference{
+		ownerRef = metav1.OwnerReference{
 			APIVersion: "apiVersion", Name: holderName, Kind: "kind", UID: holderUID}
 	)
 
@@ -97,10 +96,10 @@ var _ = Describe("LeaseController", func() {
 
 			Expect(leaseController.Sync(holderName)).NotTo(HaveOccurred())
 
-			lease, err := k8sClientSet.CoordinationV1().Leases(testLeaseNamespace).Get(holderName, v1.GetOptions{})
+			lease, err := k8sClientSet.CoordinationV1().Leases(testLeaseNamespace).Get(holderName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(lease).ShouldNot(BeNil())
-			Expect(lease.Spec.RenewTime).To(BeEquivalentTo(&v1.MicroTime{Time: fakeNowFunc()}))
+			Expect(lease.Spec.RenewTime).To(BeEquivalentTo(&metav1.MicroTime{Time: fakeNowFunc()}))
 			Expect(lease.OwnerReferences).Should(BeEmpty())
 		})
 
@@ -108,10 +107,10 @@ var _ = Describe("LeaseController", func() {
 			leaseController := NewLeaseController(fakeNowFunc, fakeClientMap, 2, testLeaseNamespace)
 			Expect(leaseController.Sync(holderName, ownerRef)).NotTo(HaveOccurred())
 
-			lease, err := k8sClientSet.CoordinationV1().Leases(testLeaseNamespace).Get(holderName, v1.GetOptions{})
+			lease, err := k8sClientSet.CoordinationV1().Leases(testLeaseNamespace).Get(holderName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(lease).ShouldNot(BeNil())
-			Expect(lease.Spec.RenewTime).To(BeEquivalentTo(&v1.MicroTime{Time: fakeNowFunc()}))
+			Expect(lease.Spec.RenewTime).To(BeEquivalentTo(&metav1.MicroTime{Time: fakeNowFunc()}))
 			Expect(lease.OwnerReferences).Should(ContainElement(ownerRef))
 		})
 
@@ -136,20 +135,20 @@ var _ = Describe("LeaseController", func() {
 		})
 
 		It("should update lease time if the lease exists", func() {
-			fakeTime := &v1.MicroTime{Time: time.Date(2020, time.April, 1, 1, 1, 1, 1, time.Local)}
+			fakeTime := &metav1.MicroTime{Time: time.Date(2020, time.April, 1, 1, 1, 1, 1, time.Local)}
 			lease.Spec.RenewTime = fakeTime
 			Expect(k8sClientSet.Tracker().Add(lease)).NotTo(HaveOccurred())
 
 			leaseController := NewLeaseController(fakeNowFunc, fakeClientMap, 2, testLeaseNamespace)
 			Expect(leaseController.Sync(holderName)).NotTo(HaveOccurred())
 
-			actualLease, err := k8sClientSet.CoordinationV1().Leases(testLeaseNamespace).Get(holderName, v1.GetOptions{})
+			actualLease, err := k8sClientSet.CoordinationV1().Leases(testLeaseNamespace).Get(holderName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(actualLease.Spec.RenewTime).To(Equal(&v1.MicroTime{Time: fakeNowFunc()}))
+			Expect(actualLease.Spec.RenewTime).To(Equal(&metav1.MicroTime{Time: fakeNowFunc()}))
 		})
 
 		It("should return error, when updates lease time and the lease exists but fails", func() {
-			fakeTime := &v1.MicroTime{Time: time.Date(2020, time.April, 1, 1, 1, 1, 1, time.Local)}
+			fakeTime := &metav1.MicroTime{Time: time.Date(2020, time.April, 1, 1, 1, 1, 1, time.Local)}
 			lease.Spec.RenewTime = fakeTime
 			Expect(k8sClientSet.Tracker().Add(lease)).NotTo(HaveOccurred())
 			k8sClientSet.PrependReactor("update", "leases", func(action k8stesting.Action) (bool, runtime.Object, error) {
@@ -163,7 +162,7 @@ var _ = Describe("LeaseController", func() {
 		})
 
 		It("should retry to update lease if conflict is returned as error from the client", func() {
-			fakeTime := &v1.MicroTime{Time: time.Date(2020, time.April, 1, 1, 1, 1, 1, time.Local)}
+			fakeTime := &metav1.MicroTime{Time: time.Date(2020, time.April, 1, 1, 1, 1, 1, time.Local)}
 			lease.Spec.RenewTime = fakeTime
 			Expect(k8sClientSet.Tracker().Add(lease)).NotTo(HaveOccurred())
 			k8sClientSet.PrependReactor("update", "leases", func(action k8stesting.Action) (bool, runtime.Object, error) {

@@ -94,10 +94,10 @@ func (h *handlerShootClient) HandleWithRequest(ctx context.Context, req admissio
 		ip := ipPort[0]
 
 		podList := &corev1.PodList{}
-		if err := h.client.List(ctx, podList, client.MatchingLabels(map[string]string{
+		if err := h.client.List(ctx, podList, client.MatchingLabels{
 			v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 			v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
-		})); err != nil {
+		}); err != nil {
 			return errors.Wrapf(err, "error while listing all pods")
 		}
 

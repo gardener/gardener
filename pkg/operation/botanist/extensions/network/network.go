@@ -27,7 +27,7 @@ import (
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -66,7 +66,7 @@ type Values struct {
 // New creates a new instance of DeployWaiter for a Network.
 func New(
 	logger *logrus.Entry,
-	client crclient.Client,
+	client client.Client,
 	values *Values,
 	waitInterval time.Duration,
 	waitSevereThreshold time.Duration,
@@ -85,7 +85,7 @@ func New(
 type network struct {
 	values              *Values
 	logger              *logrus.Entry
-	client              crclient.Client
+	client              client.Client
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
