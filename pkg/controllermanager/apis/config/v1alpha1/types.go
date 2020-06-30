@@ -111,6 +111,21 @@ type ProjectControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`
+	// MinimumLifetimeDays is the number of days a `Project` may exist before it is being
+	// checked whether it is actively used or got stale.
+	// +optional
+	MinimumLifetimeDays *int `json:"minimumLifetimeDays,omitempty"`
+	// StaleGracePeriodDays is the number of days a `Project` may be unused before it will
+	// be considered for checks whether it is actively used or got stale.
+	// +optional
+	StaleGracePeriodDays *int `json:"staleGracePeriodDays,omitempty"`
+	// StaleExpirationTimeDays is the number of days after a `Project` that has been marked as
+	// 'stale'/'unused' and passed the 'stale grace period' will be considered for auto deletion.
+	// +optional
+	StaleExpirationTimeDays *int `json:"staleExpirationTimeDays,omitempty"`
+	// StaleSyncPeriod is the duration how often the reconciliation loop for stale Projects is executed.
+	// +optional
+	StaleSyncPeriod *metav1.Duration `json:"staleSyncPeriod,omitempty"`
 }
 
 // QuotaControllerConfiguration defines the configuration of the Quota controller.

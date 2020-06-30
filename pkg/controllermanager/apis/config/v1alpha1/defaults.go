@@ -47,16 +47,36 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 			ConcurrentSyncs: 5,
 		}
 	}
+
 	if obj.Controllers.ControllerRegistration == nil {
 		obj.Controllers.ControllerRegistration = &ControllerRegistrationControllerConfiguration{
 			ConcurrentSyncs: 5,
 		}
 	}
+
 	if obj.Controllers.Project == nil {
 		obj.Controllers.Project = &ProjectControllerConfiguration{
 			ConcurrentSyncs: 5,
 		}
 	}
+	if obj.Controllers.Project.MinimumLifetimeDays == nil {
+		v := 30
+		obj.Controllers.Project.MinimumLifetimeDays = &v
+	}
+	if obj.Controllers.Project.StaleGracePeriodDays == nil {
+		v := 14
+		obj.Controllers.Project.StaleGracePeriodDays = &v
+	}
+	if obj.Controllers.Project.StaleExpirationTimeDays == nil {
+		v := 90
+		obj.Controllers.Project.StaleExpirationTimeDays = &v
+	}
+	if obj.Controllers.Project.StaleSyncPeriod == nil {
+		obj.Controllers.Project.StaleSyncPeriod = &metav1.Duration{
+			Duration: 12 * time.Hour,
+		}
+	}
+
 	if obj.Controllers.Quota == nil {
 		obj.Controllers.Quota = &QuotaControllerConfiguration{
 			ConcurrentSyncs: 5,
@@ -71,11 +91,13 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 			},
 		}
 	}
+
 	if obj.Controllers.SecretBinding == nil {
 		obj.Controllers.SecretBinding = &SecretBindingControllerConfiguration{
 			ConcurrentSyncs: 5,
 		}
 	}
+
 	if obj.Controllers.Seed == nil {
 		obj.Controllers.Seed = &SeedControllerConfiguration{
 			ConcurrentSyncs: 5,
@@ -84,7 +106,6 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 			},
 		}
 	}
-
 	if obj.Controllers.Seed.MonitorPeriod == nil {
 		v := metav1.Duration{Duration: 40 * time.Second}
 		obj.Controllers.Seed.MonitorPeriod = &v

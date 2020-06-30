@@ -101,6 +101,17 @@ type ProjectControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int
+	// MinimumLifetimeDays is the number of days a `Project` may exist before it is being
+	// checked whether it is actively used or got stale.
+	MinimumLifetimeDays *int
+	// StaleGracePeriodDays is the number of days a `Project` may be unused/stale before a
+	// timestamp for an auto deletion is computed.
+	StaleGracePeriodDays *int
+	// StaleExpirationTimeDays is the number of days after a `Project` that has been marked as
+	// 'stale'/'unused' and passed the 'stale grace period' will be considered for auto deletion.
+	StaleExpirationTimeDays *int
+	// StaleSyncPeriod is the duration how often the reconciliation loop for stale Projects is executed.
+	StaleSyncPeriod *metav1.Duration
 }
 
 // QuotaControllerConfiguration defines the configuration of the Quota controller.
@@ -126,7 +137,6 @@ type SeedControllerConfiguration struct {
 	ConcurrentSyncs int
 	// MonitorPeriod is the duration after the seed controller will mark the `GardenletReady`
 	// condition in `Seed` resources as `Unknown` in case the gardenlet did not send heartbeats.
-	// +optional
 	MonitorPeriod *metav1.Duration
 	// ShootMonitorPeriod is the duration after the seed controller will mark Gardener's conditions
 	// in `Shoot` resources as `Unknown` in case the gardenlet of the responsible seed cluster did

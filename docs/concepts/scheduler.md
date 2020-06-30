@@ -1,12 +1,12 @@
-# Gardener scheduler
+# Gardener Scheduler
 
-The Gardener scheduler is in essence a controller that watches newly created shoots and assigns a seed cluster to them.
-Conceptually, the task of the Gardener scheduler is very similar to the task of the Kubernetes Scheduler: finding a seed for a shoot instead of a node for a pod.
+The Gardener Scheduler is in essence a controller that watches newly created shoots and assigns a seed cluster to them.
+Conceptually, the task of the Gardener Scheduler is very similar to the task of the Kubernetes Scheduler: finding a seed for a shoot instead of a node for a pod.
 
 Either the scheduling strategy or the shoot cluster purpose hereby determines how the scheduler is operating.
 The following sections explain the configuration and flow in greater detail.
 
-## Why is the Gardener scheduler needed?
+## Why is the Gardener Scheduler needed?
 
 ### 1. Decoupling
 
@@ -18,22 +18,22 @@ Decoupling the API server and the scheduler comes with greater flexibility to de
 
 It should be possible to easily extend and tweak the scheduler in the future.
 Possibly, similar to the Kubernetes scheduler, hooks could be provided which influence the scheduling decisions.
-It should be also possible to completely replace the standard Gardener scheduler with a custom implementation.
+It should be also possible to completely replace the standard Gardener Scheduler with a custom implementation.
 
 ## Configuration
 
-The Gardener scheduler configuration has to be supplied on startup. It is a mandatory and also the only available flag.
+The Gardener Scheduler configuration has to be supplied on startup. It is a mandatory and also the only available flag.
 [Here](../../example/20-componentconfig-gardener-scheduler.yaml) is an example scheduler configuration.
 
 Most of the configuration options are the same as in the Gardener Controller Manager (leader election, client connection, ...).
-However, the Gardener scheduler on the other hand does not need a TLS configuration, because there are currently no webhooks configurable.
+However, the Gardener Scheduler on the other hand does not need a TLS configuration, because there are currently no webhooks configurable.
 
 The scheduling strategy is defined in the _**candidateDeterminationStrategy**_ and can have the possible values `SameRegion` and `MinimalDistance`.
 The `SameRegion` strategy is the default strategy.
 
 ### 1. Same Region strategy
 
-The Gardener scheduler reads the `spec.provider.type` and `.spec.region` fields from the `Shoot` resource.
+The Gardener Scheduler reads the `spec.provider.type` and `.spec.region` fields from the `Shoot` resource.
 It tries to find a Seed that has the identical `.spec.provider.type` and `.spec.provider.region` fields set.
 If it cannot find a suitable Seed, it adds an event to the shoot stating, that it is unschedulable.
 
@@ -74,7 +74,7 @@ After this filtering process the least utilized seed, i.e., the one with the lea
 Similar to the `.spec.nodeSelector` field in `Pod`s, the `Shoot` specification has an optional `.spec.seedSelector` field.
 It allows the user to provide a label selector that must match the labels of `Seed`s in order to be scheduled to one of them.
 The labels on `Seed`s are usually controlled by Gardener administrators/operators - end users cannot add arbitrary labels themselves.
-If provided, the Gardener scheduler will only consider those seeds as "suitable" whose labels match those provided in the `.spec.seedSelector` of the `Shoot`.
+If provided, the Gardener Scheduler will only consider those seeds as "suitable" whose labels match those provided in the `.spec.seedSelector` of the `Shoot`.
 
 ## Failure to determine a suitable seed
 
