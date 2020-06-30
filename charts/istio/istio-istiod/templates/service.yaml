@@ -12,6 +12,6 @@ spec:
     port: 15012
   - name: https-webhook # validation and injection
     port: 443
-    targetPort: 15017
+    targetPort: {{ .Values.ports.https }}
   selector:
 {{ .Values.labels | toYaml | indent 4 }}

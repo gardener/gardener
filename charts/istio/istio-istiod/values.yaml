@@ -4,3 +4,5 @@ labels:
   app: istiod
   istio: pilot
 deployNamespace: false
+ports:
+  https: 443
