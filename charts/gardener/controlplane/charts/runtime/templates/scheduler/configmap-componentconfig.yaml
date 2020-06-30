@@ -51,4 +51,8 @@ data:
         candidateDeterminationStrategy: {{ required ".Values.global.scheduler.config.schedulers.shoot.candidateDeterminationStrategy is required" .Values.global.scheduler.config.schedulers.shoot.candidateDeterminationStrategy }}
       {{- end }}
     {{- end }}
+    {{- if .Values.global.scheduler.config.featureGates }}
+    featureGates:
+      {{- toYaml .Values.global.scheduler.config.featureGates | nindent 6 }}
+    {{- end }}
 {{- end }}

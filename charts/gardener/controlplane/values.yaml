@@ -297,7 +297,7 @@ global:
 #         retrySyncPeriod: 15s
 #         concurrentSyncs: 5
 #         candidateDeterminationStrategy: SameRegion # either {SameRegion,MinimalDistance}
-
+      featureGates: {}
   internalDomain:
     provider: aws-route53 # depends on the DNS extension of your choice
     domain: example.com
