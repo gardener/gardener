@@ -697,7 +697,7 @@ func validateZone(constraints []core.Region, region, zone string) (bool, []strin
 	return false, validValues
 }
 
-// getDefaultMachineImage determines the latest machine image version from the first machine image in the CloudProfile and considers that as the default image
+// getDefaultMachineImage determines the latest non-preview machine image version from the first machine image in the CloudProfile and considers that as the default image
 func getDefaultMachineImage(machineImages []core.MachineImage, imageName string) (*core.ShootMachineImage, error) {
 	if len(machineImages) == 0 {
 		return nil, errors.New("the cloud profile does not contain any machine image - cannot create shoot cluster")
@@ -719,7 +719,7 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string)
 		defaultImage = &machineImages[0]
 	}
 
-	latestMachineImageVersion, err := helper.DetermineLatestMachineImageVersion(*defaultImage)
+	latestMachineImageVersion, err := helper.DetermineLatestExpirableVersion(defaultImage.Versions, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine latest machine image from cloud profile: %s", err.Error())
 	}
