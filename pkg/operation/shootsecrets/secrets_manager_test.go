@@ -388,7 +388,7 @@ var _ = Describe("SecretsManager", func() {
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{
-					secrets.DataKeyStaticTokenCSV: []byte("foo,foo,fooID,\"group1,group2\"\nbar,bar,barID,barGroup1"),
+					secrets.DataKeyStaticTokenCSV: []byte("bar,bar,barID,barGroup1\nfoo,foo,fooID,\"group1,group2\""),
 				},
 			}
 
