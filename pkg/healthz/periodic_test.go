@@ -81,7 +81,7 @@ var _ = Describe("Periodic", func() {
 
 				Expect(p.health).To(BeTrue())
 				time.Sleep(p.resetDuration)
-				Eventually(func() bool { return p.health }, 2*p.resetDuration, p.resetDuration).Should(BeFalse())
+				Eventually(func() bool { return p.health }, 2*p.resetDuration, p.resetDuration/5).Should(BeFalse())
 			})
 
 			It("should correctly reset the timer if status is changed to true", func() {
@@ -89,12 +89,12 @@ var _ = Describe("Periodic", func() {
 
 				Expect(p.health).To(BeTrue())
 				time.Sleep(p.resetDuration / 2)
-				Eventually(func() bool { return p.health }, 2*p.resetDuration, p.resetDuration).Should(BeTrue())
+				Eventually(func() bool { return p.health }, 2*p.resetDuration, p.resetDuration/5).Should(BeTrue())
 
 				p.Set(true)
 				Expect(p.health).To(BeTrue())
 				time.Sleep(p.resetDuration)
-				Eventually(func() bool { return p.health }, 2*p.resetDuration, p.resetDuration).Should(BeFalse())
+				Eventually(func() bool { return p.health }, 2*p.resetDuration, p.resetDuration/5).Should(BeFalse())
 			})
 		})
 
