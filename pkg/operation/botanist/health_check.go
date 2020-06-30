@@ -899,8 +899,9 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 	return apiserverAvailability, controlPlane, nodes, systemComponents
 }
 
-func isUnstableLastOperation(lastOperation *gardencorev1beta1.LastOperation) bool {
-	return isUnstableOperationType(lastOperation.Type) && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded
+func isUnstableLastOperation(lastOperation *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError) bool {
+	return (isUnstableOperationType(lastOperation.Type) && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded) ||
+		(lastOperation.State == gardencorev1beta1.LastOperationStateProcessing && lastErrors == nil)
 }
 
 var unstableOperationTypes = map[gardencorev1beta1.LastOperationType]struct{}{
@@ -914,8 +915,8 @@ func isUnstableOperationType(lastOperationType gardencorev1beta1.LastOperationTy
 }
 
 // PardonCondition pardons the given condition if the Shoot is either in create (except successful create) or delete state.
-func PardonCondition(lastOp *gardencorev1beta1.LastOperation, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	if (lastOp == nil || isUnstableLastOperation(lastOp)) && condition.Status == gardencorev1beta1.ConditionFalse {
+func PardonCondition(condition gardencorev1beta1.Condition, lastOp *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError) gardencorev1beta1.Condition {
+	if (lastOp == nil || isUnstableLastOperation(lastOp, lastErrors)) && condition.Status == gardencorev1beta1.ConditionFalse {
 		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, condition.Reason, condition.Message, condition.Codes...)
 	}
 	return condition
@@ -925,7 +926,11 @@ func PardonCondition(lastOp *gardencorev1beta1.LastOperation, condition gardenco
 func (b *Botanist) HealthChecks(initializeShootClients func() error, thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration, healthCheckOutdatedThreshold *metav1.Duration, apiserverAvailability, controlPlane, nodes, systemComponents gardencorev1beta1.Condition) (gardencorev1beta1.Condition, gardencorev1beta1.Condition, gardencorev1beta1.Condition, gardencorev1beta1.Condition) {
 	apiServerAvailable, controlPlaneHealthy, everyNodeReady, systemComponentsHealthy := b.healthChecks(initializeShootClients, thresholdMappings, healthCheckOutdatedThreshold, apiserverAvailability, controlPlane, nodes, systemComponents)
 	lastOp := b.Shoot.Info.Status.LastOperation
-	return PardonCondition(lastOp, apiServerAvailable), PardonCondition(lastOp, controlPlaneHealthy), PardonCondition(lastOp, everyNodeReady), PardonCondition(lastOp, systemComponentsHealthy)
+	lastErrors := b.Shoot.Info.Status.LastErrors
+	return PardonCondition(apiServerAvailable, lastOp, lastErrors),
+		PardonCondition(controlPlaneHealthy, lastOp, lastErrors),
+		PardonCondition(everyNodeReady, lastOp, lastErrors),
+		PardonCondition(systemComponentsHealthy, lastOp, lastErrors)
 }
 
 // MonitoringHealthChecks performs the monitoring related health checks.
