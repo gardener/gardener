@@ -134,13 +134,12 @@ func (b *Botanist) WaitUntilInfrastructureReady(ctx context.Context) error {
 
 			if infrastructure.Status.NodesCIDR != nil {
 				shootCopy := b.Shoot.Info.DeepCopy()
-				if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), shootCopy, func() error {
+				if err := b.UpdateShootAndCluster(ctx, shootCopy, func() error {
 					shootCopy.Spec.Networking.Nodes = infrastructure.Status.NodesCIDR
 					return nil
 				}); err != nil {
 					return err
 				}
-				b.Shoot.Info = shootCopy
 			}
 			return nil
 		},

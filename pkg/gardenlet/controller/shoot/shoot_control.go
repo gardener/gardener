@@ -44,12 +44,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -106,64 +104,15 @@ func confineSpecUpdateRollout(maintenance *gardencorev1beta1.Maintenance) bool {
 	return maintenance != nil && maintenance.ConfineSpecUpdateRollout != nil && *maintenance.ConfineSpecUpdateRollout
 }
 
-// SyncClusterResourceToSeed creates or updates the `Cluster` extension resource for the shoot in the seed cluster.
-// It contains the shoot, seed, and cloudprofile specification.
 func (c *Controller) syncClusterResourceToSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) error {
-	if shoot.Spec.SeedName == nil {
-		return nil
-	}
+	clusterName := shootpkg.ComputeTechnicalID(project.Name, shoot)
 
 	seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeedWithName(*shoot.Spec.SeedName))
 	if err != nil {
 		return fmt.Errorf("could not initialize a new Kubernetes client for the seed cluster: %+v", err)
 	}
 
-	var (
-		cluster = &extensionsv1alpha1.Cluster{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: shootpkg.ComputeTechnicalID(project.Name, shoot),
-			},
-		}
-
-		cloudProfileObj = cloudProfile.DeepCopy()
-		seedObj         = seed.DeepCopy()
-		shootObj        = shoot.DeepCopy()
-	)
-
-	cloudProfileObj.TypeMeta = metav1.TypeMeta{
-		APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-		Kind:       "CloudProfile",
-	}
-	seedObj.TypeMeta = metav1.TypeMeta{
-		APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-		Kind:       "Seed",
-	}
-	shootObj.TypeMeta = metav1.TypeMeta{
-		APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-		Kind:       "Shoot",
-	}
-
-	// TODO: Workaround for the issue that was fixed with https://github.com/gardener/gardener/pull/2265. It adds a
-	//       fake "observed generation" and a fake "last operation" and in case it is not set yet. This prevents the
-	//       ShootNotFailed predicate in the extensions library from reacting false negatively. This fake status is only
-	//       internally and will not be reported in the Shoot object in the garden cluster.
-	//       This code can be removed in a future version after giving extension controllers enough time to revendor
-	//       Gardener's extensions library.
-	shootObj.Status.ObservedGeneration = shootObj.Generation
-	if shootObj.Status.LastOperation == nil {
-		shootObj.Status.LastOperation = &gardencorev1beta1.LastOperation{
-			Type:  gardencorev1beta1.LastOperationTypeCreate,
-			State: gardencorev1beta1.LastOperationStateSucceeded,
-		}
-	}
-
-	_, err = controllerutil.CreateOrUpdate(ctx, seedClient.Client(), cluster, func() error {
-		cluster.Spec.CloudProfile = runtime.RawExtension{Object: cloudProfileObj}
-		cluster.Spec.Seed = runtime.RawExtension{Object: seedObj}
-		cluster.Spec.Shoot = runtime.RawExtension{Object: shootObj}
-		return nil
-	})
-	return err
+	return common.SyncClusterResourceToSeed(ctx, seedClient.Client(), clusterName, shoot, cloudProfile, seed)
 }
 
 func (c *Controller) checkSeedAndSyncClusterResource(ctx context.Context, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) error {
