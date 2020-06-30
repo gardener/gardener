@@ -34,7 +34,7 @@ spec:
         - --monitoringAddr=
         - --grpcAddr=
         - --httpAddr=localhost:8080
-        - --httpsAddr=:15017
+        - --httpsAddr=":{{ .Values.ports.https }}"
         - --log_output_level=all:warn,ads:error
         - --domain={{ .Values.trustDomain }}
         - --plugins=authn,authz,health # remove mixer plugin
@@ -42,7 +42,7 @@ spec:
         - --keepaliveMaxServerConnectionAge=30m
         ports:
         - containerPort: 15012
-        - containerPort: 15017
+        - containerPort: {{ .Values.ports.https }}
         readinessProbe:
           exec:
             command:
