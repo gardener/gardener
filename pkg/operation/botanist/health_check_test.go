@@ -900,46 +900,74 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#PardonCondition",
-		func(lastOp *gardencorev1beta1.LastOperation, condition gardencorev1beta1.Condition, expected types.GomegaMatcher) {
-			updatedCondition := botanist.PardonCondition(lastOp, condition)
+		func(condition gardencorev1beta1.Condition, lastOp *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError, expected types.GomegaMatcher) {
+			updatedCondition := botanist.PardonCondition(condition, lastOp, lastErrors)
 			Expect(&updatedCondition).To(expected)
 		},
 		Entry("should pardon false ConditionStatus when the last operation is nil",
-			nil,
 			gardencorev1beta1.Condition{
 				Type:   gardencorev1beta1.ShootAPIServerAvailable,
 				Status: gardencorev1beta1.ConditionFalse,
 			},
+			nil,
+			nil,
 			beConditionWithStatus(gardencorev1beta1.ConditionProgressing)),
 		Entry("should pardon false ConditionStatus when the last operation is create processing",
+			gardencorev1beta1.Condition{
+				Type:   gardencorev1beta1.ShootAPIServerAvailable,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
 			&gardencorev1beta1.LastOperation{
 				Type:  gardencorev1beta1.LastOperationTypeCreate,
 				State: gardencorev1beta1.LastOperationStateProcessing,
 			},
+			nil,
+			beConditionWithStatus(gardencorev1beta1.ConditionProgressing)),
+		Entry("should pardon false ConditionStatus when the last operation is delete processing",
 			gardencorev1beta1.Condition{
 				Type:   gardencorev1beta1.ShootAPIServerAvailable,
 				Status: gardencorev1beta1.ConditionFalse,
 			},
-			beConditionWithStatus(gardencorev1beta1.ConditionProgressing)),
-		Entry("should pardon false ConditionStatus when the last operation is delete processing",
 			&gardencorev1beta1.LastOperation{
 				Type:  gardencorev1beta1.LastOperationTypeDelete,
 				State: gardencorev1beta1.LastOperationStateProcessing,
 			},
+			nil,
+			beConditionWithStatus(gardencorev1beta1.ConditionProgressing)),
+		Entry("should pardon false ConditionStatus when the last operation is processing and no last errors",
 			gardencorev1beta1.Condition{
 				Type:   gardencorev1beta1.ShootAPIServerAvailable,
 				Status: gardencorev1beta1.ConditionFalse,
 			},
+			&gardencorev1beta1.LastOperation{
+				Type:  gardencorev1beta1.LastOperationTypeReconcile,
+				State: gardencorev1beta1.LastOperationStateProcessing,
+			},
+			nil,
 			beConditionWithStatus(gardencorev1beta1.ConditionProgressing)),
+		Entry("should not pardon false ConditionStatus when the last operation is processing and last errors",
+			gardencorev1beta1.Condition{
+				Type:   gardencorev1beta1.ShootAPIServerAvailable,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+			&gardencorev1beta1.LastOperation{
+				Type:  gardencorev1beta1.LastOperationTypeReconcile,
+				State: gardencorev1beta1.LastOperationStateProcessing,
+			},
+			[]gardencorev1beta1.LastError{
+				{Description: "error"},
+			},
+			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 		Entry("should not pardon false ConditionStatus when the last operation is create succeeded",
+			gardencorev1beta1.Condition{
+				Type:   gardencorev1beta1.ShootAPIServerAvailable,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
 			&gardencorev1beta1.LastOperation{
 				Type:  gardencorev1beta1.LastOperationTypeCreate,
 				State: gardencorev1beta1.LastOperationStateSucceeded,
 			},
-			gardencorev1beta1.Condition{
-				Type:   gardencorev1beta1.ShootAPIServerAvailable,
-				Status: gardencorev1beta1.ConditionFalse,
-			},
+			nil,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 	)
 })

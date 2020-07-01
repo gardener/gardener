@@ -38,7 +38,8 @@ func shootControlPlaneNotRunningConstraint(condition gardencorev1beta1.Condition
 func (b *Botanist) ConstraintsChecks(ctx context.Context, initializeShootClients func() error, hibernation gardencorev1beta1.Condition) gardencorev1beta1.Condition {
 	hibernationPossible := b.constraintsChecks(ctx, initializeShootClients, hibernation)
 	lastOp := b.Shoot.Info.Status.LastOperation
-	return PardonCondition(lastOp, hibernationPossible)
+	lastErrors := b.Shoot.Info.Status.LastErrors
+	return PardonCondition(hibernationPossible, lastOp, lastErrors)
 }
 
 func (b *Botanist) constraintsChecks(ctx context.Context, initializeShootClients func() error, hibernationConstraint gardencorev1beta1.Condition) gardencorev1beta1.Condition {
