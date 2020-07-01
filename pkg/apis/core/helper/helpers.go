@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
@@ -57,58 +56,49 @@ func QuotaScope(scopeRef corev1.ObjectReference) (string, error) {
 	return "", fmt.Errorf("unknown quota scope")
 }
 
-// DetermineLatestExpirableVersion determines the latest ExpirableVersion from a slice of ExpirableVersions
-func DetermineLatestExpirableVersion(offeredVersions []core.ExpirableVersion) (core.ExpirableVersion, error) {
-	var latestExpirableVersion core.ExpirableVersion
-
-	for _, version := range offeredVersions {
-		if len(latestExpirableVersion.Version) == 0 {
-			latestExpirableVersion = version
-			continue
-		}
-		isGreater, err := versionutils.CompareVersions(version.Version, ">", latestExpirableVersion.Version)
-		if err != nil {
-			return core.ExpirableVersion{}, fmt.Errorf("error while comparing versions: %s", err.Error())
-		}
-		if isGreater {
-			latestExpirableVersion = version
-		}
-	}
-	return latestExpirableVersion, nil
-}
-
 // DetermineLatestMachineImageVersions determines the latest versions (semVer) of the given machine images from a slice of machine images
 func DetermineLatestMachineImageVersions(images []core.MachineImage) (map[string]core.ExpirableVersion, error) {
 	resultMapVersions := make(map[string]core.ExpirableVersion)
 
 	for _, image := range images {
-		latestMachineImageVersion, err := DetermineLatestMachineImageVersion(image)
+		latestMachineImageVersion, err := DetermineLatestExpirableVersion(image.Versions, false)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to determine latest machine image version for image '%s': %v", image.Name, err)
 		}
 		resultMapVersions[image.Name] = latestMachineImageVersion
 	}
 	return resultMapVersions, nil
 }
 
-// DetermineLatestMachineImageVersion determines the latest MachineImageVersion from a MachineImage
-func DetermineLatestMachineImageVersion(image core.MachineImage) (core.ExpirableVersion, error) {
+// DetermineLatestExpirableVersion determines the latest ExpirableVersion from a slice of ExpirableVersions
+// when filterPreviewVersions is set, versions with classification preview are not considered
+func DetermineLatestExpirableVersion(versions []core.ExpirableVersion, filterPreviewVersions bool) (core.ExpirableVersion, error) {
 	var (
-		latestSemVerVersion       *semver.Version
-		latestMachineImageVersion core.ExpirableVersion
+		latestSemVerVersion    *semver.Version
+		latestExpirableVersion core.ExpirableVersion
 	)
 
-	for _, imageVersion := range image.Versions {
-		v, err := semver.NewVersion(imageVersion.Version)
+	for _, version := range versions {
+		v, err := semver.NewVersion(version.Version)
 		if err != nil {
-			return core.ExpirableVersion{}, fmt.Errorf("error while parsing machine image version '%s' of machine image '%s': version not valid: %s", imageVersion.Version, image.Name, err.Error())
+			return core.ExpirableVersion{}, fmt.Errorf("error while parsing expirable version '%s': %s", version.Version, err.Error())
 		}
+
+		if filterPreviewVersions && version.Classification != nil && *version.Classification == core.ClassificationPreview {
+			continue
+		}
+
 		if latestSemVerVersion == nil || v.GreaterThan(latestSemVerVersion) {
 			latestSemVerVersion = v
-			latestMachineImageVersion = imageVersion
+			latestExpirableVersion = version
 		}
 	}
-	return latestMachineImageVersion, nil
+
+	if latestSemVerVersion == nil {
+		return core.ExpirableVersion{}, fmt.Errorf("unable to determine latest expirable version")
+	}
+
+	return latestExpirableVersion, nil
 }
 
 // ShootWantsBasicAuthentication returns true if basic authentication is not configured or

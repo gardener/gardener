@@ -95,6 +95,9 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.kubernetes.versions"),
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.versions"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.machineImages"),
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
@@ -211,6 +214,9 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.kubernetes.versions"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.kubernetes.versions"),
 					}))))
 				})
@@ -347,6 +353,9 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.machineImages[0].versions"),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.machineImages"),
 					}))))
 				})
 

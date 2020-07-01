@@ -1124,15 +1124,21 @@ var _ = Describe("validator", func() {
 				Expect(err).To(BeForbiddenError())
 			})
 
-			It("should use latest machine image as old shoot does not specify one", func() {
+			It("should use latest non-preview machine image as old shoot does not specify one", func() {
 				imageName := "some-image"
 				version1 := "1.1.1"
 				version2 := "2.2.2"
+				version3 := "2.2.3"
+				classificationPreview := core.ClassificationPreview
 
 				cloudProfile.Spec.MachineImages = []core.MachineImage{
 					{
 						Name: imageName,
 						Versions: []core.ExpirableVersion{
+							{
+								Version:        version3,
+								Classification: &classificationPreview,
+							},
 							{
 								Version: version2,
 							},

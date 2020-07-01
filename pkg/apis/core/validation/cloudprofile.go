@@ -151,9 +151,9 @@ func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *fie
 	if len(kubernetes.Versions) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("versions"), "must provide at least one Kubernetes version"))
 	}
-	latestKubernetesVersion, err := helper.DetermineLatestExpirableVersion(kubernetes.Versions)
+	latestKubernetesVersion, err := helper.DetermineLatestExpirableVersion(kubernetes.Versions, false)
 	if err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath, latestKubernetesVersion, "failed to determine latest kubernetes version from cloud profile"))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("versions"), latestKubernetesVersion.Version, "failed to determine the latest kubernetes version from the cloud profile"))
 	}
 	if latestKubernetesVersion.ExpirationDate != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("versions[]").Child("expirationDate"), latestKubernetesVersion.ExpirationDate, fmt.Sprintf("expiration date of latest kubernetes version ('%s') must not be set", latestKubernetesVersion.Version)))
@@ -249,7 +249,7 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 
 	latestMachineImages, err := helper.DetermineLatestMachineImageVersions(machineImages)
 	if err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath, latestMachineImages, "failed to determine latest machine images from cloud profile"))
+		allErrs = append(allErrs, field.Invalid(fldPath, latestMachineImages, err.Error()))
 	}
 
 	for imageName, latestImage := range latestMachineImages {
