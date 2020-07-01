@@ -304,18 +304,18 @@ func GetDeploymentReplicas(ctx context.Context, client client.Client, namespace,
 	return replicas, nil
 }
 
-// ShootCreationCompleted checks if a shoot is successfully reconciled.
-func ShootCreationCompleted(newShoot *gardencorev1beta1.Shoot) bool {
+// ShootCreationCompleted checks if a shoot is successfully reconciled. In case it is not, it also returns a descriptive message stating the reason.
+func ShootCreationCompleted(newShoot *gardencorev1beta1.Shoot) (bool, string) {
 	if newShoot.Generation != newShoot.Status.ObservedGeneration {
-		return false
+		return false, "shoot generation did not equal observed generation"
 	}
 	if len(newShoot.Status.Conditions) == 0 && newShoot.Status.LastOperation == nil {
-		return false
+		return false, "no conditions and last operation present yet"
 	}
 
 	for _, condition := range newShoot.Status.Conditions {
 		if condition.Status != gardencorev1beta1.ConditionTrue {
-			return false
+			return false, fmt.Sprintf("condition type %s is not true yet, had message %s with reason %s", condition.Type, condition.Message, condition.Reason)
 		}
 	}
 
@@ -323,12 +323,12 @@ func ShootCreationCompleted(newShoot *gardencorev1beta1.Shoot) bool {
 		if newShoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate ||
 			newShoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeReconcile {
 			if newShoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
-				return false
+				return false, "last operation type was create or reconcile but state was not succeeded"
 			}
 		}
 	}
 
-	return true
+	return true, ""
 }
 
 // DownloadKubeconfig downloads the shoot Kubeconfig

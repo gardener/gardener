@@ -305,10 +305,11 @@ func (f *GardenerFramework) WaitForShootToBeCreated(ctx context.Context, shoot *
 			return retry.MinorError(err)
 		}
 		*shoot = *newShoot
-		if ShootCreationCompleted(shoot) {
+		completed, msg := ShootCreationCompleted(shoot)
+		if completed {
 			return retry.Ok()
 		}
-		f.Logger.Infof("Waiting for shoot %s to be created", shoot.Name)
+		f.Logger.Infof("Shoot %s not yet created successfully (%s)", shoot.Name, msg)
 		if shoot.Status.LastOperation != nil {
 			f.Logger.Infof("%d%%: Shoot State: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
 		}
@@ -347,10 +348,11 @@ func (f *GardenerFramework) WaitForShootToBeReconciled(ctx context.Context, shoo
 			return retry.MinorError(err)
 		}
 		shoot = newShoot
-		if ShootCreationCompleted(shoot) {
+		completed, msg := ShootCreationCompleted(shoot)
+		if completed {
 			return retry.Ok()
 		}
-		f.Logger.Infof("Waiting for shoot %s to be reconciled", shoot.Name)
+		f.Logger.Infof("Shoot %s not yet reconciled successfully (%s)", shoot.Name, msg)
 		if newShoot.Status.LastOperation != nil {
 			f.Logger.Debugf("%d%%: Shoot State: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
 		}

@@ -73,9 +73,12 @@ var _ = Describe("Shoot reconciliation testing", func() {
 					f.Logger.Debugf("last acted gardener version %s does not match current gardener version %s", shoot.Status.Gardener.Version, *gardenerVersion)
 					continue
 				}
-				if framework.ShootCreationCompleted(&shoot) {
+				if completed, msg := framework.ShootCreationCompleted(&shoot); completed {
 					reconciledShoots++
+				} else {
+					f.Logger.Debugf("Shoot %s not yet reconciled successfully (%s)", shoot.Name, msg)
 				}
+
 			}
 
 			if reconciledShoots != len(shoots.Items) {
