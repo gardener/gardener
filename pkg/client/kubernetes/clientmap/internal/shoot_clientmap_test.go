@@ -66,21 +66,24 @@ var _ = Describe("ShootClientMap", func() {
 
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "garden-of-eden",
+				Namespace: "garden-eden",
 				Name:      "forbidden-fruit",
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				SeedName: pointer.StringPtr("apple-seed"),
 			},
 			Status: gardencorev1beta1.ShootStatus{
-				TechnicalID: "shoot--garden-of-eden--forbidden-fruit",
+				TechnicalID: "shoot--eden--forbidden-fruit",
 			},
 		}
 
 		internal.ProjectForNamespaceWithClient = func(ctx context.Context, c client.Client, namespaceName string) (*gardencorev1beta1.Project, error) {
 			return &gardencorev1beta1.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "eden",
+				},
 				Spec: gardencorev1beta1.ProjectSpec{
-					Namespace: pointer.StringPtr("garden-of-eden"),
+					Namespace: pointer.StringPtr("garden-eden"),
 				}}, nil
 		}
 		internal.LookupHost = func(host string) ([]string, error) {
@@ -169,6 +172,8 @@ var _ = Describe("ShootClientMap", func() {
 		})
 
 		It("should fail if ProjectForNamespaceWithClient fails", func() {
+			shoot.Status.TechnicalID = "" // trigger retrieval of project instead of relying on shoot status
+
 			fakeErr := fmt.Errorf("fake")
 			mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
 				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
@@ -185,6 +190,9 @@ var _ = Describe("ShootClientMap", func() {
 		})
 
 		It("should use external kubeconfig if LookupHost fails (out-of-cluster)", func() {
+			technicalID := shoot.Status.TechnicalID
+			shoot.Status.TechnicalID = "" // trigger retrieval of project instead of relying on shoot status
+
 			fakeErr := fmt.Errorf("fake")
 			mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
 				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
@@ -197,7 +205,7 @@ var _ = Describe("ShootClientMap", func() {
 
 			internal.NewClientFromSecret = func(ctx context.Context, c client.Client, namespace, secretName string, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				Expect(c).To(BeIdenticalTo(fakeSeedClientSet.Client()))
-				Expect(namespace).To(Equal(shoot.Status.TechnicalID))
+				Expect(namespace).To(Equal(technicalID))
 				Expect(secretName).To(Equal("gardener"))
 				return nil, fakeErr
 			}
@@ -244,6 +252,10 @@ var _ = Describe("ShootClientMap", func() {
 				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 					shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
 					return nil
+				}).Times(2)
+			mockSeedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Status.TechnicalID, Name: "gardener"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					return nil
 				})
 
 			internal.NewClientFromSecret = func(ctx context.Context, c client.Client, namespace, secretName string, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
@@ -256,6 +268,60 @@ var _ = Describe("ShootClientMap", func() {
 			cs, err := cm.GetClient(ctx, key)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cs).To(BeIdenticalTo(fakeCS))
+		})
+	})
+
+	Context("#CalculateClientSetHash", func() {
+		It("should fail if ClientSetKey type is unsupported", func() {
+			key = fakeKey{}
+			hash, err := factory.CalculateClientSetHash(ctx, key)
+			Expect(hash).To(BeEmpty())
+			Expect(err).To(MatchError(ContainSubstring("unsupported ClientSetKey")))
+		})
+
+		It("should fail if getSeedNamespace fails", func() {
+			fakeErr := fmt.Errorf("fake")
+			factory.GetGardenClient = func(ctx context.Context) (kubernetes.Interface, error) {
+				return nil, fakeErr
+			}
+
+			hash, err := factory.CalculateClientSetHash(ctx, key)
+			Expect(hash).To(BeEmpty())
+			Expect(err).To(MatchError(ContainSubstring("failed to get garden client: fake")))
+		})
+
+		It("should fail if Get gardener Secret fails", func() {
+			fakeErr := fmt.Errorf("fake")
+			mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
+					return nil
+				})
+			mockSeedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Status.TechnicalID, Name: "gardener"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					return fakeErr
+				})
+
+			hash, err := factory.CalculateClientSetHash(ctx, key)
+			Expect(hash).To(BeEmpty())
+			Expect(err).To(MatchError("fake"))
+		})
+
+		It("should correctly calculate hash", func() {
+			mockGardenClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
+					return nil
+				})
+			mockSeedClient.EXPECT().Get(ctx, client.ObjectKey{Namespace: shoot.Status.TechnicalID, Name: "gardener"}, gomock.AssignableToTypeOf(&corev1.Secret{})).
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
+					return nil
+				})
+
+			hash, err := factory.CalculateClientSetHash(ctx, key)
+			Expect(hash).To(Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

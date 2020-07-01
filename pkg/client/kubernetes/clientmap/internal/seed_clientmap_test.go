@@ -178,6 +178,10 @@ var _ = Describe("SeedClientMap", func() {
 				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 					seed.DeepCopyInto(obj.(*gardencorev1beta1.Seed))
 					return nil
+				}).Times(2)
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seed.Spec.SecretRef.Namespace, Name: seed.Spec.SecretRef.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					return nil
 				})
 			internal.NewClientFromSecret = func(ctx context.Context, c client.Client, namespace, secretName string, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				Expect(c).To(BeIdenticalTo(fakeGardenClient.Client()))
@@ -189,6 +193,60 @@ var _ = Describe("SeedClientMap", func() {
 			cs, err := cm.GetClient(ctx, key)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cs).To(BeIdenticalTo(fakeCS))
+		})
+	})
+
+	Context("#CalculateClientSetHash", func() {
+		It("should fail if ClientSetKey type is unsupported", func() {
+			key = fakeKey{}
+			hash, err := factory.CalculateClientSetHash(ctx, key)
+			Expect(hash).To(BeEmpty())
+			Expect(err).To(MatchError(ContainSubstring("unsupported ClientSetKey")))
+		})
+
+		It("should fail if getSeedSecretRef fails", func() {
+			fakeErr := fmt.Errorf("fake")
+			factory.GetGardenClient = func(ctx context.Context) (kubernetes.Interface, error) {
+				return nil, fakeErr
+			}
+
+			hash, err := factory.CalculateClientSetHash(ctx, key)
+			Expect(hash).To(BeEmpty())
+			Expect(err).To(MatchError(ContainSubstring("failed to get garden client: fake")))
+		})
+
+		It("should fail if Get Seed Secret fails", func() {
+			fakeErr := fmt.Errorf("fake")
+			c.EXPECT().Get(ctx, client.ObjectKey{Name: seed.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					seed.DeepCopyInto(obj.(*gardencorev1beta1.Seed))
+					return nil
+				})
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seed.Spec.SecretRef.Namespace, Name: seed.Spec.SecretRef.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					return fakeErr
+				})
+
+			hash, err := factory.CalculateClientSetHash(ctx, key)
+			Expect(hash).To(BeEmpty())
+			Expect(err).To(MatchError("fake"))
+		})
+
+		It("should correctly calculate hash", func() {
+			c.EXPECT().Get(ctx, client.ObjectKey{Name: seed.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					seed.DeepCopyInto(obj.(*gardencorev1beta1.Seed))
+					return nil
+				})
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seed.Spec.SecretRef.Namespace, Name: seed.Spec.SecretRef.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
+					return nil
+				})
+
+			hash, err := factory.CalculateClientSetHash(ctx, key)
+			Expect(hash).To(Equal("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

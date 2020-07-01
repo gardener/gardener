@@ -19,12 +19,14 @@ import (
 	"fmt"
 
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	baseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // seedClientMap is a ClientMap for requesting and storing clients for Seed clusters.
@@ -51,11 +53,36 @@ type SeedClientSetFactory struct {
 	ClientConnectionConfig baseconfig.ClientConnectionConfiguration
 }
 
+// CalculateClientSetHash returns "" if the gardenlet uses in-cluster communication. Otherwise, it calculates a SHA256
+// hash of the kubeconfig in the seed secret.
+func (f *SeedClientSetFactory) CalculateClientSetHash(ctx context.Context, k clientmap.ClientSetKey) (string, error) {
+	key, ok := k.(SeedClientSetKey)
+	if !ok {
+		return "", fmt.Errorf("unsupported ClientSetKey: expected %T got %T", SeedClientSetKey(""), k)
+	}
+
+	if f.InCluster {
+		return "", nil
+	}
+
+	secretRef, gardenClient, err := f.getSeedSecretRef(ctx, key)
+	if err != nil {
+		return "", err
+	}
+
+	kubeconfigSecret := &corev1.Secret{}
+	if err := gardenClient.Client().Get(ctx, client.ObjectKey{Namespace: secretRef.Namespace, Name: secretRef.Name}, kubeconfigSecret); err != nil {
+		return "", err
+	}
+
+	return utils.ComputeSHA256Hex(kubeconfigSecret.Data[kubernetes.KubeConfig]), nil
+}
+
 // NewClientSet creates a new ClientSet for a Seed cluster.
 func (f *SeedClientSetFactory) NewClientSet(ctx context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, error) {
 	key, ok := k.(SeedClientSetKey)
 	if !ok {
-		return nil, fmt.Errorf("call to GetClient with unsupported ClientSetKey: expected %T got %T", SeedClientSetKey(""), k)
+		return nil, fmt.Errorf("unsupported ClientSetKey: expected %T got %T", SeedClientSetKey(""), k)
 	}
 
 	if f.InCluster {
@@ -71,26 +98,35 @@ func (f *SeedClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cli
 		)
 	}
 
-	gardenClient, err := f.GetGardenClient(ctx)
+	secretRef, gardenClient, err := f.getSeedSecretRef(ctx, key)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get garden client: %w", err)
+		return nil, err
 	}
 
-	seed := &gardencorev1beta1.Seed{}
-	if err := gardenClient.Client().Get(ctx, client.ObjectKey{Name: key.Key()}, seed); err != nil {
-		return nil, fmt.Errorf("failed to get Seed object %q: %w", key.Key(), err)
-	}
-
-	if seed.Spec.SecretRef == nil {
-		return nil, fmt.Errorf("seed %q does not have a secretRef", key.Key())
-	}
-
-	return NewClientFromSecret(ctx, gardenClient.Client(), seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name,
+	return NewClientFromSecret(ctx, gardenClient.Client(), secretRef.Namespace, secretRef.Name,
 		kubernetes.WithClientConnectionOptions(f.ClientConnectionConfig),
 		kubernetes.WithClientOptions(client.Options{
 			Scheme: kubernetes.SeedScheme,
 		}),
 	)
+}
+
+func (f *SeedClientSetFactory) getSeedSecretRef(ctx context.Context, key SeedClientSetKey) (*corev1.SecretReference, kubernetes.Interface, error) {
+	gardenClient, err := f.GetGardenClient(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get garden client: %w", err)
+	}
+
+	seed := &gardencorev1beta1.Seed{}
+	if err := gardenClient.Client().Get(ctx, client.ObjectKey{Name: key.Key()}, seed); err != nil {
+		return nil, nil, fmt.Errorf("failed to get Seed object %q: %w", key.Key(), err)
+	}
+
+	if seed.Spec.SecretRef == nil {
+		return nil, nil, fmt.Errorf("seed %q does not have a secretRef", key.Key())
+	}
+
+	return seed.Spec.SecretRef, gardenClient, nil
 }
 
 // SeedClientSetKey is a ClientSetKey for a Seed cluster.

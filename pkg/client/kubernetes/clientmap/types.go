@@ -53,4 +53,7 @@ type ClientSetKey interface {
 type ClientSetFactory interface {
 	// NewClientSet constructs a new ClientSet for the given key.
 	NewClientSet(ctx context.Context, key ClientSetKey) (kubernetes.Interface, error)
+	// CalculateClientSetHash calculates a hash for the configuration that is used to construct a ClientSet
+	// (e.g. kubeconfig secret) to detect if it has changed mid-air and the ClientSet should be refreshed.
+	CalculateClientSetHash(ctx context.Context, key ClientSetKey) (string, error)
 }

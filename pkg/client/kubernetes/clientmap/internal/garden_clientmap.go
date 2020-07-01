@@ -46,11 +46,16 @@ type GardenClientSetFactory struct {
 	RESTConfig *rest.Config
 }
 
+// CalculateClientSetHash returns "" as the garden client config cannot change during runtime
+func (f *GardenClientSetFactory) CalculateClientSetHash(context.Context, clientmap.ClientSetKey) (string, error) {
+	return "", nil
+}
+
 // NewClientSet creates a new ClientSet to the garden cluster.
 func (f *GardenClientSetFactory) NewClientSet(_ context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, error) {
 	_, ok := k.(GardenClientSetKey)
 	if !ok {
-		return nil, fmt.Errorf("call to GetClient with unsupported ClientSetKey: expected %T got %T", GardenClientSetKey{}, k)
+		return nil, fmt.Errorf("unsupported ClientSetKey: expected %T got %T", GardenClientSetKey{}, k)
 	}
 
 	return NewClientSetWithConfig(
