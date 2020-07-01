@@ -167,7 +167,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		})
 		waitUntilInfrastructureReady = g.Add(flow.Task{
 			Name:         "Waiting until shoot infrastructure has been reconciled",
-			Fn:           flow.TaskFn(botanist.WaitUntilInfrastructureReady),
+			Fn:           botanist.WaitForInfrastructure,
 			Dependencies: flow.NewTaskIDs(deployInfrastructure),
 		})
 		_ = g.Add(flow.Task{
@@ -297,15 +297,15 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Fn:           flow.TaskFn(botanist.DeployGardenerResourceManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
-		deployNetworking = g.Add(flow.Task{
+		deployNetwork = g.Add(flow.Task{
 			Name:         "Deploying shoot network plugin",
 			Fn:           flow.TaskFn(botanist.DeployNetwork).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, deployGardenerResourceManager, computeShootOSConfig),
 		})
 		waitUntilNetworkIsReady = g.Add(flow.Task{
 			Name:         "Waiting until shoot network plugin has been reconciled",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Network.Wait),
-			Dependencies: flow.NewTaskIDs(deployNetworking),
+			Fn:           botanist.Shoot.Components.Extensions.Network.Wait,
+			Dependencies: flow.NewTaskIDs(deployNetwork),
 		})
 		deployManagedResources = g.Add(flow.Task{
 			Name:         "Deploying managed resources",
@@ -364,12 +364,12 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying External DNS Entry", // delete DNS entries during hibernation.
-			Fn:           flow.TaskFn(botanist.Shoot.Components.DNS.ExternalEntry.Destroy).DoIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.DNS.ExternalEntry.Destroy).DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying Internal DNS Entry", // delete DNS entries during hibernation.
-			Fn:           flow.TaskFn(botanist.Shoot.Components.DNS.InternalEntry.Destroy).DoIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.DNS.InternalEntry.Destroy).DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
 		})
 		deployExtensionResources = g.Add(flow.Task{
@@ -424,7 +424,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		})
 	)
 
-	for k, v := range botanist.Shoot.Components.DNS.AdditionalProviders {
+	for k, v := range botanist.Shoot.Components.Extensions.DNS.AdditionalProviders {
 		_ = g.Add(flow.Task{
 			Name:         fmt.Sprintf("Ensuring additional DNSProvider %q", k),
 			Fn:           flow.TaskFn(component.OpWaiter(v).Deploy).DoIf(!o.Shoot.HibernationEnabled),

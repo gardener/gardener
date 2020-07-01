@@ -70,7 +70,9 @@ var _ = Describe("dns", func() {
 					},
 					SeedNamespace: seedNS,
 					Components: &shoot.Components{
-						DNS: &shoot.DNS{},
+						Extensions: &shoot.Extensions{
+							DNS: &shoot.DNS{},
+						},
 					},
 				},
 				Garden:         &garden.Garden{},
@@ -116,7 +118,7 @@ var _ = Describe("dns", func() {
 
 			b.SetNginxIngressAddress("1.2.3.4", seedClient)
 
-			Expect(b.Shoot.Components.DNS.NginxEntry).To(BeNil())
+			Expect(b.Shoot.Components.Extensions.DNS.NginxEntry).To(BeNil())
 		})
 
 		It("does nothing when hibernated", func() {
@@ -128,7 +130,7 @@ var _ = Describe("dns", func() {
 
 			b.SetNginxIngressAddress("1.2.3.4", seedClient)
 
-			Expect(b.Shoot.Components.DNS.NginxEntry).To(BeNil())
+			Expect(b.Shoot.Components.Extensions.DNS.NginxEntry).To(BeNil())
 		})
 
 		It("does nothing when nginx is disabled", func() {
@@ -141,7 +143,7 @@ var _ = Describe("dns", func() {
 
 			b.SetNginxIngressAddress("1.2.3.4", seedClient)
 
-			Expect(b.Shoot.Components.DNS.NginxEntry).To(BeNil())
+			Expect(b.Shoot.Components.Extensions.DNS.NginxEntry).To(BeNil())
 		})
 
 		It("sets an entry which creates DNSEntry", func() {
@@ -154,8 +156,8 @@ var _ = Describe("dns", func() {
 
 			b.SetNginxIngressAddress("1.2.3.4", seedClient)
 
-			Expect(b.Shoot.Components.DNS.NginxEntry).ToNot(BeNil())
-			Expect(b.Shoot.Components.DNS.NginxEntry.Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(b.Shoot.Components.Extensions.DNS.NginxEntry).ToNot(BeNil())
+			Expect(b.Shoot.Components.Extensions.DNS.NginxEntry.Deploy(ctx)).ToNot(HaveOccurred())
 
 			found := &dnsv1alpha1.DNSEntry{}
 			err := seedClient.Get(ctx, types.NamespacedName{Name: "ingress", Namespace: seedNS}, found)

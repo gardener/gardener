@@ -67,14 +67,14 @@ func (b *Botanist) DeployExternalDNS(ctx context.Context) error {
 func (b *Botanist) ExternalDNS() component.Deployer {
 	if b.NeedsExternalDNS() {
 		return component.OpWaiter(
-			b.Shoot.Components.DNS.ExternalProvider,
-			b.Shoot.Components.DNS.ExternalEntry,
+			b.Shoot.Components.Extensions.DNS.ExternalProvider,
+			b.Shoot.Components.Extensions.DNS.ExternalEntry,
 		)
 	}
 
 	return component.OpWaiter(
-		b.Shoot.Components.DNS.ExternalEntry,
-		b.Shoot.Components.DNS.ExternalProvider,
+		b.Shoot.Components.Extensions.DNS.ExternalEntry,
+		b.Shoot.Components.Extensions.DNS.ExternalProvider,
 	)
 }
 
@@ -88,14 +88,14 @@ func (b *Botanist) DeployInternalDNS(ctx context.Context) error {
 func (b *Botanist) InternalDNS() component.Deployer {
 	if b.NeedsInternalDNS() {
 		return component.OpWaiter(
-			b.Shoot.Components.DNS.InternalProvider,
-			b.Shoot.Components.DNS.InternalEntry,
+			b.Shoot.Components.Extensions.DNS.InternalProvider,
+			b.Shoot.Components.Extensions.DNS.InternalEntry,
 		)
 	}
 
 	return component.OpWaiter(
-		b.Shoot.Components.DNS.InternalEntry,
-		b.Shoot.Components.DNS.InternalProvider,
+		b.Shoot.Components.Extensions.DNS.InternalEntry,
+		b.Shoot.Components.Extensions.DNS.InternalProvider,
 	)
 }
 

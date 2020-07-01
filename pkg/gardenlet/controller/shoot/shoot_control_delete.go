@@ -314,12 +314,12 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 		})
 		destroyNetwork = g.Add(flow.Task{
 			Name:         "Destroying shoot network plugin",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Network.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Network.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(cleanShootNamespaces),
 		})
 		waitUntilNetworkIsDestroyed = g.Add(flow.Task{
 			Name:         "Waiting until shoot network plugin has been destroyed",
-			Fn:           botanist.Shoot.Components.Network.WaitCleanup,
+			Fn:           botanist.Shoot.Components.Extensions.Network.WaitCleanup,
 			Dependencies: flow.NewTaskIDs(destroyNetwork),
 		})
 		destroyWorker = g.Add(flow.Task{
@@ -429,22 +429,22 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 
 		destroyNginxIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying ingress DNS record",
-			Fn:           flow.TaskFn(component.OpDestroyAndWait(botanist.Shoot.Components.DNS.NginxEntry).Destroy),
+			Fn:           flow.TaskFn(component.OpDestroyAndWait(botanist.Shoot.Components.Extensions.DNS.NginxEntry).Destroy),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 		destroyInfrastructure = g.Add(flow.Task{
 			Name:         "Destroying shoot infrastructure",
-			Fn:           flow.TaskFn(botanist.DestroyInfrastructure).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Infrastructure.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted),
 		})
 		waitUntilInfrastructureDeleted = g.Add(flow.Task{
 			Name:         "Waiting until shoot infrastructure has been destroyed",
-			Fn:           botanist.WaitUntilInfrastructureDeleted,
+			Fn:           botanist.Shoot.Components.Extensions.Infrastructure.WaitCleanup,
 			Dependencies: flow.NewTaskIDs(destroyInfrastructure),
 		})
 		destroyExternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying external DNS entry",
-			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.DNS.ExternalEntry).Destroy),
+			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.Extensions.DNS.ExternalEntry).Destroy),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 
@@ -460,7 +460,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 
 		destroyInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying internal DNS entry",
-			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.DNS.InternalEntry).Destroy),
+			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.Extensions.DNS.InternalEntry).Destroy),
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
 		deleteDNSProviders = g.Add(flow.Task{

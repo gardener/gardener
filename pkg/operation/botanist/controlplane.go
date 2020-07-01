@@ -1379,7 +1379,7 @@ func (b *Botanist) setAPIServerAddress(address string) {
 	b.Operation.APIServerAddress = address
 
 	if b.NeedsInternalDNS() {
-		b.Shoot.Components.DNS.InternalEntry = dns.NewDNSEntry(
+		b.Shoot.Components.Extensions.DNS.InternalEntry = dns.NewDNSEntry(
 			&dns.EntryValues{
 				Name:    DNSInternalName,
 				DNSName: common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
@@ -1395,7 +1395,7 @@ func (b *Botanist) setAPIServerAddress(address string) {
 	}
 
 	if b.NeedsExternalDNS() {
-		b.Shoot.Components.DNS.ExternalEntry = dns.NewDNSEntry(
+		b.Shoot.Components.Extensions.DNS.ExternalEntry = dns.NewDNSEntry(
 			&dns.EntryValues{
 				Name:    DNSExternalName,
 				DNSName: common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
