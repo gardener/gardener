@@ -90,13 +90,15 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 		}
 	}
 
-	if b.Shoot.KonnectivityTunnelEnabled {
-		if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, "vpn-seed", "vpn-seed-tlsauth", "vpn-shoot"); err != nil {
-			return err
-		}
-	} else {
-		if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, common.KonnectivityServerKubeconfig, common.KonnectivityServerCertName); err != nil {
-			return err
+	if b.Shoot.Info.DeletionTimestamp != nil {
+		if b.Shoot.KonnectivityTunnelEnabled {
+			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, "vpn-seed", "vpn-seed-tlsauth", "vpn-shoot"); err != nil {
+				return err
+			}
+		} else {
+			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, common.KonnectivityServerKubeconfig, common.KonnectivityServerCertName); err != nil {
+				return err
+			}
 		}
 	}
 
