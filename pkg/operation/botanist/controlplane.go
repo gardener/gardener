@@ -1365,7 +1365,7 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 			},
 			Name:                     v1beta1constants.DeploymentNameKubeAPIServer,
 			IstioIngressNamespace:    common.IstioIngressGatewayNamespace,
-			EnableKonnectivityTunnel: gardenletfeatures.FeatureGate.Enabled(features.KonnectivityTunnel),
+			EnableKonnectivityTunnel: b.Shoot.KonnectivityTunnelEnabled,
 		},
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),
