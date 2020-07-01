@@ -35,13 +35,28 @@ After you depoyed it yourself into your seed clusters, it initializes a bootstra
 * Gardenlet starts up with a bootstrap kubeconfig having a bootstrap token that allows to create `CertificateSigningRequest` resources
 * After the CSR is signed it downloads the created client certificate, creates a new kubeconfig with it, and stores it inside a `Secret` in the seed cluster
 * It deletes the bootstrap kubeconfig secret and starts up with its new kubeconfig
+* Gardenlet starts normal operation
 
 Basically, you can follow the Kubernetes documentation regarding the process.
 The gardener-controller-manager runs a control loop that automatically signs CSRs created by Gardenlets.
 
-:warning: Certificate rotation is not yet implemented but will follow very soon.
+Optionally, if you don't want to run this bootstrap process, then you can create a kubeconfig pointing to the Garden cluster for the Gardenlet yourself, and simply provide it to it (field `gardenClientConnection.kubeconfig` in the Gardenlet configuration).
 
-Optionally, if you don't want to run this bootstrap process, then you can create a Kubeconfig pointing to the Garden cluster for the Gardenlet yourself, and simply provide it to it.
+### Gardenlet certificate rotation
+
+The Gardenlet tries to automatically rotate the certificate when it approaches expiration of its one year lifetime (at ~80% already passed).
+In order to use certificate rotation, the Gardenlet [component configuration](#component-configuration) needs to set the field `.gardenClientConnection.kubeconfigSecret`, specifying the secret to store the kubeconfig with the rotated certificate.
+
+The same control loop in the gardener-controller-manager that signs the CSRs during the initial TLS Bootstrapping, also automatically signs the CSR during a certificate rotation.
+This works when the Gardenlet created the certificate during the initial TLS Bootstrapping using the Bootstrap kubeconfig. 
+
+However, when trying to rotate a Kubeconfig containing a custom certificate (not created by Gardenlet TLS Bootstrap), the x509 certificate's `Subject` field needs to conform to the following:
+  - the Common Name (CN) is prefixed with `gardener.cloud:system:seed:`
+  - the Organisation (O) equals `gardener.cloud:system:seeds`
+
+Otherwise, the gardener-controller-manager will not automatically sign the CSR.
+In this case, an external component/user needs to approve the CSR manually (e.g. via `kubectl certificate approve  seed-csr-<...>`).
+If that does not happen within 15 minutes, the Gardenlet repeats the process and creates another CSR.
 
 ## Seed Config vs. Seed Selector
 

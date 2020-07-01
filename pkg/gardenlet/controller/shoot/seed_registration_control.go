@@ -33,7 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
+	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -487,14 +487,14 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 
 			clusterRoleBinding := &rbacv1.ClusterRoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: bootstrap.BuildBootstrapperName(shoot.Name),
+					Name: bootstraputil.BuildBootstrapperName(shoot.Name),
 				},
 			}
 			if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient.Client(), clusterRoleBinding, func() error {
 				clusterRoleBinding.RoleRef = rbacv1.RoleRef{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     "ClusterRole",
-					Name:     bootstrap.GardenerSeedBootstrapper,
+					Name:     bootstraputil.GardenerSeedBootstrapper,
 				}
 				clusterRoleBinding.Subjects = []rbacv1.Subject{
 					{
@@ -508,7 +508,7 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 				return err
 			}
 
-			bootstrapKubeconfig, err = bootstrap.MarshalKubeconfigWithToken(&restConfig, string(saSecret.Data[corev1.ServiceAccountTokenKey]))
+			bootstrapKubeconfig, err = bootstraputil.MarshalKubeconfigWithToken(&restConfig, string(saSecret.Data[corev1.ServiceAccountTokenKey]))
 			if err != nil {
 				return err
 			}
@@ -545,7 +545,7 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 				}
 			}
 
-			bootstrapKubeconfig, err = bootstrap.MarshalKubeconfigWithToken(&restConfig, kutil.BootstrapTokenFrom(bootstrapTokenSecret.Data))
+			bootstrapKubeconfig, err = bootstraputil.MarshalKubeconfigWithToken(&restConfig, kutil.BootstrapTokenFrom(bootstrapTokenSecret.Data))
 			if err != nil {
 				return err
 			}
