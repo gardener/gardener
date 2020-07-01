@@ -207,12 +207,12 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		generateEncryptionConfigurationMetaData = g.Add(flow.Task{
 			Name:         "Generating etcd encryption configuration",
 			Fn:           flow.TaskFn(botanist.GenerateEncryptionConfiguration).DoIf(enableEtcdEncryption),
-			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists),
+			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists, loadSecrets, generateSecrets),
 		})
 		persistETCDEncryptionConfiguration = g.Add(flow.Task{
 			Name:         "Persisting etcd encryption configuration in ShootState",
 			Fn:           flow.TaskFn(botanist.PersistEncryptionConfiguration).DoIf(enableEtcdEncryption),
-			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists, generateEncryptionConfigurationMetaData),
+			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists, generateEncryptionConfigurationMetaData, loadSecrets, generateSecrets),
 		})
 		// TODO: This can be removed in a future version once all etcd encryption configuration secrets have been cleaned up.
 		_ = g.Add(flow.Task{

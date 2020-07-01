@@ -192,7 +192,7 @@ func (b *Botanist) updateShootLabelsForEtcdEncryption(ctx context.Context, label
 func (b *Botanist) persistEncryptionConfigInShootState(ctx context.Context) error {
 	shootState := &gardencorev1alpha1.ShootState{ObjectMeta: kutil.ObjectMeta(b.Shoot.Info.Namespace, b.Shoot.Info.Name)}
 	if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), shootState, func() error {
-		gardenerResourceList := gardencorev1alpha1helper.GardenerResourceDataList(b.ShootState.Spec.Gardener)
+		gardenerResourceList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 		if err := infodata.UpsertInfoData(&gardenerResourceList, common.ETCDEncryptionConfigDataName, b.Shoot.ETCDEncryption); err != nil {
 			return err
 		}
