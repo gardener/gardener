@@ -198,3 +198,19 @@ func GetLoadBalancerIngress(ctx context.Context, client client.Client, namespace
 
 	return "", errors.New("`.status.loadBalancer.ingress[]` has an element which does neither contain `.ip` nor `.hostname`")
 }
+
+// LookupObject retrieves an obj for the given object key dealing with potential stale cache that still does not contain the obj.
+// It first tries to retrieve the obj using the given cached client.
+// If the object key is not found, then it does live lookup from the API server using the given apiReader.
+func LookupObject(ctx context.Context, c client.Client, apiReader client.Reader, key client.ObjectKey, obj runtime.Object) error {
+	err := c.Get(ctx, key, obj)
+	if err == nil {
+		return nil
+	}
+	if !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	// Try to get the obj, now by doing a live lookup instead of relying on the cache.
+	return apiReader.Get(ctx, key, obj)
+}
