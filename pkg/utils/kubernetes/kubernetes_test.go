@@ -45,6 +45,11 @@ func TestKubernetes(t *testing.T) {
 }
 
 var _ = Describe("kubernetes", func() {
+	const (
+		namespace = "namespace"
+		name      = "name"
+	)
+
 	var (
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
@@ -61,15 +66,10 @@ var _ = Describe("kubernetes", func() {
 
 	Describe("#Key", func() {
 		It("should return an ObjectKey with namespace and name set", func() {
-			const (
-				namespace = "namespace"
-				name      = "name"
-			)
 			Expect(Key(namespace, name)).To(Equal(client.ObjectKey{Namespace: namespace, Name: name}))
 		})
 
 		It("should return an ObjectKey with only name set", func() {
-			const name = "name"
 			Expect(Key(name)).To(Equal(client.ObjectKey{Name: name}))
 		})
 
@@ -80,15 +80,10 @@ var _ = Describe("kubernetes", func() {
 
 	Describe("#ObjectMeta", func() {
 		It("should return an ObjectKey with namespace and name set", func() {
-			const (
-				namespace = "namespace"
-				name      = "name"
-			)
 			Expect(ObjectMeta(namespace, name)).To(Equal(metav1.ObjectMeta{Namespace: namespace, Name: name}))
 		})
 
 		It("should return an ObjectKey with only name set", func() {
-			const name = "name"
 			Expect(ObjectMeta(name)).To(Equal(metav1.ObjectMeta{Name: name}))
 		})
 
@@ -686,8 +681,6 @@ var _ = Describe("kubernetes", func() {
 
 		Describe("#WaitUntilResourcesDeleted", func() {
 			var (
-				namespace = "bar"
-				name      = "foo"
 				configMap = corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: namespace,
@@ -743,9 +736,7 @@ var _ = Describe("kubernetes", func() {
 
 	Describe("#GetLoadBalancerIngress", func() {
 		var (
-			namespace = "foo"
-			name      = "bar"
-			key       = Key(namespace, name)
+			key = Key(namespace, name)
 		)
 
 		It("should return an unexpected client error", func() {
@@ -818,4 +809,45 @@ var _ = Describe("kubernetes", func() {
 		})
 	})
 
+	Context("#LookupObject", func() {
+		var (
+			ctx       = context.TODO()
+			key       = Key(namespace, name)
+			configMap = &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      name,
+				},
+			}
+
+			apiReader *mockclient.MockClient
+		)
+
+		BeforeEach(func() {
+			apiReader = mockclient.NewMockClient(ctrl)
+		})
+
+		It("should retrieve the obj when cached client can retrieve it", func() {
+			c.EXPECT().Get(ctx, key, configMap)
+
+			err := LookupObject(context.TODO(), c, apiReader, key, configMap)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return error when cached client fails with error other than NotFound error", func() {
+			expectedErr := fmt.Errorf("unexpected")
+			c.EXPECT().Get(ctx, key, configMap).Return(expectedErr)
+
+			err := LookupObject(context.TODO(), c, apiReader, key, configMap)
+			Expect(err).To(BeIdenticalTo(expectedErr))
+		})
+
+		It("should retrieve the obj using the apiReader when cached client fails with NotFound error", func() {
+			c.EXPECT().Get(ctx, key, configMap).Return(apierrors.NewNotFound(schema.GroupResource{}, name))
+			apiReader.EXPECT().Get(ctx, key, configMap)
+
+			err := LookupObject(context.TODO(), c, apiReader, key, configMap)
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
 })
