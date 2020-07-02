@@ -183,15 +183,6 @@ func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, object
 	return nil
 }
 
-func (b *HealthChecker) checkRequiredDaemonSets(condition gardencorev1beta1.Condition, requiredNames sets.String, objects []*appsv1.DaemonSet) *gardencorev1beta1.Condition {
-	actualNames := sets.NewString()
-	for _, object := range objects {
-		actualNames.Insert(object.Name)
-	}
-
-	return b.checkRequiredResourceNames(condition, requiredNames, actualNames, "DaemonSetMissing", "Missing required daemon sets")
-}
-
 // CheckManagedResource checks the conditions of the given managed resource and reflects the state in the returned condition.
 func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
 	if mr.Generation != mr.Status.ObservedGeneration {
@@ -223,17 +214,6 @@ func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Conditi
 		}
 		c := b.FailedCondition(condition, gardencorev1beta1.ManagedResourceMissingConditionError, fmt.Sprintf("ManagedResource %s is missing the following condition(s), %v", mr.Name, missing))
 		return &c
-	}
-
-	return nil
-}
-
-func (b *HealthChecker) checkDaemonSets(condition gardencorev1beta1.Condition, objects []*appsv1.DaemonSet) *gardencorev1beta1.Condition {
-	for _, object := range objects {
-		if err := health.CheckDaemonSet(object); err != nil {
-			c := b.FailedCondition(condition, "DaemonSetUnhealthy", fmt.Sprintf("Daemon set %s is unhealthy: %v", object.Name, err.Error()))
-			return &c
-		}
 	}
 
 	return nil

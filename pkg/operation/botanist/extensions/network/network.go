@@ -164,8 +164,3 @@ func (d *network) WaitCleanup(ctx context.Context) error {
 		d.values.Name,
 	)
 }
-
-// emptyNetwork returns an empty Network CRD used for deletion.
-func (d *network) emptyNetwork() *extensionsv1alpha1.Network {
-	return &extensionsv1alpha1.Network{ObjectMeta: metav1.ObjectMeta{Name: d.values.Name, Namespace: d.values.Namespace}}
-}
