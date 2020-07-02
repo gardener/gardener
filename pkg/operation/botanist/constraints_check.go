@@ -27,7 +27,7 @@ import (
 )
 
 func shootHibernatedConstraint(condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, "ConstraintNotChecked", "Shoot cluster has been hibernated.")
+	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "ConstraintNotChecked", "Shoot cluster has been hibernated.")
 }
 
 func shootControlPlaneNotRunningConstraint(condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
