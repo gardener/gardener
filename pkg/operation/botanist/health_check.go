@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -37,7 +36,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
-	prometheusmodel "github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -78,6 +76,16 @@ var Now = time.Now
 type HealthChecker struct {
 	conditionThresholds                map[gardencorev1beta1.ConditionType]time.Duration
 	staleExtensionHealthCheckThreshold *metav1.Duration
+	lastOperation                      *gardencorev1beta1.LastOperation
+}
+
+// NewHealthChecker creates a new health checker.
+func NewHealthChecker(conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration, healthCheckOutdatedThreshold *metav1.Duration, lastOperation *gardencorev1beta1.LastOperation) *HealthChecker {
+	return &HealthChecker{
+		conditionThresholds:                conditionThresholds,
+		staleExtensionHealthCheckThreshold: healthCheckOutdatedThreshold,
+		lastOperation:                      lastOperation,
+	}
 }
 
 func (b *HealthChecker) checkRequiredResourceNames(condition gardencorev1beta1.Condition, requiredNames, names sets.String, reason, message string) *gardencorev1beta1.Condition {
@@ -346,10 +354,19 @@ func (b *HealthChecker) FailedCondition(condition gardencorev1beta1.Condition, r
 		if !ok {
 			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 		}
+		if b.lastOperation != nil && b.lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded && Now().UTC().Sub(b.lastOperation.LastUpdateTime.UTC()) <= threshold {
+			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
+		}
 		if delta := Now().UTC().Sub(condition.LastTransitionTime.Time.UTC()); delta <= threshold {
 			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 		}
 		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
+
+	case gardencorev1beta1.ConditionFalse:
+		threshold, ok := b.conditionThresholds[condition.Type]
+		if ok && b.lastOperation != nil && b.lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded && Now().UTC().Sub(b.lastOperation.LastUpdateTime.UTC()) <= threshold {
+			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
+		}
 	}
 
 	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
@@ -360,74 +377,6 @@ func (b *Botanist) checkAPIServerAvailability(checker *HealthChecker, condition 
 	return health.CheckAPIServerAvailability(condition, b.K8sShootClient.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
 		return checker.FailedCondition(condition, conditionType, message)
 	})
-}
-
-const (
-	alertStatusFiring  = "firing"
-	alertStatusPending = "pending"
-	alertNameLabel     = "alertname"
-	alertStateLabel    = "alertstate"
-)
-
-// checkAlerts checks whether firing or pending alerts exists by querying the Shoot Prometheus.
-func (b *Botanist) checkAlerts(checker *HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	// Fetch firing and pending alerts from the Shoot cluster Prometheus.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-	alertResultSet, err := b.MonitoringClient.Query(ctx, "ALERTS{alertstate=~'firing|pending'}", Now())
-	if err != nil {
-		return gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(condition, fmt.Sprintf("Alerts can't be queried from Shoot Prometheus (%s).", err.Error()))
-	}
-
-	var (
-		firingAlerts  []string
-		pendingAlerts []string
-	)
-
-	switch alertResultSet.Type() {
-	case prometheusmodel.ValVector:
-		resultVector := alertResultSet.(prometheusmodel.Vector)
-		for _, v := range resultVector {
-			switch v.Metric[alertStateLabel] {
-			case alertStatusFiring:
-				firingAlerts = append(firingAlerts, string(v.Metric[alertNameLabel]))
-			case alertStatusPending:
-				pendingAlerts = append(pendingAlerts, string(v.Metric[alertNameLabel]))
-			}
-		}
-	default:
-		return gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(condition, "Unexpected metrics format. Can't determine alerts.")
-	}
-
-	// Validate the alert results and update the conditions accordingly.
-	var (
-		message strings.Builder
-		reason  string
-		failed  bool
-	)
-
-	if len(firingAlerts) > 0 {
-		reason = "FiringAlertsActive"
-		failed = true
-		message.WriteString(fmt.Sprintf("The following alerts are active: %v", strings.Join(firingAlerts, ", ")))
-		if len(pendingAlerts) > 0 {
-			reason = "FiringAndPendingAlertsActive"
-		}
-	} else {
-		reason = "NoAlertsActive"
-		failed = false
-		message.WriteString("No active alerts")
-		if len(pendingAlerts) > 0 {
-			reason = "PendingAlertsActive"
-		}
-	}
-	if len(pendingAlerts) > 0 {
-		message.WriteString(fmt.Sprintf(". The following alerts might trigger soon: %v", strings.Join(pendingAlerts, ", ")))
-	}
-	if failed {
-		return checker.FailedCondition(condition, reason, message.String())
-	}
-	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, reason, message.String())
 }
 
 // CheckClusterNodes checks whether cluster nodes in the given listers are healthy and within the desired range.
@@ -806,14 +755,6 @@ var (
 	shootNodeListOptions = metav1.ListOptions{}
 )
 
-// NewHealthChecker creates a new health checker.
-func NewHealthChecker(conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration, healthCheckOutdatedThreshold *metav1.Duration) *HealthChecker {
-	return &HealthChecker{
-		conditionThresholds:                conditionThresholds,
-		staleExtensionHealthCheckThreshold: healthCheckOutdatedThreshold,
-	}
-}
-
 func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration, healthCheckOutdatedThreshold *metav1.Duration, apiserverAvailability, controlPlane, nodes, systemComponents gardencorev1beta1.Condition) (gardencorev1beta1.Condition, gardencorev1beta1.Condition, gardencorev1beta1.Condition, gardencorev1beta1.Condition) {
 	if b.Shoot.HibernationEnabled || b.Shoot.Info.Status.IsHibernated {
 		return shootHibernatedCondition(apiserverAvailability), shootHibernatedCondition(controlPlane), shootHibernatedCondition(nodes), shootHibernatedCondition(systemComponents)
@@ -844,7 +785,7 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 		seedEtcdLister        = makeEtcdLister(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 		seedWorkerLister      = makeWorkerLister(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 
-		checker = NewHealthChecker(thresholdMappings, healthCheckOutdatedThreshold)
+		checker = NewHealthChecker(thresholdMappings, healthCheckOutdatedThreshold, b.Shoot.Info.Status.LastOperation)
 	)
 
 	extensionConditionsControlPlaneHealthy, extensionConditionsEveryNodeReady, extensionConditionsSystemComponentsHealthy, err := b.getAllExtensionConditions(context.TODO())
@@ -926,19 +867,6 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, thresholdMa
 		PardonCondition(controlPlaneHealthy, lastOp, lastErrors),
 		PardonCondition(everyNodeReady, lastOp, lastErrors),
 		PardonCondition(systemComponentsHealthy, lastOp, lastErrors)
-}
-
-// MonitoringHealthChecks performs the monitoring related health checks.
-func (b *Botanist) MonitoringHealthChecks(checker *HealthChecker, inactiveAlerts gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	if b.Shoot.HibernationEnabled {
-		return shootHibernatedCondition(inactiveAlerts)
-	}
-	if err := b.InitializeMonitoringClient(); err != nil {
-		message := fmt.Sprintf("Could not initialize Shoot monitoring API client for health check: %+v", err)
-		b.Logger.Error(message)
-		return gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(inactiveAlerts, message)
-	}
-	return b.checkAlerts(checker, inactiveAlerts)
 }
 
 // ExtensionCondition contains information about the extension type, name, namespace and the respective condition object.

@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"time"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -26,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -258,7 +258,7 @@ var _ = Describe("health check", func() {
 				deploymentLister = constDeploymentLister(deployments)
 				etcdLister       = constEtcdLister(etcds)
 				workerLister     = constWorkerLister(workers)
-				checker          = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
+				checker          = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil)
 			)
 
 			exitCondition, err := checker.CheckControlPlane(shoot, seedNamespace, condition, deploymentLister, etcdLister, workerLister)
@@ -375,7 +375,7 @@ var _ = Describe("health check", func() {
 		func(conditions []resourcesv1alpha1.ManagedResourceCondition, upToDate bool, conditionMatcher types.GomegaMatcher) {
 			var (
 				mr      = new(resourcesv1alpha1.ManagedResource)
-				checker = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
+				checker = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil)
 			)
 
 			if !upToDate {
@@ -488,7 +488,7 @@ var _ = Describe("health check", func() {
 		func(nodes []*corev1.Node, workerPools []gardencorev1beta1.Worker, conditionMatcher types.GomegaMatcher) {
 			var (
 				nodeLister = constNodeLister(nodes)
-				checker    = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
+				checker    = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil)
 			)
 
 			exitCondition, err := checker.CheckClusterNodes(workerPools, condition, nodeLister)
@@ -590,7 +590,7 @@ var _ = Describe("health check", func() {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
-				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
+				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil)
 			)
 
 			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, isTestingShoot, wantsAlertmanager, condition, deploymentLister, statefulSetLister)
@@ -653,7 +653,7 @@ var _ = Describe("health check", func() {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
-				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil)
+				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil)
 			)
 
 			exitCondition, err := checker.CheckLoggingControlPlane(seedNamespace, isTestingShoot, condition, deploymentLister, statefulSetLister)
@@ -695,8 +695,8 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#FailedCondition",
-		func(thresholds map[gardencorev1beta1.ConditionType]time.Duration, transitionTime metav1.Time, now time.Time, condition gardencorev1beta1.Condition, expected types.GomegaMatcher) {
-			checker := botanist.NewHealthChecker(thresholds, nil)
+		func(thresholds map[gardencorev1beta1.ConditionType]time.Duration, lastOperation *gardencorev1beta1.LastOperation, transitionTime metav1.Time, now time.Time, condition gardencorev1beta1.Condition, expected types.GomegaMatcher) {
+			checker := botanist.NewHealthChecker(thresholds, nil, lastOperation)
 			tmp1, tmp2 := botanist.Now, gardencorev1beta1helper.Now
 			defer func() {
 				botanist.Now, gardencorev1beta1helper.Now = tmp1, tmp2
@@ -713,6 +713,7 @@ var _ = Describe("health check", func() {
 			map[gardencorev1beta1.ConditionType]time.Duration{
 				gardencorev1beta1.ShootControlPlaneHealthy: time.Minute,
 			},
+			nil,
 			zeroMetaTime,
 			zeroTime,
 			gardencorev1beta1.Condition{
@@ -722,8 +723,9 @@ var _ = Describe("health check", func() {
 			MatchFields(IgnoreExtras, Fields{
 				"Status": Equal(gardencorev1beta1.ConditionProgressing),
 			})),
-		Entry("true condition without threshold",
+		Entry("true condition without condition threshold",
 			map[gardencorev1beta1.ConditionType]time.Duration{},
+			nil,
 			zeroMetaTime,
 			zeroTime,
 			gardencorev1beta1.Condition{
@@ -733,9 +735,13 @@ var _ = Describe("health check", func() {
 			MatchFields(IgnoreExtras, Fields{
 				"Status": Equal(gardencorev1beta1.ConditionFalse),
 			})),
-		Entry("progressing condition within threshold",
+		Entry("progressing condition within last operation update time threshold",
 			map[gardencorev1beta1.ConditionType]time.Duration{
 				gardencorev1beta1.ShootControlPlaneHealthy: time.Minute,
+			},
+			&gardencorev1beta1.LastOperation{
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: zeroMetaTime,
 			},
 			zeroMetaTime,
 			zeroTime,
@@ -746,9 +752,31 @@ var _ = Describe("health check", func() {
 			MatchFields(IgnoreExtras, Fields{
 				"Status": Equal(gardencorev1beta1.ConditionProgressing),
 			})),
-		Entry("progressing condition outside threshold",
+		Entry("progressing condition outside last operation update time threshold but within last transition time threshold",
 			map[gardencorev1beta1.ConditionType]time.Duration{
 				gardencorev1beta1.ShootControlPlaneHealthy: time.Minute,
+			},
+			&gardencorev1beta1.LastOperation{
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: zeroMetaTime,
+			},
+			zeroMetaTime,
+			zeroTime.Add(time.Minute+time.Second),
+			gardencorev1beta1.Condition{
+				Type:               gardencorev1beta1.ShootControlPlaneHealthy,
+				Status:             gardencorev1beta1.ConditionProgressing,
+				LastTransitionTime: metav1.Time{Time: zeroMetaTime.Add(time.Minute)},
+			},
+			MatchFields(IgnoreExtras, Fields{
+				"Status": Equal(gardencorev1beta1.ConditionProgressing),
+			})),
+		Entry("progressing condition outside last operation update time threshold and last transition time threshold",
+			map[gardencorev1beta1.ConditionType]time.Duration{
+				gardencorev1beta1.ShootControlPlaneHealthy: time.Minute,
+			},
+			&gardencorev1beta1.LastOperation{
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: zeroMetaTime,
 			},
 			zeroMetaTime,
 			zeroTime.Add(time.Minute+time.Second),
@@ -759,8 +787,43 @@ var _ = Describe("health check", func() {
 			MatchFields(IgnoreExtras, Fields{
 				"Status": Equal(gardencorev1beta1.ConditionFalse),
 			})),
-		Entry("failed condition",
+		Entry("failed condition within last operation update time threshold",
+			map[gardencorev1beta1.ConditionType]time.Duration{
+				gardencorev1beta1.ShootControlPlaneHealthy: time.Minute,
+			},
+			&gardencorev1beta1.LastOperation{
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: zeroMetaTime,
+			},
+			zeroMetaTime,
+			zeroTime.Add(time.Minute-time.Second),
+			gardencorev1beta1.Condition{
+				Type:   gardencorev1beta1.ShootControlPlaneHealthy,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+			MatchFields(IgnoreExtras, Fields{
+				"Status": Equal(gardencorev1beta1.ConditionProgressing),
+			})),
+		Entry("failed condition outside of last operation update time threshold",
+			map[gardencorev1beta1.ConditionType]time.Duration{
+				gardencorev1beta1.ShootControlPlaneHealthy: time.Minute,
+			},
+			&gardencorev1beta1.LastOperation{
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: zeroMetaTime,
+			},
+			zeroMetaTime,
+			zeroTime.Add(time.Minute+time.Second),
+			gardencorev1beta1.Condition{
+				Type:   gardencorev1beta1.ShootControlPlaneHealthy,
+				Status: gardencorev1beta1.ConditionFalse,
+			},
+			MatchFields(IgnoreExtras, Fields{
+				"Status": Equal(gardencorev1beta1.ConditionFalse),
+			})),
+		Entry("failed condition without thresholds",
 			map[gardencorev1beta1.ConditionType]time.Duration{},
+			nil,
 			zeroMetaTime,
 			zeroTime,
 			gardencorev1beta1.Condition{
@@ -775,7 +838,7 @@ var _ = Describe("health check", func() {
 	// CheckExtensionCondition
 	DescribeTable("#CheckExtensionCondition - HealthCheckReport",
 		func(healthCheckOutdatedThreshold *metav1.Duration, condition gardencorev1beta1.Condition, extensionsConditions []botanist.ExtensionCondition, expected types.GomegaMatcher) {
-			checker := botanist.NewHealthChecker(nil, healthCheckOutdatedThreshold)
+			checker := botanist.NewHealthChecker(nil, healthCheckOutdatedThreshold, nil)
 			updatedCondition := checker.CheckExtensionCondition(condition, extensionsConditions)
 			if expected == nil {
 				Expect(updatedCondition).To(BeNil())
