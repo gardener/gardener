@@ -35,6 +35,21 @@ func (m *MockClientSetFactory) EXPECT() *MockClientSetFactoryMockRecorder {
 	return m.recorder
 }
 
+// CalculateClientSetHash mocks base method
+func (m *MockClientSetFactory) CalculateClientSetHash(arg0 context.Context, arg1 clientmap.ClientSetKey) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CalculateClientSetHash", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CalculateClientSetHash indicates an expected call of CalculateClientSetHash
+func (mr *MockClientSetFactoryMockRecorder) CalculateClientSetHash(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateClientSetHash", reflect.TypeOf((*MockClientSetFactory)(nil).CalculateClientSetHash), arg0, arg1)
+}
+
 // NewClientSet mocks base method
 func (m *MockClientSetFactory) NewClientSet(arg0 context.Context, arg1 clientmap.ClientSetKey) (kubernetes.Interface, error) {
 	m.ctrl.T.Helper()

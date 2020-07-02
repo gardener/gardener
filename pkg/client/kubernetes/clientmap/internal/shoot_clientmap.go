@@ -23,8 +23,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	baseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,38 +59,37 @@ type ShootClientSetFactory struct {
 	Log logrus.FieldLogger
 }
 
+// CalculateClientSetHash calculates a SHA256 hash of the kubeconfig in the 'gardener' secret in the Shoot's Seed namespace.
+func (f *ShootClientSetFactory) CalculateClientSetHash(ctx context.Context, k clientmap.ClientSetKey) (string, error) {
+	key, ok := k.(ShootClientSetKey)
+	if !ok {
+		return "", fmt.Errorf("unsupported ClientSetKey: expected %T got %T", ShootClientSetKey{}, k)
+	}
+
+	seedNamespace, seedClient, err := f.getSeedNamespace(ctx, key)
+	if err != nil {
+		return "", err
+	}
+
+	kubeconfigSecret := &corev1.Secret{}
+	if err := seedClient.Client().Get(ctx, client.ObjectKey{Namespace: seedNamespace, Name: v1beta1constants.SecretNameGardener}, kubeconfigSecret); err != nil {
+		return "", err
+	}
+
+	return utils.ComputeSHA256Hex(kubeconfigSecret.Data[kubernetes.KubeConfig]), nil
+}
+
 // NewClientSet creates a new ClientSet for a Shoot cluster.
 func (f *ShootClientSetFactory) NewClientSet(ctx context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, error) {
 	key, ok := k.(ShootClientSetKey)
 	if !ok {
-		return nil, fmt.Errorf("call to GetClient with unsupported ClientSetKey: expected %T got %T", ShootClientSetKey{}, k)
+		return nil, fmt.Errorf("unsupported ClientSetKey: expected %T got %T", ShootClientSetKey{}, k)
 	}
 
-	gardenClient, err := f.GetGardenClient(ctx)
+	seedNamespace, seedClient, err := f.getSeedNamespace(ctx, key)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get garden client: %w", err)
+		return nil, err
 	}
-
-	shoot := &gardencorev1beta1.Shoot{}
-	if err := gardenClient.Client().Get(ctx, client.ObjectKey{Namespace: key.Namespace, Name: key.Name}, shoot); err != nil {
-		return nil, fmt.Errorf("failed to get Shoot object %q: %w", key.Key(), err)
-	}
-
-	if shoot.Spec.SeedName == nil {
-		return nil, fmt.Errorf("shoot %q is not scheduled yet", key.Key())
-	}
-
-	seedClient, err := f.GetSeedClient(ctx, *shoot.Spec.SeedName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get seed client: %w", err)
-	}
-
-	project, err := ProjectForNamespaceWithClient(ctx, gardenClient.Client(), shoot.Namespace)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Project for Shoot %q: %w", key.Key(), err)
-	}
-
-	seedNamespace := shootpkg.ComputeTechnicalID(project.Name, shoot)
 
 	secretName := v1beta1constants.SecretNameGardener
 	// If the gardenlet runs in the same cluster like the API server of the shoot then use the internal kubeconfig
@@ -118,6 +119,38 @@ func (f *ShootClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cl
 	}
 
 	return clientSet, err
+}
+
+func (f *ShootClientSetFactory) getSeedNamespace(ctx context.Context, key ShootClientSetKey) (string, kubernetes.Interface, error) {
+	gardenClient, err := f.GetGardenClient(ctx)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to get garden client: %w", err)
+	}
+
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := gardenClient.Client().Get(ctx, client.ObjectKey{Namespace: key.Namespace, Name: key.Name}, shoot); err != nil {
+		return "", nil, fmt.Errorf("failed to get Shoot object %q: %w", key.Key(), err)
+	}
+
+	if shoot.Spec.SeedName == nil {
+		return "", nil, fmt.Errorf("shoot %q is not scheduled yet", key.Key())
+	}
+
+	seedClient, err := f.GetSeedClient(ctx, *shoot.Spec.SeedName)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to get seed client: %w", err)
+	}
+
+	if len(shoot.Status.TechnicalID) > 0 {
+		return shoot.Status.TechnicalID, seedClient, nil
+	}
+
+	project, err := ProjectForNamespaceWithClient(ctx, gardenClient.Client(), shoot.Namespace)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to get Project for Shoot %q: %w", key.Key(), err)
+	}
+
+	return shootpkg.ComputeTechnicalID(project.Name, shoot), seedClient, nil
 }
 
 // ShootClientSetKey is a ClientSetKey for a Shoot cluster.

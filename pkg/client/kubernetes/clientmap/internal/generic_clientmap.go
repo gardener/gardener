@@ -32,7 +32,13 @@ var _ clientmap.ClientMap = &GenericClientMap{}
 
 const (
 	waitForCacheSyncTimeout = 5 * time.Minute
-	maxRefreshInterval      = 5 * time.Second
+)
+
+var (
+	// MaxRefreshInterval is the maximum rate at which the version and hash of a single ClientSet are checked, to
+	// decide whether the ClientSet should be refreshed. Also, the GenericClientMap waits at least MaxRefreshInterval
+	// after creating a new ClientSet before checking if it should be refreshed.
+	MaxRefreshInterval = 5 * time.Second
 )
 
 // GenericClientMap is a generic implementation of clientmap.ClientMap, which can be used by specific ClientMap
@@ -58,6 +64,7 @@ type clientMapEntry struct {
 	clientSet kubernetes.Interface
 	synced    bool
 	cancel    context.CancelFunc
+	hash      string
 
 	// refreshLimiter limits the attempts to refresh the entry due to an outdated server version.
 	refreshLimiter *rate.Limiter
@@ -87,15 +94,32 @@ func (cm *GenericClientMap) GetClient(ctx context.Context, key clientmap.ClientS
 
 	if found {
 		if entry.refreshLimiter.Allow() {
-			// invalidate client if server version has changed
-			serverVersion, err := entry.clientSet.Kubernetes().Discovery().ServerVersion()
+			shouldRefresh, err := func() (bool, error) {
+				// invalidate client if server version has changed
+				serverVersion, err := entry.clientSet.Kubernetes().Discovery().ServerVersion()
+				if err != nil {
+					return false, fmt.Errorf("failed to discover server version: %w", err)
+				}
+
+				if serverVersion.GitVersion != entry.clientSet.Version() {
+					return true, nil
+				}
+
+				// invalidate client if the config of the client has changed (e.g. kubeconfig secret)
+				hash, err := cm.factory.CalculateClientSetHash(ctx, key)
+				if err != nil {
+					return false, fmt.Errorf("failed to calculate new hash for ClientSet: %w", err)
+				}
+
+				return hash != entry.hash, nil
+			}()
 			if err != nil {
-				return nil, fmt.Errorf("failed to discover server version: %w", err)
+				return nil, err
 			}
 
-			if serverVersion.GitVersion != entry.clientSet.Version() {
+			if shouldRefresh {
 				if err := cm.InvalidateClient(key); err != nil {
-					return nil, fmt.Errorf("error invalidating ClientSet for key %q due to changed server version: %w", key.Key(), err)
+					return nil, fmt.Errorf("error refreshing ClientSet for key %q: %w", key.Key(), err)
 				}
 				found = false
 			}
@@ -140,10 +164,21 @@ func (cm *GenericClientMap) addClientSet(ctx context.Context, key clientmap.Clie
 		return nil, false, fmt.Errorf("error creating new ClientSet for key %q: %w", key.Key(), err)
 	}
 
+	// save hash of client set configuration to detect if it should be recreated later on
+	hash, err := cm.factory.CalculateClientSetHash(ctx, key)
+	if err != nil {
+		return nil, false, fmt.Errorf("error calculating ClientSet hash for key %q: %w", key.Key(), err)
+	}
+
 	entry := &clientMapEntry{
 		clientSet:      cs,
-		refreshLimiter: rate.NewLimiter(rate.Every(maxRefreshInterval), 1),
+		refreshLimiter: rate.NewLimiter(rate.Every(MaxRefreshInterval), 1),
+		hash:           hash,
 	}
+
+	// avoid checking if the client should be refreshed directly after creating, by directly taking a token here
+	entry.refreshLimiter.Allow()
+
 	// add ClientSet to map
 	cm.clientSets[key] = entry
 
