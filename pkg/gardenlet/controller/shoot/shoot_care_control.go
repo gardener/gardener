@@ -122,16 +122,6 @@ func shootClientInitializer(b *botanistpkg.Botanist) func() error {
 	)
 	return func() error {
 		once.Do(func() {
-			apiServerRunning, err2 := b.IsAPIServerRunning()
-			if err2 != nil {
-				err = err2
-				return
-			}
-			// Don't initialize clients for Shoots, that are currently hibernated or in the process of being created or deleted.
-			if !apiServerRunning {
-				return
-			}
-
 			err = b.InitializeShootClients()
 		})
 		return err

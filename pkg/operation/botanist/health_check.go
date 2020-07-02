@@ -243,16 +243,14 @@ func shootHibernatedCondition(condition gardencorev1beta1.Condition) gardencorev
 	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "ConditionNotChecked", "Shoot cluster has been hibernated.")
 }
 
-func shootControlPlaneNotRunningCondition(lastOperation *gardencorev1beta1.LastOperation, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	message := "Shoot control plane is not running at the moment."
+func shootControlPlaneNotRunningMessage(lastOperation *gardencorev1beta1.LastOperation) string {
 	switch {
 	case lastOperation == nil || lastOperation.Type == gardencorev1beta1.LastOperationTypeCreate:
-		message = "Shoot control plane has not been fully created yet."
+		return "Shoot control plane has not been fully created yet."
 	case lastOperation.Type == gardencorev1beta1.LastOperationTypeDelete:
-		message = "Shoot control plane has already been or is about to be deleted."
+		return "Shoot control plane has already been or is about to be deleted."
 	}
-
-	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "ConditionNotChecked", message)
+	return "Shoot control plane is not running at the moment."
 }
 
 // This is a hack to quickly do a cloud provider specific check for the required control plane deployments.
@@ -760,6 +758,8 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 		return shootHibernatedCondition(apiserverAvailability), shootHibernatedCondition(controlPlane), shootHibernatedCondition(nodes), shootHibernatedCondition(systemComponents)
 	}
 
+	checker := NewHealthChecker(thresholdMappings, healthCheckOutdatedThreshold, b.Shoot.Info.Status.LastOperation)
+
 	apiServerRunning, err := b.IsAPIServerRunning()
 	if err != nil {
 		message := fmt.Sprintf("Failed to check if control plane is currently running: %v", err)
@@ -772,11 +772,14 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 
 	// don't execute health checks if API server has already been deleted or has not been created yet
 	if !apiServerRunning {
-		lastOp := b.Shoot.Info.Status.LastOperation
-		return shootControlPlaneNotRunningCondition(lastOp, apiserverAvailability),
-			shootControlPlaneNotRunningCondition(lastOp, controlPlane),
-			shootControlPlaneNotRunningCondition(lastOp, nodes),
-			shootControlPlaneNotRunningCondition(lastOp, systemComponents)
+		message := shootControlPlaneNotRunningMessage(b.Shoot.Info.Status.LastOperation)
+
+		apiserverAvailability = checker.FailedCondition(apiserverAvailability, "APIServerDown", message)
+		controlPlane = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(controlPlane, message)
+		nodes = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(nodes, message)
+		systemComponents = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(systemComponents, message)
+
+		return apiserverAvailability, controlPlane, nodes, systemComponents
 	}
 
 	var (
@@ -784,8 +787,6 @@ func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMa
 		seedStatefulSetLister = makeStatefulSetLister(b.K8sSeedClient.Kubernetes(), b.Shoot.SeedNamespace, seedStatefulSetListOptions)
 		seedEtcdLister        = makeEtcdLister(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 		seedWorkerLister      = makeWorkerLister(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
-
-		checker = NewHealthChecker(thresholdMappings, healthCheckOutdatedThreshold, b.Shoot.Info.Status.LastOperation)
 	)
 
 	extensionConditionsControlPlaneHealthy, extensionConditionsEveryNodeReady, extensionConditionsSystemComponentsHealthy, err := b.getAllExtensionConditions(context.TODO())
