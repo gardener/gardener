@@ -245,6 +245,7 @@ go test -mod=vendor -timeout=0 ./test/system/shoot_creation \
   -region=$REGION \
   -k8s-version=$K8S_VERSION \
   -project-namespace=$PROJECT_NAMESPACE \
+  -annotations=$SHOOT_ANNOTATIONS \
   -infrastructure-provider-config-filepath=$INFRASTRUCTURE_PROVIDER_CONFIG_FILEPATH \
   -controlplane-provider-config-filepath=$CONTROLPLANE_PROVIDER_CONFIG_FILEPATH \
   -workers-config-filepath=$$WORKERS_CONFIG_FILEPATH \

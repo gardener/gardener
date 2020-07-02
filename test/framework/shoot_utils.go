@@ -167,6 +167,27 @@ func CreateShootTestArtifacts(cfg *ShootCreationConfig, projectNamespace string,
 	return shoot.Name, shoot, nil
 }
 
+func parseAnnotationCfg(cfg string) (map[string]string, error) {
+	if !StringSet(cfg) {
+		return nil, nil
+	}
+	result := make(map[string]string)
+	annotations := strings.Split(cfg, ",")
+	for _, annotation := range annotations {
+		annotation = strings.TrimSpace(annotation)
+		if !StringSet(annotation) {
+			continue
+		}
+		keyValue := strings.Split(annotation, "=")
+		if len(keyValue) != 2 {
+			return nil, fmt.Errorf("annotation %s could not be parsed into key and value", annotation)
+		}
+		result[keyValue[0]] = keyValue[1]
+	}
+
+	return result, nil
+}
+
 // setShootMetadata sets the Shoot's metadata from the given config and project namespace
 func setShootMetadata(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationConfig, projectNamespace string) error {
 	if StringSet(cfg.testShootName) {
@@ -183,8 +204,24 @@ func setShootMetadata(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationConfig, 
 		shoot.Namespace = projectNamespace
 	}
 
+	if err := setConfiguredShootAnnotations(shoot, cfg); err != nil {
+		return err
+	}
+
 	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootIgnoreAlerts, "true")
 
+	return nil
+}
+
+// setConfiguredShootAnnotations sets annotations from the given config on the given shoot
+func setConfiguredShootAnnotations(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationConfig) error {
+	annotations, err := parseAnnotationCfg(cfg.shootAnnotations)
+	if err != nil {
+		return err
+	}
+	for k, v := range annotations {
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, k, v)
+	}
 	return nil
 }
 

@@ -60,6 +60,7 @@ type ShootCreationConfig struct {
 	networkingProviderConfig      string
 	workersConfig                 string
 	shootYamlPath                 string
+	shootAnnotations              string
 }
 
 // ShootCreationFramework represents the shoot test framework that includes
@@ -113,6 +114,13 @@ func (f *ShootCreationFramework) AfterEach(ctx context.Context) {
 func validateShootCreationConfig(cfg *ShootCreationConfig) {
 	if cfg == nil {
 		ginkgo.Fail("no shoot creation framework configuration provided")
+	}
+
+	if StringSet(cfg.shootAnnotations) {
+		_, err := parseAnnotationCfg(cfg.shootAnnotations)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("annotations could not be parsed: %+v", err))
+		}
 	}
 
 	if !StringSet(cfg.shootProviderType) {
@@ -196,6 +204,10 @@ func mergeShootCreationConfig(base, overwrite *ShootCreationConfig) *ShootCreati
 
 	if StringSet(overwrite.testShootPrefix) {
 		base.testShootPrefix = overwrite.testShootPrefix
+	}
+
+	if StringSet(overwrite.shootAnnotations) {
+		base.shootAnnotations = overwrite.shootAnnotations
 	}
 
 	if StringSet(overwrite.shootMachineImageName) {
@@ -303,6 +315,7 @@ func RegisterShootCreationFrameworkFlags() *ShootCreationConfig {
 	flag.StringVar(&newCfg.seedKubeconfigPath, "seed-kubecfg-path", "", "the path to where the Kubeconfig of the Seed cluster will be downloaded to.")
 	flag.StringVar(&newCfg.testShootName, "shoot-name", "", "unique name to use for test shoots. Used by test-machinery.")
 	flag.StringVar(&newCfg.testShootPrefix, "prefix", "", "prefix for generated shoot name. Usually used locally to auto generate a unique name.")
+	flag.StringVar(&newCfg.shootAnnotations, "annotations", "", "annotations to be added to the test shoot. Expected format is key1=val1,key2=val2 (similar to kubectl --selector).")
 	flag.StringVar(&newCfg.shootMachineImageName, "machine-image-name", "", "the Machine Image Name of the test shoot. Defaults to first machine image in the CloudProfile.")
 	flag.StringVar(&newCfg.shootMachineType, "machine-type", "", "the Machine type of the first worker of the test shoot. Needs to match the machine types for that Provider available in the CloudProfile.")
 	flag.StringVar(&newCfg.shootMachineImageVersion, "machine-image-version", "", "the Machine Image version of the first worker of the test shoot. Needs to be set when the MachineImageName is set.")
