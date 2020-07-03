@@ -12,9 +12,11 @@ resources:
 replicas: 1
 
 controllers:
+#  cacheResyncPeriod: 24h0m0s
   managedResource:
     syncPeriod: 1m0s
     concurrentSyncs: 20
+    alwaysUpdate: true
   managedResourceHealth:
     syncPeriod: 1m0s
     concurrentSyncs: 10
