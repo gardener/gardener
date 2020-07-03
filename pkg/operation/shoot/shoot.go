@@ -162,7 +162,9 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	shoot.WantsAlertmanager = !shoot.IgnoreAlerts && shootObject.Spec.Monitoring != nil && shootObject.Spec.Monitoring.Alerting != nil && len(shootObject.Spec.Monitoring.Alerting.EmailReceivers) > 0
 	shoot.WantsVerticalPodAutoscaler = gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(shootObject)
 	shoot.Components = &Components{
-		DNS:          &DNS{},
+		Extensions: &Extensions{
+			DNS: &DNS{},
+		},
 		ControlPlane: &ControlPlane{},
 	}
 

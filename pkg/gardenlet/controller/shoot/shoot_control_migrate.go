@@ -258,17 +258,17 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		})
 		destroyIngressDNSEntries = g.Add(flow.Task{
 			Name:         "Destroying ingress DNS record",
-			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.DNS.NginxEntry).Destroy),
+			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.Extensions.DNS.NginxEntry).Destroy),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
 		destroyExternalDNSEntries = g.Add(flow.Task{
 			Name:         "Destroying external domain DNS record",
-			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.DNS.ExternalEntry).Destroy),
+			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.Extensions.DNS.ExternalEntry).Destroy),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
 		destroyInternalDNSEntries = g.Add(flow.Task{
 			Name:         "Destroying internal domain DNS record",
-			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.DNS.InternalEntry).Destroy),
+			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.Extensions.DNS.InternalEntry).Destroy),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
 		destroyDNSProviders = g.Add(flow.Task{
