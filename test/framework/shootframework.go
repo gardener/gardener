@@ -21,12 +21,15 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/onsi/ginkgo"
 	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -321,4 +324,22 @@ func (f *ShootFramework) WaitForShootCondition(ctx context.Context, interval, ti
 		f.Logger.Infof("Waiting for shoot %s to have expected condition (%s: %s). Currently: (%s: %s)", f.Shoot.Name, conditionType, conditionStatus, conditionType, cond.Status)
 		return retry.MinorError(fmt.Errorf("shoot %q does not yet have expected condition", shoot.Name))
 	})
+}
+
+// IsAPIServerRunning checks, if the Shoot's API server deployment is present, not yet deleted and has at least one
+// available replica.
+func (f *ShootFramework) IsAPIServerRunning(ctx context.Context) (bool, error) {
+	deployment := &appsv1.Deployment{}
+	if err := f.SeedClient.DirectClient().Get(ctx, kutil.Key(f.ShootSeedNamespace(), v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	if deployment.GetDeletionTimestamp() != nil {
+		return false, nil
+	}
+
+	return deployment.Status.AvailableReplicas > 0, nil
 }
