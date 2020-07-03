@@ -36,10 +36,14 @@ spec:
         - /gardener-resource-manager
         - --leader-election=true
         - --leader-election-namespace={{ .Release.Namespace }}
+        {{- if .Values.controllers.cacheResyncPeriod }}
+        - --cache-resync-period={{ .Values.controllers.cacheResyncPeriod }}
+        {{- end }}
         - --sync-period={{ .Values.controllers.managedResource.syncPeriod }}
         - --max-concurrent-workers={{ .Values.controllers.managedResource.concurrentSyncs }}
         - --health-sync-period={{ .Values.controllers.managedResourceHealth.syncPeriod }}
         - --health-max-concurrent-workers={{ .Values.controllers.managedResourceHealth.concurrentSyncs }}
+        - --always-update={{ .Values.controllers.managedResource.alwaysUpdate }}
         - --namespace={{ .Release.Namespace }}
         - --target-kubeconfig=/etc/gardener-resource-manager/kubeconfig
         {{- if .Values.resources }}
