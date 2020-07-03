@@ -71,7 +71,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	be := &gardencorev1beta1.BackupEntry{}
-	if err := gardenClient.Client().Get(r.ctx, request.NamespacedName, be); err != nil {
+	if err := gardenClient.DirectClient().Get(r.ctx, request.NamespacedName, be); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Debugf("[BACKUPENTRY RECONCILE] %s - skipping because BackupEntry has been deleted", request.NamespacedName)
 			return reconcile.Result{}, nil
@@ -90,7 +90,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 func (r *reconciler) reconcileBackupEntry(gardenClient kubernetes.Interface, backupEntry *gardencorev1beta1.BackupEntry) (reconcile.Result, error) {
 	backupEntryLogger := logger.NewFieldLogger(logger.Logger, "backupentry", backupEntry.Name)
 
-	if err := controllerutils.EnsureFinalizer(r.ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.GardenerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(r.ctx, gardenClient.DirectClient(), backupEntry, gardencorev1beta1.GardenerName); err != nil {
 		backupEntryLogger.Errorf("Failed to ensure gardener finalizer on backupentry: %+v", err)
 		return reconcile.Result{}, err
 	}
