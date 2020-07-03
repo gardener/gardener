@@ -93,11 +93,11 @@ This new OWA can be configured with multiple OIDC providers and the entire flow 
       - RS256
       requiredClaims:
         baz: bar
-      caBundle: LS0tLS1CRUdJTiBDRVJU...base64-encoded cert
+      caBundle: LS0tLS1CRUdJTiBDRVJU...base64-encoded CA certs for issuerURL.
     ```
 
 1. 1. OWA watches for changes on this resource and does [OIDC discovery](https://openid.net/specs/openid-connect-discovery-1_0.html). The [OIDC provider's  configuration](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse) has to be accessible under the `spec.issuerURL` with a [well-known path (.well-known/openid-configuration)](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig).
-1. OWA uses the `jwks_uri` obtained from the OIDC providers configuration, to fetch the OIDC provider's public keys from from that endpoint and stores them in the status of `OpenIDConnect`:
+1. OWA uses the `jwks_uri` obtained from the OIDC providers configuration, to fetch the OIDC provider's public keys from that endpoint and stores them in the status of `OpenIDConnect`:
 
     ```yaml
     apiVersion: authentication.gardener.cloud/v1alpha1
@@ -136,7 +136,9 @@ When a user presents an `id_token` obtained from a OpenID Connect the flow looks
     }
     ```
 
-1. OWA uses `TokenReview` to authenticate the calling API server (the Kube APIServer for delegation of authentication and authorization is different from the calling API server)
+1. OWA uses `TokenReview` to authenticate the calling API server (the Kube APIServer for delegation of authentication and authorization is different from the calling API server).
+
+    > Example: When a Shoot cluster's API Server is configured to verify tokens by OWA, that API server will be the callee API server. The Seed API server will be used for delegating authentication and authorization.
 
     ```json
     {
