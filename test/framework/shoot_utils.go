@@ -99,7 +99,8 @@ func (f *ShootFramework) DumpState(ctx context.Context) {
 			f.Logger.Fatalf("Cannot decode shoot %s: %s", f.Shoot.GetName(), err)
 		}
 
-		if f.ShootClient != nil {
+		isRunning, err := f.IsAPIServerRunning(ctx)
+		if f.ShootClient != nil && isRunning && err == nil {
 			ctxIdentifier := fmt.Sprintf("[SHOOT %s]", f.Shoot.Name)
 			f.Logger.Info(ctxIdentifier)
 			if err := f.DumpDefaultResourcesInAllNamespaces(ctx, ctxIdentifier, f.ShootClient); err != nil {
@@ -108,6 +109,12 @@ func (f *ShootFramework) DumpState(ctx context.Context) {
 			if err := f.dumpNodes(ctx, ctxIdentifier, f.ShootClient); err != nil {
 				f.Logger.Errorf("unable to dump information of nodes from shoot %s: %s", f.Shoot.Name, err.Error())
 			}
+		} else {
+			errMsg := ""
+			if err != nil {
+				errMsg = ": " + err.Error()
+			}
+			f.Logger.Errorf("unable to dump resources from shoot %s: API server is currently not running%s", f.Shoot.Name, errMsg)
 		}
 	}
 
