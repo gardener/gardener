@@ -96,7 +96,7 @@ var _ = Describe("ingress", func() {
 			Expect(c.Get(ctx, client.ObjectKey{Name: "istio-ingressgateway", Namespace: deployNS}, actualDeploy)).ToNot(HaveOccurred())
 			envs := actualDeploy.Spec.Template.Spec.Containers[0].Env
 
-			Expect(envs).To(HaveLen(18))
+			Expect(envs).To(HaveLen(19))
 			Expect(envs).To(ContainElement(env))
 		},
 		Entry("NODE_NAME is projected", fieldEnv("NODE_NAME", "spec.nodeName")),
@@ -112,11 +112,14 @@ var _ = Describe("ingress", func() {
 		Entry("Use SDS", simplEnv("ISTIO_META_USER_SDS", "true")),
 		Entry("istiod address is set", simplEnv("CA_ADDR", "istiod.istio-test-system.svc:15012")),
 		Entry("workload name is set", simplEnv("ISTIO_META_WORKLOAD_NAME", "istio-ingressgateway")),
-		Entry("meta owner is igw", simplEnv("ISTIO_META_OWNER", "kubernetes://apis/apps/v1/namespaces/test-ingress/deployments/istio-ingressgateway")),
+		Entry("meta owner is igw",
+			simplEnv("ISTIO_META_OWNER", "kubernetes://apis/apps/v1/namespaces/test-ingress/deployments/istio-ingressgateway")),
 		Entry("mesh id is the trust domain", simplEnv("ISTIO_META_MESH_ID", "foo.bar")),
 		Entry("auto mTLS is enabled", simplEnv("ISTIO_AUTO_MTLS_ENABLED", "true")),
 		Entry("router mode is sni-dnat", simplEnv("ISTIO_META_ROUTER_MODE", "sni-dnat")),
 		Entry("ISTIO_META_CLUSTER_ID is Kubernetes", simplEnv("ISTIO_META_CLUSTER_ID", "Kubernetes")),
+		Entry("ISTIO_BOOTSTRAP_OVERRIDE is set to override",
+			simplEnv("ISTIO_BOOTSTRAP_OVERRIDE", "/etc/istio/custom-bootstrap/custom_bootstrap.yaml")),
 	)
 
 	It("ingress gateway service has load balancer annotations", func() {

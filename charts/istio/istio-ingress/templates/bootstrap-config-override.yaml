@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istio-custom-bootstrap-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ .Values.labels | toYaml | indent 4 }}
+data:
+  custom_bootstrap.yaml: |
+    layered_runtime:
+      layers:
+      - name: static_layer_0
+        static_layer:
+          overload:
+            # Fix for https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-8663
+            # https://istio.io/latest/news/security/istio-security-2020-007/
+            global_downstream_max_connections: 750000
+      - name: admin
+        admin_layer: {}
