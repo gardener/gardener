@@ -53,7 +53,7 @@ var _ = Describe("Seed Validation Tests", func() {
 						Region: "eu-west-1",
 					},
 					DNS: core.SeedDNS{
-						IngressDomain: "ingress.my-seed-1.example.com",
+						IngressDomain: pointer.StringPtr("ingress.my-seed-1.example.com"),
 					},
 					SecretRef: &corev1.SecretReference{
 						Name:      "seed-foo",
@@ -104,7 +104,7 @@ var _ = Describe("Seed Validation Tests", func() {
 		It("should forbid Seed specification with empty or invalid keys", func() {
 			invalidCIDR := "invalid-cidr"
 			seed.Spec.Provider = core.SeedProvider{}
-			seed.Spec.DNS.IngressDomain = "invalid_dns1123-subdomain"
+			seed.Spec.DNS.IngressDomain = pointer.StringPtr("invalid_dns1123-subdomain")
 			seed.Spec.SecretRef = &corev1.SecretReference{}
 			seed.Spec.Networks = core.SeedNetworks{
 				Nodes:    &invalidCIDR,
@@ -447,6 +447,115 @@ var _ = Describe("Seed Validation Tests", func() {
 					"Type":   Equal(field.ErrorTypeInvalid),
 					"Field":  Equal("spec.backup"),
 					"Detail": Equal(`field is immutable`),
+				}))
+			})
+		})
+
+		Context("ingress config", func() {
+			BeforeEach(func() {
+				seed.Spec.Ingress = &core.Ingress{
+					Domain: "foo.bar.com",
+					Controller: core.IngressController{
+						Kind: "nginx",
+					},
+				}
+				seed.Spec.DNS.IngressDomain = nil
+				seed.Spec.DNS.Provider = &core.SeedDNSProvider{
+					Type: "some-type",
+					SecretRef: corev1.SecretReference{
+						Name:      "foo",
+						Namespace: "bar",
+					},
+				}
+			})
+
+			It("should succeed if ingress config is correct", func() {
+				Expect(ValidateSeed(seed)).To(BeEmpty())
+			})
+
+			It("both nil", func() {
+				seed.Spec.Ingress = nil
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec"),
+				}))
+			})
+
+			It("both set", func() {
+				seed.Spec.DNS.IngressDomain = pointer.StringPtr("foo")
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.ingressDomain"),
+				}))
+			})
+
+			It("requires to specify a DNS provider if ingress is specified", func() {
+				seed.Spec.DNS.Provider = nil
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.dns.provider"),
+				}))
+			})
+
+			It("should fail if kind is different to nginx", func() {
+				seed.Spec.Ingress.Controller.Kind = "new-kind"
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.ingress.controller.kind"),
+				}))
+			})
+
+			It("should fail if the ingress domain is invalid", func() {
+				seed.Spec.Ingress.Domain = "invalid_dns1123-subdomain"
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.ingress.domain"),
+				}))
+			})
+
+			It("should fail if the ingress domain is empty", func() {
+				seed.Spec.Ingress.Domain = ""
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Detail": Equal("either specify spec.ingress or spec.dns.ingressDomain"),
+				}, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.ingress.domain"),
+				}))
+			})
+
+			It("should fail if DNS provider config is invalid", func() {
+				seed.Spec.DNS.Provider = &core.SeedDNSProvider{}
+
+				errorList := ValidateSeed(seed)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.dns.provider.type"),
+				}, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.dns.provider.secretRef.name"),
+				}, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.dns.provider.secretRef.namespace"),
 				}))
 			})
 		})

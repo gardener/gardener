@@ -19,8 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"sort"
-	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -33,7 +31,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -42,7 +39,7 @@ import (
 func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) error {
 	const timeout = 10 * time.Minute
 
-	loadBalancerIngress, err := b.WaitUntilShootLoadBalancerIsReady(ctx, metav1.NamespaceSystem, "addons-nginx-ingress-controller", timeout)
+	loadBalancerIngress, err := kutil.WaitUntilLoadBalancerIsReady(ctx, b.K8sShootClient, metav1.NamespaceSystem, "addons-nginx-ingress-controller", timeout, b.Logger)
 	if err != nil {
 		return err
 	}
@@ -55,44 +52,8 @@ func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) erro
 func (b *Botanist) WaitUntilVpnShootServiceIsReady(ctx context.Context) error {
 	const timeout = 10 * time.Minute
 
-	_, err := b.WaitUntilShootLoadBalancerIsReady(ctx, metav1.NamespaceSystem, "vpn-shoot", timeout)
+	_, err := kutil.WaitUntilLoadBalancerIsReady(ctx, b.K8sShootClient, metav1.NamespaceSystem, "vpn-shoot", timeout, b.Logger)
 	return err
-}
-
-// WaitUntilShootLoadBalancerIsReady waits until the given external load balancer has
-// been created (i.e., its ingress information has been updated in the service status).
-func (b *Botanist) WaitUntilShootLoadBalancerIsReady(ctx context.Context, namespace, name string, timeout time.Duration) (string, error) {
-	var loadBalancerIngress string
-	if err := retry.UntilTimeout(ctx, 5*time.Second, timeout, func(ctx context.Context) (done bool, err error) {
-		loadBalancerIngress, err = kutil.GetLoadBalancerIngress(ctx, b.K8sShootClient.Client(), namespace, name)
-		if err != nil {
-			b.Logger.Infof("Waiting until the %s service deployed in the Shoot cluster is ready...", name)
-			// TODO(AC): This is a quite optimistic check / we should differentiate here
-			return retry.MinorError(fmt.Errorf("%s service deployed in the Shoot cluster is not ready: %v", name, err))
-		}
-		return retry.Ok()
-	}); err != nil {
-		fieldSelector := client.MatchingFields{
-			"involvedObject.kind":      "Service",
-			"involvedObject.name":      name,
-			"involvedObject.namespace": namespace,
-			"type":                     corev1.EventTypeWarning,
-		}
-		eventList := &corev1.EventList{}
-		if err2 := b.K8sShootClient.DirectClient().List(ctx, eventList, fieldSelector); err2 != nil {
-			return "", fmt.Errorf("error '%v' occured while fetching more details on error '%v'", err2, err)
-		}
-
-		if len(eventList.Items) > 0 {
-			eventsErrorMessage := buildEventsErrorMessage(eventList.Items)
-			errorMessage := err.Error() + "\n\n" + eventsErrorMessage
-			return "", errors.New(errorMessage)
-		}
-
-		return "", err
-	}
-
-	return loadBalancerIngress, nil
 }
 
 // WaitUntilKubeAPIServerIsDeleted waits until the kube-apiserver is deleted
@@ -335,55 +296,4 @@ func WaitUntilDeploymentScaledToDesiredReplicas(ctx context.Context, client clie
 
 		return retry.MinorError(fmt.Errorf("deployment %q currently has '%d' replicas. Desired: %d", name, deployment.Status.AvailableReplicas, desiredReplicas))
 	})
-}
-
-func buildEventsErrorMessage(events []corev1.Event) string {
-	sort.Sort(SortableEvents(events))
-
-	const eventsLimit = 2
-	if len(events) > eventsLimit {
-		events = events[len(events)-eventsLimit:]
-	}
-
-	var builder strings.Builder
-	fmt.Fprintf(&builder, "-> Events:")
-	for _, event := range events {
-		var interval string
-		if event.Count > 1 {
-			interval = fmt.Sprintf("%s ago (x%d over %s)", translateTimestampSince(event.LastTimestamp), event.Count, translateTimestampSince(event.FirstTimestamp))
-		} else {
-			interval = fmt.Sprintf("%s ago", translateTimestampSince(event.FirstTimestamp))
-			if event.FirstTimestamp.IsZero() {
-				interval = fmt.Sprintf("%s ago", translateMicroTimestampSince(event.EventTime))
-			}
-		}
-		source := event.Source.Component
-		if source == "" {
-			source = event.ReportingController
-		}
-
-		fmt.Fprintf(&builder, "\n* %s reported %s: %s", source, interval, event.Message)
-	}
-
-	return builder.String()
-}
-
-// translateTimestampSince returns the elapsed time since timestamp in
-// human-readable approximation.
-func translateTimestampSince(timestamp metav1.Time) string {
-	if timestamp.IsZero() {
-		return "<unknown>"
-	}
-
-	return duration.HumanDuration(time.Since(timestamp.Time))
-}
-
-// translateMicroTimestampSince returns the elapsed time since timestamp in
-// human-readable approximation.
-func translateMicroTimestampSince(timestamp metav1.MicroTime) string {
-	if timestamp.IsZero() {
-		return "<unknown>"
-	}
-
-	return duration.HumanDuration(time.Since(timestamp.Time))
 }

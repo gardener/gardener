@@ -715,6 +715,36 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 		})
 	})
 
+	Describe("#computeKindTypesForSeed", func() {
+		var providerType = "fake-provider-type"
+
+		It("should add the DNSProvider extension", func() {
+			seed := &gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					DNS: gardencorev1beta1.SeedDNS{
+						Provider: &gardencorev1beta1.SeedDNSProvider{
+							Type: providerType,
+						},
+					},
+				},
+			}
+
+			expected := sets.NewString(common.ExtensionID(dnsv1alpha1.DNSProviderKind, providerType))
+			actual := computeKindTypesForSeed(seed)
+			Expect(actual).To(Equal(expected))
+		})
+
+		It("should not add an extension", func() {
+			seed := &gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{},
+			}
+
+			expected := sets.NewString()
+			actual := computeKindTypesForSeed(seed)
+			Expect(actual).To(Equal(expected))
+		})
+	})
+
 	Describe("#computeControllerRegistrationMaps", func() {
 		It("should correctly compute the result", func() {
 			registrations := computeControllerRegistrationMaps(controllerRegistrationList)
@@ -848,13 +878,13 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				installation2 := controllerInstallation2.DeepCopy()
 				installation2.Labels = map[string]string{
 					common.RegistrationSpecHash: "b24405c0d68a538e",
-					common.SeedSpecHash:         "6668c8b5c30659ab",
+					common.SeedSpecHash:         "a5e0943b25bc6cab",
 				}
 
 				installation3 := controllerInstallation3.DeepCopy()
 				installation3.Labels = map[string]string{
 					common.RegistrationSpecHash: "b24405c0d68a538e",
-					common.SeedSpecHash:         "6668c8b5c30659ab",
+					common.SeedSpecHash:         "a5e0943b25bc6cab",
 				}
 
 				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
@@ -888,7 +918,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				installation2 := controllerInstallation2.DeepCopy()
 				installation2.Labels = map[string]string{
 					common.RegistrationSpecHash: "b24405c0d68a538e",
-					common.SeedSpecHash:         "6668c8b5c30659ab",
+					common.SeedSpecHash:         "a5e0943b25bc6cab",
 				}
 
 				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))

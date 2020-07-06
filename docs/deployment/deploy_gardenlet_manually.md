@@ -26,40 +26,54 @@ Manually deploying a gardenlet is required in the following cases:
   You need to configure this information in the `Seed` configuration.
   Gardener uses this information to check that the shoot cluster isn’t created with overlapping CIDR ranges.
 
-- You need to have a predeployed `Ingress` controller.
-  The ingress controller is preinstalled for shooted seed clusters. 
-  An ingress controller is required to:
-
-  - Configure the `Seed` cluster resource 
-    (tells the gardenlet the ingress domain to use to deploy 
-    ingress resources for seed components like grafana and prometheus).
-      
-  - Handle ingress resources that are deployed 
-    during the `Seed` bootstrap by the gardenlet.
-      
-  >:warning:<br>  
-  There must be a DNS record `*.ingress.<SEED-CLUSTER-DOMAIN>` where `<SEED-CLUSTER-DOMAIN>` is the value of the `.dns.ingressDomain` field of [a seed cluster resource](../../example/50-seed.yaml) (or configured using the `seedConfig{}` in the [gardenlet configuration](../../example/20-componentconfig-gardenlet.yaml)).
-  
-### Example `Nginx` Ingress Controller
-
-Here is an example for the Nginx ingress controller:
-
-1. Deploy Nginx into the `kube-system` namespace 
-  in the Kubernetes cluster that you want to be registered as a `Seed`.
-
-   On most cloud providers, Nginx creates the service 
-  with type `LoadBalancer` with an external IP. 
-  
-    ```
-    NAME                        TYPE           CLUSTER-IP    EXTERNAL-IP
-    nginx-ingress-controller    LoadBalancer   10.0.15.46    34.200.30.30
-    ```
+- Every Seed cluster needs an Ingress controller which distributes external requests to internal components like grafana and prometheus. Gardener supports two approaches to achieve this:
     
-1. Create a wildcard `A` record 
-  (for example, `*.ingress.sweet-seed.<my-domain>. IN A 34.200.30.30`) 
-  with your DNS provider and point it to the external IP of the ingress service. 
-  This ingress domain is later required to register the `Seed` cluster.
+a. Gardener managed Ingress controller and DNS records. For this configure the following lines in your [Seed resource](../../example/50-seed.yaml):
+```yaml
+spec:
+  dns:
+    provider:
+      type: aws-route53
+      secretRef:
+        name: ingress-secret
+        namespace: garden
+  ingress:
+    domain: ingress.my-seed.example.com
+    controller:
+      kind: nginx
+      providerConfig:
+        <some-optional-provider-specific-config-for-the-ingressController>
+```
 
+⚠ Please note that if you set `.spec.ingress` then `.spec.dns.ingressDomain` must be `nil`.
+
+b. Self-managed DNS record and Ingress controller:
+
+:warning:  
+There should exist a DNS record `*.ingress.<SEED-CLUSTER-DOMAIN>` where `<SEED-CLUSTER-DOMAIN>` is the value of the `.dns.ingressDomain` field of [a Seed cluster resource](../../example/50-seed.yaml) (or the [respective Gardenlet configuration](../../example/20-componentconfig-gardenlet.yaml#L84-L85)).
+
+*This is how it could be done for the Nginx ingress controller*
+
+Deploy nginx into the `kube-system` namespace in the Kubernetes cluster that should be registered as a `Seed`.
+
+Nginx will on most cloud providers create the service with type `LoadBalancer` with an external ip.
+
+```
+NAME                        TYPE           CLUSTER-IP    EXTERNAL-IP
+nginx-ingress-controller    LoadBalancer   10.0.15.46    34.200.30.30
+```
+
+Create a wildcard `A` record (e.g *.ingress.sweet-seed.<my-domain>. IN A 34.200.30.30) with your DNS provider and point it to the external ip of the ingress service. This ingress domain is later required to register the `Seed` cluster.
+
+Please configure the ingress domain in the `Seed` specification as follows:
+
+```yaml
+spec:
+  dns:
+    ingressDomain: ingress.sweet-seed.<my-domain>
+```
+
+⚠ Please note that if you set `.spec.dns.ingressDomain` then `.spec.ingress` must be `nil`.
 
 ### `kubeconfig` for the Seed Cluster
 

@@ -138,7 +138,7 @@ func NewController(
 	controller.controllerInstallationSynced = controllerInstallationInformer.Informer().HasSynced
 
 	seedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    controller.seedAdd,
+		AddFunc:    func(obj interface{}) { controller.seedAdd(obj, true) },
 		UpdateFunc: controller.seedUpdate,
 		DeleteFunc: controller.seedDelete,
 	})

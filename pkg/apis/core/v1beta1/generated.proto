@@ -676,6 +676,26 @@ message HorizontalPodAutoscalerConfig {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration upscaleDelay = 7;
 }
 
+// Ingress configures the Ingress specific settings of the Seed cluster
+message Ingress {
+  // Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used
+  // to construct ingress URLs for system applications running in Shoot clusters.
+  optional string domain = 1;
+
+  // Controller configures a Gardener managed Ingress Controller listening on the ingressDomain
+  optional IngressController controller = 2;
+}
+
+// IngressController enables a Gardener managed Ingress Controller listening on the ingressDomain
+message IngressController {
+  // Kind defines which kind of IngressController to use, for example `nginx`
+  optional string kind = 1;
+
+  // ProviderConfig specifies infrastructure specific configuration for the ingressController
+  // +optional
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
+}
+
 // KubeAPIServerConfig contains configuration settings for the kube-apiserver.
 message KubeAPIServerConfig {
   optional KubernetesConfig kubernetesConfig = 1;
@@ -1618,7 +1638,30 @@ message SeedBackup {
 message SeedDNS {
   // IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
   // to construct ingress URLs for system applications running in Shoot clusters.
+  // This will be removed in the next API version and replaced by spec.ingress.domain.
+  // +optional
   optional string ingressDomain = 1;
+
+  // Provider configures a DNSProvider
+  // +optional
+  optional SeedDNSProvider provider = 2;
+}
+
+// SeedDNSProvider configures a DNSProvider for Seeds
+message SeedDNSProvider {
+  // Type describes the type of the dns-provider, for example `aws-route53`
+  optional string type = 1;
+
+  // SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.
+  optional k8s.io.api.core.v1.SecretReference secretRef = 2;
+
+  // Domains contains information about which domains shall be included/excluded for this provider.
+  // +optional
+  optional DNSIncludeExclude domains = 3;
+
+  // Zones contains information about which hosted zones shall be included/excluded for this provider.
+  // +optional
+  optional DNSIncludeExclude zones = 4;
 }
 
 // SeedList is a collection of Seeds.
@@ -1775,6 +1818,10 @@ message SeedSpec {
   // Settings contains certain settings for this seed cluster.
   // +optional
   optional SeedSettings settings = 8;
+
+  // Ingress configures Ingress specific settings of the Seed cluster.
+  // +optional
+  optional Ingress ingress = 9;
 }
 
 // SeedStatus is the status of a Seed.

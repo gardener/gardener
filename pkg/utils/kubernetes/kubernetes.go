@@ -20,15 +20,19 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -177,6 +181,42 @@ func WaitUntilResourceDeletedWithDefaults(ctx context.Context, c client.Client, 
 	return WaitUntilResourceDeleted(ctx, c, obj, 5*time.Second)
 }
 
+// WaitUntilLoadBalancerIsReady waits until the given external load balancer has
+// been created (i.e., its ingress information has been updated in the service status).
+func WaitUntilLoadBalancerIsReady(ctx context.Context, kubeClient kubernetes.Interface, namespace, name string, timeout time.Duration, logger *logrus.Entry) (string, error) {
+	var loadBalancerIngress string
+	if err := retry.UntilTimeout(ctx, 5*time.Second, timeout, func(ctx context.Context) (done bool, err error) {
+		loadBalancerIngress, err = GetLoadBalancerIngress(ctx, kubeClient.Client(), namespace, name)
+		if err != nil {
+			logger.Infof("Waiting until the %s service deployed is ready...", name)
+			// TODO(AC): This is a quite optimistic check / we should differentiate here
+			return retry.MinorError(fmt.Errorf("%s service deployed is not ready: %v", name, err))
+		}
+		return retry.Ok()
+	}); err != nil {
+		fieldSelector := client.MatchingFields{
+			"involvedObject.kind":      "Service",
+			"involvedObject.name":      name,
+			"involvedObject.namespace": namespace,
+			"type":                     corev1.EventTypeWarning,
+		}
+		eventList := &corev1.EventList{}
+		if err2 := kubeClient.DirectClient().List(ctx, eventList, fieldSelector); err2 != nil {
+			return "", fmt.Errorf("error '%v' occured while fetching more details on error '%v'", err2, err)
+		}
+
+		if len(eventList.Items) > 0 {
+			eventsErrorMessage := buildEventsErrorMessage(eventList.Items)
+			errorMessage := err.Error() + "\n\n" + eventsErrorMessage
+			return "", errors.New(errorMessage)
+		}
+
+		return "", err
+	}
+
+	return loadBalancerIngress, nil
+}
+
 // GetLoadBalancerIngress takes a context, a client, a namespace and a service name. It queries for a load balancer's technical name
 // (ip address or hostname). It returns the value of the technical name whereby it always prefers the hostname (if given)
 // over the IP address. It also returns the list of all load balancer ingresses.
@@ -274,4 +314,55 @@ func ReconcileServicePorts(existingPorts []corev1.ServicePort, desiredPorts []co
 	}
 
 	return out
+}
+
+func buildEventsErrorMessage(events []corev1.Event) string {
+	sort.Sort(SortableEvents(events))
+
+	const eventsLimit = 2
+	if len(events) > eventsLimit {
+		events = events[len(events)-eventsLimit:]
+	}
+
+	var builder strings.Builder
+	fmt.Fprintf(&builder, "-> Events:")
+	for _, event := range events {
+		var interval string
+		if event.Count > 1 {
+			interval = fmt.Sprintf("%s ago (x%d over %s)", translateTimestampSince(event.LastTimestamp), event.Count, translateTimestampSince(event.FirstTimestamp))
+		} else {
+			interval = fmt.Sprintf("%s ago", translateTimestampSince(event.FirstTimestamp))
+			if event.FirstTimestamp.IsZero() {
+				interval = fmt.Sprintf("%s ago", translateMicroTimestampSince(event.EventTime))
+			}
+		}
+		source := event.Source.Component
+		if source == "" {
+			source = event.ReportingController
+		}
+
+		fmt.Fprintf(&builder, "\n* %s reported %s: %s", source, interval, event.Message)
+	}
+
+	return builder.String()
+}
+
+// translateTimestampSince returns the elapsed time since timestamp in
+// human-readable approximation.
+func translateTimestampSince(timestamp metav1.Time) string {
+	if timestamp.IsZero() {
+		return "<unknown>"
+	}
+
+	return duration.HumanDuration(time.Since(timestamp.Time))
+}
+
+// translateMicroTimestampSince returns the elapsed time since timestamp in
+// human-readable approximation.
+func translateMicroTimestampSince(timestamp metav1.MicroTime) string {
+	if timestamp.IsZero() {
+		return "<unknown>"
+	}
+
+	return duration.HumanDuration(time.Since(timestamp.Time))
 }

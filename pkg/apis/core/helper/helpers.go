@@ -297,3 +297,13 @@ func HibernationIsEnabled(shoot *core.Shoot) bool {
 func SystemComponentsAllowed(worker *core.Worker) bool {
 	return worker.SystemComponents == nil || worker.SystemComponents.Allow
 }
+
+// KubernetesDashboardEnabled returns true if the kubernetes-dashboard addon is enabled in the Shoot manifest.
+func KubernetesDashboardEnabled(addons *core.Addons) bool {
+	return addons != nil && addons.KubernetesDashboard != nil && addons.KubernetesDashboard.Enabled
+}
+
+// NginxIngressEnabled returns true if the nginx-ingress addon is enabled in the Shoot manifest.
+func NginxIngressEnabled(addons *core.Addons) bool {
+	return addons != nil && addons.NginxIngress != nil && addons.NginxIngress.Enabled
+}

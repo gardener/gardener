@@ -25,21 +25,36 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 )
 
-func (c *Controller) seedAdd(obj interface{}) {
+func (c *Controller) seedAdd(obj interface{}, addToControllerRegistrationQueue bool) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		return
 	}
+
 	c.seedQueue.Add(key)
+	if addToControllerRegistrationQueue {
+		c.controllerRegistrationSeedQueue.Add(key)
+	}
 }
 
 func (c *Controller) seedUpdate(oldObj, newObj interface{}) {
-	c.seedAdd(newObj)
+	oldObject, ok := oldObj.(*gardencorev1beta1.Seed)
+	if !ok {
+		return
+	}
+
+	newObject, ok := newObj.(*gardencorev1beta1.Seed)
+	if !ok {
+		return
+	}
+
+	c.seedAdd(newObj, !apiequality.Semantic.DeepEqual(oldObject.Spec.DNS.Provider, newObject.Spec.DNS.Provider))
 }
 
 func (c *Controller) seedDelete(obj interface{}) {
@@ -48,6 +63,7 @@ func (c *Controller) seedDelete(obj interface{}) {
 		return
 	}
 	c.seedQueue.Add(key)
+	c.controllerRegistrationSeedQueue.Add(key)
 }
 
 func (c *Controller) reconcileSeedKey(key string) error {

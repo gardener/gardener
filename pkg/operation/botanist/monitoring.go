@@ -140,6 +140,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"enabled": b.Shoot.KonnectivityTunnelEnabled,
 			},
 			"ingress": map[string]interface{}{
+				"class":           getIngressClass(b.Seed.Info.Spec.Ingress),
 				"basicAuthSecret": basicAuth,
 				"hosts":           hosts,
 			},
@@ -282,6 +283,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 		alertManagerValues, err := b.InjectSeedShootImages(map[string]interface{}{
 			"ingress": map[string]interface{}{
+				"class":           getIngressClass(b.Seed.Info.Spec.Ingress),
 				"basicAuthSecret": basicAuthUsers,
 				"hosts":           hosts,
 			},
@@ -302,6 +304,13 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func getIngressClass(ingress *gardencorev1beta1.Ingress) string {
+	if ingress != nil && ingress.Controller.Kind == v1beta1constants.IngressKindNginx {
+		return v1beta1constants.SeedNginxIngressClass
+	}
+	return v1beta1constants.ShootNginxIngressClass
 }
 
 func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretKeys []string) (map[string]interface{}, error) {
@@ -400,6 +409,7 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 
 	values, err := b.InjectSeedShootImages(map[string]interface{}{
 		"ingress": map[string]interface{}{
+			"class":           getIngressClass(b.Seed.Info.Spec.Ingress),
 			"basicAuthSecret": basicAuth,
 			"hosts":           hosts,
 		},

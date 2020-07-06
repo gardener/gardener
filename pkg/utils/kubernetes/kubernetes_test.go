@@ -22,13 +22,16 @@ import (
 	"time"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mock "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -893,4 +896,102 @@ var _ = Describe("kubernetes", func() {
 		Entry("existing and desired ports", []corev1.ServicePort{{Name: port1.Name, NodePort: 1337}}, ConsistOf(corev1.ServicePort{Name: port1.Name, Protocol: port1.Protocol, Port: port1.Port, NodePort: 1337}, port2, port3)),
 		Entry("existing and both desired and undesired ports", []corev1.ServicePort{{Name: "foo"}, {Name: port1.Name, NodePort: 1337}}, ConsistOf(corev1.ServicePort{Name: port1.Name, Protocol: port1.Protocol, Port: port1.Port, NodePort: 1337}, port2, port3)),
 	)
+
+	Describe("#WaitUntilLoadBalancerIsReady", func() {
+		var (
+			ctrl                  *gomock.Controller
+			k8sShootClient        *mock.MockInterface
+			k8sShootRuntimeClient *mockclient.MockClient
+			key                   = client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: "load-balancer"}
+			logger                = logrus.NewEntry(logger.NewNopLogger())
+		)
+
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+
+			k8sShootClient = mock.NewMockInterface(ctrl)
+			k8sShootRuntimeClient = mockclient.NewMockClient(ctrl)
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		It("should return nil when the Service has .status.loadBalancer.ingress[]", func() {
+			var (
+				ctx = context.TODO()
+				svc = &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "load-balancer",
+						Namespace: metav1.NamespaceSystem,
+					},
+					Status: corev1.ServiceStatus{
+						LoadBalancer: corev1.LoadBalancerStatus{
+							Ingress: []corev1.LoadBalancerIngress{
+								{
+									Hostname: "cluster.local",
+								},
+							},
+						},
+					},
+				}
+			)
+
+			gomock.InOrder(
+				k8sShootClient.EXPECT().Client().Return(k8sShootRuntimeClient),
+				k8sShootRuntimeClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(
+					func(_ context.Context, _ client.ObjectKey, obj *corev1.Service) error {
+						*obj = *svc
+						return nil
+					}),
+			)
+
+			actual, err := WaitUntilLoadBalancerIsReady(ctx, k8sShootClient, metav1.NamespaceSystem, "load-balancer", 1*time.Second, logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actual).To(Equal("cluster.local"))
+		})
+
+		It("should return err when the Service has no .status.loadBalancer.ingress[]", func() {
+			var (
+				ctx = context.TODO()
+				svc = &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "load-balancer",
+						Namespace: metav1.NamespaceSystem,
+					},
+					Status: corev1.ServiceStatus{},
+				}
+				event = corev1.Event{
+					Source:         corev1.EventSource{Component: "service-controller"},
+					Message:        "Error syncing load balancer: an error occurred",
+					FirstTimestamp: metav1.NewTime(time.Date(2020, time.January, 15, 0, 0, 0, 0, time.UTC)),
+					LastTimestamp:  metav1.NewTime(time.Date(2020, time.January, 15, 0, 0, 0, 0, time.UTC)),
+					Count:          1,
+					Type:           corev1.EventTypeWarning,
+				}
+			)
+
+			gomock.InOrder(
+				k8sShootClient.EXPECT().Client().Return(k8sShootRuntimeClient),
+				k8sShootRuntimeClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(
+					func(_ context.Context, _ client.ObjectKey, obj *corev1.Service) error {
+						*obj = *svc
+						return nil
+					}),
+				k8sShootClient.EXPECT().DirectClient().Return(k8sShootRuntimeClient),
+				k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
+					func(_ context.Context, list *corev1.EventList, _ ...client.ListOption) error {
+						list.Items = append(list.Items, event)
+						return nil
+					}),
+			)
+
+			actual, err := WaitUntilLoadBalancerIsReady(ctx, k8sShootClient, metav1.NamespaceSystem, "load-balancer", 1*time.Second, logger)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("-> Events:\n* service-controller reported"))
+			Expect(err.Error()).To(ContainSubstring("Error syncing load balancer: an error occurred"))
+			Expect(actual).To(BeEmpty())
+		})
+	})
+
 })

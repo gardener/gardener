@@ -1280,6 +1280,20 @@ SeedSettings
 <p>Settings contains certain settings for this seed cluster.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>ingress</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Ingress">
+Ingress
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Ingress configures Ingress specific settings of the Seed cluster.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -3092,7 +3106,8 @@ not a default domain is used.</p>
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.DNSProvider">DNSProvider</a>)
+<a href="#core.gardener.cloud/v1beta1.DNSProvider">DNSProvider</a>, 
+<a href="#core.gardener.cloud/v1beta1.SeedDNSProvider">SeedDNSProvider</a>)
 </p>
 <p>
 </p>
@@ -3726,6 +3741,94 @@ Kubernetes meta/v1.Duration
 <td>
 <em>(Optional)</em>
 <p>The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.Ingress">Ingress
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">SeedSpec</a>)
+</p>
+<p>
+<p>Ingress configures the Ingress specific settings of the Seed cluster</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>domain</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used
+to construct ingress URLs for system applications running in Shoot clusters.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>controller</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.IngressController">
+IngressController
+</a>
+</em>
+</td>
+<td>
+<p>Controller configures a Gardener managed Ingress Controller listening on the ingressDomain</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.IngressController">IngressController
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Ingress">Ingress</a>)
+</p>
+<p>
+<p>IngressController enables a Gardener managed Ingress Controller listening on the ingressDomain</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>kind</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Kind defines which kind of IngressController to use, for example <code>nginx</code></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig specifies infrastructure specific configuration for the ingressController</p>
 </td>
 </tr>
 </tbody>
@@ -6850,8 +6953,95 @@ string
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-to construct ingress URLs for system applications running in Shoot clusters.</p>
+to construct ingress URLs for system applications running in Shoot clusters.
+This will be removed in the next API version and replaced by spec.ingress.domain.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>provider</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedDNSProvider">
+SeedDNSProvider
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Provider configures a DNSProvider</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.SeedDNSProvider">SeedDNSProvider
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedDNS">SeedDNS</a>)
+</p>
+<p>
+<p>SeedDNSProvider configures a DNSProvider for Seeds</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type describes the type of the dns-provider, for example <code>aws-route53</code></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>domains</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.DNSIncludeExclude">
+DNSIncludeExclude
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Domains contains information about which domains shall be included/excluded for this provider.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>zones</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.DNSIncludeExclude">
+DNSIncludeExclude
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Zones contains information about which hosted zones shall be included/excluded for this provider.</p>
 </td>
 </tr>
 </tbody>
@@ -7418,6 +7608,20 @@ SeedSettings
 <td>
 <em>(Optional)</em>
 <p>Settings contains certain settings for this seed cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ingress</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Ingress">
+Ingress
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Ingress configures Ingress specific settings of the Seed cluster.</p>
 </td>
 </tr>
 </tbody>

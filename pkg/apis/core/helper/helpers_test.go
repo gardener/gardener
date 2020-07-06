@@ -487,4 +487,26 @@ var _ = Describe("helper", func() {
 		Entry("should return an error - only preview versions", []core.MachineImageVersion{previewVersion}, true, nil, true),
 		Entry("should return an error - empty version slice", []core.MachineImageVersion{}, true, nil, true),
 	)
+
+	DescribeTable("#KubernetesDashboardEnabled",
+		func(addons *core.Addons, matcher gomegatypes.GomegaMatcher) {
+			Expect(KubernetesDashboardEnabled(addons)).To(matcher)
+		},
+
+		Entry("addons nil", nil, BeFalse()),
+		Entry("kubernetesDashboard nil", &core.Addons{}, BeFalse()),
+		Entry("kubernetesDashboard disabled", &core.Addons{KubernetesDashboard: &core.KubernetesDashboard{Addon: core.Addon{Enabled: false}}}, BeFalse()),
+		Entry("kubernetesDashboard enabled", &core.Addons{KubernetesDashboard: &core.KubernetesDashboard{Addon: core.Addon{Enabled: true}}}, BeTrue()),
+	)
+
+	DescribeTable("#NginxIngressEnabled",
+		func(addons *core.Addons, matcher gomegatypes.GomegaMatcher) {
+			Expect(NginxIngressEnabled(addons)).To(matcher)
+		},
+
+		Entry("addons nil", nil, BeFalse()),
+		Entry("nginxIngress nil", &core.Addons{}, BeFalse()),
+		Entry("nginxIngress disabled", &core.Addons{NginxIngress: &core.NginxIngress{Addon: core.Addon{Enabled: false}}}, BeFalse()),
+		Entry("nginxIngress enabled", &core.Addons{NginxIngress: &core.NginxIngress{Addon: core.Addon{Enabled: true}}}, BeTrue()),
+	)
 })

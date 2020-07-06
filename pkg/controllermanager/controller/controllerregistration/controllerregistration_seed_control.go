@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -152,12 +153,14 @@ func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1be
 		wantedKindTypeCombinationForBackupBuckets, buckets = computeKindTypesForBackupBuckets(backupBucketList, seed.Name)
 		wantedKindTypeCombinationForBackupEntries          = computeKindTypesForBackupEntries(logger, backupEntryList, buckets, seed.Name)
 		wantedKindTypeCombinationForShoots                 = computeKindTypesForShoots(ctx, logger, gardenClient.Client(), shootList, seed, controllerRegistrationList, internalDomain, defaultDomains)
+		wantedKindTypeCombinationForSeed                   = computeKindTypesForSeed(seed)
 
 		wantedKindTypeCombinations = sets.
 						NewString().
 						Union(wantedKindTypeCombinationForBackupBuckets).
 						Union(wantedKindTypeCombinationForBackupEntries).
-						Union(wantedKindTypeCombinationForShoots)
+						Union(wantedKindTypeCombinationForShoots).
+						Union(wantedKindTypeCombinationForSeed)
 	)
 
 	wantedControllerRegistrationNames, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, len(shootList), seed.ObjectMeta)
@@ -271,6 +274,20 @@ func computeKindTypesForShoots(
 
 	for result := range out {
 		wantedKindTypeCombinations = wantedKindTypeCombinations.Union(result)
+	}
+
+	return wantedKindTypeCombinations
+}
+
+// computeKindTypesForSeed computes the list of wanted kind/type combinations for extension resources based on the
+// Seed configuration
+func computeKindTypesForSeed(
+	seed *gardencorev1beta1.Seed,
+) sets.String {
+	var wantedKindTypeCombinations = sets.NewString()
+
+	if seed.Spec.DNS.Provider != nil {
+		wantedKindTypeCombinations.Insert(common.ExtensionID(dnsv1alpha1.DNSProviderKind, seed.Spec.DNS.Provider.Type))
 	}
 
 	return wantedKindTypeCombinations

@@ -16,6 +16,7 @@ package validation
 
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
@@ -23,6 +24,12 @@ import (
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+)
+
+var (
+	availableIngressKinds = sets.NewString(
+		v1beta1constants.IngressKindNginx,
+	)
 )
 
 // ValidateSeed validates a Seed object.
@@ -58,7 +65,6 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path) field.ErrorL
 		allErrs = append(allErrs, field.Required(providerPath.Child("region"), "must provide a provider region"))
 	}
 
-	allErrs = append(allErrs, validateDNS1123Subdomain(seedSpec.DNS.IngressDomain, fldPath.Child("dns", "ingressDomain"))...)
 	if seedSpec.SecretRef != nil {
 		allErrs = append(allErrs, validateSecretReference(*seedSpec.SecretRef, fldPath.Child("secretRef"))...)
 	}
@@ -135,6 +141,48 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path) field.ErrorL
 
 	if seedSpec.Settings != nil && seedSpec.Settings.LoadBalancerServices != nil {
 		allErrs = append(allErrs, apivalidation.ValidateAnnotations(seedSpec.Settings.LoadBalancerServices.Annotations, fldPath.Child("settings", "loadBalancerServices", "annotations"))...)
+	}
+
+	if seedSpec.DNS.IngressDomain != nil {
+		allErrs = append(allErrs, validateDNS1123Subdomain(*seedSpec.DNS.IngressDomain, fldPath.Child("dns", "ingressDomain"))...)
+	}
+
+	if seedSpec.DNS.IngressDomain == nil && (seedSpec.Ingress == nil || len(seedSpec.Ingress.Domain) == 0) {
+		allErrs = append(allErrs, field.Invalid(fldPath, seedSpec, "either specify spec.ingress or spec.dns.ingressDomain"))
+	}
+
+	if seedSpec.Ingress != nil {
+		if seedSpec.DNS.IngressDomain != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "ingressDomain"), "",
+				"Either specify spec.ingress.domain or spec.dns.ingressDomain"),
+			)
+		} else {
+			if !availableIngressKinds.Has(seedSpec.Ingress.Controller.Kind) {
+				allErrs = append(allErrs, field.NotSupported(
+					fldPath.Child("ingress", "controller", "kind"),
+					seedSpec.Ingress.Controller.Kind,
+					availableIngressKinds.UnsortedList()),
+				)
+			}
+			if seedSpec.DNS.Provider == nil {
+				allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider"),
+					"ingress controller requires dns.provider to be set"))
+			} else {
+				if len(seedSpec.DNS.Provider.Type) == 0 {
+					allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider", "type"),
+						"DNS provider type must be set"))
+				}
+				if len(seedSpec.DNS.Provider.SecretRef.Name) == 0 {
+					allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider", "secretRef", "name"),
+						"secret reference name must be set"))
+				}
+				if len(seedSpec.DNS.Provider.SecretRef.Namespace) == 0 {
+					allErrs = append(allErrs, field.Required(fldPath.Child("dns", "provider", "secretRef", "namespace"),
+						"secret reference namespace must be set"))
+				}
+			}
+			allErrs = append(allErrs, validateDNS1123Subdomain(seedSpec.Ingress.Domain, fldPath.Child("ingress", "domain"))...)
+		}
 	}
 
 	return allErrs

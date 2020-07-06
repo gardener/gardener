@@ -38,6 +38,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -357,7 +358,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.addons.kubernetes-dashboard.authenticationMode"),
+				"Field": Equal("spec.addons.kubernetesDashboard.authenticationMode"),
 			}))))
 		})
 
@@ -383,8 +384,34 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.addons.nginx-ingress.externalTrafficPolicy"),
+				"Field": Equal("spec.addons.nginxIngress.externalTrafficPolicy"),
 			}))))
+		})
+
+		It("should forbid enabling the nginx-ingress addon for shooted seeds if it was disabled", func() {
+			newShoot := prepareShootForUpdate(shoot)
+
+			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootUseAsSeed, "true")
+			shoot.Spec.Addons.NginxIngress.Enabled = false
+			metav1.SetMetaDataAnnotation(&newShoot.ObjectMeta, v1beta1constants.AnnotationShootUseAsSeed, "true")
+			newShoot.Spec.Addons.NginxIngress.Enabled = true
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("spec.addons.nginxIngress.enabled"),
+			}))))
+		})
+
+		It("should allow enabling the nginx-ingress addon for shoots if it was disabled", func() {
+			newShoot := prepareShootForUpdate(shoot)
+			shoot.Spec.Addons.NginxIngress.Enabled = false
+			newShoot.Spec.Addons.NginxIngress.Enabled = true
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid using basic auth mode for kubernetes dashboard when it's disabled in kube-apiserver config", func() {
@@ -395,7 +422,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.addons.kubernetes-dashboard.authenticationMode"),
+				"Field": Equal("spec.addons.kubernetesDashboard.authenticationMode"),
 			}))))
 		})
 
@@ -1785,7 +1812,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				oldShoot := shoot.DeepCopy()
 				oldShoot.Spec.Kubernetes.KubeProxy = &oldConfig
 
-				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, false, field.NewPath("spec"))
+				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, metav1.ObjectMeta{}, field.NewPath("spec"))
 
 				Expect(errorList).ToNot(BeEmpty())
 				Expect(errorList).To(ConsistOfFields(Fields{
@@ -1821,7 +1848,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				oldShoot := shoot.DeepCopy()
 				oldShoot.Spec.Kubernetes.KubeProxy = &oldConfig
 
-				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, false, field.NewPath("spec"))
+				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, metav1.ObjectMeta{}, field.NewPath("spec"))
 				Expect(errorList).To(BeEmpty())
 			})
 		})

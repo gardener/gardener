@@ -184,6 +184,10 @@ images:
   repository: k8s.gcr.io/ingress-nginx/controller
   tag: "v0.41.2"
   targetVersion: ">= 1.20"
+- name: nginx-ingress-controller-seed
+  sourceRepository: github.com/kubernetes/ingress-nginx
+  repository: k8s.gcr.io/ingress-nginx/controller
+  tag: "v0.41.2"
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
