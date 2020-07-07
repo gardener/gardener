@@ -54,8 +54,8 @@ global:
       seedClientConnection:
         acceptContentTypes: application/json
         contentType: application/json
-        qps: 25
-        burst: 50
+        qps: 100
+        burst: 130
       # kubeconfig: |
       #   Specify a kubeconfig for the seed cluster here if you don't want to use the Gardenlet's service account.
       shootClientConnection:
