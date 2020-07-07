@@ -45,21 +45,23 @@ func (m *secretToBackupEntryMapper) Map(obj handler.MapObject) []reconcile.Reque
 	}
 
 	backupEntryList := &extensionsv1alpha1.BackupEntryList{}
-	if err := m.client.List(context.TODO(), backupEntryList, client.MatchingFields{"spec.secretRef.name": secret.Name}, client.MatchingFields{"spec.secretRef.namespace": secret.Namespace}); err != nil {
+	if err := m.client.List(context.TODO(), backupEntryList); err != nil {
 		return nil
 	}
 
 	var requests []reconcile.Request
 	for _, backupEntry := range backupEntryList.Items {
-		if !extensionspredicate.EvalGeneric(&backupEntry, m.predicates...) {
-			continue
+		if backupEntry.Spec.SecretRef.Name == secret.Name && backupEntry.Spec.SecretRef.Namespace == secret.Namespace {
+			if extensionspredicate.EvalGeneric(&backupEntry, m.predicates...) {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name: backupEntry.Name,
+					},
+				})
+			}
 		}
-		requests = append(requests, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name: backupEntry.Name,
-			},
-		})
 	}
+
 	return requests
 }
 
