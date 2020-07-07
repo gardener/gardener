@@ -59,20 +59,21 @@ func (m *secretToBackupBucketMapper) Map(obj handler.MapObject) []reconcile.Requ
 	}
 
 	backupBucketList := &extensionsv1alpha1.BackupBucketList{}
-	if err := m.client.List(context.TODO(), backupBucketList, client.MatchingFields{"spec.secretRef.name": secret.Name}, client.MatchingFields{"spec.secretRef.namespace": secret.Namespace}); err != nil {
+	if err := m.client.List(context.TODO(), backupBucketList); err != nil {
 		return nil
 	}
 
 	var requests []reconcile.Request
 	for _, backupBucket := range backupBucketList.Items {
-		if !extensionspredicate.EvalGeneric(&backupBucket, m.predicates...) {
-			continue
+		if backupBucket.Spec.SecretRef.Name == secret.Name && backupBucket.Spec.SecretRef.Namespace == secret.Namespace {
+			if extensionspredicate.EvalGeneric(&backupBucket, m.predicates...) {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name: backupBucket.Name,
+					},
+				})
+			}
 		}
-		requests = append(requests, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name: backupBucket.Name,
-			},
-		})
 	}
 	return requests
 }
