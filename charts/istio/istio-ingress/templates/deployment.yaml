@@ -22,6 +22,7 @@ spec:
         service.istio.io/canonical-revision: "1.5"
       annotations:
         sidecar.istio.io/inject: "false"
+        checksum/configmap-bootstrap-config-override: {{ include (print $.Template.BasePath "/bootstrap-config-override.yaml") . | sha256sum }}
     spec:
       serviceAccountName: istio-ingressgateway
       containers:
@@ -127,9 +128,14 @@ spec:
           value: sni-dnat
         - name: ISTIO_META_CLUSTER_ID
           value: "Kubernetes"
+        - name: ISTIO_BOOTSTRAP_OVERRIDE
+          value: /etc/istio/custom-bootstrap/custom_bootstrap.yaml
         volumeMounts:
         - mountPath: /var/run/secrets/istio
           name: istiod-ca-cert
+        - mountPath: /etc/istio/custom-bootstrap
+          name: custom-bootstrap-volume
+          readOnly: true
         - name: istio-token
           mountPath: /var/run/secrets/tokens
           readOnly: true
@@ -141,6 +147,9 @@ spec:
       - name: istiod-ca-cert
         configMap:
           name: istio-ca-root-cert
+      - name: custom-bootstrap-volume
+        configMap:
+          name: istio-custom-bootstrap-config
       - name: podinfo
         downwardAPI:
           items:
