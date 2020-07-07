@@ -95,6 +95,10 @@ func (b *Botanist) applyFuncToAllExtensionCRs(ctx context.Context, applyFunc fun
 }
 
 func (b *Botanist) restoreExtensionObject(ctx context.Context, client client.Client, extensionObj extensionsv1alpha1.Object, resourceKind string) error {
+	if err := client.Get(ctx, kutil.KeyFromObject(extensionObj), extensionObj); err != nil {
+		return err
+	}
+
 	if err := b.restoreExtensionObjectState(ctx, client, extensionObj, resourceKind, extensionObj.GetName(), extensionObj.GetExtensionSpec().GetExtensionPurpose()); err != nil {
 		return err
 	}
