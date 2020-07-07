@@ -9,8 +9,8 @@ gardenClientConnection:
 seedClientConnection:
   acceptContentTypes: application/json
   contentType: application/json
-  qps: 25
-  burst: 50
+  qps: 100
+  burst: 130
 shootClientConnection:
   acceptContentTypes: application/json
   contentType: application/json
