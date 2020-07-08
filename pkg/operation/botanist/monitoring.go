@@ -386,6 +386,7 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 		"extensions": map[string]interface{}{
 			"dashboards": dashboards,
 		},
+		"vpaEnabled": b.Shoot.WantsVerticalPodAutoscaler,
 		"konnectivityTunnel": map[string]interface{}{
 			"enabled": b.Shoot.KonnectivityTunnelEnabled,
 		},
