@@ -772,9 +772,26 @@ func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []c
 	// This should only happen in the maintenance time window of shoots and is performed by the
 	// shoot maintenance controller.
 
-	name := worker.Name
-	if oldWorker := helper.FindWorkerByName(oldWorkers, name); worker.Machine.Image == nil && oldWorker != nil && oldWorker.Machine.Image != nil {
-		return oldWorker.Machine.Image, nil
+	oldWorker := helper.FindWorkerByName(oldWorkers, worker.Name)
+	if oldWorker != nil && oldWorker.Machine.Image != nil {
+		// worker is already existing -> keep the machine image if name/version is unspecified
+		if worker.Machine.Image == nil {
+			// machine image completely unspecified in new worker -> keep the old one
+			return oldWorker.Machine.Image, nil
+		}
+
+		if oldWorker.Machine.Image.Name == worker.Machine.Image.Name {
+			// image name was not changed -> keep version from the new worker if specified, otherwise use the old worker image version
+			if len(worker.Machine.Image.Version) != 0 {
+				return worker.Machine.Image, nil
+			}
+			return oldWorker.Machine.Image, nil
+		} else {
+			// image name was changed -> keep version from new worker if specified, otherwise default the image version
+			if len(worker.Machine.Image.Version) != 0 {
+				return worker.Machine.Image, nil
+			}
+		}
 	}
 
 	imageName := ""
