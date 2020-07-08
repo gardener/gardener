@@ -1124,6 +1124,78 @@ var _ = Describe("validator", func() {
 			})
 
 			Context("machine image checks", func() {
+				var (
+					classificationPreview = core.ClassificationPreview
+
+					imageName1 = "some-image"
+					imageName2 = "other-image"
+
+					expiredVersion          = "1.1.1"
+					expiringVersion         = "1.2.1"
+					nonExpiredVersion1      = "2.0.0"
+					nonExpiredVersion2      = "2.0.1"
+					latestNonExpiredVersion = "2.1.0"
+					previewVersion          = "3.0.0"
+
+					cloudProfileMachineImages = []core.MachineImage{
+						{
+							Name: imageName1,
+							Versions: []core.ExpirableVersion{
+								{
+									Version:        previewVersion,
+									Classification: &classificationPreview,
+								},
+								{
+									Version: latestNonExpiredVersion,
+								},
+								{
+									Version: nonExpiredVersion1,
+								},
+								{
+									Version: nonExpiredVersion2,
+								},
+								{
+									Version:        expiringVersion,
+									ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
+								},
+								{
+									Version:        expiredVersion,
+									ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+								},
+							},
+						}, {
+							Name: imageName2,
+							Versions: []core.ExpirableVersion{
+								{
+									Version:        previewVersion,
+									Classification: &classificationPreview,
+								},
+								{
+									Version: latestNonExpiredVersion,
+								},
+								{
+									Version: nonExpiredVersion1,
+								},
+								{
+									Version: nonExpiredVersion2,
+								},
+								{
+									Version:        expiringVersion,
+									ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
+								},
+								{
+									Version:        expiredVersion,
+									ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+								},
+							},
+						},
+					}
+				)
+
+				BeforeEach(func() {
+					cloudProfile.Spec.MachineImages = cloudProfileMachineImages
+				})
+
 				Context("create Shoot", func() {
 					It("should reject due to an invalid machine image", func() {
 						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
@@ -1158,30 +1230,10 @@ var _ = Describe("validator", func() {
 					})
 
 					It("should reject due to a machine image with expiration date in the past", func() {
-						imageVersionExpired := "0.0.1-beta"
-
 						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    validMachineImageName,
-							Version: imageVersionExpired,
+							Name:    imageName1,
+							Version: expiredVersion,
 						}
-
-						timeInThePast := metav1.Now().Add(time.Second * -1000)
-						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, core.MachineImage{
-							Name: validMachineImageName,
-							Versions: []core.ExpirableVersion{
-								{
-									Version:        imageVersionExpired,
-									ExpirationDate: &metav1.Time{Time: timeInThePast},
-								},
-							},
-						}, core.MachineImage{
-							Name: "other-image-name",
-							Versions: []core.ExpirableVersion{
-								{
-									Version: imageVersionExpired,
-								},
-							},
-						})
 
 						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -1194,31 +1246,6 @@ var _ = Describe("validator", func() {
 					})
 
 					It("should default version to latest non-preview version as shoot does not specify one", func() {
-						imageName := "some-image"
-						version1 := "1.1.1"
-						version2 := "2.2.2"
-						version3 := "2.2.3"
-						classificationPreview := core.ClassificationPreview
-
-						cloudProfile.Spec.MachineImages = []core.MachineImage{
-							{
-								Name: imageName,
-								Versions: []core.ExpirableVersion{
-									{
-										Version:        version3,
-										Classification: &classificationPreview,
-									},
-									{
-										Version: version2,
-									},
-									{
-										Version:        version1,
-										ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
-									},
-								},
-							},
-						}
-
 						shoot.Spec.Provider.Workers[0].Machine.Image = nil
 
 						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -1230,34 +1257,36 @@ var _ = Describe("validator", func() {
 
 						Expect(err).NotTo(HaveOccurred())
 						Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
-							Name:    imageName,
-							Version: version2,
+							Name:    imageName1,
+							Version: latestNonExpiredVersion,
+						}))
+					})
+
+					It("should default version to latest non-preview version as shoot only specifies name", func() {
+						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name: imageName1,
+						}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
+							Name:    imageName1,
+							Version: latestNonExpiredVersion,
 						}))
 					})
 				})
 
 				Context("update Shoot", func() {
-					It("should not touch the machine image of the old shoot", func() {
-						imageName := "some-image"
-						version1 := "1.1.1"
-						version2 := "2.2.2"
-
-						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, core.MachineImage{
-							Name: imageName,
-							Versions: []core.ExpirableVersion{
-								{
-									Version: version2,
-								},
-								{
-									Version:        version1,
-									ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
-								},
-							},
-						})
-
+					It("should keep machine image of the old shoot (unset in new shoot)", func() {
 						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    imageName,
-							Version: version1,
+							Name:    imageName1,
+							Version: nonExpiredVersion1,
 						}
 						newShoot := shoot.DeepCopy()
 						newShoot.Spec.Provider.Workers[0].Machine.Image = nil
@@ -1273,32 +1302,36 @@ var _ = Describe("validator", func() {
 						Expect(*newShoot).To(Equal(shoot))
 					})
 
-					It("should respect the desired machine image of the new shoot", func() {
-						imageName := "some-image"
-						version1 := "1.1.1"
-						version2 := "2.2.2"
-
-						cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, core.MachineImage{
-							Name: imageName,
-							Versions: []core.ExpirableVersion{
-								{
-									Version: version2,
-								},
-								{
-									Version:        version1,
-									ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
-								},
-							},
-						})
-
+					It("should keep machine image of the old shoot (version unset in new shoot)", func() {
 						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    imageName,
-							Version: version1,
+							Name:    imageName1,
+							Version: nonExpiredVersion1,
 						}
 						newShoot := shoot.DeepCopy()
 						newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-							Name:    imageName,
-							Version: version2,
+							Name: imageName1,
+						}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(*newShoot).To(Equal(shoot))
+					})
+
+					It("should use updated machine image version as specified", func() {
+						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name:    imageName1,
+							Version: nonExpiredVersion1,
+						}
+						newShoot := shoot.DeepCopy()
+						newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name:    imageName1,
+							Version: nonExpiredVersion2,
 						}
 
 						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -1310,8 +1343,130 @@ var _ = Describe("validator", func() {
 
 						Expect(err).NotTo(HaveOccurred())
 						Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
-							Name:    imageName,
-							Version: version2,
+							Name:    imageName1,
+							Version: nonExpiredVersion2,
+						}))
+					})
+
+					It("should default version of new worker pool to latest non-preview version", func() {
+						newShoot := shoot.DeepCopy()
+						newWorker := newShoot.Spec.Provider.Workers[0].DeepCopy()
+						newWorker.Name = "second-worker"
+						newWorker.Machine.Image = nil
+						newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, *newWorker)
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(newShoot.Spec.Provider.Workers[0]).To(Equal(shoot.Spec.Provider.Workers[0]))
+						Expect(newShoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(&core.ShootMachineImage{
+							Name:    imageName1,
+							Version: latestNonExpiredVersion,
+						}))
+					})
+
+					It("should default version of new worker pool to latest non-preview version (version unset)", func() {
+						newShoot := shoot.DeepCopy()
+						newWorker := newShoot.Spec.Provider.Workers[0].DeepCopy()
+						newWorker.Name = "second-worker"
+						newWorker.Machine.Image = &core.ShootMachineImage{
+							Name: imageName2,
+						}
+						newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, *newWorker)
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(newShoot.Spec.Provider.Workers[0]).To(Equal(shoot.Spec.Provider.Workers[0]))
+						Expect(newShoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(&core.ShootMachineImage{
+							Name:    imageName2,
+							Version: latestNonExpiredVersion,
+						}))
+					})
+
+					It("should use version of new worker pool as specified", func() {
+						newShoot := shoot.DeepCopy()
+						newWorker := newShoot.Spec.Provider.Workers[0].DeepCopy()
+						newWorker.Name = "second-worker"
+						newWorker.Machine.Image = &core.ShootMachineImage{
+							Name:    imageName2,
+							Version: nonExpiredVersion1,
+						}
+						newShoot.Spec.Provider.Workers = append(newShoot.Spec.Provider.Workers, *newWorker)
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(newShoot.Spec.Provider.Workers[0]).To(Equal(shoot.Spec.Provider.Workers[0]))
+						Expect(newShoot.Spec.Provider.Workers[1].Machine.Image).To(Equal(&core.ShootMachineImage{
+							Name:    imageName2,
+							Version: nonExpiredVersion1,
+						}))
+					})
+
+					It("should default version of new image to latest non-preview version (version unset)", func() {
+						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name:    imageName1,
+							Version: nonExpiredVersion2,
+						}
+
+						newShoot := shoot.DeepCopy()
+						newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name: imageName2,
+						}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
+							Name:    imageName2,
+							Version: latestNonExpiredVersion,
+						}))
+					})
+
+					It("should use version of new image as specified", func() {
+						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name:    imageName1,
+							Version: nonExpiredVersion2,
+						}
+
+						newShoot := shoot.DeepCopy()
+						newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name:    imageName2,
+							Version: nonExpiredVersion2,
+						}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), newShoot.Namespace, newShoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+						Expect(newShoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(&core.ShootMachineImage{
+							Name:    imageName2,
+							Version: nonExpiredVersion2,
 						}))
 					})
 				})
