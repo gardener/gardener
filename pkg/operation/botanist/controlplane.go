@@ -120,6 +120,22 @@ func (b *Botanist) deleteNamespace(ctx context.Context, name string) error {
 	return err
 }
 
+// EnsureClusterIdentity ensures that Shoot cluster-identity ConfigMap exists and stores its data
+// in the operation. Updates shoot.status.clusterIdentity if it doesn't exist already.
+func (b *Botanist) EnsureClusterIdentity(ctx context.Context) error {
+	if err := b.Shoot.Components.ClusterIdentity.Deploy(ctx); err != nil {
+		return err
+	}
+
+	latestShoot := &gardencorev1beta1.Shoot{}
+	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, b.Shoot.Info.Name), latestShoot); err != nil {
+		return err
+	}
+
+	b.Shoot.Info = latestShoot
+	return nil
+}
+
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
 func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 	// invalidate shoot client here before deleting API server

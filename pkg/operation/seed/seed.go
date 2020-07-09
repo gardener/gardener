@@ -281,7 +281,7 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 }
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
-func BootstrapCluster(k8sSeedClient kubernetes.Interface, seed *Seed, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, componentImageVectors imagevector.ComponentImageVectors) error {
+func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed *Seed, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, componentImageVectors imagevector.ComponentImageVectors) error {
 	const chartName = "seed-bootstrap"
 
 	gardenNamespace := &corev1.Namespace{
@@ -645,6 +645,18 @@ func BootstrapCluster(k8sSeedClient kubernetes.Interface, seed *Seed, secrets ma
 		}
 	}
 
+	if seed.Info.Status.ClusterIdentity == nil {
+		seedClusterIdentity, err := determineClusterIdentity(context.TODO(), k8sSeedClient.Client())
+		if err != nil {
+			return err
+		}
+
+		seed.Info.Status.ClusterIdentity = &seedClusterIdentity
+		if err := k8sGardenClient.Client().Status().Update(context.TODO(), seed.Info); err != nil {
+			return err
+		}
+	}
+
 	values := kubernetes.Values(map[string]interface{}{
 		"cloudProvider": seed.Info.Spec.Provider.Type,
 		"global": map[string]interface{}{
@@ -735,6 +747,7 @@ func BootstrapCluster(k8sSeedClient kubernetes.Interface, seed *Seed, secrets ma
 		"ingress": map[string]interface{}{
 			"basicAuthSecret": monitoringBasicAuth,
 		},
+		"cluster-identity": map[string]interface{}{"clusterIdentity": &seed.Info.Status.ClusterIdentity},
 	})
 
 	return chartApplier.Apply(context.TODO(), filepath.Join("charts", chartName), v1beta1constants.GardenNamespace, chartName, values, applierOptions)
@@ -855,4 +868,23 @@ func GetWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secre
 		return &wildcardCerts.Items[0], nil
 	}
 	return nil, nil
+}
+
+// determineClusterIdentity determines the identity of a cluster, in cases where the identity was
+// created manually or the Seed was created as Shoot, and later registered as Seed and already has
+// an identity, it should not be changed.
+func determineClusterIdentity(ctx context.Context, c client.Client) (string, error) {
+	clusterIdentity := &corev1.ConfigMap{}
+	if err := c.Get(ctx, kutil.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), clusterIdentity); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return "", err
+		}
+
+		gardenNamespace := &corev1.Namespace{}
+		if err := c.Get(ctx, kutil.Key(metav1.NamespaceSystem), gardenNamespace); err != nil {
+			return "", err
+		}
+		return string(gardenNamespace.UID), nil
+	}
+	return clusterIdentity.Data[v1beta1constants.ClusterIdentity], nil
 }

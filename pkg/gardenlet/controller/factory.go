@@ -56,6 +56,7 @@ const DefaultImageVector = "images.yaml"
 // GardenletControllerFactory contains information relevant to controllers for the Garden API group.
 type GardenletControllerFactory struct {
 	cfg                    *config.GardenletConfiguration
+	gardenClusterIdentity  string
 	identity               *gardencorev1beta1.Gardener
 	gardenNamespace        string
 	clientMap              clientmap.ClientMap
@@ -71,12 +72,14 @@ func NewGardenletControllerFactory(
 	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	cfg *config.GardenletConfiguration, identity *gardencorev1beta1.Gardener,
-	gardenNamespace string, recorder record.EventRecorder,
+	gardenClusterIdentity, gardenNamespace string,
+	recorder record.EventRecorder,
 	healthManager healthz.Manager,
 ) *GardenletControllerFactory {
 	return &GardenletControllerFactory{
 		cfg:                    cfg,
 		identity:               identity,
+		gardenClusterIdentity:  gardenClusterIdentity,
 		gardenNamespace:        gardenNamespace,
 		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenCoreInformerFactory,
@@ -153,7 +156,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) {
 		backupEntryController            = backupentrycontroller.NewBackupEntryController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 		controllerInstallationController = controllerinstallationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace)
 		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.healthManager, secrets, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
-		shootController                  = shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.identity, secrets, imageVector, f.recorder)
+		shootController                  = shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.identity, f.gardenClusterIdentity, secrets, imageVector, f.recorder)
 		federatedSeedController          = federatedseedcontroller.NewFederatedSeedController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 	)
 

@@ -27,6 +27,7 @@ trap cleanup_tls_dir EXIT
 apiserver_flags="
   --authentication-kubeconfig $kubeconfig \
   --authorization-kubeconfig $kubeconfig \
+  --cluster-identity=gardener-local-${USER} \
   --authorization-always-allow-paths=/healthz \
   --kubeconfig $kubeconfig \
   --secure-port=8443 \

@@ -1719,6 +1719,10 @@ message SeedStatus {
   // Seed's generation, which is updated on mutation by the API Server.
   // +optional
   optional int64 observedGeneration = 4;
+
+  // ClusterIdentity is the identity of the Seed cluster
+  // +optional
+  optional string clusterIdentity = 5;
 }
 
 // SeedTaint describes a taint on a seed.
@@ -1980,6 +1984,10 @@ message ShootStatus {
   // UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
   // It is used to compute unique hashes.
   optional string uid = 12;
+
+  // ClusterIdentity is the identity of the Shoot cluster
+  // +optional
+  optional string clusterIdentity = 13;
 }
 
 // Toleration is a toleration for a seed taint.

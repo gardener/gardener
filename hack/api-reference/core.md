@@ -7050,6 +7050,18 @@ int64
 Seed&rsquo;s generation, which is updated on mutation by the API Server.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>clusterIdentity</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ClusterIdentity is the identity of the Seed cluster</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedTaint">SeedTaint
@@ -7748,6 +7760,18 @@ k8s.io/apimachinery/pkg/types.UID
 <td>
 <p>UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
 It is used to compute unique hashes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>clusterIdentity</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ClusterIdentity is the identity of the Shoot cluster</p>
 </td>
 </tr>
 </tbody>

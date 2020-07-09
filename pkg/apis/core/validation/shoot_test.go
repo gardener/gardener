@@ -1939,6 +1939,29 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))
 			})
 		})
+
+		Context("validate shoot cluster identity update", func() {
+			var clusterIdentity = "newClusterIdentity"
+			It("should not fail to set the cluster identity if it is missing", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Status.ClusterIdentity = &clusterIdentity
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(HaveLen(0))
+			})
+
+			It("should fail to set the cluster identity if it is already set", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Status.ClusterIdentity = &clusterIdentity
+				shoot.Status.ClusterIdentity = pointer.StringPtr("oldClusterIdentity")
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(HaveLen(1))
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.clusterIdentity"),
+					"Detail": ContainSubstring(`field is immutable`),
+				}))
+			})
+		})
 	})
 
 	Describe("#ValidateWorker", func() {

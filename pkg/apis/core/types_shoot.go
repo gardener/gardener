@@ -123,6 +123,8 @@ type ShootStatus struct {
 	// UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
 	// It is used to compute unique hashes.
 	UID types.UID
+	// ClusterIdentity is the identity of the Shoot cluster
+	ClusterIdentity *string
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

@@ -3960,6 +3960,7 @@ func autoConvert_v1beta1_SeedStatus_To_core_SeedStatus(in *SeedStatus, out *core
 	out.KubernetesVersion = (*string)(unsafe.Pointer(in.KubernetesVersion))
 	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
 	out.ObservedGeneration = in.ObservedGeneration
+	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	return nil
 }
 
@@ -3973,6 +3974,7 @@ func autoConvert_core_SeedStatus_To_v1beta1_SeedStatus(in *core.SeedStatus, out 
 	out.KubernetesVersion = (*string)(unsafe.Pointer(in.KubernetesVersion))
 	out.Conditions = *(*[]Condition)(unsafe.Pointer(&in.Conditions))
 	out.ObservedGeneration = in.ObservedGeneration
+	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	return nil
 }
 
@@ -4271,6 +4273,7 @@ func autoConvert_v1beta1_ShootStatus_To_core_ShootStatus(in *ShootStatus, out *c
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
 	out.TechnicalID = in.TechnicalID
 	out.UID = types.UID(in.UID)
+	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	return nil
 }
 
@@ -4293,6 +4296,7 @@ func autoConvert_core_ShootStatus_To_v1beta1_ShootStatus(in *core.ShootStatus, o
 	out.SeedName = (*string)(unsafe.Pointer(in.SeedName))
 	out.TechnicalID = in.TechnicalID
 	out.UID = types.UID(in.UID)
+	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	return nil
 }
 
