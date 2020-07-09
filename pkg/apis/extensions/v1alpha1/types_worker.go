@@ -15,6 +15,8 @@
 package v1alpha1
 
 import (
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -189,3 +191,6 @@ type MachineDeployment struct {
 	// Maximum is the maximum number for this machine deployment.
 	Maximum int32 `json:"maximum"`
 }
+
+// WorkerRollingUpdate is a constant for a condition type indicating a rolling update for any worker pool of the Shoot.
+const WorkerRollingUpdate gardencorev1beta1.ConditionType = "RollingUpdate"

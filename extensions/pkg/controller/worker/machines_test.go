@@ -17,9 +17,9 @@ package worker_test
 import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	. "github.com/gardener/gardener/extensions/pkg/controller/worker"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -40,6 +40,17 @@ var _ = Describe("Machines", func() {
 			Entry("empty list", MachineDeployments{}, "foo", false),
 			Entry("entry not found", MachineDeployments{{Name: "bar"}}, "foo", false),
 			Entry("entry exists", MachineDeployments{{Name: "bar"}}, "bar", true),
+		)
+
+		DescribeTable("#FindByName",
+			func(machineDeployments MachineDeployments, name string, expectedDeployment *MachineDeployment) {
+				Expect(machineDeployments.FindByName(name)).To(Equal(expectedDeployment))
+			},
+
+			Entry("list is nil", nil, "foo", nil),
+			Entry("empty list", MachineDeployments{}, "foo", nil),
+			Entry("entry not found", MachineDeployments{{Name: "bar"}}, "foo", nil),
+			Entry("entry exists", MachineDeployments{{Name: "bar"}}, "bar", &MachineDeployment{Name: "bar"}),
 		)
 
 		DescribeTable("#HasClass",
