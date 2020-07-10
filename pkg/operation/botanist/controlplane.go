@@ -541,7 +541,7 @@ func (b *Botanist) DeployControlPlane(ctx context.Context) error {
 	}
 
 	if restorePhase {
-		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), cp, extensionsv1alpha1.ControlPlaneResource)
+		return b.restoreExtensionObject(ctx, b.K8sSeedClient.DirectClient(), cp, extensionsv1alpha1.ControlPlaneResource)
 	}
 
 	return nil
@@ -591,7 +591,7 @@ func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
 	}
 
 	if restorePhase {
-		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), cp, extensionsv1alpha1.ControlPlaneResource)
+		return b.restoreExtensionObject(ctx, b.K8sSeedClient.DirectClient(), cp, extensionsv1alpha1.ControlPlaneResource)
 	}
 	return nil
 }

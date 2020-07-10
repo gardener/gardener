@@ -63,7 +63,7 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 	}
 
 	if b.isRestorePhase() {
-		return b.restoreExtensionObject(ctx, b.K8sSeedClient.Client(), &extensionsv1alpha1.Infrastructure{
+		return b.restoreExtensionObject(ctx, b.K8sSeedClient.DirectClient(), &extensionsv1alpha1.Infrastructure{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      b.Shoot.Info.Name,
 				Namespace: b.Shoot.SeedNamespace,
