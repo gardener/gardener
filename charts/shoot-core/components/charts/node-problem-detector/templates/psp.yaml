@@ -25,6 +25,7 @@ spec:
   allowedHostPaths:
   - pathPrefix: /etc/localtime
   - pathPrefix: /var/log
+  - pathPrefix: /dev/kmsg
   runAsUser:
     rule: 'RunAsAny'
   seLinux:

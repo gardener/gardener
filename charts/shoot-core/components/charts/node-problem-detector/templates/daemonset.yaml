@@ -60,6 +60,9 @@ spec:
             - name: localtime
               mountPath: /etc/localtime
               readOnly: true
+            - name: kmsg
+              mountPath: /dev/kmsg
+              readOnly: true
             - name: custom-config
               mountPath: /custom-config
               readOnly: true
@@ -98,6 +101,9 @@ spec:
           hostPath:
             path: /etc/localtime
             type: "FileOrCreate"
+        - name: kmsg
+          hostPath:
+            path: /dev/kmsg
         - name: custom-config
           configMap:
             name: node-problem-detector-custom-config
