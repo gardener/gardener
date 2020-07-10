@@ -1,0 +1,79 @@
+digraph oidc_registration {
+    graph [overlap=true, splines=line, nodesep=1.7, ordering=out];
+    edge [arrowhead=none];
+    node [shape=none, width=0, height=0, label=""];
+
+    {
+        rank=same;
+        node[shape=rectangle, height=0.7];
+        admin[label="Admin"];
+        idpr[label="Custom IDP"];
+        k8sr[label="Kube API Server"];
+        authr[label="OIDC Authenticator"];
+    }
+
+    // Draw vertical lines
+    {
+        edge [style=dashed,weight=6];
+        admin -> ar1;
+        ar1 -> ar2;
+        ar2 -> ar3;
+        ar3 -> ar4;
+        ar4 -> ar5;
+        ar5 -> ar6;
+        ar6 -> ar7;
+        ar7 -> ar8;
+        ar8 -> ar9;
+        ar9 -> ar10;
+    }
+    {
+        edge [style=dashed, weight=6];
+        idpr -> br1;
+        br1 -> br2;
+        br2 -> br3;
+        br3 -> br4 [penwidth=5,style=solid];
+        br4 -> br5;
+        br5 -> br6 [penwidth=5,style=solid];
+        br6 -> br7;
+        br7 -> br8;
+        br8 -> br9;
+        br9 -> br10;
+    }
+    {
+        edge [style=dashed, weight=6];
+        k8sr -> cr1;
+        cr1 -> cr2 [penwidth=5,style=solid];
+        cr2 -> cr3;
+        cr3 -> cr4;
+        cr4 -> cr5;
+        cr5 -> cr6;
+        cr6 -> cr7;
+        cr7 -> cr8 [penwidth=5,style=solid];
+        cr8 -> cr9;
+        cr9 -> cr10;
+    }
+    {
+        dr9[label="ready",shape=rectangle,height=1]
+        edge [style=dashed, weight=6];
+        authr -> dr1;
+        dr1 -> dr2;
+        dr2 -> dr3[penwidth=5,style=solid];
+        dr3 -> dr4;
+        dr4 -> dr5[penwidth=5,style=solid];
+        dr5 -> dr6;
+        dr6 -> dr7 [penwidth=5,style=solid];
+        dr7 -> dr8;
+        dr8 -> dr9 [label="   add Custom IDP\n  to list of OIDC\n  authenticators",penwidth=5,style=solid,arrowhead=normal];
+        dr9 -> dr10;
+    }
+    // Draws activations
+     { rank=same; ar1 -> br1 [label="create\nOpenIDConnect"]; br1 -> cr1 [arrowhead=normal] }
+     { rank=same; cr2 -> dr2 [label="watch",arrowhead=normal] }
+     { rank=same; br3 -> cr3 [arrowhead=normal,dir=back] cr3 -> dr3 [label="OIDCdiscovery\n request"];  }
+     { rank=same; br5 -> cr5 [arrowhead=normal,dir=back] cr5 -> dr5 [label="jwks_uri\n request"];  }
+     { rank=same; br4 -> cr4 [label="OIDC discovery\n response"]; cr4 -> dr4 [arrowhead=normal] }
+     { rank=same; br6 -> cr6 [label="jwks_uri\n response"]; cr6 -> dr6 [arrowhead=normal] }
+     { rank=same; cr7 -> dr7 [label="OpenIDConnect\n update status",arrowhead=normal,dir=back] }
+     { rank=same; cr8 -> dr8 [label="watch",arrowhead=normal] }
+
+}
