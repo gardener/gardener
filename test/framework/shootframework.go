@@ -140,6 +140,10 @@ func (f *ShootFramework) AfterEach(ctx context.Context) {
 			}
 		}
 		err = f.WaitUntilNamespaceIsDeleted(ctx, f.ShootClient, f.Namespace)
+		if err != nil {
+			err2 := f.DumpDefaultResourcesInNamespace(ctx, fmt.Sprintf("[SHOOT %s] [NAMESPACE %s]", f.Shoot.Name, f.Namespace), f.ShootClient, f.Namespace)
+			ExpectNoError(err2)
+		}
 		ExpectNoError(err)
 		f.Namespace = ""
 		ginkgo.By(fmt.Sprintf("deleted test namespace %s", f.Namespace))
