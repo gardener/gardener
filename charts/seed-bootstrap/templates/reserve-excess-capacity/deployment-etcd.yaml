@@ -1,0 +1,36 @@
+{{- if .Values.reserveExcessCapacity }}
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: reserve-excess-capacity-etcd
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: etcd-statefulset
+    role: main
+spec:
+  revisionHistoryLimit: 0
+  replicas: {{ index .Values.replicas "reserve-excess-capacity" }}
+  selector:
+    matchLabels:
+      app: etcd-statefulset
+      role: main
+  template:
+    metadata:
+      labels:
+        app: etcd-statefulset
+        role: main
+    spec:
+      terminationGracePeriodSeconds: 5
+      containers:
+      - name: pause-container
+        image: {{ index .Values.global.images "pause-container" }}
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 300m
+            memory: 1Gi
+          limits:
+            cpu: 900m
+            memory: 3Gi
+      priorityClassName: gardener-reserve-excess-capacity
+{{- end }}
