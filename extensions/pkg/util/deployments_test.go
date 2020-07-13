@@ -16,20 +16,25 @@ package util_test
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/gardener/gardener/extensions/pkg/util"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Deployments", func() {
 	var (
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
+		ctrl      *gomock.Controller
+		c         *mockclient.MockClient
+		namespace = "test"
+		name      = "dummy-app"
 	)
 
 	BeforeEach(func() {
@@ -53,6 +58,158 @@ var _ = Describe("Deployments", func() {
 				})
 
 			Expect(ScaleDeployment(context.TODO(), c, &appsv1.Deployment{}, replicas)).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("#HasDeploymentRolloutCompleted", func() {
+		It("Rollout is complete", func() {
+
+			c.EXPECT().
+				Get(
+					gomock.Any(),
+					gomock.AssignableToTypeOf(client.ObjectKey{}),
+					gomock.AssignableToTypeOf(&appsv1.Deployment{}),
+				).
+				DoAndReturn(func(
+					_ context.Context,
+					key client.ObjectKey,
+					deployment *appsv1.Deployment,
+				) error {
+					var (
+						replicas   int32 = 5
+						generation int64 = 10
+					)
+
+					deployment.Generation = generation
+					deployment.Spec.Replicas = &replicas
+					deployment.Status = appsv1.DeploymentStatus{
+						ObservedGeneration: generation,
+						Replicas:           replicas,
+						UpdatedReplicas:    replicas,
+						AvailableReplicas:  replicas,
+					}
+
+					return nil
+				})
+
+			_, actualError := HasDeploymentRolloutCompleted(context.TODO(), c, namespace, name)
+			Expect(actualError).NotTo(HaveOccurred())
+		})
+		It("Updated deployment hasn't been picked up yet", func() {
+			var (
+				replicas           int32 = 5
+				generation         int64 = 10
+				observedGeneration int64 = 11
+			)
+
+			_, expectedError := retry.MinorError(fmt.Errorf("%q not observed at latest generation (%d/%d)",
+				name, observedGeneration, generation))
+
+			c.EXPECT().
+				Get(
+					gomock.Any(),
+					gomock.AssignableToTypeOf(client.ObjectKey{}),
+					gomock.AssignableToTypeOf(&appsv1.Deployment{}),
+				).
+				DoAndReturn(func(
+					_ context.Context,
+					key client.ObjectKey,
+					deployment *appsv1.Deployment,
+				) error {
+					var ()
+
+					deployment.Generation = generation
+					deployment.Spec.Replicas = &replicas
+					deployment.Status = appsv1.DeploymentStatus{
+						ObservedGeneration: observedGeneration,
+						Replicas:           replicas - 1,
+						UpdatedReplicas:    replicas - 1,
+						AvailableReplicas:  replicas - 1,
+					}
+
+					return nil
+				})
+
+			_, actualError := HasDeploymentRolloutCompleted(context.TODO(), c, namespace, name)
+			Expect(actualError).To(Equal(expectedError))
+		})
+		It("UpdatedReplicas isn't matching with desired", func() {
+			var (
+				replicas          int32 = 5
+				updatedReplicas   int32 = replicas - 1
+				availableReplicas int32 = updatedReplicas
+				generation        int64 = 10
+			)
+
+			_, expectedError := retry.MinorError(fmt.Errorf("deployment %q currently has Updated/Available: %d/%d replicas. Desired: %d",
+				name, updatedReplicas, availableReplicas, replicas))
+
+			c.EXPECT().
+				Get(
+					gomock.Any(),
+					gomock.AssignableToTypeOf(client.ObjectKey{}),
+					gomock.AssignableToTypeOf(&appsv1.Deployment{}),
+				).
+				DoAndReturn(func(
+					_ context.Context,
+					key client.ObjectKey,
+					deployment *appsv1.Deployment,
+				) error {
+					var ()
+
+					deployment.Generation = generation
+					deployment.Spec.Replicas = &replicas
+					deployment.Status = appsv1.DeploymentStatus{
+						ObservedGeneration: generation,
+						Replicas:           replicas - 1,
+						UpdatedReplicas:    updatedReplicas,
+						AvailableReplicas:  availableReplicas,
+					}
+
+					return nil
+				})
+
+			_, actualError := HasDeploymentRolloutCompleted(context.TODO(), c, namespace, name)
+			Expect(actualError).To(Equal(expectedError))
+		})
+		It("AvailableReplicas isn't matching with desired", func() {
+			var (
+				replicas          int32 = 5
+				updatedReplicas   int32 = replicas
+				availableReplicas int32 = replicas - 1
+				generation        int64 = 10
+			)
+
+			_, expectedError := retry.MinorError(fmt.Errorf("deployment %q currently has Updated/Available: %d/%d replicas. Desired: %d",
+				name, updatedReplicas, availableReplicas, replicas))
+
+			c.EXPECT().
+				Get(
+					gomock.Any(),
+					gomock.AssignableToTypeOf(client.ObjectKey{}),
+					gomock.AssignableToTypeOf(&appsv1.Deployment{}),
+				).
+				DoAndReturn(func(
+					_ context.Context,
+					key client.ObjectKey,
+					deployment *appsv1.Deployment,
+				) error {
+					var ()
+
+					deployment.Generation = generation
+					deployment.Spec.Replicas = &replicas
+					deployment.Status = appsv1.DeploymentStatus{
+						ObservedGeneration: generation,
+						Replicas:           replicas - 1,
+						UpdatedReplicas:    updatedReplicas,
+						AvailableReplicas:  availableReplicas,
+					}
+
+					return nil
+				})
+
+			_, actualError := HasDeploymentRolloutCompleted(context.TODO(), c, namespace, name)
+			Expect(actualError).To(Equal(expectedError))
 		})
 	})
 })

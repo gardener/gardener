@@ -33,11 +33,13 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
-// McmShootResourceName is the name of the managed resource that contains the Machine Controller Manager
-const McmShootResourceName = "extension-worker-mcm-shoot"
+const (
+	// McmShootResourceName is the name of the managed resource that contains the Machine Controller Manager
+	McmShootResourceName = "extension-worker-mcm-shoot"
 
-// McmDeploymentName is the name of the deployment that spawn machine-cotroll-manager pods
-const McmDeploymentName = "machine-controller-manager"
+	// McmDeploymentName is the name of the deployment that spawn machine-cotroll-manager pods
+	McmDeploymentName = "machine-controller-manager"
+)
 
 // ReplicaCount determines the number of replicas.
 type ReplicaCount func() (int32, error)
@@ -68,6 +70,10 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, wo
 
 	if err := a.applyMachineControllerManagerShootChart(ctx, workerDelegate, workerObj, cluster); err != nil {
 		return errors.Wrapf(err, "could not apply machine-controller-manager shoot chart")
+	}
+
+	if err := util.WaitUntilDeploymentRolloutIsComplete(ctx, a.client, workerObj.Namespace, McmDeploymentName, 5*time.Second, 300*time.Second); err != nil {
+		return errors.Wrapf(err, "waiting until deployment/%s is updated", McmDeploymentName)
 	}
 
 	return nil
