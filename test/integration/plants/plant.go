@@ -50,6 +50,7 @@ import (
 	"github.com/gardener/gardener/test/framework"
 
 	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -130,6 +131,14 @@ users:
 		framework.ExpectNoError(err)
 
 		framework.ExpectNoError(f.WaitForPlantToBeReconciledSuccessfully(ctx, plant))
+
+		// cross-check discovered plant cluster info with shoot spec
+		// unfortunately we cannot cross-check Cloud.Type in a similar fashion, as the nodes' providerID don't have the
+		// same pattern on all cloud providers and also don't necessarily map to the cloud provider types known to
+		// Gardener (e.g. GCP nodes have `gce://` as a prefix in their providerID, but the corresponding provider type
+		// in Gardener is `gcp`)
+		gomega.Expect(plant.Status.ClusterInfo.Cloud.Region).To(gomega.Equal(f.Shoot.Spec.Region))
+		gomega.Expect(plant.Status.ClusterInfo.Kubernetes.Version).To(gomega.Equal("v" + f.Shoot.Spec.Kubernetes.Version))
 
 		defer func() {
 			framework.ExpectNoError(cleanPlant(ctx, f, plant, secret))
