@@ -171,9 +171,7 @@ spec:
         - --audit-webhook-version={{ .Values.global.apiserver.audit.webhook.version }}
         {{- end }}
         - --authorization-always-allow-paths=/healthz
-        {{- if .Values.global.apiserver.clusterIdentity }}
-        - --cluster-identity={{ .Values.global.apiserver.clusterIdentity }}
-        {{- end }}
+        - --cluster-identity={{ required ".Values.global.apiserver.clusterIdentity is required" .Values.global.apiserver.clusterIdentity }}
         {{- if .Values.global.apiserver.disableAdmissionPlugins }}
         - --disable-admission-plugins={{ .Values.global.apiserver.disableAdmissionPlugins | join "," }}
         {{- end }}
