@@ -79,15 +79,20 @@ func getCloudProviderForNode(providerID string) string {
 	return provider[0]
 }
 
+var regionLabels = []string{
+	corev1.LabelZoneRegionStable,
+	corev1.LabelZoneRegion,
+	corev1.LabelZoneFailureDomainStable,
+	corev1.LabelZoneFailureDomain,
+}
+
 func getRegionNameForNode(node corev1.Node) string {
-	for key, value := range node.Labels {
-		if key == corev1.LabelZoneRegion {
-			return value
-		}
-		if key == corev1.LabelZoneFailureDomain {
-			return value
+	for _, label := range regionLabels {
+		if region, ok := node.Labels[label]; ok && len(region) > 0 {
+			return region
 		}
 	}
+
 	return Unknown
 }
 
