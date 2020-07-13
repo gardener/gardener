@@ -23,6 +23,7 @@ import (
 
 	apiextensionclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
@@ -134,6 +135,26 @@ func (c *clientSet) RESTClient() rest.Interface {
 // Version returns the GitVersion of the Kubernetes client stored on the object.
 func (c *clientSet) Version() string {
 	return c.version
+}
+
+// DiscoverVersion tries to retrieve the server version of the targeted Kubernetes cluster and updates the
+// ClientSet's saved version accordingly. Use Version if you only want to retrieve the kubernetes version instead
+// of refreshing the ClientSet's saved version.
+func (c *clientSet) DiscoverVersion() (*version.Info, error) {
+	serverVersion, err := c.kubernetes.Discovery().ServerVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := checkIfSupportedKubernetesVersion(serverVersion.GitVersion); err != nil {
+		return nil, err
+	}
+
+	c.version = serverVersion.GitVersion
+	c.chartRenderer = chartrenderer.NewWithServerVersion(serverVersion)
+	c.chartApplier = NewChartApplier(c.chartRenderer, c.applier)
+
+	return serverVersion, nil
 }
 
 // Start starts the cache of the ClientSet's controller-runtime client and returns immediately.

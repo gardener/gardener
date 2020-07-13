@@ -19,12 +19,9 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/apimachinery/pkg/version"
-
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	"github.com/gardener/gardener/pkg/logger"
 	mockkubernetes "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
 	mockclientmap "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes/clientmap"
@@ -32,6 +29,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/version"
 )
 
 var _ = Describe("GenericClientMap", func() {
@@ -89,8 +87,8 @@ var _ = Describe("GenericClientMap", func() {
 				fakeErr := fmt.Errorf("fake")
 				factory.EXPECT().NewClientSet(ctx, key).Return(nil, fakeErr)
 
-				cs, err := cm.GetClient(ctx, key)
-				Expect(cs).To(BeNil())
+				clientSet, err := cm.GetClient(ctx, key)
+				Expect(clientSet).To(BeNil())
 				Expect(err).To(MatchError(fmt.Sprintf("error creating new ClientSet for key %q: %v", key.Key(), fakeErr)))
 			})
 
@@ -115,36 +113,45 @@ var _ = Describe("GenericClientMap", func() {
 				cs.EXPECT().Start(gomock.Any())
 				cs.EXPECT().WaitForCacheSync(gomock.Any()).Return(false)
 
-				cs, err := cm.GetClient(ctx, key)
-				Expect(cs).To(BeNil())
+				clientSet, err := cm.GetClient(ctx, key)
+				Expect(clientSet).To(BeNil())
 				Expect(err).To(MatchError(fmt.Sprintf("timed out waiting for caches of ClientSet with key %q to sync", key.Key())))
 			})
 
-			It("should refresh the ClientSet because of version change", func() {
+			It("should refresh the ClientSet's server version", func() {
 				By("should create a new ClientSet")
 				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil)
+				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil).AnyTimes()
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
 				By("should not check for a version change directly after creating the client")
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
-				By("should not refresh the ClientSet as version and hash haven't changed")
+				By("should refresh the ClientSet's server version")
 				// let the max refresh interval pass
 				time.Sleep(internal.MaxRefreshInterval)
-				cs.EXPECT().Kubernetes().Return(test.NewClientSetWithFakedServerVersion(nil, csVersion))
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil)
+				cs.EXPECT().DiscoverVersion().Return(&version.Info{GitVersion: "1.18.1"}, nil)
+				clientSet, err := cm.GetClient(ctx, key)
+				Expect(clientSet).To(BeIdenticalTo(cs))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should fail to refresh the ClientSet's server version because DiscoverVersion fails", func() {
+				By("should create a new ClientSet")
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
+				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil).AnyTimes()
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
-				By("should refresh the ClientSet as the version has changed")
-				// let the max refresh interval pass again
-				time.Sleep(internal.MaxRefreshInterval)
-				cs.EXPECT().Kubernetes().Return(test.NewClientSetWithFakedServerVersion(nil, &version.Info{GitVersion: "1.18.1"}))
-				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil)
+				By("should not check for a version change directly after creating the client")
+				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
-				cs2 := mockkubernetes.NewMockInterface(ctrl)
-				factory.EXPECT().NewClientSet(ctx, key).Return(cs2, nil)
-				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs2))
+				By("should fail to refresh the ClientSet's server version because DiscoverVersion fails")
+				// let the max refresh interval pass
+				time.Sleep(internal.MaxRefreshInterval)
+				cs.EXPECT().DiscoverVersion().Return(nil, fmt.Errorf("fake"))
+				clientSet, err := cm.GetClient(ctx, key)
+				Expect(clientSet).To(BeNil())
+				Expect(err).To(MatchError(ContainSubstring("fake")))
 			})
 
 			It("should refresh the ClientSet because of hash change", func() {
@@ -159,19 +166,45 @@ var _ = Describe("GenericClientMap", func() {
 				By("should not refresh the ClientSet as version and hash haven't changed")
 				// let the max refresh interval pass
 				time.Sleep(internal.MaxRefreshInterval)
-				cs.EXPECT().Kubernetes().Return(test.NewClientSetWithFakedServerVersion(nil, csVersion))
+				cs.EXPECT().DiscoverVersion().Return(csVersion, nil)
 				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("hash1", nil)
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
 				By("should refresh the ClientSet as the hash has changed")
 				// let the max refresh interval pass again
 				time.Sleep(internal.MaxRefreshInterval)
-				cs.EXPECT().Kubernetes().Return(test.NewClientSetWithFakedServerVersion(nil, csVersion))
+				cs.EXPECT().DiscoverVersion().Return(csVersion, nil)
 				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("hash2", nil).Times(2)
 
 				cs2 := mockkubernetes.NewMockInterface(ctrl)
 				factory.EXPECT().NewClientSet(ctx, key).Return(cs2, nil)
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs2))
+			})
+
+			It("should fail because CalculateClientSetHash fails for new ClientSet", func() {
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
+				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", fmt.Errorf("fake"))
+
+				clientSet, err := cm.GetClient(ctx, key)
+				Expect(clientSet).To(BeNil())
+				Expect(err).To(MatchError(ContainSubstring("fake")))
+			})
+
+			It("should fail because CalculateClientSetHash fails for existing ClientSet", func() {
+				By("should create a new ClientSet")
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
+				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("hash1", nil)
+				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
+
+				By("should fail to get the ClientSet again because CalculateClientSetHash fails")
+				// let the max refresh interval pass again
+				time.Sleep(internal.MaxRefreshInterval)
+				cs.EXPECT().DiscoverVersion().Return(csVersion, nil)
+				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", fmt.Errorf("fake"))
+
+				clientSet, err := cm.GetClient(ctx, key)
+				Expect(clientSet).To(BeNil())
+				Expect(err).To(MatchError(ContainSubstring("fake")))
 			})
 		})
 

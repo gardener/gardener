@@ -16,16 +16,14 @@ package fake_test
 
 import (
 	"context"
-
-	apiextensionsfake "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
-	"k8s.io/client-go/discovery"
-	kubernetesfake "k8s.io/client-go/kubernetes/fake"
-	apiregistrationfake "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/fake"
+	"errors"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencorefake "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	"github.com/gardener/gardener/pkg/mock/apimachinery/api/meta"
+	mockdiscovery "github.com/gardener/gardener/pkg/mock/client-go/discovery"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
@@ -33,8 +31,12 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	apiextensionsfake "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
 	"k8s.io/apimachinery/pkg/version"
+	"k8s.io/client-go/discovery"
+	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
+	apiregistrationfake "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/fake"
 )
 
 var _ = Describe("Fake ClientSet", func() {
@@ -152,20 +154,47 @@ var _ = Describe("Fake ClientSet", func() {
 		Expect(cs.Version()).To(Equal(version))
 	})
 
+	Context("#DiscoverVersion", func() {
+		It("should correctly refresh server version", func() {
+			oldVersion, newVersion := "1.18.1", "1.18.2"
+			cs := builder.
+				WithVersion(oldVersion).
+				WithKubernetes(test.NewClientSetWithFakedServerVersion(nil, &version.Info{GitVersion: newVersion})).
+				Build()
+
+			Expect(cs.Version()).To(Equal(oldVersion))
+			_, err := cs.DiscoverVersion()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cs.Version()).To(Equal(newVersion))
+		})
+
+		It("should fail if discovery fails", func() {
+			discovery := mockdiscovery.NewMockDiscoveryInterface(ctrl)
+			discovery.EXPECT().ServerVersion().Return(nil, errors.New("fake"))
+
+			cs := builder.
+				WithKubernetes(test.NewClientSetWithDiscovery(nil, discovery)).
+				Build()
+
+			_, err := cs.DiscoverVersion()
+			Expect(err).To(MatchError("fake"))
+		})
+	})
+
 	It("should do nothing on Start", func() {
-		cs := builder.Build()
+		cs := fake.NewClientSet()
 
 		cs.Start(context.Background().Done())
 	})
 
 	It("should do nothing on WaitForCacheSync", func() {
-		cs := builder.Build()
+		cs := fake.NewClientSet()
 
 		Expect(cs.WaitForCacheSync(context.Background().Done())).To(BeTrue())
 	})
 
 	It("should do nothing on ForwardPodPort", func() {
-		cs := builder.Build()
+		cs := fake.NewClientSet()
 
 		ch, err := cs.ForwardPodPort("", "", 0, 0)
 		Expect(ch).To(BeNil())
@@ -173,7 +202,7 @@ var _ = Describe("Fake ClientSet", func() {
 	})
 
 	It("should do nothing on CheckForwardPodPort", func() {
-		cs := builder.Build()
+		cs := fake.NewClientSet()
 
 		Expect(cs.CheckForwardPodPort("", "", 0, 0)).To(Succeed())
 	})

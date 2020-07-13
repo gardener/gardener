@@ -21,6 +21,7 @@ import (
 
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/version"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
@@ -121,6 +122,17 @@ func (c *ClientSet) RESTClient() rest.Interface {
 // Version returns the GitVersion of the Kubernetes client stored on the object.
 func (c *ClientSet) Version() string {
 	return c.version
+}
+
+// DiscoverVersion tries to retrieve the server version using the kubernetes discovery client.
+func (c *ClientSet) DiscoverVersion() (*version.Info, error) {
+	serverVersion, err := c.Kubernetes().Discovery().ServerVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	c.version = serverVersion.GitVersion
+	return serverVersion, nil
 }
 
 // Start does nothing as the fake ClientSet does not support it.
