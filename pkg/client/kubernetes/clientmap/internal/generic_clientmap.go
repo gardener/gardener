@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-
 	"golang.org/x/time/rate"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -82,7 +81,8 @@ func NewGenericClientMap(factory clientmap.ClientSetFactory, logger logrus.Field
 // GetClient requests a ClientSet for a cluster identified by the given key. If the ClientSet was already created before,
 // it returns the one saved in the map, otherwise it creates a new ClientSet by using the provided ClientSetFactory.
 // New ClientSets are immediately started if the ClientMap has already been started before. Also GetClient will regularly
-// check if the server version of the targeted cluster has changed and recreate a ClientSet if a version change is detected.
+// rediscover the server version of the targeted cluster and check if the config hash has changed and recreate the
+// ClientSet if a config hash change is detected.
 func (cm *GenericClientMap) GetClient(ctx context.Context, key clientmap.ClientSetKey) (kubernetes.Interface, error) {
 	entry, started, found := func() (*clientMapEntry, bool, bool) {
 		cm.lock.RLock()
@@ -95,14 +95,14 @@ func (cm *GenericClientMap) GetClient(ctx context.Context, key clientmap.ClientS
 	if found {
 		if entry.refreshLimiter.Allow() {
 			shouldRefresh, err := func() (bool, error) {
-				// invalidate client if server version has changed
-				serverVersion, err := entry.clientSet.Kubernetes().Discovery().ServerVersion()
+				// refresh server version
+				oldVersion := entry.clientSet.Version()
+				serverVersion, err := entry.clientSet.DiscoverVersion()
 				if err != nil {
-					return false, fmt.Errorf("failed to discover server version: %w", err)
+					return false, fmt.Errorf("failed to refresh ClientSet's server version: %w", err)
 				}
-
-				if serverVersion.GitVersion != entry.clientSet.Version() {
-					return true, nil
+				if serverVersion.GitVersion != oldVersion {
+					cm.log.Infof("New server version discovered for ClientSet with key %q: %s", key.Key(), serverVersion.GitVersion)
 				}
 
 				// invalidate client if the config of the client has changed (e.g. kubeconfig secret)
@@ -111,7 +111,12 @@ func (cm *GenericClientMap) GetClient(ctx context.Context, key clientmap.ClientS
 					return false, fmt.Errorf("failed to calculate new hash for ClientSet: %w", err)
 				}
 
-				return hash != entry.hash, nil
+				if hash != entry.hash {
+					cm.log.Infof("Refreshing ClientSet with key %q due to changed ClientSetHash: %s/%s", key.Key(), entry.hash, hash)
+					return true, nil
+				}
+
+				return false, nil
 			}()
 			if err != nil {
 				return nil, err

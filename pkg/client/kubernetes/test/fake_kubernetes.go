@@ -27,12 +27,12 @@ var _ kubernetesclientset.Interface = &ClientSet{}
 // ClientSet implements k8s.io/client-go/kubernetes.Interface but allows to use a fake discovery client.
 type ClientSet struct {
 	kubernetesclientset.Interface
-	*fakediscovery.FakeDiscovery
+	discovery.DiscoveryInterface
 }
 
-// NewClientSetWithFakeDiscovery allows to easily fake calls to kubernetes.Interface.Discovery() by using the given
-// fake discovery interface.
-func NewClientSetWithFakeDiscovery(kubernetes kubernetesclientset.Interface, discovery *fakediscovery.FakeDiscovery) *ClientSet {
+// NewClientSetWithDiscovery allows to easily fake calls to kubernetes.Interface.Discovery() by using the given
+// discovery interface.
+func NewClientSetWithDiscovery(kubernetes kubernetesclientset.Interface, discovery discovery.DiscoveryInterface) *ClientSet {
 	return &ClientSet{kubernetes, discovery}
 }
 
@@ -41,7 +41,7 @@ func NewClientSetWithFakeDiscovery(kubernetes kubernetesclientset.Interface, dis
 func NewClientSetWithFakedServerVersion(kubernetes kubernetesclientset.Interface, version *version.Info) *ClientSet {
 	return &ClientSet{
 		Interface: kubernetes,
-		FakeDiscovery: &fakediscovery.FakeDiscovery{
+		DiscoveryInterface: &fakediscovery.FakeDiscovery{
 			Fake:               &testing.Fake{},
 			FakedServerVersion: version,
 		},
@@ -49,5 +49,5 @@ func NewClientSetWithFakedServerVersion(kubernetes kubernetesclientset.Interface
 }
 
 func (c *ClientSet) Discovery() discovery.DiscoveryInterface {
-	return c.FakeDiscovery
+	return c.DiscoveryInterface
 }

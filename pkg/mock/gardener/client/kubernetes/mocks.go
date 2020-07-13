@@ -11,6 +11,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	meta "k8s.io/apimachinery/pkg/api/meta"
+	version "k8s.io/apimachinery/pkg/version"
 	kubernetes0 "k8s.io/client-go/kubernetes"
 	rest "k8s.io/client-go/rest"
 	clientset0 "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
@@ -166,6 +167,21 @@ func (m *MockInterface) DirectClient() client.Client {
 func (mr *MockInterfaceMockRecorder) DirectClient() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DirectClient", reflect.TypeOf((*MockInterface)(nil).DirectClient))
+}
+
+// DiscoverVersion mocks base method
+func (m *MockInterface) DiscoverVersion() (*version.Info, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DiscoverVersion")
+	ret0, _ := ret[0].(*version.Info)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DiscoverVersion indicates an expected call of DiscoverVersion
+func (mr *MockInterfaceMockRecorder) DiscoverVersion() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DiscoverVersion", reflect.TypeOf((*MockInterface)(nil).DiscoverVersion))
 }
 
 // ForwardPodPort mocks base method

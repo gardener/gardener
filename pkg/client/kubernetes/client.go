@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -281,31 +280,12 @@ func newClientSet(conf *config) (Interface, error) {
 		return nil, err
 	}
 
-	serverVersion, err := kubernetes.Discovery().ServerVersion()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := checkIfSupportedKubernetesVersion(serverVersion.GitVersion); err != nil {
-		return nil, err
-	}
-
-	applier := NewApplier(runtimeClient, conf.clientOptions.Mapper)
-	chartRenderer := chartrenderer.NewWithServerVersion(serverVersion)
-	chartApplier := NewChartApplier(chartRenderer, applier)
-
-	if err := checkIfSupportedKubernetesVersion(serverVersion.GitVersion); err != nil {
-		return nil, err
-	}
-
 	cs := &clientSet{
 		config:     conf.restConfig,
 		restMapper: conf.clientOptions.Mapper,
 		restClient: kubernetes.Discovery().RESTClient(),
 
-		applier:       applier,
-		chartRenderer: chartRenderer,
-		chartApplier:  chartApplier,
+		applier: NewApplier(runtimeClient, conf.clientOptions.Mapper),
 
 		client:       runtimeClient,
 		directClient: directClient,
@@ -315,8 +295,10 @@ func newClientSet(conf *config) (Interface, error) {
 		gardenCore:      gardenCore,
 		apiregistration: apiRegistration,
 		apiextension:    apiExtension,
+	}
 
-		version: serverVersion.GitVersion,
+	if _, err := cs.DiscoverVersion(); err != nil {
+		return nil, fmt.Errorf("error discovering kubernetes version: %w", err)
 	}
 
 	return cs, nil
