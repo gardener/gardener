@@ -91,6 +91,10 @@ func (c *Controller) reconcileSeedKey(key string) error {
 	seed, err := c.seedLister.Get(name)
 	if apierrors.IsNotFound(err) {
 		logger.Logger.Debugf("[SEED RECONCILE] %s - skipping because Seed has been deleted", key)
+
+		if err := c.clientMap.InvalidateClient(keys.ForSeedWithName(name)); err != nil {
+			return fmt.Errorf("failed to invalidate seed client: %w", err)
+		}
 		return nil
 	}
 	if err != nil {

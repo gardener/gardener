@@ -57,6 +57,11 @@ func (c *Controller) reconcileSeedLeaseKey(key string) error {
 	seed, err := c.seedLister.Get(name)
 	if apierrors.IsNotFound(err) {
 		logger.Logger.Infof("[SEED LEASE] Stopping lease operations for Seed %s since it has been deleted", key)
+
+		if err := c.clientMap.InvalidateClient(keys.ForSeedWithName(name)); err != nil {
+			return fmt.Errorf("failed to invalidate seed client: %w", err)
+		}
+
 		c.seedLeaseQueue.Done(key)
 		return nil
 	}
