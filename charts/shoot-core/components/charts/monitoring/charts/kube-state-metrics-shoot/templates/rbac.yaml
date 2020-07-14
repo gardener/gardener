@@ -38,6 +38,14 @@ rules:
   verbs:
   - list
   - watch
+- apiGroups:
+  - "autoscaling.k8s.io"
+  resources:
+  - verticalpodautoscalers
+  verbs:
+  - get
+  - list
+  - watch
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding

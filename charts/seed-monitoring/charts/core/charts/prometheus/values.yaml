@@ -180,6 +180,10 @@ allowedMetrics:
   - kube_statefulset_status_replicas_current
   - kube_statefulset_status_replicas_ready
   - kube_statefulset_status_replicas_updated
+  - kube_verticalpodautoscaler_status_recommendation_containerrecommendations_target
+  - kube_verticalpodautoscaler_status_recommendation_containerrecommendations_upperbound
+  - kube_verticalpodautoscaler_status_recommendation_containerrecommendations_lowerbound
+  - kube_verticalpodautoscaler_spec_updatepolicy_updatemode
   machineControllerManager:
   - mcm_workqueue_adds_total
   - mcm_workqueue_depth

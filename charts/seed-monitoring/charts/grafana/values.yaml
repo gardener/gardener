@@ -13,6 +13,7 @@ ports:
   prometheus: 9090
   grafana: 3000
 
+vpaEnabled: false
 role: operators
 extensions:
   dashboards: ""

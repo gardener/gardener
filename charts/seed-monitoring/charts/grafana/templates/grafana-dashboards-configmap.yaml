@@ -9,8 +9,10 @@ metadata:
 data:
 {{ if eq .Values.role "users" }}
 {{ range $name, $bytes := .Files.Glob "dashboards/owners/**.json" }}
+{{ if not (and (eq $name "dashboards/owners/shoot-vpa-dashboard.json") (eq $.Values.vpaEnabled false)) }}
   {{ base $name }}: |-
 {{ toString $bytes | indent 4}}
+{{ end }}
 {{ end }}
 {{ else }}
 {{ range $name, $bytes := .Files.Glob "dashboards/**.json" }}
