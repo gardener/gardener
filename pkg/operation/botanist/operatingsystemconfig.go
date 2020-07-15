@@ -366,7 +366,7 @@ func (b *Botanist) applyAndWaitForShootOperatingSystemConfig(ctx context.Context
 
 	if err := common.WaitUntilExtensionCRReady(
 		ctx,
-		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.DirectClient(),
 		b.Logger,
 		func() runtime.Object { return &extensionsv1alpha1.OperatingSystemConfig{} },
 		"OperatingSystemConfig",
