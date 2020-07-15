@@ -254,8 +254,15 @@ var _ = Describe("Actuator", func() {
 
 	Describe("#removeWantedDeploymentWithoutState", func() {
 		var (
-			mdWithoutState = worker.MachineDeployment{ClassName: "gcp", Name: "md-without-state"}
-			mdWithState    = worker.MachineDeployment{ClassName: "gcp", Name: "md-with-state", State: &worker.MachineDeploymentState{Replicas: 3}}
+			mdWithoutState            = worker.MachineDeployment{ClassName: "gcp", Name: "md-without-state"}
+			mdWithStateAndMachineSets = worker.MachineDeployment{ClassName: "gcp", Name: "md-with-state-machinesets", State: &worker.MachineDeploymentState{Replicas: 1, MachineSets: []machinev1alpha1.MachineSet{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "machineSet",
+					},
+				},
+			}}}
+			mdWithEmptyState = worker.MachineDeployment{ClassName: "gcp", Name: "md-with-state", State: &worker.MachineDeploymentState{Replicas: 1, MachineSets: []machinev1alpha1.MachineSet{}}}
 		)
 
 		It("should not panic for MachineDeployments without state", func() {
@@ -275,10 +282,17 @@ var _ = Describe("Actuator", func() {
 		})
 
 		It("should return only MachineDeployments with states", func() {
-			reducedMDs := removeWantedDeploymentWithoutState(worker.MachineDeployments{mdWithoutState, mdWithState})
+			reducedMDs := removeWantedDeploymentWithoutState(worker.MachineDeployments{mdWithoutState, mdWithStateAndMachineSets})
 
 			Expect(len(reducedMDs)).To(Equal(1))
-			Expect(reducedMDs[0]).To(Equal(mdWithState))
+			Expect(reducedMDs[0]).To(Equal(mdWithStateAndMachineSets))
+		})
+
+		It("should reduce the lenght to one", func() {
+			reducedMDs := removeWantedDeploymentWithoutState(worker.MachineDeployments{mdWithoutState, mdWithStateAndMachineSets, mdWithEmptyState})
+
+			Expect(len(reducedMDs)).To(Equal(1))
+			Expect(reducedMDs[0]).To(Equal(mdWithStateAndMachineSets))
 		})
 	})
 
