@@ -18,4 +18,4 @@ set -e
 
 echo "> Format"
 
-gofmt -l -w $@
+goimports -l -w $@
