@@ -1,0 +1,14 @@
+{{- if .Values.global.vpaEnabled }}
+apiVersion: "autoscaling.k8s.io/v1beta2"
+kind: VerticalPodAutoscaler
+metadata:
+  name: node-local-dns
+  namespace: {{ .Release.Namespace }}
+spec:
+  targetRef:
+    apiVersion: {{ include "daemonsetversion" . }}
+    kind: DaemonSet
+    name: node-local-dns
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}

@@ -1,0 +1,16 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: gardener.cloud:psp:kube-system:node-local-dns
+  labels:
+    app: node-local-dns
+rules:
+- apiGroups:
+  - policy
+  - extensions
+  resourceNames:
+  - gardener.kube-system.node-local-dns
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use

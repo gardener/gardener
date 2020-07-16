@@ -44,7 +44,6 @@ configmap:
       parameters: cluster.local in-addr.arpa ip6.arpa
       configBlock: |-
         pods insecure
-        upstream
         fallthrough in-addr.arpa ip6.arpa
         ttl 30
     - name: prometheus

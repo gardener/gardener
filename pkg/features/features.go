@@ -67,4 +67,9 @@ const (
 	// owner @tim-ebert
 	// alpha: v1.7.0
 	CachedRuntimeClients featuregate.Feature = "CachedRuntimeClients"
+
+	// NodeLocalDNS enables node-local-dns cache feature.
+	// owner @zanetworker
+	// alpha: v1.7.0
+	NodeLocalDNS featuregate.Feature = "NodeLocalDNS"
 )

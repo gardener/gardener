@@ -32,6 +32,7 @@ var (
 		features.KonnectivityTunnel:   {Default: false, PreRelease: featuregate.Alpha},
 		features.APIServerSNI:         {Default: false, PreRelease: featuregate.Alpha},
 		features.CachedRuntimeClients: {Default: false, PreRelease: featuregate.Alpha},
+		features.NodeLocalDNS:         {Default: false, PreRelease: featuregate.Alpha},
 	}
 )
 

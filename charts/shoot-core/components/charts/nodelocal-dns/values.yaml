@@ -1,0 +1,11 @@
+images:
+  node-local-dns: image-repository:image-tag
+
+prometheus:
+  port: 9253
+  scrape: true
+
+clusterDNS: __PILLAR__CLUSTER__DNS__
+dnsServer:  ""
+nodeLocal: 169.254.20.10
+domain: cluster.local

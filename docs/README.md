@@ -39,6 +39,7 @@
 * [Troubleshooting guide](usage/trouble_shooting_guide.md)
 * [`ManagedIstio` feature](usage/istio.md)
 * [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
+* [`NodeLocalDNS` feature](usage/node-local-dns.md)
 
 ## Proposals
 

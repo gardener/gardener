@@ -208,6 +208,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	shoot.Networks = networks
 
 	shoot.ResourceRefs = getResourceRefs(shootObject)
+	shoot.NodeLocalDNSEnabled = gardenletfeatures.FeatureGate.Enabled(features.NodeLocalDNS)
 
 	return shoot, nil
 }
