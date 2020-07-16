@@ -35,6 +35,11 @@ apiserver_flags="
   --tls-private-key-file $tls_dir/tls.key \
   --v 2"
 
+if [[ "$(uname -s)" == "Linux" && "$(uname -r)" =~ "microsoft-standard" ]]; then
+  apiserver_flags="${apiserver_flags} \
+  --bind-address=127.0.0.1"
+fi
+
 ldflags="$("$(dirname $0)"/../get-build-ld-flags.sh)"
 case $(k8s_env) in
     $KIND)

@@ -111,6 +111,18 @@ brew install coreutils gnu-sed
 
 This will create symbolic links for the GNU utilities with `g` prefix in `/usr/local/bin`, e.g., `gsed` or `gbase64`. To allow using them without the `g` prefix please put `/usr/local/opt/coreutils/libexec/gnubin` at the beginning of your `PATH` environment variable, e.g., `export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH`.
 
+## [Windows] WSL2
+
+Apart from Linux distributions and MacOS, the local gardener setup can also run on the Windows Subsystem for Linux 2. 
+
+While WSL1, plain docker for windows and various Linux distributions and local Kubernetes environments may be supported, this setup was verified with:
+* [WSL2](https://docs.microsoft.com/en-us/windows/wsl/wsl2-index) 
+* [Docker Desktop WSL2 Engine](https://docs.docker.com/docker-for-windows/wsl/)
+* [Ubuntu 18.04 LTS on WSL2](https://ubuntu.com/blog/ubuntu-on-wsl-2-is-generally-available)  
+* Nodeless local garden (see below)
+
+The Gardener repository and all the above-mentioned tools (git, golang, kubectl, ...) should be installed in your WSL2 distro, according to the distribution-specific Linux installation instructions. 
+
 ## [Optional] Installing gcloud SDK
 
 In case you have to create a new release or a new hotfix of the Gardener you have to push the resulting Docker image into a Docker registry. Currently, we are using the Google Container Registry (this could change in the future). Please follow the official [installation instructions from Google](https://cloud.google.com/sdk/downloads).
