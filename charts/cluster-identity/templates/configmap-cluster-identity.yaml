@@ -5,4 +5,4 @@ metadata:
   name: cluster-identity
   namespace: kube-system
 data:
-  cluster-identity: "{{ .Values.clusterIdentity }}"
+  cluster-identity: "{{ required ".Values.clusterIdentity is required" .Values.clusterIdentity }}"
