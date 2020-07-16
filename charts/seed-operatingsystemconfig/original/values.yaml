@@ -59,6 +59,16 @@ worker:
       imageFSInodesFree: 0Mi
       nodeFSAvailable: 0Mi
       nodeFSInodesFree: 0Mi
+    kubeReserved:
+      cpu: 80m
+      memory: 1Gi
+      # pid: 1000
+      # ephemeral-storage: 10Gi
+    # systemReserved:
+      # cpu: 80m
+      # memory: 1Gi
+      # pid: 1000
+      # ephemeral-storage: 10Gi
     featureGates: {}
     # CustomResourceValidation: true
     # RotateKubeletServerCertificate: false

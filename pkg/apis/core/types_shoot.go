@@ -556,6 +556,13 @@ type KubeletConfig struct {
 	ImagePullProgressDeadline *metav1.Duration
 	// FailSwapOn makes the Kubelet fail to start if swap is enabled on the node. (default true).
 	FailSwapOn *bool
+	// KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
+	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
+	// Default: cpu=80m,memory=1Gi
+	KubeReserved *KubeletConfigReserved
+	// SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
+	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
+	SystemReserved *KubeletConfigReserved
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
@@ -598,6 +605,19 @@ type KubeletConfigEvictionSoftGracePeriod struct {
 	NodeFSAvailable *metav1.Duration
 	// NodeFSInodesFree is the grace period for the NodeFSInodesFree eviction threshold.
 	NodeFSInodesFree *metav1.Duration
+}
+
+// KubeletConfigReserved contains reserved resources for daemons
+type KubeletConfigReserved struct {
+	// CPU is the reserved cpu.
+	CPU *resource.Quantity
+	// Memory is the reserved memory.
+	Memory *resource.Quantity
+	// EphemeralStorage is the reserved ephemeral-storage.
+	EphemeralStorage *resource.Quantity
+	// PID is the reserved process-ids.
+	// To reserve PID, the SupportNodePidsLimit feature gate must be enabled in Kubernetes versions < 1.15.
+	PID *resource.Quantity
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

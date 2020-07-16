@@ -4225,6 +4225,37 @@ bool
 <p>FailSwapOn makes the Kubelet fail to start if swap is enabled on the node. (default true).</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>kubeReserved</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.KubeletConfigReserved">
+KubeletConfigReserved
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
+When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
+Default: cpu=80m,memory=1Gi</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>systemReserved</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.KubeletConfigReserved">
+KubeletConfigReserved
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
+When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfigEviction">KubeletConfigEviction
@@ -4480,6 +4511,82 @@ Kubernetes meta/v1.Duration
 <td>
 <em>(Optional)</em>
 <p>NodeFSInodesFree is the grace period for the NodeFSInodesFree eviction threshold.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.KubeletConfigReserved">KubeletConfigReserved
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubeletConfig">KubeletConfig</a>)
+</p>
+<p>
+<p>KubeletConfigReserved contains reserved resources for daemons</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>cpu</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/api/resource#Quantity">
+k8s.io/apimachinery/pkg/api/resource.Quantity
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CPU is the reserved cpu.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>memory</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/api/resource#Quantity">
+k8s.io/apimachinery/pkg/api/resource.Quantity
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Memory is the reserved memory.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ephemeralStorage</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/api/resource#Quantity">
+k8s.io/apimachinery/pkg/api/resource.Quantity
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EphemeralStorage is the reserved ephemeral-storage.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>pid</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/api/resource#Quantity">
+k8s.io/apimachinery/pkg/api/resource.Quantity
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PID is the reserved process-ids.
+To reserve PID, the SupportNodePidsLimit feature gate must be enabled in Kubernetes versions &lt; 1.15.</p>
 </td>
 </tr>
 </tbody>

@@ -986,6 +986,12 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, fldPath *field.Path
 	if kubeletConfig.EvictionSoftGracePeriod != nil {
 		allErrs = append(allErrs, validateKubeletConfigEvictionSoftGracePeriod(kubeletConfig.EvictionSoftGracePeriod, fldPath.Child("evictionSoftGracePeriod"))...)
 	}
+	if kubeletConfig.KubeReserved != nil {
+		allErrs = append(allErrs, validateKubeletConfigReserved(kubeletConfig.KubeReserved, fldPath.Child("kubeReserved"))...)
+	}
+	if kubeletConfig.SystemReserved != nil {
+		allErrs = append(allErrs, validateKubeletConfigReserved(kubeletConfig.SystemReserved, fldPath.Child("systemReserved"))...)
+	}
 	return allErrs
 }
 
@@ -1026,6 +1032,23 @@ func validateKubeletConfigEvictionSoftGracePeriod(eviction *core.KubeletConfigEv
 	allErrs = append(allErrs, ValidatePositiveDuration(eviction.ImageFSInodesFree, fldPath.Child("imagefsInodesFree"))...)
 	allErrs = append(allErrs, ValidatePositiveDuration(eviction.NodeFSAvailable, fldPath.Child("nodefsAvailable"))...)
 	allErrs = append(allErrs, ValidatePositiveDuration(eviction.ImageFSInodesFree, fldPath.Child("imagefsInodesFree"))...)
+	return allErrs
+}
+
+func validateKubeletConfigReserved(reserved *core.KubeletConfigReserved, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if reserved.CPU != nil {
+		allErrs = append(allErrs, validateResourceQuantityValue("cpu", *reserved.CPU, fldPath.Child("cpu"))...)
+	}
+	if reserved.Memory != nil {
+		allErrs = append(allErrs, validateResourceQuantityValue("memory", *reserved.Memory, fldPath.Child("memory"))...)
+	}
+	if reserved.EphemeralStorage != nil {
+		allErrs = append(allErrs, validateResourceQuantityValue("ephemeralStorage", *reserved.EphemeralStorage, fldPath.Child("ephemeralStorage"))...)
+	}
+	if reserved.PID != nil {
+		allErrs = append(allErrs, validateResourceQuantityValue("pid", *reserved.EphemeralStorage, fldPath.Child("pid"))...)
+	}
 	return allErrs
 }
 
