@@ -70,7 +70,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	bb := &gardencorev1beta1.BackupBucket{}
-	if err := gardenClient.DirectClient().Get(r.ctx, request.NamespacedName, bb); err != nil {
+	if err := gardenClient.Client().Get(r.ctx, request.NamespacedName, bb); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Debugf("[BACKUPBUCKET RECONCILE] %s - skipping because BackupBucket has been deleted", request.NamespacedName)
 			return reconcile.Result{}, nil

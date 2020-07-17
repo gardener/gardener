@@ -412,9 +412,9 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 		Start(ctx)
 
 	// Prepare a reusable run function.
-	run := func(ctx context.Context) {
+	run := func(ctx context.Context) error {
 		g.HealthManager.Start()
-		g.startControllers(ctx)
+		return g.startControllers(ctx)
 	}
 
 	leaderElectionCtx, leaderElectionCancel := context.WithCancel(context.Background())
@@ -424,7 +424,9 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 		g.LeaderElection.Callbacks = leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(_ context.Context) {
 				g.Logger.Info("Acquired leadership, starting controllers.")
-				run(controllerCtx)
+				if err := run(controllerCtx); err != nil {
+					g.Logger.Errorf("failed to run gardenlet controllers: %v", err)
+				}
 				leaderElectionCancel()
 			},
 			OnStoppedLeading: func() {
@@ -442,12 +444,15 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 
 	// Leader election is disabled, thus run directly until done.
 	leaderElectionCancel()
-	run(controllerCtx)
-	return nil
+	err := run(controllerCtx)
+	if err != nil {
+		g.Logger.Errorf("failed to run gardenlet controllers: %v", err)
+	}
+	return err
 }
 
-func (g *Gardenlet) startControllers(ctx context.Context) {
-	controller.NewGardenletControllerFactory(
+func (g *Gardenlet) startControllers(ctx context.Context) error {
+	return controller.NewGardenletControllerFactory(
 		g.ClientMap,
 		g.K8sGardenCoreInformers,
 		g.KubeInformerFactory,

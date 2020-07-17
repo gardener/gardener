@@ -16,23 +16,26 @@ package backupbucket
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"github.com/gardener/gardener/pkg/logger"
 )
 
 const (
@@ -42,12 +45,13 @@ const (
 
 // Controller controls BackupBuckets.
 type Controller struct {
-	config     *config.GardenletConfiguration
-	reconciler reconcile.Reconciler
-	recorder   record.EventRecorder
+	gardenClient client.Client
+	config       *config.GardenletConfiguration
+	reconciler   reconcile.Reconciler
+	recorder     record.EventRecorder
 
-	backupBucketQueue  workqueue.RateLimitingInterface
-	backupBucketSynced cache.InformerSynced
+	backupBucketInformer runtimecache.Informer
+	backupBucketQueue    workqueue.RateLimitingInterface
 
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -56,43 +60,43 @@ type Controller struct {
 // NewBackupBucketController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <backupBucketInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewBackupBucketController(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder) *Controller {
-	var (
-		gardencorev1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
-		backupBucketInformer      = gardencorev1beta1Informer.BackupBuckets()
-
-		seedInformer = gardencorev1beta1Informer.Seeds()
-		seedLister   = seedInformer.Lister()
-	)
-
-	backupBucketController := &Controller{
-		config:            config,
-		reconciler:        newReconciler(context.TODO(), clientMap, recorder, config),
-		recorder:          recorder,
-		backupBucketQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupBucket"),
-		workerCh:          make(chan int),
+func NewBackupBucketController(ctx context.Context, clientMap clientmap.ClientMap, config *config.GardenletConfiguration, recorder record.EventRecorder) (*Controller, error) {
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	backupBucketInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.BackupBucketFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister, config.SeedSelector),
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    backupBucketController.backupBucketAdd,
-			UpdateFunc: backupBucketController.backupBucketUpdate,
-			DeleteFunc: backupBucketController.backupBucketDelete,
-		},
-	})
+	backupBucketInformer, err := gardenClient.Cache().GetInformer(&gardencorev1beta1.BackupBucket{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get BackupBucket Informer: %w", err)
+	}
 
-	backupBucketController.backupBucketSynced = backupBucketInformer.Informer().HasSynced
-
-	return backupBucketController
+	return &Controller{
+		gardenClient:         gardenClient.Client(),
+		config:               config,
+		reconciler:           newReconciler(ctx, clientMap, recorder, config),
+		recorder:             recorder,
+		backupBucketInformer: backupBucketInformer,
+		backupBucketQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupBucket"),
+		workerCh:             make(chan int),
+	}, nil
 }
 
-// Run runs the Controller until the given stop channel can be read from.
+// Run runs the Controller until the given stop channel is closed.
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.backupBucketSynced) {
-		logger.Logger.Error("Timed out waiting for caches to sync")
+	c.backupBucketInformer.AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controllerutils.BackupBucketFilterFunc(ctx, c.gardenClient, confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.config.SeedSelector),
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc:    c.backupBucketAdd,
+			UpdateFunc: c.backupBucketUpdate,
+			DeleteFunc: c.backupBucketDelete,
+		},
+	})
+
+	if !cache.WaitForCacheSync(ctx.Done(), c.backupBucketInformer.HasSynced) {
+		logger.Logger.Fatal("Timed out waiting for BackupBucket Informer to sync")
 		return
 	}
 
