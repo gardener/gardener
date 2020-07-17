@@ -79,7 +79,7 @@
   * [Trigger for reconcile operations](extensions/reconcile-trigger.md)
   * [Deploy resources into the shoot cluster](extensions/managedresources.md)
   * [Shoot resource customization webhooks](extensions/shoot-webhooks.md)
-  * [Logging and Monitoring configuration](extensions/logging-and-monitoring.md)
+  * [Logging and monitoring for extensions](extensions/logging-and-monitoring.md)
   * [Contributing to shoot health status conditions](extensions/shoot-health-status-conditions.md)
     * [Health Check Library](extensions/healthcheck-library.md)
   * Blob storage providers
