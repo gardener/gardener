@@ -218,7 +218,7 @@ func (b *Botanist) WaitUntilWorkerReady(ctx context.Context) error {
 func (b *Botanist) WaitUntilWorkerDeleted(ctx context.Context) error {
 	return common.WaitUntilExtensionCRDeleted(
 		ctx,
-		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.DirectClient(),
 		b.Logger,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Worker{} },
 		"Worker",
