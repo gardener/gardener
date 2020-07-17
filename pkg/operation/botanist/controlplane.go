@@ -670,7 +670,7 @@ func (b *Botanist) WaitUntilControlPlaneDeleted(ctx context.Context) error {
 func (b *Botanist) waitUntilControlPlaneDeleted(ctx context.Context, name string) error {
 	return common.WaitUntilExtensionCRDeleted(
 		ctx,
-		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.DirectClient(),
 		b.Logger,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
 		"ControlPlane",
@@ -1339,7 +1339,7 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 		b.K8sSeedClient.ChartApplier(),
 		b.ChartsRootPath,
 		b.Logger,
-		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.DirectClient(),
 		nil,
 		b.setAPIServerServiceClusterIP,
 		b.setAPIServerAddress,
