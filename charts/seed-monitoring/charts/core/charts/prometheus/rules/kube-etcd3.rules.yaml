@@ -71,25 +71,25 @@ groups:
 
   # etcd DB size alerts
   - alert: KubeEtcd3DbSizeLimitApproaching
-    expr: (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"} > bool 1610612736) + (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"} <= bool 2147483648) == 2 # between 1.5GB and 2GB
+    expr: (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"} > bool 7516193000) + (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"} <= bool 8589935000) == 2 # between 7GB and 8GB
     labels:
       service: etcd
       severity: warning
       type: seed
       visibility: all
     annotations:
-      description: Etcd3 {{ $labels.role }} DB size is approaching its current practical limit of 2GB.
+      description: Etcd3 {{ $labels.role }} DB size is approaching its current practical limit of 8GB. Etcd quota might need to be increased.
       summary: Etcd3 {{ $labels.role }} DB size is approaching its current practical limit.
 
   - alert: KubeEtcd3DbSizeLimitCrossed
-    expr: etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"} > 2147483648 # above 2GB
+    expr: etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"} > 8589935000 # above 8GB
     labels:
       service: etcd
       severity: critical
       type: seed
       visibility: all
     annotations:
-      description: Etcd3 {{ $labels.role }} DB size has crossed its current practical limit of 2GB. Etcd might now require more memory to continue serving traffic with low latency, and might face request throttling.
+      description: Etcd3 {{ $labels.role }} DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.
       summary: Etcd3 {{ $labels.role }} DB size has crossed its current practical limit.
 
   # etcd backup failure alerts
@@ -127,4 +127,3 @@ groups:
     annotations:
       description: Etcd data restoration was triggered, but has failed.
       summary: Etcd data restoration failure.
-

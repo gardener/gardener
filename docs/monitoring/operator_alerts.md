@@ -12,8 +12,8 @@
 |KubeEtcd3MainNoLeader|critical|seed|`Etcd3 main has no leader. No communication with etcd main possible. Apiserver is read only.`|
 |KubeEtcd3EventsNoLeader|critical|seed|`Etcd3 events has no leader. No communication with etcd events possible. New cluster events cannot be collected. Events can only be read.`|
 |KubeEtcd3HighNumberOfFailedProposals|warning|seed|`Etcd3 pod {{ $labels.pod }} has seen {{ $value }} proposal failures within the last hour.`|
-|KubeEtcd3DbSizeLimitApproaching|warning|seed|`Etcd3 {{ $labels.role }} DB size is approaching its current practical limit of 2GB.`|
-|KubeEtcd3DbSizeLimitCrossed|critical|seed|`Etcd3 {{ $labels.role }} DB size has crossed its current practical limit of 2GB. Etcd might now require more memory to continue serving traffic with low latency, and might face request throttling.`|
+|KubeEtcd3DbSizeLimitApproaching|warning|seed|`Etcd3 {{ $labels.role }} DB size is approaching its current practical limit of 8GB. Etcd quota might need to be increased.`|
+|KubeEtcd3DbSizeLimitCrossed|critical|seed|`Etcd3 {{ $labels.role }} DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.`|
 |KubeEtcdDeltaBackupFailed|critical|seed|`No delta snapshot for the past at least 30 minutes.`|
 |KubeEtcdFullBackupFailed|critical|seed|`No full snapshot taken in the past day.`|
 |KubeEtcdRestorationFailed|critical|seed|`Etcd data restoration was triggered, but has failed.`|
