@@ -330,7 +330,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		nginxLBReady = g.Add(flow.Task{
 			Name:         "Waiting until nginx ingress LoadBalancer is ready",
 			Fn:           flow.TaskFn(botanist.WaitUntilNginxIngressServiceIsReady).DoIf(botanist.Shoot.NginxIngressEnabled()).SkipIf(o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployManagedResources, initializeShootClients),
+			Dependencies: flow.NewTaskIDs(deployManagedResources, initializeShootClients, waitUntilWorkerReady),
 		})
 		ensureIngressDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Ensuring nginx ingress domain record",
