@@ -8,8 +8,8 @@
 |KubeApiServerTooManyOpenFileDescriptors|warning|seed|`The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.`|
 |KubeApiServerTooManyOpenFileDescriptors|critical|seed|`The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.`|
 |KubeControllerManagerDown|critical|seed|`Deployments and replication controllers are not making progress.`|
-|KubeEtcd3DbSizeLimitApproaching|warning|seed|`Etcd3 {{ $labels.role }} DB size is approaching its current practical limit of 2GB.`|
-|KubeEtcd3DbSizeLimitCrossed|critical|seed|`Etcd3 {{ $labels.role }} DB size has crossed its current practical limit of 2GB. Etcd might now require more memory to continue serving traffic with low latency, and might face request throttling.`|
+|KubeEtcd3DbSizeLimitApproaching|warning|seed|`Etcd3 {{ $labels.role }} DB size is approaching its current practical limit of 8GB. Etcd quota might need to be increased.`|
+|KubeEtcd3DbSizeLimitCrossed|critical|seed|`Etcd3 {{ $labels.role }} DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.`|
 |KubeKubeletNodeDown|warning|shoot|`The kubelet {{ $labels.instance }} has been unavailable/unreachable for more than 1 hour. Workloads on the affected node may not be schedulable.`|
 |KubeKubeletTooManyPods|warning||`Kubelet {{ $labels.instance }} is running {{ $value }} pods, close to the limit of 110`|
 |KubeletTooManyOpenFileDescriptorsShoot|warning|shoot|`Shoot-kubelet ({{ $labels.kubernetes_io_hostname }}) is using {{ $value }}% of the available file/socket descriptors. Kubelet could be under heavy load.`|
