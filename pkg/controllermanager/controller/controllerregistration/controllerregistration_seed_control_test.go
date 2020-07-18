@@ -137,6 +137,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 
 		alwaysPolicy   = gardencorev1beta1.ControllerDeploymentPolicyAlways
 		onDemandPolicy = gardencorev1beta1.ControllerDeploymentPolicyOnDemand
+		now            = metav1.Now()
 
 		type1  = "type1"
 		type2  = "type2"
@@ -790,11 +791,12 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 
 			It("should correctly deploy needed controller installations", func() {
 				var (
-					wantedControllerRegistrations      = sets.NewString(controllerRegistration2.Name, controllerRegistration3.Name)
+					wantedControllerRegistrations      = sets.NewString(controllerRegistration2.Name, controllerRegistration3.Name, controllerRegistration4.Name)
 					registrationNameToInstallationName = map[string]string{
 						controllerRegistration1.Name: controllerInstallation1.Name,
 						controllerRegistration2.Name: controllerInstallation2.Name,
 						controllerRegistration3.Name: controllerInstallation3.Name,
+						controllerRegistration4.Name: "",
 					}
 				)
 
@@ -816,7 +818,60 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation3.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
 				k8sClient.EXPECT().Update(ctx, installation3)
 
+				k8sClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
+
 				err := deployNeededInstallations(ctx, nopLogger, k8sClient, seedWithShootDNSEnabled, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallationName)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should not skip the controller registration that is after one in deletion", func() {
+				registration1 := controllerRegistration1.DeepCopy()
+				registration1.DeletionTimestamp = &now
+				var (
+					wantedControllerRegistrations      = sets.NewString(registration1.Name, controllerRegistration2.Name)
+					registrationNameToInstallationName = map[string]string{
+						registration1.Name:           controllerInstallation1.Name,
+						controllerRegistration2.Name: controllerInstallation2.Name,
+					}
+					registrations = map[string]controllerRegistration{
+						registration1.Name:           {obj: registration1, deployAlways: false},
+						controllerRegistration2.Name: {obj: controllerRegistration2, deployAlways: false},
+					}
+				)
+
+				installation2 := controllerInstallation2.DeepCopy()
+				installation2.Labels = map[string]string{
+					common.RegistrationSpecHash: "b24405c0d68a538e",
+					common.SeedSpecHash:         "6668c8b5c30659ab",
+				}
+
+				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
+				k8sClient.EXPECT().Update(ctx, installation2)
+
+				err := deployNeededInstallations(ctx, nopLogger, k8sClient, seedWithShootDNSEnabled, wantedControllerRegistrations, registrations, registrationNameToInstallationName)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should not create or update controller installation for controller registration in deletion", func() {
+				registration1 := controllerRegistration1.DeepCopy()
+				registration1.DeletionTimestamp = &now
+				registration2 := controllerRegistration2.DeepCopy()
+				registration2.DeletionTimestamp = &now
+				var (
+					wantedControllerRegistrations      = sets.NewString(registration1.Name, registration2.Name)
+					registrationNameToInstallationName = map[string]string{
+						registration1.Name: controllerInstallation1.Name,
+						registration2.Name: "",
+					}
+					registrations = map[string]controllerRegistration{
+						registration1.Name: {obj: registration1, deployAlways: false},
+						registration2.Name: {obj: registration2, deployAlways: false},
+					}
+				)
+
+				err := deployNeededInstallations(ctx, nopLogger, k8sClient, seedWithShootDNSEnabled, wantedControllerRegistrations, registrations, registrationNameToInstallationName)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
