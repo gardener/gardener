@@ -387,6 +387,15 @@ func deployNeededInstallations(
 	registrationNameToInstallationName map[string]string,
 ) error {
 	for _, registrationName := range wantedControllerRegistrations.UnsortedList() {
+		// Sometimes an operator needs to migrate to a new controller registration that supports the required
+		// kind and types, but it is required to offboard the old extension. Thus, the operator marks the old
+		// controller registration for deletion and manually delete its controller installation.
+		// In parallel, Gardener should not create new controller installations for the deleted controller registation.
+		if controllerRegistrations[registrationName].obj.DeletionTimestamp != nil {
+			logger.Infof("Do not create or update ControllerInstallation for %q which is in deletion", registrationName)
+			continue
+		}
+
 		logger.Infof("Deploying wanted ControllerInstallation for %q", registrationName)
 
 		if err := deployNeededInstallation(ctx, c, seed, controllerRegistrations[registrationName].obj, registrationNameToInstallationName[registrationName]); err != nil {
@@ -404,7 +413,6 @@ func deployNeededInstallation(
 	controllerRegistration *gardencorev1beta1.ControllerRegistration,
 	controllerInstallationName string,
 ) error {
-
 	installationSpec := gardencorev1beta1.ControllerInstallationSpec{
 		SeedRef: corev1.ObjectReference{
 			Name:            seed.Name,
