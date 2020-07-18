@@ -129,21 +129,11 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardencorev1beta1.Shoot, key 
 		return fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	expirationTime, exits := shoot.Annotations[common.ShootExpirationTimestampDeprecated]
+	expirationTime, exits := shoot.Annotations[common.ShootExpirationTimestamp]
 	if !exits {
 		expirationTime = shoot.CreationTimestamp.Add(time.Duration(*clusterLifeTime*24) * time.Hour).Format(time.RFC3339)
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.ShootExpirationTimestamp, expirationTime)
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.ShootExpirationTimestampDeprecated, expirationTime)
 
-		shootUpdated, err := gardenClient.GardenCore().CoreV1beta1().Shoots(shoot.Namespace).Update(shoot)
-		if err != nil {
-			return err
-		}
-		shoot = shootUpdated
-	}
-
-	if shoot.Annotations[common.ShootExpirationTimestamp] != expirationTime {
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.ShootExpirationTimestamp, expirationTime)
 		shootUpdated, err := gardenClient.GardenCore().CoreV1beta1().Shoots(shoot.Namespace).Update(shoot)
 		if err != nil {
 			return err

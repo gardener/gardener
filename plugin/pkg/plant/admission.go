@@ -134,7 +134,6 @@ func (a *Handler) Admit(ctx context.Context, attrs admission.Attributes, o admis
 
 	if attrs.GetOperation() == admission.Create {
 		metav1.SetMetaDataAnnotation(&plant.ObjectMeta, common.GardenCreatedBy, attrs.GetUserInfo().GetName())
-		metav1.SetMetaDataAnnotation(&plant.ObjectMeta, common.GardenCreatedByDeprecated, attrs.GetUserInfo().GetName())
 	}
 
 	return nil

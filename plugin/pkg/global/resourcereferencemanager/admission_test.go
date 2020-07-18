@@ -496,13 +496,11 @@ var _ = Describe("resourcereferencemanager", func() {
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, user.Name))
-				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedByDeprecated, user.Name))
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(shoot.Annotations).To(HaveKeyWithValue(common.GardenCreatedBy, user.Name))
-				Expect(shoot.Annotations).To(HaveKeyWithValue(common.GardenCreatedByDeprecated, user.Name))
 			})
 
 			It("should accept because all referenced objects have been found", func() {

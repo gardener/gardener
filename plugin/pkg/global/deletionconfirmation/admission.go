@@ -259,7 +259,7 @@ func shootIgnored(obj metav1.Object) bool {
 		return false
 	}
 	ignore := false
-	if value, ok := common.GetShootIgnoreAnnotation(annotations); ok {
+	if value, ok := annotations[common.ShootIgnore]; ok {
 		ignore, _ = strconv.ParseBool(value)
 	}
 	return ignore

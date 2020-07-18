@@ -399,7 +399,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Maintain shoot annotations",
-			Fn:           flow.TaskFn(botanist.MaintainShootAnnotations).SkipIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.MaintainShootAnnotations),
 			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
 		})
 		deployContainerRuntimeResources = g.Add(flow.Task{

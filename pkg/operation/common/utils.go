@@ -579,16 +579,10 @@ func GetDomainInfoFromAnnotations(annotations map[string]string) (provider strin
 		return "", "", nil, nil, fmt.Errorf("domain secret has no annotations")
 	}
 
-	if providerAnnotation, ok := annotations[DNSProviderDeprecated]; ok {
-		provider = providerAnnotation
-	}
 	if providerAnnotation, ok := annotations[DNSProvider]; ok {
 		provider = providerAnnotation
 	}
 
-	if domainAnnotation, ok := annotations[DNSDomainDeprecated]; ok {
-		domain = domainAnnotation
-	}
 	if domainAnnotation, ok := annotations[DNSDomain]; ok {
 		domain = domainAnnotation
 	}
@@ -633,7 +627,7 @@ func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *gardencorev1beta1
 		return false
 	}
 
-	value, ok := GetShootIgnoreAnnotation(shoot.Annotations)
+	value, ok := shoot.Annotations[ShootIgnore]
 	if !ok {
 		return false
 	}
@@ -675,7 +669,7 @@ func SyncPeriodOfShoot(respectSyncPeriodOverwrite bool, defaultMinSyncPeriod tim
 		return defaultMinSyncPeriod
 	}
 
-	syncPeriodOverwrite, ok := GetShootSyncPeriodAnnotation(shoot.Annotations)
+	syncPeriodOverwrite, ok := shoot.Annotations[ShootSyncPeriod]
 	if !ok {
 		return defaultMinSyncPeriod
 	}
@@ -761,34 +755,10 @@ func GetConfirmationDeletionAnnotation(annotations map[string]string) (string, b
 	return getDeprecatedAnnotation(annotations, ConfirmationDeletion, ConfirmationDeletionDeprecated)
 }
 
-// GetShootExpirationTimestampAnnotation fetches the value for ShootExpirationTimestamp annotation.
-// If not present, it fallbacks to ShootExpirationTimestampDeprecated.
-func GetShootExpirationTimestampAnnotation(annotations map[string]string) (string, bool) {
-	return getDeprecatedAnnotation(annotations, ShootExpirationTimestamp, ShootExpirationTimestampDeprecated)
-}
-
 // GetShootOperationAnnotation fetches the value for v1beta1constants.GardenerOperation annotation.
 // If not present, it fallbacks to ShootOperationDeprecated.
 func GetShootOperationAnnotation(annotations map[string]string) (string, bool) {
 	return getDeprecatedAnnotation(annotations, v1beta1constants.GardenerOperation, ShootOperationDeprecated)
-}
-
-// GetShootSyncPeriodAnnotation fetches the value for ShootSyncPeriod annotation.
-// If not present, it fallbacks to ShootSyncPeriodDeprecated.
-func GetShootSyncPeriodAnnotation(annotations map[string]string) (string, bool) {
-	return getDeprecatedAnnotation(annotations, ShootSyncPeriod, ShootSyncPeriodDeprecated)
-}
-
-// GetShootIgnoreAnnotation fetches the value for ShootIgnore annotation.
-// If not present, it fallbacks to ShootIgnoreDeprecated.
-func GetShootIgnoreAnnotation(annotations map[string]string) (string, bool) {
-	return getDeprecatedAnnotation(annotations, ShootIgnore, ShootIgnoreDeprecated)
-}
-
-// GetTasksAnnotation fetches the value for ShootTasks annotation.
-// If not present, it falls back to ShootTasksDeprecated.
-func GetTasksAnnotation(annotations map[string]string) (string, bool) {
-	return getDeprecatedAnnotation(annotations, ShootTasks, ShootTasksDeprecated)
 }
 
 func getDeprecatedAnnotation(annotations map[string]string, annotationKey, deprecatedAnnotationKey string) (string, bool) {

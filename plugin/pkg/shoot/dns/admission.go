@@ -32,7 +32,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
@@ -326,26 +325,14 @@ func assignDefaultDomainIfNeeded(shoot *core.Shoot, projectLister corelisters.Pr
 }
 
 func getDefaultDomains(secretLister kubecorev1listers.SecretLister) ([]string, error) {
-	var domainSecrets []*corev1.Secret
-	deprecatedSelector, err := labels.Parse(fmt.Sprintf("%s=%s", v1beta1constants.DeprecatedGardenRole, common.GardenRoleDefaultDomain))
-	if err != nil {
-		return nil, apierrors.NewInternalError(err)
-	}
-	secrets, err := secretLister.Secrets(v1beta1constants.GardenNamespace).List(deprecatedSelector)
-	if err != nil {
-		return nil, apierrors.NewInternalError(err)
-	}
-	domainSecrets = append(domainSecrets, secrets...)
-
 	selector, err := labels.Parse(fmt.Sprintf("%s=%s", v1beta1constants.GardenRole, common.GardenRoleDefaultDomain))
 	if err != nil {
 		return nil, apierrors.NewInternalError(err)
 	}
-	secrets, err = secretLister.Secrets(v1beta1constants.GardenNamespace).List(selector)
+	domainSecrets, err := secretLister.Secrets(v1beta1constants.GardenNamespace).List(selector)
 	if err != nil {
 		return nil, apierrors.NewInternalError(err)
 	}
-	domainSecrets = append(domainSecrets, secrets...)
 
 	var defaultDomains []string
 	for _, domainSecret := range domainSecrets {
