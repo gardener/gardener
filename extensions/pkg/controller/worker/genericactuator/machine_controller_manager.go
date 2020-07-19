@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
-	managedresources "github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"

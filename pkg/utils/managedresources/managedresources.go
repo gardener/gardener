@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+package managedresources
 
 import (
 	"context"
 	"time"
+
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener-resource-manager/pkg/manager"
@@ -24,8 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // CreateManagedResourceFromUnstructured creates a managed resource and its secret with the given name, class, and objects in the given namespace.

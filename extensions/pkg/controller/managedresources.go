@@ -23,7 +23,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	managedresources "github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 // RenderChartAndCreateManagedResource renders a chart and creates a ManagedResource for the gardener-resource-manager
