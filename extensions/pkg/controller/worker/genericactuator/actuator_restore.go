@@ -163,7 +163,7 @@ func removeWantedDeploymentWithoutState(wantedMachineDeployments workercontrolle
 
 	reducedMachineDeployments := make(workercontroller.MachineDeployments, 0)
 	for _, wantedMachineDeployment := range wantedMachineDeployments {
-		if wantedMachineDeployment.State != nil && len(wantedMachineDeployment.State.MachineSets) < 1 {
+		if wantedMachineDeployment.State != nil && len(wantedMachineDeployment.State.MachineSets) > 0 {
 			reducedMachineDeployments = append(reducedMachineDeployments, wantedMachineDeployment)
 		}
 	}
