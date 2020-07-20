@@ -9,7 +9,7 @@ metadata:
     app: vpa-recommender
 {{ toYaml .Values.labels | indent 4 }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.recommender.replicas }}
   selector:
     matchLabels:
       app: vpa-recommender

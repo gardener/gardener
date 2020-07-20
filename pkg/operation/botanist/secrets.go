@@ -165,7 +165,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 	}
 
 	if b.Shoot.WantsVerticalPodAutoscaler {
-		if err := b.storeStaticTokenAsSecrets(ctx, secretsManager.StaticToken, existingSecrets[v1beta1constants.SecretNameCACluster].Data[secrets.DataKeyCertificateCA], vpaSecrets); err != nil {
+		if err := b.storeStaticTokenAsSecrets(ctx, secretsManager.StaticToken, secretsManager.DeployedSecrets[v1beta1constants.SecretNameCACluster].Data[secrets.DataKeyCertificateCA], vpaSecrets); err != nil {
 			return err
 		}
 	}
