@@ -16,6 +16,8 @@ package component
 
 import (
 	"context"
+
+	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 )
 
 // Deployer is used to control the life-cycle of a component.
@@ -34,8 +36,27 @@ type Waiter interface {
 	WaitCleanup(ctx context.Context) error
 }
 
+// Migrator is used to control the control-plane migration operations of a component.
+type Migrator interface {
+	Restore(ctx context.Context, shootState *v1alpha1.ShootState) error
+	Migrate(ctx context.Context) error
+}
+
+// MigrateWaiter waits for the control-plane migration operations of a component to finish.
+type MigrateWaiter interface {
+	WaitMigrate(ctx context.Context) error
+}
+
 // DeployWaiter controls and waits for life-cycle operations of a component.
 type DeployWaiter interface {
 	Deployer
+	Waiter
+}
+
+// DeployMigrateWaiter controls and waits for the life-cycle and control-plane migration operations of a component.
+type DeployMigrateWaiter interface {
+	Deployer
+	Migrator
+	MigrateWaiter
 	Waiter
 }
