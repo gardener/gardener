@@ -71,7 +71,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	be := &gardencorev1beta1.BackupEntry{}
-	if err := gardenClient.DirectClient().Get(r.ctx, request.NamespacedName, be); err != nil {
+	if err := gardenClient.Client().Get(r.ctx, request.NamespacedName, be); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Debugf("[BACKUPENTRY RECONCILE] %s - skipping because BackupEntry has been deleted", request.NamespacedName)
 			return reconcile.Result{}, nil

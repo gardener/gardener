@@ -90,7 +90,7 @@ func NewGardenletControllerFactory(
 }
 
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
-func (f *GardenletControllerFactory) Run(ctx context.Context) {
+func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	var (
 		// Garden core informers
 		backupBucketInformer           = f.k8sGardenCoreInformers.Core().V1beta1().BackupBuckets().Informer()
@@ -109,22 +109,22 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) {
 	)
 
 	if err := f.clientMap.Start(ctx.Done()); err != nil {
-		panic(fmt.Errorf("failed to start ClientMap: %+v", err))
+		return fmt.Errorf("failed to start ClientMap: %+v", err)
 	}
 
 	k8sGardenClient, err := f.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
-		panic(fmt.Errorf("failed to get garden client: %+v", err))
+		return fmt.Errorf("failed to get garden client: %+v", err)
 	}
 
 	f.k8sGardenCoreInformers.Start(ctx.Done())
 	if !cache.WaitForCacheSync(ctx.Done(), backupBucketInformer.HasSynced, backupEntryInformer.HasSynced, cloudProfileInformer.HasSynced, controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, projectInformer.HasSynced, secretBindingInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
-		panic("Timed out waiting for Garden core caches to sync")
+		return fmt.Errorf("timed out waiting for Garden core caches to sync")
 	}
 
 	f.k8sInformers.Start(ctx.Done())
 	if !cache.WaitForCacheSync(ctx.Done(), namespaceInformer.HasSynced, secretInformer.HasSynced, configMapInformer.HasSynced) {
-		panic("Timed out waiting for Kube caches to sync")
+		return fmt.Errorf("timed out waiting for Kube caches to sync")
 	}
 
 	secrets, err := garden.ReadGardenSecrets(f.k8sInformers, f.k8sGardenCoreInformers)
@@ -152,13 +152,21 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) {
 	gardenmetrics.RegisterWorkqueMetrics()
 
 	var (
-		backupBucketController           = backupbucketcontroller.NewBackupBucketController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder)
-		backupEntryController            = backupentrycontroller.NewBackupEntryController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 		controllerInstallationController = controllerinstallationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace)
 		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.healthManager, secrets, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
 		shootController                  = shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.identity, f.gardenClusterIdentity, secrets, imageVector, f.recorder)
 		federatedSeedController          = federatedseedcontroller.NewFederatedSeedController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 	)
+
+	backupBucketController, err := backupbucketcontroller.NewBackupBucketController(ctx, f.clientMap, f.cfg, f.recorder)
+	if err != nil {
+		return fmt.Errorf("failed initializing BackupBucket controller: %w", err)
+	}
+
+	backupEntryController, err := backupentrycontroller.NewBackupEntryController(ctx, f.clientMap, f.cfg, f.recorder)
+	if err != nil {
+		return fmt.Errorf("failed initializing BackupEntry controller: %w", err)
+	}
 
 	// Initialize the Controller metrics collection.
 	gardenmetrics.RegisterControllerMetrics(
@@ -185,4 +193,6 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) {
 
 	logger.Logger.Infof("I have received a stop signal and will no longer watch resources.")
 	logger.Logger.Infof("Bye Bye!")
+
+	return nil
 }
