@@ -1,5 +1,0 @@
-dependencies:
-- name: kyma
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: kyma.enabled
