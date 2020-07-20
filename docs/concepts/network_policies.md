@@ -14,5 +14,5 @@ The aforementioned namespaces in the Seed contain a `deny-all` network policy th
 This [secure by default](https://en.wikipedia.org/wiki/Secure_by_default) setting requires pods to whitelist network traffic.
 This is done by pods having [labels matching to the selectors of the network policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/#networkpolicy-resource) deployed by Gardener.
 
-More details on the deployed network policies can be found in the [development](https://github.com/gardener/gardener/tree/master/docs/development/seed_network_policies.md) and [usage](https://github.com/gardener/gardener/tree/master/docs/development/shoot_network_policies.md) sections.
+More details on the deployed network policies can be found in the [development](https://github.com/gardener/gardener/tree/master/docs/development/seed_network_policies.md) and [usage](https://github.com/gardener/gardener/tree/master/docs/usage/shoot_network_policies.md) sections.
  
