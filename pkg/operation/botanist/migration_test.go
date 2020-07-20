@@ -16,14 +16,18 @@ package botanist_test
 
 import (
 	"context"
+	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsclient "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/network"
 	"github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/sirupsen/logrus"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -59,9 +63,18 @@ var _ = Describe("control plane migration", func() {
 	Describe("#AnnotateExtensionCRDsForMigration()", func() {
 		It("should annotate all extension objects", func() {
 			var (
+				log   = logrus.NewEntry(logger.NewNopLogger())
 				ctx   = context.TODO()
 				shoot = &shoot.Shoot{
 					SeedNamespace: testSeedNamespace,
+					Components: &shoot.Components{
+						Extensions: &shoot.Extensions{
+							Network: network.New(log, fakeClient, &network.Values{
+								Namespace: "test-network",
+								Name:      testSeedNamespace,
+							}, time.Second, 2*time.Second, 3*time.Second),
+						},
+					},
 				}
 			)
 

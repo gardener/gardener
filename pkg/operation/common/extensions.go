@@ -21,14 +21,20 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/api/extensions"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/sirupsen/logrus"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -365,6 +371,142 @@ func WaitUntilExtensionCRDeleted(
 	}
 
 	return nil
+}
+
+// RestoreExtensionWithDeployFunction deploys the extension resource with the passed in deployFunc and sets its operation annotation to wait-for-state.
+// It then restores the state of the extension resource from the ShootState, creates any required state resources and sets the operation annotation to restore.
+func RestoreExtensionWithDeployFunction(
+	ctx context.Context,
+	shootState *gardencorev1alpha1.ShootState,
+	c client.Client,
+	resourceKind string,
+	namespace string,
+	deployFunc func(ctx context.Context, operationAnnotation string) (extensionsv1alpha1.Object, error),
+) error {
+	extensionObj, err := deployFunc(ctx, v1beta1constants.GardenerOperationWaitForState)
+	if err != nil {
+		return err
+	}
+
+	if err := RestoreExtensionObjectState(ctx, c, shootState, namespace, extensionObj, resourceKind); err != nil {
+		return err
+	}
+
+	return AnnotateExtensionObjectWithOperation(ctx, c, extensionObj, v1beta1constants.GardenerOperationRestore)
+}
+
+//RestoreExtensionObjectState restores the status.state field of the extension resources and deploys any required resources from the provided shoot state
+func RestoreExtensionObjectState(
+	ctx context.Context,
+	c client.Client,
+	shootState *gardencorev1alpha1.ShootState,
+	namespace string,
+	extensionObj extensionsv1alpha1.Object,
+	resourceKind string,
+) error {
+	var resourceRefs []autoscalingv1.CrossVersionObjectReference
+	if shootState.Spec.Extensions != nil {
+		resourceName := extensionObj.GetName()
+		purpose := extensionObj.GetExtensionSpec().GetExtensionPurpose()
+		list := gardencorev1alpha1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
+		if extensionResourceState := list.Get(resourceKind, &resourceName, purpose); extensionResourceState != nil {
+			extensionStatus := extensionObj.GetExtensionStatus()
+			extensionStatus.SetState(extensionResourceState.State)
+			extensionStatus.SetResources(extensionResourceState.Resources)
+
+			if err := c.Status().Update(ctx, extensionObj); err != nil {
+				return err
+			}
+
+			for _, r := range extensionResourceState.Resources {
+				resourceRefs = append(resourceRefs, r.ResourceRef)
+			}
+		}
+	}
+	if shootState.Spec.Resources != nil {
+		list := gardencorev1alpha1helper.ResourceDataList(shootState.Spec.Resources)
+		for _, resourceRef := range resourceRefs {
+			resourceData := list.Get(&resourceRef)
+			if resourceData != nil {
+				obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&resourceData.Data)
+				if err != nil {
+					return err
+				}
+				if err := utils.CreateOrUpdateObjectByRef(ctx, c, &resourceRef, namespace, obj); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// MigrateExtensionCR adds the migrate operation annotation to the extension CR.
+func MigrateExtensionCR(
+	ctx context.Context,
+	c client.Client,
+	newObjFunc func() extensionsv1alpha1.Object,
+	namespace string,
+	name string,
+) error {
+	obj := newObjFunc()
+	obj.SetNamespace(namespace)
+	obj.SetName(name)
+
+	if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, obj); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			return nil
+		}
+		return err
+	}
+
+	return AnnotateExtensionObjectWithOperation(ctx, c, obj, v1beta1constants.GardenerOperationMigrate)
+}
+
+// WaitUntilExtensionCRMigrated waits until the migrate operation for the extension resource is successful.
+func WaitUntilExtensionCRMigrated(
+	ctx context.Context,
+	c client.Client,
+	newObjFunc func() extensionsv1alpha1.Object,
+	namespace string,
+	name string,
+	interval time.Duration,
+	timeout time.Duration,
+) error {
+	obj := newObjFunc()
+	obj.SetNamespace(namespace)
+	obj.SetName(name)
+
+	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
+		if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, obj); err != nil {
+			if client.IgnoreNotFound(err) == nil {
+				return retry.Ok()
+			}
+			return retry.SevereError(err)
+		}
+
+		if extensionObjStatus := obj.GetExtensionStatus(); extensionObjStatus != nil {
+			if lastOperation := extensionObjStatus.GetLastOperation(); lastOperation != nil {
+				if lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+					return retry.Ok()
+				}
+			}
+		}
+
+		var extensionType string
+		if extensionSpec := obj.GetExtensionSpec(); extensionSpec != nil {
+			extensionType = extensionSpec.GetExtensionType()
+		}
+		return retry.MinorError(fmt.Errorf("lastOperation for extension CR %s with name %s and type %s is not Migrate=Succeeded", obj.GetObjectKind().GroupVersionKind().Kind, name, extensionType))
+	})
+}
+
+// AnnotateExtensionObjectWithOperation annotates the extension resource with the provided operation annotation value.
+func AnnotateExtensionObjectWithOperation(ctx context.Context, c client.Client, extensionObj extensionsv1alpha1.Object, operation string) error {
+	extensionObjCopy := extensionObj.DeepCopyObject()
+	kutil.SetMetaDataAnnotation(extensionObj, v1beta1constants.GardenerOperation, operation)
+	kutil.SetMetaDataAnnotation(extensionObj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+	return c.Patch(ctx, extensionObj, client.MergeFrom(extensionObjCopy))
 }
 
 func extensionKey(kind, namespace, name string) string {

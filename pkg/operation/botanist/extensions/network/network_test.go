@@ -20,6 +20,7 @@ import (
 	"net"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -35,9 +36,9 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,7 +63,7 @@ var _ = Describe("#Network", func() {
 		expected         *extensionsv1alpha1.Network
 		values           *network.Values
 		log              *logrus.Entry
-		defaultDepWaiter component.DeployWaiter
+		defaultDepWaiter component.DeployMigrateWaiter
 
 		mockNow *mocktime.MockNow
 		now     time.Time
@@ -130,12 +131,11 @@ var _ = Describe("#Network", func() {
 	})
 
 	Describe("#Deploy", func() {
-		DescribeTable("correct Network is created", func(mutator func()) {
+		It("should create correct Network", func() {
 			defer test.WithVars(
 				&network.TimeNow, mockNow.Do,
 			)()
 
-			mutator()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			Expect(defaultDepWaiter.Deploy(ctx)).ToNot(HaveOccurred())
@@ -145,13 +145,7 @@ var _ = Describe("#Network", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(DeepDerivativeEqual(expected))
-		},
-			Entry("with no modification", func() {}),
-			Entry("during restore phase", func() {
-				values.IsInRestorePhaseOfControlPlaneMigration = true
-				expected.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationWaitForState
-			}),
-		)
+		})
 	})
 
 	Describe("#Wait", func() {
@@ -234,6 +228,126 @@ var _ = Describe("#Network", func() {
 	Describe("#WaitCleanup", func() {
 		It("should not return error when it's already removed", func() {
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).ToNot(HaveOccurred())
+		})
+	})
+
+	Describe("#Restore", func() {
+		var (
+			shootState *gardencorev1alpha1.ShootState
+		)
+
+		BeforeEach(func() {
+			shootState = &gardencorev1alpha1.ShootState{
+				Spec: gardencorev1alpha1.ShootStateSpec{
+					Extensions: []gardencorev1alpha1.ExtensionResourceState{
+						{
+							Name:  &expected.Name,
+							Kind:  extensionsv1alpha1.NetworkResource,
+							State: &runtime.RawExtension{Raw: []byte("dummy state")},
+						},
+					},
+				},
+			}
+		})
+
+		It("should restore the network state if it exists in the shoot state", func() {
+			defer test.WithVars(
+				&network.TimeNow, mockNow.Do,
+				&common.TimeNow, mockNow.Do,
+			)()
+
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			expected.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationWaitForState
+
+			expectedWithState := expected.DeepCopy()
+			expectedWithState.Status = extensionsv1alpha1.NetworkStatus{
+				DefaultStatus: extensionsv1alpha1.DefaultStatus{State: &runtime.RawExtension{Raw: []byte("dummy state")}},
+			}
+
+			expectedWithRestore := expectedWithState.DeepCopy()
+			expectedWithRestore.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationRestore
+
+			mc := mockclient.NewMockClient(ctrl)
+			gomock.InOrder(
+				mc.EXPECT().Get(ctx, kutil.Key(networkNs, networkName), gomock.AssignableToTypeOf(&extensionsv1alpha1.Network{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, n *extensionsv1alpha1.Network) error {
+					return apierrors.NewNotFound(extensionsv1alpha1.Resource("Network"), expected.Name)
+				}),
+
+				mc.EXPECT().Create(ctx, expected).Return(nil),
+				mc.EXPECT().Status().DoAndReturn(func() *mockclient.MockClient {
+					return mc
+				}),
+				mc.EXPECT().Update(ctx, expectedWithState).Return(nil),
+				mc.EXPECT().Patch(ctx, expectedWithRestore, client.MergeFrom(expectedWithState)),
+			)
+
+			defaultDepWaiter = network.New(log, mc, values, time.Second, 2*time.Second, 3*time.Second)
+
+			Expect(defaultDepWaiter.Restore(ctx, shootState)).To(Succeed())
+		})
+	})
+
+	Describe("#Migrate", func() {
+		It("should migrate the resource", func() {
+			defer test.WithVars(
+				&network.TimeNow, mockNow.Do,
+				&common.TimeNow, mockNow.Do,
+			)()
+
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			expectedCopy := expected.DeepCopy()
+			expectedCopy.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationMigrate
+
+			mc := mockclient.NewMockClient(ctrl)
+
+			mc.EXPECT().Get(ctx, kutil.Key(networkNs, networkName), gomock.AssignableToTypeOf(&extensionsv1alpha1.Network{})).SetArg(2, *expected)
+			mc.EXPECT().Patch(ctx, expectedCopy, gomock.AssignableToTypeOf(client.MergeFrom(expected)))
+
+			defaultDepWaiter = network.New(log, mc, values, time.Second, 2*time.Second, 3*time.Second)
+			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())
+		})
+
+		It("should not return error if resource does not exist", func() {
+			mc := mockclient.NewMockClient(ctrl)
+			mc.EXPECT().Get(ctx, kutil.Key(networkNs, networkName), gomock.AssignableToTypeOf(&extensionsv1alpha1.Network{})).Return(
+				apierrors.NewNotFound(extensionsv1alpha1.Resource("Network"), expected.Name),
+			)
+
+			defaultDepWaiter = network.New(log, mc, values, time.Second, 2*time.Second, 3*time.Second)
+			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())
+		})
+	})
+
+	Describe("#WaitMigrate", func() {
+		It("should not return error when resource is missing", func() {
+			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(Succeed())
+		})
+
+		It("should return error if resource is not yet migrated successfully", func() {
+			expected.Status.LastError = &gardencorev1beta1.LastError{
+				Description: "Some error",
+			}
+
+			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateError,
+				Type:  gardencorev1beta1.LastOperationTypeMigrate,
+			}
+
+			Expect(c.Create(ctx, expected)).To(Succeed(), "creating network succeeds")
+			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(HaveOccurred())
+		})
+
+		It("should not return error if resource gets migrated successfully", func() {
+			expected.Status.LastError = nil
+			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateSucceeded,
+				Type:  gardencorev1beta1.LastOperationTypeMigrate,
+			}
+
+			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating network succeeds")
+			Expect(defaultDepWaiter.WaitMigrate(ctx)).ToNot(HaveOccurred(), "network is ready, should not return an error")
 		})
 	})
 })

@@ -171,7 +171,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 	}
 
 	if restorePhase {
-		return b.restoreExtensionObject(ctx, b.K8sSeedClient.DirectClient(), worker, extensionsv1alpha1.WorkerResource)
+		return b.restoreExtensionObject(ctx, worker, extensionsv1alpha1.WorkerResource)
 	}
 
 	return nil

@@ -16,30 +16,26 @@ package botanist
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/gardener/gardener/pkg/api/extensions"
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	k8sretry "k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // AnnotateExtensionCRsForMigration annotates extension CRs with migrate operation annotation
 func (b *Botanist) AnnotateExtensionCRsForMigration(ctx context.Context) (err error) {
+	if err = b.Shoot.Components.Extensions.Network.Migrate(ctx); err != nil {
+		return err
+	}
+
 	var fns []flow.TaskFn
 	fns, err = b.applyFuncToAllExtensionCRs(ctx, annotateObjectForMigrationFunc(ctx, b.K8sSeedClient.DirectClient()))
 	if err != nil {
@@ -51,20 +47,45 @@ func (b *Botanist) AnnotateExtensionCRsForMigration(ctx context.Context) (err er
 
 func annotateObjectForMigrationFunc(ctx context.Context, client client.Client) func(runtime.Object) error {
 	return func(obj runtime.Object) error {
-		return kutil.TryUpdate(ctx, k8sretry.DefaultBackoff, client, obj, func() error {
-			acc, err := extensions.Accessor(obj)
-			if err != nil {
-				return err
-			}
-
-			kutil.SetMetaDataAnnotation(acc, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate)
-			return nil
-		})
+		extensionObj := obj.(extensionsv1alpha1.Object)
+		return common.AnnotateExtensionObjectWithOperation(ctx, client, extensionObj, v1beta1constants.GardenerOperationMigrate)
 	}
+}
+
+// WaitForExtensionsOperationMigrateToSucceed waits until extension CRs has lastOperation Migrate Succeeded
+func (b *Botanist) WaitForExtensionsOperationMigrateToSucceed(ctx context.Context) error {
+	if err := b.Shoot.Components.Extensions.Network.WaitMigrate(ctx); err != nil {
+		return err
+	}
+
+	fns, err := b.applyFuncToAllExtensionCRs(ctx, func(obj runtime.Object) error {
+		extensionObj, err := extensions.Accessor(obj)
+		if err != nil {
+			return err
+		}
+		return common.WaitUntilExtensionCRMigrated(
+			ctx,
+			b.K8sSeedClient.DirectClient(),
+			func() extensionsv1alpha1.Object { return extensionObj },
+			extensionObj.GetName(),
+			extensionObj.GetNamespace(),
+			5*time.Second,
+			300*time.Second,
+		)
+	})
+	if err != nil {
+		return err
+	}
+
+	return flow.Parallel(fns...)(ctx)
 }
 
 // DeleteAllExtensionCRs deletes all extension CRs from the Shoot namespace
 func (b *Botanist) DeleteAllExtensionCRs(ctx context.Context) error {
+	if err := b.Shoot.Components.Extensions.Network.Destroy(ctx); err != nil {
+		return err
+	}
+
 	fns, err := b.applyFuncToAllExtensionCRs(ctx, func(obj runtime.Object) error {
 		extensionObj, err := extensions.Accessor(obj)
 		if err != nil {
@@ -94,109 +115,47 @@ func (b *Botanist) applyFuncToAllExtensionCRs(ctx context.Context, applyFunc fun
 	return fns, nil
 }
 
-func (b *Botanist) restoreExtensionObject(ctx context.Context, client client.Client, extensionObj extensionsv1alpha1.Object, resourceKind string) error {
-	if err := client.Get(ctx, kutil.KeyFromObject(extensionObj), extensionObj); err != nil {
+func (b *Botanist) restoreExtensionObject(ctx context.Context, extensionObj extensionsv1alpha1.Object, resourceKind string) error {
+	if err := b.K8sSeedClient.DirectClient().Get(ctx, kutil.KeyFromObject(extensionObj), extensionObj); err != nil {
 		return err
 	}
 
-	if err := b.restoreExtensionObjectState(ctx, client, extensionObj, resourceKind, extensionObj.GetName(), extensionObj.GetExtensionSpec().GetExtensionPurpose()); err != nil {
+	if err := common.RestoreExtensionObjectState(ctx, b.K8sSeedClient.Client(), b.ShootState, b.Shoot.SeedNamespace, extensionObj, resourceKind); err != nil {
 		return err
 	}
 
-	return annotateExtensionObjectWithOperationRestore(ctx, client, extensionObj)
-}
-
-func (b *Botanist) restoreExtensionObjectState(ctx context.Context, client client.Client, extensionObj extensionsv1alpha1.Object, resourceKind, resourceName string, purpose *string) error {
-	var resourceRefs []autoscalingv1.CrossVersionObjectReference
-	if b.ShootState.Spec.Extensions != nil {
-		list := gardencorev1alpha1helper.ExtensionResourceStateList(b.ShootState.Spec.Extensions)
-		if extensionResourceState := list.Get(resourceKind, &resourceName, purpose); extensionResourceState != nil {
-			extensionStatus := extensionObj.GetExtensionStatus()
-			extensionStatus.SetState(extensionResourceState.State)
-			extensionStatus.SetResources(extensionResourceState.Resources)
-			for _, r := range extensionResourceState.Resources {
-				resourceRefs = append(resourceRefs, r.ResourceRef)
-			}
-		}
-	}
-	if b.ShootState.Spec.Resources != nil {
-		list := gardencorev1alpha1helper.ResourceDataList(b.ShootState.Spec.Resources)
-		for _, resourceRef := range resourceRefs {
-			resourceData := list.Get(&resourceRef)
-			if resourceData != nil {
-				obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&resourceData.Data)
-				if err != nil {
-					return err
-				}
-				if err := utils.CreateOrUpdateObjectByRef(ctx, b.K8sSeedClient.Client(), &resourceRef, b.Shoot.SeedNamespace, obj); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return client.Status().Update(ctx, extensionObj)
-}
-
-func annotateExtensionObjectWithOperationRestore(ctx context.Context, c client.Client, extensionObj extensionsv1alpha1.Object) error {
-	extensionObjCopy := extensionObj.DeepCopyObject()
-	kutil.SetMetaDataAnnotation(extensionObj, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore)
-	return c.Patch(ctx, extensionObj, client.MergeFrom(extensionObjCopy))
-}
-
-func (b *Botanist) isRestorePhase() bool {
-	if b.Shoot == nil {
-		return false
-	}
-
-	return b.Shoot.Info.Status.LastOperation != nil && b.Shoot.Info.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore
+	return common.AnnotateExtensionObjectWithOperation(ctx, b.K8sSeedClient.Client(), extensionObj, v1beta1constants.GardenerOperationRestore)
 }
 
 // AnnotateBackupEntryInSeedForMigration annotates the BackupEntry with gardener.cloud/operation=migrate
 func (b *Botanist) AnnotateBackupEntryInSeedForMigration(ctx context.Context) error {
-	var (
-		name        = common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
-		backupEntry = &extensionsv1alpha1.BackupEntry{}
+	name := common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
+	return common.MigrateExtensionCR(
+		ctx,
+		b.K8sSeedClient.Client(),
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupEntry{} },
+		"",
+		name,
 	)
-
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(name), backupEntry); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-
-	metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate)
-	return b.K8sSeedClient.Client().Update(ctx, backupEntry)
 }
 
 // WaitForBackupEntryOperationMigrateToSucceed waits until BackupEntry has lastOperation equal to Migrate=Succeeded
 func (b *Botanist) WaitForBackupEntryOperationMigrateToSucceed(ctx context.Context) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 600*time.Second, func(ctx context.Context) (done bool, err error) {
-		var (
-			name        = common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
-			backupEntry = &extensionsv1alpha1.BackupEntry{}
-		)
-
-		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(name), backupEntry); err != nil {
-			if apierrors.IsNotFound(err) {
-				return retry.Ok()
-			}
-			return retry.SevereError(fmt.Errorf("waiting for lastOperation to be Migrate Succeeded for BackupEntry %q failed with: %v", name, err))
-		}
-
-		lastOperation := backupEntry.Status.LastOperation
-		if lastOperation != nil && lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
-			return retry.Ok()
-		}
-		return retry.MinorError(fmt.Errorf("BackupEntry %q lastOperation status is not yet Succeeded, but [%v]", name, lastOperation))
-	})
+	name := common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
+	return common.WaitUntilExtensionCRMigrated(
+		ctx,
+		b.K8sSeedClient.DirectClient(),
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupEntry{} },
+		"",
+		name,
+		5*time.Second,
+		600*time.Second,
+	)
 }
 
 // DeleteBackupEntryFromSeed deletes the migrated BackupEntry from the Seed
 func (b *Botanist) DeleteBackupEntryFromSeed(ctx context.Context) error {
-	var (
-		name = common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
-	)
+	name := common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
 	return common.DeleteExtensionCR(
 		ctx,
 		b.K8sSeedClient.Client(),
@@ -204,4 +163,10 @@ func (b *Botanist) DeleteBackupEntryFromSeed(ctx context.Context) error {
 		"",
 		name,
 	)
+}
+
+func (b *Botanist) isRestorePhase() bool {
+	return b.Shoot != nil &&
+		b.Shoot.Info.Status.LastOperation != nil &&
+		b.Shoot.Info.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore
 }

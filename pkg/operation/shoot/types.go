@@ -94,7 +94,7 @@ type ControlPlane struct {
 type Extensions struct {
 	DNS            *DNS
 	Infrastructure Infrastructure
-	Network        component.DeployWaiter
+	Network        component.DeployMigrateWaiter
 }
 
 // DNS contains references to internal and external DNSProvider and DNSEntry deployers.

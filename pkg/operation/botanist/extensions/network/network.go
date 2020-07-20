@@ -19,6 +19,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -71,7 +72,7 @@ func New(
 	waitInterval time.Duration,
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
-) component.DeployWaiter {
+) component.DeployMigrateWaiter {
 	return &network{
 		client:              client,
 		logger:              logger,
@@ -93,37 +94,37 @@ type network struct {
 
 // Deploy uses the seed client to create or update the Network custom resource in the Shoot namespace in the Seed
 func (d *network) Deploy(ctx context.Context) error {
-	var (
-		restorePhase = d.values.IsInRestorePhaseOfControlPlaneMigration
-		operation    = v1beta1constants.GardenerOperationReconcile
-		network      = &extensionsv1alpha1.Network{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      d.values.Name,
-				Namespace: d.values.Namespace,
-			},
-		}
-	)
-
-	if restorePhase {
-		operation = v1beta1constants.GardenerOperationWaitForState
-	}
-
-	_, err := controllerutil.CreateOrUpdate(ctx, d.client, network, func() error {
-		metav1.SetMetaDataAnnotation(&network.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&network.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
-
-		network.Spec = extensionsv1alpha1.NetworkSpec{
-			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type:           d.values.Type,
-				ProviderConfig: d.values.ProviderConfig,
-			},
-			PodCIDR:     d.values.PodCIDR.String(),
-			ServiceCIDR: d.values.ServiceCIDR.String(),
-		}
-
-		return nil
-	})
+	_, err := d.internalDeploy(ctx, v1beta1constants.GardenerOperationReconcile)
 	return err
+}
+
+// Restore uses the seed client and the ShootState to create the Network custom resource in the Shoot namespace in the Seed and restore its state
+func (d *network) Restore(ctx context.Context, shootState *v1alpha1.ShootState) error {
+	return common.RestoreExtensionWithDeployFunction(ctx, shootState, d.client, extensionsv1alpha1.NetworkResource, d.values.Namespace, d.internalDeploy)
+}
+
+// Migrate migrates the Network custom resource
+func (d *network) Migrate(ctx context.Context) error {
+	return common.MigrateExtensionCR(
+		ctx,
+		d.client,
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Network{} },
+		d.values.Namespace,
+		d.values.Name,
+	)
+}
+
+// WaitMigrate waits until the Network custom resource has been successfully migrated.
+func (d *network) WaitMigrate(ctx context.Context) error {
+	return common.WaitUntilExtensionCRMigrated(
+		ctx,
+		d.client,
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Network{} },
+		d.values.Namespace,
+		d.values.Name,
+		d.waitInterval,
+		d.waitTimeout,
+	)
 }
 
 // Destroy deletes the Network CRD
@@ -137,14 +138,14 @@ func (d *network) Destroy(ctx context.Context) error {
 	)
 }
 
-// Wait waits until the Network CRD is ready
+// Wait waits until the Network CRD is ready (deployed or restored)
 func (d *network) Wait(ctx context.Context) error {
 	return common.WaitUntilExtensionCRReady(
 		ctx,
 		d.client,
 		d.logger,
 		func() runtime.Object { return &extensionsv1alpha1.Network{} },
-		"Network",
+		extensionsv1alpha1.NetworkResource,
 		d.values.Namespace,
 		d.values.Name,
 		d.waitInterval,
@@ -161,10 +162,39 @@ func (d *network) WaitCleanup(ctx context.Context) error {
 		d.client,
 		d.logger,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Network{} },
-		"Network",
+		extensionsv1alpha1.NetworkResource,
 		d.values.Namespace,
 		d.values.Name,
 		d.waitInterval,
 		d.waitTimeout,
 	)
+}
+
+func (d *network) internalDeploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
+	var (
+		network = &extensionsv1alpha1.Network{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      d.values.Name,
+				Namespace: d.values.Namespace,
+			},
+		}
+	)
+
+	_, err := controllerutil.CreateOrUpdate(ctx, d.client, network, func() error {
+		metav1.SetMetaDataAnnotation(&network.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+		metav1.SetMetaDataAnnotation(&network.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+
+		network.Spec = extensionsv1alpha1.NetworkSpec{
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				Type:           d.values.Type,
+				ProviderConfig: d.values.ProviderConfig,
+			},
+			PodCIDR:     d.values.PodCIDR.String(),
+			ServiceCIDR: d.values.ServiceCIDR.String(),
+		}
+
+		return nil
+	})
+
+	return network, err
 }

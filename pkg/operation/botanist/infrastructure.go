@@ -26,8 +26,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/secrets"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -63,7 +63,7 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 	}
 
 	if b.isRestorePhase() {
-		return b.restoreExtensionObject(ctx, b.K8sSeedClient.DirectClient(), &extensionsv1alpha1.Infrastructure{
+		return b.restoreExtensionObject(ctx, &extensionsv1alpha1.Infrastructure{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      b.Shoot.Info.Name,
 				Namespace: b.Shoot.SeedNamespace,

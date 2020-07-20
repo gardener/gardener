@@ -16,18 +16,13 @@ package botanist
 
 import (
 	"context"
-	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/api/extensions"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -70,7 +65,7 @@ func (b *Botanist) DeployExtensionResources(ctx context.Context) error {
 			})
 
 			if restorePhase {
-				return b.restoreExtensionObject(ctx, b.K8sSeedClient.DirectClient(), &toApply, extensionsv1alpha1.ExtensionResource)
+				return b.restoreExtensionObject(ctx, &toApply, extensionsv1alpha1.ExtensionResource)
 			}
 
 			return err
@@ -147,41 +142,4 @@ func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error
 		shoot.ExtensionDefaultTimeout,
 		nil,
 	)
-}
-
-// WaitForExtensionsOperationMigrateToSucceed waits until extension CRs has lastOperation Migrate Succeeded
-func (b *Botanist) WaitForExtensionsOperationMigrateToSucceed(ctx context.Context) error {
-	fns, err := b.applyFuncToAllExtensionCRs(ctx, func(obj runtime.Object) error {
-		return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
-			objDeepCopy := obj.DeepCopyObject()
-			extensionObj, err := extensions.Accessor(objDeepCopy)
-			if err != nil {
-				return retry.SevereError(err)
-			}
-
-			// fetch last object
-			if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(extensionObj.GetNamespace(), extensionObj.GetName()), extensionObj); err != nil {
-				return retry.SevereError(err)
-			}
-
-			if extensionObjStatus := extensionObj.GetExtensionStatus(); extensionObjStatus != nil {
-				if lastOperation := extensionObjStatus.GetLastOperation(); lastOperation != nil {
-					if lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
-						return retry.Ok()
-					}
-				}
-			}
-
-			var exetnsionType string
-			if extensionSpec := extensionObj.GetExtensionSpec(); extensionSpec != nil {
-				exetnsionType = extensionSpec.GetExtensionType()
-			}
-			return retry.MinorError(fmt.Errorf("lastOperation for extension CR %s with name %s and type %s is not Migrate=Succeeded", extensionObj.GetObjectKind().GroupVersionKind().Kind, extensionObj.GetName(), exetnsionType))
-		})
-	})
-	if err != nil {
-		return err
-	}
-
-	return flow.Parallel(fns...)(ctx)
 }
