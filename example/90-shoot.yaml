@@ -115,7 +115,7 @@ spec:
     # zones: # optional, only relevant if the provider supports availability zones
     # - europe-central-1a
     # - europe-central-1b
-    # settings: # optional, it allows to configure the machine-controller.
+    # machineControllerManager: # optional, it allows to configure the machine-controller settings.
     #   machineDrainTimeout: 10m
     #   machineHealthTimeout: 10m
     #   machineCreationTimeout: 10m

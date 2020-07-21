@@ -944,13 +944,13 @@ type Worker struct {
 	// SystemComponents contains configuration for system components related to this worker pool
 	// +optional
 	SystemComponents *WorkerSystemComponents `json:"systemComponents,omitempty" protobuf:"bytes,18,opt,name=systemComponents"`
-	// Settings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
+	// MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
 	// +optional
-	Settings *Settings `json:"settings,omitempty" protobuf:"bytes,19,opt,name=settings"`
+	MachineControllerManagerSettings *MachineControllerManagerSettings `json:"machineControllerManager,omitempty" protobuf:"bytes,19,opt,name=machineControllerManager"`
 }
 
-// Settings contains configurations for different worker-pools.
-type Settings struct {
+// MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
+type MachineControllerManagerSettings struct {
 	// MachineDrainTimeout is the period after which machine is forcefully deleted.
 	// +optional
 	MachineDrainTimeout *metav1.Duration `json:"machineDrainTimeout,omitempty" protobuf:"bytes,1,name=machineDrainTimeout"`

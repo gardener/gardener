@@ -17,7 +17,6 @@ package genericactuator
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
@@ -278,12 +277,6 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, cluster 
 			},
 		}
 
-		// Find the workerpool related to current machine deployment.
-		workerPool := workerPoolForMachineDeployment(worker, deployment)
-		if workerPool == nil {
-			a.logger.Error(fmt.Errorf("Error finding worker pool for machine deployment"), "Worker pool settings will not be applied on related machine deployment.", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
-		}
-
 		if _, err := controllerutil.CreateOrUpdate(ctx, a.client, machineDeployment, func() error {
 			machineDeployment.Spec = machinev1alpha1.MachineDeploymentSpec{
 				Replicas:        int32(replicas),
@@ -315,13 +308,6 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, cluster 
 							Spec: corev1.NodeSpec{
 								Taints: deployment.Taints,
 							},
-						},
-						MachineConfiguration: &machinev1alpha1.MachineConfiguration{
-							MachineDrainTimeout:    workerPool.Settings.MachineDrainTimeout,
-							MachineCreationTimeout: workerPool.Settings.MachineCreationTimeout,
-							MachineHealthTimeout:   workerPool.Settings.MachineHealthTimeout,
-							MaxEvictRetries:        workerPool.Settings.MaxEvictRetries,
-							NodeConditions:         workerPool.Settings.NodeConditions,
 						},
 					},
 				},
@@ -576,15 +562,6 @@ func getExistingMachineDeployment(existingMachineDeployments *machinev1alpha1.Ma
 	for _, machineDeployment := range existingMachineDeployments.Items {
 		if machineDeployment.Name == name {
 			return &machineDeployment
-		}
-	}
-	return nil
-}
-
-func workerPoolForMachineDeployment(worker *extensionsv1alpha1.Worker, deployment extensionsworker.MachineDeployment) *extensionsv1alpha1.WorkerPool {
-	for _, pool := range worker.Spec.Pools {
-		if strings.Contains(deployment.Name, pool.Name) {
-			return &pool
 		}
 	}
 	return nil
