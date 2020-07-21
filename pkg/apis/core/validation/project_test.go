@@ -66,7 +66,7 @@ var _ = Describe("Project Validation Tests", func() {
 								Kind:     rbacv1.UserKind,
 								Name:     "bob.doe@example.com",
 							},
-							Roles: []string{core.ProjectMemberViewer},
+							Roles: []string{core.ProjectMemberViewer, core.ProjectMemberUserAccessManager},
 						},
 					},
 				},
@@ -205,7 +205,7 @@ var _ = Describe("Project Validation Tests", func() {
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.members[1].roles[1]"),
+				"Field": Equal("spec.members[1].roles[2]"),
 			}))))
 		})
 

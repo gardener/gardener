@@ -144,9 +144,10 @@ func ValidateSubject(subject rbacv1.Subject, fldPath *field.Path) field.ErrorLis
 }
 
 var supportedRoles = sets.NewString(
+	core.ProjectMemberOwner,
 	core.ProjectMemberAdmin,
 	core.ProjectMemberViewer,
-	core.ProjectMemberOwner,
+	core.ProjectMemberUserAccessManager,
 )
 
 const extensionRoleMaxLength = 20

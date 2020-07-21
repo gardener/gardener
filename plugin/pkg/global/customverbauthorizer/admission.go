@@ -18,15 +18,18 @@ import (
 	"context"
 	"fmt"
 	"io"
-
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apiserver/pkg/authorization/authorizer"
-
-	"k8s.io/apiserver/pkg/admission"
+	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+
+	rbacv1 "k8s.io/api/rbac/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
+	"k8s.io/apiserver/pkg/authorization/authorizer"
 )
 
 const (
@@ -36,6 +39,9 @@ const (
 	// CustomVerbModifyProjectTolerationsWhitelist is a constant for the custom verb that allows modifying the
 	// `.spec.tolerations.whitelist` field in `Project` resources.
 	CustomVerbModifyProjectTolerationsWhitelist = "modify-spec-tolerations-whitelist"
+	// CustomVerbProjectUserAccessManagement is a constant for the custom verb that allows to manage human users or
+	// groups subjects in the `.spec.members` field in `Project` resources.
+	CustomVerbProjectManageMembers = "manage-members"
 )
 
 // Register registers a plugin.
@@ -104,11 +110,15 @@ func (c *CustomVerbAuthorizer) admitProjects(ctx context.Context, a admission.At
 		}
 	}
 
-	if apiequality.Semantic.DeepEqual(oldObj.Spec.Tolerations, obj.Spec.Tolerations) {
-		return nil
+	if mustCheckProjectTolerationsWhitelist(oldObj.Spec.Tolerations, obj.Spec.Tolerations) {
+		return c.authorize(ctx, a, CustomVerbModifyProjectTolerationsWhitelist, "modify .spec.tolerations.whitelist")
 	}
 
-	return c.authorize(ctx, a, CustomVerbModifyProjectTolerationsWhitelist, "modify .spec.tolerations.whitelist")
+	if mustCheckProjectMembers(oldObj.Spec.Members, obj.Spec.Members) {
+		return c.authorize(ctx, a, CustomVerbProjectManageMembers, "manage human users or groups in .spec.members")
+	}
+
+	return nil
 }
 
 func (c *CustomVerbAuthorizer) authorize(ctx context.Context, a admission.Attributes, verb, operation string) error {
@@ -136,4 +146,42 @@ func (c *CustomVerbAuthorizer) authorize(ctx context.Context, a admission.Attrib
 	}
 
 	return nil
+}
+
+func mustCheckProjectTolerationsWhitelist(oldTolerations, tolerations *core.ProjectTolerations) bool {
+	if apiequality.Semantic.DeepEqual(oldTolerations, tolerations) {
+		return false
+	}
+	if oldTolerations == nil && tolerations != nil {
+		return !apiequality.Semantic.DeepEqual(nil, tolerations.Whitelist)
+	}
+	if oldTolerations != nil && tolerations == nil {
+		return !apiequality.Semantic.DeepEqual(oldTolerations.Whitelist, nil)
+	}
+	return !apiequality.Semantic.DeepEqual(oldTolerations.Whitelist, tolerations.Whitelist)
+}
+
+func mustCheckProjectMembers(oldMembers, members []core.ProjectMember) bool {
+	if apiequality.Semantic.DeepEqual(oldMembers, members) {
+		return false
+	}
+
+	var oldHumanUsers, newHumanUsers = findHumanUsers(oldMembers), findHumanUsers(members)
+	return !oldHumanUsers.Equal(newHumanUsers)
+}
+
+func findHumanUsers(members []core.ProjectMember) sets.String {
+	result := sets.NewString()
+
+	for _, member := range members {
+		if isHumanUser(member.Subject) {
+			result.Insert(member.Kind + member.Name)
+		}
+	}
+
+	return result
+}
+
+func isHumanUser(subject rbacv1.Subject) bool {
+	return subject.Kind == rbacv1.UserKind && !strings.HasPrefix(subject.Name, serviceaccount.ServiceAccountUsernamePrefix)
 }

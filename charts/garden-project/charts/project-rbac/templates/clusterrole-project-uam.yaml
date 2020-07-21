@@ -2,7 +2,7 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: gardener.cloud:system:project:{{ .Values.project.name }}
+  name: gardener.cloud:system:project-uam:{{ .Values.project.name }}
   ownerReferences:
   - apiVersion: core.gardener.cloud/v1beta1
     kind: Project
@@ -12,14 +12,6 @@ metadata:
     uid: {{ .Values.project.uid | quote }}
 rules:
 - apiGroups:
-  - ""
-  resources:
-  - namespaces
-  resourceNames:
-  - {{ .Release.Namespace | quote }}
-  verbs:
-  - get
-- apiGroups:
   - core.gardener.cloud
   resources:
   - projects
@@ -27,7 +19,6 @@ rules:
   - {{ .Values.project.name | quote }}
   verbs:
   - get
-  - patch
   - manage-members
+  - patch
   - update
-  - delete

@@ -16,20 +16,27 @@ package project
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/prometheus/client_golang/prometheus"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
+	rbacv1isters "k8s.io/client-go/listers/rbac/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -54,6 +61,8 @@ type Controller struct {
 	namespaceLister kubecorev1listers.NamespaceLister
 	namespaceSynced cache.InformerSynced
 
+	clusterRoleLister rbacv1isters.ClusterRoleLister
+	clusterRoleSynced cache.InformerSynced
 	roleBindingSynced cache.InformerSynced
 
 	workerCh               chan int
@@ -93,6 +102,9 @@ func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFacto
 		secretInformer = corev1Informer.Secrets()
 		secretLister   = secretInformer.Lister()
 
+		clusterRoleInformer = rbacv1Informer.ClusterRoles()
+		clusterRoleLister   = clusterRoleInformer.Lister()
+
 		roleBindingInformer = rbacv1Informer.RoleBindings()
 	)
 
@@ -107,6 +119,7 @@ func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFacto
 		projectQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
 		projectStaleQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
 		namespaceLister:        namespaceLister,
+		clusterRoleLister:      clusterRoleLister,
 		workerCh:               make(chan int),
 	}
 
@@ -123,6 +136,7 @@ func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFacto
 
 	projectController.projectSynced = projectInformer.Informer().HasSynced
 	projectController.namespaceSynced = namespaceInformer.Informer().HasSynced
+	projectController.clusterRoleSynced = clusterRoleInformer.Informer().HasSynced
 	projectController.roleBindingSynced = roleBindingInformer.Informer().HasSynced
 
 	return projectController
@@ -132,7 +146,7 @@ func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFacto
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.projectSynced, c.namespaceSynced, c.roleBindingSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.projectSynced, c.namespaceSynced, c.clusterRoleSynced, c.roleBindingSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
@@ -144,6 +158,52 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 			logger.Logger.Debugf("Current number of running Project workers is %d", c.numberOfRunningWorkers)
 		}
 	}()
+
+	// TODO: This can be removed in a future version again.
+	// The following code assigns the 'uam' role to every project member having the role 'admin'. This is only done in
+	// case the UAM cluster role was not created yet, i.e., for existing projects. It won't happen for new projects.
+	{
+		logger.Logger.Info("Project controller user access management migration started.")
+		gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+		if err != nil {
+			panic(fmt.Errorf("failed to get garden client: %w", err))
+		}
+
+		projectList, err := c.projectLister.List(labels.Everything())
+		if err != nil {
+			panic(err)
+		}
+
+		for _, project := range projectList {
+			if _, err := c.clusterRoleLister.Get("gardener.cloud:system:project-uam:" + project.Name); err != nil {
+				if !apierrors.IsNotFound(err) {
+					panic(err)
+				}
+
+				var (
+					projectCopy = project.DeepCopy()
+					memberNames []string
+				)
+
+				for i, member := range projectCopy.Spec.Members {
+					if (member.Role == gardencorev1beta1.ProjectMemberAdmin || utils.ValueExists(gardencorev1beta1.ProjectMemberAdmin, member.Roles)) && !utils.ValueExists(gardencorev1beta1.ProjectMemberUserAccessManager, member.Roles) {
+						projectCopy.Spec.Members[i].Roles = append(projectCopy.Spec.Members[i].Roles, gardencorev1beta1.ProjectMemberUserAccessManager)
+						memberNames = append(memberNames, member.Name)
+					}
+				}
+
+				if memberNames == nil {
+					continue
+				}
+
+				if err2 := gardenClient.Client().Update(ctx, projectCopy); err2 != nil {
+					panic(err2)
+				}
+				logger.Logger.Infof("[PROJECT UAM MIGRATION] Project %q added 'uam' role to members %+v", project.Name, memberNames)
+			}
+		}
+		logger.Logger.Info("Project controller user access management migration finished.")
+	}
 
 	logger.Logger.Info("Project controller initialized.")
 

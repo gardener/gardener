@@ -1,11 +1,8 @@
 # Extending project roles
 
 The `Project` resource allows to specify a list of roles for every member (`.spec.members[*].roles`).
-There are a few standard roles defined by Gardener itself:
-
-* `owner` (describes the owner/main contact of the project (as of today only one owner can be specified))
-* `admin` (describes administrators with full read/write access to all resources concerning the project)
-* `viewer` (describes members with limited read access to some resources concerning the project)
+There are a few standard roles defined by Gardener itself.
+Please consult [this document](../usage/projects.md) for further information.
 
 However, extension controllers running in the garden cluster may also create `CustomResourceDefinition`s that project members might be able to CRUD.
 For this purpose Gardener also allows to specify extension roles.
