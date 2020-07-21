@@ -20,6 +20,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -142,8 +143,12 @@ func SetDefaults_Shoot(obj *Shoot) {
 	// Error is ignored here because we cannot do anything meaningful with it.
 	// k8sVersionLessThan116 will default to `false`.
 
-	trueVar := true
-	falseVar := false
+	var (
+		trueVar            = true
+		falseVar           = false
+		kubeReservedMemory = resource.MustParse("1Gi")
+		kubeReservedCPU    = resource.MustParse("80m")
+	)
 
 	if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil {
 		obj.Spec.Kubernetes.AllowPrivilegedContainers = &trueVar
@@ -208,6 +213,17 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 	if obj.Spec.Kubernetes.Kubelet.FailSwapOn == nil {
 		obj.Spec.Kubernetes.Kubelet.FailSwapOn = &trueVar
+	}
+
+	if obj.Spec.Kubernetes.Kubelet.KubeReserved == nil {
+		obj.Spec.Kubernetes.Kubelet.KubeReserved = &KubeletConfigReserved{Memory: &kubeReservedMemory, CPU: &kubeReservedCPU}
+	} else {
+		if obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory == nil {
+			obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory = &kubeReservedMemory
+		}
+		if obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU == nil {
+			obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU = &kubeReservedCPU
+		}
 	}
 
 	if obj.Spec.Maintenance == nil {

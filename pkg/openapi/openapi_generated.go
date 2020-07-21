@@ -87,6 +87,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEviction":                 schema_pkg_apis_core_v1alpha1_KubeletConfigEviction(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEvictionMinimumReclaim":   schema_pkg_apis_core_v1alpha1_KubeletConfigEvictionMinimumReclaim(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEvictionSoftGracePeriod":  schema_pkg_apis_core_v1alpha1_KubeletConfigEvictionSoftGracePeriod(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigReserved":                 schema_pkg_apis_core_v1alpha1_KubeletConfigReserved(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes":                            schema_pkg_apis_core_v1alpha1_Kubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubernetesConfig":                      schema_pkg_apis_core_v1alpha1_KubernetesConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubernetesDashboard":                   schema_pkg_apis_core_v1alpha1_KubernetesDashboard(ref),
@@ -212,6 +213,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEviction":                  schema_pkg_apis_core_v1beta1_KubeletConfigEviction(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionMinimumReclaim":    schema_pkg_apis_core_v1beta1_KubeletConfigEvictionMinimumReclaim(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionSoftGracePeriod":   schema_pkg_apis_core_v1beta1_KubeletConfigEvictionSoftGracePeriod(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved":                  schema_pkg_apis_core_v1beta1_KubeletConfigReserved(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes":                             schema_pkg_apis_core_v1beta1_Kubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesConfig":                       schema_pkg_apis_core_v1beta1_KubernetesConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesDashboard":                    schema_pkg_apis_core_v1beta1_KubernetesDashboard(ref),
@@ -2830,11 +2832,23 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 							Format:      "",
 						},
 					},
+					"kubeReserved": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime). When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied. Default: cpu=80m,memory=1Gi",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigReserved"),
+						},
+					},
+					"systemReserved": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald). When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigReserved"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEviction", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEvictionMinimumReclaim", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEvictionSoftGracePeriod", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEviction", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEvictionMinimumReclaim", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigEvictionSoftGracePeriod", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigReserved", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -2973,6 +2987,45 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfigEvictionSoftGracePeriod(ref comm
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_KubeletConfigReserved(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "KubeletConfigReserved contains reserved resources for daemons",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"cpu": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CPU is the reserved cpu.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+					"memory": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Memory is the reserved memory.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+					"ephemeralStorage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EphemeralStorage is the reserved ephemeral-storage.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+					"pid": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PID is the reserved process-ids. To reserve PID, the SupportNodePidsLimit feature gate must be enabled in Kubernetes versions < 1.15.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/api/resource.Quantity"},
 	}
 }
 
@@ -8493,11 +8546,23 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"kubeReserved": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime). When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied. Default: cpu=80m,memory=1Gi",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved"),
+						},
+					},
+					"systemReserved": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald). When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEviction", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionMinimumReclaim", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionSoftGracePeriod", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEviction", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionMinimumReclaim", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigEvictionSoftGracePeriod", "github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -8636,6 +8701,45 @@ func schema_pkg_apis_core_v1beta1_KubeletConfigEvictionSoftGracePeriod(ref commo
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_KubeletConfigReserved(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "KubeletConfigReserved contains reserved resources for daemons",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"cpu": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CPU is the reserved cpu.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+					"memory": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Memory is the reserved memory.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+					"ephemeralStorage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EphemeralStorage is the reserved ephemeral-storage.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+					"pid": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PID is the reserved process-ids. To reserve PID, the SupportNodePidsLimit feature gate must be enabled in Kubernetes versions < 1.15.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/api/resource.Quantity"},
 	}
 }
 
