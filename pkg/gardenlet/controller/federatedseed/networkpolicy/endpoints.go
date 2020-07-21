@@ -17,6 +17,8 @@ package networkpolicy
 import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy/helper"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"k8s.io/client-go/tools/cache"
 )
@@ -34,13 +36,15 @@ func (c *Controller) endpointDelete(_ interface{}) {
 }
 
 func (c *Controller) enqueueNamespaces() {
-	namespaces, err := c.namespaceLister.List(c.shootNamespaceSelector)
-	if err != nil {
+	namespaces := &corev1.NamespaceList{}
+	if err := c.seedClient.List(c.ctx, namespaces, &client.ListOptions{
+		LabelSelector: c.shootNamespaceSelector,
+	}); err != nil {
 		c.log.Errorf("Failed to enqueue namespaces to update NetworkPolicy %q - unable to list Shoot namespaces: %v", helper.AllowToSeedAPIServer, err)
 		return
 	}
 
-	for _, namespace := range namespaces {
+	for _, namespace := range namespaces.Items {
 		key, err := cache.MetaNamespaceKeyFunc(namespace)
 		if err != nil {
 			c.log.Errorf("Failed to enqueue namespaces to update NetworkPolicy %q for namespace %q - couldn't get key for namespace: %v", helper.AllowToSeedAPIServer, namespace.Name, err)

@@ -19,32 +19,28 @@ import (
 	"fmt"
 	"sync"
 
-	dnsclientset "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned"
-	dnsinformers "github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	kubeinformers "k8s.io/client-go/informers"
+	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	extensionsclientset "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned"
-	extensionsinformers "github.com/gardener/gardener/pkg/client/extensions/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/extensions"
 	seedapiservernetworkpolicy "github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/workqueue"
+	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Controller is responsible for maintaining multiple federated Seeds' controllers
@@ -54,9 +50,10 @@ type Controller struct {
 
 	config *config.GardenletConfiguration
 
-	seedLister    gardencorelisters.SeedLister
-	seedHasSynced cache.InformerSynced
-	seedQueue     workqueue.RateLimitingInterface
+	gardenClient client.Client
+
+	seedInformer runtimecache.Informer
+	seedQueue    workqueue.RateLimitingInterface
 
 	recorder record.EventRecorder
 
@@ -67,16 +64,24 @@ type Controller struct {
 }
 
 // NewFederatedSeedController creates new controller that reconciles extension resources.
-func NewFederatedSeedController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder) *Controller {
-	var seedInformer = gardenCoreInformerFactory.Core().V1beta1().Seeds()
+func NewFederatedSeedController(ctx context.Context, clientMap clientmap.ClientMap, config *config.GardenletConfiguration, recorder record.EventRecorder) (*Controller, error) {
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, err
+	}
+	seedInformer, err := gardenClient.Cache().GetInformer(&gardencorev1beta1.Seed{})
+	if err != nil {
+		return nil, err
+	}
 
 	controller := &Controller{
-		clientMap:  clientMap,
-		seedLister: seedInformer.Lister(),
-		seedQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-controllers"),
-		config:     config,
-		workerCh:   make(chan int),
-		recorder:   recorder,
+		clientMap:    clientMap,
+		gardenClient: gardenClient.Client(),
+		seedInformer: seedInformer,
+		seedQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-controllers"),
+		config:       config,
+		workerCh:     make(chan int),
+		recorder:     recorder,
 	}
 
 	controller.federatedSeedControllerManager = &federatedSeedControllerManager{
@@ -85,17 +90,7 @@ func NewFederatedSeedController(clientMap clientmap.ClientMap, gardenCoreInforme
 		namespaceControllers: make(map[string]*namespaceController),
 	}
 
-	seedInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.SeedFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), config.SeedSelector),
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    controller.seedAdd,
-			UpdateFunc: controller.seedUpdate,
-			DeleteFunc: controller.seedDelete,
-		},
-	})
-
-	controller.seedHasSynced = seedInformer.Informer().HasSynced
-	return controller
+	return controller, nil
 }
 
 func (c *Controller) seedAdd(obj interface{}) {
@@ -134,9 +129,18 @@ func (c *Controller) seedDelete(obj interface{}) {
 
 // Run starts the FederatedSeed Controller
 func (c *Controller) Run(ctx context.Context, workers int) {
+	c.seedInformer.AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controllerutils.SeedFilterFunc(confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.config.SeedSelector),
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc:    c.seedAdd,
+			UpdateFunc: c.seedUpdate,
+			DeleteFunc: c.seedDelete,
+		},
+	})
+
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.seedHasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.seedInformer.HasSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
@@ -164,17 +168,17 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 func (c *Controller) createReconcileSeedRequestFunc(ctx context.Context) reconcile.Func {
 	return func(req reconcile.Request) (reconcile.Result, error) {
-		seed, err := c.seedLister.Get(req.Name)
-		if apierrors.IsNotFound(err) {
-			logger.Logger.Infof("Skipping - Seed %s was not found", req.Name)
-			return reconcile.Result{}, nil
-		}
-		if err != nil {
+		seed := &gardencorev1beta1.Seed{}
+		if err := c.gardenClient.Get(ctx, kutil.Key(req.Name), seed); err != nil {
+			if apierrors.IsNotFound(err) {
+				logger.Logger.Infof("Skipping federated seed setup - Seed %s was not found", req.Name)
+				return reconcile.Result{}, nil
+			}
 			return reconcile.Result{}, err
 		}
 
 		if seed.DeletionTimestamp != nil {
-			c.federatedSeedControllerManager.removeController(seed.GetName())
+			logger.Logger.Infof("Skipping federated seed setup - Seed %s is being deleted", req.Name)
 			return reconcile.Result{}, nil
 		}
 
@@ -244,21 +248,11 @@ func (f *federatedSeedControllerManager) createExtensionControllers(ctx context.
 		return fmt.Errorf("failed to get seed client: %w", err)
 	}
 
-	dnsClient, err := dnsclientset.NewForConfig(seedClient.RESTConfig())
+	extensionsController, err := extensions.NewController(gardenClient, seedClient, seedName, seedLogger, recorder)
 	if err != nil {
 		return err
 	}
-	extensionsClient, err := extensionsclientset.NewForConfig(seedClient.RESTConfig())
-	if err != nil {
-		return err
-	}
-
-	var (
-		extensionCtx, extensionCancelFunc = context.WithCancel(ctx)
-		dnsInformers                      = dnsinformers.NewSharedInformerFactory(dnsClient, 0)
-		extensionsInformers               = extensionsinformers.NewSharedInformerFactory(extensionsClient, 0)
-		extensionsController              = extensions.NewController(ctx, gardenClient, seedClient, seedName, dnsInformers, extensionsInformers, seedLogger, recorder)
-	)
+	extensionCtx, extensionCancelFunc := context.WithCancel(ctx)
 
 	seedLogger.Info("Run extensions controller")
 	if err := extensionsController.Run(extensionCtx, *config.Controllers.ControllerInstallationRequired.ConcurrentSyncs, *config.Controllers.ShootStateSync.ConcurrentSyncs); err != nil {
@@ -285,16 +279,17 @@ func (f *federatedSeedControllerManager) createNamespaceControllers(ctx context.
 		return fmt.Errorf("failed to get seed client: %w", err)
 	}
 
-	var (
-		namespaceCtx, namespaceCancelFunc = context.WithCancel(ctx)
-		seedKubeInformerFactory           = kubeinformers.NewSharedInformerFactory(seedClient.Kubernetes(), 0)
-		// if another controller also needs to work with endpoint resources in the Seed cluster, consider replacing this informer factory with a reusable informer factory.
-		// if this informer factory is not bound to the default namespace, make sure that the endpoint event handlers FilterFunc() also filters for the default namespace.
-		seedDefaultNamespaceKubeInformer = kubeinformers.NewSharedInformerFactoryWithOptions(seedClient.Kubernetes(), 0, kubeinformers.WithNamespace(corev1.NamespaceDefault))
-		namespaceController              = seedapiservernetworkpolicy.NewController(ctx, seedClient, seedDefaultNamespaceKubeInformer, seedKubeInformerFactory, seedLogger, recorder, seedName)
-	)
+	// if another controller also needs to work with endpoint resources in the Seed cluster, consider replacing this informer factory with a reusable informer factory.
+	// if this informer factory is not bound to the default namespace, make sure that the endpoint event handlers FilterFunc() also filters for the default namespace.
+	seedDefaultNamespaceKubeInformer := kubeinformers.NewSharedInformerFactoryWithOptions(seedClient.Kubernetes(), 0, kubeinformers.WithNamespace(corev1.NamespaceDefault))
+
+	namespaceController, err := seedapiservernetworkpolicy.NewController(ctx, seedClient, seedDefaultNamespaceKubeInformer, seedLogger, recorder, seedName)
+	if err != nil {
+		return err
+	}
 
 	seedLogger.Info("Run namespace controller")
+	namespaceCtx, namespaceCancelFunc := context.WithCancel(ctx)
 	if err := namespaceController.Run(namespaceCtx, *config.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs); err != nil {
 		seedLogger.Infof("There was an error running the namespace controller: %v", err)
 		namespaceCancelFunc()

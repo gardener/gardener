@@ -30,31 +30,31 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	kubeinformers "k8s.io/client-go/informers"
-	corev1listers "k8s.io/client-go/listers/core/v1"
-	networkingv1listers "k8s.io/client-go/listers/networking/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Controller watching the endpoints resource "kubernetes" of the Seeds's kube-apiserver in the default namespace
 // to keep the NetworkPolicy "allow-to-seed-apiserver" in sync.
 type Controller struct {
+	ctx      context.Context
 	log      *logrus.Entry
 	recorder record.EventRecorder
 
+	seedClient client.Client
+
 	namespaceReconciler reconcile.Reconciler
 
-	endpointSynced  cache.InformerSynced
-	endpointsLister corev1listers.EndpointsLister
+	endpointsInformer cache.SharedInformer
 
-	networkPoliciesSynced cache.InformerSynced
-	networkPoliciesLister networkingv1listers.NetworkPolicyLister
+	networkPoliciesInformer runtimecache.Informer
 
-	namespaceSynced cache.InformerSynced
-	namespaceQueue  workqueue.RateLimitingInterface
-	namespaceLister corev1listers.NamespaceLister
+	namespaceQueue    workqueue.RateLimitingInterface
+	namespaceInformer runtimecache.Informer
 
 	shootNamespaceSelector labels.Selector
 
@@ -64,16 +64,18 @@ type Controller struct {
 }
 
 // NewController instantiates a new controller.
-func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDefaultNamespaceKubeInformer kubeinformers.SharedInformerFactory, seedKubeInformerFactory kubeinformers.SharedInformerFactory, seedLogger *logrus.Entry, recorder record.EventRecorder, seedName string) *Controller {
+func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDefaultNamespaceKubeInformer kubeinformers.SharedInformerFactory, seedLogger *logrus.Entry, recorder record.EventRecorder, seedName string) (*Controller, error) {
+	networkPoliciesInformer, err := seedClient.Cache().GetInformer(&networkingv1.NetworkPolicy{})
+	if err != nil {
+		return nil, err
+	}
+	namespaceInformer, err := seedClient.Cache().GetInformer(&corev1.Namespace{})
+	if err != nil {
+		return nil, err
+	}
+
 	var (
 		endpointsInformer = seedDefaultNamespaceKubeInformer.Core().V1().Endpoints()
-		endpointsLister   = endpointsInformer.Lister()
-
-		networkPoliciesInformer = seedKubeInformerFactory.Networking().V1().NetworkPolicies()
-		networkPoliciesLister   = networkPoliciesInformer.Lister()
-
-		namespaceInformer = seedKubeInformerFactory.Core().V1().Namespaces()
-		namespaceLister   = namespaceInformer.Lister()
 		namespaceQueue    = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "namespace")
 	)
 
@@ -82,26 +84,39 @@ func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDef
 		v1beta1constants.GardenRole:           v1beta1constants.GardenRoleShoot})
 
 	controller := &Controller{
+		ctx:                 ctx,
 		log:                 seedLogger,
-		namespaceReconciler: newNamespaceReconciler(ctx, seedLogger, seedClient.Client(), endpointsLister, networkPoliciesLister, namespaceLister, seedName, shootNamespaceSelector),
+		namespaceReconciler: newNamespaceReconciler(ctx, seedLogger, seedClient.Client(), endpointsInformer.Lister(), seedName, shootNamespaceSelector),
 		recorder:            recorder,
 
-		endpointSynced:  endpointsInformer.Informer().HasSynced,
-		endpointsLister: endpointsLister,
+		seedClient: seedClient.Client(),
 
-		networkPoliciesLister: networkPoliciesLister,
-		networkPoliciesSynced: networkPoliciesInformer.Informer().HasSynced,
-
-		namespaceSynced: namespaceInformer.Informer().HasSynced,
-		namespaceQueue:  namespaceQueue,
-		namespaceLister: namespaceLister,
+		endpointsInformer:       endpointsInformer.Informer(),
+		namespaceInformer:       namespaceInformer,
+		networkPoliciesInformer: networkPoliciesInformer,
+		namespaceQueue:          namespaceQueue,
 
 		shootNamespaceSelector: shootNamespaceSelector,
 
 		workerCh: make(chan int),
 	}
 
-	endpointsInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	// start informer & sync caches
+	seedDefaultNamespaceKubeInformer.Start(ctx.Done())
+
+	return controller, nil
+}
+
+// Run runs the Controller until the given stop channel can be read from.
+func (c *Controller) Run(ctx context.Context, workers int) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute*2)
+	defer cancel()
+
+	if !cache.WaitForCacheSync(timeoutCtx.Done(), c.endpointsInformer.HasSynced, c.namespaceInformer.HasSynced, c.networkPoliciesInformer.HasSynced) {
+		return fmt.Errorf("timeout waiting for endpoints informers to sync")
+	}
+
+	c.endpointsInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			endpoints, ok := obj.(*corev1.Endpoints)
 			if !ok {
@@ -110,13 +125,13 @@ func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDef
 			return endpoints.Name == "kubernetes"
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    controller.endpointAdd,
-			UpdateFunc: controller.endpointUpdate,
-			DeleteFunc: controller.endpointDelete,
+			AddFunc:    c.endpointAdd,
+			UpdateFunc: c.endpointUpdate,
+			DeleteFunc: c.endpointDelete,
 		},
 	})
 
-	networkPoliciesInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	c.networkPoliciesInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			policy, ok := obj.(*networkingv1.NetworkPolicy)
 			if !ok {
@@ -125,31 +140,15 @@ func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDef
 			return policy.Name == helper.AllowToSeedAPIServer
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
-			UpdateFunc: controller.networkPolicyUpdate,
-			DeleteFunc: controller.networkPolicyDelete,
+			UpdateFunc: c.networkPolicyUpdate,
+			DeleteFunc: c.networkPolicyDelete,
 		},
 	})
 
-	namespaceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    controller.namespaceAdd,
-		UpdateFunc: controller.namespaceUpdate,
+	c.namespaceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    c.namespaceAdd,
+		UpdateFunc: c.namespaceUpdate,
 	})
-
-	// start informer & sync caches
-	seedDefaultNamespaceKubeInformer.Start(ctx.Done())
-	seedKubeInformerFactory.Start(ctx.Done())
-
-	return controller
-}
-
-// Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(ctx context.Context, workers int) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute*2)
-	defer cancel()
-
-	if !cache.WaitForCacheSync(timeoutCtx.Done(), c.endpointSynced, c.namespaceSynced, c.networkPoliciesSynced) {
-		return fmt.Errorf("timeout waiting for endpoints informers to sync")
-	}
 
 	go func() {
 		for res := range c.workerCh {

@@ -21,11 +21,9 @@ import (
 	"time"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	extensionsinformers "github.com/gardener/gardener/pkg/client/extensions/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 
-	dnsinformers "github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions"
 	"github.com/sirupsen/logrus"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -48,11 +46,8 @@ type Controller struct {
 }
 
 // NewController creates new controller that syncs extensions states to ShootState
-func NewController(ctx context.Context, gardenClient, seedClient kubernetes.Interface, seedName string, dnsInformers dnsinformers.SharedInformerFactory, extensionsInformers extensionsinformers.SharedInformerFactory, log *logrus.Entry, recorder record.EventRecorder) *Controller {
-	controllerArtifacts := controllerArtifacts{
-		artifacts:                           make(map[string]*artifact),
-		controllerInstallationRequiredQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation-extension-required"),
-	}
+func NewController(gardenClient, seedClient kubernetes.Interface, seedName string, log *logrus.Entry, recorder record.EventRecorder) (*Controller, error) {
+	controllerArtifacts := newControllerArtifacts()
 
 	controller := &Controller{
 		log:      log,
@@ -64,7 +59,7 @@ func NewController(ctx context.Context, gardenClient, seedClient kubernetes.Inte
 			seedClient:                  seedClient,
 			seedName:                    seedName,
 			log:                         log,
-			controllerInstallationQueue: controllerArtifacts.controllerInstallationRequiredQueue,
+			controllerInstallationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation-extension-required"),
 			lock:                        &sync.RWMutex{},
 			kindToRequiredTypes:         make(map[string]sets.String),
 		},
@@ -77,14 +72,11 @@ func NewController(ctx context.Context, gardenClient, seedClient kubernetes.Inte
 		},
 	}
 
-	controller.controllerArtifacts.initialize(dnsInformers, extensionsInformers)
-	controller.controllerArtifacts.addControllerInstallationEventHandlers()
-	controller.controllerArtifacts.addShootStateEventHandlers()
+	if err := controllerArtifacts.initialize(seedClient); err != nil {
+		return nil, err
+	}
 
-	dnsInformers.Start(ctx.Done())
-	extensionsInformers.Start(ctx.Done())
-
-	return controller
+	return controller, nil
 }
 
 // Run creates workers that reconciles extension resources.
@@ -117,31 +109,24 @@ func (s *Controller) Run(ctx context.Context, controllerInstallationWorkers, sho
 }
 
 func (s *Controller) createControllerInstallationWorkers(ctx context.Context, control controllerInstallationControl) {
-	controllerutils.CreateWorker(ctx, s.controllerArtifacts.controllerInstallationRequiredQueue, "ControllerInstallation-Required", control.createControllerInstallationRequiredReconcileFunc(ctx), &s.waitGroup, s.workerCh)
+	controllerutils.CreateWorker(ctx, s.controllerInstallationControl.controllerInstallationQueue, "ControllerInstallation-Required", control.createControllerInstallationRequiredReconcileFunc(ctx), &s.waitGroup, s.workerCh)
 
-	for kind, artifact := range s.controllerArtifacts.artifacts {
-		if artifact.controllerInstallationExtensionQueue == nil {
-			continue
-		}
-
+	for kind, artifact := range s.controllerArtifacts.controllerInstallationArtifacts {
 		workerName := fmt.Sprintf("ControllerInstallation-Extension-%s", kind)
-		controllerutils.CreateWorker(ctx, artifact.controllerInstallationExtensionQueue, workerName, control.createExtensionRequiredReconcileFunc(ctx, kind, artifact.newListObjFunc), &s.waitGroup, s.workerCh)
+		controllerutils.CreateWorker(ctx, artifact.queue, workerName, control.createExtensionRequiredReconcileFunc(ctx, kind, artifact.newFunc), &s.waitGroup, s.workerCh)
 	}
 }
 
 func (s *Controller) createShootStateWorkers(ctx context.Context, control shootStateControl) {
-	for kind, artifact := range s.controllerArtifacts.artifacts {
-		if artifact.shootStateQueue == nil {
-			continue
-		}
-
+	for kind, artifact := range s.controllerArtifacts.stateArtifacts {
 		workerName := fmt.Sprintf("ShootState-%s", kind)
-		controllerutils.CreateWorker(ctx, artifact.shootStateQueue, workerName, control.createShootStateSyncReconcileFunc(ctx, kind, artifact.newObjFunc), &s.waitGroup, s.workerCh)
+		controllerutils.CreateWorker(ctx, artifact.queue, workerName, control.createShootStateSyncReconcileFunc(ctx, kind, artifact.newFunc), &s.waitGroup, s.workerCh)
 	}
 }
 
 // Stop the controller
 func (s *Controller) Stop() {
+	s.controllerInstallationControl.controllerInstallationQueue.ShutDown()
 	s.controllerArtifacts.shutdownQueues()
 	s.waitGroup.Wait()
 }
