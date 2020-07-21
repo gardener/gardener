@@ -2968,6 +2968,91 @@ restarted when a new version has been downloaded.</p>
 <p>
 <p>Purpose is a string alias.</p>
 </p>
+<h3 id="extensions.gardener.cloud/v1alpha1.Settings">Settings
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.WorkerPool">WorkerPool</a>)
+</p>
+<p>
+<p>Settings contains configurations for different worker-pools.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>machineDrainTimeout</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineDrainTimeout is the period after which machine is forcefully deleted.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machineHealthTimeout</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineHealthTimeout is the period after which machine is declared failed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>machineCreationTimeout</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#duration-v1-meta">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineCreationTimeout is the period after which creation of the machine is declared failed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxEvictRetries</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxEvictRetries are the number of eviction retries on a pod after which drain is declared failed, and forceful deletion is triggered.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>nodeConditions</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="extensions.gardener.cloud/v1alpha1.Spec">Spec
 </h3>
 <p>
@@ -3340,6 +3425,20 @@ string
 <td>
 <em>(Optional)</em>
 <p>Zones contains information about availability zones for this worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>settings</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.Settings">
+Settings
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Settings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.</p>
 </td>
 </tr>
 </tbody>

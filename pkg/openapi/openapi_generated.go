@@ -144,6 +144,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolume":                            schema_pkg_apis_core_v1alpha1_SeedVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolumeProvider":                    schema_pkg_apis_core_v1alpha1_SeedVolumeProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountConfig":                  schema_pkg_apis_core_v1alpha1_ServiceAccountConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Settings":                              schema_pkg_apis_core_v1alpha1_Settings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Shoot":                                 schema_pkg_apis_core_v1alpha1_Shoot(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootList":                             schema_pkg_apis_core_v1alpha1_ShootList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootMachineImage":                     schema_pkg_apis_core_v1alpha1_ShootMachineImage(ref),
@@ -269,6 +270,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume":                             schema_pkg_apis_core_v1beta1_SeedVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolumeProvider":                     schema_pkg_apis_core_v1beta1_SeedVolumeProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig":                   schema_pkg_apis_core_v1beta1_ServiceAccountConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Settings":                               schema_pkg_apis_core_v1beta1_Settings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Shoot":                                  schema_pkg_apis_core_v1beta1_Shoot(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootList":                              schema_pkg_apis_core_v1beta1_ShootList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootMachineImage":                      schema_pkg_apis_core_v1beta1_ShootMachineImage(ref),
@@ -5411,6 +5413,53 @@ func schema_pkg_apis_core_v1alpha1_ServiceAccountConfig(ref common.ReferenceCall
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_Settings(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Settings contains configurations for different worker-pools.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"machineDrainTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineDrainTimeout is the period after which machine is forcefully deleted.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"machineHealthTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineHealthTimeout is the period after which machine is declared failed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"machineCreationTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineCreationTimeout is the period after which creation of the machine is declared failed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"maxEvictRetries": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxEvictRetries are the number of eviction retries on a pod after which drain is declared failed, and forceful deletion is triggered.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"nodeConditions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_Shoot(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6336,12 +6385,18 @@ func schema_pkg_apis_core_v1alpha1_Worker(ref common.ReferenceCallback) common.O
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerSystemComponents"),
 						},
 					},
+					"settings": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Settings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Settings"),
+						},
+					},
 				},
 				Required: []string{"name", "machine", "maximum", "minimum"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.DataVolume", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerKubernetes", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerSystemComponents", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/runtime.RawExtension", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.DataVolume", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Settings", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerKubernetes", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerSystemComponents", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/runtime.RawExtension", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 
@@ -11082,6 +11137,53 @@ func schema_pkg_apis_core_v1beta1_ServiceAccountConfig(ref common.ReferenceCallb
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_Settings(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Settings contains configurations for different worker-pools.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"machineDrainTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineDrainTimeout is the period after which machine is forcefully deleted.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"machineHealthTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineHealthTimeout is the period after which machine is declared failed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"machineCreationTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineCreationTimeout is the period after which creation of the machine is declared failed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"maxEvictRetries": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxEvictRetries are the number of eviction retries on a pod after which drain is declared failed, and forceful deletion is triggered.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"nodeConditions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_Shoot(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -11851,12 +11953,18 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerSystemComponents"),
 						},
 					},
+					"settings": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Settings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Settings"),
+						},
+					},
 				},
 				Required: []string{"name", "machine", "maximum", "minimum"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerSystemComponents", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/runtime.RawExtension", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Settings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerSystemComponents", "k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/runtime.RawExtension", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 
