@@ -53,7 +53,7 @@ type controllerInstallationControl struct {
 // it enqueue all ControllerInstallations for the seed that are referring to ControllerRegistrations responsible for
 // the given kind.
 func (c *controllerInstallationControl) createExtensionRequiredReconcileFunc(ctx context.Context, kind string, newListObjFunc func() runtime.Object) reconcile.Func {
-	return func(req reconcile.Request) (reconcile.Result, error) {
+	return func(_ reconcile.Request) (reconcile.Result, error) {
 		listObj := newListObjFunc()
 		if err := c.seedClient.Client().List(ctx, listObj); err != nil {
 			return reconcile.Result{}, err

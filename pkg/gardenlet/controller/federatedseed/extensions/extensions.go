@@ -30,6 +30,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Controller watches the extension resources and has several control loops.
@@ -113,7 +114,15 @@ func (s *Controller) createControllerInstallationWorkers(ctx context.Context, co
 
 	for kind, artifact := range s.controllerArtifacts.controllerInstallationArtifacts {
 		workerName := fmt.Sprintf("ControllerInstallation-Extension-%s", kind)
-		controllerutils.CreateWorker(ctx, artifact.queue, workerName, control.createExtensionRequiredReconcileFunc(ctx, kind, artifact.newFunc), &s.waitGroup, s.workerCh)
+		controlFn := control.createExtensionRequiredReconcileFunc(ctx, kind, artifact.newFunc)
+		// Execute control function once outside of the worker to initialize the `kindToRequiredTypes` map once.
+		// This is necessary for Kinds which are registered but no extension object exists in the seed yet (e.g. disabled backups).
+		// In this case no event is triggered and the control function would never be executed.
+		// Eventually, the Kind would never be part of the `kindToRequiredTypes` map and no decision if the the ControllerInstallation is required could be taken.
+		if _, err := controlFn(reconcile.Request{}); err != nil {
+			s.log.Errorf("Error during initial run of extension reconciliation: %v", err)
+		}
+		controllerutils.CreateWorker(ctx, artifact.queue, workerName, controlFn, &s.waitGroup, s.workerCh)
 	}
 }
 
