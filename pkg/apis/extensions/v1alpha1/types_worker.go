@@ -130,6 +130,28 @@ type WorkerPool struct {
 	// Zones contains information about availability zones for this worker pool.
 	// +optional
 	Zones []string `json:"zones,omitempty"`
+	// Settings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
+	// +optional
+	Settings *Settings `json:"settings,omitempty"`
+}
+
+// Settings contains configurations for different worker-pools.
+type Settings struct {
+	// MachineDrainTimeout is the period after which machine is forcefully deleted.
+	// +optional
+	MachineDrainTimeout *metav1.Duration `json:"machineDrainTimeout,omitempty"`
+	// MachineHealthTimeout is the period after which machine is declared failed.
+	// +optional
+	MachineHealthTimeout *metav1.Duration `json:"machineHealthTimeout,omitempty"`
+	// MachineCreationTimeout is the period after which creation of the machine is declared failed.
+	// +optional
+	MachineCreationTimeout *metav1.Duration `json:"machineCreationTimeout,omitempty"`
+	// MaxEvictRetries are the number of eviction retries on a pod after which drain is declared failed, and forceful deletion is triggered.
+	// +optional
+	MaxEvictRetries *int32 `json:"maxEvictRetries,omitempty"`
+	// NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
+	// +optional
+	NodeConditions *string `json:"nodeConditions,omitempty"`
 }
 
 // MachineImage contains logical information about the name and the version of the machie image that

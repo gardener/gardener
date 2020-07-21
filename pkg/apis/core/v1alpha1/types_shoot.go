@@ -944,6 +944,28 @@ type Worker struct {
 	// SystemComponents contains configuration for system components related to this worker pool
 	// +optional
 	SystemComponents *WorkerSystemComponents `json:"systemComponents,omitempty" protobuf:"bytes,18,opt,name=systemComponents"`
+	// Settings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
+	// +optional
+	Settings *Settings `json:"settings,omitempty" protobuf:"bytes,19,opt,name=settings"`
+}
+
+// Settings contains configurations for different worker-pools.
+type Settings struct {
+	// MachineDrainTimeout is the period after which machine is forcefully deleted.
+	// +optional
+	MachineDrainTimeout *metav1.Duration `json:"machineDrainTimeout,omitempty" protobuf:"bytes,1,name=machineDrainTimeout"`
+	// MachineHealthTimeout is the period after which machine is declared failed.
+	// +optional
+	MachineHealthTimeout *metav1.Duration `json:"machineHealthTimeout,omitempty" protobuf:"bytes,2,name=machineHealthTimeout"`
+	// MachineCreationTimeout is the period after which creation of the machine is declared failed.
+	// +optional
+	MachineCreationTimeout *metav1.Duration `json:"machineCreationTimeout,omitempty" protobuf:"bytes,3,name=machineCreationTimeout"`
+	// MaxEvictRetries are the number of eviction retries on a pod after which drain is declared failed, and forceful deletion is triggered.
+	// +optional
+	MaxEvictRetries *int32 `json:"maxEvictRetries,omitempty" protobuf:"bytes,4,name=maxEvictRetries"`
+	// NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
+	// +optional
+	NodeConditions *string `json:"nodeConditions,omitempty" protobuf:"bytes,5,name=nodeConditions"`
 }
 
 // WorkerSystemComponents contains configuration for system components related to this worker pool

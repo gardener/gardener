@@ -115,6 +115,12 @@ spec:
     # zones: # optional, only relevant if the provider supports availability zones
     # - europe-central-1a
     # - europe-central-1b
+    # settings: # optional, it allows to configure the machine-controller.
+    #   machineDrainTimeout: 10m
+    #   machineHealthTimeout: 10m
+    #   machineCreationTimeout: 10m
+    #   maxEvictRetries: 10
+    #   nodeConditions: 'ReadonlyFilesystem,KernelDeadlock,DiskPressure'
   kubernetes:
     version: 1.15.1
   # allowPrivilegedContainers: true # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.

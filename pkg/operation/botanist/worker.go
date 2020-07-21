@@ -119,6 +119,15 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 			}
 		}
 
+		settings := &extensionsv1alpha1.Settings{}
+		if workerPool.Settings != nil {
+			settings.MachineDrainTimeout = workerPool.Settings.MachineDrainTimeout
+			settings.MachineHealthTimeout = workerPool.Settings.MachineHealthTimeout
+			settings.MachineCreationTimeout = workerPool.Settings.MachineCreationTimeout
+			settings.MaxEvictRetries = workerPool.Settings.MaxEvictRetries
+			settings.NodeConditions = workerPool.Settings.NodeConditions
+		}
+
 		pools = append(pools, extensionsv1alpha1.WorkerPool{
 			Name:           workerPool.Name,
 			Minimum:        workerPool.Minimum,
@@ -139,6 +148,7 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 			DataVolumes:           dataVolumes,
 			KubeletDataVolumeName: workerPool.KubeletDataVolumeName,
 			Zones:                 workerPool.Zones,
+			Settings:              settings,
 		})
 	}
 

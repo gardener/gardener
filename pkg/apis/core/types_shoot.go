@@ -754,6 +754,17 @@ type Worker struct {
 	// Zones is a list of availability zones that are used to evenly distribute this worker pool. Optional
 	// as not every provider may support availability zones.
 	Zones []string
+	// Settings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
+	Settings *Settings
+}
+
+// Settings contains configurations for different worker-pools.
+type Settings struct {
+	MachineDrainTimeout    *metav1.Duration
+	MachineHealthTimeout   *metav1.Duration
+	MachineCreationTimeout *metav1.Duration
+	MaxEvictRetries        *int32
+	NodeConditions         *string
 }
 
 // WorkerSystemComponents contains configuration for system components related to this worker pool
