@@ -40,7 +40,7 @@ if [[ "$(uname -s)" == "Linux" && "$(uname -r)" =~ "microsoft-standard" ]]; then
   --bind-address=127.0.0.1"
 fi
 
-ldflags="$("$(dirname $0)"/../get-build-ld-flags.sh)"
+ld_flags="$("$(dirname $0)"/../get-build-ld-flags.sh)"
 case $(k8s_env) in
     $KIND)
         echo "Found kind ..."
