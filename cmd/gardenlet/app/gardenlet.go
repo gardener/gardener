@@ -360,7 +360,6 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 
 	// Initialize /healthz manager.
 	g.HealthManager = healthz.NewPeriodicHealthz(seedcontroller.LeaseResyncGracePeriodSeconds * time.Second)
-	g.HealthManager.Set(true)
 
 	// Start HTTPS server.
 	if g.Config.Server.HTTPS.TLS == nil {
