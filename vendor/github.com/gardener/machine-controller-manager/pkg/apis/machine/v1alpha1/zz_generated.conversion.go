@@ -108,6 +108,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*AlicloudDataDisk)(nil), (*machine.AlicloudDataDisk)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_AlicloudDataDisk_To_machine_AlicloudDataDisk(a.(*AlicloudDataDisk), b.(*machine.AlicloudDataDisk), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*machine.AlicloudDataDisk)(nil), (*AlicloudDataDisk)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_machine_AlicloudDataDisk_To_v1alpha1_AlicloudDataDisk(a.(*machine.AlicloudDataDisk), b.(*AlicloudDataDisk), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*AlicloudMachineClass)(nil), (*machine.AlicloudMachineClass)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_AlicloudMachineClass_To_machine_AlicloudMachineClass(a.(*AlicloudMachineClass), b.(*machine.AlicloudMachineClass), scope)
 	}); err != nil {
@@ -145,6 +155,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*machine.AlicloudSystemDisk)(nil), (*AlicloudSystemDisk)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_machine_AlicloudSystemDisk_To_v1alpha1_AlicloudSystemDisk(a.(*machine.AlicloudSystemDisk), b.(*AlicloudSystemDisk), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*AzureDataDisk)(nil), (*machine.AzureDataDisk)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_AzureDataDisk_To_machine_AzureDataDisk(a.(*AzureDataDisk), b.(*machine.AzureDataDisk), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*machine.AzureDataDisk)(nil), (*AzureDataDisk)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_machine_AzureDataDisk_To_v1alpha1_AzureDataDisk(a.(*machine.AzureDataDisk), b.(*AzureDataDisk), scope)
 	}); err != nil {
 		return err
 	}
@@ -468,6 +488,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*MachineConfiguration)(nil), (*machine.MachineConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_MachineConfiguration_To_machine_MachineConfiguration(a.(*MachineConfiguration), b.(*machine.MachineConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*machine.MachineConfiguration)(nil), (*MachineConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_machine_MachineConfiguration_To_v1alpha1_MachineConfiguration(a.(*machine.MachineConfiguration), b.(*MachineConfiguration), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*MachineDeployment)(nil), (*machine.MachineDeployment)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_MachineDeployment_To_machine_MachineDeployment(a.(*MachineDeployment), b.(*machine.MachineDeployment), scope)
 	}); err != nil {
@@ -495,16 +525,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*machine.MachineDeploymentList)(nil), (*MachineDeploymentList)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_machine_MachineDeploymentList_To_v1alpha1_MachineDeploymentList(a.(*machine.MachineDeploymentList), b.(*MachineDeploymentList), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*MachineDeploymentRollback)(nil), (*machine.MachineDeploymentRollback)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_MachineDeploymentRollback_To_machine_MachineDeploymentRollback(a.(*MachineDeploymentRollback), b.(*machine.MachineDeploymentRollback), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*machine.MachineDeploymentRollback)(nil), (*MachineDeploymentRollback)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_machine_MachineDeploymentRollback_To_v1alpha1_MachineDeploymentRollback(a.(*machine.MachineDeploymentRollback), b.(*MachineDeploymentRollback), scope)
 	}); err != nil {
 		return err
 	}
@@ -628,26 +648,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*MachineTemplate)(nil), (*machine.MachineTemplate)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_MachineTemplate_To_machine_MachineTemplate(a.(*MachineTemplate), b.(*machine.MachineTemplate), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*machine.MachineTemplate)(nil), (*MachineTemplate)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_machine_MachineTemplate_To_v1alpha1_MachineTemplate(a.(*machine.MachineTemplate), b.(*MachineTemplate), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*MachineTemplateList)(nil), (*machine.MachineTemplateList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_MachineTemplateList_To_machine_MachineTemplateList(a.(*MachineTemplateList), b.(*machine.MachineTemplateList), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*machine.MachineTemplateList)(nil), (*MachineTemplateList)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_machine_MachineTemplateList_To_v1alpha1_MachineTemplateList(a.(*machine.MachineTemplateList), b.(*MachineTemplateList), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*MachineTemplateSpec)(nil), (*machine.MachineTemplateSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_MachineTemplateSpec_To_machine_MachineTemplateSpec(a.(*MachineTemplateSpec), b.(*machine.MachineTemplateSpec), scope)
 	}); err != nil {
@@ -758,36 +758,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Scale)(nil), (*machine.Scale)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_Scale_To_machine_Scale(a.(*Scale), b.(*machine.Scale), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*machine.Scale)(nil), (*Scale)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_machine_Scale_To_v1alpha1_Scale(a.(*machine.Scale), b.(*Scale), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*ScaleSpec)(nil), (*machine.ScaleSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_ScaleSpec_To_machine_ScaleSpec(a.(*ScaleSpec), b.(*machine.ScaleSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*machine.ScaleSpec)(nil), (*ScaleSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_machine_ScaleSpec_To_v1alpha1_ScaleSpec(a.(*machine.ScaleSpec), b.(*ScaleSpec), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*ScaleStatus)(nil), (*machine.ScaleStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_ScaleStatus_To_machine_ScaleStatus(a.(*ScaleStatus), b.(*machine.ScaleStatus), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*machine.ScaleStatus)(nil), (*ScaleStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_machine_ScaleStatus_To_v1alpha1_ScaleStatus(a.(*machine.ScaleStatus), b.(*ScaleStatus), scope)
-	}); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -825,6 +795,8 @@ func autoConvert_v1alpha1_AWSEbsBlockDeviceSpec_To_machine_AWSEbsBlockDeviceSpec
 	out.DeleteOnTermination = (*bool)(unsafe.Pointer(in.DeleteOnTermination))
 	out.Encrypted = in.Encrypted
 	out.Iops = in.Iops
+	out.KmsKeyID = (*string)(unsafe.Pointer(in.KmsKeyID))
+	out.SnapshotID = (*string)(unsafe.Pointer(in.SnapshotID))
 	out.VolumeSize = in.VolumeSize
 	out.VolumeType = in.VolumeType
 	return nil
@@ -839,6 +811,8 @@ func autoConvert_machine_AWSEbsBlockDeviceSpec_To_v1alpha1_AWSEbsBlockDeviceSpec
 	out.DeleteOnTermination = (*bool)(unsafe.Pointer(in.DeleteOnTermination))
 	out.Encrypted = in.Encrypted
 	out.Iops = in.Iops
+	out.KmsKeyID = (*string)(unsafe.Pointer(in.KmsKeyID))
+	out.SnapshotID = (*string)(unsafe.Pointer(in.SnapshotID))
 	out.VolumeSize = in.VolumeSize
 	out.VolumeType = in.VolumeType
 	return nil
@@ -964,9 +938,9 @@ func Convert_machine_AWSMachineClassSpec_To_v1alpha1_AWSMachineClassSpec(in *mac
 }
 
 func autoConvert_v1alpha1_AWSNetworkInterfaceSpec_To_machine_AWSNetworkInterfaceSpec(in *AWSNetworkInterfaceSpec, out *machine.AWSNetworkInterfaceSpec, s conversion.Scope) error {
-	out.AssociatePublicIPAddress = in.AssociatePublicIPAddress
-	out.DeleteOnTermination = in.DeleteOnTermination
-	out.Description = in.Description
+	out.AssociatePublicIPAddress = (*bool)(unsafe.Pointer(in.AssociatePublicIPAddress))
+	out.DeleteOnTermination = (*bool)(unsafe.Pointer(in.DeleteOnTermination))
+	out.Description = (*string)(unsafe.Pointer(in.Description))
 	out.SecurityGroupIDs = *(*[]string)(unsafe.Pointer(&in.SecurityGroupIDs))
 	out.SubnetID = in.SubnetID
 	return nil
@@ -978,9 +952,9 @@ func Convert_v1alpha1_AWSNetworkInterfaceSpec_To_machine_AWSNetworkInterfaceSpec
 }
 
 func autoConvert_machine_AWSNetworkInterfaceSpec_To_v1alpha1_AWSNetworkInterfaceSpec(in *machine.AWSNetworkInterfaceSpec, out *AWSNetworkInterfaceSpec, s conversion.Scope) error {
-	out.AssociatePublicIPAddress = in.AssociatePublicIPAddress
-	out.DeleteOnTermination = in.DeleteOnTermination
-	out.Description = in.Description
+	out.AssociatePublicIPAddress = (*bool)(unsafe.Pointer(in.AssociatePublicIPAddress))
+	out.DeleteOnTermination = (*bool)(unsafe.Pointer(in.DeleteOnTermination))
+	out.Description = (*string)(unsafe.Pointer(in.Description))
 	out.SecurityGroupIDs = *(*[]string)(unsafe.Pointer(&in.SecurityGroupIDs))
 	out.SubnetID = in.SubnetID
 	return nil
@@ -989,6 +963,36 @@ func autoConvert_machine_AWSNetworkInterfaceSpec_To_v1alpha1_AWSNetworkInterface
 // Convert_machine_AWSNetworkInterfaceSpec_To_v1alpha1_AWSNetworkInterfaceSpec is an autogenerated conversion function.
 func Convert_machine_AWSNetworkInterfaceSpec_To_v1alpha1_AWSNetworkInterfaceSpec(in *machine.AWSNetworkInterfaceSpec, out *AWSNetworkInterfaceSpec, s conversion.Scope) error {
 	return autoConvert_machine_AWSNetworkInterfaceSpec_To_v1alpha1_AWSNetworkInterfaceSpec(in, out, s)
+}
+
+func autoConvert_v1alpha1_AlicloudDataDisk_To_machine_AlicloudDataDisk(in *AlicloudDataDisk, out *machine.AlicloudDataDisk, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Category = in.Category
+	out.Description = in.Description
+	out.Encrypted = in.Encrypted
+	out.DeleteWithInstance = (*bool)(unsafe.Pointer(in.DeleteWithInstance))
+	out.Size = in.Size
+	return nil
+}
+
+// Convert_v1alpha1_AlicloudDataDisk_To_machine_AlicloudDataDisk is an autogenerated conversion function.
+func Convert_v1alpha1_AlicloudDataDisk_To_machine_AlicloudDataDisk(in *AlicloudDataDisk, out *machine.AlicloudDataDisk, s conversion.Scope) error {
+	return autoConvert_v1alpha1_AlicloudDataDisk_To_machine_AlicloudDataDisk(in, out, s)
+}
+
+func autoConvert_machine_AlicloudDataDisk_To_v1alpha1_AlicloudDataDisk(in *machine.AlicloudDataDisk, out *AlicloudDataDisk, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Category = in.Category
+	out.Description = in.Description
+	out.Encrypted = in.Encrypted
+	out.Size = in.Size
+	out.DeleteWithInstance = (*bool)(unsafe.Pointer(in.DeleteWithInstance))
+	return nil
+}
+
+// Convert_machine_AlicloudDataDisk_To_v1alpha1_AlicloudDataDisk is an autogenerated conversion function.
+func Convert_machine_AlicloudDataDisk_To_v1alpha1_AlicloudDataDisk(in *machine.AlicloudDataDisk, out *AlicloudDataDisk, s conversion.Scope) error {
+	return autoConvert_machine_AlicloudDataDisk_To_v1alpha1_AlicloudDataDisk(in, out, s)
 }
 
 func autoConvert_v1alpha1_AlicloudMachineClass_To_machine_AlicloudMachineClass(in *AlicloudMachineClass, out *machine.AlicloudMachineClass, s conversion.Scope) error {
@@ -1019,7 +1023,17 @@ func Convert_machine_AlicloudMachineClass_To_v1alpha1_AlicloudMachineClass(in *m
 
 func autoConvert_v1alpha1_AlicloudMachineClassList_To_machine_AlicloudMachineClassList(in *AlicloudMachineClassList, out *machine.AlicloudMachineClassList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]machine.AlicloudMachineClass)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]machine.AlicloudMachineClass, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha1_AlicloudMachineClass_To_machine_AlicloudMachineClass(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1030,7 +1044,17 @@ func Convert_v1alpha1_AlicloudMachineClassList_To_machine_AlicloudMachineClassLi
 
 func autoConvert_machine_AlicloudMachineClassList_To_v1alpha1_AlicloudMachineClassList(in *machine.AlicloudMachineClassList, out *AlicloudMachineClassList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]AlicloudMachineClass)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]AlicloudMachineClass, len(*in))
+		for i := range *in {
+			if err := Convert_machine_AlicloudMachineClass_To_v1alpha1_AlicloudMachineClass(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -1048,6 +1072,17 @@ func autoConvert_v1alpha1_AlicloudMachineClassSpec_To_machine_AlicloudMachineCla
 	out.VSwitchID = in.VSwitchID
 	out.PrivateIPAddress = in.PrivateIPAddress
 	out.SystemDisk = (*machine.AlicloudSystemDisk)(unsafe.Pointer(in.SystemDisk))
+	if in.DataDisks != nil {
+		in, out := &in.DataDisks, &out.DataDisks
+		*out = make([]machine.AlicloudDataDisk, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha1_AlicloudDataDisk_To_machine_AlicloudDataDisk(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.DataDisks = nil
+	}
 	out.InstanceChargeType = in.InstanceChargeType
 	out.InternetChargeType = in.InternetChargeType
 	out.InternetMaxBandwidthIn = (*int)(unsafe.Pointer(in.InternetMaxBandwidthIn))
@@ -1074,6 +1109,17 @@ func autoConvert_machine_AlicloudMachineClassSpec_To_v1alpha1_AlicloudMachineCla
 	out.VSwitchID = in.VSwitchID
 	out.PrivateIPAddress = in.PrivateIPAddress
 	out.SystemDisk = (*AlicloudSystemDisk)(unsafe.Pointer(in.SystemDisk))
+	if in.DataDisks != nil {
+		in, out := &in.DataDisks, &out.DataDisks
+		*out = make([]AlicloudDataDisk, len(*in))
+		for i := range *in {
+			if err := Convert_machine_AlicloudDataDisk_To_v1alpha1_AlicloudDataDisk(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.DataDisks = nil
+	}
 	out.InstanceChargeType = in.InstanceChargeType
 	out.InternetChargeType = in.InternetChargeType
 	out.InternetMaxBandwidthIn = (*int)(unsafe.Pointer(in.InternetMaxBandwidthIn))
@@ -1111,6 +1157,34 @@ func autoConvert_machine_AlicloudSystemDisk_To_v1alpha1_AlicloudSystemDisk(in *m
 // Convert_machine_AlicloudSystemDisk_To_v1alpha1_AlicloudSystemDisk is an autogenerated conversion function.
 func Convert_machine_AlicloudSystemDisk_To_v1alpha1_AlicloudSystemDisk(in *machine.AlicloudSystemDisk, out *AlicloudSystemDisk, s conversion.Scope) error {
 	return autoConvert_machine_AlicloudSystemDisk_To_v1alpha1_AlicloudSystemDisk(in, out, s)
+}
+
+func autoConvert_v1alpha1_AzureDataDisk_To_machine_AzureDataDisk(in *AzureDataDisk, out *machine.AzureDataDisk, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Lun = (*int32)(unsafe.Pointer(in.Lun))
+	out.Caching = in.Caching
+	out.StorageAccountType = in.StorageAccountType
+	out.DiskSizeGB = in.DiskSizeGB
+	return nil
+}
+
+// Convert_v1alpha1_AzureDataDisk_To_machine_AzureDataDisk is an autogenerated conversion function.
+func Convert_v1alpha1_AzureDataDisk_To_machine_AzureDataDisk(in *AzureDataDisk, out *machine.AzureDataDisk, s conversion.Scope) error {
+	return autoConvert_v1alpha1_AzureDataDisk_To_machine_AzureDataDisk(in, out, s)
+}
+
+func autoConvert_machine_AzureDataDisk_To_v1alpha1_AzureDataDisk(in *machine.AzureDataDisk, out *AzureDataDisk, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Lun = (*int32)(unsafe.Pointer(in.Lun))
+	out.Caching = in.Caching
+	out.StorageAccountType = in.StorageAccountType
+	out.DiskSizeGB = in.DiskSizeGB
+	return nil
+}
+
+// Convert_machine_AzureDataDisk_To_v1alpha1_AzureDataDisk is an autogenerated conversion function.
+func Convert_machine_AzureDataDisk_To_v1alpha1_AzureDataDisk(in *machine.AzureDataDisk, out *AzureDataDisk, s conversion.Scope) error {
+	return autoConvert_machine_AzureDataDisk_To_v1alpha1_AzureDataDisk(in, out, s)
 }
 
 func autoConvert_v1alpha1_AzureHardwareProfile_To_machine_AzureHardwareProfile(in *AzureHardwareProfile, out *machine.AzureHardwareProfile, s conversion.Scope) error {
@@ -1474,6 +1548,7 @@ func autoConvert_v1alpha1_AzureStorageProfile_To_machine_AzureStorageProfile(in 
 	if err := Convert_v1alpha1_AzureOSDisk_To_machine_AzureOSDisk(&in.OsDisk, &out.OsDisk, s); err != nil {
 		return err
 	}
+	out.DataDisks = *(*[]machine.AzureDataDisk)(unsafe.Pointer(&in.DataDisks))
 	return nil
 }
 
@@ -1489,6 +1564,7 @@ func autoConvert_machine_AzureStorageProfile_To_v1alpha1_AzureStorageProfile(in 
 	if err := Convert_machine_AzureOSDisk_To_v1alpha1_AzureOSDisk(&in.OsDisk, &out.OsDisk, s); err != nil {
 		return err
 	}
+	out.DataDisks = *(*[]AzureDataDisk)(unsafe.Pointer(&in.DataDisks))
 	return nil
 }
 
@@ -1638,10 +1714,11 @@ func Convert_machine_CurrentStatus_To_v1alpha1_CurrentStatus(in *machine.Current
 }
 
 func autoConvert_v1alpha1_GCPDisk_To_machine_GCPDisk(in *GCPDisk, out *machine.GCPDisk, s conversion.Scope) error {
-	out.AutoDelete = in.AutoDelete
+	out.AutoDelete = (*bool)(unsafe.Pointer(in.AutoDelete))
 	out.Boot = in.Boot
 	out.SizeGb = in.SizeGb
 	out.Type = in.Type
+	out.Interface = in.Interface
 	out.Image = in.Image
 	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
 	return nil
@@ -1653,10 +1730,11 @@ func Convert_v1alpha1_GCPDisk_To_machine_GCPDisk(in *GCPDisk, out *machine.GCPDi
 }
 
 func autoConvert_machine_GCPDisk_To_v1alpha1_GCPDisk(in *machine.GCPDisk, out *GCPDisk, s conversion.Scope) error {
-	out.AutoDelete = in.AutoDelete
+	out.AutoDelete = (*bool)(unsafe.Pointer(in.AutoDelete))
 	out.Boot = in.Boot
 	out.SizeGb = in.SizeGb
 	out.Type = in.Type
+	out.Interface = in.Interface
 	out.Image = in.Image
 	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
 	return nil
@@ -1963,6 +2041,34 @@ func Convert_machine_MachineClassList_To_v1alpha1_MachineClassList(in *machine.M
 	return autoConvert_machine_MachineClassList_To_v1alpha1_MachineClassList(in, out, s)
 }
 
+func autoConvert_v1alpha1_MachineConfiguration_To_machine_MachineConfiguration(in *MachineConfiguration, out *machine.MachineConfiguration, s conversion.Scope) error {
+	out.MachineDrainTimeout = (*metav1.Duration)(unsafe.Pointer(in.MachineDrainTimeout))
+	out.MachineHealthTimeout = (*metav1.Duration)(unsafe.Pointer(in.MachineHealthTimeout))
+	out.MachineCreationTimeout = (*metav1.Duration)(unsafe.Pointer(in.MachineCreationTimeout))
+	out.MaxEvictRetries = (*int32)(unsafe.Pointer(in.MaxEvictRetries))
+	out.NodeConditions = (*string)(unsafe.Pointer(in.NodeConditions))
+	return nil
+}
+
+// Convert_v1alpha1_MachineConfiguration_To_machine_MachineConfiguration is an autogenerated conversion function.
+func Convert_v1alpha1_MachineConfiguration_To_machine_MachineConfiguration(in *MachineConfiguration, out *machine.MachineConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha1_MachineConfiguration_To_machine_MachineConfiguration(in, out, s)
+}
+
+func autoConvert_machine_MachineConfiguration_To_v1alpha1_MachineConfiguration(in *machine.MachineConfiguration, out *MachineConfiguration, s conversion.Scope) error {
+	out.MachineDrainTimeout = (*metav1.Duration)(unsafe.Pointer(in.MachineDrainTimeout))
+	out.MachineHealthTimeout = (*metav1.Duration)(unsafe.Pointer(in.MachineHealthTimeout))
+	out.MachineCreationTimeout = (*metav1.Duration)(unsafe.Pointer(in.MachineCreationTimeout))
+	out.MaxEvictRetries = (*int32)(unsafe.Pointer(in.MaxEvictRetries))
+	out.NodeConditions = (*string)(unsafe.Pointer(in.NodeConditions))
+	return nil
+}
+
+// Convert_machine_MachineConfiguration_To_v1alpha1_MachineConfiguration is an autogenerated conversion function.
+func Convert_machine_MachineConfiguration_To_v1alpha1_MachineConfiguration(in *machine.MachineConfiguration, out *MachineConfiguration, s conversion.Scope) error {
+	return autoConvert_machine_MachineConfiguration_To_v1alpha1_MachineConfiguration(in, out, s)
+}
+
 func autoConvert_v1alpha1_MachineDeployment_To_machine_MachineDeployment(in *MachineDeployment, out *machine.MachineDeployment, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
 	if err := Convert_v1alpha1_MachineDeploymentSpec_To_machine_MachineDeploymentSpec(&in.Spec, &out.Spec, s); err != nil {
@@ -2045,34 +2151,6 @@ func autoConvert_machine_MachineDeploymentList_To_v1alpha1_MachineDeploymentList
 // Convert_machine_MachineDeploymentList_To_v1alpha1_MachineDeploymentList is an autogenerated conversion function.
 func Convert_machine_MachineDeploymentList_To_v1alpha1_MachineDeploymentList(in *machine.MachineDeploymentList, out *MachineDeploymentList, s conversion.Scope) error {
 	return autoConvert_machine_MachineDeploymentList_To_v1alpha1_MachineDeploymentList(in, out, s)
-}
-
-func autoConvert_v1alpha1_MachineDeploymentRollback_To_machine_MachineDeploymentRollback(in *MachineDeploymentRollback, out *machine.MachineDeploymentRollback, s conversion.Scope) error {
-	out.Name = in.Name
-	out.UpdatedAnnotations = *(*map[string]string)(unsafe.Pointer(&in.UpdatedAnnotations))
-	if err := Convert_v1alpha1_RollbackConfig_To_machine_RollbackConfig(&in.RollbackTo, &out.RollbackTo, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_v1alpha1_MachineDeploymentRollback_To_machine_MachineDeploymentRollback is an autogenerated conversion function.
-func Convert_v1alpha1_MachineDeploymentRollback_To_machine_MachineDeploymentRollback(in *MachineDeploymentRollback, out *machine.MachineDeploymentRollback, s conversion.Scope) error {
-	return autoConvert_v1alpha1_MachineDeploymentRollback_To_machine_MachineDeploymentRollback(in, out, s)
-}
-
-func autoConvert_machine_MachineDeploymentRollback_To_v1alpha1_MachineDeploymentRollback(in *machine.MachineDeploymentRollback, out *MachineDeploymentRollback, s conversion.Scope) error {
-	out.Name = in.Name
-	out.UpdatedAnnotations = *(*map[string]string)(unsafe.Pointer(&in.UpdatedAnnotations))
-	if err := Convert_machine_RollbackConfig_To_v1alpha1_RollbackConfig(&in.RollbackTo, &out.RollbackTo, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_machine_MachineDeploymentRollback_To_v1alpha1_MachineDeploymentRollback is an autogenerated conversion function.
-func Convert_machine_MachineDeploymentRollback_To_v1alpha1_MachineDeploymentRollback(in *machine.MachineDeploymentRollback, out *MachineDeploymentRollback, s conversion.Scope) error {
-	return autoConvert_machine_MachineDeploymentRollback_To_v1alpha1_MachineDeploymentRollback(in, out, s)
 }
 
 func autoConvert_v1alpha1_MachineDeploymentSpec_To_machine_MachineDeploymentSpec(in *MachineDeploymentSpec, out *machine.MachineDeploymentSpec, s conversion.Scope) error {
@@ -2363,6 +2441,7 @@ func autoConvert_v1alpha1_MachineSpec_To_machine_MachineSpec(in *MachineSpec, ou
 	if err := Convert_v1alpha1_NodeTemplateSpec_To_machine_NodeTemplateSpec(&in.NodeTemplateSpec, &out.NodeTemplateSpec, s); err != nil {
 		return err
 	}
+	out.MachineConfiguration = (*machine.MachineConfiguration)(unsafe.Pointer(in.MachineConfiguration))
 	return nil
 }
 
@@ -2379,6 +2458,7 @@ func autoConvert_machine_MachineSpec_To_v1alpha1_MachineSpec(in *machine.Machine
 	if err := Convert_machine_NodeTemplateSpec_To_v1alpha1_NodeTemplateSpec(&in.NodeTemplateSpec, &out.NodeTemplateSpec, s); err != nil {
 		return err
 	}
+	out.MachineConfiguration = (*MachineConfiguration)(unsafe.Pointer(in.MachineConfiguration))
 	return nil
 }
 
@@ -2396,6 +2476,7 @@ func autoConvert_v1alpha1_MachineStatus_To_machine_MachineStatus(in *MachineStat
 	if err := Convert_v1alpha1_CurrentStatus_To_machine_CurrentStatus(&in.CurrentStatus, &out.CurrentStatus, s); err != nil {
 		return err
 	}
+	out.LastKnownState = in.LastKnownState
 	return nil
 }
 
@@ -2413,6 +2494,7 @@ func autoConvert_machine_MachineStatus_To_v1alpha1_MachineStatus(in *machine.Mac
 	if err := Convert_machine_CurrentStatus_To_v1alpha1_CurrentStatus(&in.CurrentStatus, &out.CurrentStatus, s); err != nil {
 		return err
 	}
+	out.LastKnownState = in.LastKnownState
 	return nil
 }
 
@@ -2449,54 +2531,6 @@ func autoConvert_machine_MachineSummary_To_v1alpha1_MachineSummary(in *machine.M
 // Convert_machine_MachineSummary_To_v1alpha1_MachineSummary is an autogenerated conversion function.
 func Convert_machine_MachineSummary_To_v1alpha1_MachineSummary(in *machine.MachineSummary, out *MachineSummary, s conversion.Scope) error {
 	return autoConvert_machine_MachineSummary_To_v1alpha1_MachineSummary(in, out, s)
-}
-
-func autoConvert_v1alpha1_MachineTemplate_To_machine_MachineTemplate(in *MachineTemplate, out *machine.MachineTemplate, s conversion.Scope) error {
-	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha1_MachineTemplateSpec_To_machine_MachineTemplateSpec(&in.Template, &out.Template, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_v1alpha1_MachineTemplate_To_machine_MachineTemplate is an autogenerated conversion function.
-func Convert_v1alpha1_MachineTemplate_To_machine_MachineTemplate(in *MachineTemplate, out *machine.MachineTemplate, s conversion.Scope) error {
-	return autoConvert_v1alpha1_MachineTemplate_To_machine_MachineTemplate(in, out, s)
-}
-
-func autoConvert_machine_MachineTemplate_To_v1alpha1_MachineTemplate(in *machine.MachineTemplate, out *MachineTemplate, s conversion.Scope) error {
-	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_machine_MachineTemplateSpec_To_v1alpha1_MachineTemplateSpec(&in.Template, &out.Template, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_machine_MachineTemplate_To_v1alpha1_MachineTemplate is an autogenerated conversion function.
-func Convert_machine_MachineTemplate_To_v1alpha1_MachineTemplate(in *machine.MachineTemplate, out *MachineTemplate, s conversion.Scope) error {
-	return autoConvert_machine_MachineTemplate_To_v1alpha1_MachineTemplate(in, out, s)
-}
-
-func autoConvert_v1alpha1_MachineTemplateList_To_machine_MachineTemplateList(in *MachineTemplateList, out *machine.MachineTemplateList, s conversion.Scope) error {
-	out.ListMeta = in.ListMeta
-	out.Items = *(*[]machine.MachineTemplate)(unsafe.Pointer(&in.Items))
-	return nil
-}
-
-// Convert_v1alpha1_MachineTemplateList_To_machine_MachineTemplateList is an autogenerated conversion function.
-func Convert_v1alpha1_MachineTemplateList_To_machine_MachineTemplateList(in *MachineTemplateList, out *machine.MachineTemplateList, s conversion.Scope) error {
-	return autoConvert_v1alpha1_MachineTemplateList_To_machine_MachineTemplateList(in, out, s)
-}
-
-func autoConvert_machine_MachineTemplateList_To_v1alpha1_MachineTemplateList(in *machine.MachineTemplateList, out *MachineTemplateList, s conversion.Scope) error {
-	out.ListMeta = in.ListMeta
-	out.Items = *(*[]MachineTemplate)(unsafe.Pointer(&in.Items))
-	return nil
-}
-
-// Convert_machine_MachineTemplateList_To_v1alpha1_MachineTemplateList is an autogenerated conversion function.
-func Convert_machine_MachineTemplateList_To_v1alpha1_MachineTemplateList(in *machine.MachineTemplateList, out *MachineTemplateList, s conversion.Scope) error {
-	return autoConvert_machine_MachineTemplateList_To_v1alpha1_MachineTemplateList(in, out, s)
 }
 
 func autoConvert_v1alpha1_MachineTemplateSpec_To_machine_MachineTemplateSpec(in *MachineTemplateSpec, out *machine.MachineTemplateSpec, s conversion.Scope) error {
@@ -2609,6 +2643,7 @@ func autoConvert_v1alpha1_OpenStackMachineClassSpec_To_machine_OpenStackMachineC
 	out.SecretRef = (*v1.SecretReference)(unsafe.Pointer(in.SecretRef))
 	out.PodNetworkCidr = in.PodNetworkCidr
 	out.RootDiskSize = in.RootDiskSize
+	out.UseConfigDrive = (*bool)(unsafe.Pointer(in.UseConfigDrive))
 	return nil
 }
 
@@ -2631,6 +2666,7 @@ func autoConvert_machine_OpenStackMachineClassSpec_To_v1alpha1_OpenStackMachineC
 	out.SecretRef = (*v1.SecretReference)(unsafe.Pointer(in.SecretRef))
 	out.PodNetworkCidr = in.PodNetworkCidr
 	out.RootDiskSize = in.RootDiskSize
+	out.UseConfigDrive = (*bool)(unsafe.Pointer(in.UseConfigDrive))
 	return nil
 }
 
@@ -2787,80 +2823,4 @@ func autoConvert_machine_RollingUpdateMachineDeployment_To_v1alpha1_RollingUpdat
 // Convert_machine_RollingUpdateMachineDeployment_To_v1alpha1_RollingUpdateMachineDeployment is an autogenerated conversion function.
 func Convert_machine_RollingUpdateMachineDeployment_To_v1alpha1_RollingUpdateMachineDeployment(in *machine.RollingUpdateMachineDeployment, out *RollingUpdateMachineDeployment, s conversion.Scope) error {
 	return autoConvert_machine_RollingUpdateMachineDeployment_To_v1alpha1_RollingUpdateMachineDeployment(in, out, s)
-}
-
-func autoConvert_v1alpha1_Scale_To_machine_Scale(in *Scale, out *machine.Scale, s conversion.Scope) error {
-	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1alpha1_ScaleSpec_To_machine_ScaleSpec(&in.Spec, &out.Spec, s); err != nil {
-		return err
-	}
-	if err := Convert_v1alpha1_ScaleStatus_To_machine_ScaleStatus(&in.Status, &out.Status, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_v1alpha1_Scale_To_machine_Scale is an autogenerated conversion function.
-func Convert_v1alpha1_Scale_To_machine_Scale(in *Scale, out *machine.Scale, s conversion.Scope) error {
-	return autoConvert_v1alpha1_Scale_To_machine_Scale(in, out, s)
-}
-
-func autoConvert_machine_Scale_To_v1alpha1_Scale(in *machine.Scale, out *Scale, s conversion.Scope) error {
-	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_machine_ScaleSpec_To_v1alpha1_ScaleSpec(&in.Spec, &out.Spec, s); err != nil {
-		return err
-	}
-	if err := Convert_machine_ScaleStatus_To_v1alpha1_ScaleStatus(&in.Status, &out.Status, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_machine_Scale_To_v1alpha1_Scale is an autogenerated conversion function.
-func Convert_machine_Scale_To_v1alpha1_Scale(in *machine.Scale, out *Scale, s conversion.Scope) error {
-	return autoConvert_machine_Scale_To_v1alpha1_Scale(in, out, s)
-}
-
-func autoConvert_v1alpha1_ScaleSpec_To_machine_ScaleSpec(in *ScaleSpec, out *machine.ScaleSpec, s conversion.Scope) error {
-	out.Replicas = in.Replicas
-	return nil
-}
-
-// Convert_v1alpha1_ScaleSpec_To_machine_ScaleSpec is an autogenerated conversion function.
-func Convert_v1alpha1_ScaleSpec_To_machine_ScaleSpec(in *ScaleSpec, out *machine.ScaleSpec, s conversion.Scope) error {
-	return autoConvert_v1alpha1_ScaleSpec_To_machine_ScaleSpec(in, out, s)
-}
-
-func autoConvert_machine_ScaleSpec_To_v1alpha1_ScaleSpec(in *machine.ScaleSpec, out *ScaleSpec, s conversion.Scope) error {
-	out.Replicas = in.Replicas
-	return nil
-}
-
-// Convert_machine_ScaleSpec_To_v1alpha1_ScaleSpec is an autogenerated conversion function.
-func Convert_machine_ScaleSpec_To_v1alpha1_ScaleSpec(in *machine.ScaleSpec, out *ScaleSpec, s conversion.Scope) error {
-	return autoConvert_machine_ScaleSpec_To_v1alpha1_ScaleSpec(in, out, s)
-}
-
-func autoConvert_v1alpha1_ScaleStatus_To_machine_ScaleStatus(in *ScaleStatus, out *machine.ScaleStatus, s conversion.Scope) error {
-	out.Replicas = in.Replicas
-	out.Selector = (*metav1.LabelSelector)(unsafe.Pointer(in.Selector))
-	out.TargetSelector = in.TargetSelector
-	return nil
-}
-
-// Convert_v1alpha1_ScaleStatus_To_machine_ScaleStatus is an autogenerated conversion function.
-func Convert_v1alpha1_ScaleStatus_To_machine_ScaleStatus(in *ScaleStatus, out *machine.ScaleStatus, s conversion.Scope) error {
-	return autoConvert_v1alpha1_ScaleStatus_To_machine_ScaleStatus(in, out, s)
-}
-
-func autoConvert_machine_ScaleStatus_To_v1alpha1_ScaleStatus(in *machine.ScaleStatus, out *ScaleStatus, s conversion.Scope) error {
-	out.Replicas = in.Replicas
-	out.Selector = (*metav1.LabelSelector)(unsafe.Pointer(in.Selector))
-	out.TargetSelector = in.TargetSelector
-	return nil
-}
-
-// Convert_machine_ScaleStatus_To_v1alpha1_ScaleStatus is an autogenerated conversion function.
-func Convert_machine_ScaleStatus_To_v1alpha1_ScaleStatus(in *machine.ScaleStatus, out *ScaleStatus, s conversion.Scope) error {
-	return autoConvert_machine_ScaleStatus_To_v1alpha1_ScaleStatus(in, out, s)
 }

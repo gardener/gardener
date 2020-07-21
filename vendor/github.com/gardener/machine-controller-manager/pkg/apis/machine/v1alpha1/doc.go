@@ -17,6 +17,7 @@
 // +k8s:conversion-gen=github.com/gardener/machine-controller-manager/pkg/apis/machine
 // +k8s:openapi-gen=true
 // +k8s:defaulter-gen=TypeMeta
-// Package v1alpha1 is a version of the API.
 // +groupName=machine.sapcloud.io
+// +kubebuilder:object:generate=true
+// Package v1alpha1 is a version of the API.
 package v1alpha1

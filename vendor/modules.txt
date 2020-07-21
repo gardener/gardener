@@ -129,14 +129,7 @@ github.com/gardener/etcd-druid/api/v1alpha1
 ## explicit
 github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
-github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned
 github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme
-github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/typed/dns/v1alpha1
-github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions
-github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions/dns
-github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions/dns/v1alpha1
-github.com/gardener/external-dns-management/pkg/client/dns/informers/externalversions/internalinterfaces
-github.com/gardener/external-dns-management/pkg/client/dns/listers/dns/v1alpha1
 # github.com/gardener/gardener-resource-manager v0.13.1
 ## explicit
 github.com/gardener/gardener-resource-manager/pkg/apis/resources
@@ -147,7 +140,7 @@ github.com/gardener/gardener-resource-manager/pkg/manager
 # github.com/gardener/hvpa-controller v0.2.5
 ## explicit
 github.com/gardener/hvpa-controller/api/v1alpha1
-# github.com/gardener/machine-controller-manager v0.27.0
+# github.com/gardener/machine-controller-manager v0.33.0
 ## explicit
 github.com/gardener/machine-controller-manager/pkg/apis/machine
 github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1
