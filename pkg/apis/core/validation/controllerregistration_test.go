@@ -19,7 +19,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
-	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -37,7 +37,7 @@ var _ = Describe("validation", func() {
 
 	BeforeEach(func() {
 		ctrlResource = core.ControllerResource{
-			Kind: "OperatingSystemConfig",
+			Kind: extensionsv1alpha1.OperatingSystemConfigResource,
 			Type: "my-os",
 		}
 		controllerRegistration = &core.ControllerRegistration{
@@ -85,6 +85,42 @@ var _ = Describe("validation", func() {
 			}))))
 		})
 
+		It("should allow all known extension kinds", func() {
+			controllerRegistration.Spec.Resources = make([]core.ControllerResource, 0, len(extensionsv1alpha1.ExtensionKinds))
+			for kind := range extensionsv1alpha1.ExtensionKinds {
+				controllerRegistration.Spec.Resources = append(controllerRegistration.Spec.Resources,
+					core.ControllerResource{
+						Kind: kind,
+						Type: "foo",
+					},
+				)
+			}
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid unknown extension kinds", func() {
+			controllerRegistration.Spec.Resources = []core.ControllerResource{
+				{
+					Kind: extensionsv1alpha1.BackupBucketResource,
+					Type: "my-os",
+				},
+				{
+					Kind: "foo",
+					Type: "my-os",
+				},
+			}
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.resources[1].kind"),
+			}))))
+		})
+
 		It("should allow specifying no resources", func() {
 			controllerRegistration.Spec.Resources = nil
 
@@ -101,7 +137,7 @@ var _ = Describe("validation", func() {
 
 		It("should allow to set required field for kind Extension", func() {
 			resource := core.ControllerResource{
-				Kind:             v1alpha1.ExtensionResource,
+				Kind:             extensionsv1alpha1.ExtensionResource,
 				Type:             "arbitrary",
 				GloballyEnabled:  pointer.BoolPtr(true),
 				ReconcileTimeout: makeDurationPointer(10 * time.Second),

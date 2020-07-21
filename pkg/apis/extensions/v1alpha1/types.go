@@ -16,8 +16,11 @@ package v1alpha1
 
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // Status is the status of an Object.
@@ -68,3 +71,17 @@ type Object interface {
 	// GetExtensionStatus retrieves the object's status.
 	GetExtensionStatus() Status
 }
+
+// ExtensionKinds contains all supported extension kinds.
+var ExtensionKinds = sets.NewString(
+	BackupBucketResource,
+	BackupEntryResource,
+	ContainerRuntimeResource,
+	ControlPlaneResource,
+	dnsv1alpha1.DNSProviderKind,
+	ExtensionResource,
+	InfrastructureResource,
+	NetworkResource,
+	OperatingSystemConfigResource,
+	WorkerResource,
+)
