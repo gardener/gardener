@@ -30,7 +30,7 @@ func NewPeriodicHealthz(resetDuration time.Duration) Manager {
 }
 
 type periodicHealthz struct {
-	mutex         sync.Mutex
+	mutex         sync.RWMutex
 	health        bool
 	timer         *time.Timer
 	resetDuration time.Duration
@@ -45,11 +45,14 @@ func (p *periodicHealthz) Name() string {
 
 // Start starts the health manager.
 func (p *periodicHealthz) Start() {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	if p.started {
 		return
 	}
 
-	p.Set(true)
+	p.health = true
 	p.timer = time.NewTimer(p.resetDuration)
 	p.started = true
 	p.stopCh = make(chan struct{})
@@ -59,23 +62,32 @@ func (p *periodicHealthz) Start() {
 			select {
 			case <-p.timer.C:
 				p.Set(false)
-				p.timer.Reset(p.resetDuration)
 			case <-p.stopCh:
 				p.timer.Stop()
+				return
 			}
 		}
 	}()
 }
 
-// Stop starts the health manager.
+// Stop stops the health manager.
 func (p *periodicHealthz) Stop() {
-	p.Set(false)
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	p.health = false
+	if !p.started {
+		return
+	}
+
 	close(p.stopCh)
 	p.started = false
 }
 
 // Get returns the current health status.
 func (p *periodicHealthz) Get() bool {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
 	return p.health
 }
 
@@ -83,7 +95,7 @@ func (p *periodicHealthz) Get() bool {
 func (p *periodicHealthz) Set(health bool) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-	p.health = health
+	p.health = health && p.started
 
 	if health && p.started {
 		p.timer.Reset(p.resetDuration)

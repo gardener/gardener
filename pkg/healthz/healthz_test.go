@@ -32,6 +32,7 @@ var _ = Describe("Healthz", func() {
 
 		BeforeEach(func() {
 			healthz = NewDefaultHealthz()
+			healthz.Start()
 			response = &fakeResponse{}
 		})
 
