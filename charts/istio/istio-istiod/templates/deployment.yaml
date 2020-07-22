@@ -24,7 +24,7 @@ spec:
     spec:
       serviceAccountName: istiod
       securityContext:
-        fsGroup: 1337
+        fsGroup: 0
       containers:
       - name: discovery
         image: "{{ .Values.image }}"
@@ -34,7 +34,7 @@ spec:
         - --monitoringAddr=
         - --grpcAddr=
         - --httpAddr=localhost:8080
-        - --httpsAddr=":{{ .Values.ports.https }}"
+        - --httpsAddr=:{{ .Values.ports.https }}
         - --log_output_level=all:warn,ads:error
         - --domain={{ .Values.trustDomain }}
         - --plugins=authn,authz,health # remove mixer plugin
@@ -96,12 +96,14 @@ spec:
             cpu: 1000m
             memory: 2048Mi
         securityContext:
-          runAsUser: 1337
-          runAsGroup: 1337
-          runAsNonRoot: true
+          runAsUser: 0
+          runAsGroup: 0
+          runAsNonRoot: false
           capabilities:
             drop:
             - ALL
+            add:
+            - NET_BIND_SERVICE
         volumeMounts:
         - name: config-volume
           mountPath: /etc/istio/config
