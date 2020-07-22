@@ -20,6 +20,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 )
 
@@ -38,7 +39,7 @@ func (b *Botanist) MaintainShootAnnotations(ctx context.Context) error {
 	if len(annotationsToAdd) > 0 {
 		if _, err := kutil.TryUpdateShootAnnotations(b.K8sGardenClient.GardenCore(), retry.DefaultRetry, b.Shoot.Info.ObjectMeta, func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			for key, value := range annotationsToAdd {
-				shoot.Annotations[key] = value
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, key, value)
 			}
 			return shoot, nil
 		}); err != nil {

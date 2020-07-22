@@ -183,7 +183,7 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 
 		// do not add reconcile annotation if shoot was once set to failed or if shoot is already in an ongoing reconciliation
 		if s.Status.LastOperation != nil && s.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
-			s.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationReconcile
+			metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, common.ShootOperationReconcile)
 		}
 
 		var needsRetry bool
@@ -193,7 +193,7 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 		delete(s.Annotations, common.FailedShootNeedsRetryOperation)
 
 		if needsRetry {
-			s.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationRetry
+			metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, common.ShootOperationRetry)
 		}
 
 		if !gardencorev1beta1helper.HibernationIsEnabled(s) {
