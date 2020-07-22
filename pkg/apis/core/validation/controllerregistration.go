@@ -61,6 +61,11 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 		if len(resource.Kind) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("kind"), "field is required"))
 		}
+
+		if !extensionsv1alpha1.ExtensionKinds.Has(resource.Kind) {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("kind"), resource.Kind, extensionsv1alpha1.ExtensionKinds.UnsortedList()))
+		}
+
 		if len(resource.Type) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("type"), "field is required"))
 		}
