@@ -6,8 +6,8 @@ package genericactuator
 
 import (
 	context "context"
-	controller "github.com/gardener/gardener/extensions/pkg/controller"
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensions "github.com/gardener/gardener/pkg/extensions"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -36,7 +36,7 @@ func (m *MockValuesProvider) EXPECT() *MockValuesProviderMockRecorder {
 }
 
 // GetConfigChartValues mocks base method
-func (m *MockValuesProvider) GetConfigChartValues(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *controller.Cluster) (map[string]interface{}, error) {
+func (m *MockValuesProvider) GetConfigChartValues(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster) (map[string]interface{}, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetConfigChartValues", arg0, arg1, arg2)
 	ret0, _ := ret[0].(map[string]interface{})
@@ -51,7 +51,7 @@ func (mr *MockValuesProviderMockRecorder) GetConfigChartValues(arg0, arg1, arg2 
 }
 
 // GetControlPlaneChartValues mocks base method
-func (m *MockValuesProvider) GetControlPlaneChartValues(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *controller.Cluster, arg3 map[string]string, arg4 bool) (map[string]interface{}, error) {
+func (m *MockValuesProvider) GetControlPlaneChartValues(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster, arg3 map[string]string, arg4 bool) (map[string]interface{}, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetControlPlaneChartValues", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(map[string]interface{})
@@ -66,7 +66,7 @@ func (mr *MockValuesProviderMockRecorder) GetControlPlaneChartValues(arg0, arg1,
 }
 
 // GetControlPlaneExposureChartValues mocks base method
-func (m *MockValuesProvider) GetControlPlaneExposureChartValues(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *controller.Cluster, arg3 map[string]string) (map[string]interface{}, error) {
+func (m *MockValuesProvider) GetControlPlaneExposureChartValues(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster, arg3 map[string]string) (map[string]interface{}, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetControlPlaneExposureChartValues", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(map[string]interface{})
@@ -81,7 +81,7 @@ func (mr *MockValuesProviderMockRecorder) GetControlPlaneExposureChartValues(arg
 }
 
 // GetControlPlaneShootChartValues mocks base method
-func (m *MockValuesProvider) GetControlPlaneShootChartValues(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *controller.Cluster, arg3 map[string]string) (map[string]interface{}, error) {
+func (m *MockValuesProvider) GetControlPlaneShootChartValues(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster, arg3 map[string]string) (map[string]interface{}, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetControlPlaneShootChartValues", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(map[string]interface{})
@@ -96,7 +96,7 @@ func (mr *MockValuesProviderMockRecorder) GetControlPlaneShootChartValues(arg0, 
 }
 
 // GetStorageClassesChartValues mocks base method
-func (m *MockValuesProvider) GetStorageClassesChartValues(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *controller.Cluster) (map[string]interface{}, error) {
+func (m *MockValuesProvider) GetStorageClassesChartValues(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster) (map[string]interface{}, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetStorageClassesChartValues", arg0, arg1, arg2)
 	ret0, _ := ret[0].(map[string]interface{})
