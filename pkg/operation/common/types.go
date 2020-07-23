@@ -406,6 +406,9 @@ const (
 	// CoreDNSImageName is the name of the CoreDNS image.
 	CoreDNSImageName = "coredns"
 
+	// NodeLocalDNSImageName is the name of the node-local-dns image.
+	NodeLocalDNSImageName = "node-local-dns"
+
 	// NodeProblemDetectorImageName is the name of the node-problem-detector image.
 	NodeProblemDetectorImageName = "node-problem-detector"
 

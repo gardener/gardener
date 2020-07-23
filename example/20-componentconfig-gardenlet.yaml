@@ -84,6 +84,7 @@ featureGates:
   KonnectivityTunnel: false
   APIServerSNI: false
   CachedRuntimeClients: true
+  NodeLocalDNS: true
 seedSelector: {} # selects all seeds, only use for development purposes
 # seedConfig:
 #   metadata:

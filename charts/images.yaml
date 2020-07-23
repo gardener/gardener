@@ -131,7 +131,11 @@ images:
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: coredns/coredns
-  tag: "1.6.3"
+  tag: "1.7.0"
+- name: node-local-dns
+  sourceRepository: github.com/kubernetes/kubernetes/blob/master/cluster/addons/dns/nodelocaldns
+  repository: k8s.gcr.io/k8s-dns-node-cache
+  tag: "1.15.13"
 - name: node-problem-detector
   sourceRepository: github.com/kubernetes/node-problem-detector
   repository: k8s.gcr.io/node-problem-detector

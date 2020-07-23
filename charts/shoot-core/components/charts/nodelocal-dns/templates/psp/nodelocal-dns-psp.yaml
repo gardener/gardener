@@ -1,0 +1,28 @@
+apiVersion: {{ include "podsecuritypolicyversion" .}}
+kind: PodSecurityPolicy
+metadata:
+  name: gardener.kube-system.node-local-dns
+  labels:
+    app: node-local-dns
+spec:
+  allowedHostPaths:
+    - pathPrefix: /run/xtables.lock
+  fsGroup:
+    rule: RunAsAny
+  hostNetwork: true
+  hostPorts:
+    - max: 53
+      min: 53
+    - max: {{ .Values.prometheus.port}}
+      min: {{ .Values.prometheus.port}}
+  privileged: true
+  runAsUser:
+    rule: RunAsAny
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  volumes:
+    - secret
+    - hostPath
+    - configMap

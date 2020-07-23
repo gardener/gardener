@@ -315,6 +315,10 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 				},
 			},
 		}
+		nodeLocalDNSConfig = map[string]interface{}{
+			"domain": gardencorev1beta1.DefaultDomain,
+		}
+
 		podSecurityPolicies = map[string]interface{}{
 			"allowPrivilegedContainers": *b.Shoot.Info.Spec.Kubernetes.AllowPrivilegedContainers,
 		}
@@ -379,6 +383,19 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		return nil, err
 	}
 
+	// The node-local-dns interface cannot bind the kube-dns cluster IP since the interface
+	// used for IPVS load-balancing already uses this address.
+	if b.Shoot.IPVSEnabled() {
+		nodeLocalDNSConfig["clusterDNS"] = b.Shoot.Networks.CoreDNS.String()
+	} else {
+		nodeLocalDNSConfig["dnsServer"] = b.Shoot.Networks.CoreDNS.String()
+	}
+
+	nodelocalDNS, err := b.InjectShootShootImages(nodeLocalDNSConfig, common.NodeLocalDNSImageName)
+	if err != nil {
+		return nil, err
+	}
+
 	nodeProblemDetector, err := b.InjectShootShootImages(nodeProblemDetectorConfig, common.NodeProblemDetectorImageName)
 	if err != nil {
 		return nil, err
@@ -421,6 +438,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		"global":                  global,
 		"cluster-autoscaler":      common.GenerateAddonConfig(nil, b.Shoot.WantsClusterAutoscaler),
 		"coredns":                 coreDNS,
+		"node-local-dns":          common.GenerateAddonConfig(nodelocalDNS, b.Shoot.NodeLocalDNSEnabled),
 		"kube-apiserver-kubelet":  common.GenerateAddonConfig(nil, true),
 		"apiserver-proxy":         common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
 		"kube-controller-manager": common.GenerateAddonConfig(nil, true),

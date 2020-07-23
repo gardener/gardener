@@ -127,15 +127,26 @@ func (b *Botanist) generateDownloaderConfig(machineImageName string) map[string]
 
 func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 	var (
-		originalConfig = map[string]interface{}{
-			"kubernetes": map[string]interface{}{
-				"clusterDNS": b.Shoot.Networks.CoreDNS.String(),
-				"domain":     gardencorev1beta1.DefaultDomain,
-				"version":    b.Shoot.Info.Spec.Kubernetes.Version,
-			},
+		kubernetesConfig = map[string]interface{}{
+			"clusterDNS": b.Shoot.Networks.CoreDNS.String(),
+			"domain":     gardencorev1beta1.DefaultDomain,
+			"version":    b.Shoot.Info.Spec.Kubernetes.Version,
 		}
 	)
-	caBundle := ""
+
+	// if IPVS is enabled, instruct the kubelet to create pods resolving DNS to the `nodelocaldns` network interface link-local ip address
+	// for more information checkout the [usage documentation](https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/)
+	if b.Shoot.NodeLocalDNSEnabled && b.Shoot.IPVSEnabled() {
+		kubernetesConfig["clusterDNS"] = "169.254.20.10"
+	}
+
+	var (
+		originalConfig = map[string]interface{}{
+			"kubernetes": kubernetesConfig,
+		}
+		caBundle = ""
+	)
+
 	if cloudProfileCaBundle := b.Shoot.CloudProfile.Spec.CABundle; cloudProfileCaBundle != nil {
 		caBundle = *cloudProfileCaBundle
 	}
