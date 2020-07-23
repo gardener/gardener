@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util_test
+package kubernetes_test
 
 import (
 	"context"
 	"fmt"
 
-	. "github.com/gardener/gardener/extensions/pkg/util"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -44,21 +44,6 @@ var _ = Describe("Deployments", func() {
 
 	AfterEach(func() {
 		ctrl.Finish()
-	})
-
-	Describe("#ScaleDeployment", func() {
-		It("should scale the deployment", func() {
-			var replicas int32 = 5
-
-			c.EXPECT().
-				Update(gomock.Any(), gomock.AssignableToTypeOf(&appsv1.Deployment{})).
-				DoAndReturn(func(_ context.Context, deployment *appsv1.Deployment) error {
-					deployment.Spec.Replicas = &replicas
-					return nil
-				})
-
-			Expect(ScaleDeployment(context.TODO(), c, &appsv1.Deployment{}, replicas)).NotTo(HaveOccurred())
-		})
 	})
 
 	Describe("#HasDeploymentRolloutCompleted", func() {
@@ -92,9 +77,10 @@ var _ = Describe("Deployments", func() {
 					return nil
 				})
 
-			_, actualError := HasDeploymentRolloutCompleted(context.TODO(), c, namespace, name)
+			_, actualError := kubernetes.HasDeploymentRolloutCompleted(context.TODO(), c, namespace, name)
 			Expect(actualError).NotTo(HaveOccurred())
 		})
+
 		It("Updated deployment hasn't been picked up yet", func() {
 			var (
 				replicas           int32 = 5
@@ -130,9 +116,10 @@ var _ = Describe("Deployments", func() {
 					return nil
 				})
 
-			_, actualError := HasDeploymentRolloutCompleted(context.TODO(), c, namespace, name)
+			_, actualError := kubernetes.HasDeploymentRolloutCompleted(context.TODO(), c, namespace, name)
 			Expect(actualError).To(Equal(expectedError))
 		})
+
 		It("UpdatedReplicas isn't matching with desired", func() {
 			var (
 				replicas          int32 = 5
@@ -169,9 +156,10 @@ var _ = Describe("Deployments", func() {
 					return nil
 				})
 
-			_, actualError := HasDeploymentRolloutCompleted(context.TODO(), c, namespace, name)
+			_, actualError := kubernetes.HasDeploymentRolloutCompleted(context.TODO(), c, namespace, name)
 			Expect(actualError).To(Equal(expectedError))
 		})
+
 		It("AvailableReplicas isn't matching with desired", func() {
 			var (
 				replicas          int32 = 5
@@ -208,7 +196,7 @@ var _ = Describe("Deployments", func() {
 					return nil
 				})
 
-			_, actualError := HasDeploymentRolloutCompleted(context.TODO(), c, namespace, name)
+			_, actualError := kubernetes.HasDeploymentRolloutCompleted(context.TODO(), c, namespace, name)
 			Expect(actualError).To(Equal(expectedError))
 		})
 	})

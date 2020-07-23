@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	"github.com/pkg/errors"
@@ -72,7 +73,7 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, wo
 		return errors.Wrapf(err, "could not apply machine-controller-manager shoot chart")
 	}
 
-	if err := util.WaitUntilDeploymentRolloutIsComplete(ctx, a.client, workerObj.Namespace, McmDeploymentName, 5*time.Second, 300*time.Second); err != nil {
+	if err := kubernetes.WaitUntilDeploymentRolloutIsComplete(ctx, a.client, workerObj.Namespace, McmDeploymentName, 5*time.Second, 300*time.Second); err != nil {
 		return errors.Wrapf(err, "waiting until deployment/%s is updated", McmDeploymentName)
 	}
 
