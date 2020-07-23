@@ -17,18 +17,18 @@ package controller
 import (
 	"context"
 
-	"github.com/pkg/errors"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+
+	"github.com/pkg/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // RenderChartAndCreateManagedResource renders a chart and creates a ManagedResource for the gardener-resource-manager
 // out of the results.
-func RenderChartAndCreateManagedResource(ctx context.Context, namespace string, name string, client client.Client, chartRenderer chartrenderer.Interface, chart util.Chart, values map[string]interface{}, imageVector imagevector.ImageVector, chartNamespace string, version string, withNoCleanupLabel bool, forceOverwriteAnnotations bool) error {
+func RenderChartAndCreateManagedResource(ctx context.Context, namespace string, name string, client client.Client, chartRenderer chartrenderer.Interface, chart chart.Interface, values map[string]interface{}, imageVector imagevector.ImageVector, chartNamespace string, version string, withNoCleanupLabel bool, forceOverwriteAnnotations bool) error {
 	chartName, data, err := chart.Render(chartRenderer, chartNamespace, imageVector, version, version, values)
 	if err != nil {
 		return errors.Wrapf(err, "could not render chart")

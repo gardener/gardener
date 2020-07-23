@@ -44,7 +44,7 @@ func (s *VPNTLSAuthConfig) GetName() string {
 }
 
 // Generate implements ConfigInterface.
-func (s *VPNTLSAuthConfig) Generate() (Interface, error) {
+func (s *VPNTLSAuthConfig) Generate() (DataInterface, error) {
 	key, err := s.generateKey()
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (s *VPNTLSAuthConfig) GenerateInfoData() (infodata.InfoData, error) {
 }
 
 // GenerateFromInfoData implements ConfigInteface
-func (s *VPNTLSAuthConfig) GenerateFromInfoData(infoData infodata.InfoData) (Interface, error) {
+func (s *VPNTLSAuthConfig) GenerateFromInfoData(infoData infodata.InfoData) (DataInterface, error) {
 	data, ok := infoData.(*PrivateKeyInfoData)
 	if !ok {
 		return nil, fmt.Errorf("could not convert InfoData entry %s to PrivateKeyInfoData", s.Name)

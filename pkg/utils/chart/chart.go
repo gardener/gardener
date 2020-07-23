@@ -28,6 +28,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// Interface represents a Helm chart that can be applied and deleted.
+type Interface interface {
+	// Apply applies this chart in the given namespace using the given ChartApplier. Before applying the chart,
+	// it collects its values, injecting images and merging the given values as needed.
+	Apply(context.Context, gardenerkubernetes.ChartApplier, string, imagevector.ImageVector, string, string, map[string]interface{}) error
+	// Render renders this chart in the given namespace using the given chartRenderer. Before rendering the chart,
+	// it collects its values, injecting images and merging the given values as needed.
+	Render(chartrenderer.Interface, string, imagevector.ImageVector, string, string, map[string]interface{}) (string, []byte, error)
+	// Delete deletes this chart's objects from the given namespace.
+	Delete(context.Context, client.Client, string) error
+}
+
 // Chart represents a Helm chart (and its sub-charts) that can be applied and deleted.
 type Chart struct {
 	Name      string

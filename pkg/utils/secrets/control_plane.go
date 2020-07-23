@@ -59,7 +59,7 @@ func (s *ControlPlaneSecretConfig) GetName() string {
 }
 
 // Generate implements ConfigInterface.
-func (s *ControlPlaneSecretConfig) Generate() (Interface, error) {
+func (s *ControlPlaneSecretConfig) Generate() (DataInterface, error) {
 	return s.GenerateControlPlane()
 }
 
@@ -78,7 +78,7 @@ func (s *ControlPlaneSecretConfig) GenerateInfoData() (infodata.InfoData, error)
 }
 
 // GenerateFromInfoData implements ConfigInterface
-func (s *ControlPlaneSecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (Interface, error) {
+func (s *ControlPlaneSecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (DataInterface, error) {
 	data, ok := infoData.(*CertificateInfoData)
 	if !ok {
 		return nil, fmt.Errorf("could not convert InfoData entry %s to CertificateInfoData", s.Name)

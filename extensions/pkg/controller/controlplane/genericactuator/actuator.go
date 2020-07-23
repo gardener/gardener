@@ -22,14 +22,15 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane"
-	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	secretutil "github.com/gardener/gardener/pkg/utils/secrets"
 
 	"github.com/gardener/gardener-resource-manager/pkg/manager"
 	"github.com/go-logr/logr"
@@ -64,8 +65,8 @@ type ValuesProvider interface {
 // the values provided by the given values provider.
 func NewActuator(
 	providerName string,
-	secrets, exposureSecrets util.Secrets,
-	configChart, controlPlaneChart, controlPlaneShootChart, storageClassesChart, controlPlaneExposureChart util.Chart,
+	secrets, exposureSecrets secretutil.Interface,
+	configChart, controlPlaneChart, controlPlaneShootChart, storageClassesChart, controlPlaneExposureChart chart.Interface,
 	vp ValuesProvider,
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
 	imageVector imagevector.ImageVector,
@@ -96,13 +97,13 @@ func NewActuator(
 // actuator is an Actuator that acts upon and updates the status of ControlPlane resources.
 type actuator struct {
 	providerName              string
-	secrets                   util.Secrets
-	exposureSecrets           util.Secrets
-	configChart               util.Chart
-	controlPlaneChart         util.Chart
-	controlPlaneShootChart    util.Chart
-	storageClassesChart       util.Chart
-	controlPlaneExposureChart util.Chart
+	secrets                   secretutil.Interface
+	exposureSecrets           secretutil.Interface
+	configChart               chart.Interface
+	controlPlaneChart         chart.Interface
+	controlPlaneShootChart    chart.Interface
+	storageClassesChart       chart.Interface
+	controlPlaneExposureChart chart.Interface
 	vp                        ValuesProvider
 	chartRendererFactory      extensionscontroller.ChartRendererFactory
 	imageVector               imagevector.ImageVector

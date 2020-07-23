@@ -56,7 +56,7 @@ func (s *RSASecretConfig) GetName() string {
 }
 
 // Generate implements ConfigInterface.
-func (s *RSASecretConfig) Generate() (Interface, error) {
+func (s *RSASecretConfig) Generate() (DataInterface, error) {
 	return s.GenerateRSAKeys()
 }
 
@@ -71,7 +71,7 @@ func (s *RSASecretConfig) GenerateInfoData() (infodata.InfoData, error) {
 }
 
 // GenerateFromInfoData implements ConfigInterface
-func (s *RSASecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (Interface, error) {
+func (s *RSASecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (DataInterface, error) {
 	data, ok := infoData.(*PrivateKeyInfoData)
 	if !ok {
 		return nil, fmt.Errorf("could not convert InfoData entry %s to RSAPrivateKeyInfoData", s.Name)

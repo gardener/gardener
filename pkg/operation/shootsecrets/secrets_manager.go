@@ -191,7 +191,7 @@ func (s *SecretsManager) Deploy(ctx context.Context, k8sClient client.Client, na
 		return err
 	}
 
-	deployedSecrets, err := secrets.GenerateClusterSecretsWithFunc(ctx, k8sClient, s.existingSecrets, secretConfigs, namespace, func(c secrets.ConfigInterface) (secrets.Interface, error) {
+	deployedSecrets, err := secrets.GenerateClusterSecretsWithFunc(ctx, k8sClient, s.existingSecrets, secretConfigs, namespace, func(c secrets.ConfigInterface) (secrets.DataInterface, error) {
 		return s.getInfoDataAndGenerateSecret(c)
 	})
 	if err != nil {
@@ -280,7 +280,7 @@ func (s *SecretsManager) generateInfoDataAndUpdateResourceList(secretConfig secr
 	return infodata.UpsertInfoData(&s.GardenerResourceDataList, secretConfig.GetName(), data)
 }
 
-func (s *SecretsManager) getInfoDataAndGenerateSecret(secretConfig secrets.ConfigInterface) (secrets.Interface, error) {
+func (s *SecretsManager) getInfoDataAndGenerateSecret(secretConfig secrets.ConfigInterface) (secrets.DataInterface, error) {
 	secretInfoData, err := infodata.GetInfoData(s.GardenerResourceDataList, secretConfig.GetName())
 	if err != nil {
 		return nil, err
@@ -407,7 +407,7 @@ func (s *SecretsManager) deployCertificateAuthorities(ctx context.Context, k8sCl
 	return nil
 }
 
-func (s *SecretsManager) deploySecret(ctx context.Context, k8sClient client.Client, namespace string, secretInterface secrets.Interface, secretName string) (*corev1.Secret, error) {
+func (s *SecretsManager) deploySecret(ctx context.Context, k8sClient client.Client, namespace string, secretInterface secrets.DataInterface, secretName string) (*corev1.Secret, error) {
 	if secret, ok := s.existingSecrets[secretName]; ok {
 		return secret, nil
 	}

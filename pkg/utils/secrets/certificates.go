@@ -103,7 +103,7 @@ func (s *CertificateSecretConfig) GetName() string {
 }
 
 // Generate implements ConfigInterface.
-func (s *CertificateSecretConfig) Generate() (Interface, error) {
+func (s *CertificateSecretConfig) Generate() (DataInterface, error) {
 	return s.GenerateCertificate()
 }
 
@@ -123,7 +123,7 @@ func (s *CertificateSecretConfig) GenerateInfoData() (infodata.InfoData, error) 
 }
 
 // GenerateFromInfoData implements ConfigInterface
-func (s *CertificateSecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (Interface, error) {
+func (s *CertificateSecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (DataInterface, error) {
 	data, ok := infoData.(*CertificateInfoData)
 	if !ok {
 		return nil, fmt.Errorf("could not convert InfoData entry %s to CertificateInfoData", s.Name)
@@ -365,7 +365,7 @@ func loadCA(name string, existingSecret *corev1.Secret) (*corev1.Secret, *Certif
 }
 
 // GenerateCertificateAuthorities get a map of wanted certificates and check If they exist in the existingSecretsMap based on the keys in the map. If they exist it get only the certificate from the corresponding
-// existing secret and makes a certificate Interface from the existing secret. If there is no existing secret contaning the wanted certificate, we make one certificate and with it we deploy in K8s cluster
+// existing secret and makes a certificate DataInterface from the existing secret. If there is no existing secret contaning the wanted certificate, we make one certificate and with it we deploy in K8s cluster
 // a secret with that  certificate and then return the newly existing secret. The function returns a map of secrets contaning the wanted CA, a map with the wanted CA certificate and an error.
 func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret, wantedCertificateAuthorities map[string]*CertificateSecretConfig, namespace string) (map[string]*corev1.Secret, map[string]*Certificate, error) {
 	type caOutput struct {
