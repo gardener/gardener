@@ -12,25 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubernetes
+package utils
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"encoding/json"
+	"sort"
 )
 
-// Object is wrapper interface combining runtime.Object and metav1.Object interfaces together.
-type Object interface {
-	runtime.Object
-	metav1.Object
+// ComputeSecretCheckSum computes the sha256 checksum of secret data.
+func ComputeSecretCheckSum(data map[string][]byte) string {
+	var (
+		hash string
+		keys []string
+	)
+
+	for k := range data {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		hash += ComputeSHA256Hex(data[k])
+	}
+
+	return ComputeSHA256Hex([]byte(hash))
 }
 
-// ObjectName returns the name of the given object in the format <namespace>/<name>
-func ObjectName(obj runtime.Object) string {
-	k, err := client.ObjectKeyFromObject(obj)
+// ComputeChecksum computes a SHA256 checksum for the give map.
+func ComputeChecksum(data interface{}) string {
+	jsonString, err := json.Marshal(data)
 	if err != nil {
-		return "/"
+		return ""
 	}
-	return k.String()
+	return ComputeSHA256Hex(jsonString)
 }

@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shootsecrets"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
@@ -177,7 +178,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 			b.Secrets[name] = secret
 		}
 		for name, secret := range b.Secrets {
-			b.CheckSums[name] = common.ComputeSecretCheckSum(secret.Data)
+			b.CheckSums[name] = utils.ComputeSecretCheckSum(secret.Data)
 		}
 	}()
 
@@ -212,7 +213,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 // in the Seed cluster.
 func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 	var (
-		checksum = common.ComputeSecretCheckSum(b.Shoot.Secret.Data)
+		checksum = utils.ComputeSecretCheckSum(b.Shoot.Secret.Data)
 		secret   = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      v1beta1constants.SecretNameCloudProvider,
@@ -316,7 +317,7 @@ func (b *Botanist) storeStaticTokenAsSecrets(ctx context.Context, staticToken *s
 			return err
 		}
 
-		b.CheckSums[secretName] = common.ComputeSecretCheckSum(secret.Data)
+		b.CheckSums[secretName] = utils.ComputeSecretCheckSum(secret.Data)
 	}
 
 	return nil
@@ -408,21 +409,12 @@ func (b *Botanist) cleanupTunnelSecrets(ctx context.Context, gardenerResourceDat
 	return nil
 }
 
-func dnsNamesForService(name, namespace string) []string {
-	return []string{
-		name,
-		fmt.Sprintf("%s.%s", name, namespace),
-		fmt.Sprintf("%s.%s.svc", name, namespace),
-		fmt.Sprintf("%s.%s.svc.%s", name, namespace, gardencorev1beta1.DefaultDomain),
-	}
-}
-
 func dnsNamesForEtcd(namespace string) []string {
 	names := []string{
 		fmt.Sprintf("%s-local", v1beta1constants.ETCDMain),
 		fmt.Sprintf("%s-local", v1beta1constants.ETCDEvents),
 	}
-	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", v1beta1constants.ETCDMain), namespace)...)
-	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", v1beta1constants.ETCDEvents), namespace)...)
+	names = append(names, kutil.DNSNamesForService(fmt.Sprintf("%s-client", v1beta1constants.ETCDMain), namespace)...)
+	names = append(names, kutil.DNSNamesForService(fmt.Sprintf("%s-client", v1beta1constants.ETCDEvents), namespace)...)
 	return names
 }

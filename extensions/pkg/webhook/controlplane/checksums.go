@@ -17,7 +17,7 @@ package controlplane
 import (
 	"context"
 
-	"github.com/gardener/gardener/extensions/pkg/util"
+	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -35,7 +35,7 @@ func EnsureSecretChecksumAnnotation(ctx context.Context, template *corev1.PodTem
 	}
 
 	// Add checksum annotation
-	metav1.SetMetaDataAnnotation(&template.ObjectMeta, "checksum/secret-"+name, util.ComputeChecksum(secret.Data))
+	metav1.SetMetaDataAnnotation(&template.ObjectMeta, "checksum/secret-"+name, utils.ComputeChecksum(secret.Data))
 	return nil
 }
 
@@ -49,6 +49,6 @@ func EnsureConfigMapChecksumAnnotation(ctx context.Context, template *corev1.Pod
 	}
 
 	// Add checksum annotation
-	metav1.SetMetaDataAnnotation(&template.ObjectMeta, "checksum/configmap-"+name, util.ComputeChecksum(cm.Data))
+	metav1.SetMetaDataAnnotation(&template.ObjectMeta, "checksum/configmap-"+name, utils.ComputeChecksum(cm.Data))
 	return nil
 }

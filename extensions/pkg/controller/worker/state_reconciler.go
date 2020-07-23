@@ -19,18 +19,15 @@ import (
 	"fmt"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/util"
-	corev1 "k8s.io/api/core/v1"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	contextutil "github.com/gardener/gardener/pkg/utils/context"
 
 	"github.com/go-logr/logr"
-
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -78,7 +75,7 @@ func (r *stateReconciler) InjectClient(client client.Client) error {
 }
 
 func (r *stateReconciler) InjectStopChannel(stopCh <-chan struct{}) error {
-	r.ctx = util.ContextFromStopChannel(stopCh)
+	r.ctx = contextutil.FromStopChannel(stopCh)
 	return nil
 }
 

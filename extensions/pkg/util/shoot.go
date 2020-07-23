@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	"github.com/Masterminds/semver"
@@ -61,7 +62,7 @@ func GetOrCreateShootKubeconfig(ctx context.Context, c client.Client, certificat
 	}
 
 	var (
-		computedChecksum   = ComputeChecksum(caSecret.Data)
+		computedChecksum   = utils.ComputeChecksum(caSecret.Data)
 		storedChecksum, ok = secret.Annotations[CAChecksumAnnotation]
 	)
 	if ok && computedChecksum == storedChecksum {

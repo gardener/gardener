@@ -21,11 +21,11 @@ import (
 	"time"
 
 	controllererror "github.com/gardener/gardener/extensions/pkg/controller/error"
-	"github.com/gardener/gardener/extensions/pkg/util"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	contextutil "github.com/gardener/gardener/pkg/utils/context"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	resourcemanagerv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
@@ -96,7 +96,7 @@ func ReconcileErrCauseOrErr(err error) error {
 
 // SetupSignalHandlerContext sets up a context from signals.SetupSignalHandler stop channel.
 func SetupSignalHandlerContext() context.Context {
-	return util.ContextFromStopChannel(signals.SetupSignalHandler())
+	return contextutil.FromStopChannel(signals.SetupSignalHandler())
 }
 
 // AddToManagerBuilder aggregates various AddToManager functions.
