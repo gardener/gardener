@@ -109,7 +109,8 @@
 
 ## Deployment
 
-* [Deploying the Gardener into a Kubernetes cluster](deployment/kubernetes.md)
+* [Setup Gardener on a Kubernetes cluster](deployment/setup_gardener.md)
+* [Deploying a Gardenlet](deployment/deploy_gardenlet.md)
 * [Deploying the Gardener and a Seed into an AKS cluster](deployment/aks.md)
 * [Overwrite image vector](deployment/image_vector.md)
 * [Migration from Gardener `v0` to `v1`](deployment/migration_v0_to_v1.md)

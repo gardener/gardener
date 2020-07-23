@@ -294,6 +294,7 @@ time="2019-11-06T15:24:18+02:00" level=info msg="Seed controller initialized."
 ```
 
 :warning: The Gardenlet will handle all your seeds for this development scenario, although, for productive usage it is recommended to run it once per seed, see [this document](../concepts/gardenlet.md) for more information.
+See the [Appendix](#appendix) on how to configure the Seed clusters for the local development scenario. 
 
 Please checkout the [Gardener Extensions Manager](https://github.com/gardener/gem) to install extension controllers - make sure that you install all of them required for your local development.
 Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
@@ -313,7 +314,7 @@ to operate against your local running Gardener API Server.
 
 You can run Gardener (API server, controller manager, scheduler, gardenlet) against any local Kubernetes cluster, however, your seed and shoot clusters must be deployed to a "real" provider.
 Currently, it is not possible to run Gardener entirely isolated from any cloud provider.
-We are planning to support such a setup based on KubeVirt (see [this for details](https://github.com/gardener/gardener/issues/827)), however, it does not yet exist.
+We are planning to support a setup that can run completely locally (see [this for details](https://github.com/gardener/gardener-extension-provider-mock)), however, it does not yet exist.
 This means that - after you have setup Gardener - you need to register an external seed cluster (e.g., one created in AWS).
 Only after that step you can start creating shoot clusters with your locally running Gardener.
 
@@ -332,3 +333,46 @@ Moreover, it hid too many things and came with a bunch of limitations, making th
 To make sure that a specific Seed cluster will be chosen, specify the `.spec.seedName` field (see [here](../../example/90-shoot.yaml#L265-L266) for an example Shoot manifest).
 
 Please take a look at the [example manifests folder](../../example) to see which resource objects you need to install into your Garden cluster.
+
+
+# Appendix
+
+## Configure Seed clusters for local development
+
+When using the Gardenlet in a local development scenario with `make start-gardenlet` then the Gardenlet component configuration is setup with a [seed selector](../concepts/gardenlet.md#seed-config-vs-seed-selector) that targets all available Seed clusters.
+However, a `Seed` resource needs to be configured to allow being reconciled by a Gardenlet which such a configuration.
+
+When deploying the Gardenlet to reconcile only one Seed cluster (using component configuration `.seedConfig`), 
+the Gardenlet either needs to be supplied with a kubeconfig for the particular Seed cluster, or acquires one via bootstrapping.
+Having said that, if the Gardenlet is configured to manage multiple Seed clusters based on a label selector, it needs to fetch the kubeconfig of each Seed cluster at runtime from somewhere.
+That is why the `Seed` resource needs to be configured with an additional secret reference that contains the kubeconfig of the Seed cluster.
+
+Create a secret containing the base64 encoded kubeconfig of the Seed cluster (the scope of the permissions should be identical to the kubeconfig that the Gardenlet creates during bootstrapping - for now, `cluster-admin` privileges are recommended).
+
+Create the secret in the Garden cluster:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sweet-seed
+  namespace: garden
+type: Opaque
+data:
+  kubeconfig: <base64-seed-kubeconfig>.
+```
+
+Adjust the `Seed` resource to reference the secret in `spec.secretRef` like so:
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Seed
+metadata:
+  name: my-sweet-seed
+spec:
+  ...
+  secretRef:
+    name: sweet-seed
+    namespace: garden
+```
+
