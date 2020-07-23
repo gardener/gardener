@@ -166,6 +166,31 @@ func init() {
 				},
 			},
 		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "machineclasses.machine.sapcloud.io",
+			},
+			Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
+				Group:   machineGroup,
+				Version: machineVersion,
+				Scope:   apiextensionsv1beta1.NamespaceScoped,
+				Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
+					Kind:       "MachineClass",
+					Plural:     "machineclasses",
+					Singular:   "machineclass",
+					ShortNames: []string{"machcls"},
+				},
+				AdditionalPrinterColumns: []apiextensionsv1beta1.CustomResourceColumnDefinition{
+					{
+						Name:        "Provider",
+						Type:        "string",
+						JSONPath:    ".provider",
+						Description: "Name of the provider which acts on the machine class object",
+					},
+					agePrinterColumn,
+				},
+			},
+		},
 	}
 
 	type machineClass struct {
