@@ -26,8 +26,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/secrets"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -47,9 +47,6 @@ func (b *Botanist) DefaultInfrastructure(seedClient client.Client) shoot.Infrast
 			IsInRestorePhaseOfControlPlaneMigration: b.isRestorePhase(),
 			DeploymentRequested:                     controllerutils.HasTask(b.Shoot.Info.Annotations, common.ShootTaskDeployInfrastructure),
 		},
-		infrastructure.DefaultInterval,
-		infrastructure.DefaultSevereThreshold,
-		infrastructure.DefaultTimeout,
 	)
 }
 

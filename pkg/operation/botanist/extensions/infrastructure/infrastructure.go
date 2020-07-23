@@ -77,17 +77,14 @@ func New(
 	logger *logrus.Entry,
 	client client.Client,
 	values *Values,
-	waitInterval time.Duration,
-	waitSevereThreshold time.Duration,
-	waitTimeout time.Duration,
 ) shoot.Infrastructure {
 	return &infrastructure{
 		client:              client,
 		logger:              logger,
 		values:              values,
-		waitInterval:        waitInterval,
-		waitSevereThreshold: waitSevereThreshold,
-		waitTimeout:         waitTimeout,
+		waitInterval:        DefaultInterval,
+		waitSevereThreshold: DefaultSevereThreshold,
+		waitTimeout:         DefaultTimeout,
 	}
 }
 
