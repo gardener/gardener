@@ -90,6 +90,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		allowBackup                    = o.Seed.Info.Spec.Backup != nil
 		staticNodesCIDR                = o.Shoot.Info.Spec.Networking.Nodes != nil
 		useSNI                         = botanist.APIServerSNIEnabled()
+		generation                     = o.Shoot.Info.Generation
 		allTasks                       = controllerutils.GetTasks(o.Shoot.Info.Annotations)
 		requestControlPlanePodsRestart = controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskRestartControlPlanePods)
 
@@ -447,7 +448,9 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 	// Remove completed tasks from Shoot if they were executed.
 	newShoot, err := kutil.TryUpdateShootAnnotations(o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			controllerutils.RemoveTasks(shoot.Annotations, allTasks...)
+			if shoot.Generation == generation {
+				controllerutils.RemoveTasks(shoot.Annotations, allTasks...)
+			}
 			return shoot, nil
 		},
 	)
