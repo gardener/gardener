@@ -29,6 +29,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
@@ -68,6 +70,9 @@ var _ = Describe("#Infrastructure", func() {
 		infra        *extensionsv1alpha1.Infrastructure
 		values       *infrastructure.Values
 		deployWaiter shoot.Infrastructure
+		waiter       *retryfake.Ops
+
+		cleanupFunc func()
 	)
 
 	BeforeEach(func() {
@@ -97,11 +102,19 @@ var _ = Describe("#Infrastructure", func() {
 				Namespace: namespace,
 			},
 		}
-		deployWaiter = infrastructure.New(log, c, values, time.Millisecond, 2*time.Millisecond, 3*time.Millisecond)
+
+		waiter = &retryfake.Ops{MaxAttempts: 1}
+		cleanupFunc = test.WithVars(
+			&retry.Until, waiter.Until,
+			&retry.UntilTimeout, waiter.UntilTimeout,
+		)
+
+		deployWaiter = infrastructure.New(log, c, values)
 	})
 
 	AfterEach(func() {
 		ctrl.Finish()
+		cleanupFunc()
 	})
 
 	Describe("#Deploy", func() {
@@ -184,6 +197,19 @@ var _ = Describe("#Infrastructure", func() {
 			Expect(deployWaiter.Wait(ctx)).To(HaveOccurred())
 		})
 
+		It("should return unexpected errors", func() {
+			waiter.MaxAttempts = 2
+
+			fakeErr := errors.New("fake")
+
+			c.
+				EXPECT().
+				Get(gomock.Any(), kutil.Key(namespace, name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
+				Return(fakeErr)
+
+			Expect(deployWaiter.Wait(ctx)).To(MatchError(ContainSubstring(fakeErr.Error())))
+		})
+
 		It("should return error when it's not ready", func() {
 			description := "some error"
 
@@ -198,10 +224,7 @@ var _ = Describe("#Infrastructure", func() {
 				}).
 				AnyTimes()
 
-			err := deployWaiter.Wait(ctx)
-
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(description))
+			Expect(deployWaiter.Wait(ctx)).To(MatchError(ContainSubstring(description)))
 		})
 
 		It("should return no error when is ready", func() {
@@ -228,6 +251,65 @@ var _ = Describe("#Infrastructure", func() {
 			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
 			Expect(deployWaiter.NodesCIDR()).To(PointTo(Equal(nodesCIDR)))
 		})
+
+		It("should poll until it's ready", func() {
+			waiter.MaxAttempts = 2
+
+			var (
+				description    = "some error"
+				nodesCIDR      = "1.2.3.4/5"
+				providerStatus = &runtime.RawExtension{
+					Raw: []byte("foo"),
+				}
+			)
+
+			c.
+				EXPECT().
+				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
+					obj.Status.LastError = &gardencorev1beta1.LastError{
+						Description: description,
+					}
+					return nil
+				})
+
+			c.
+				EXPECT().
+				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
+					obj.Status.LastError = nil
+					obj.ObjectMeta.Annotations = map[string]string{}
+					obj.Status.LastOperation = &gardencorev1beta1.LastOperation{
+						State: gardencorev1beta1.LastOperationStateSucceeded,
+					}
+					obj.Status.NodesCIDR = &nodesCIDR
+					obj.Status.ProviderStatus = providerStatus
+					return nil
+				})
+
+			Expect(deployWaiter.Wait(ctx)).To(Succeed())
+			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
+			Expect(deployWaiter.NodesCIDR()).To(PointTo(Equal(nodesCIDR)))
+		})
+
+		It("should poll until it times out", func() {
+			waiter.MaxAttempts = 3
+
+			description := "some error"
+
+			c.
+				EXPECT().
+				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
+					obj.Status.LastError = &gardencorev1beta1.LastError{
+						Description: description,
+					}
+					return nil
+				}).
+				AnyTimes()
+
+			Expect(deployWaiter.Wait(ctx)).To(MatchError(ContainSubstring(description)))
+		})
 	})
 
 	Describe("#Destroy", func() {
@@ -241,7 +323,7 @@ var _ = Describe("#Infrastructure", func() {
 				Delete(ctx, infra).
 				Return(apierrors.NewNotFound(schema.GroupResource{}, name))
 
-			Expect(deployWaiter.Destroy(ctx)).ToNot(HaveOccurred())
+			Expect(deployWaiter.Destroy(ctx)).To(Succeed())
 		})
 
 		It("should not return error when it's deleted successfully", func() {
@@ -293,10 +375,7 @@ var _ = Describe("#Infrastructure", func() {
 				Delete(ctx, infraCopy).
 				Return(fakeErr)
 
-			err := deployWaiter.Destroy(ctx)
-
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(fakeErr.Error()))
+			Expect(deployWaiter.Destroy(ctx)).To(MatchError(ContainSubstring(fakeErr.Error())))
 		})
 	})
 
@@ -310,10 +389,35 @@ var _ = Describe("#Infrastructure", func() {
 			Expect(deployWaiter.WaitCleanup(ctx)).To(Succeed())
 		})
 
-		It("should poll until it's removed", func() {
+		It("should return error when it's not deleted successfully", func() {
+			description := "some error"
+
 			c.
 				EXPECT().
-				Get(gomock.Any(), kutil.Key(namespace, name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}))
+				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
+					obj.Status.LastError = &gardencorev1beta1.LastError{
+						Description: description,
+					}
+					return nil
+				})
+
+			Expect(deployWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring(description)))
+		})
+
+		It("should poll until it's removed", func() {
+			waiter.MaxAttempts = 2
+			description := "some error"
+
+			c.
+				EXPECT().
+				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
+					obj.Status.LastError = &gardencorev1beta1.LastError{
+						Description: description,
+					}
+					return nil
+				})
 			c.
 				EXPECT().
 				Get(gomock.Any(), kutil.Key(namespace, name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
@@ -322,7 +426,27 @@ var _ = Describe("#Infrastructure", func() {
 			Expect(deployWaiter.WaitCleanup(ctx)).To(Succeed())
 		})
 
+		It("should poll until it times out", func() {
+			waiter.MaxAttempts = 3
+			description := "some error"
+
+			c.
+				EXPECT().
+				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
+					obj.Status.LastError = &gardencorev1beta1.LastError{
+						Description: description,
+					}
+					return nil
+				}).
+				AnyTimes()
+
+			Expect(deployWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring(description)))
+		})
+
 		It("should return unexpected errors", func() {
+			waiter.MaxAttempts = 2
+
 			fakeErr := errors.New("fake")
 
 			c.
@@ -330,10 +454,7 @@ var _ = Describe("#Infrastructure", func() {
 				Get(gomock.Any(), kutil.Key(namespace, name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
 				Return(fakeErr)
 
-			err := deployWaiter.WaitCleanup(ctx)
-
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring(fakeErr.Error()))
+			Expect(deployWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring(fakeErr.Error())))
 		})
 	})
 })
