@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,18 +20,17 @@ import (
 	"testing"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
+	gardencorevalpha1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mockcontrolplane "github.com/gardener/gardener/pkg/mock/gardener/extensions/webhook/controlplane"
 	mockgenericmutator "github.com/gardener/gardener/pkg/mock/gardener/extensions/webhook/controlplane/genericmutator"
 
 	"github.com/coreos/go-systemd/unit"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	gardencorevalpha1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -41,6 +40,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
@@ -274,7 +274,7 @@ var _ = Describe("Mutator", func() {
 						Units: []extensionsv1alpha1.Unit{
 							{
 								Name:    v1beta1constants.OperatingSystemConfigUnitNameKubeletService,
-								Content: util.StringPtr(newServiceContent),
+								Content: pointer.StringPtr(newServiceContent),
 							},
 						},
 						Files: []extensionsv1alpha1.File{
@@ -339,7 +339,7 @@ var _ = Describe("Mutator", func() {
 			)
 
 			oldOSC := newOSC.DeepCopy()
-			oldOSC.Spec.Units[0].Content = util.StringPtr(oldServiceContent)
+			oldOSC.Spec.Units[0].Content = pointer.StringPtr(oldServiceContent)
 			oldOSC.Spec.Files[0].Content.Inline.Data = oldKubeletConfigData
 			oldOSC.Spec.Files[1].Content.Inline.Data = oldKubernetesGeneralConfigData
 
@@ -351,7 +351,7 @@ var _ = Describe("Mutator", func() {
 					return nil
 				},
 			)
-			ensurer.EXPECT().EnsureKubernetesGeneralConfiguration(context.TODO(), gomock.Any(), util.StringPtr(newKubernetesGeneralConfigData), util.StringPtr(oldKubernetesGeneralConfigData)).DoAndReturn(
+			ensurer.EXPECT().EnsureKubernetesGeneralConfiguration(context.TODO(), gomock.Any(), pointer.StringPtr(newKubernetesGeneralConfigData), pointer.StringPtr(oldKubernetesGeneralConfigData)).DoAndReturn(
 				func(ctx context.Context, ectx genericmutator.EnsurerContext, data, newData *string) error {
 					*data = mutatedKubernetesGeneralConfigData
 					return nil
@@ -401,7 +401,7 @@ var _ = Describe("Mutator", func() {
 func checkOperatingSystemConfig(osc *extensionsv1alpha1.OperatingSystemConfig) {
 	kubeletUnit := extensionswebhook.UnitWithName(osc.Spec.Units, v1beta1constants.OperatingSystemConfigUnitNameKubeletService)
 	Expect(kubeletUnit).To(Not(BeNil()))
-	Expect(kubeletUnit.Content).To(Equal(util.StringPtr(mutatedServiceContent)))
+	Expect(kubeletUnit.Content).To(Equal(pointer.StringPtr(mutatedServiceContent)))
 
 	customMTU := extensionswebhook.UnitWithName(osc.Spec.Units, "custom-mtu.service")
 	Expect(customMTU).To(Not(BeNil()))
@@ -420,7 +420,7 @@ func checkOperatingSystemConfig(osc *extensionsv1alpha1.OperatingSystemConfig) {
 	cloudProvider := extensionswebhook.FileWithPath(osc.Spec.Files, genericmutator.CloudProviderConfigPath)
 	Expect(cloudProvider).To(Not(BeNil()))
 	Expect(cloudProvider.Path).To(Equal(genericmutator.CloudProviderConfigPath))
-	Expect(cloudProvider.Permissions).To(Equal(util.Int32Ptr(0644)))
+	Expect(cloudProvider.Permissions).To(Equal(pointer.Int32Ptr(0644)))
 	Expect(cloudProvider.Content.Inline).To(Equal(&extensionsv1alpha1.FileContentInline{Data: cloudproviderconfEncoded, Encoding: encoding}))
 }
 
