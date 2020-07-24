@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/util"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
@@ -115,7 +116,7 @@ var _ = Describe("Shoot", func() {
 
 		It("should get the kubeconfig", func() {
 			certificateSecret.Annotations = make(map[string]string)
-			certificateSecret.Annotations[util.CAChecksumAnnotation] = util.ComputeChecksum(caSecret.Data)
+			certificateSecret.Annotations[util.CAChecksumAnnotation] = utils.ComputeChecksum(caSecret.Data)
 
 			c.EXPECT().Get(ctx, kutil.Key(namespace, caName), gomock.AssignableToTypeOf(&corev1.Secret{})).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *corev1.Secret) error {

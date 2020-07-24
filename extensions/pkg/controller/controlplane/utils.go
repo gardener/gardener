@@ -15,23 +15,10 @@
 package controlplane
 
 import (
-	"fmt"
+	"github.com/gardener/gardener/pkg/utils"
 
-	"github.com/gardener/gardener/extensions/pkg/util"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
-
-// DNSNamesForService returns the possible DNS names for a service with the given name and namespace
-func DNSNamesForService(name, namespace string) []string {
-	return []string{
-		name,
-		fmt.Sprintf("%s.%s", name, namespace),
-		fmt.Sprintf("%s.%s.svc", name, namespace),
-		fmt.Sprintf("%s.%s.svc.%s", name, namespace, gardencorev1beta1.DefaultDomain),
-	}
-}
 
 // MergeSecretMaps merges the 2 given secret maps.
 func MergeSecretMaps(a, b map[string]*corev1.Secret) map[string]*corev1.Secret {
@@ -48,10 +35,10 @@ func MergeSecretMaps(a, b map[string]*corev1.Secret) map[string]*corev1.Secret {
 func ComputeChecksums(secrets map[string]*corev1.Secret, cms map[string]*corev1.ConfigMap) map[string]string {
 	checksums := make(map[string]string, len(secrets)+len(cms))
 	for name, secret := range secrets {
-		checksums[name] = util.ComputeChecksum(secret.Data)
+		checksums[name] = utils.ComputeChecksum(secret.Data)
 	}
 	for name, cm := range cms {
-		checksums[name] = util.ComputeChecksum(cm.Data)
+		checksums[name] = utils.ComputeChecksum(cm.Data)
 	}
 	return checksums
 }

@@ -22,7 +22,6 @@ import (
 	"net"
 	"reflect"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -64,7 +63,7 @@ var (
 
 // GetSecretKeysWithPrefix returns a list of keys of the given map <m> which are prefixed with <kind>.
 func GetSecretKeysWithPrefix(kind string, m map[string]*corev1.Secret) []string {
-	result := []string{}
+	var result []string
 	for key := range m {
 		if strings.HasPrefix(key, kind) {
 			result = append(result, key)
@@ -277,25 +276,6 @@ func ShouldObjectBeRemoved(obj metav1.Object, gracePeriod time.Duration) bool {
 	}
 
 	return deletionTimestamp.Time.Before(time.Now().Add(-gracePeriod))
-}
-
-// ComputeSecretCheckSum computes the sha256 checksum of secret data.
-func ComputeSecretCheckSum(m map[string][]byte) string {
-	var (
-		hash string
-		keys []string
-	)
-
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	for _, k := range keys {
-		hash += utils.ComputeSHA256Hex(m[k])
-	}
-
-	return utils.ComputeSHA256Hex([]byte(hash))
 }
 
 // DeleteHvpa delete all resources required for the HVPA in the given namespace.

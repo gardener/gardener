@@ -12,25 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubernetes
+package kubernetes_test
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-// Object is wrapper interface combining runtime.Object and metav1.Object interfaces together.
-type Object interface {
-	runtime.Object
-	metav1.Object
-}
-
-// ObjectName returns the name of the given object in the format <namespace>/<name>
-func ObjectName(obj runtime.Object) string {
-	k, err := client.ObjectKeyFromObject(obj)
-	if err != nil {
-		return "/"
-	}
-	return k.String()
-}
+var _ = Describe("service", func() {
+	Describe("#DNSNamesForService", func() {
+		It("should return all expected DNS names for the given service name and namespace", func() {
+			Expect(kutil.DNSNamesForService("test", "default")).To(Equal([]string{
+				"test",
+				"test.default",
+				"test.default.svc",
+				"test.default.svc.cluster.local",
+			}))
+		})
+	})
+})

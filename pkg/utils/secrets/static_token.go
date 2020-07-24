@@ -69,7 +69,7 @@ func (s *StaticTokenSecretConfig) GetName() string {
 }
 
 // Generate implements ConfigInterface.
-func (s *StaticTokenSecretConfig) Generate() (Interface, error) {
+func (s *StaticTokenSecretConfig) Generate() (DataInterface, error) {
 	return s.GenerateStaticToken()
 }
 
@@ -89,7 +89,7 @@ func (s *StaticTokenSecretConfig) GenerateInfoData() (infodata.InfoData, error) 
 }
 
 // GenerateFromInfoData implements ConfigInterface.
-func (s *StaticTokenSecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (Interface, error) {
+func (s *StaticTokenSecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (DataInterface, error) {
 	data, ok := infoData.(*StaticTokenInfoData)
 	if !ok {
 		return nil, fmt.Errorf("could not convert InfoData entry %s to StaticTokenInfoData", s.Name)

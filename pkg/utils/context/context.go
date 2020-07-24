@@ -19,6 +19,17 @@ import (
 	"time"
 )
 
+// FromStopChannel creates a new context from a given stop channel.
+func FromStopChannel(stopCh <-chan struct{}) context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		defer cancel()
+		<-stopCh
+	}()
+
+	return ctx
+}
+
 type ops struct{}
 
 // WithTimeout returns the context with the given timeout and a CancelFunc to cleanup its resources.

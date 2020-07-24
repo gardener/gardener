@@ -19,21 +19,21 @@ import (
 	"testing"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/util"
 	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mockchartrenderer "github.com/gardener/gardener/pkg/mock/gardener/chartrenderer"
 	mockkubernetes "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
 	mockextensionscontroller "github.com/gardener/gardener/pkg/mock/gardener/extensions/controller"
 	mockgenericactuator "github.com/gardener/gardener/pkg/mock/gardener/extensions/controller/controlplane/genericactuator"
-	mockutil "github.com/gardener/gardener/pkg/mock/gardener/extensions/util"
-
-	resourcemanagerv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	mockchartutil "github.com/gardener/gardener/pkg/mock/gardener/utils/chart"
+	mocksecretsutil "github.com/gardener/gardener/pkg/mock/gardener/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+
+	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -131,9 +131,9 @@ var _ = Describe("Actuator", func() {
 			Data:       map[string][]byte{chartName: []byte(renderedContent)},
 			Type:       corev1.SecretTypeOpaque,
 		}
-		createdMRForCPShootChart = &resourcemanagerv1alpha1.ManagedResource{
+		createdMRForCPShootChart = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootChartResourceName, Namespace: namespace},
-			Spec: resourcemanagerv1alpha1.ManagedResourceSpec{
+			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs: []corev1.LocalObjectReference{
 					{Name: ControlPlaneShootChartResourceName},
 				},
@@ -145,7 +145,7 @@ var _ = Describe("Actuator", func() {
 		deletedMRSecretForCPShootChart = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootChartResourceName, Namespace: namespace},
 		}
-		deleteMRForCPShootChart = &resourcemanagerv1alpha1.ManagedResource{
+		deleteMRForCPShootChart = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{Name: ControlPlaneShootChartResourceName, Namespace: namespace},
 		}
 
@@ -155,9 +155,9 @@ var _ = Describe("Actuator", func() {
 			Data:       map[string][]byte{chartName: []byte(renderedContent)},
 			Type:       corev1.SecretTypeOpaque,
 		}
-		createdMRForStorageClassesChart = &resourcemanagerv1alpha1.ManagedResource{
+		createdMRForStorageClassesChart = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{Name: StorageClassesChartResourceName, Namespace: namespace},
-			Spec: resourcemanagerv1alpha1.ManagedResourceSpec{
+			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs: []corev1.LocalObjectReference{
 					{Name: StorageClassesChartResourceName},
 				},
@@ -169,7 +169,7 @@ var _ = Describe("Actuator", func() {
 		deletedMRSecretForStorageClassesChart = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Name: StorageClassesChartResourceName, Namespace: namespace},
 		}
-		deleteMRForStorageClassesChart = &resourcemanagerv1alpha1.ManagedResource{
+		deleteMRForStorageClassesChart = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{Name: StorageClassesChartResourceName, Namespace: namespace},
 		}
 
@@ -216,15 +216,15 @@ var _ = Describe("Actuator", func() {
 		}
 
 		resourceKeyShootWebhooks  = client.ObjectKey{Namespace: namespace, Name: ShootWebhooksResourceName}
-		createdMRForShootWebhooks = &resourcemanagerv1alpha1.ManagedResource{
+		createdMRForShootWebhooks = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: namespace},
-			Spec: resourcemanagerv1alpha1.ManagedResourceSpec{
+			Spec: resourcesv1alpha1.ManagedResourceSpec{
 				SecretRefs: []corev1.LocalObjectReference{
 					{Name: ShootWebhooksResourceName},
 				},
 			},
 		}
-		deletedMRForShootWebhooks = &resourcemanagerv1alpha1.ManagedResource{
+		deletedMRForShootWebhooks = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: namespace},
 		}
 		deletedMRSecretForShootWebhooks = &corev1.Secret{
@@ -327,19 +327,19 @@ var _ = Describe("Actuator", func() {
 			crf.EXPECT().NewChartRendererForShoot(shootVersion).Return(chartRenderer, nil)
 
 			// Create mock secrets and charts
-			secrets := mockutil.NewMockSecrets(ctrl)
+			secrets := mocksecretsutil.NewMockInterface(ctrl)
 			secrets.EXPECT().Deploy(ctx, gomock.Any(), gardenerClientset, namespace).Return(deployedSecrets, nil)
-			var configChart util.Chart
+			var configChart chart.Interface
 			if configName != "" {
-				cc := mockutil.NewMockChart(ctrl)
+				cc := mockchartutil.NewMockInterface(ctrl)
 				cc.EXPECT().Apply(ctx, chartApplier, namespace, nil, "", "", configChartValues).Return(nil)
 				configChart = cc
 			}
-			ccmChart := mockutil.NewMockChart(ctrl)
+			ccmChart := mockchartutil.NewMockInterface(ctrl)
 			ccmChart.EXPECT().Apply(ctx, chartApplier, namespace, imageVector, seedVersion, shootVersion, controlPlaneChartValues).Return(nil)
-			ccmShootChart := mockutil.NewMockChart(ctrl)
+			ccmShootChart := mockchartutil.NewMockInterface(ctrl)
 			ccmShootChart.EXPECT().Render(chartRenderer, metav1.NamespaceSystem, imageVector, shootVersion, shootVersion, controlPlaneShootChartValues).Return(chartName, []byte(renderedContent), nil)
-			storageClassesChart := mockutil.NewMockChart(ctrl)
+			storageClassesChart := mockchartutil.NewMockInterface(ctrl)
 			storageClassesChart.EXPECT().Render(chartRenderer, metav1.NamespaceSystem, imageVector, shootVersion, shootVersion, storageClassesChartValues).Return(chartName, []byte(renderedContent), nil)
 
 			// Create mock values provider
@@ -385,15 +385,15 @@ var _ = Describe("Actuator", func() {
 			client.EXPECT().Get(gomock.Any(), resourceKeyCPShootChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errors.NewNotFound(schema.GroupResource{}, deleteMRForCPShootChart.Name))
 
 			// Create mock secrets and charts
-			secrets := mockutil.NewMockSecrets(ctrl)
+			secrets := mocksecretsutil.NewMockInterface(ctrl)
 			secrets.EXPECT().Delete(gomock.Any(), namespace).Return(nil)
-			var configChart util.Chart
+			var configChart chart.Interface
 			if configName != "" {
-				cc := mockutil.NewMockChart(ctrl)
+				cc := mockchartutil.NewMockInterface(ctrl)
 				cc.EXPECT().Delete(ctx, client, namespace).Return(nil)
 				configChart = cc
 			}
-			ccmChart := mockutil.NewMockChart(ctrl)
+			ccmChart := mockchartutil.NewMockInterface(ctrl)
 			ccmChart.EXPECT().Delete(ctx, client, namespace).Return(nil)
 
 			if len(webhooks) > 0 {
@@ -427,9 +427,9 @@ var _ = Describe("Actuator", func() {
 			chartApplier := mockkubernetes.NewMockChartApplier(ctrl)
 
 			// Create mock secrets and charts
-			exposureSecrets := mockutil.NewMockSecrets(ctrl)
+			exposureSecrets := mocksecretsutil.NewMockInterface(ctrl)
 			exposureSecrets.EXPECT().Deploy(ctx, gomock.Any(), gardenerClientset, namespace).Return(deployedExposureSecrets, nil)
-			cpExposureChart := mockutil.NewMockChart(ctrl)
+			cpExposureChart := mockchartutil.NewMockInterface(ctrl)
 			cpExposureChart.EXPECT().Apply(ctx, chartApplier, namespace, imageVector, seedVersion, shootVersion, controlPlaneExposureChartValues).Return(nil)
 
 			// Create mock values provider
@@ -457,10 +457,10 @@ var _ = Describe("Actuator", func() {
 			client := mockclient.NewMockClient(ctrl)
 
 			// Create mock secrets and charts
-			exposureSecrets := mockutil.NewMockSecrets(ctrl)
+			exposureSecrets := mocksecretsutil.NewMockInterface(ctrl)
 			exposureSecrets.EXPECT().Delete(gomock.Any(), namespace).Return(nil)
 
-			cpExposureChart := mockutil.NewMockChart(ctrl)
+			cpExposureChart := mockchartutil.NewMockInterface(ctrl)
 			cpExposureChart.EXPECT().Delete(ctx, client, namespace).Return(nil)
 
 			// Create actuator

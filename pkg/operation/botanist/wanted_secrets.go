@@ -23,7 +23,9 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 )
@@ -118,14 +120,14 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			fmt.Sprintf("kube-apiserver.%s", b.Shoot.SeedNamespace),
 			fmt.Sprintf("kube-apiserver.%s.svc", b.Shoot.SeedNamespace),
 			common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-		}, dnsNamesForService("kubernetes", "default")...)
+		}, kubernetes.DNSNamesForService("kubernetes", "default")...)
 
-		kubeControllerManagerCertDNSNames = dnsNamesForService("kube-controller-manager", b.Shoot.SeedNamespace)
-		kubeSchedulerCertDNSNames         = dnsNamesForService("kube-scheduler", b.Shoot.SeedNamespace)
+		kubeControllerManagerCertDNSNames = kubernetes.DNSNamesForService("kube-controller-manager", b.Shoot.SeedNamespace)
+		kubeSchedulerCertDNSNames         = kubernetes.DNSNamesForService("kube-scheduler", b.Shoot.SeedNamespace)
 
 		konnectivityServerDNSNames = append([]string{
 			common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-		}, dnsNamesForService(common.KonnectivityServerCertName, b.Shoot.SeedNamespace)...)
+		}, kubernetes.DNSNamesForService(common.KonnectivityServerCertName, b.Shoot.SeedNamespace)...)
 
 		etcdCertDNSNames = dnsNamesForEtcd(b.Shoot.SeedNamespace)
 

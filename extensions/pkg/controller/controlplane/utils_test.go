@@ -22,17 +22,6 @@ import (
 )
 
 var _ = Describe("Utils", func() {
-	Describe("#DNSNamesForService", func() {
-		It("should return all expected DNS names for the given service name and namespace", func() {
-			Expect(DNSNamesForService("test", "default")).To(Equal([]string{
-				"test",
-				"test.default",
-				"test.default.svc",
-				"test.default.svc.cluster.local",
-			}))
-		})
-	})
-
 	Describe("#MergeSecretMaps", func() {
 		var (
 			test0 = getSecret("test0", "default", nil)

@@ -17,7 +17,7 @@ package inject
 import (
 	"context"
 
-	"github.com/gardener/gardener/extensions/pkg/util"
+	contextutil "github.com/gardener/gardener/pkg/utils/context"
 
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,7 +52,7 @@ type WithContext struct {
 
 // InjectStopChannel implements `inject.InjectStopChannel`.
 func (w *WithContext) InjectStopChannel(stopChan <-chan struct{}) error {
-	w.Context = util.ContextFromStopChannel(stopChan)
+	w.Context = contextutil.FromStopChannel(stopChan)
 	return nil
 }
 

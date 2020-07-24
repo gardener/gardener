@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,13 +17,13 @@ package controlplane
 import (
 	"time"
 
-	"github.com/gardener/gardener/extensions/pkg/util"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("KubeletConfigCodec", func() {
@@ -42,11 +42,11 @@ var _ = Describe("KubeletConfigCodec", func() {
 					ClientCAFile: "/var/lib/kubelet/ca.crt",
 				},
 				Webhook: kubeletconfigv1beta1.KubeletWebhookAuthentication{
-					Enabled:  util.BoolPtr(true),
+					Enabled:  pointer.BoolPtr(true),
 					CacheTTL: metav1.Duration{Duration: 2 * time.Minute},
 				},
 				Anonymous: kubeletconfigv1beta1.KubeletAnonymousAuthentication{
-					Enabled: util.BoolPtr(false),
+					Enabled: pointer.BoolPtr(false),
 				},
 			},
 			Authorization: kubeletconfigv1beta1.KubeletAuthorization{
@@ -56,22 +56,22 @@ var _ = Describe("KubeletConfigCodec", func() {
 					CacheUnauthorizedTTL: metav1.Duration{Duration: 30 * time.Second},
 				},
 			},
-			RegistryPullQPS:         util.Int32Ptr(5),
+			RegistryPullQPS:         pointer.Int32Ptr(5),
 			RegistryBurst:           10,
-			EventRecordQPS:          util.Int32Ptr(50),
+			EventRecordQPS:          pointer.Int32Ptr(50),
 			EventBurst:              50,
-			EnableDebuggingHandlers: util.BoolPtr(true),
+			EnableDebuggingHandlers: pointer.BoolPtr(true),
 			ClusterDomain:           "cluster.local",
 			ClusterDNS: []string{
 				"100.64.0.10",
 			},
 			NodeStatusUpdateFrequency:   metav1.Duration{Duration: 10 * time.Second},
 			ImageMinimumGCAge:           metav1.Duration{Duration: 2 * time.Minute},
-			ImageGCHighThresholdPercent: util.Int32Ptr(50),
-			ImageGCLowThresholdPercent:  util.Int32Ptr(40),
+			ImageGCHighThresholdPercent: pointer.Int32Ptr(50),
+			ImageGCLowThresholdPercent:  pointer.Int32Ptr(40),
 			VolumeStatsAggPeriod:        metav1.Duration{Duration: 1 * time.Minute},
 			CgroupRoot:                  "/",
-			CgroupsPerQOS:               util.BoolPtr(true),
+			CgroupsPerQOS:               pointer.BoolPtr(true),
 			CgroupDriver:                "cgroupfs",
 			CPUManagerPolicy:            "none",
 			CPUManagerReconcilePeriod:   metav1.Duration{Duration: 10 * time.Second},
@@ -79,11 +79,11 @@ var _ = Describe("KubeletConfigCodec", func() {
 			HairpinMode:                 "promiscuous-bridge",
 			MaxPods:                     110,
 			ResolverConfig:              "/etc/resolv.conf",
-			CPUCFSQuota:                 util.BoolPtr(true),
+			CPUCFSQuota:                 pointer.BoolPtr(true),
 			MaxOpenFiles:                1000000,
-			KubeAPIQPS:                  util.Int32Ptr(50),
+			KubeAPIQPS:                  pointer.Int32Ptr(50),
 			KubeAPIBurst:                50,
-			SerializeImagePulls:         util.BoolPtr(true),
+			SerializeImagePulls:         pointer.BoolPtr(true),
 			EvictionHard: map[string]string{
 				"imagefs.available":  "5%",
 				"imagefs.inodesFree": "5%",
@@ -107,8 +107,8 @@ var _ = Describe("KubeletConfigCodec", func() {
 			},
 			EvictionPressureTransitionPeriod: metav1.Duration{Duration: 4 * time.Minute},
 			EvictionMaxPodGracePeriod:        90,
-			EnableControllerAttachDetach:     util.BoolPtr(true),
-			FailSwapOn:                       util.BoolPtr(true),
+			EnableControllerAttachDetach:     pointer.BoolPtr(true),
+			FailSwapOn:                       pointer.BoolPtr(true),
 			KubeReserved: map[string]string{
 				"cpu":    "80m",
 				"memory": "1Gi",

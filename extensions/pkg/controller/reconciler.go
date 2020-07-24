@@ -17,8 +17,9 @@ package controller
 import (
 	"context"
 
-	"github.com/gardener/gardener/extensions/pkg/util"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	contextutil "github.com/gardener/gardener/pkg/utils/context"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,7 +58,7 @@ func (o *operationAnnotationWrapper) InjectFunc(f inject.Func) error {
 
 // InjectStopChannel is an implementation for getting the respective stop channel managed by the controller-runtime.
 func (o *operationAnnotationWrapper) InjectStopChannel(stopCh <-chan struct{}) error {
-	o.ctx = util.ContextFromStopChannel(stopCh)
+	o.ctx = contextutil.FromStopChannel(stopCh)
 	return nil
 }
 

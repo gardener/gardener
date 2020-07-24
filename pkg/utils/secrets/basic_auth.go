@@ -70,7 +70,7 @@ func (s *BasicAuthSecretConfig) GetName() string {
 }
 
 // Generate implements ConfigInterface.
-func (s *BasicAuthSecretConfig) Generate() (Interface, error) {
+func (s *BasicAuthSecretConfig) Generate() (DataInterface, error) {
 	return s.GenerateBasicAuth()
 }
 
@@ -85,7 +85,7 @@ func (s *BasicAuthSecretConfig) GenerateInfoData() (infodata.InfoData, error) {
 }
 
 // GenerateFromInfoData implements ConfigInteface
-func (s *BasicAuthSecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (Interface, error) {
+func (s *BasicAuthSecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (DataInterface, error) {
 	data, ok := infoData.(*BasicAuthInfoData)
 	if !ok {
 		return nil, fmt.Errorf("could not convert InfoData entry %s to BasicAuthInfoData", s.Name)
@@ -124,7 +124,7 @@ func (s *BasicAuthSecretConfig) GenerateBasicAuth() (*BasicAuth, error) {
 	return s.generateWithPassword(password)
 }
 
-// generateWithPassword returns a BasicAuth secret Interface with the given password.
+// generateWithPassword returns a BasicAuth secret DataInterface with the given password.
 func (s *BasicAuthSecretConfig) generateWithPassword(password string) (*BasicAuth, error) {
 	basicAuth := &BasicAuth{
 		Name:   s.Name,

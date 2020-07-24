@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util
+package kubernetes
 
 import (
 	"context"
@@ -21,15 +21,10 @@ import (
 
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
+
 	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// ScaleDeployment scales the given deployment.
-func ScaleDeployment(ctx context.Context, client client.Client, deployment *appsv1.Deployment, replicas int32) error {
-	deployment.Spec.Replicas = &replicas
-	return client.Update(ctx, deployment)
-}
 
 // HasDeploymentRolloutCompleted checks for the number of updated &
 // available replicas to be equal to the deployment's desired replicas count.

@@ -23,11 +23,11 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
-	"github.com/gardener/gardener/extensions/pkg/util"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
@@ -56,8 +56,8 @@ type genericActuator struct {
 
 	delegateFactory DelegateFactory
 	mcmName         string
-	mcmSeedChart    util.Chart
-	mcmShootChart   util.Chart
+	mcmSeedChart    chart.Interface
+	mcmShootChart   chart.Interface
 	imageVector     imagevector.ImageVector
 
 	client               client.Client
@@ -71,7 +71,7 @@ type genericActuator struct {
 // NewActuator creates a new Actuator that reconciles
 // Worker resources of Gardener's `extensions.gardener.cloud` API group.
 // It provides a default implementation that allows easier integration of providers.
-func NewActuator(logger logr.Logger, delegateFactory DelegateFactory, mcmName string, mcmSeedChart, mcmShootChart util.Chart, imageVector imagevector.ImageVector, chartRendererFactory extensionscontroller.ChartRendererFactory) worker.Actuator {
+func NewActuator(logger logr.Logger, delegateFactory DelegateFactory, mcmName string, mcmSeedChart, mcmShootChart chart.Interface, imageVector imagevector.ImageVector, chartRendererFactory extensionscontroller.ChartRendererFactory) worker.Actuator {
 	return &genericActuator{
 		logger: logger.WithName("worker-actuator"),
 

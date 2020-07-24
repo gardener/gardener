@@ -24,12 +24,12 @@ import (
 	workerhealthcheck "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/worker"
 	extensionsworker "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
-	"github.com/gardener/gardener/extensions/pkg/util"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
@@ -181,11 +181,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 
 	// Scale down machine-controller-manager if shoot is hibernated.
 	if isHibernated {
-		deployment := &appsv1.Deployment{}
-		if err := a.client.Get(ctx, kutil.Key(worker.Namespace, a.mcmName), deployment); err != nil {
-			return err
-		}
-		if err := util.ScaleDeployment(ctx, a.client, deployment, 0); err != nil {
+		if err := kubernetes.ScaleDeployment(ctx, a.client, kutil.Key(worker.Namespace, a.mcmName), 0); err != nil {
 			return err
 		}
 	}
@@ -204,17 +200,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 }
 
 func (a *genericActuator) scaleClusterAutoscaler(ctx context.Context, worker *extensionsv1alpha1.Worker, replicas int32) error {
-	deployment := &appsv1.Deployment{}
-	if err := a.client.Get(ctx, kutil.Key(worker.Namespace, v1beta1constants.DeploymentNameClusterAutoscaler), deployment); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-	} else {
-		if err := util.ScaleDeployment(ctx, a.client, deployment, replicas); err != nil {
-			return err
-		}
-	}
-	return nil
+	return client.IgnoreNotFound(kubernetes.ScaleDeployment(ctx, a.client, kutil.Key(worker.Namespace, v1beta1constants.DeploymentNameClusterAutoscaler), replicas))
 }
 
 func (a *genericActuator) deployMachineDeployments(ctx context.Context, cluster *controller.Cluster, worker *extensionsv1alpha1.Worker, existingMachineDeployments *machinev1alpha1.MachineDeploymentList, wantedMachineDeployments extensionsworker.MachineDeployments, classKind string, clusterAutoscalerUsed bool) error {

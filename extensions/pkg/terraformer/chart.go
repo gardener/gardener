@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,21 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package chart
+package terraformer
 
 import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
-)
-
-const (
-	// TerraformMainTFFilename is the name of the main.tf file.
-	TerraformMainTFFilename = "main.tf"
-	// TerraformVariablesTFFilename is the name of the variables.tf file.
-	TerraformVariablesTFFilename = "variables.tf"
-	// TerraformTFVarsFilename is the name of the terraform.tfvars file.
-	TerraformTFVarsFilename = "terraform.tfvars"
 )
 
 // TerraformFiles contains all files necessary for initializing a Terraformer.
@@ -49,17 +40,17 @@ func nonEmptyFileContent(release *chartrenderer.RenderedChart, filename string) 
 //
 // It errors if a file is not contained in the chart.
 func ExtractTerraformFiles(release *chartrenderer.RenderedChart) (*TerraformFiles, error) {
-	main, err := nonEmptyFileContent(release, TerraformMainTFFilename)
+	main, err := nonEmptyFileContent(release, MainKey)
 	if err != nil {
 		return nil, err
 	}
 
-	variables, err := nonEmptyFileContent(release, TerraformVariablesTFFilename)
+	variables, err := nonEmptyFileContent(release, VariablesKey)
 	if err != nil {
 		return nil, err
 	}
 
-	tfVars, err := nonEmptyFileContent(release, TerraformTFVarsFilename)
+	tfVars, err := nonEmptyFileContent(release, TFVarsKey)
 	if err != nil {
 		return nil, err
 	}

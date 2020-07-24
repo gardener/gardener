@@ -26,7 +26,7 @@ import (
 
 var _ = Describe("Basic Auth Secrets", func() {
 	Describe("Basic Auth Configuration", func() {
-		compareCurrentAndExpectedBasicAuth := func(current Interface, expected *BasicAuth, comparePasswords, hasBcryptPasswordHash bool) {
+		compareCurrentAndExpectedBasicAuth := func(current DataInterface, expected *BasicAuth, comparePasswords, hasBcryptPasswordHash bool) {
 			basicAuth, ok := current.(*BasicAuth)
 			Expect(ok).To(BeTrue())
 

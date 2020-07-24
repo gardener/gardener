@@ -21,15 +21,15 @@ type ConfigInterface interface {
 	// GetName returns the name of the configuration.
 	GetName() string
 	// Generate generates a secret interface
-	Generate() (Interface, error)
+	Generate() (DataInterface, error)
 	// GenerateInfoData generates only the InfoData (metadata) which can later be used to generate a secret.
 	GenerateInfoData() (infodata.InfoData, error)
 	// GenerateFromInfoData combines the configuration and the provided InfoData (metadata) and generates a secret.
-	GenerateFromInfoData(infoData infodata.InfoData) (Interface, error)
+	GenerateFromInfoData(infoData infodata.InfoData) (DataInterface, error)
 }
 
-// Interface defines functions needed for defining the data map of a Kubernetes secret.
-type Interface interface {
+// DataInterface defines functions needed for defining the data map of a Kubernetes secret.
+type DataInterface interface {
 	// SecretData computes the data map which can be used in a Kubernetes secret.
 	SecretData() map[string][]byte
 }
