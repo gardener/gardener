@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -package chartrenderer -destination=mocks.go github.com/gardener/gardener/pkg/chartrenderer Interface
+//go:generate mockgen -package chartrenderer -destination=mocks.go github.com/gardener/gardener/pkg/chartrenderer Interface,Factory
 
 package chartrenderer

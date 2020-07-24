@@ -18,7 +18,6 @@
 package common
 
 import (
-	extensionschartrenderer "github.com/gardener/gardener/extensions/pkg/gardener/chartrenderer"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -99,13 +98,13 @@ func (cc *RESTConfigContext) RESTConfig() *rest.Config {
 // provide a chart renderer
 type ChartRendererContext struct {
 	RESTConfigContext
-	factory       extensionschartrenderer.Factory
+	factory       chartrenderer.Factory
 	chartRenderer chartrenderer.Interface
 }
 
 // NewChartRendererContext creates a new chart renderer context using a
 // dedicated factory for the renderer,
-func NewChartRendererContext(factory extensionschartrenderer.Factory) ChartRendererContext {
+func NewChartRendererContext(factory chartrenderer.Factory) ChartRendererContext {
 	return ChartRendererContext{factory: factory}
 }
 
@@ -118,7 +117,7 @@ func (cc *ChartRendererContext) InjectConfig(config *rest.Config) error {
 	}
 
 	if cc.factory == nil {
-		cc.factory = extensionschartrenderer.DefaultFactory()
+		cc.factory = chartrenderer.DefaultFactory()
 	}
 	chartRenderer, err := cc.factory.NewForConfig(config)
 	if err != nil {

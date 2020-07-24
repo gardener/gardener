@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,19 +15,23 @@
 package chartrenderer
 
 import (
-	"github.com/gardener/gardener/pkg/chartrenderer"
 	"k8s.io/client-go/rest"
 )
 
+// Factory is a factory that is able to produce Interface.
+type Factory interface {
+	NewForConfig(config *rest.Config) (Interface, error)
+}
+
 // FactoryFunc implements the Factory interface.
-type FactoryFunc func(config *rest.Config) (chartrenderer.Interface, error)
+type FactoryFunc func(config *rest.Config) (Interface, error)
 
 // NewForConfig implements Factory.
-func (f FactoryFunc) NewForConfig(config *rest.Config) (chartrenderer.Interface, error) {
+func (f FactoryFunc) NewForConfig(config *rest.Config) (Interface, error) {
 	return f(config)
 }
 
 // DefaultFactory returns the default Factory.
 func DefaultFactory() Factory {
-	return FactoryFunc(chartrenderer.NewForConfig)
+	return FactoryFunc(NewForConfig)
 }
