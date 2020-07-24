@@ -19,15 +19,15 @@ import (
 	"fmt"
 	"strings"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/extensions"
 	gardenlogger "github.com/gardener/gardener/pkg/logger"
 
 	"github.com/sirupsen/logrus"
 	"gomodules.xyz/jsonpatch/v2"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -66,67 +66,110 @@ func MutatePod(ctx context.Context, c client.Client, logger *logrus.Logger, requ
 
 // mutateShootControlPlanePodAnnotations checks if the object mutation is allowed and return the needed patches .
 func mutateShootControlPlanePodAnnotations(ctx context.Context, c client.Client, logger *logrus.Entry, pod runtime.Object, namespace string) ([]jsonpatch.JsonPatchOperation, error) {
-	var patch []jsonpatch.JsonPatchOperation
-	// determine whether to perform mutation
-	isMutationRequired, err := mutationRequired(ctx, c, namespace)
-	if err != nil {
-		return nil, err
-	}
+	desiredAnnotations := map[string]string{"fluentbit.io/exclude": "true"}
 
 	acc, err := meta.Accessor(pod)
 	if err != nil {
 		return nil, err
 	}
 
-	if !isMutationRequired {
-		logger.Debugf("Skipping mutation for %s/%s due to policy check", acc.GetNamespace(), acc.GetName())
+	shoot, err := extractShoot(ctx, c, namespace)
+	if err != nil {
+		return nil, err
+	}
+	if shoot == nil {
+		logger.Debugf("Skipping mutation for %s/%s because shoot could not be extracted", acc.GetNamespace(), acc.GetName())
 		return nil, nil
 	}
 
-	originalAnnotations := acc.GetAnnotations()
-	annotationsToAdd := map[string]string{
-		"fluentbit.io/exclude": "true",
+	if mustAddOrReplaceAnnotations(shoot) {
+		return computeAddOrReplacePatch(acc.GetAnnotations(), desiredAnnotations), nil
 	}
 
-	if originalAnnotations != nil {
-		for key, value := range annotationsToAdd {
-			patch = append(patch, jsonpatch.JsonPatchOperation{
-				Operation: "replace",
-				Path:      "/metadata/annotations/" + strings.ReplaceAll(key, "/", "~1"),
-				Value:     value,
-			})
-		}
-		return patch, nil
+	if mustRemoveAnnotations(acc.GetAnnotations(), desiredAnnotations) {
+		return computeRemovePatch(acc.GetAnnotations(), desiredAnnotations), nil
 	}
 
-	patch = append(patch, jsonpatch.JsonPatchOperation{
-		Operation: "add",
-		Path:      "/metadata/annotations",
-		Value:     annotationsToAdd,
-	})
-	return patch, nil
+	logger.Debugf("Skipping mutation for %s/%s due to policy check", acc.GetNamespace(), acc.GetName())
+	return nil, nil
 }
 
-func mutationRequired(ctx context.Context, c client.Client, namespace string) (bool, error) {
-	cluster, err := extensionscontroller.GetCluster(ctx, c, namespace)
+func extractShoot(ctx context.Context, c client.Client, namespace string) (*gardencorev1beta1.Shoot, error) {
+	cluster, err := extensions.GetCluster(ctx, c, namespace)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			return false, nil
+		if apierrors.IsNotFound(err) {
+			return nil, nil
 		}
-		return false, err
+		return nil, err
 	}
 
-	if cluster.Shoot == nil {
-		return false, nil
+	return cluster.Shoot, nil
+}
+
+func mustAddOrReplaceAnnotations(shoot *gardencorev1beta1.Shoot) bool {
+	if shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil && *shoot.Spec.Hibernation.Enabled {
+		return true
 	}
 
-	if cluster.Shoot.Spec.Hibernation != nil && cluster.Shoot.Spec.Hibernation.Enabled != nil && *cluster.Shoot.Spec.Hibernation.Enabled {
-		return true, nil
+	if shoot.Spec.Purpose != nil && *shoot.Spec.Purpose == gardencorev1beta1.ShootPurposeTesting {
+		return true
 	}
 
-	if cluster.Shoot.Spec.Purpose != nil && *cluster.Shoot.Spec.Purpose == gardencorev1beta1.ShootPurposeTesting {
-		return true, nil
+	return false
+}
+
+func computeAddOrReplacePatch(existingAnnotations, desiredAnnotations map[string]string) []jsonpatch.JsonPatchOperation {
+	if len(existingAnnotations) == 0 {
+		return []jsonpatch.JsonPatchOperation{
+			{
+				Operation: "add",
+				Path:      "/metadata/annotations",
+				Value:     desiredAnnotations,
+			},
+		}
 	}
 
-	return false, nil
+	var patch []jsonpatch.JsonPatchOperation
+
+	for key, value := range desiredAnnotations {
+		operation := "add"
+		if _, ok := existingAnnotations[key]; ok {
+			operation = "replace"
+		}
+
+		patch = append(patch, jsonpatch.JsonPatchOperation{
+			Operation: operation,
+			Path:      "/metadata/annotations/" + strings.ReplaceAll(key, "/", "~1"),
+			Value:     value,
+		})
+	}
+
+	return patch
+}
+
+func mustRemoveAnnotations(existingAnnotations, desiredAnnotations map[string]string) bool {
+	for key, value := range desiredAnnotations {
+		if val, ok := existingAnnotations[key]; ok && val == value {
+			return true
+		}
+	}
+
+	return false
+}
+
+func computeRemovePatch(existingAnnotations, desiredAnnotations map[string]string) []jsonpatch.JsonPatchOperation {
+	var patch []jsonpatch.JsonPatchOperation
+
+	for key := range desiredAnnotations {
+		if _, ok := existingAnnotations[key]; !ok {
+			continue
+		}
+
+		patch = append(patch, jsonpatch.JsonPatchOperation{
+			Operation: "remove",
+			Path:      "/metadata/annotations/" + strings.ReplaceAll(key, "/", "~1"),
+		})
+	}
+
+	return patch
 }

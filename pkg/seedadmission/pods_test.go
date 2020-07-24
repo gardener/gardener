@@ -115,10 +115,19 @@ var _ = Describe("Pods", func() {
 				key: "true",
 			},
 		}
+		expectedPatchAddToExistingFluentBitExludeTrue := &jsonpatch.JsonPatchOperation{
+			Operation: "add",
+			Path:      "/metadata/annotations/" + strings.ReplaceAll(key, "/", "~1"),
+			Value:     "true",
+		}
 		expectedPatchReplaceFluentBitExludeTrue := &jsonpatch.JsonPatchOperation{
 			Operation: "replace",
 			Path:      "/metadata/annotations/" + strings.ReplaceAll(key, "/", "~1"),
 			Value:     "true",
+		}
+		expectedPatchRemoveFluentBitExludeTrue := &jsonpatch.JsonPatchOperation{
+			Operation: "remove",
+			Path:      "/metadata/annotations/" + strings.ReplaceAll(key, "/", "~1"),
 		}
 
 		It("should ignore types other than Pods", func() {
@@ -197,14 +206,14 @@ var _ = Describe("Pods", func() {
 					Annotations:   annotationFluentBitExludeTrue,
 					Cluster:       testingCluster,
 				}),
-				Entry("It should not add annotation to object", DescribeTableArgs{
-					ExpectedPatch: nil,
-					Annotations:   nil,
+				Entry("It should remove annotation from object", DescribeTableArgs{
+					ExpectedPatch: expectedPatchRemoveFluentBitExludeTrue,
+					Annotations:   annotationFluentBitExludeTrue,
 					Cluster:       developmentNotHibernatedCluster,
 				}),
-				Entry("It should not replace annotation to object", DescribeTableArgs{
+				Entry("It should not remove annotation from object (not present)", DescribeTableArgs{
 					ExpectedPatch: nil,
-					Annotations:   annotationFluentBitExludeTrue,
+					Annotations:   nil,
 					Cluster:       developmentNotHibernatedCluster,
 				}),
 			)
@@ -279,14 +288,14 @@ var _ = Describe("Pods", func() {
 					Annotations:   annotationFluentBitExludeTrue,
 					Cluster:       testingCluster,
 				}),
-				Entry("It should not add annotation to object", DescribeTableArgs{
-					ExpectedPatch: nil,
-					Annotations:   nil,
+				Entry("It should remove annotation from object", DescribeTableArgs{
+					ExpectedPatch: expectedPatchRemoveFluentBitExludeTrue,
+					Annotations:   annotationFluentBitExludeTrue,
 					Cluster:       developmentNotHibernatedCluster,
 				}),
-				Entry("It should not replace annotation to object", DescribeTableArgs{
+				Entry("It should not remove the annotation from object (not present)", DescribeTableArgs{
 					ExpectedPatch: nil,
-					Annotations:   annotationFluentBitExludeTrue,
+					Annotations:   nil,
 					Cluster:       developmentNotHibernatedCluster,
 				}),
 			)
@@ -377,23 +386,22 @@ var _ = Describe("Pods", func() {
 					Annotations:   annotationFluentBitExludeTrue,
 					Cluster:       testingCluster,
 				}),
-				Entry("It should replace annotation to object w/o Fluent Bit excluder", DescribeTableArgs{
-					ExpectedPatch: expectedPatchReplaceFluentBitExludeTrue,
+				Entry("It should add annotation to object w/o Fluent Bit excluder", DescribeTableArgs{
+					ExpectedPatch: expectedPatchAddToExistingFluentBitExludeTrue,
 					Annotations:   map[string]string{"foo": "bar"},
 					Cluster:       testingCluster,
 				}),
-				Entry("It should not add annotation to object", DescribeTableArgs{
+				Entry("It should remove the annotation from object", DescribeTableArgs{
+					ExpectedPatch: expectedPatchRemoveFluentBitExludeTrue,
+					Annotations:   annotationFluentBitExludeTrue,
+					Cluster:       developmentNotHibernatedCluster,
+				}),
+				Entry("It should not remove the annotation from object (not present)", DescribeTableArgs{
 					ExpectedPatch: nil,
 					Annotations:   nil,
 					Cluster:       developmentNotHibernatedCluster,
 				}),
-				Entry("It should not replace annotation to object", DescribeTableArgs{
-					ExpectedPatch: nil,
-					Annotations:   annotationFluentBitExludeTrue,
-					Cluster:       developmentNotHibernatedCluster,
-				}),
 			)
-
 		})
 	})
 })
@@ -402,7 +410,7 @@ func populateClusterFunc(cluster *extensionsv1alpha1.Cluster) func(_ context.Con
 	return func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
 		cl, ok := o.(*extensionsv1alpha1.Cluster)
 		if !ok {
-			return fmt.Errorf("Error casting runtime object to cluster")
+			return fmt.Errorf("error casting runtime object to cluster")
 		}
 		cluster.DeepCopyInto(cl)
 		return nil
