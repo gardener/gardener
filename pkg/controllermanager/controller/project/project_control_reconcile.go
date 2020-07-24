@@ -119,6 +119,7 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 	// role to ensure access for listing shoots, creating secrets, etc.
 	var (
 		admins     []rbacv1.Subject
+		uams       []rbacv1.Subject
 		viewers    []rbacv1.Subject
 		extensions []map[string]interface{}
 
@@ -132,6 +133,9 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 		for _, role := range allRoles {
 			if role == gardencorev1beta1.ProjectMemberAdmin || role == gardencorev1beta1.ProjectMemberOwner {
 				admins = append(admins, member.Subject)
+			}
+			if role == gardencorev1beta1.ProjectMemberUserAccessManager {
+				uams = append(uams, member.Subject)
 			}
 			if role == gardencorev1beta1.ProjectMemberViewer {
 				viewers = append(viewers, member.Subject)
@@ -158,6 +162,7 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 			"uid":        project.UID,
 			"owner":      project.Spec.Owner,
 			"members":    admins,
+			"uams":       uams,
 			"viewers":    viewers,
 			"extensions": extensions,
 		},

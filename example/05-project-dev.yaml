@@ -17,6 +17,7 @@ spec:
     role: admin
   # roles: # Additional roles go here
   # - viewer
+  # - uam # User access manager
   - apiGroup: rbac.authorization.k8s.io
     kind: User
     name: bob.doe@example.com

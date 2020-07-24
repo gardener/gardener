@@ -24,8 +24,10 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
+	servieaccount "k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 )
@@ -90,8 +92,7 @@ var _ = Describe("customverbauthorizer", func() {
 
 				It("should always allow creating a project without whitelist tolerations", func() {
 					attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-					err := admissionHandler.Validate(context.TODO(), attrs, nil)
-					Expect(err).NotTo(HaveOccurred())
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 				})
 
 				Describe("permissions granted", func() {
@@ -103,8 +104,7 @@ var _ = Describe("customverbauthorizer", func() {
 						project.Spec.Tolerations = &core.ProjectTolerations{Whitelist: []core.Toleration{{Key: "foo"}}}
 
 						attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Validate(context.TODO(), attrs, nil)
-						Expect(err).NotTo(HaveOccurred())
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 					})
 
 					It("should allow updating a project's whitelist tolerations", func() {
@@ -113,8 +113,7 @@ var _ = Describe("customverbauthorizer", func() {
 						project.Spec.Tolerations.Whitelist = append(project.Spec.Tolerations.Whitelist, core.Toleration{Key: "bar"})
 
 						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
-						err := admissionHandler.Validate(context.TODO(), attrs, nil)
-						Expect(err).NotTo(HaveOccurred())
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 					})
 
 					It("should allow removing a project's whitelist tolerations", func() {
@@ -123,8 +122,7 @@ var _ = Describe("customverbauthorizer", func() {
 						project.Spec.Tolerations.Whitelist = nil
 
 						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
-						err := admissionHandler.Validate(context.TODO(), attrs, nil)
-						Expect(err).NotTo(HaveOccurred())
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 					})
 				})
 
@@ -137,8 +135,7 @@ var _ = Describe("customverbauthorizer", func() {
 						project.Spec.Tolerations = &core.ProjectTolerations{Whitelist: []core.Toleration{{Key: "foo"}}}
 
 						attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
-						err := admissionHandler.Validate(context.TODO(), attrs, nil)
-						Expect(err).To(HaveOccurred())
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
 					})
 
 					It("should forbid updating a project's whitelist tolerations", func() {
@@ -147,8 +144,7 @@ var _ = Describe("customverbauthorizer", func() {
 						project.Spec.Tolerations.Whitelist = append(project.Spec.Tolerations.Whitelist, core.Toleration{Key: "bar"})
 
 						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
-						err := admissionHandler.Validate(context.TODO(), attrs, nil)
-						Expect(err).To(HaveOccurred())
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
 					})
 
 					It("should forbid removing a project's whitelist tolerations", func() {
@@ -157,8 +153,131 @@ var _ = Describe("customverbauthorizer", func() {
 						project.Spec.Tolerations.Whitelist = nil
 
 						attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
-						err := admissionHandler.Validate(context.TODO(), attrs, nil)
-						Expect(err).To(HaveOccurred())
+						Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
+					})
+				})
+			})
+
+			Context("manage-members verb", func() {
+				BeforeEach(func() {
+					authorizeAttributes.Verb = CustomVerbProjectManageMembers
+				})
+
+				var (
+					projectMembersWithHumans = []core.ProjectMember{
+						{
+							Subject: rbacv1.Subject{
+								Kind: rbacv1.UserKind,
+								Name: "foo",
+							},
+						},
+						{
+							Subject: rbacv1.Subject{
+								Kind: rbacv1.GroupKind,
+								Name: "bar",
+							},
+						},
+					}
+					projectMembersWithoutHumans = []core.ProjectMember{
+						{
+							Subject: rbacv1.Subject{
+								Kind: rbacv1.ServiceAccountKind,
+								Name: "foo",
+							},
+						},
+						{
+							Subject: rbacv1.Subject{
+								Kind: rbacv1.UserKind,
+								Name: servieaccount.ServiceAccountUsernamePrefix + "foo:bar",
+							},
+						},
+					}
+				)
+
+				It("should always allow creating a project without members", func() {
+					attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
+				Describe("permissions granted", func() {
+					BeforeEach(func() {
+						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionAllow, "", nil)
+					})
+
+					Context("CREATE", func() {
+						It("should allow creating a project with human members if creator=owner", func() {
+							project.Spec.Members = projectMembersWithHumans
+							project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+						})
+
+						It("should allow creating a project without human members if creator=owner", func() {
+							project.Spec.Members = projectMembersWithoutHumans
+							project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+						})
+					})
+
+					Context("UPDATE", func() {
+						It("should allow to add human users", func() {
+							project.Spec.Members = projectMembersWithoutHumans
+							oldProject := project.DeepCopy()
+							project.Spec.Members = append(projectMembersWithoutHumans, projectMembersWithHumans...)
+
+							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+						})
+
+						It("should allow to remove human users", func() {
+							project.Spec.Members = projectMembersWithHumans
+							oldProject := project.DeepCopy()
+							project.Spec.Members = projectMembersWithoutHumans
+
+							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+						})
+					})
+				})
+
+				Describe("permissions not granted", func() {
+					BeforeEach(func() {
+						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionDeny, "", nil)
+					})
+
+					Context("CREATE", func() {
+						It("should allow creating a project without human members if creator!=owner", func() {
+							project.Spec.Members = projectMembersWithoutHumans
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+						})
+
+						It("should forbid creating a project with human members if creator!=owner", func() {
+							project.Spec.Members = projectMembersWithHumans
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
+						})
+					})
+
+					Context("UPDATE", func() {
+						It("should forbid to add human users", func() {
+							project.Spec.Members = projectMembersWithoutHumans
+							oldProject := project.DeepCopy()
+							project.Spec.Members = append(projectMembersWithoutHumans, projectMembersWithHumans...)
+
+							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
+						})
+
+						It("should forbid to remove human users", func() {
+							project.Spec.Members = projectMembersWithHumans
+							oldProject := project.DeepCopy()
+							project.Spec.Members = projectMembersWithoutHumans
+
+							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
+						})
 					})
 				})
 			})

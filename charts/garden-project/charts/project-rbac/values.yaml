@@ -13,6 +13,10 @@ project:
   - apiGroup: rbac.authorization.k8s.io
     kind: User
     name: bob.doe@example.com
+# uams:
+# - apiGroup: rbac.authorization.k8s.io
+#   kind: User
+#   name: bob.doe@example.com
 # extensions:
 # - name: foo
 #   subjects:
