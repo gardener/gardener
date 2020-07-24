@@ -1097,7 +1097,7 @@ message MachineControllerManagerSettings {
 
   // NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
   // +optional
-  optional string nodeConditions = 5;
+  repeated string nodeConditions = 5;
 }
 
 // MachineImage defines the name and multiple versions of the machine image in any environment.

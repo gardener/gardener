@@ -962,7 +962,7 @@ type MachineControllerManagerSettings struct {
 	MaxEvictRetries *int32 `json:"maxEvictRetries,omitempty" protobuf:"bytes,4,name=maxEvictRetries"`
 	// NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
 	// +optional
-	NodeConditions *string `json:"nodeConditions,omitempty" protobuf:"bytes,5,name=nodeConditions"`
+	NodeConditions []string `json:"nodeConditions,omitempty" protobuf:"bytes,5,name=nodeConditions"`
 }
 
 // WorkerSystemComponents contains configuration for system components related to this worker pool

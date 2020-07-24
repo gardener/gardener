@@ -769,7 +769,7 @@ type MachineControllerManagerSettings struct {
 	// MaxEvictRetries are the number of eviction retries on a pod after which drain is declared failed, and forceful deletion is triggered.
 	MaxEvictRetries *int32
 	// NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
-	NodeConditions *string
+	NodeConditions []string
 }
 
 // WorkerSystemComponents contains configuration for system components related to this worker pool

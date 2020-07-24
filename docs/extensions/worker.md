@@ -78,6 +78,15 @@ spec:
     zones:
     - eu-west-1b
     - eu-west-1c
+    machineControllerManager:
+      drainTimeout: 10m
+      healthTimeout: 10m
+      creationTimeout: 10m
+      maxEvictRetries: 30
+      nodeConditions:
+      - ReadonlyFilesystem
+      - DiskPressure
+      - KernelDeadlock
 ```
 
 The `.spec.secretRef` contains a reference to the provider secret pointing to the account that shall be used to create the needed virtual machines.
@@ -86,6 +95,8 @@ Also, as you can see, Gardener copies the output of the infrastructure creation 
 In the `.spec.pools[]` field the desired worker pools are listed.
 In the above example, one pool with machine type `m4.large` and `min=3`, `max=5` machines shall be spread over two availability zones (`eu-west-1b`, `eu-west-1c`).
 This information together with the infrastructure status must be used to determine the proper configuration for the machine classes.
+
+The `spec.pools[].machineControllerManager` field allows to configure the settings for machine-controller-manager component. Providers must populate these settings on worker-pool to the related [fields](https://github.com/gardener/machine-controller-manager/blob/master/kubernetes/machine_objects/machine-deployment.yaml#L30-L34) in MachineDeployment.
 
 When seeing such a resource your controller must make sure that it deploys the machine-controller-manager next to the control plane in the seed cluster.
 After that, it must compute the desired machine classes and the desired machine deployments.

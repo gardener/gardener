@@ -3378,8 +3378,15 @@ func schema_pkg_apis_core_v1alpha1_MachineControllerManagerSettings(ref common.R
 					"nodeConditions": {
 						SchemaProps: spec.SchemaProps{
 							Description: "NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.",
-							Type:        []string{"string"},
-							Format:      "",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
 						},
 					},
 				},
@@ -9145,8 +9152,15 @@ func schema_pkg_apis_core_v1beta1_MachineControllerManagerSettings(ref common.Re
 					"nodeConditions": {
 						SchemaProps: spec.SchemaProps{
 							Description: "NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.",
-							Type:        []string{"string"},
-							Format:      "",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
 						},
 					},
 				},

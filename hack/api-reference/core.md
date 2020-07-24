@@ -5168,7 +5168,7 @@ int32
 <td>
 <code>nodeConditions</code></br>
 <em>
-string
+[]string
 </em>
 </td>
 <td>

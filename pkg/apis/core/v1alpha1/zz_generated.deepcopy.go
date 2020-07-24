@@ -1927,8 +1927,8 @@ func (in *MachineControllerManagerSettings) DeepCopyInto(out *MachineControllerM
 	}
 	if in.NodeConditions != nil {
 		in, out := &in.NodeConditions, &out.NodeConditions
-		*out = new(string)
-		**out = **in
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 	return
 }

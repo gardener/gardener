@@ -17,6 +17,7 @@ package genericactuator
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
@@ -309,6 +310,7 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, cluster 
 								Taints: deployment.Taints,
 							},
 						},
+						MachineConfiguration: deployment.MachineConfiguration,
 					},
 				},
 			}
@@ -565,4 +567,29 @@ func getExistingMachineDeployment(existingMachineDeployments *machinev1alpha1.Ma
 		}
 	}
 	return nil
+}
+
+// ReadMachineConfiguration reads the configuration from worker-pool and returns the corresponding configuration of machine-deployment.
+func ReadMachineConfiguration(pool extensionsv1alpha1.WorkerPool) *machinev1alpha1.MachineConfiguration {
+	machineConfiguration := &machinev1alpha1.MachineConfiguration{}
+	poolSettings := pool.MachineControllerManagerSettings
+	if poolSettings != nil {
+		if poolSettings.MachineDrainTimeout != nil {
+			machineConfiguration.MachineDrainTimeout = poolSettings.MachineDrainTimeout
+		}
+		if poolSettings.MachineHealthTimeout != nil {
+			machineConfiguration.MachineHealthTimeout = poolSettings.MachineHealthTimeout
+		}
+		if poolSettings.MachineCreationTimeout != nil {
+			machineConfiguration.MachineCreationTimeout = poolSettings.MachineCreationTimeout
+		}
+		if poolSettings.MaxEvictRetries != nil {
+			machineConfiguration.MaxEvictRetries = poolSettings.MaxEvictRetries
+		}
+		if len(poolSettings.NodeConditions) > 0 {
+			nodeConditions := strings.Join(poolSettings.NodeConditions, ",")
+			machineConfiguration.NodeConditions = &nodeConditions
+		}
+	}
+	return machineConfiguration
 }
