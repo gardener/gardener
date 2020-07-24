@@ -23,6 +23,7 @@ Check out these repositories for implementations of the Gardener Extension contr
 - [OpenStack](https://github.com/gardener/gardener-extension-provider-openstack)
 - [Packet](https://github.com/gardener/gardener-extension-provider-packet)
 - [vSphere](https://github.com/gardener/gardener-extension-provider-vsphere)
+- [Kubevirt](https://github.com/gardener/gardener-extension-provider-kubevirt)
 
 ### DNS Provider
 
