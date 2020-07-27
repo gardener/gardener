@@ -172,6 +172,31 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(workerImages[0].Version).To(PointTo(Equal(cloudProfile.Spec.MachineImages[0].Versions[1].Version)))
 		})
 
+		It("should determine that the shoot worker machine images must be maintained - multiple worker pools", func() {
+			cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, gardencorev1beta1.MachineImage{
+				Name: "gardenlinux",
+				Versions: []gardencorev1beta1.ExpirableVersion{
+					{Version: "1.0.0"},
+				},
+			})
+
+			otherWorker := gardencorev1beta1.Worker{
+				Name: "cpu-glinux",
+				Machine: gardencorev1beta1.Machine{Image: &gardencorev1beta1.ShootMachineImage{
+					Name:    "gardenlinux",
+					Version: pointer.StringPtr("1.0.0"),
+				}},
+			}
+
+			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, otherWorker)
+			workerImages, _, err := MaintainMachineImages(testlogger, shoot, cloudProfile)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(workerImages)).NotTo(Equal(0))
+			Expect(workerImages[0].Name).To(Equal(cloudProfile.Spec.MachineImages[0].Name))
+			Expect(workerImages[0].Version).To(PointTo(Equal(cloudProfile.Spec.MachineImages[0].Versions[1].Version)))
+		})
+
 		It("should update to latest non-preview version - MaintenanceAutoUpdate set to true", func() {
 			highestPreviewVersion := gardencorev1beta1.ExpirableVersion{
 				Version:        "1.1.2",
