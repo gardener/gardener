@@ -20,7 +20,7 @@ tests:
     values: '0+0x30'
   # KubeEtcd3HighNumberOfFailedProposals
   - series: 'etcd_server_proposals_failed_total{job="kube-etcd3", pod="etcd"}'
-    values: '0+1x81 81+0x39'
+    values: '0+2x60 121+0x60'
   # KubeEtcd3DbSizeLimitApproaching
   # KubeEtcd3DbSizeLimitCrossed
   - series: 'etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3",role="main"}'
@@ -94,7 +94,7 @@ tests:
         pod: etcd
         job: kube-etcd3
       exp_annotations:
-        description: Etcd3 pod etcd has seen 81 proposal failures within the last hour.
+        description: Etcd3 pod etcd has seen 121 proposal failures within the last hour.
         summary: High number of failed etcd proposals
   - eval_time: 5m
     alertname: KubeEtcd3DbSizeLimitApproaching
