@@ -19,13 +19,12 @@ import (
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"k8s.io/apimachinery/pkg/api/resource"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
@@ -274,13 +273,7 @@ var _ = Describe("Defaults", func() {
 	})
 
 	Describe("#SetDefaults_Shoot", func() {
-		var (
-			obj                       *Shoot
-			defaultKubeReservedMemory = resource.MustParse("1Gi")
-			defaultKubeReservedCPU    = resource.MustParse("80m")
-			kubeReservedMemory        = resource.MustParse("2Gi")
-			kubeReservedCPU           = resource.MustParse("20m")
-		)
+		var obj *Shoot
 
 		BeforeEach(func() {
 			obj = &Shoot{}
@@ -323,31 +316,65 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.Kubelet.FailSwapOn).To(PointTo(BeFalse()))
 		})
 
-		It("should default kubeReserved", func() {
-			SetDefaults_Shoot(obj)
+		Context("default kubeReserved", func() {
+			var (
+				defaultKubeReservedMemory = resource.MustParse("1Gi")
+				defaultKubeReservedCPU    = resource.MustParse("80m")
+				kubeReservedMemory        = resource.MustParse("2Gi")
+				kubeReservedCPU           = resource.MustParse("20m")
+			)
 
-			Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(Not(BeNil()))
-			Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU).To(PointTo(Equal(defaultKubeReservedCPU)))
-			Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory).To(PointTo(Equal(defaultKubeReservedMemory)))
+			It("should default all fields", func() {
+				SetDefaults_Shoot(obj)
 
-			obj.Spec.Kubernetes.Kubelet.KubeReserved = &KubeletConfigReserved{CPU: &kubeReservedCPU}
-			SetDefaults_Shoot(obj)
-			Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU).To(PointTo(Equal(kubeReservedCPU)))
-			Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory).To(PointTo(Equal(defaultKubeReservedMemory)))
+				Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
+					CPU:    &defaultKubeReservedCPU,
+					Memory: &defaultKubeReservedMemory,
+				})))
+			})
 
-			obj.Spec.Kubernetes.Kubelet.KubeReserved = &KubeletConfigReserved{Memory: &kubeReservedMemory}
-			SetDefaults_Shoot(obj)
-			Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU).To(PointTo(Equal(defaultKubeReservedCPU)))
-			Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory).To(PointTo(Equal(kubeReservedMemory)))
-		})
+			It("should default memory", func() {
+				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
+					KubeReserved: &KubeletConfigReserved{
+						CPU: &kubeReservedCPU,
+					},
+				}
+				SetDefaults_Shoot(obj)
 
-		It("should not default kubeReserved", func() {
-			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-			obj.Spec.Kubernetes.Kubelet.KubeReserved = &KubeletConfigReserved{CPU: &kubeReservedCPU, Memory: &kubeReservedMemory}
-			SetDefaults_Shoot(obj)
+				Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
+					CPU:    &kubeReservedCPU,
+					Memory: &defaultKubeReservedMemory,
+				})))
+			})
 
-			Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU).To(PointTo(Equal(kubeReservedCPU)))
-			Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory).To(PointTo(Equal(kubeReservedMemory)))
+			It("should default CPU", func() {
+				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
+					KubeReserved: &KubeletConfigReserved{
+						Memory: &kubeReservedMemory,
+					},
+				}
+				SetDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
+					CPU:    &defaultKubeReservedCPU,
+					Memory: &kubeReservedMemory,
+				})))
+			})
+
+			It("should not default kubeReserved", func() {
+				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
+					KubeReserved: &KubeletConfigReserved{
+						CPU:    &kubeReservedCPU,
+						Memory: &kubeReservedMemory,
+					},
+				}
+				SetDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
+					CPU:    &kubeReservedCPU,
+					Memory: &kubeReservedMemory,
+				})))
+			})
 		})
 
 		It("should set the maintenance field", func() {
