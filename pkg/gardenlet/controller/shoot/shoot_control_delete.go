@@ -52,7 +52,6 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 		kubeAPIServerDeploymentFound         = true
 		kubeControllerManagerDeploymentFound = true
 		controlPlaneDeploymentNeeded         bool
-		workerDeploymentNeeded               bool
 		tasksWithErrors                      []string
 		err                                  error
 	)
@@ -169,10 +168,6 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 			controlPlaneDeploymentNeeded, err = needsControlPlaneDeployment(o, kubeAPIServerDeploymentFound)
 			return err
 		}),
-		errors.ToExecute("Check whether worker deployment is needed", func() error {
-			workerDeploymentNeeded, err = needsWorkerDeployment(o)
-			return err
-		}),
 	)
 
 	if err != nil {
@@ -250,16 +245,6 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 
 		// Redeploy the worker extensions, and kube-controller-manager to make sure all components that depend on the
 		// cloud provider secret are restarted in case it has changed.
-		computeShootOSConfig = g.Add(flow.Task{
-			Name:         "Computing operating system specific configuration for shoot workers",
-			Fn:           flow.TaskFn(botanist.ComputeShootOperatingSystemConfig).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources && workerDeploymentNeeded && !shootNamespaceInDeletion),
-			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilControlPlaneReady, initializeShootClients),
-		})
-		deployWorker = g.Add(flow.Task{
-			Name:         "Configuring shoot worker pools",
-			Fn:           flow.TaskFn(botanist.DeployWorker).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources && workerDeploymentNeeded && !shootNamespaceInDeletion),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, initializeShootClients, computeShootOSConfig),
-		})
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
 			Fn:           flow.TaskFn(botanist.DeployKubeControllerManager).DoIf(cleanupShootResources && kubeControllerManagerDeploymentFound && !shootNamespaceInDeletion).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -297,7 +282,6 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 			initializeShootClients,
 			cleanExtendedAPIs,
 			deployControlPlane,
-			deployWorker,
 			deployKubeControllerManager,
 			waitForControllersToBeActive,
 		)
@@ -572,21 +556,6 @@ func needsControlPlaneDeployment(o *operation.Operation, kubeAPIServerDeployment
 	// The infrastructure resource has been found, but its provider status is nil
 	// In this case the control plane could not have been created at all, so no need to redeploy it
 	return false, nil
-}
-
-func needsWorkerDeployment(o *operation.Operation) (bool, error) {
-	var (
-		client    = o.K8sSeedClient.DirectClient()
-		namespace = o.Shoot.SeedNamespace
-		name      = o.Shoot.Info.Name
-	)
-
-	// If the `Worker` resource does no longer exist then we don't want to re-deploy it.
-	exists, err := extensionResourceStillExists(client, &extensionsv1alpha1.Worker{}, namespace, name)
-	if err != nil {
-		return false, err
-	}
-	return exists, nil
 }
 
 func extensionResourceStillExists(c client.Client, obj runtime.Object, namespace, name string) (bool, error) {
