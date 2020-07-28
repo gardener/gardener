@@ -20,10 +20,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
-	"k8s.io/apimachinery/pkg/api/resource"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
@@ -143,15 +143,8 @@ func SetDefaults_Shoot(obj *Shoot) {
 	// Error is ignored here because we cannot do anything meaningful with it.
 	// k8sVersionLessThan116 will default to `false`.
 
-	var (
-		trueVar            = true
-		falseVar           = false
-		kubeReservedMemory = resource.MustParse("1Gi")
-		kubeReservedCPU    = resource.MustParse("80m")
-	)
-
 	if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil {
-		obj.Spec.Kubernetes.AllowPrivilegedContainers = &trueVar
+		obj.Spec.Kubernetes.AllowPrivilegedContainers = pointer.BoolPtr(true)
 	}
 
 	if obj.Spec.Kubernetes.KubeAPIServer == nil {
@@ -159,9 +152,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 	if obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication == nil {
 		if k8sVersionLessThan116 {
-			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = &trueVar
+			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(true)
 		} else {
-			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = &falseVar
+			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(false)
 		}
 	}
 
@@ -212,8 +205,13 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
 	}
 	if obj.Spec.Kubernetes.Kubelet.FailSwapOn == nil {
-		obj.Spec.Kubernetes.Kubelet.FailSwapOn = &trueVar
+		obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.BoolPtr(true)
 	}
+
+	var (
+		kubeReservedMemory = resource.MustParse("1Gi")
+		kubeReservedCPU    = resource.MustParse("80m")
+	)
 
 	if obj.Spec.Kubernetes.Kubelet.KubeReserved == nil {
 		obj.Spec.Kubernetes.Kubelet.KubeReserved = &KubeletConfigReserved{Memory: &kubeReservedMemory, CPU: &kubeReservedCPU}
