@@ -7,7 +7,6 @@ Examples:
 - Alertmanager
 - Grafana for operators and end-users
 - Prometheus
-- Kibana
 
 Gardener generates the backing TLS certificates which are signed by the shoot cluster's CA by default (self-signed).
 

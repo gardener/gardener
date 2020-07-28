@@ -1,0 +1,35 @@
+apiVersion: {{ include "networkpolicyversion" . }}
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: |
+      Allows Ingress to the Loki API pods labeled with 'networking.gardener.cloud/to-loki=allowed'.
+  name: allow-loki
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+{{ toYaml .Values.labels | indent 6 }}
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+{{ toYaml .Values.global.fluentbit.labels | indent 10 }}
+      namespaceSelector:
+        matchLabels:
+          role: garden
+    - podSelector:
+        matchLabels:
+{{ toYaml .Values.prometheus.labels | indent 10 }}
+      namespaceSelector:
+        matchLabels:
+          role: garden
+    - podSelector:
+        matchLabels:
+          networking.gardener.cloud/to-loki: allowed
+    ports:
+    - protocol: TCP
+      port: {{ .Values.service.port }}
+  policyTypes:
+  - Ingress
+  egress: []

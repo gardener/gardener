@@ -7,7 +7,7 @@ metadata:
     component: grafana
     role: {{ .Values.role }}
 data:
-  prometheus-datasource.yaml: |-
+  datasources.yaml: |-
     # config file version
     apiVersion: 1
 
@@ -27,3 +27,9 @@ data:
       isDefault: true
       version: 1
       editable: false
+    - name: loki
+      type: loki
+      access: proxy
+      url: http://loki.{{ .Release.Namespace }}.svc:3100
+      jsonData:
+        maxLines: 1000

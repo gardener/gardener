@@ -533,14 +533,6 @@ func (o *Operation) ComputeGrafanaHosts() []string {
 	}
 }
 
-// ComputeKibanaHosts computes the hosts for kibana.
-func (o *Operation) ComputeKibanaHosts() []string {
-	return []string{
-		o.ComputeKibanaHostDeprecated(),
-		o.ComputeKibanaHost(),
-	}
-}
-
 // ComputePrometheusHosts computes the hosts for prometheus.
 func (o *Operation) ComputePrometheusHosts() []string {
 	return []string{
@@ -599,17 +591,6 @@ func (o *Operation) ComputePrometheusHostDeprecated() string {
 // ComputePrometheusHost computes the host for prometheus.
 func (o *Operation) ComputePrometheusHost() string {
 	return o.ComputeIngressHost(common.PrometheusPrefix)
-}
-
-// ComputeKibanaHostDeprecated computes the host for kibana.
-// TODO: timuthy - remove in the future. Old Kibana host is retained for migration reasons.
-func (o *Operation) ComputeKibanaHostDeprecated() string {
-	return o.ComputeIngressHostDeprecated(common.KibanaPrefix)
-}
-
-// ComputeKibanaHost computes the host for kibana.
-func (o *Operation) ComputeKibanaHost() string {
-	return o.ComputeIngressHost(common.KibanaPrefix)
 }
 
 // ComputeIngressHostDeprecated computes the host for a given prefix.

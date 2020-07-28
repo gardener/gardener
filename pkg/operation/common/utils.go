@@ -40,6 +40,7 @@ import (
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1beta1 "k8s.io/api/scheduling/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -382,7 +383,7 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 		return errors.New("must provide non-nil kubernetes client to common.DeleteLoggingStack")
 	}
 
-	// Delete the resources below that match "garden.sapcloud.io/role=logging"
+	// Delete the resources below that match "gardener.cloud/role=logging"
 	lists := []runtime.Object{
 		&corev1.ConfigMapList{},
 		&batchv1beta1.CronJobList{},
@@ -403,7 +404,7 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 	for _, list := range lists {
 		if err := k8sClient.List(ctx, list,
 			client.InNamespace(namespace),
-			client.MatchingLabels{v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleLogging}); err != nil {
+			client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging}); err != nil {
 			return err
 		}
 
@@ -416,7 +417,7 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 
 	pvc := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "elasticsearch-logging-elasticsearch-logging-0",
+			Name:      "loki-loki-0",
 			Namespace: namespace,
 		},
 	}
@@ -449,6 +450,83 @@ func DeleteReserveExcessCapacity(ctx context.Context, k8sClient client.Client) e
 		},
 	}
 	return client.IgnoreNotFound(k8sClient.Delete(ctx, priorityClass))
+}
+
+// DeleteOldLoggingStack deletes all resource of the old EFK logging stack in the given namespace.
+// TODO: Should be removed with one of the next minor release of gardener
+func DeleteOldLoggingStack(ctx context.Context, k8sClient client.Client, namespace string) error {
+	if k8sClient == nil {
+		return errors.New("must provide non-nil kubernetes client to common.DeleteLoggingStack")
+	}
+
+	resources := []runtime.Object{
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "seed-logging-ingress-credentials", Namespace: namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "logging-ingress-credentials", Namespace: namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "logging-ingress-credentials-users", Namespace: namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kibana-logging-sg-credentials", Namespace: namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging-server", Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-es-config", Namespace: "garden"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "es-configmap", Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "searchguard-config", Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "curator-daily-config", Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "curator-hourly-config", Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kibana-configmap", Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kibana-object-registration", Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kibana-saved-objects", Namespace: namespace}},
+		&batchv1beta1.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "daily-curator", Namespace: namespace}},
+		&batchv1beta1.CronJob{ObjectMeta: metav1.ObjectMeta{Name: "hourly-curator", Namespace: namespace}},
+		&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging", Namespace: namespace}},
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging", Namespace: namespace}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kibana-logging", Namespace: namespace}},
+		&autoscalingv2beta1.HorizontalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-es", Namespace: namespace}},
+		&extensionsv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "kibana", Namespace: namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kibana-basic-auth", Namespace: namespace}},
+		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging", Namespace: namespace}},
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging", Namespace: namespace}},
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-es", Namespace: namespace}},
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "kibana-logging", Namespace: namespace}},
+		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-es", Namespace: namespace}},
+		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging-elasticsearch-logging-0", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-0", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-1", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-2", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-3", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-4", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-5", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-6", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-7", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-8", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "fluentd-fluentd-es-9", Namespace: namespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-elasticsearch", Namespace: namespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-elasticsearch", Namespace: namespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-fluentd", Namespace: namespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kibana", Namespace: namespace}},
+		&autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "elasticsearch-logging-vpa", Namespace: namespace}},
+	}
+
+	for _, resource := range resources {
+		if err := k8sClient.Delete(ctx, resource); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	ds := &appsv1.DaemonSet{}
+	if err := k8sClient.Get(ctx, kutil.Key(namespace, "fluent-bit"), ds); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	if _, ok := ds.Spec.Selector.MatchLabels["garden.sapcloud.io/role"]; ok {
+		if err := k8sClient.Delete(ctx, ds); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // DeleteAlertmanager deletes all resources of the Alertmanager in a given namespace.

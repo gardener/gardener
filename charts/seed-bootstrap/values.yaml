@@ -98,22 +98,7 @@ allowedMetrics:
   - kube_hpa_status_current_replicas
   - kube_hpa_status_desired_replicas
 
-  fluentd: []
   fluentbit: []
-
-  elasticsearch:
-  - elasticsearch_cluster_health_active_primary_shards
-  - elasticsearch_cluster_health_active_shards
-  - elasticsearch_cluster_health_delayed_unassigned_shards
-  - elasticsearch_cluster_health_number_of_pending_tasks
-  - elasticsearch_cluster_health_status
-  - elasticsearch_filesystem_data_free_bytes
-  - elasticsearch_indices_flush_time_seconds
-  - elasticsearch_indices_flush_total
-  - elasticsearch_indices_segments_count
-  - elasticsearch_indices_segments_memory_bytes
-  - elasticsearch_jvm_memory_pool_used_bytes
-  - elasticsearch_jvm_memory_pool_max_bytes
 
   vpa:
   - vpa_status_recommendation
@@ -131,6 +116,32 @@ allowedMetrics:
   - hvpa_status_blocked_hpa_current_replicas
   - hvpa_status_blocked_hpa_desired_replicas
   - hvpa_status_blocked_vpa_recommendation
+
+  loki:
+  - loki_ingester_blocks_per_chunk_sum
+  - loki_ingester_blocks_per_chunk_count
+  - loki_ingester_chunk_age_seconds_sum
+  - loki_ingester_chunk_age_seconds_count
+  - loki_ingester_chunk_bounds_hours_sum
+  - loki_ingester_chunk_bounds_hours_count
+  - loki_ingester_chunk_compression_ratio_sum
+  - loki_ingester_chunk_compression_ratio_count
+  - loki_ingester_chunk_encode_time_seconds_sum
+  - loki_ingester_chunk_encode_time_seconds_count
+  - loki_ingester_chunk_entries_sum
+  - loki_ingester_chunk_entries_count
+  - loki_ingester_chunk_size_bytes_sum
+  - loki_ingester_chunk_size_bytes_count
+  - loki_ingester_chunk_utilization_sum
+  - loki_ingester_chunk_utilization_count
+  - loki_ingester_memory_chunks
+  - loki_ingester_received_chunks
+  - loki_ingester_samples_per_chunk_sum
+  - loki_ingester_samples_per_chunk_count
+  - loki_ingester_sent_chunks
+  - loki_panic_total
+  - loki_logql_querystats_duplicates_total
+  - loki_logql_querystats_ingester_sent_lines_total
 
 
 ingress:
@@ -152,14 +163,10 @@ global:
     alertmanager: image-repository:image-tag
     alpine: image-repository:image-tag
     configmap-reloader: image-repository:image-tag
-    curator-es: image-repository:image-tag
-    elasticsearch-oss: image-repository:image-tag
-    elasticsearch-searchguard-oss: image-repository:image-tag
-    fluentd-es: image-repository:image-tag
+    loki: image-repository:image-tag
     gardener-resource-manager: image-repository:image-tag
     gardener-seed-admission-controller: image-repository:image-tag
     grafana: image-repository:image-tag
-    kibana-oss: image-repository:image-tag
     pause-container: image-repository:image-tag
     prometheus: image-repository:image-tag
     vpa-admission-controller: image-repository:image-tag
@@ -171,18 +178,10 @@ global:
 #   etcd-druid: |
 #     Please find documentation in docs/deployment/image_vector.md
 
-  elasticsearchPorts:
-    db: 9200
-    transport: 9300
-
-elastic-kibana-curator:
+fluent-bit:
   enabled: true
-  curator:
-    objectCount: 1
-  elasticsearch:
-    objectCount: 1
 
-fluentd-es:
+loki:
   enabled: true
 
 alertmanager:

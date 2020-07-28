@@ -1,0 +1,12 @@
+apiVersion: "autoscaling.k8s.io/v1beta2"
+kind: VerticalPodAutoscaler
+metadata:
+  name: loki-vpa
+  namespace: {{ .Release.Namespace }}
+spec:
+  targetRef:
+    apiVersion: {{ include "statefulsetversion" . }}
+    kind: StatefulSet
+    name: loki
+  updatePolicy:
+    updateMode: "Auto"

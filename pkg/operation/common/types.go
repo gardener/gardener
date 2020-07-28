@@ -189,9 +189,6 @@ const (
 	// AlertManagerPrefix is a constant for a prefix used for the AlertManager instance.
 	AlertManagerPrefix = "au"
 
-	// KibanaPrefix is a constant for a prefix used for the Kibana instance.
-	KibanaPrefix = "k"
-
 	// IngressPrefix is the part of a FQDN which will be used to construct the domain name for an ingress controller of
 	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the ingress domain would be
 	// '*.<IngressPrefix>.cluster.example.com'.
@@ -237,9 +234,6 @@ const (
 	// NodeExporterDaemonSetName is the name of the node-exporter daemon set.
 	NodeExporterDaemonSetName = "node-exporter"
 
-	// KibanaAdminIngressCredentialsSecretName is the name of the secret which holds admin credentials.
-	KibanaAdminIngressCredentialsSecretName = "logging-ingress-credentials"
-
 	// KubecfgUsername is the username for the token used for the kubeconfig the shoot.
 	KubecfgUsername = "system:cluster-admin"
 
@@ -260,9 +254,6 @@ const (
 
 	// StaticTokenSecretName is the name of the secret containing static tokens for the kube-apiserver.
 	StaticTokenSecretName = "static-token"
-
-	// FluentdEsStatefulSetName is the name of the fluentd-es stateful set.
-	FluentdEsStatefulSetName = "fluentd-es"
 
 	// ProjectPrefix is the prefix of namespaces representing projects.
 	ProjectPrefix = "garden-"
@@ -493,26 +484,8 @@ const (
 	// PauseContainerImageName is the name of the PauseContainer image.
 	PauseContainerImageName = "pause-container"
 
-	// ElasticsearchImageName is the name of the Elastic-Search image used for logging
-	ElasticsearchImageName = "elasticsearch-oss"
-
-	// ElasticsearchMetricsExporterImageName is the name of the metrics exporter image used to fetch elasticsearch metrics.
-	ElasticsearchMetricsExporterImageName = "elasticsearch-metrics-exporter"
-
-	// ElasticsearchSearchguardImageName is the name of the Elastic-Search image with installed searchguard plugin used for logging
-	ElasticsearchSearchguardImageName = "elasticsearch-searchguard-oss"
-
-	// CuratorImageName is the name of the curator image used to alter the Elastic-search logs
-	CuratorImageName = "curator-es"
-
-	// KibanaImageName is the name of the Kibana image used for logging  UI
-	KibanaImageName = "kibana-oss"
-
-	// SearchguardImageName is the name of the Searchguard image used for updating the users and roles
-	SearchguardImageName = "sg-sgadmin"
-
-	// FluentdEsImageName is the image of the Fluentd image used for logging
-	FluentdEsImageName = "fluentd-es"
+	// LokiImageName is the name of the Loki image used for logging
+	LokiImageName = "loki"
 
 	// FluentBitImageName is the image of Fluent-bit image
 	FluentBitImageName = "fluent-bit"
@@ -586,8 +559,6 @@ const (
 	GrafanaTLS = "grafana-tls"
 	// PrometheusTLS is the name of the secret resource which holds the TLS certificate for Prometheus.
 	PrometheusTLS = "prometheus-tls"
-	// KibanaTLS is the name of the secret resource which holds the TLS certificate for Kibana.
-	KibanaTLS = "kibana-tls"
 	// EtcdServerTLS is the name of the secret resource which holds TLS server certificate of Etcd
 	EtcdServerTLS = "etcd-server-cert"
 	// EtcdClientTLS is the name of the secret resource which holds TLS client certificate of Etcd
@@ -624,12 +595,7 @@ var (
 
 	// RequiredLoggingStatefulSets is a set of the required logging stateful sets.
 	RequiredLoggingStatefulSets = sets.NewString(
-		v1beta1constants.StatefulSetNameElasticSearch,
-	)
-
-	// RequiredLoggingDeployments is a set of the required logging deployments.
-	RequiredLoggingDeployments = sets.NewString(
-		v1beta1constants.DeploymentNameKibana,
+		v1beta1constants.StatefulSetNameLoki,
 	)
 
 	// ManagedResourcesShoot is a set of managed resource names which contain resources deployed to the shoot.

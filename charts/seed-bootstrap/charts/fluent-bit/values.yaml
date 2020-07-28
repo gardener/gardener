@@ -1,0 +1,18 @@
+global:
+  lokiPort: 3100
+  lokiLabels:
+      gardener.cloud/role: logging
+      app: loki
+      role: logging
+  images:
+    fluent-bit: image-repository:image-tag
+
+labels:
+  gardener.cloud/role: logging
+  app: fluent-bit
+  role: logging
+ports:
+  metrics: 2020
+extensions:
+  filters: ""
+  parsers: ""

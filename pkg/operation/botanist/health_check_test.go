@@ -239,16 +239,10 @@ var _ = Describe("health check", func() {
 			prometheusStatefulSet,
 		}
 
-		kibanaDeployment = newDeployment(seedNamespace, v1beta1constants.DeploymentNameKibana, v1beta1constants.GardenRoleLogging, true)
-
-		requiredLoggingControlPlaneDeployments = []*appsv1.Deployment{
-			kibanaDeployment,
-		}
-
-		elasticSearchStatefulSet = newStatefulSet(seedNamespace, v1beta1constants.StatefulSetNameElasticSearch, v1beta1constants.GardenRoleLogging, true)
+		lokiStatefulSet = newStatefulSet(seedNamespace, v1beta1constants.StatefulSetNameLoki, v1beta1constants.GardenRoleLogging, true)
 
 		requiredLoggingControlPlaneStatefulSets = []*appsv1.StatefulSet{
-			elasticSearchStatefulSet,
+			lokiStatefulSet,
 		}
 	)
 
@@ -586,14 +580,14 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckMonitoringControlPlane",
-		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, isTestingShoot, wantsAlertmanager bool, conditionMatcher types.GomegaMatcher) {
+		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, isHealthCheckObsolete, wantsAlertmanager bool, conditionMatcher types.GomegaMatcher) {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
 				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil)
 			)
 
-			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, isTestingShoot, wantsAlertmanager, condition, deploymentLister, statefulSetLister)
+			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, isHealthCheckObsolete, wantsAlertmanager, condition, deploymentLister, statefulSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
@@ -649,46 +643,31 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckLoggingControlPlane",
-		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, isTestingShoot bool, conditionMatcher types.GomegaMatcher) {
+		func(statefulSets []*appsv1.StatefulSet, isHealthCheckObsolete bool, conditionMatcher types.GomegaMatcher) {
 			var (
-				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
 				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil)
 			)
 
-			exitCondition, err := checker.CheckLoggingControlPlane(seedNamespace, isTestingShoot, condition, deploymentLister, statefulSetLister)
+			exitCondition, err := checker.CheckLoggingControlPlane(seedNamespace, isHealthCheckObsolete, condition, statefulSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
 		Entry("all healthy",
-			requiredLoggingControlPlaneDeployments,
 			requiredLoggingControlPlaneStatefulSets,
 			false,
 			BeNil()),
-		Entry("required deployment missing",
-			nil,
-			requiredLoggingControlPlaneStatefulSets,
-			false,
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 		Entry("required stateful set missing",
-			requiredLoggingControlPlaneDeployments,
 			nil,
-			false,
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-		Entry("deployment unhealthy",
-			[]*appsv1.Deployment{newDeployment(kibanaDeployment.Namespace, kibanaDeployment.Name, roleOf(kibanaDeployment), false)},
-			requiredLoggingControlPlaneStatefulSets,
 			false,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 		Entry("stateful set unhealthy",
-			requiredLoggingControlPlaneDeployments,
 			[]*appsv1.StatefulSet{
-				newStatefulSet(elasticSearchStatefulSet.Namespace, elasticSearchStatefulSet.Name, roleOf(elasticSearchStatefulSet), false),
+				newStatefulSet(lokiStatefulSet.Namespace, lokiStatefulSet.Name, roleOf(lokiStatefulSet), false),
 			},
 			false,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 		Entry("shoot purpose is testing, omit all checks",
-			[]*appsv1.Deployment{},
 			[]*appsv1.StatefulSet{},
 			true,
 			BeNil()),

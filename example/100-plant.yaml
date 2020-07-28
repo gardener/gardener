@@ -9,9 +9,6 @@ spec:
   secretRef:
     name: my-external-cluster-secret
   endpoints:
-  - name: Kibana Dashboard
-    url: https://...
-    purpose: logging
   - name: Prometheus Dashboard
     url: https://...
     purpose: monitoring

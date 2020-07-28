@@ -1,14 +1,14 @@
 dependencies:
-- name: elastic-kibana-curator
+- name: loki
   repository: http://localhost:10191
   version: 0.1.0
   # needed for the logging feature gate
-  condition: elastic-kibana-curator.enabled
-- name: fluentd-es
+  condition: loki.enabled
+- name: fluent-bit
   repository: http://localhost:10191
   version: 0.1.0
   # needed for the logging feature gate
-  condition: fluentd-es.enabled
+  condition: fluent-bit.enabled
 - name: vpa
   repository: http://localhost:10191
   version: 0.1.0

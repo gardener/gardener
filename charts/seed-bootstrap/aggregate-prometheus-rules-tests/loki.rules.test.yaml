@@ -1,0 +1,24 @@
+rule_files:
+- ../aggregate-prometheus-rules/loki.rules.yaml
+
+evaluation_interval: 30s
+
+tests:
+- interval: 30s
+  input_series:
+  # LokiDown
+  - series: 'up{app="loki"}'
+    values: '0+0x30'
+  alert_rule_test:
+  - eval_time: 15m
+    alertname: LokiDown
+    exp_alerts:
+    - exp_labels:
+        service: loki
+        severity: warning
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: There are no running loki pods. No logs will be collected.
+        summary: Loki is down
+

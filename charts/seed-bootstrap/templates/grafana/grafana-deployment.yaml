@@ -23,6 +23,7 @@ spec:
         garden.sapcloud.io/role: monitoring
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-aggregate-prometheus: allowed
+        networking.gardener.cloud/to-loki: allowed
         component: grafana
     spec:
       containers:
@@ -31,9 +32,9 @@ spec:
         imagePullPolicy: IfNotPresent
         env:
         - name: GF_AUTH_BASIC_ENABLED
-          value: "false"
-        - name: GF_AUTH_DISABLE_LOGIN_FORM
           value: "true"
+        - name: GF_AUTH_DISABLE_LOGIN_FORM
+          value: "false"
         - name: GF_AUTH_ANONYMOUS_ENABLED
           value: "true"
         - name: GF_SNAPSHOTS_EXTERNAL_ENABLED

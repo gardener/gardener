@@ -269,19 +269,31 @@ allowedMetrics:
   vpn:
   - probe_http_status_code
   - probe_success
-  elasticsearch:
-  - elasticsearch_cluster_health_active_primary_shards
-  - elasticsearch_cluster_health_active_shards
-  - elasticsearch_cluster_health_delayed_unassigned_shards
-  - elasticsearch_cluster_health_number_of_pending_tasks
-  - elasticsearch_cluster_health_status
-  - elasticsearch_filesystem_data_free_bytes
-  - elasticsearch_indices_flush_time_seconds
-  - elasticsearch_indices_flush_total
-  - elasticsearch_indices_segments_count
-  - elasticsearch_indices_segments_memory_bytes
-  - elasticsearch_jvm_memory_pool_used_bytes
-  - elasticsearch_jvm_memory_pool_max_bytes
+  loki:
+  - loki_ingester_blocks_per_chunk_sum
+  - loki_ingester_blocks_per_chunk_count
+  - loki_ingester_chunk_age_seconds_sum
+  - loki_ingester_chunk_age_seconds_count
+  - loki_ingester_chunk_bounds_hours_sum
+  - loki_ingester_chunk_bounds_hours_count
+  - loki_ingester_chunk_compression_ratio_sum
+  - loki_ingester_chunk_compression_ratio_count
+  - loki_ingester_chunk_encode_time_seconds_sum
+  - loki_ingester_chunk_encode_time_seconds_count
+  - loki_ingester_chunk_entries_sum
+  - loki_ingester_chunk_entries_count
+  - loki_ingester_chunk_size_bytes_sum
+  - loki_ingester_chunk_size_bytes_count
+  - loki_ingester_chunk_utilization_sum
+  - loki_ingester_chunk_utilization_count
+  - loki_ingester_memory_chunks
+  - loki_ingester_received_chunks
+  - loki_ingester_samples_per_chunk_sum
+  - loki_ingester_samples_per_chunk_count
+  - loki_ingester_sent_chunks
+  - loki_panic_total
+  - loki_logql_querystats_duplicates_total
+  - loki_logql_querystats_ingester_sent_lines_total
 
 seed:
   apiserver: https://api.foo.bar
@@ -300,13 +312,14 @@ rules:
       enabled: true
     alertmanager:
       enabled: false
-    elasticsearch:
-      enabled: true
     hvpa:
       enabled: false
       rules: false
     vpn:
-      enaled: false
+      enabled: false
+    loki:
+      enabled: true
+
 alerting:
   auth_type: {}
 #     none:

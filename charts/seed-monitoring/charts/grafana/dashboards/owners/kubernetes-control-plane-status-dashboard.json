@@ -446,12 +446,14 @@
       "decimals": 0,
       "description": "Checks the connection to the API Server from the seed and from the shoot (via loadbalancer).\n\n0 = down; 1 = up",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 5,
         "w": 24,
         "x": 0,
         "y": 6
       },
+      "hiddenSeries": false,
       "id": 14,
       "legend": {
         "avg": false,
@@ -549,12 +551,14 @@
       "dashes": false,
       "description": "Shows the CPU usage of the Kube API Server and shows the requests and limits.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 12,
         "x": 0,
         "y": 11
       },
+      "hiddenSeries": false,
       "id": 41,
       "legend": {
         "avg": false,
@@ -649,12 +653,14 @@
       "dashes": false,
       "description": "Shows the memory usage of the Kube API Server.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 12,
         "x": 12,
         "y": 11
       },
+      "hiddenSeries": false,
       "id": 24,
       "legend": {
         "avg": false,
@@ -751,6 +757,7 @@
       "editable": false,
       "error": false,
       "fill": 0,
+      "fillGradient": 0,
       "grid": {
         "threshold1Color": "rgba(216, 200, 27, 0.27)",
         "threshold2Color": "rgba(234, 112, 112, 0.22)"
@@ -761,6 +768,7 @@
         "x": 0,
         "y": 18
       },
+      "hiddenSeries": false,
       "id": 6,
       "isNew": false,
       "legend": {
@@ -854,6 +862,7 @@
       "editable": false,
       "error": false,
       "fill": 0,
+      "fillGradient": 0,
       "grid": {
         "threshold1Color": "rgba(216, 200, 27, 0.27)",
         "threshold2Color": "rgba(234, 112, 112, 0.22)"
@@ -864,6 +873,7 @@
         "x": 12,
         "y": 18
       },
+      "hiddenSeries": false,
       "id": 7,
       "isNew": false,
       "legend": {
@@ -950,6 +960,7 @@
       "editable": true,
       "error": false,
       "fill": 0,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 6,
@@ -957,6 +968,7 @@
         "x": 0,
         "y": 25
       },
+      "hiddenSeries": false,
       "id": 32,
       "interval": "",
       "legend": {
@@ -1042,12 +1054,14 @@
       "decimals": 0,
       "description": "Shows the number of API Resources that are in the cluster.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 6,
         "w": 16,
         "x": 8,
         "y": 25
       },
+      "hiddenSeries": false,
       "id": 44,
       "legend": {
         "alignAsTable": true,
@@ -1140,12 +1154,14 @@
       "decimals": 0,
       "description": "Count of registered API Server watches split by watched resources. \n\nHigh number of watches can lead to performance issues of the API Server and the underlying ETCD.\n\nNote: **group** is a reference for the default k8s api group.",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 6,
         "w": 24,
         "x": 0,
         "y": 31
       },
+      "hiddenSeries": false,
       "id": 50,
       "legend": {
         "alignAsTable": true,
@@ -1233,12 +1249,38 @@
       }
     },
     {
+      "datasource": "loki",
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 37
+      },
+      "id": 52,
+      "options": {
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "expr": "{container_name=\"kube-apiserver\"} |~ \"$search\"",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "API Server Logs",
+      "type": "logs"
+    },
+    {
       "collapsed": true,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 48
       },
       "id": 20,
       "panels": [
@@ -1249,12 +1291,14 @@
           "dashes": false,
           "description": "Shows the CPU usage of the kube-controller-manager and shows the requests and limits.",
           "fill": 0,
+          "fillGradient": 0,
           "gridPos": {
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 39
+            "y": 49
           },
+          "hiddenSeries": false,
           "id": 16,
           "legend": {
             "avg": false,
@@ -1348,12 +1392,14 @@
           "dashes": false,
           "description": "Shows the memory usage of the kube-controller-manager.",
           "fill": 0,
+          "fillGradient": 0,
           "gridPos": {
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 39
+            "y": 49
           },
+          "hiddenSeries": false,
           "id": 18,
           "legend": {
             "avg": false,
@@ -1447,12 +1493,14 @@
           "dashes": false,
           "description": "The average http request rate of the last 5m executed by the Kube Controller Manager to the cluster API server. The request are split by their response status codes.",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 45
+            "y": 55
           },
+          "hiddenSeries": false,
           "id": 47,
           "legend": {
             "avg": false,
@@ -1524,6 +1572,32 @@
             "align": false,
             "alignLevel": null
           }
+        },
+        {
+          "datasource": "loki",
+          "gridPos": {
+            "h": 11,
+            "w": 24,
+            "x": 0,
+            "y": 61
+          },
+          "id": 54,
+          "options": {
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": false
+          },
+          "targets": [
+            {
+              "expr": "{container_name=\"kube-controller-manager\"} |~ \"$search\"",
+              "refId": "A"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Kube-controller-manager logs",
+          "type": "logs"
         }
       ],
       "title": "Kube-controller-manager",
@@ -1535,7 +1609,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 49
       },
       "id": 30,
       "panels": [
@@ -1546,12 +1620,14 @@
           "dashes": false,
           "description": "Shows the CPU usage of the kube-scheduler and shows the requests and limits.",
           "fill": 0,
+          "fillGradient": 0,
           "gridPos": {
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 40
+            "y": 50
           },
+          "hiddenSeries": false,
           "id": 27,
           "legend": {
             "avg": false,
@@ -1645,12 +1721,14 @@
           "dashes": false,
           "description": "Shows the memory usage of the kube-scheduler.",
           "fill": 0,
+          "fillGradient": 0,
           "gridPos": {
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 40
+            "y": 50
           },
+          "hiddenSeries": false,
           "id": 28,
           "legend": {
             "avg": false,
@@ -1747,6 +1825,7 @@
           "editable": false,
           "error": false,
           "fill": 0,
+          "fillGradient": 0,
           "grid": {
             "threshold1Color": "rgba(216, 200, 27, 0.27)",
             "threshold2Color": "rgba(234, 112, 112, 0.22)"
@@ -1755,8 +1834,9 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 46
+            "y": 56
           },
+          "hiddenSeries": false,
           "id": 5,
           "isNew": false,
           "legend": {
@@ -1838,12 +1918,14 @@
           "dashes": false,
           "description": "The average http request rate of the last 5m executed by the Kube Scheduler to the cluster API server. The request are split by their response status codes.",
           "fill": 1,
+          "fillGradient": 0,
           "gridPos": {
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 46
+            "y": 56
           },
+          "hiddenSeries": false,
           "id": 48,
           "legend": {
             "avg": false,
@@ -1915,6 +1997,32 @@
             "align": false,
             "alignLevel": null
           }
+        },
+        {
+          "datasource": "loki",
+          "gridPos": {
+            "h": 11,
+            "w": 24,
+            "x": 0,
+            "y": 62
+          },
+          "id": 56,
+          "options": {
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": false
+          },
+          "targets": [
+            {
+              "expr": "{container_name=\"kube-scheduler\"} |~ \"$search\"",
+              "refId": "A"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Kube-scheduler logs",
+          "type": "logs"
         }
       ],
       "title": "Kube-scheduler",
@@ -1922,14 +2030,35 @@
     }
   ],
   "refresh": "1m",
-  "schemaVersion": 18,
+  "schemaVersion": 25,
   "style": "dark",
   "tags": [
     "controlplane",
     "seed"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "",
+          "value": ""
+        },
+        "hide": 0,
+        "label": "Search",
+        "name": "search",
+        "options": [
+          {
+            "selected": true,
+            "text": "",
+            "value": ""
+          }
+        ],
+        "query": "",
+        "skipUrlSync": false,
+        "type": "textbox"
+      }
+    ]
   },
   "time": {
     "from": "now-30m",

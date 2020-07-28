@@ -1,0 +1,27 @@
+apiVersion: {{ include "networkpolicyversion" . }}
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: |
+      Allows Egress from fluentbit to loki
+  name: allow-fluentbit
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+{{ toYaml .Values.labels | indent 6 }}
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          gardener.cloud/role: shoot
+      podSelector: 
+{{ toYaml .Values.global.lokiLabels | indent 10 }}
+    - podSelector:
+        matchLabels:
+{{ toYaml .Values.global.lokiLabels | indent 10 }}
+    ports:
+    - protocol: TCP
+      port: {{ .Values.global.lokiPort }}
+  policyTypes:
+  - Egress

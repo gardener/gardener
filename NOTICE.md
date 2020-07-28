@@ -25,12 +25,8 @@ The following charts of the [`charts`](charts) directory were seeded based on a 
 * [git.k8s.io/charts/stable/nginx-ingress](https://git.k8s.io/charts/stable/nginx-ingress)
 * [git.k8s.io/charts/stable/prometheus](https://git.k8s.io/charts/stable/prometheus)
 * [git.k8s.io/charts/stable/kubernetes-dashboard](https://git.k8s.io/charts/stable/kubernetes-dashboard)
-* [github.com/kubernetes/kubernetes/cluster/addons/fluentd-elasticsearch/es-service.yaml](https://github.com/kubernetes/kubernetes/blob/master/cluster/addons/fluentd-elasticsearch/es-service.yaml)
-* [github.com/kubernetes/kubernetes/cluster/addons/fluentd-elasticsearch/es-statefulset.yaml](https://github.com/kubernetes/kubernetes/blob/master/cluster/addons/fluentd-elasticsearch/es-statefulset.yaml)
-* [github.com/kubernetes/kubernetes/cluster/addons/fluentd-elasticsearch/fluentd-es-configmap.yaml](https://github.com/kubernetes/kubernetes/blob/master/cluster/addons/fluentd-elasticsearch/fluentd-es-configmap.yaml)
-* [github.com/kubernetes/kubernetes/cluster/addons/fluentd-elasticsearch/fluentd-es-ds.yaml](https://github.com/kubernetes/kubernetes/blob/master/cluster/addons/fluentd-elasticsearch/fluentd-es-ds.yaml)
-* [github.com/kubernetes/kubernetes/cluster/addons/fluentd-elasticsearch/kibana-deployment.yaml](https://github.com/kubernetes/kubernetes/blob/master/cluster/addons/fluentd-elasticsearch/kibana-deployment.yaml)
-* [github.com/kubernetes/kubernetes/cluster/addons/fluentd-elasticsearch/kibana-service.yaml](https://github.com/kubernetes/kubernetes/blob/master/cluster/addons/fluentd-elasticsearch/kibana-service.yaml)
+* [github.com/grafana/loki/blob/master/production/helm/loki/templates/statefulset.yaml](https://github.com/grafana/loki/blob/master/production/helm/loki/templates/statefulset.yaml)
+* [github.com/grafana/loki/blob/master/production/helm/loki/templates/service.yaml](https://github.com/grafana/loki/blob/master/production/helm/loki/templates/service.yaml)
 
 ## Container Images
 

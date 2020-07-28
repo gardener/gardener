@@ -1617,7 +1617,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "absent(up{job=\"elasticsearch-logging\"} == 1)",
+          "expr": "absent(up{job=\"loki\"} == 1)",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 10,
@@ -1626,7 +1626,7 @@
         }
       ],
       "thresholds": "0,1",
-      "title": "elasticsearch",
+      "title": "loki",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [

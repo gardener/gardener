@@ -26,6 +26,7 @@ spec:
         component: grafana
         networking.gardener.cloud/to-dns: allowed
         role: {{ .Values.role }}
+        networking.gardener.cloud/to-loki: allowed
     spec:
       initContainers:
       - name: init-prometheus
@@ -36,10 +37,17 @@ spec:
         image: {{ index .Values.images "grafana" }}
         imagePullPolicy: IfNotPresent
         env:
+{{- if eq .Values.role "operators" }}
+        - name: GF_AUTH_BASIC_ENABLED
+          value: "true"
+        - name: GF_AUTH_DISABLE_LOGIN_FORM
+          value: "false"
+{{- else }}
         - name: GF_AUTH_BASIC_ENABLED
           value: "false"
         - name: GF_AUTH_DISABLE_LOGIN_FORM
           value: "true"
+{{- end }}
         - name: GF_AUTH_ANONYMOUS_ENABLED
           value: "true"
         - name: GF_SNAPSHOTS_EXTERNAL_ENABLED

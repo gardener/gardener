@@ -126,7 +126,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 					"alertmanager": map[string]interface{}{
 						"enabled": b.Shoot.WantsAlertmanager,
 					},
-					"elasticsearch": map[string]interface{}{
+					"loki": map[string]interface{}{
 						"enabled": gardenletfeatures.FeatureGate.Enabled(features.Logging),
 					},
 					"hvpa": map[string]interface{}{

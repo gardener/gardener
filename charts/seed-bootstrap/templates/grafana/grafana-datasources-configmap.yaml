@@ -6,7 +6,7 @@ metadata:
   labels:
     component: grafana
 data:
-  prometheus-datasource.yaml: |-
+  datasources.yaml: |-
     # config file version
     apiVersion: 1
 
@@ -26,3 +26,9 @@ data:
       isDefault: true
       version: 1
       editable: false
+    - name: loki
+      type: loki
+      access: proxy
+      url: http://loki.garden.svc:3100
+      jsonData:
+        maxLines: 5000

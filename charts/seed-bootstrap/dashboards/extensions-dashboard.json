@@ -5,7 +5,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1565956209276,
+  "iteration": 1593423133301,
   "links": [],
   "panels": [
     {
@@ -49,11 +49,15 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(seed:container_cpu_usage_seconds_total:sum_by_container{container=~\"(gardener-extension)(.+)\"}) by (container)",
+          "expr": "sum(seed:container_cpu_usage_seconds_total:sum_by_container{container=\"$container\"}) by (container)",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{ container }}",
           "refId": "A"
+        },
+        {
+          "refId": "B"
         }
       ],
       "thresholds": [],
@@ -138,8 +142,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(seed:container_memory_working_set_bytes:sum_by_container{container=~\"(gardener-extension)(.+)\"}) by (container)",
+          "expr": "sum(seed:container_memory_working_set_bytes:sum_by_container{container=\"$container\"}) by (container)",
           "format": "time_series",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{ container }}",
           "refId": "A"
@@ -185,17 +190,70 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "datasource": "loki",
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 5,
+      "options": {
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "expr": "{container_name=~\"$container\"}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Logs",
+      "type": "logs"
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 19,
+  "schemaVersion": 25,
   "style": "dark",
   "tags": [
     "extensions",
     "resources"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "",
+          "value": ""
+        },
+        "datasource": "loki",
+        "definition": "label_values(container_name)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Container",
+        "multi": false,
+        "name": "container",
+        "options": [],
+        "query": "label_values(container_name)",
+        "refresh": 1,
+        "regex": "gardener-extension.*",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
   },
   "time": {
     "from": "now-6h",
