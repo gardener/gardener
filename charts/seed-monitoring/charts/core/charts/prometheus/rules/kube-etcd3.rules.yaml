@@ -54,8 +54,9 @@ groups:
   # Note: Increasing the failedProposals count to 80, known issue in etcd, fix in progress
   # https://github.com/kubernetes/kubernetes/pull/64539 - fix in Kubernetes to be released with v1.15
   # https://github.com/etcd-io/etcd/issues/9360 - ongoing discussion in etcd
+  # TODO (shreyas-s-rao): change value from 120 to 5 after upgrading to etcd 3.4
   - alert: KubeEtcd3HighNumberOfFailedProposals
-    expr: increase(etcd_server_proposals_failed_total{job="kube-etcd3"}[1h]) > 80
+    expr: increase(etcd_server_proposals_failed_total{job="kube-etcd3"}[1h]) > 120
     labels:
       service: etcd
       severity: warning
