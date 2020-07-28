@@ -35,36 +35,29 @@ func shootControlPlaneNotRunningConstraint(condition gardencorev1beta1.Condition
 }
 
 // ConstraintsChecks conducts the constraints checks on all the given constraints.
-func (b *Botanist) ConstraintsChecks(ctx context.Context, initializeShootClients func() error, hibernation gardencorev1beta1.Condition) gardencorev1beta1.Condition {
+func (b *Botanist) ConstraintsChecks(ctx context.Context, initializeShootClients func() (bool, error), hibernation gardencorev1beta1.Condition) gardencorev1beta1.Condition {
 	hibernationPossible := b.constraintsChecks(ctx, initializeShootClients, hibernation)
 	lastOp := b.Shoot.Info.Status.LastOperation
 	lastErrors := b.Shoot.Info.Status.LastErrors
 	return PardonCondition(hibernationPossible, lastOp, lastErrors)
 }
 
-func (b *Botanist) constraintsChecks(ctx context.Context, initializeShootClients func() error, hibernationConstraint gardencorev1beta1.Condition) gardencorev1beta1.Condition {
+func (b *Botanist) constraintsChecks(ctx context.Context, initializeShootClients func() (bool, error), hibernationConstraint gardencorev1beta1.Condition) gardencorev1beta1.Condition {
 	if b.Shoot.HibernationEnabled || b.Shoot.Info.Status.IsHibernated {
 		return shootHibernatedConstraint(hibernationConstraint)
 	}
 
-	apiServerRunning, err := b.IsAPIServerRunning()
+	apiServerRunning, err := initializeShootClients()
 	if err != nil {
-		message := fmt.Sprintf("Failed to check if control plane is currently running: %v", err)
-		b.Logger.Error(message)
-		return gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(hibernationConstraint, message)
-	}
-
-	// don't check constraints if API server has already been deleted or has not been created yet
-	if !apiServerRunning {
-		return shootControlPlaneNotRunningConstraint(hibernationConstraint)
-	}
-
-	if err := initializeShootClients(); err != nil {
 		message := fmt.Sprintf("Could not initialize Shoot client for constraints check: %+v", err)
 		b.Logger.Error(message)
 		hibernationConstraint = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(hibernationConstraint, message)
 
 		return hibernationConstraint
+	}
+	if !apiServerRunning {
+		// don't check constraints if API server has already been deleted or has not been created yet
+		return shootControlPlaneNotRunningConstraint(hibernationConstraint)
 	}
 
 	newHibernationConstraint, err := b.CheckHibernationPossible(ctx, hibernationConstraint)

@@ -30,7 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/logger"
-	operation "github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -116,25 +116,43 @@ func (c *defaultCareControl) conditionThresholdsToProgressingMapping() map[garde
 	return out
 }
 
-func shootClientInitializer(b *botanistpkg.Botanist) func() error {
+func shootClientInitializer(ctx context.Context, b *botanistpkg.Botanist) func() (bool, error) {
 	var (
-		once sync.Once
-		err  error
+		once             sync.Once
+		apiServerRunning bool
+		err              error
 	)
-	return func() error {
+	return func() (bool, error) {
 		once.Do(func() {
-			err = b.InitializeShootClients()
+			// Don't initialize clients for Shoots, for which the API server is not running
+			apiServerRunning, err = b.IsAPIServerRunning(ctx)
+			if err != nil || !apiServerRunning {
+				return
+			}
+
+			err = b.InitializeShootClients(ctx)
+
+			// b.InitializeShootClients might not initialize b.K8sShootClient in case the Shoot is being hibernated
+			// and the API server has just been scaled down. So, double-check if b.K8sShootClient is set/initialized,
+			// otherwise we cannot execute health and constraint checks and garbage collection
+			// This is done to prevent a race between the two calls to b.IsAPIServerRunning which would cause the care
+			// controller to use a nil shoot client (panic)
+			if b.K8sShootClient == nil {
+				apiServerRunning = false
+			}
 		})
-		return err
+		return apiServerRunning, err
 	}
 }
 
 func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string) error {
 	var (
-		ctx         = context.TODO()
 		shoot       = shootObj.DeepCopy()
 		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace)
 	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), c.config.Controllers.ShootCare.SyncPeriod.Duration)
+	defer cancel()
 
 	shootLogger.Debugf("[SHOOT CARE] %s", key)
 
@@ -200,15 +218,16 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
-	initializeShootClients := shootClientInitializer(botanist)
+	initializeShootClients := shootClientInitializer(ctx, botanist)
 
 	// Trigger garbage collection
-	go garbageCollection(initializeShootClients, botanist)
+	go garbageCollection(ctx, initializeShootClients, botanist)
 
 	_ = flow.Parallel(
 		// Trigger health check
 		func(ctx context.Context) error {
 			conditionAPIServerAvailable, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy = botanist.HealthChecks(
+				ctx,
 				initializeShootClients,
 				c.conditionThresholdsToProgressingMapping(),
 				c.config.Controllers.ShootCare.StaleExtensionHealthCheckThreshold,
@@ -222,7 +241,10 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		// Fetch seed conditions of shoot is a seed
 		func(ctx context.Context) error {
 			seedConditions, err = retrieveSeedConditions(ctx, botanist)
-			return err
+			if err != nil {
+				botanist.Logger.Errorf("Error retrieving seed conditions: %+v", err)
+			}
+			return nil
 		},
 		// Trigger constraint checks
 		func(ctx context.Context) error {
@@ -289,7 +311,7 @@ func updateShootStatus(g gardencore.Interface, shoot *gardencorev1beta1.Shoot, c
 
 // garbageCollection cleans the Seed and the Shoot cluster from no longer required
 // objects. It receives a botanist object <botanist> which stores the Shoot object.
-func garbageCollection(initShootClients func() error, botanist *botanistpkg.Botanist) {
+func garbageCollection(ctx context.Context, initShootClients func() (bool, error), botanist *botanistpkg.Botanist) {
 	var (
 		qualifiedShootName = fmt.Sprintf("%s/%s", botanist.Shoot.Info.Namespace, botanist.Shoot.Info.Name)
 		wg                 sync.WaitGroup
@@ -298,24 +320,24 @@ func garbageCollection(initShootClients func() error, botanist *botanistpkg.Bota
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		if err := botanist.PerformGarbageCollectionSeed(); err != nil {
+		if err := botanist.PerformGarbageCollectionSeed(ctx); err != nil {
 			botanist.Logger.Errorf("Error during seed garbage collection: %+v", err)
 		}
 	}()
 
-	if apiServerRunning, err := botanist.IsAPIServerRunning(); err == nil && apiServerRunning {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err := initShootClients(); err != nil {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if apiServerRunning, err := initShootClients(); err != nil || !apiServerRunning {
+			if err != nil {
 				botanist.Logger.Errorf("Could not initialize Shoot client for garbage collection of shoot %s: %+v", qualifiedShootName, err)
-				return
 			}
-			if err := botanist.PerformGarbageCollectionShoot(); err != nil {
-				botanist.Logger.Errorf("Error during shoot garbage collection: %+v", err)
-			}
-		}()
-	}
+			return
+		}
+		if err := botanist.PerformGarbageCollectionShoot(ctx); err != nil {
+			botanist.Logger.Errorf("Error during shoot garbage collection: %+v", err)
+		}
+	}()
 
 	wg.Wait()
 	botanist.Logger.Debugf("Successfully performed full garbage collection for Shoot cluster %s", qualifiedShootName)

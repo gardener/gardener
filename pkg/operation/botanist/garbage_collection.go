@@ -30,15 +30,13 @@ import (
 )
 
 // PerformGarbageCollectionSeed performs garbage collection in the Shoot namespace in the Seed cluster
-func (b *Botanist) PerformGarbageCollectionSeed() error {
-	ctx := context.TODO()
-
+func (b *Botanist) PerformGarbageCollectionSeed(ctx context.Context) error {
 	podList := &corev1.PodList{}
 	if err := b.K8sSeedClient.Client().List(ctx, podList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
 		return err
 	}
 
-	if err := b.deleteStalePods(b.K8sSeedClient.Client(), podList); err != nil {
+	if err := b.deleteStalePods(ctx, b.K8sSeedClient.Client(), podList); err != nil {
 		return err
 	}
 	return nil
@@ -46,9 +44,9 @@ func (b *Botanist) PerformGarbageCollectionSeed() error {
 
 // PerformGarbageCollectionShoot performs garbage collection in the kube-system namespace in the Shoot
 // cluster, i.e., it deletes evicted pods (mitigation for https://github.com/kubernetes/kubernetes/issues/55051).
-func (b *Botanist) PerformGarbageCollectionShoot() error {
+func (b *Botanist) PerformGarbageCollectionShoot(ctx context.Context) error {
 	// Workaround for https://github.com/kubernetes/kubernetes/pull/72507.
-	if err := b.removeStaleOutOfDiskNodeCondition(); err != nil {
+	if err := b.removeStaleOutOfDiskNodeCondition(ctx); err != nil {
 		return err
 	}
 
@@ -58,20 +56,20 @@ func (b *Botanist) PerformGarbageCollectionShoot() error {
 	}
 
 	podList := &corev1.PodList{}
-	if err := b.K8sShootClient.Client().List(context.TODO(), podList, client.InNamespace(namespace)); err != nil {
+	if err := b.K8sShootClient.Client().List(ctx, podList, client.InNamespace(namespace)); err != nil {
 		return err
 	}
 
-	return b.deleteStalePods(b.K8sShootClient.Client(), podList)
+	return b.deleteStalePods(ctx, b.K8sShootClient.Client(), podList)
 }
 
-func (b *Botanist) deleteStalePods(k8sClient client.Client, podList *corev1.PodList) error {
+func (b *Botanist) deleteStalePods(ctx context.Context, c client.Client, podList *corev1.PodList) error {
 	var result error
 
 	for _, pod := range podList.Items {
 		if strings.Contains(pod.Status.Reason, "Evicted") {
 			b.Logger.Debugf("Deleting pod %s as its reason is %s.", pod.Name, pod.Status.Reason)
-			if err := k8sClient.Delete(context.TODO(), &pod, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
+			if err := c.Delete(ctx, &pod, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)
 			}
 			continue
@@ -79,7 +77,7 @@ func (b *Botanist) deleteStalePods(k8sClient client.Client, podList *corev1.PodL
 
 		if common.ShouldObjectBeRemoved(&pod, common.GardenerDeletionGracePeriod) {
 			b.Logger.Debugf("Deleting stuck terminating pod %q", pod.Name)
-			if err := k8sClient.Delete(context.TODO(), &pod, kubernetes.ForceDeleteOptions...); client.IgnoreNotFound(err) != nil {
+			if err := c.Delete(ctx, &pod, kubernetes.ForceDeleteOptions...); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)
 			}
 		}
@@ -88,7 +86,7 @@ func (b *Botanist) deleteStalePods(k8sClient client.Client, podList *corev1.PodL
 	return result
 }
 
-func (b *Botanist) removeStaleOutOfDiskNodeCondition() error {
+func (b *Botanist) removeStaleOutOfDiskNodeCondition(ctx context.Context) error {
 	// This code is limited to 1.13.0-1.13.3 (1.13.4 contains the Kubernetes fix).
 	// For more details see https://github.com/kubernetes/kubernetes/pull/73394.
 	needsRemovalOfStaleCondition, err := version.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13.0, <= 1.13.3")
@@ -100,7 +98,7 @@ func (b *Botanist) removeStaleOutOfDiskNodeCondition() error {
 	}
 
 	nodeList := &corev1.NodeList{}
-	if err := b.K8sShootClient.Client().List(context.TODO(), nodeList); err != nil {
+	if err := b.K8sShootClient.Client().List(ctx, nodeList); err != nil {
 		return err
 	}
 
@@ -120,7 +118,7 @@ func (b *Botanist) removeStaleOutOfDiskNodeCondition() error {
 
 		node.Status.Conditions = conditions
 
-		if err := b.K8sShootClient.Client().Status().Update(context.TODO(), &node); err != nil {
+		if err := b.K8sShootClient.Client().Status().Update(ctx, &node); err != nil {
 			result = multierror.Append(result, err)
 		}
 	}
