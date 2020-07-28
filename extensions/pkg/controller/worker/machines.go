@@ -42,17 +42,18 @@ func init() {
 // MachineDeployment holds information about the name, class, replicas of a MachineDeployment
 // managed by the machine-controller-manager.
 type MachineDeployment struct {
-	Name           string
-	ClassName      string
-	SecretName     string
-	Minimum        int32
-	Maximum        int32
-	MaxSurge       intstr.IntOrString
-	MaxUnavailable intstr.IntOrString
-	Labels         map[string]string
-	Annotations    map[string]string
-	Taints         []corev1.Taint
-	State          *MachineDeploymentState
+	Name                 string
+	ClassName            string
+	SecretName           string
+	Minimum              int32
+	Maximum              int32
+	MaxSurge             intstr.IntOrString
+	MaxUnavailable       intstr.IntOrString
+	Labels               map[string]string
+	Annotations          map[string]string
+	Taints               []corev1.Taint
+	State                *MachineDeploymentState
+	MachineConfiguration *machinev1alpha1.MachineConfiguration
 }
 
 // MachineDeployments is a list of machine deployments.

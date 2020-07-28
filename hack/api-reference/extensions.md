@@ -3342,6 +3342,20 @@ string
 <p>Zones contains information about availability zones for this worker pool.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>machineControllerManager</code></br>
+<em>
+<a href="../core#core.gardener.cloud/v1alpha1.MachineControllerManagerSettings">
+github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.WorkerSpec">WorkerSpec

@@ -1077,6 +1077,29 @@ message Machine {
   optional ShootMachineImage image = 2;
 }
 
+// MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
+message MachineControllerManagerSettings {
+  // MachineDrainTimeout is the period after which machine is forcefully deleted.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration machineDrainTimeout = 1;
+
+  // MachineHealthTimeout is the period after which machine is declared failed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration machineHealthTimeout = 2;
+
+  // MachineCreationTimeout is the period after which creation of the machine is declared failed.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration machineCreationTimeout = 3;
+
+  // MaxEvictRetries are the number of eviction retries on a pod after which drain is declared failed, and forceful deletion is triggered.
+  // +optional
+  optional int32 maxEvictRetries = 4;
+
+  // NodeConditions are the set of conditions if set to true for the period of MachineHealthTimeout, machine will be declared failed.
+  // +optional
+  repeated string nodeConditions = 5;
+}
+
 // MachineImage defines the name and multiple versions of the machine image in any environment.
 message MachineImage {
   // Name is the name of the image.
@@ -2170,6 +2193,10 @@ message Worker {
   // SystemComponents contains configuration for system components related to this worker pool
   // +optional
   optional WorkerSystemComponents systemComponents = 18;
+
+  // MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
+  // +optional
+  optional MachineControllerManagerSettings machineControllerManager = 19;
 }
 
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.

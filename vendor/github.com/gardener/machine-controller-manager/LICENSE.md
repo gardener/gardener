@@ -299,6 +299,12 @@ Alibaba Cloud Go Software Development Kit.
 https://github.com/aliyun/alibaba-cloud-sdk-go.  
 Apache 2 license (https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/LICENSE)  
 
+gRPC-Go.  
+https://github.com/grpc/grpc-go.  
+Copyright 2017 gRPC authors.  
+Apache 2 license (https://github.com/grpc/grpc-go/blob/master/LICENSE)  
+
+
 ------
 ## BSD 3-clause "New" or "Revised" License
 

@@ -1399,6 +1399,11 @@ func (in *WorkerPool) DeepCopyInto(out *WorkerPool) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.MachineControllerManagerSettings != nil {
+		in, out := &in.MachineControllerManagerSettings, &out.MachineControllerManagerSettings
+		*out = new(v1beta1.MachineControllerManagerSettings)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

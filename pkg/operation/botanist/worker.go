@@ -133,12 +133,13 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 				Name:    workerPool.Machine.Image.Name,
 				Version: *workerPool.Machine.Image.Version,
 			},
-			ProviderConfig:        pConfig,
-			UserData:              []byte(b.Shoot.OperatingSystemConfigsMap[workerPool.Name].Downloader.Data.Content),
-			Volume:                volume,
-			DataVolumes:           dataVolumes,
-			KubeletDataVolumeName: workerPool.KubeletDataVolumeName,
-			Zones:                 workerPool.Zones,
+			ProviderConfig:                   pConfig,
+			UserData:                         []byte(b.Shoot.OperatingSystemConfigsMap[workerPool.Name].Downloader.Data.Content),
+			Volume:                           volume,
+			DataVolumes:                      dataVolumes,
+			KubeletDataVolumeName:            workerPool.KubeletDataVolumeName,
+			Zones:                            workerPool.Zones,
+			MachineControllerManagerSettings: workerPool.MachineControllerManagerSettings,
 		})
 	}
 

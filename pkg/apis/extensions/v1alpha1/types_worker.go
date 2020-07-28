@@ -130,6 +130,9 @@ type WorkerPool struct {
 	// Zones contains information about availability zones for this worker pool.
 	// +optional
 	Zones []string `json:"zones,omitempty"`
+	// MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
+	// +optional
+	MachineControllerManagerSettings *gardencorev1beta1.MachineControllerManagerSettings `json:"machineControllerManager,omitempty"`
 }
 
 // MachineImage contains logical information about the name and the version of the machie image that
