@@ -16,14 +16,19 @@ package controllerinstallation
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/registry/generic"
+	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 )
 
@@ -107,4 +112,34 @@ func (controllerInstallationStatusStrategy) PrepareForUpdate(ctx context.Context
 
 func (controllerInstallationStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateControllerInstallationStatusUpdate(obj.(*core.ControllerInstallation).Status, old.(*core.ControllerInstallation).Status)
+}
+
+// ToSelectableFields returns a field set that represents the object
+func ToSelectableFields(controllerInstallation *core.ControllerInstallation) fields.Set {
+	// The purpose of allocation with a given number of elements is to reduce
+	// amount of allocations needed to create the fields.Set. If you add any
+	// field here or the number of object-meta related fields changes, this should
+	// be adjusted.
+	controllerInstallationSpecificFieldsSet := make(fields.Set, 3)
+	controllerInstallationSpecificFieldsSet[core.RegistrationRefName] = controllerInstallation.Spec.RegistrationRef.Name
+	controllerInstallationSpecificFieldsSet[core.SeedRefName] = controllerInstallation.Spec.SeedRef.Name
+	return generic.AddObjectMetaFieldsSet(controllerInstallationSpecificFieldsSet, &controllerInstallation.ObjectMeta, false)
+}
+
+// GetAttrs returns labels and fields of a given object for filtering purposes.
+func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
+	controllerInstallation, ok := obj.(*core.ControllerInstallation)
+	if !ok {
+		return nil, nil, fmt.Errorf("not a ControllerInstallation")
+	}
+	return labels.Set(controllerInstallation.ObjectMeta.Labels), ToSelectableFields(controllerInstallation), nil
+}
+
+// MatchControllerInstallation returns a generic matcher for a given label and field selector.
+func MatchControllerInstallation(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
+	return storage.SelectionPredicate{
+		Label:    label,
+		Field:    field,
+		GetAttrs: GetAttrs,
+	}
 }
