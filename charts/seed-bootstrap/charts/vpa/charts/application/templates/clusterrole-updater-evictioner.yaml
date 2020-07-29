@@ -3,7 +3,7 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: system:evictioner
+  name: gardener.cloud:vpa:{{ .Values.clusterType }}:evictioner
   labels:
   {{ toYaml .Values.labels | indent 4 }}
 rules:
