@@ -78,7 +78,9 @@ type SeedSelector struct {
 	// LabelSelector is optional and can be used to select seeds by their label settings
 	// +optional
 	*metav1.LabelSelector
-	// Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.
+	// ProviderTypes contains a list of allowed provider types used by the Gardener scheduler to restricting seeds by
+	// their provider type and enable cross-provider scheduling.
+	// By default, Shoots are only scheduled on Seeds having the same provider type.
 	// +optional
 	ProviderTypes []string
 }

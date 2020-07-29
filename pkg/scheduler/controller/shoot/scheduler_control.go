@@ -175,27 +175,31 @@ func determineSeed(shoot *gardencorev1beta1.Shoot, seedLister gardencorelisters.
 	if err != nil {
 		return nil, err
 	}
-
 	filteredSeeds, err := filterUsableSeeds(seedList)
-	if err == nil {
-		filteredSeeds, err = filterSeedsMatchingSeedSelector(filteredSeeds, cloudProfile.Spec.SeedSelector, "CloudProfile")
+	if err != nil {
+		return nil, err
 	}
-	if err == nil {
-		filteredSeeds, err = filterSeedsMatchingSeedSelector(filteredSeeds, shoot.Spec.SeedSelector, "Shoot")
+	filteredSeeds, err = filterSeedsMatchingLabelSelector(filteredSeeds, cloudProfile.Spec.SeedSelector, "CloudProfile")
+	if err != nil {
+		return nil, err
 	}
-	if err == nil {
-		filteredSeeds, err = filterSeedsMatchingProviders(cloudProfile, shoot, filteredSeeds)
+	filteredSeeds, err = filterSeedsMatchingLabelSelector(filteredSeeds, shoot.Spec.SeedSelector, "Shoot")
+	if err != nil {
+		return nil, err
 	}
-	if err == nil {
-		filteredSeeds, err = filterCandidates(shoot, filteredSeeds)
+	filteredSeeds, err = filterSeedsMatchingProviders(cloudProfile, shoot, filteredSeeds)
+	if err != nil {
+		return nil, err
 	}
-	if err == nil {
-		filteredSeeds, err = applyStrategy(shoot, filteredSeeds, strategy)
+	filteredSeeds, err = filterCandidates(shoot, filteredSeeds)
+	if err != nil {
+		return nil, err
 	}
-	if err == nil {
-		return getSeedWithLeastShootsDeployed(filteredSeeds, shootList)
+	filteredSeeds, err = applyStrategy(shoot, filteredSeeds, strategy)
+	if err != nil {
+		return nil, err
 	}
-	return nil, err
+	return getSeedWithLeastShootsDeployed(filteredSeeds, shootList)
 }
 
 func isUsableSeed(seed *gardencorev1beta1.Seed) bool {
@@ -217,7 +221,7 @@ func filterUsableSeeds(seedList []*gardencorev1beta1.Seed) ([]*gardencorev1beta1
 	return matchingSeeds, nil
 }
 
-func filterSeedsMatchingSeedSelector(seedList []*gardencorev1beta1.Seed, seedSelector *gardencorev1beta1.SeedSelector, kind string) ([]*gardencorev1beta1.Seed, error) {
+func filterSeedsMatchingLabelSelector(seedList []*gardencorev1beta1.Seed, seedSelector *gardencorev1beta1.SeedSelector, kind string) ([]*gardencorev1beta1.Seed, error) {
 	if seedSelector == nil || seedSelector.LabelSelector == nil {
 		return seedList, nil
 	}
@@ -262,12 +266,6 @@ func applyStrategy(shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1beta1
 		candidates = determineCandidatesOfSameProvider(seedList, shoot)
 	case strategy == config.SameRegion:
 		candidates = determineCandidatesWithSameRegionStrategy(seedList, shoot)
-	case strategy == config.BestRegion:
-		candidates = determineCandidatesWithSameRegionStrategy(seedList, shoot)
-		if len(candidates) > 0 {
-			return candidates, nil
-		}
-		fallthrough
 	case strategy == config.MinimalDistance:
 		candidates = determineCandidatesWithMinimalDistanceStrategy(seedList, shoot)
 	default:
@@ -365,15 +363,19 @@ func determineCandidatesWithSameRegionStrategy(seedList []*gardencorev1beta1.See
 
 func determineCandidatesWithMinimalDistanceStrategy(seeds []*gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) []*gardencorev1beta1.Seed {
 	var (
-		minDistance = 1000
-		shootRegion = shoot.Spec.Region
-		candidates  []*gardencorev1beta1.Seed
+		minDistance   = 1000
+		shootRegion   = shoot.Spec.Region
+		shootProvider = shoot.Spec.Provider.Type
+		candidates    []*gardencorev1beta1.Seed
 	)
 
 	for _, seed := range seeds {
 		seedRegion := seed.Spec.Provider.Region
 		dist := distance(seedRegion, shootRegion)
 
+		if shootProvider != seed.Spec.Provider.Type {
+			dist = dist + 2
+		}
 		// append
 		if dist == minDistance {
 			candidates = append(candidates, seed)
