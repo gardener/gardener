@@ -8,6 +8,8 @@ global:
 labels:
   garden.sapcloud.io/role: vpa
 
+clusterType: seed
+
 admissionController:
   replicas: 1
   enabled: true

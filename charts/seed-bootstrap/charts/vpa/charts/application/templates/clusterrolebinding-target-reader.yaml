@@ -2,13 +2,13 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
-  name: system:vpa-target-reader-binding
+  name: gardener.cloud:vpa:{{ .Values.clusterType }}:target-reader
   labels:
   {{ toYaml .Values.labels | indent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:vpa-target-reader
+  name: gardener.cloud:vpa:{{ .Values.clusterType }}:target-reader
 {{- if or .Values.admissionController.enabled .Values.recommender.enabled .Values.updater.enabled }}
 subjects:
 {{- if .Values.recommender.enabled }}
