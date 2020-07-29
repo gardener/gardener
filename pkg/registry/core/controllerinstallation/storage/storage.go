@@ -53,6 +53,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	store := &genericregistry.Store{
 		NewFunc:                  func() runtime.Object { return &core.ControllerInstallation{} },
 		NewListFunc:              func() runtime.Object { return &core.ControllerInstallationList{} },
+		PredicateFunc:            controllerinstallation.MatchControllerInstallation,
 		DefaultQualifiedResource: core.Resource("controllerinstallations"),
 		EnableGarbageCollection:  true,
 

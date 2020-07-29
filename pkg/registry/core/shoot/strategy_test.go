@@ -407,10 +407,10 @@ var _ = Describe("GetAttrs", func() {
 	It("should return correct result", func() {
 		ls, fs, err := shootregistry.GetAttrs(newShoot("foo"))
 
+		Expect(err).NotTo(HaveOccurred())
 		Expect(ls).To(HaveLen(1))
 		Expect(ls.Get("foo")).To(Equal("bar"))
 		Expect(fs.Get(core.ShootSeedName)).To(Equal("foo"))
-		Expect(err).NotTo(HaveOccurred())
 	})
 })
 

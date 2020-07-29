@@ -24,6 +24,13 @@ const (
 	// the Seed cluster of a core.gardener.cloud/v1beta1 BackupEntry.
 	BackupEntrySeedName = "spec.seedName"
 
+	// RegistrationRefName is the field selector path for finding
+	// the ControllerRegistration name of a core.gardener.cloud/{v1beta1,v1beta1} ControllerInstallation.
+	RegistrationRefName = "spec.registrationRef.name"
+	// SeedRefName is the field selector path for finding
+	// the Seed name of a core.gardener.cloud/{v1beta1,v1beta1} ControllerInstallation.
+	SeedRefName = "spec.seedRef.name"
+
 	// ShootCloudProfileName is the field selector path for finding
 	// the CloudProfile name of a core.gardener.cloud/{v1alpha1,v1beta1} Shoot.
 	ShootCloudProfileName = "spec.cloudProfileName"
