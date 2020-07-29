@@ -52,6 +52,7 @@ var _ = Describe("ShootClientMap", func() {
 		key                    clientmap.ClientSetKey
 		factory                *internal.ShootClientSetFactory
 		clientConnectionConfig baseconfig.ClientConnectionConfiguration
+		clientOptions          client.Options
 
 		shoot *gardencorev1beta1.Shoot
 	)
@@ -94,8 +95,13 @@ var _ = Describe("ShootClientMap", func() {
 		key = keys.ForShoot(shoot)
 
 		clientConnectionConfig = baseconfig.ClientConnectionConfiguration{
-			Kubeconfig: "/var/run/secrets/kubeconfig",
+			Kubeconfig:         "/var/run/secrets/kubeconfig",
+			AcceptContentTypes: "application/vnd.kubernetes.protobuf;application/json",
+			ContentType:        "application/vnd.kubernetes.protobuf",
+			QPS:                42,
+			Burst:              43,
 		}
+		clientOptions = client.Options{Scheme: kubernetes.ShootScheme}
 		factory = &internal.ShootClientSetFactory{
 			GetGardenClient: func(ctx context.Context) (kubernetes.Interface, error) {
 				return fakeGardenClientSet, nil
@@ -235,6 +241,11 @@ var _ = Describe("ShootClientMap", func() {
 					Expect(c).To(BeIdenticalTo(fakeSeedClientSet.Client()))
 					Expect(namespace).To(Equal(shoot.Status.TechnicalID))
 					Expect(secretName).To(Equal("gardener"))
+					Expect(fns).To(kubernetes.ConsistOfConfigFuncs(
+						kubernetes.WithClientConnectionOptions(clientConnectionConfig),
+						kubernetes.WithClientOptions(clientOptions),
+						kubernetes.WithDisabledCachedClient(),
+					))
 					timesCalled++
 					return nil, fakeErr
 				}
@@ -262,6 +273,11 @@ var _ = Describe("ShootClientMap", func() {
 				Expect(c).To(BeIdenticalTo(fakeSeedClientSet.Client()))
 				Expect(namespace).To(Equal(shoot.Status.TechnicalID))
 				Expect(secretName).To(Equal("gardener-internal"))
+				Expect(fns).To(kubernetes.ConsistOfConfigFuncs(
+					kubernetes.WithClientConnectionOptions(clientConnectionConfig),
+					kubernetes.WithClientOptions(clientOptions),
+					kubernetes.WithDisabledCachedClient(),
+				))
 				return fakeCS, nil
 			}
 

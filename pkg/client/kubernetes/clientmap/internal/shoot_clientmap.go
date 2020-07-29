@@ -109,12 +109,14 @@ func (f *ShootClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cl
 	clientSet, err := NewClientFromSecret(ctx, seedClient.Client(), seedNamespace, secretName,
 		kubernetes.WithClientConnectionOptions(f.ClientConnectionConfig),
 		kubernetes.WithClientOptions(clientOptions),
+		kubernetes.WithDisabledCachedClient(),
 	)
 
 	if secretName == v1beta1constants.SecretNameGardenerInternal && err != nil && apierrors.IsNotFound(err) {
 		clientSet, err = NewClientFromSecret(ctx, seedClient.Client(), seedNamespace, v1beta1constants.SecretNameGardener,
 			kubernetes.WithClientConnectionOptions(f.ClientConnectionConfig),
 			kubernetes.WithClientOptions(clientOptions),
+			kubernetes.WithDisabledCachedClient(),
 		)
 	}
 

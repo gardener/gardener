@@ -74,7 +74,11 @@ var _ = Describe("SeedClientMap", func() {
 		key = keys.ForSeed(seed)
 
 		clientConnectionConfig = baseconfig.ClientConnectionConfiguration{
-			Kubeconfig: "/var/run/secrets/kubeconfig",
+			Kubeconfig:         "/var/run/secrets/kubeconfig",
+			AcceptContentTypes: "application/vnd.kubernetes.protobuf;application/json",
+			ContentType:        "application/vnd.kubernetes.protobuf",
+			QPS:                42,
+			Burst:              43,
 		}
 		factory = &internal.SeedClientSetFactory{
 			GetGardenClient: func(ctx context.Context) (kubernetes.Interface, error) {
@@ -115,6 +119,10 @@ var _ = Describe("SeedClientMap", func() {
 			internal.NewClientFromFile = func(masterURL, kubeconfigPath string, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				Expect(masterURL).To(BeEmpty())
 				Expect(kubeconfigPath).To(Equal(clientConnectionConfig.Kubeconfig))
+				Expect(fns).To(kubernetes.ConsistOfConfigFuncs(
+					kubernetes.WithClientConnectionOptions(clientConnectionConfig),
+					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
+				))
 				return fakeCS, nil
 			}
 
@@ -187,6 +195,10 @@ var _ = Describe("SeedClientMap", func() {
 				Expect(c).To(BeIdenticalTo(fakeGardenClient.Client()))
 				Expect(namespace).To(Equal(seed.Spec.SecretRef.Namespace))
 				Expect(secretName).To(Equal(seed.Spec.SecretRef.Name))
+				Expect(fns).To(kubernetes.ConsistOfConfigFuncs(
+					kubernetes.WithClientConnectionOptions(clientConnectionConfig),
+					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
+				))
 				return fakeCS, nil
 			}
 
