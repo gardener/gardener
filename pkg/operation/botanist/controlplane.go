@@ -829,12 +829,19 @@ func (b *Botanist) deployNetworkPolicies(ctx context.Context, denyAll bool) erro
 		globalNetworkPoliciesValues = map[string]interface{}{
 			"blockedAddresses": b.Seed.Info.Spec.Networks.BlockCIDRs,
 			"denyAll":          denyAll,
-			"sniEnabled":       b.APIServerSNIEnabled(),
 		}
 		excludeNets = []string{}
-
-		values = map[string]interface{}{}
+		values      = map[string]interface{}{}
 	)
+
+	switch b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase { //nolint:exhaustive
+	case component.PhaseEnabled, component.PhaseEnabling, component.PhaseDisabling:
+		// SNI needs to be enabled as the control plane is transitioning between states
+		// to ensure that traffic from old clients is still going to reach the API server.
+		globalNetworkPoliciesValues["sniEnabled"] = true
+	default:
+		globalNetworkPoliciesValues["sniEnabled"] = false
+	}
 
 	excludeNets = append(excludeNets, b.Seed.Info.Spec.Networks.BlockCIDRs...)
 
@@ -1312,20 +1319,19 @@ func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
 }
 
 // DefaultKubeAPIServerService returns a deployer for kube-apiserver service.
-func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
-	var sniService *client.ObjectKey
+func (b *Botanist) DefaultKubeAPIServerService(sniPhase component.Phase) component.DeployWaiter {
+	return b.kubeAPIServiceService(sniPhase)
+}
 
-	if b.APIServerSNIEnabled() {
-		sniService = &client.ObjectKey{Name: common.IstioIngressGatewayServiceName, Namespace: common.IstioIngressGatewayNamespace}
-	}
-
+func (b *Botanist) kubeAPIServiceService(sniPhase component.Phase) component.DeployWaiter {
 	return controlplane.NewKubeAPIService(
 		&controlplane.KubeAPIServiceValues{
 			Annotations:               b.Seed.LoadBalancerServiceAnnotations,
 			KonnectivityTunnelEnabled: b.Shoot.KonnectivityTunnelEnabled,
+			SNIPhase:                  sniPhase,
 		},
 		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
-		sniService,
+		client.ObjectKey{Name: common.IstioIngressGatewayServiceName, Namespace: common.IstioIngressGatewayNamespace},
 		b.K8sSeedClient.ChartApplier(),
 		b.ChartsRootPath,
 		b.Logger,
@@ -1334,6 +1340,38 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 		b.setAPIServerServiceClusterIP,
 		func(address string) { b.setAPIServerAddress(address, b.K8sSeedClient.DirectClient()) },
 	)
+}
+
+// SNIPhase returns the current phase of the SNI entablement of kube-apiserver's service.
+func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
+	var (
+		svc        = &corev1.Service{}
+		sniEnabled = b.APIServerSNIEnabled()
+	)
+
+	if err := b.K8sSeedClient.DirectClient().Get(
+		ctx,
+		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
+		svc,
+	); err != nil {
+		return component.PhaseUnknown, err
+	}
+
+	switch {
+	case svc.Spec.Type == corev1.ServiceTypeLoadBalancer && sniEnabled:
+		return component.PhaseEnabling, nil
+	case svc.Spec.Type == corev1.ServiceTypeClusterIP && sniEnabled:
+		return component.PhaseEnabled, nil
+	case svc.Spec.Type == corev1.ServiceTypeClusterIP && !sniEnabled:
+		return component.PhaseDisabling, nil
+	default:
+		return component.PhaseDisabled, nil
+	}
+}
+
+// DeployKubeAPIService deploys for kube-apiserver service.
+func (b *Botanist) DeployKubeAPIService(ctx context.Context, sniPhase component.Phase) error {
+	return b.kubeAPIServiceService(sniPhase).Deploy(ctx)
 }
 
 // DeployKubeAPIServerSNI deploys the kube-apiserver-sni chart.
@@ -1355,7 +1393,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 }
 
 func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
-	if !b.APIServerSNIEnabled() {
+	if b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase == component.PhaseDisabled {
 		return
 	}
 

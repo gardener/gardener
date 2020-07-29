@@ -4,3 +4,5 @@ enableSNI: false
 annotations: {}
 enableKonnectivityTunnel: false
 name: kube-apiserver
+serviceType: LoadBalancer
+gardenerManaged: false
