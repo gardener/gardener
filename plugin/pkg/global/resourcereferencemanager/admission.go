@@ -263,7 +263,6 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				annotations = map[string]string{}
 			}
 			annotations[common.GardenCreatedBy] = a.GetUserInfo().GetName()
-			annotations[common.GardenCreatedByDeprecated] = a.GetUserInfo().GetName()
 			shoot.Annotations = annotations
 		}
 		err = r.ensureShootReferences(ctx, a, shoot)

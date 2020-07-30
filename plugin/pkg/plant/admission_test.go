@@ -82,13 +82,11 @@ var _ = Describe("Admission", func() {
 			attrs := admission.NewAttributesRecord(&plant, nil, core.Kind("Plant").WithVersion("version"), plant.Namespace, plant.Name, core.Resource("plants").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
 			Expect(plant.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
-			Expect(plant.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedByDeprecated, defaultUserName))
 
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(plant.Annotations).To(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
-			Expect(plant.Annotations).To(HaveKeyWithValue(common.GardenCreatedByDeprecated, defaultUserName))
 		})
 
 		It("should reject Plant resources referencing same kubeconfig secret", func() {

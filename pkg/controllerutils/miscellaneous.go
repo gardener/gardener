@@ -26,7 +26,7 @@ const separator = ","
 // GetTasks returns the list of tasks in the ShootTasks annotation.
 func GetTasks(annotations map[string]string) []string {
 	var tasks []string
-	if val, _ := common.GetTasksAnnotation(annotations); len(val) > 0 {
+	if val := annotations[common.ShootTasks]; len(val) > 0 {
 		tasks = strings.Split(val, separator)
 	}
 	return tasks
@@ -71,6 +71,7 @@ func RemoveTasks(annotations map[string]string, tasksToRemove ...string) {
 // RemoveAllTasks removes the ShootTasks annotation from the passed map.
 func RemoveAllTasks(annotations map[string]string) {
 	delete(annotations, common.ShootTasks)
+	// TODO: remove in a future release
 	delete(annotations, common.ShootTasksDeprecated)
 }
 
@@ -81,5 +82,4 @@ func setTaskAnnotations(annotations map[string]string, tasks []string) {
 	}
 
 	annotations[common.ShootTasks] = strings.Join(tasks, separator)
-	annotations[common.ShootTasksDeprecated] = strings.Join(tasks, separator)
 }

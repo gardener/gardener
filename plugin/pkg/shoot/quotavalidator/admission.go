@@ -220,7 +220,7 @@ func (q *QuotaValidator) Validate(ctx context.Context, a admission.Attributes, o
 	}
 
 	// Admit Shoot lifetime changes
-	if lifetime, exists := common.GetShootExpirationTimestampAnnotation(shoot.Annotations); checkLifetime && exists && maxShootLifetime != nil {
+	if lifetime, exists := shoot.Annotations[common.ShootExpirationTimestamp]; checkLifetime && exists && maxShootLifetime != nil {
 		var (
 			plannedExpirationTime     time.Time
 			maxPossibleExpirationTime time.Time
@@ -451,11 +451,11 @@ func getShootWorkerResources(shoot *core.Shoot, cloudProfile *core.CloudProfile)
 }
 
 func lifetimeVerificationNeeded(new, old core.Shoot) bool {
-	oldLifetime, ok := common.GetShootExpirationTimestampAnnotation(old.Annotations)
+	oldLifetime, ok := old.Annotations[common.ShootExpirationTimestamp]
 	if !ok {
 		oldLifetime = old.CreationTimestamp.String()
 	}
-	newLifetime, _ := common.GetShootExpirationTimestampAnnotation(new.Annotations)
+	newLifetime := new.Annotations[common.ShootExpirationTimestamp]
 	return oldLifetime != newLifetime
 }
 

@@ -185,46 +185,6 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 	for _, obj := range secrets {
 		secret := obj.DeepCopy()
 
-		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
-		// a label indicating the Garden role default-domain.
-		if secret.Labels[v1beta1constants.DeprecatedGardenRole] == common.GardenRoleDefaultDomain {
-			_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
-			if err != nil {
-				logger.Logger.Warnf("error getting information out of default domain secret %s: %+v", secret.Name, err)
-				continue
-			}
-			defaultDomainSecret := secret
-			secretsMap[fmt.Sprintf("%s-%s", common.GardenRoleDefaultDomain, domain)] = defaultDomainSecret
-			logger.Logger.Infof("Found default domain secret %s for domain %s.", secret.Name, domain)
-		}
-
-		// Retrieving internal domain secrets based on all secrets in the Garden namespace which have
-		// a label indicating the Garden role internal-domain.
-		if secret.Labels[v1beta1constants.DeprecatedGardenRole] == common.GardenRoleInternalDomain {
-			_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
-			if err != nil {
-				logger.Logger.Warnf("error getting information out of internal domain secret %s: %+v", secret.Name, err)
-				continue
-			}
-			internalDomainSecret := secret
-			secretsMap[common.GardenRoleInternalDomain] = internalDomainSecret
-			logger.Logger.Infof("Found internal domain secret %s for domain %s.", secret.Name, domain)
-			numberOfInternalDomainSecrets++
-		}
-
-		// Retrieving Diffie-Hellman secret for OpenVPN based on all secrets in the Garden namespace which have
-		// a label indicating the Garden role openvpn-diffie-hellman.
-		if secret.Labels[v1beta1constants.DeprecatedGardenRole] == common.GardenRoleOpenVPNDiffieHellman {
-			openvpnDiffieHellman := secret
-			key := "dh2048.pem"
-			if _, ok := secret.Data[key]; !ok {
-				return nil, fmt.Errorf("cannot use OpenVPN Diffie Hellman secret '%s' as it does not contain key '%s' (whose value should be the actual Diffie Hellman key)", secret.Name, key)
-			}
-			secretsMap[common.GardenRoleOpenVPNDiffieHellman] = openvpnDiffieHellman
-			logger.Logger.Infof("Found OpenVPN Diffie Hellman secret %s.", secret.Name)
-			numberOfOpenVPNDiffieHellmanSecrets++
-		}
-
 		// Retrieving basic auth secret for aggregate monitoring with a label
 		// indicating the Garden role global-monitoring.
 		if secret.Labels[v1beta1constants.DeprecatedGardenRole] == common.GardenRoleGlobalMonitoring {
@@ -244,7 +204,49 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 		return nil, err
 	}
 
-	for _, secret := range secretsGardenRole {
+	for _, obj := range secretsGardenRole {
+		secret := obj.DeepCopy()
+
+		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
+		// a label indicating the Garden role default-domain.
+		if secret.Labels[v1beta1constants.GardenRole] == common.GardenRoleDefaultDomain {
+			_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
+			if err != nil {
+				logger.Logger.Warnf("error getting information out of default domain secret %s: %+v", secret.Name, err)
+				continue
+			}
+			defaultDomainSecret := secret
+			secretsMap[fmt.Sprintf("%s-%s", common.GardenRoleDefaultDomain, domain)] = defaultDomainSecret
+			logger.Logger.Infof("Found default domain secret %s for domain %s.", secret.Name, domain)
+		}
+
+		// Retrieving internal domain secrets based on all secrets in the Garden namespace which have
+		// a label indicating the Garden role internal-domain.
+		if secret.Labels[v1beta1constants.GardenRole] == common.GardenRoleInternalDomain {
+			_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
+			if err != nil {
+				logger.Logger.Warnf("error getting information out of internal domain secret %s: %+v", secret.Name, err)
+				continue
+			}
+			internalDomainSecret := secret
+			secretsMap[common.GardenRoleInternalDomain] = internalDomainSecret
+			logger.Logger.Infof("Found internal domain secret %s for domain %s.", secret.Name, domain)
+			numberOfInternalDomainSecrets++
+		}
+
+		// Retrieving Diffie-Hellman secret for OpenVPN based on all secrets in the Garden namespace which have
+		// a label indicating the Garden role openvpn-diffie-hellman.
+		if secret.Labels[v1beta1constants.GardenRole] == common.GardenRoleOpenVPNDiffieHellman {
+			openvpnDiffieHellman := secret
+			key := "dh2048.pem"
+			if _, ok := secret.Data[key]; !ok {
+				return nil, fmt.Errorf("cannot use OpenVPN Diffie Hellman secret '%s' as it does not contain key '%s' (whose value should be the actual Diffie Hellman key)", secret.Name, key)
+			}
+			secretsMap[common.GardenRoleOpenVPNDiffieHellman] = openvpnDiffieHellman
+			logger.Logger.Infof("Found OpenVPN Diffie Hellman secret %s.", secret.Name)
+			numberOfOpenVPNDiffieHellmanSecrets++
+		}
+
 		// Retrieve the alerting secret to configure alerting. Either in cluster email alerting or
 		// external alertmanager configuration.
 		if secret.Labels[v1beta1constants.GardenRole] == common.GardenRoleAlerting {
@@ -381,6 +383,7 @@ func generateMonitoringSecret(k8sGardenClient kubernetes.Interface, gardenNamesp
 	}
 	if _, err := controllerutil.CreateOrUpdate(context.TODO(), k8sGardenClient.Client(), secret, func() error {
 		secret.Labels = map[string]string{
+			v1beta1constants.GardenRole:           common.GardenRoleGlobalMonitoring,
 			v1beta1constants.DeprecatedGardenRole: common.GardenRoleGlobalMonitoring,
 		}
 		secret.Type = corev1.SecretTypeOpaque

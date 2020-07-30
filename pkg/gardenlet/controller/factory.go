@@ -48,6 +48,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 )
 
 // DefaultImageVector is a constant for the path to the default image vector file.
@@ -129,6 +130,16 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 
 	secrets, err := garden.ReadGardenSecrets(f.k8sInformers, f.k8sGardenCoreInformers)
 	runtime.Must(err)
+
+	// TODO: remove in a future release
+	// Add also the 'gardener.cloud/role' label to the 'global-monitoring' secret
+	if secret, ok := secrets[common.GardenRoleGlobalMonitoring]; ok && len(secret.Labels[v1beta1constants.GardenRole]) == 0 {
+		err := kutil.TryUpdate(ctx, retry.DefaultBackoff, k8sGardenClient.Client(), secret, func() error {
+			kutil.SetMetaDataLabel(secret, v1beta1constants.GardenRole, common.GardenRoleGlobalMonitoring)
+			return nil
+		})
+		runtime.Must(err)
+	}
 
 	if secret, ok := secrets[common.GardenRoleInternalDomain]; ok {
 		shootList, err := f.k8sGardenCoreInformers.Core().V1beta1().Shoots().Lister().List(labels.Everything())

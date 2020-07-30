@@ -64,18 +64,6 @@ const (
 	// manager stores its configuration.
 	ControllerManagerInternalConfigMapName = "gardener-controller-manager-internal-config"
 
-	// DNSProviderDeprecated is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
-	// DNS provider.
-	//
-	// Deprecated: Use `DNSProvider` instead.
-	DNSProviderDeprecated = "dns.garden.sapcloud.io/provider"
-
-	// DNSDomainDeprecated is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
-	// domain name.
-	//
-	// Deprecated: Use `DNSDomain` instead.
-	DNSDomainDeprecated = "dns.garden.sapcloud.io/domain"
-
 	// DNSProvider is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
 	// DNS provider.
 	DNSProvider = "dns.gardener.cloud/provider"
@@ -295,13 +283,6 @@ const (
 	// of referenced quotas.
 	ShootExpirationTimestamp = "shoot.gardener.cloud/expiration-timestamp"
 
-	// ShootExpirationTimestampDeprecated is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
-	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
-	// of referenced quotas.
-	//
-	// Deprecated: Use `ShootExpirationTimestamp` instead.
-	ShootExpirationTimestampDeprecated = "shoot.garden.sapcloud.io/expirationTimestamp"
-
 	// ShootNoCleanup is a constant for a label on a resource indicating the the Gardener cleaner should not delete this
 	// resource when cleaning a shoot during the deletion flow.
 	ShootNoCleanup = "shoot.gardener.cloud/no-cleanup"
@@ -356,25 +337,10 @@ const (
 	// changed then the reconciliation flow will be executed.
 	ShootSyncPeriod = "shoot.gardener.cloud/sync-period"
 
-	// ShootSyncPeriodDeprecated is a constant for an annotation on a Shoot which may be used to overwrite the global Shoot controller sync period.
-	// The value must be a duration. It can also be used to disable the reconciliation at all by setting it to 0m. Disabling the reconciliation
-	// does only mean that the period reconciliation is disabled. However, when the Gardener is restarted/redeployed or the specification is
-	// changed then the reconciliation flow will be executed.
-	//
-	// Deprecated: Use `ShootSyncPeriod` instead.
-	ShootSyncPeriodDeprecated = "shoot.garden.sapcloud.io/sync-period"
-
 	// ShootIgnore is a constant for an annotation on a Shoot which may be used to tell the Gardener that the Shoot with this name should be
 	// ignored completely. That means that the Shoot will never reach the reconciliation flow (independent of the operation (create/update/
 	// delete)).
 	ShootIgnore = "shoot.gardener.cloud/ignore"
-
-	// ShootIgnoreDeprecated is a constant for an annotation on a Shoot which may be used to tell the Gardener that the Shoot with this name should be
-	// ignored completely. That means that the Shoot will never reach the reconciliation flow (independent of the operation (create/update/
-	// delete)).
-	//
-	// Deprecated: Use `ShootIgnore` instead.
-	ShootIgnoreDeprecated = "shoot.garden.sapcloud.io/ignore"
 
 	// ManagedResourceShootCoreName is the name of the shoot core managed resource.
 	ManagedResourceShootCoreName = "shoot-core"

@@ -123,16 +123,13 @@ var _ = Describe("Shoot Utils", func() {
 				Expect(modified.Labels).To(Equal(expectedLabels))
 			},
 			Entry("StatusHealthy", shoot.StatusHealthy, map[string]string{
-				common.ShootStatus:           string(shoot.StatusHealthy),
-				common.ShootStatusDeprecated: string(shoot.StatusHealthy),
+				common.ShootStatus: string(shoot.StatusHealthy),
 			}),
 			Entry("StatusProgressing", shoot.StatusProgressing, map[string]string{
-				common.ShootStatus:           string(shoot.StatusProgressing),
-				common.ShootStatusDeprecated: string(shoot.StatusProgressing),
+				common.ShootStatus: string(shoot.StatusProgressing),
 			}),
 			Entry("StatusUnhealthy", shoot.StatusUnhealthy, map[string]string{
-				common.ShootStatus:           string(shoot.StatusUnhealthy),
-				common.ShootStatusDeprecated: string(shoot.StatusUnhealthy),
+				common.ShootStatus: string(shoot.StatusUnhealthy),
 			}),
 		)
 	})
