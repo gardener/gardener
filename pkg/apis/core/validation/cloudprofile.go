@@ -252,12 +252,6 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 		allErrs = append(allErrs, field.Invalid(fldPath, latestMachineImages, err.Error()))
 	}
 
-	for imageName, latestImage := range latestMachineImages {
-		if latestImage.ExpirationDate != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("expirationDate"), latestImage.ExpirationDate, fmt.Sprintf("expiration date of latest image ('%s','%s') must not be set", imageName, latestImage.Version)))
-		}
-	}
-
 	duplicateNameVersion := sets.String{}
 	duplicateName := sets.String{}
 	for i, image := range machineImages {
