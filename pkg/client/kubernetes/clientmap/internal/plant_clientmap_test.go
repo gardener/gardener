@@ -155,6 +155,11 @@ var _ = Describe("PlantClientMap", func() {
 				Expect(c).To(BeIdenticalTo(fakeGardenClient.Client()))
 				Expect(namespace).To(Equal(plant.Namespace))
 				Expect(secretName).To(Equal(plant.Spec.SecretRef.Name))
+				Expect(fns).To(kubernetes.ConsistOfConfigFuncs(
+					kubernetes.WithClientOptions(client.Options{
+						Scheme: kubernetes.PlantScheme,
+					}),
+				))
 				return fakeCS, nil
 			}
 

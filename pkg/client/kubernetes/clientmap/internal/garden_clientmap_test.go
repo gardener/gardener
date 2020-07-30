@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("GardenClientMap", func() {
@@ -72,6 +73,10 @@ var _ = Describe("GardenClientMap", func() {
 		It("should correctly construct a new ClientSet", func() {
 			fakeCS := fakeclientset.NewClientSetBuilder().WithRESTConfig(restConfig).Build()
 			internal.NewClientSetWithConfig = func(fns ...kubernetes.ConfigFunc) (i kubernetes.Interface, err error) {
+				Expect(fns).To(kubernetes.ConsistOfConfigFuncs(
+					kubernetes.WithRESTConfig(restConfig),
+					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
+				))
 				return fakeCS, nil
 			}
 
