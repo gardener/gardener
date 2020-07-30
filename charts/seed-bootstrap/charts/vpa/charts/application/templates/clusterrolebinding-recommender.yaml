@@ -2,13 +2,13 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
-  name: system:metrics-reader
+  name: gardener.cloud:vpa:{{ .Values.clusterType }}:metrics-reader
   labels:
   {{ toYaml .Values.labels | indent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:metrics-reader
+  name: gardener.cloud:vpa:{{ .Values.clusterType }}:metrics-reader
 {{- if .Values.recommender.enabled }}
 subjects:
 {{- if .Values.recommender.enableServiceAccount }}

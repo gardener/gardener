@@ -2,13 +2,13 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
-  name: system:vpa-checkpoint-actor
+  name: gardener.cloud:vpa:{{ .Values.clusterType }}:checkpoint-actor
   labels:
   {{ toYaml .Values.labels | indent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:vpa-checkpoint-actor
+  name: gardener.cloud:vpa:{{ .Values.clusterType }}:checkpoint-actor
 {{- if .Values.recommender.enabled }}
 subjects:
 {{- if .Values.recommender.enableServiceAccount }}
