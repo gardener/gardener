@@ -97,6 +97,10 @@ The Gardener API server enforces the following requirements for versions:
 **Adding a version** 
 - A version must not have an expiration date in the past.
 - There can be only one `supported` version per minor version.
+- The latest Kubernetes version cannot have an expiration date.
+- The latest version for a machine image can have an expiration date. [*]
+
+<sub>[*] Useful for cases in which support for given machine image needs to be deprecated and removed (for example the machine image reaches end of life).</sub>
 
 ## Forceful migration of expired versions
  

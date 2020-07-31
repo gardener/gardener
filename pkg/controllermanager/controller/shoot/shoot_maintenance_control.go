@@ -386,7 +386,7 @@ func shouldMachineImageBeUpdated(logger *logrus.Entry, autoUpdateMachineImageVer
 
 		// otherwise, there should always be a qualifying version (at least the Shoot's machine image version itself).
 		if !qualifyingVersionFound {
-			return false, nil, nil, fmt.Errorf("no latest qualifying Shoot machine image could be determined for machine image %q. This is most likely a misconfiguration in the CloudProfile. Make sure the machine image in the CloudProfile has at least one version that is not expired, not in preview and greater or equal to the current Shoot image version %q", machineImage.Name, *shootMachineImage.Version)
+			return false, nil, nil, fmt.Errorf("no latest qualifying Shoot machine image could be determined for machine image %q. Either the machine image is reaching end of life and migration to another machine image is required or there is a misconfiguration in the CloudProfile. If it is the latter, make sure the machine image in the CloudProfile has at least one version that is not expired, not in preview and greater or equal to the current Shoot image version %q", machineImage.Name, *shootMachineImage.Version)
 		}
 
 		if *latestShootMachineImage.Version == *shootMachineImage.Version {

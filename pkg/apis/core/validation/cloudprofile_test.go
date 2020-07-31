@@ -392,7 +392,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					}))))
 				})
 
-				It("should forbid expiration date on latest machine image version", func() {
+				It("should allow expiration date on latest machine image version", func() {
 					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
 					cloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
@@ -422,16 +422,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					}
 
 					errorList := ValidateCloudProfile(cloudProfile)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.machineImages.expirationDate"),
-						"Detail": ContainSubstring("some-machineimage"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.machineImages.expirationDate"),
-						"Detail": ContainSubstring("xy"),
-					}))))
+					Expect(errorList).To(BeEmpty())
 				})
 
 				It("should forbid invalid classification for machine image versions", func() {
