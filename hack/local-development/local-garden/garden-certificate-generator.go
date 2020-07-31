@@ -117,6 +117,7 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 		},
 		kubeAPIServerCertNamesKey: {
 			localhostName,
+			"host.docker.internal",
 			"kube-apiserver",
 			"kubernetes",
 			"kubernetes.default,kubernetes.default.svc",

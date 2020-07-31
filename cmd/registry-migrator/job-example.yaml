@@ -61,7 +61,7 @@ spec:
         env:
         - name: ENDPOINTS
           # TODO: Change this value and enter your etcd endpoints
-          value: http://docker.for.mac.localhost:32379
+          value: http://host.docker.internal:32379
         volumeMounts:
         - name: ca
           mountPath: /var/lib/etcd-migration/tls/ca
