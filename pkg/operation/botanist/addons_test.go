@@ -88,7 +88,9 @@ var _ = Describe("dns", func() {
 		seedClient = fake.NewFakeClientWithScheme(s)
 
 		renderer := cr.NewWithServerVersion(&version.Info{})
-		chartApplier := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(seedClient, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
+		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion, dnsv1alpha1.SchemeGroupVersion})
+		mapper.Add(dnsv1alpha1.SchemeGroupVersion.WithKind("DNSOwner"), meta.RESTScopeRoot)
+		chartApplier := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(seedClient, mapper))
 		Expect(chartApplier).NotTo(BeNil(), "should return chart applier")
 
 		fakeClientSet := fakeclientset.NewClientSetBuilder().
@@ -99,7 +101,7 @@ var _ = Describe("dns", func() {
 	})
 
 	Context("DefaultNginxIngressDNSEntry", func() {
-		It("should delete when calling Deploy", func() {
+		It("should delete the entry when calling Deploy", func() {
 			Expect(seedClient.Create(ctx, &dnsv1alpha1.DNSEntry{
 				ObjectMeta: metav1.ObjectMeta{Name: "ingress", Namespace: seedNS},
 			})).ToNot(HaveOccurred())
@@ -112,12 +114,27 @@ var _ = Describe("dns", func() {
 		})
 	})
 
+	Context("DefaultNginxIngressDNSOwner", func() {
+		It("should delete the owner when calling Deploy", func() {
+			Expect(seedClient.Create(ctx, &dnsv1alpha1.DNSOwner{
+				ObjectMeta: metav1.ObjectMeta{Name: seedNS + "-ingress"},
+			})).ToNot(HaveOccurred())
+
+			Expect(b.DefaultNginxIngressDNSOwner(seedClient).Deploy(ctx)).ToNot(HaveOccurred())
+
+			found := &dnsv1alpha1.DNSOwner{}
+			err := seedClient.Get(ctx, types.NamespacedName{Name: seedNS + "-ingress"}, found)
+			Expect(err).To(BeNotFoundError())
+		})
+	})
+
 	Context("SetNginxIngressAddress", func() {
 		It("does nothing when DNS is disabled", func() {
 			b.Shoot.DisableDNS = true
 
 			b.SetNginxIngressAddress("1.2.3.4", seedClient)
 
+			Expect(b.Shoot.Components.Extensions.DNS.NginxOwner).To(BeNil())
 			Expect(b.Shoot.Components.Extensions.DNS.NginxEntry).To(BeNil())
 		})
 
@@ -130,6 +147,7 @@ var _ = Describe("dns", func() {
 
 			b.SetNginxIngressAddress("1.2.3.4", seedClient)
 
+			Expect(b.Shoot.Components.Extensions.DNS.NginxOwner).To(BeNil())
 			Expect(b.Shoot.Components.Extensions.DNS.NginxEntry).To(BeNil())
 		})
 
@@ -143,10 +161,12 @@ var _ = Describe("dns", func() {
 
 			b.SetNginxIngressAddress("1.2.3.4", seedClient)
 
+			Expect(b.Shoot.Components.Extensions.DNS.NginxOwner).To(BeNil())
 			Expect(b.Shoot.Components.Extensions.DNS.NginxEntry).To(BeNil())
 		})
 
-		It("sets an entry which creates DNSEntry", func() {
+		It("sets an owner and entry which create DNSOwner and DNSEntry", func() {
+			b.Shoot.Info.Status.ClusterIdentity = pointer.StringPtr("shoot-cluster-identity")
 			b.Shoot.DisableDNS = false
 			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.StringPtr("foo")}
 			b.Shoot.ExternalClusterDomain = pointer.StringPtr("baz")
@@ -156,18 +176,29 @@ var _ = Describe("dns", func() {
 
 			b.SetNginxIngressAddress("1.2.3.4", seedClient)
 
+			Expect(b.Shoot.Components.Extensions.DNS.NginxOwner).ToNot(BeNil())
+			Expect(b.Shoot.Components.Extensions.DNS.NginxOwner.Deploy(ctx)).ToNot(HaveOccurred())
 			Expect(b.Shoot.Components.Extensions.DNS.NginxEntry).ToNot(BeNil())
 			Expect(b.Shoot.Components.Extensions.DNS.NginxEntry.Deploy(ctx)).ToNot(HaveOccurred())
 
-			found := &dnsv1alpha1.DNSEntry{}
-			err := seedClient.Get(ctx, types.NamespacedName{Name: "ingress", Namespace: seedNS}, found)
+			owner := &dnsv1alpha1.DNSOwner{}
+			err := seedClient.Get(ctx, types.NamespacedName{Name: seedNS + "-ingress"}, owner)
+			Expect(err).ToNot(HaveOccurred())
+			entry := &dnsv1alpha1.DNSEntry{}
+			err = seedClient.Get(ctx, types.NamespacedName{Name: "ingress", Namespace: seedNS}, entry)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(found).To(DeepDerivativeEqual(&dnsv1alpha1.DNSEntry{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "DNSEntry",
-					APIVersion: "dns.gardener.cloud/v1alpha1",
+			Expect(owner).To(DeepDerivativeEqual(&dnsv1alpha1.DNSOwner{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "test-ns-ingress",
+					ResourceVersion: "1",
 				},
+				Spec: dnsv1alpha1.DNSOwnerSpec{
+					OwnerId: "shoot-cluster-identity-ingress",
+					Active:  pointer.BoolPtr(true),
+				},
+			}))
+			Expect(entry).To(DeepDerivativeEqual(&dnsv1alpha1.DNSEntry{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            "ingress",
 					Namespace:       "test-ns",
@@ -179,6 +210,16 @@ var _ = Describe("dns", func() {
 					Targets: []string{"1.2.3.4"},
 				},
 			}))
+
+			Expect(b.Shoot.Components.Extensions.DNS.NginxOwner.Destroy(ctx)).ToNot(HaveOccurred())
+			Expect(b.Shoot.Components.Extensions.DNS.NginxEntry.Destroy(ctx)).ToNot(HaveOccurred())
+
+			owner = &dnsv1alpha1.DNSOwner{}
+			err = seedClient.Get(ctx, types.NamespacedName{Name: seedNS + "-ingress"}, owner)
+			Expect(err).To(BeNotFoundError())
+			entry = &dnsv1alpha1.DNSEntry{}
+			err = seedClient.Get(ctx, types.NamespacedName{Name: "ingress", Namespace: seedNS}, entry)
+			Expect(err).To(BeNotFoundError())
 		})
 	})
 

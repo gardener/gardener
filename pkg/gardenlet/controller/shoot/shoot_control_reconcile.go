@@ -161,7 +161,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
 		})
 		deployExternalDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Deploying external domain",
+			Name:         "Deploying external domain DNS record",
 			Fn:           flow.TaskFn(botanist.DeployExternalDNS).DoIf(!o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
 		})
@@ -333,7 +333,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Dependencies: flow.NewTaskIDs(deployManagedResources, initializeShootClients, waitUntilWorkerReady),
 		})
 		ensureIngressDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Ensuring nginx ingress domain record",
+			Name:         "Ensuring nginx ingress DNS record",
 			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord),
 			Dependencies: flow.NewTaskIDs(nginxLBReady),
 		})
@@ -368,12 +368,12 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Destroying External DNS Entry", // delete DNS entries during hibernation.
+			Name:         "Destroying external domain DNS record if hibernated", // delete DNS entries during hibernation.
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.DNS.ExternalEntry.Destroy).DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Destroying Internal DNS Entry", // delete DNS entries during hibernation.
+			Name:         "Destroying internal domain DNS record if hibernated", // delete DNS entries during hibernation.
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.DNS.InternalEntry.Destroy).DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
 		})

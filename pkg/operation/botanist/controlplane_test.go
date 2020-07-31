@@ -15,16 +15,91 @@
 package botanist
 
 import (
+	"context"
+
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	cr "github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/garden"
+	"github.com/gardener/gardener/pkg/operation/shoot"
+	. "github.com/gardener/gardener/test/gomega"
+
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/version"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
 	auditv1alpha1 "k8s.io/apiserver/pkg/apis/audit/v1alpha1"
 	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("controlplane", func() {
+	const (
+		seedNS  = "test-ns"
+		shootNS = "shoot-ns"
+	)
+
+	var (
+		b          *Botanist
+		seedClient client.Client
+		s          *runtime.Scheme
+		ctx        context.Context
+	)
+
+	BeforeEach(func() {
+		ctx = context.TODO()
+		b = &Botanist{
+			Operation: &operation.Operation{
+				Shoot: &shoot.Shoot{
+					Info: &v1beta1.Shoot{
+						ObjectMeta: metav1.ObjectMeta{Namespace: shootNS},
+					},
+					SeedNamespace: seedNS,
+					Components: &shoot.Components{
+						Extensions: &shoot.Extensions{
+							DNS: &shoot.DNS{},
+						},
+					},
+				},
+				Garden:         &garden.Garden{},
+				Logger:         logrus.NewEntry(logger.NewNopLogger()),
+				ChartsRootPath: "../../../charts",
+			},
+		}
+
+		s = runtime.NewScheme()
+		Expect(dnsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
+		Expect(corev1.AddToScheme(s)).NotTo(HaveOccurred())
+
+		seedClient = fake.NewFakeClientWithScheme(s)
+
+		renderer := cr.NewWithServerVersion(&version.Info{})
+		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion, dnsv1alpha1.SchemeGroupVersion})
+		mapper.Add(dnsv1alpha1.SchemeGroupVersion.WithKind("DNSOwner"), meta.RESTScopeRoot)
+		chartApplier := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(seedClient, mapper))
+		Expect(chartApplier).NotTo(BeNil(), "should return chart applier")
+
+		fakeClientSet := fakeclientset.NewClientSetBuilder().
+			WithChartApplier(chartApplier).
+			Build()
+
+		b.K8sSeedClient = fakeClientSet
+	})
+
 	Describe("#ValidateAuditPolicyApiGroupVersionKind", func() {
 		var (
 			kind = "Policy"
@@ -132,4 +207,113 @@ var _ = Describe("controlplane", func() {
 		Entry("nodes <= 2, scaling class 2xlarge", 2, "2xlarge", "3000m", "5200Mi", "4000m", "7800Mi"),
 	)
 
+	Context("setAPIServerAddress", func() {
+		It("does nothing when DNS is disabled", func() {
+			b.Shoot.DisableDNS = true
+
+			b.setAPIServerAddress("1.2.3.4", seedClient)
+
+			Expect(b.Shoot.Components.Extensions.DNS.InternalOwner).To(BeNil())
+			Expect(b.Shoot.Components.Extensions.DNS.InternalEntry).To(BeNil())
+			Expect(b.Shoot.Components.Extensions.DNS.ExternalOwner).To(BeNil())
+			Expect(b.Shoot.Components.Extensions.DNS.ExternalEntry).To(BeNil())
+		})
+
+		It("sets owners and entries which create DNSOwner and DNSEntry", func() {
+			b.Shoot.Info.Status.ClusterIdentity = pointer.StringPtr("shoot-cluster-identity")
+			b.Shoot.DisableDNS = false
+			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.StringPtr("foo")}
+			b.Shoot.InternalClusterDomain = "bar"
+			b.Shoot.ExternalClusterDomain = pointer.StringPtr("baz")
+			b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
+			b.Garden.InternalDomain = &garden.Domain{Provider: "valid-provider"}
+
+			b.setAPIServerAddress("1.2.3.4", seedClient)
+
+			Expect(b.Shoot.Components.Extensions.DNS.InternalOwner).ToNot(BeNil())
+			Expect(b.Shoot.Components.Extensions.DNS.InternalOwner.Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(b.Shoot.Components.Extensions.DNS.InternalEntry).ToNot(BeNil())
+			Expect(b.Shoot.Components.Extensions.DNS.InternalEntry.Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(b.Shoot.Components.Extensions.DNS.ExternalOwner).ToNot(BeNil())
+			Expect(b.Shoot.Components.Extensions.DNS.ExternalOwner.Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(b.Shoot.Components.Extensions.DNS.ExternalEntry).ToNot(BeNil())
+			Expect(b.Shoot.Components.Extensions.DNS.ExternalEntry.Deploy(ctx)).ToNot(HaveOccurred())
+
+			internalOwner := &dnsv1alpha1.DNSOwner{}
+			err := seedClient.Get(ctx, types.NamespacedName{Name: seedNS + "-internal"}, internalOwner)
+			Expect(err).ToNot(HaveOccurred())
+			internalEntry := &dnsv1alpha1.DNSEntry{}
+			err = seedClient.Get(ctx, types.NamespacedName{Name: "internal", Namespace: seedNS}, internalEntry)
+			Expect(err).ToNot(HaveOccurred())
+			externalOwner := &dnsv1alpha1.DNSOwner{}
+			err = seedClient.Get(ctx, types.NamespacedName{Name: seedNS + "-external"}, externalOwner)
+			Expect(err).ToNot(HaveOccurred())
+			externalEntry := &dnsv1alpha1.DNSEntry{}
+			err = seedClient.Get(ctx, types.NamespacedName{Name: "external", Namespace: seedNS}, externalEntry)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(internalOwner).To(DeepDerivativeEqual(&dnsv1alpha1.DNSOwner{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "test-ns-internal",
+					ResourceVersion: "1",
+				},
+				Spec: dnsv1alpha1.DNSOwnerSpec{
+					OwnerId: "shoot-cluster-identity-internal",
+					Active:  pointer.BoolPtr(true),
+				},
+			}))
+			Expect(internalEntry).To(DeepDerivativeEqual(&dnsv1alpha1.DNSEntry{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "internal",
+					Namespace:       "test-ns",
+					ResourceVersion: "1",
+				},
+				Spec: dnsv1alpha1.DNSEntrySpec{
+					DNSName: "api.bar",
+					TTL:     pointer.Int64Ptr(120),
+					Targets: []string{"1.2.3.4"},
+				},
+			}))
+			Expect(externalOwner).To(DeepDerivativeEqual(&dnsv1alpha1.DNSOwner{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "test-ns-external",
+					ResourceVersion: "1",
+				},
+				Spec: dnsv1alpha1.DNSOwnerSpec{
+					OwnerId: "shoot-cluster-identity-external",
+					Active:  pointer.BoolPtr(true),
+				},
+			}))
+			Expect(externalEntry).To(DeepDerivativeEqual(&dnsv1alpha1.DNSEntry{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "external",
+					Namespace:       "test-ns",
+					ResourceVersion: "1",
+				},
+				Spec: dnsv1alpha1.DNSEntrySpec{
+					DNSName: "api.baz",
+					TTL:     pointer.Int64Ptr(120),
+					Targets: []string{"1.2.3.4"},
+				},
+			}))
+
+			Expect(b.Shoot.Components.Extensions.DNS.InternalOwner.Destroy(ctx)).ToNot(HaveOccurred())
+			Expect(b.Shoot.Components.Extensions.DNS.InternalEntry.Destroy(ctx)).ToNot(HaveOccurred())
+			Expect(b.Shoot.Components.Extensions.DNS.ExternalOwner.Destroy(ctx)).ToNot(HaveOccurred())
+			Expect(b.Shoot.Components.Extensions.DNS.ExternalEntry.Destroy(ctx)).ToNot(HaveOccurred())
+
+			internalOwner = &dnsv1alpha1.DNSOwner{}
+			err = seedClient.Get(ctx, types.NamespacedName{Name: seedNS + "-internal"}, internalOwner)
+			Expect(err).To(BeNotFoundError())
+			internalEntry = &dnsv1alpha1.DNSEntry{}
+			err = seedClient.Get(ctx, types.NamespacedName{Name: "internal", Namespace: seedNS}, internalEntry)
+			Expect(err).To(BeNotFoundError())
+			externalOwner = &dnsv1alpha1.DNSOwner{}
+			err = seedClient.Get(ctx, types.NamespacedName{Name: seedNS + "-external"}, externalOwner)
+			Expect(err).To(BeNotFoundError())
+			externalEntry = &dnsv1alpha1.DNSEntry{}
+			err = seedClient.Get(ctx, types.NamespacedName{Name: "external", Namespace: seedNS}, externalEntry)
+			Expect(err).To(BeNotFoundError())
+		})
+	})
 })

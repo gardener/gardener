@@ -1346,7 +1346,7 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 		b.K8sSeedClient.DirectClient(),
 		nil,
 		b.setAPIServerServiceClusterIP,
-		b.setAPIServerAddress,
+		func(address string) { b.setAPIServerAddress(address, b.K8sSeedClient.DirectClient()) },
 	)
 }
 
@@ -1395,37 +1395,63 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 }
 
 // setAPIServerAddress sets the IP address of the API server's LoadBalancer.
-func (b *Botanist) setAPIServerAddress(address string) {
+func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client) {
 	b.Operation.APIServerAddress = address
 
 	if b.NeedsInternalDNS() {
+		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSInternalName
+		b.Shoot.Components.Extensions.DNS.InternalOwner = dns.NewDNSOwner(
+			&dns.OwnerValues{
+				Name:    DNSInternalName,
+				Active:  true,
+				OwnerID: ownerID,
+			},
+			b.Shoot.SeedNamespace,
+			b.K8sSeedClient.ChartApplier(),
+			b.ChartsRootPath,
+			seedClient,
+		)
 		b.Shoot.Components.Extensions.DNS.InternalEntry = dns.NewDNSEntry(
 			&dns.EntryValues{
 				Name:    DNSInternalName,
 				DNSName: common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 				Targets: []string{b.APIServerAddress},
+				OwnerID: ownerID,
 			},
 			b.Shoot.SeedNamespace,
 			b.K8sSeedClient.ChartApplier(),
 			b.ChartsRootPath,
 			b.Logger,
-			b.K8sSeedClient.DirectClient(),
+			seedClient,
 			nil,
 		)
 	}
 
 	if b.NeedsExternalDNS() {
+		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSExternalName
+		b.Shoot.Components.Extensions.DNS.ExternalOwner = dns.NewDNSOwner(
+			&dns.OwnerValues{
+				Name:    DNSExternalName,
+				Active:  true,
+				OwnerID: ownerID,
+			},
+			b.Shoot.SeedNamespace,
+			b.K8sSeedClient.ChartApplier(),
+			b.ChartsRootPath,
+			seedClient,
+		)
 		b.Shoot.Components.Extensions.DNS.ExternalEntry = dns.NewDNSEntry(
 			&dns.EntryValues{
 				Name:    DNSExternalName,
 				DNSName: common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 				Targets: []string{b.APIServerAddress},
+				OwnerID: ownerID,
 			},
 			b.Shoot.SeedNamespace,
 			b.K8sSeedClient.ChartApplier(),
 			b.ChartsRootPath,
 			b.Logger,
-			b.K8sSeedClient.DirectClient(),
+			seedClient,
 			nil,
 		)
 	}

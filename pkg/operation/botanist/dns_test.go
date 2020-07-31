@@ -201,7 +201,7 @@ var _ = Describe("dns", func() {
 	})
 
 	Context("DefaultExternalDNSEntry", func() {
-		It("should delete when calling Deploy", func() {
+		It("should delete the entry when calling Deploy", func() {
 			Expect(seedClient.Create(ctx, &dnsv1alpha1.DNSEntry{
 				ObjectMeta: metav1.ObjectMeta{Name: "external", Namespace: seedNS},
 			})).ToNot(HaveOccurred())
@@ -210,6 +210,20 @@ var _ = Describe("dns", func() {
 
 			found := &dnsv1alpha1.DNSEntry{}
 			err := seedClient.Get(ctx, types.NamespacedName{Name: "external", Namespace: seedNS}, found)
+			Expect(err).To(BeNotFoundError())
+		})
+	})
+
+	Context("DefaultExternalDNSOwner", func() {
+		It("should delete the owner when calling Deploy", func() {
+			Expect(seedClient.Create(ctx, &dnsv1alpha1.DNSOwner{
+				ObjectMeta: metav1.ObjectMeta{Name: seedNS + "-external"},
+			})).ToNot(HaveOccurred())
+
+			Expect(b.DefaultExternalDNSOwner(seedClient).Deploy(ctx)).ToNot(HaveOccurred())
+
+			found := &dnsv1alpha1.DNSOwner{}
+			err := seedClient.Get(ctx, types.NamespacedName{Name: seedNS + "-external"}, found)
 			Expect(err).To(BeNotFoundError())
 		})
 	})
@@ -224,6 +238,20 @@ var _ = Describe("dns", func() {
 
 			found := &dnsv1alpha1.DNSEntry{}
 			err := seedClient.Get(ctx, types.NamespacedName{Name: "internal", Namespace: seedNS}, found)
+			Expect(err).To(BeNotFoundError())
+		})
+	})
+
+	Context("DefaultInternalDNSOwner", func() {
+		It("should delete the owner when calling Deploy", func() {
+			Expect(seedClient.Create(ctx, &dnsv1alpha1.DNSOwner{
+				ObjectMeta: metav1.ObjectMeta{Name: seedNS + "-internal"},
+			})).ToNot(HaveOccurred())
+
+			Expect(b.DefaultInternalDNSOwner(seedClient).Deploy(ctx)).ToNot(HaveOccurred())
+
+			found := &dnsv1alpha1.DNSOwner{}
+			err := seedClient.Get(ctx, types.NamespacedName{Name: seedNS + "-internal"}, found)
 			Expect(err).To(BeNotFoundError())
 		})
 	})
