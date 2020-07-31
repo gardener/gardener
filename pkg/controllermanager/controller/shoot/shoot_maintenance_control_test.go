@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package shoot_test
 
 import (
@@ -163,6 +164,31 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the shoot worker machine images must be maintained - MaintenanceAutoUpdate set to true (nil is also is being defaulted to true in the API server)", func() {
+			workerImages, _, err := MaintainMachineImages(testlogger, shoot, cloudProfile)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(workerImages)).NotTo(Equal(0))
+			Expect(workerImages[0].Name).To(Equal(cloudProfile.Spec.MachineImages[0].Name))
+			Expect(workerImages[0].Version).To(PointTo(Equal(cloudProfile.Spec.MachineImages[0].Versions[1].Version)))
+		})
+
+		It("should determine that the shoot worker machine images must be maintained - multiple worker pools", func() {
+			cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, gardencorev1beta1.MachineImage{
+				Name: "gardenlinux",
+				Versions: []gardencorev1beta1.ExpirableVersion{
+					{Version: "1.0.0"},
+				},
+			})
+
+			otherWorker := gardencorev1beta1.Worker{
+				Name: "cpu-glinux",
+				Machine: gardencorev1beta1.Machine{Image: &gardencorev1beta1.ShootMachineImage{
+					Name:    "gardenlinux",
+					Version: pointer.StringPtr("1.0.0"),
+				}},
+			}
+
+			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, otherWorker)
 			workerImages, _, err := MaintainMachineImages(testlogger, shoot, cloudProfile)
 
 			Expect(err).NotTo(HaveOccurred())

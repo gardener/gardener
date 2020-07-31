@@ -8,7 +8,10 @@ global:
 labels:
   garden.sapcloud.io/role: vpa
 
+clusterType: seed
+
 admissionController:
+  replicas: 1
   enabled: true
   podAnnotations: {}
   podLabels: {}
@@ -16,6 +19,7 @@ admissionController:
   registerByURL: false
 
 exporter:
+  replicas: 1
   enabled: true
   podAnnotations: {}
   podLabels: {}
@@ -24,6 +28,7 @@ exporter:
   enableService: true
 
 recommender:
+  replicas: 1
   enabled: true
   podAnnotations: {}
   podLabels: {}
@@ -32,6 +37,7 @@ recommender:
   recommendationMarginFraction: 0.05
 
 updater:
+  replicas: 1
   enabled: true
   podAnnotations: {}
   podLabels: {}

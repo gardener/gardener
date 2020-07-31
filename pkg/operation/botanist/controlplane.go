@@ -207,6 +207,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 			v1beta1constants.LabelNetworkPolicyToShootAPIServer: "allowed",
 		}
 		admissionController = map[string]interface{}{
+			"replicas": b.Shoot.GetReplicas(1),
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-vpa-tls-certs":            b.CheckSums["vpa-tls-certs"],
 				"checksum/secret-vpa-admission-controller": b.CheckSums["vpa-admission-controller"],
@@ -218,9 +219,11 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 			"registerByURL":        true,
 		}
 		exporter = map[string]interface{}{
-			"enabled": false,
+			"enabled":  false,
+			"replicas": 0,
 		}
 		recommender = map[string]interface{}{
+			"replicas": b.Shoot.GetReplicas(1),
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-vpa-recommender": b.CheckSums["vpa-recommender"],
 			},
@@ -230,6 +233,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 			"interval":                     gardencorev1beta1.DefaultRecommenderInterval,
 		}
 		updater = map[string]interface{}{
+			"replicas": b.Shoot.GetReplicas(1),
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-vpa-updater": b.CheckSums["vpa-updater"],
 			},

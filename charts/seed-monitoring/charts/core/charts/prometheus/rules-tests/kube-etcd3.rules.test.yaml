@@ -20,11 +20,11 @@ tests:
     values: '0+0x30'
   # KubeEtcd3HighNumberOfFailedProposals
   - series: 'etcd_server_proposals_failed_total{job="kube-etcd3", pod="etcd"}'
-    values: '0+1x81 81+0x39'
+    values: '0+2x60 121+0x60'
   # KubeEtcd3DbSizeLimitApproaching
   # KubeEtcd3DbSizeLimitCrossed
   - series: 'etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3",role="main"}'
-    values: '966367641+107374182x20' # 0.9GB 1GB 1.1GB .. 1.9GB
+    values: '7194070000+107374182x20' # 6.7GB 6.8GB 6.9GB .. 7.7GB
   # KubeEtcdDeltaBackupFailed
   - series: 'etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore",role="main",kind="Incr"}'
     values: '0+0x62'
@@ -94,7 +94,7 @@ tests:
         pod: etcd
         job: kube-etcd3
       exp_annotations:
-        description: Etcd3 pod etcd has seen 81 proposal failures within the last hour.
+        description: Etcd3 pod etcd has seen 121 proposal failures within the last hour.
         summary: High number of failed etcd proposals
   - eval_time: 5m
     alertname: KubeEtcd3DbSizeLimitApproaching
@@ -107,7 +107,7 @@ tests:
         type: seed
         visibility: all
       exp_annotations:
-        description: Etcd3 main DB size is approaching its current practical limit of 2GB.
+        description: Etcd3 main DB size is approaching its current practical limit of 8GB. Etcd quota might need to be increased.
         summary: Etcd3 main DB size is approaching its current practical limit.
   - eval_time: 10m
     alertname: KubeEtcd3DbSizeLimitCrossed
@@ -120,7 +120,7 @@ tests:
         type: seed
         visibility: all
       exp_annotations:
-        description: Etcd3 main DB size has crossed its current practical limit of 2GB. Etcd might now require more memory to continue serving traffic with low latency, and might face request throttling.
+        description: Etcd3 main DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.
         summary: Etcd3 main DB size has crossed its current practical limit.
   - eval_time: 31m
     alertname: KubeEtcdDeltaBackupFailed

@@ -183,7 +183,7 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 
 		// do not add reconcile annotation if shoot was once set to failed or if shoot is already in an ongoing reconciliation
 		if s.Status.LastOperation != nil && s.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
-			s.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationReconcile
+			metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, common.ShootOperationReconcile)
 		}
 
 		var needsRetry bool
@@ -193,7 +193,7 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 		delete(s.Annotations, common.FailedShootNeedsRetryOperation)
 
 		if needsRetry {
-			s.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationRetry
+			metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, common.ShootOperationRetry)
 		}
 
 		if !gardencorev1beta1helper.HibernationIsEnabled(s) {
@@ -318,8 +318,10 @@ func hasMaintainNowAnnotation(shoot *gardencorev1beta1.Shoot) bool {
 
 // MaintainMachineImages determines if a shoots machine images have to be maintained and in case returns the target images
 func MaintainMachineImages(logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile) (updatedMachineImages []*gardencorev1beta1.ShootMachineImage, reasons []string, error error) {
-	var shootMachineImagesForUpdate []*gardencorev1beta1.ShootMachineImage
-	var reasonsForUpdate []string
+	var (
+		shootMachineImagesForUpdate []*gardencorev1beta1.ShootMachineImage
+		reasonsForUpdate            []string
+	)
 	for _, worker := range shoot.Spec.Provider.Workers {
 		workerImage := worker.Machine.Image
 		machineImageFromCloudProfile, err := determineMachineImage(cloudProfile, workerImage)
@@ -333,13 +335,16 @@ func MaintainMachineImages(logger *logrus.Entry, shoot *gardencorev1beta1.Shoot,
 		}
 
 		if !shouldBeUpdated {
-			return nil, nil, nil
+			continue
 		}
 
 		message := fmt.Sprintf("image of worker-pool '%s' from '%s' version '%s' to version '%s'. Reason: %s", worker.Name, workerImage.Name, *workerImage.Version, *updatedMachineImage.Version, *reason)
 		reasonsForUpdate = append(reasonsForUpdate, message)
 		logger.Debugf("[SHOOT MAINTENANCE] Updating %s", message)
 		shootMachineImagesForUpdate = append(shootMachineImagesForUpdate, updatedMachineImage)
+	}
+	if len(shootMachineImagesForUpdate) == 0 {
+		return nil, nil, nil
 	}
 	return shootMachineImagesForUpdate, reasonsForUpdate, nil
 }

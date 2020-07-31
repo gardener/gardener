@@ -335,6 +335,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			},
 		}
 		verticalPodAutoscaler = map[string]interface{}{
+			"clusterType":         "shoot",
 			"admissionController": map[string]interface{}{"enableServiceAccount": false},
 			"exporter":            map[string]interface{}{"enableServiceAccount": false},
 			"recommender":         map[string]interface{}{"enableServiceAccount": false},

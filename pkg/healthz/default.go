@@ -27,8 +27,9 @@ func NewDefaultHealthz() Manager {
 }
 
 type defaultHealthz struct {
-	mutex  sync.Mutex
-	health bool
+	mutex   sync.RWMutex
+	health  bool
+	started bool
 }
 
 // Name returns the name of the health manager.
@@ -38,16 +39,26 @@ func (d *defaultHealthz) Name() string {
 
 // Start starts the health manager.
 func (d *defaultHealthz) Start() {
-	d.Set(true)
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	d.started = true
+	d.health = true
 }
 
-// Stop starts the health manager.
+// Stop stops the health manager.
 func (d *defaultHealthz) Stop() {
-	d.Set(false)
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	d.started = false
+	d.health = false
 }
 
 // Get returns the current health status.
 func (d *defaultHealthz) Get() bool {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
 	return d.health
 }
 
@@ -55,5 +66,5 @@ func (d *defaultHealthz) Get() bool {
 func (d *defaultHealthz) Set(health bool) {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
-	d.health = health
+	d.health = health && d.started
 }

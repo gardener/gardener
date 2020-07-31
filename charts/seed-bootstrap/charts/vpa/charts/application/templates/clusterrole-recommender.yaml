@@ -3,7 +3,7 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: system:metrics-reader
+  name: gardener.cloud:vpa:{{ .Values.clusterType }}:metrics-reader
   labels:
   {{ toYaml .Values.labels | indent 4 }}
 rules:
