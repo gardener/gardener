@@ -212,6 +212,16 @@ spec:
               - sh
               - -c
               - sleep 5
+        livenessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /livez
+            port: 443
+          initialDelaySeconds: {{ .Values.global.apiserver.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.global.apiserver.livenessProbe.periodSeconds }}
+          successThreshold: {{ .Values.global.apiserver.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.global.apiserver.livenessProbe.failureThreshold }}
+          timeoutSeconds: {{ .Values.global.apiserver.livenessProbe.timeoutSeconds }}
         {{- if .Values.global.apiserver.resources }}
         resources:
 {{ toYaml .Values.global.apiserver.resources | indent 10 }}
