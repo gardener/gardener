@@ -24,7 +24,7 @@ const (
 	// KubeconfigSecretKeyName ist the name of the key in a secret that holds the kubeconfig of a shoot
 	KubeconfigSecretKeyName = "kubeconfig"
 
-	// LoggingUserName is the admin user name for the elasticserach logging instance of a shoot
+	// LoggingUserName is the admin user name for the loki instance of a shoot
 	lokiLogging = "loki"
 	lokiPort    = 3100
 

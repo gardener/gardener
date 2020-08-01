@@ -196,8 +196,8 @@ func (a *Agnostic) CloudControllerManagerSecured() *SourcePod {
 	}
 }
 
-// LokiSearch points to cloud-agnostic loki instance.
-func (a *Agnostic) LokiSearch() *SourcePod {
+// Loki points to cloud-agnostic loki instance.
+func (a *Agnostic) Loki() *SourcePod {
 	return &SourcePod{
 		Ports: []Port{
 			{Name: "metrics", Port: 3100},
