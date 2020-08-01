@@ -51,6 +51,8 @@ type ControllerManagerControllerConfiguration struct {
 	CloudProfile *CloudProfileControllerConfiguration
 	// ControllerRegistration defines the configuration of the ControllerRegistration controller.
 	ControllerRegistration *ControllerRegistrationControllerConfiguration
+	// Event defines the configuration of the Event controller.  If unset, the event controller will be disabled.
+	Event *EventControllerConfiguration
 	// Plant defines the configuration of the Plant controller.
 	Plant *PlantControllerConfiguration
 	// Project defines the configuration of the Project controller.
@@ -93,6 +95,15 @@ type PlantControllerConfiguration struct {
 	ConcurrentSyncs int
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration
+}
+
+// EventControllerConfiguration defines the configuration of the Event controller.
+type EventControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int
+	// TTLNonShootEvents is the time-to-live for all non-shoot related events (defaults to `1h`).
+	TTLNonShootEvents *metav1.Duration
 }
 
 // ProjectControllerConfiguration defines the configuration of the

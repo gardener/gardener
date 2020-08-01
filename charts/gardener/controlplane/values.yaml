@@ -208,6 +208,9 @@ global:
         qps: 100
         burst: 130
       controllers:
+#       event:
+#         concurrentSyncs: 5
+#         ttlNonShootEvents: 1h
         plant:
           concurrentSyncs: 20
           syncPeriod: 30s

@@ -156,7 +156,7 @@ func (c *defaultControl) ScheduleShoot(ctx context.Context, obj *gardencorev1bet
 	}
 
 	schedulerLogger.Infof("Shoot '%s' (Cloud Profile '%s', Region '%s') successfully scheduled to seed '%s' using SeedDeterminationStrategy '%s'", shoot.Name, shoot.Spec.CloudProfileName, shoot.Spec.Region, seed.Name, c.config.Schedulers.Shoot.Strategy)
-	c.reportSuccessfulScheduling(shoot, seed.Name)
+	c.reportEvent(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventSchedulingSuccessful, "Scheduled to seed '%s'", seed.Name)
 	return nil
 }
 
@@ -452,10 +452,6 @@ func UpdateShootToBeScheduledOntoSeed(ctx context.Context, shoot *gardencorev1be
 
 func (c *defaultControl) reportFailedScheduling(shoot *gardencorev1beta1.Shoot, err error) {
 	c.reportEvent(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventSchedulingFailed, MsgUnschedulable+" '%s' : %+v", shoot.Name, err)
-}
-
-func (c *defaultControl) reportSuccessfulScheduling(shoot *gardencorev1beta1.Shoot, seedName string) {
-	c.reportEvent(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventSchedulingSuccessful, "Scheduled to seed '%s'", seedName)
 }
 
 func (c *defaultControl) reportEvent(project *gardencorev1beta1.Shoot, eventType string, eventReason, messageFmt string, args ...interface{}) {

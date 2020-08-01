@@ -56,6 +56,9 @@ type ControllerManagerControllerConfiguration struct {
 	// ControllerRegistration defines the configuration of the ControllerRegistration controller.
 	// +optional
 	ControllerRegistration *ControllerRegistrationControllerConfiguration `json:"controllerRegistration,omitempty"`
+	// Event defines the configuration of the Event controller.  If unset, the event controller will be disabled.
+	// +optional
+	Event *EventControllerConfiguration `json:"event,omitempty"`
 	// Plant defines the configuration of the Plant controller.
 	// +optional
 	Plant *PlantControllerConfiguration `json:"plant,omitempty"`
@@ -93,6 +96,16 @@ type ControllerRegistrationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// EventControllerConfiguration defines the configuration of the Event controller.
+type EventControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+	// TTLNonShootEvents is the time-to-live for all non-shoot related events (defaults to `1h`).
+	// +optional
+	TTLNonShootEvents *metav1.Duration `json:"ttlNonShootEvents,omitempty"`
 }
 
 // PlantControllerConfiguration defines the configuration of the

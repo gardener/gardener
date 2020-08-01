@@ -26,6 +26,7 @@ import (
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
 )
 
 func hibernationLogger(key string) logrus.FieldLogger {
@@ -81,7 +82,7 @@ func LocationLogger(logger logrus.FieldLogger, location *time.Location) logrus.F
 }
 
 // ComputeHibernationSchedule computes the HibernationSchedule for the given Shoot.
-func ComputeHibernationSchedule(clientMap clientmap.ClientMap, logger logrus.FieldLogger, shoot *gardencorev1beta1.Shoot) (HibernationSchedule, error) {
+func ComputeHibernationSchedule(clientMap clientmap.ClientMap, logger logrus.FieldLogger, recorder record.EventRecorder, shoot *gardencorev1beta1.Shoot) (HibernationSchedule, error) {
 	var (
 		schedules           = getShootHibernationSchedules(shoot)
 		locationToSchedules = GroupHibernationSchedulesByLocation(schedules)
@@ -103,7 +104,7 @@ func ComputeHibernationSchedule(clientMap clientmap.ClientMap, logger logrus.Fie
 					return nil, err
 				}
 
-				cr.Schedule(start, NewHibernationJob(clientMap, cronLogger, shoot, true))
+				cr.Schedule(start, NewHibernationJob(clientMap, cronLogger, recorder, shoot, true))
 				cronLogger.Debugf("Next hibernation for spec %q will trigger at %v", *schedule.Start, start.Next(TimeNow().UTC()))
 			}
 
@@ -113,7 +114,7 @@ func ComputeHibernationSchedule(clientMap clientmap.ClientMap, logger logrus.Fie
 					return nil, err
 				}
 
-				cr.Schedule(end, NewHibernationJob(clientMap, cronLogger, shoot, false))
+				cr.Schedule(end, NewHibernationJob(clientMap, cronLogger, recorder, shoot, false))
 				cronLogger.Debugf("Next wakeup for spec %q will trigger at %v", *schedule.End, end.Next(TimeNow().UTC()))
 			}
 		}
@@ -220,7 +221,7 @@ func (c *Controller) reconcileShootHibernation(logger logrus.FieldLogger, key st
 		return nil
 	}
 
-	schedule, err := ComputeHibernationSchedule(c.clientMap, logger, shoot)
+	schedule, err := ComputeHibernationSchedule(c.clientMap, logger, c.recorder, shoot)
 	if err != nil {
 		return err
 	}

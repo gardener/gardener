@@ -26,7 +26,9 @@ import (
 
 	"github.com/robfig/cron"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 )
 
@@ -93,6 +95,7 @@ func NewHibernationScheduleRegistry() HibernationScheduleRegistry {
 type hibernationJob struct {
 	clientMap clientmap.ClientMap
 	logger    logrus.FieldLogger
+	recorder  record.EventRecorder
 	target    *gardencorev1beta1.Shoot
 	enabled   bool
 }
@@ -123,9 +126,16 @@ func (h *hibernationJob) Run() {
 		return
 	}
 	h.logger.Debugf("Successfully set hibernation.enabled to %t", h.enabled)
+	if h.enabled {
+		msg := "Hibernating cluster due to schedule"
+		h.recorder.Eventf(h.target, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationEnabled, "%s", msg)
+	} else {
+		msg := "Waking up cluster due to schedule"
+		h.recorder.Eventf(h.target, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationDisabled, "%s", msg)
+	}
 }
 
 // NewHibernationJob creates a new cron.Job that sets the hibernation of the given shoot to enabled when it triggers.
-func NewHibernationJob(clientMap clientmap.ClientMap, logger logrus.FieldLogger, target *gardencorev1beta1.Shoot, enabled bool) cron.Job {
-	return &hibernationJob{clientMap, logger, target, enabled}
+func NewHibernationJob(clientMap clientmap.ClientMap, logger logrus.FieldLogger, recorder record.EventRecorder, target *gardencorev1beta1.Shoot, enabled bool) cron.Job {
+	return &hibernationJob{clientMap, logger, recorder, target, enabled}
 }

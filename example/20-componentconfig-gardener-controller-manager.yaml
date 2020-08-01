@@ -29,6 +29,9 @@ controllers:
     staleGracePeriodDays: 14
     staleExpirationTimeDays: 90
     staleSyncPeriod: 12h
+  event:
+    concurrentSyncs: 5
+    ttlNonShootEvents: 1h
 leaderElection:
   leaderElect: true
   leaseDuration: 15s

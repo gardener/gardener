@@ -137,8 +137,6 @@ const (
 	EventDeleted = "Deleted"
 	// EventDeleteError indicates that the a Delete operation failed.
 	EventDeleteError = "DeleteError"
-	// EventOperationPending
-	EventOperationPending = "OperationPending"
 	// EventPrepareMigration indicates that a Prepare Migration operation started.
 	EventPrepareMigration = "PrepareMigration"
 	// EventMigrationPrepared indicates that Migration preparation was successful.

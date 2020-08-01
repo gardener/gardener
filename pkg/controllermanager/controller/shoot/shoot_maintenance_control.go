@@ -146,7 +146,6 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 		shoot       = shootObj.DeepCopy()
 		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace)
 		handleError = func(msg string) {
-			c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventMaintenanceError, "%s", msg)
 			shootLogger.Error(msg)
 		}
 	)
@@ -221,28 +220,20 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 		return err
 	}
 
-	// no update to Kubernetes and Machine Image version --> one event
-	if updatedKubernetesVersion == nil && updatedMachineImages == nil {
-		sendMaintenanceCompletedEvent(c.recorder, shoot, "No action required.")
-		return nil
-	}
-
 	if updatedKubernetesVersion != nil {
-		sendMaintenanceCompletedEvent(c.recorder, shoot, fmt.Sprintf("Updated %s.", *reasonForKubernetesUpdate))
+		c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s",
+			fmt.Sprintf("Updated %s.", *reasonForKubernetesUpdate))
 	}
 
 	if updatedMachineImages != nil {
 		for _, reason := range reasonForImageUpdatePerPool {
-			sendMaintenanceCompletedEvent(c.recorder, shoot, fmt.Sprintf("Updated %s.", reason))
+			c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventImageVersionMaintenance, "%s",
+				fmt.Sprintf("Updated %s.", reason))
 		}
 	}
 
 	shootLogger.Infof("[SHOOT MAINTENANCE] completed for %s/%s", shoot.Namespace, shoot.Name)
 	return nil
-}
-
-func sendMaintenanceCompletedEvent(recorder record.EventRecorder, shoot *gardencorev1beta1.Shoot, message string) {
-	recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventMaintenanceDone, "%s", message)
 }
 
 // MaintainKubernetesVersion determines if a shoots kubernetes version has to be maintained and in case returns the target version

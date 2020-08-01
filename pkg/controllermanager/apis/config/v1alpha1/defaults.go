@@ -147,3 +147,10 @@ func SetDefaults_LeaderElectionConfiguration(obj *LeaderElectionConfiguration) {
 		obj.LockObjectName = ControllerManagerDefaultLockObjectName
 	}
 }
+
+// SetDefaults_EventControllerConfiguration sets defaults for the EventControllerConfiguration.
+func SetDefaults_EventControllerConfiguration(obj *EventControllerConfiguration) {
+	if obj.TTLNonShootEvents == nil {
+		obj.TTLNonShootEvents = &metav1.Duration{Duration: 1 * time.Hour}
+	}
+}

@@ -27,6 +27,7 @@ import (
 	csrcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
 	cloudprofilecontroller "github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
 	controllerregistrationcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
+	eventcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/event"
 	plantcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/plant"
 	projectcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/project"
 	quotacontroller "github.com/gardener/gardener/pkg/controllermanager/controller/quota"
@@ -127,6 +128,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 		secretBindingController          = secretbindingcontroller.NewSecretBindingController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.recorder)
 		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
 		shootController                  = shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
+		eventController                  = eventcontroller.NewController(f.clientMap, f.cfg.Controllers.Event)
 	)
 
 	// Initialize the Controller metrics collection.
@@ -142,6 +144,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 		secretBindingController,
 		seedController,
 		shootController,
+		eventController,
 	)
 
 	go cloudProfileController.Run(ctx, f.cfg.Controllers.CloudProfile.ConcurrentSyncs)
@@ -153,6 +156,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	go secretBindingController.Run(ctx, f.cfg.Controllers.SecretBinding.ConcurrentSyncs)
 	go seedController.Run(ctx, f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(ctx, f.cfg.Controllers.ShootMaintenance.ConcurrentSyncs, f.cfg.Controllers.ShootQuota.ConcurrentSyncs, f.cfg.Controllers.ShootHibernation.ConcurrentSyncs)
+	go eventController.Run(ctx)
 
 	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Get().GitVersion)
 

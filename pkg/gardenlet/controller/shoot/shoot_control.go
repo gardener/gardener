@@ -291,7 +291,6 @@ func (c *Controller) deleteShoot(logger *logrus.Entry, shoot *gardencorev1beta1.
 	// We accept the deletion.
 	if len(shoot.Status.UID) == 0 {
 		logger.Info("`.status.uid` is empty, assuming Shoot cluster did never exist. Deletion accepted.")
-		c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventDeleted, "Deleted Shoot cluster")
 		return c.finalizeShootDeletion(ctx, gardenClient, shoot, project.Name)
 	}
 
@@ -324,7 +323,7 @@ func (c *Controller) deleteShoot(logger *logrus.Entry, shoot *gardencorev1beta1.
 	// At this point the deletion is allowed, hence, check if the seed is up-to-date, then sync the Cluster resource
 	// initialize a new operation and, eventually, start the deletion flow.
 	if err := c.checkSeedAndSyncClusterResource(ctx, o.Shoot.Info, project, cloudProfile, seed); err != nil {
-		return c.updateShootStatusAndRequeueOnSyncError(gardenClient.GardenCore(), o.Shoot.Info, err)
+		return c.updateShootStatusAndRequeueOnSyncError(gardenClient.GardenCore(), o.Shoot.Info, logger, err)
 	}
 
 	if flowErr := c.runDeleteShootFlow(o); flowErr != nil {
@@ -412,7 +411,6 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 	if !reconcileAllowed {
 		durationUntilNextSync := c.durationUntilNextShootSync(shoot)
 		message := fmt.Sprintf("Reconciliation not allowed, scheduling next sync in %s (%s)", durationUntilNextSync, time.Now().UTC().Add(durationUntilNextSync))
-		c.recorder.Event(shoot, corev1.EventTypeNormal, "ScheduledNextSync", message)
 		logger.Infof(message)
 		return reconcile.Result{RequeueAfter: durationUntilNextSync}, nil
 	}
@@ -443,7 +441,7 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 	// At this point the reconciliation is allowed, hence, check if the seed is up-to-date, then sync the Cluster resource
 	// initialize a new operation and, eventually, start the reconciliation flow.
 	if err := c.checkSeedAndSyncClusterResource(ctx, o.Shoot.Info, project, cloudProfile, seed); err != nil {
-		return c.updateShootStatusAndRequeueOnSyncError(gardenClient.GardenCore(), o.Shoot.Info, err)
+		return c.updateShootStatusAndRequeueOnSyncError(gardenClient.GardenCore(), o.Shoot.Info, logger, err)
 	}
 
 	var dnsEnabled = !o.Shoot.DisableDNS
@@ -484,8 +482,7 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 	}
 
 	durationUntilNextSync := c.durationUntilNextShootSync(o.Shoot.Info)
-	message := fmt.Sprintf("Scheduled next queuing time for Shoot in %s (%s)", durationUntilNextSync, time.Now().UTC().Add(durationUntilNextSync))
-	c.recorder.Event(o.Shoot.Info, corev1.EventTypeNormal, "ScheduledNextSync", message)
+	logger.Infof("Scheduled next queuing time in %s (%s)", durationUntilNextSync, time.Now().UTC().Add(durationUntilNextSync))
 	return reconcile.Result{RequeueAfter: durationUntilNextSync}, nil
 }
 
@@ -504,13 +501,13 @@ func (c *Controller) durationUntilNextShootSync(shoot *gardencorev1beta1.Shoot) 
 	return syncPeriod
 }
 
-func (c *Controller) updateShootStatusAndRequeueOnSyncError(g gardencore.Interface, shoot *gardencorev1beta1.Shoot, err error) (reconcile.Result, error) {
-	message := fmt.Sprintf("Shoot cannot be synced with Seed: %v", err)
-	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventOperationPending, message)
+func (c *Controller) updateShootStatusAndRequeueOnSyncError(g gardencore.Interface, shoot *gardencorev1beta1.Shoot, logger *logrus.Entry, err error) (reconcile.Result, error) {
+	msg := fmt.Sprintf("Shoot cannot be synced with Seed: %v", err)
+	logger.Error(err)
 
 	_, updateErr := kutil.TryUpdateShootStatus(g, retry.DefaultRetry, shoot.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			shoot.Status.LastOperation.Description = message
+			shoot.Status.LastOperation.Description = msg
 			shoot.Status.LastOperation.LastUpdateTime = metav1.NewTime(time.Now().UTC())
 			return shoot, nil
 		},
