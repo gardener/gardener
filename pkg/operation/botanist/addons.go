@@ -68,9 +68,43 @@ func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, 
 	return common.GenerateAddonConfig(values, enabled), nil
 }
 
-// EnsureIngressDNSRecord ensures the nginx DNSEntry and waits for completion.
+// EnsureIngressDNSRecord deploys the nginx ingress DNSEntry and DNSOwner resources.
 func (b *Botanist) EnsureIngressDNSRecord(ctx context.Context) error {
-	return component.OpWaiter(b.Shoot.Components.Extensions.DNS.NginxEntry).Deploy(ctx)
+	if b.NeedsExternalDNS() && !b.Shoot.HibernationEnabled && b.Shoot.NginxIngressEnabled() {
+		if b.isRestorePhase() {
+			return dnsRestoreDeployer{
+				entry: b.Shoot.Components.Extensions.DNS.NginxEntry,
+				owner: b.Shoot.Components.Extensions.DNS.NginxOwner,
+			}.Deploy(ctx)
+		}
+
+		return component.OpWaiter(
+			b.Shoot.Components.Extensions.DNS.NginxOwner,
+			b.Shoot.Components.Extensions.DNS.NginxEntry,
+		).Deploy(ctx)
+	}
+
+	return component.OpWaiter(
+		b.Shoot.Components.Extensions.DNS.NginxEntry,
+		b.Shoot.Components.Extensions.DNS.NginxOwner,
+	).Deploy(ctx)
+}
+
+// DestroyIngressDNSRecord destroys the nginx ingress DNSEntry and DNSOwner resources.
+func (b *Botanist) DestroyIngressDNSRecord(ctx context.Context) error {
+	return component.OpDestroyAndWait(
+		b.Shoot.Components.Extensions.DNS.NginxEntry,
+		b.Shoot.Components.Extensions.DNS.NginxOwner,
+	).Destroy(ctx)
+}
+
+// MigrateIngressDNSRecord destroys the nginx ingress DNSEntry and DNSOwner resources,
+// without removing the entry from the DNS provider.
+func (b *Botanist) MigrateIngressDNSRecord(ctx context.Context) error {
+	return component.OpDestroy(
+		b.Shoot.Components.Extensions.DNS.NginxOwner,
+		b.Shoot.Components.Extensions.DNS.NginxEntry,
+	).Destroy(ctx)
 }
 
 // DefaultNginxIngressDNSEntry returns a Deployer which removes existing nginx ingress DNSEntry.
@@ -88,14 +122,40 @@ func (b *Botanist) DefaultNginxIngressDNSEntry(seedClient client.Client) compone
 	))
 }
 
+// DefaultNginxIngressDNSOwner returns DeployWaiter which removes the nginx ingress DNSOwner.
+func (b *Botanist) DefaultNginxIngressDNSOwner(seedClient client.Client) component.DeployWaiter {
+	return component.OpDestroy(dns.NewDNSOwner(
+		&dns.OwnerValues{
+			Name: DNSIngressName,
+		},
+		b.Shoot.SeedNamespace,
+		b.K8sSeedClient.ChartApplier(),
+		b.ChartsRootPath,
+		seedClient,
+	))
+}
+
 // SetNginxIngressAddress sets the IP address of the API server's LoadBalancer.
 func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Client) {
 	if b.NeedsExternalDNS() && !b.Shoot.HibernationEnabled && b.Shoot.NginxIngressEnabled() {
+		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSIngressName
+		b.Shoot.Components.Extensions.DNS.NginxOwner = dns.NewDNSOwner(
+			&dns.OwnerValues{
+				Name:    DNSIngressName,
+				Active:  true,
+				OwnerID: ownerID,
+			},
+			b.Shoot.SeedNamespace,
+			b.K8sSeedClient.ChartApplier(),
+			b.ChartsRootPath,
+			seedClient,
+		)
 		b.Shoot.Components.Extensions.DNS.NginxEntry = dns.NewDNSEntry(
 			&dns.EntryValues{
 				Name:    DNSIngressName,
 				DNSName: b.Shoot.GetIngressFQDN("*"),
 				Targets: []string{address},
+				OwnerID: ownerID,
 			},
 			b.Shoot.SeedNamespace,
 			b.K8sSeedClient.ChartApplier(),

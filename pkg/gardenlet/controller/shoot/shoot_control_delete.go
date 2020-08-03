@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -412,8 +411,8 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 		})
 
 		destroyNginxIngressDNSRecord = g.Add(flow.Task{
-			Name:         "Destroying ingress DNS record",
-			Fn:           flow.TaskFn(component.OpDestroyAndWait(botanist.Shoot.Components.Extensions.DNS.NginxEntry).Destroy),
+			Name:         "Destroying nginx ingress DNS record",
+			Fn:           flow.TaskFn(botanist.DestroyIngressDNSRecord),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 		destroyInfrastructure = g.Add(flow.Task{
@@ -427,8 +426,8 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 			Dependencies: flow.NewTaskIDs(destroyInfrastructure),
 		})
 		destroyExternalDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Destroying external DNS entry",
-			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.Extensions.DNS.ExternalEntry).Destroy),
+			Name:         "Destroying external domain DNS record",
+			Fn:           flow.TaskFn(botanist.DestroyExternalDNS),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 
@@ -443,12 +442,12 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 		)
 
 		destroyInternalDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Destroying internal DNS entry",
-			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.Extensions.DNS.InternalEntry).Destroy),
+			Name:         "Destroying internal domain DNS record",
+			Fn:           flow.TaskFn(botanist.DestroyInternalDNS),
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
 		deleteDNSProviders = g.Add(flow.Task{
-			Name:         "Deleting DNS providers",
+			Name:         "Deleting additional DNS providers",
 			Fn:           flow.TaskFn(botanist.DeleteDNSProviders),
 			Dependencies: flow.NewTaskIDs(destroyInternalDomainDNSRecord),
 		})

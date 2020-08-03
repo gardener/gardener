@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -256,25 +255,25 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 			Dependencies: flow.NewTaskIDs(waitForExtensionCRsOperationMigrateToSucceed),
 			Fn:           botanist.DeleteAllExtensionCRs,
 		})
-		destroyIngressDNSEntries = g.Add(flow.Task{
-			Name:         "Destroying ingress DNS record",
-			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.Extensions.DNS.NginxEntry).Destroy),
+		migrateIngressDNSRecord = g.Add(flow.Task{
+			Name:         "Migrating nginx ingress DNS record",
+			Fn:           flow.TaskFn(botanist.MigrateIngressDNSRecord),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
-		destroyExternalDNSEntries = g.Add(flow.Task{
-			Name:         "Destroying external domain DNS record",
-			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.Extensions.DNS.ExternalEntry).Destroy),
+		migrateExternalDNSRecord = g.Add(flow.Task{
+			Name:         "Migrating external domain DNS record",
+			Fn:           flow.TaskFn(botanist.MigrateExternalDNS),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
-		destroyInternalDNSEntries = g.Add(flow.Task{
-			Name:         "Destroying internal domain DNS record",
-			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.Extensions.DNS.InternalEntry).Destroy),
+		migrateInternalDNSRecord = g.Add(flow.Task{
+			Name:         "Migrating internal domain DNS record",
+			Fn:           flow.TaskFn(botanist.MigrateInternalDNS),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
 		destroyDNSProviders = g.Add(flow.Task{
 			Name:         "Deleting DNS providers",
 			Fn:           flow.TaskFn(botanist.DeleteDNSProviders),
-			Dependencies: flow.NewTaskIDs(destroyIngressDNSEntries, destroyExternalDNSEntries, destroyInternalDNSEntries),
+			Dependencies: flow.NewTaskIDs(migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord),
 		})
 		createETCDSnapshot = g.Add(flow.Task{
 			Name:         "Creating ETCD Snapshot",
@@ -289,7 +288,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteNamespace).Retry(defaultInterval),
-			Dependencies: flow.NewTaskIDs(deleteAllExtensionCRs, deleteBackupEntryFromSeed, waitForManagedResourcesDeletion, scaleETCDToZero, destroyDNSProviders),
+			Dependencies: flow.NewTaskIDs(deleteAllExtensionCRs, destroyDNSProviders, deleteBackupEntryFromSeed, waitForManagedResourcesDeletion, scaleETCDToZero),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace in Seed has been deleted",

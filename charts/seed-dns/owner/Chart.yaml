@@ -1,0 +1,4 @@
+apiVersion: v1
+description: DNSOwner extension resource for declaration of DNS Entry owner.
+name: owner
+version: 0.1.0
