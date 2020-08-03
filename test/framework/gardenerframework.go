@@ -17,12 +17,13 @@ package framework
 import (
 	"context"
 	"flag"
+	"time"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 var gardenerCfg *GardenerConfig

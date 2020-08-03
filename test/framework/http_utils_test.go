@@ -16,11 +16,12 @@ package framework_test
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
+
 	"github.com/gardener/gardener/test/framework"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/http"
-	"net/http/httptest"
 )
 
 var _ = Describe("HTTP Utils tests", func() {

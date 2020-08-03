@@ -16,10 +16,11 @@ package framework_test
 
 import (
 	"context"
-	"github.com/gardener/gardener/test/framework"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/gardener/gardener/test/framework"
 
 	"github.com/gardener/gardener/pkg/logger"
 

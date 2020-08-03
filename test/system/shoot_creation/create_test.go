@@ -28,8 +28,9 @@ package shoot_creation
 
 import (
 	"context"
-	"github.com/gardener/gardener/test/framework"
 	"time"
+
+	"github.com/gardener/gardener/test/framework"
 
 	. "github.com/onsi/ginkgo"
 )

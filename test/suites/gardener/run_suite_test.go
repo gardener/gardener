@@ -17,12 +17,13 @@ package gardener_suite_test
 import (
 	"flag"
 	"fmt"
+	"os"
+
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/config"
 	"github.com/gardener/gardener/test/framework/reporter"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"os"
 
 	"testing"
 
