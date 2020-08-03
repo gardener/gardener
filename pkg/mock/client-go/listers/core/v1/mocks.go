@@ -5,37 +5,38 @@
 package v1
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	v10 "k8s.io/client-go/listers/core/v1"
-	reflect "reflect"
 )
 
-// MockSecretLister is a mock of SecretLister interface
+// MockSecretLister is a mock of SecretLister interface.
 type MockSecretLister struct {
 	ctrl     *gomock.Controller
 	recorder *MockSecretListerMockRecorder
 }
 
-// MockSecretListerMockRecorder is the mock recorder for MockSecretLister
+// MockSecretListerMockRecorder is the mock recorder for MockSecretLister.
 type MockSecretListerMockRecorder struct {
 	mock *MockSecretLister
 }
 
-// NewMockSecretLister creates a new mock instance
+// NewMockSecretLister creates a new mock instance.
 func NewMockSecretLister(ctrl *gomock.Controller) *MockSecretLister {
 	mock := &MockSecretLister{ctrl: ctrl}
 	mock.recorder = &MockSecretListerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockSecretLister) EXPECT() *MockSecretListerMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockSecretLister) List(arg0 labels.Selector) ([]*v1.Secret, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0)
@@ -44,13 +45,13 @@ func (m *MockSecretLister) List(arg0 labels.Selector) ([]*v1.Secret, error) {
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockSecretListerMockRecorder) List(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSecretLister)(nil).List), arg0)
 }
 
-// Secrets mocks base method
+// Secrets mocks base method.
 func (m *MockSecretLister) Secrets(arg0 string) v10.SecretNamespaceLister {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Secrets", arg0)
@@ -58,7 +59,7 @@ func (m *MockSecretLister) Secrets(arg0 string) v10.SecretNamespaceLister {
 	return ret0
 }
 
-// Secrets indicates an expected call of Secrets
+// Secrets indicates an expected call of Secrets.
 func (mr *MockSecretListerMockRecorder) Secrets(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Secrets", reflect.TypeOf((*MockSecretLister)(nil).Secrets), arg0)

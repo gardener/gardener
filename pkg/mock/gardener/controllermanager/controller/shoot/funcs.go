@@ -5,36 +5,37 @@
 package shoot
 
 import (
-	shoot "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 	time "time"
+
+	shoot "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
+	gomock "github.com/golang/mock/gomock"
 )
 
-// MockNewCronWithLocation is a mock of NewCronWithLocation interface
+// MockNewCronWithLocation is a mock of NewCronWithLocation interface.
 type MockNewCronWithLocation struct {
 	ctrl     *gomock.Controller
 	recorder *MockNewCronWithLocationMockRecorder
 }
 
-// MockNewCronWithLocationMockRecorder is the mock recorder for MockNewCronWithLocation
+// MockNewCronWithLocationMockRecorder is the mock recorder for MockNewCronWithLocation.
 type MockNewCronWithLocationMockRecorder struct {
 	mock *MockNewCronWithLocation
 }
 
-// NewMockNewCronWithLocation creates a new mock instance
+// NewMockNewCronWithLocation creates a new mock instance.
 func NewMockNewCronWithLocation(ctrl *gomock.Controller) *MockNewCronWithLocation {
 	mock := &MockNewCronWithLocation{ctrl: ctrl}
 	mock.recorder = &MockNewCronWithLocationMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockNewCronWithLocation) EXPECT() *MockNewCronWithLocationMockRecorder {
 	return m.recorder
 }
 
-// Do mocks base method
+// Do mocks base method.
 func (m *MockNewCronWithLocation) Do(arg0 *time.Location) shoot.Cron {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Do", arg0)
@@ -42,7 +43,7 @@ func (m *MockNewCronWithLocation) Do(arg0 *time.Location) shoot.Cron {
 	return ret0
 }
 
-// Do indicates an expected call of Do
+// Do indicates an expected call of Do.
 func (mr *MockNewCronWithLocationMockRecorder) Do(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockNewCronWithLocation)(nil).Do), arg0)

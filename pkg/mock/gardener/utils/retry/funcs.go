@@ -6,34 +6,35 @@ package retry
 
 import (
 	context "context"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
-// MockWaitFunc is a mock of WaitFunc interface
+// MockWaitFunc is a mock of WaitFunc interface.
 type MockWaitFunc struct {
 	ctrl     *gomock.Controller
 	recorder *MockWaitFuncMockRecorder
 }
 
-// MockWaitFuncMockRecorder is the mock recorder for MockWaitFunc
+// MockWaitFuncMockRecorder is the mock recorder for MockWaitFunc.
 type MockWaitFuncMockRecorder struct {
 	mock *MockWaitFunc
 }
 
-// NewMockWaitFunc creates a new mock instance
+// NewMockWaitFunc creates a new mock instance.
 func NewMockWaitFunc(ctrl *gomock.Controller) *MockWaitFunc {
 	mock := &MockWaitFunc{ctrl: ctrl}
 	mock.recorder = &MockWaitFuncMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockWaitFunc) EXPECT() *MockWaitFuncMockRecorder {
 	return m.recorder
 }
 
-// Do mocks base method
+// Do mocks base method.
 func (m *MockWaitFunc) Do(arg0 context.Context) (context.Context, context.CancelFunc) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Do", arg0)
@@ -42,36 +43,36 @@ func (m *MockWaitFunc) Do(arg0 context.Context) (context.Context, context.Cancel
 	return ret0, ret1
 }
 
-// Do indicates an expected call of Do
+// Do indicates an expected call of Do.
 func (mr *MockWaitFuncMockRecorder) Do(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockWaitFunc)(nil).Do), arg0)
 }
 
-// MockFunc is a mock of Func interface
+// MockFunc is a mock of Func interface.
 type MockFunc struct {
 	ctrl     *gomock.Controller
 	recorder *MockFuncMockRecorder
 }
 
-// MockFuncMockRecorder is the mock recorder for MockFunc
+// MockFuncMockRecorder is the mock recorder for MockFunc.
 type MockFuncMockRecorder struct {
 	mock *MockFunc
 }
 
-// NewMockFunc creates a new mock instance
+// NewMockFunc creates a new mock instance.
 func NewMockFunc(ctrl *gomock.Controller) *MockFunc {
 	mock := &MockFunc{ctrl: ctrl}
 	mock.recorder = &MockFuncMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockFunc) EXPECT() *MockFuncMockRecorder {
 	return m.recorder
 }
 
-// Do mocks base method
+// Do mocks base method.
 func (m *MockFunc) Do(arg0 context.Context) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Do", arg0)
@@ -80,7 +81,7 @@ func (m *MockFunc) Do(arg0 context.Context) (bool, error) {
 	return ret0, ret1
 }
 
-// Do indicates an expected call of Do
+// Do indicates an expected call of Do.
 func (mr *MockFuncMockRecorder) Do(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockFunc)(nil).Do), arg0)

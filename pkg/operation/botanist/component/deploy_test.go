@@ -18,18 +18,18 @@ import (
 	"context"
 	"fmt"
 
-	. "github.com/gardener/gardener/pkg/operation/botanist/component"
-	mockdeployer "github.com/gardener/gardener/pkg/operation/botanist/component/fake"
 	"github.com/golang/mock/gomock"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	mockcomponent "github.com/gardener/gardener/pkg/mock/gardener/operation/botanist/component"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component"
 )
 
 var _ = Describe("Helper functions", func() {
 	var (
 		ctrl     *gomock.Controller
-		c, c2    *mockdeployer.MockDeployWaiter
+		c, c2    *mockcomponent.MockDeployWaiter
 		err      = fmt.Errorf("some error")
 		ctx      = context.TODO()
 		deployer Deployer
@@ -38,8 +38,8 @@ var _ = Describe("Helper functions", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		c = mockdeployer.NewMockDeployWaiter(ctrl)
-		c2 = mockdeployer.NewMockDeployWaiter(ctrl)
+		c = mockcomponent.NewMockDeployWaiter(ctrl)
+		c2 = mockcomponent.NewMockDeployWaiter(ctrl)
 	})
 
 	AfterEach(func() {

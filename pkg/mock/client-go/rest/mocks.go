@@ -5,39 +5,40 @@
 package rest
 
 import (
+	http "net/http"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
-	http "net/http"
-	reflect "reflect"
 )
 
-// MockHTTPClient is a mock of HTTPClient interface
+// MockHTTPClient is a mock of HTTPClient interface.
 type MockHTTPClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockHTTPClientMockRecorder
 }
 
-// MockHTTPClientMockRecorder is the mock recorder for MockHTTPClient
+// MockHTTPClientMockRecorder is the mock recorder for MockHTTPClient.
 type MockHTTPClientMockRecorder struct {
 	mock *MockHTTPClient
 }
 
-// NewMockHTTPClient creates a new mock instance
+// NewMockHTTPClient creates a new mock instance.
 func NewMockHTTPClient(ctrl *gomock.Controller) *MockHTTPClient {
 	mock := &MockHTTPClient{ctrl: ctrl}
 	mock.recorder = &MockHTTPClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockHTTPClient) EXPECT() *MockHTTPClientMockRecorder {
 	return m.recorder
 }
 
-// Do mocks base method
+// Do mocks base method.
 func (m *MockHTTPClient) Do(arg0 *http.Request) (*http.Response, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Do", arg0)
@@ -46,36 +47,36 @@ func (m *MockHTTPClient) Do(arg0 *http.Request) (*http.Response, error) {
 	return ret0, ret1
 }
 
-// Do indicates an expected call of Do
+// Do indicates an expected call of Do.
 func (mr *MockHTTPClientMockRecorder) Do(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockHTTPClient)(nil).Do), arg0)
 }
 
-// MockInterface is a mock of Interface interface
+// MockInterface is a mock of Interface interface.
 type MockInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfaceMockRecorder
 }
 
-// MockInterfaceMockRecorder is the mock recorder for MockInterface
+// MockInterfaceMockRecorder is the mock recorder for MockInterface.
 type MockInterfaceMockRecorder struct {
 	mock *MockInterface
 }
 
-// NewMockInterface creates a new mock instance
+// NewMockInterface creates a new mock instance.
 func NewMockInterface(ctrl *gomock.Controller) *MockInterface {
 	mock := &MockInterface{ctrl: ctrl}
 	mock.recorder = &MockInterfaceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 	return m.recorder
 }
 
-// APIVersion mocks base method
+// APIVersion mocks base method.
 func (m *MockInterface) APIVersion() schema.GroupVersion {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "APIVersion")
@@ -83,13 +84,13 @@ func (m *MockInterface) APIVersion() schema.GroupVersion {
 	return ret0
 }
 
-// APIVersion indicates an expected call of APIVersion
+// APIVersion indicates an expected call of APIVersion.
 func (mr *MockInterfaceMockRecorder) APIVersion() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIVersion", reflect.TypeOf((*MockInterface)(nil).APIVersion))
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockInterface) Delete() *rest.Request {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete")
@@ -97,13 +98,13 @@ func (m *MockInterface) Delete() *rest.Request {
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockInterfaceMockRecorder) Delete() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockInterface)(nil).Delete))
 }
 
-// Get mocks base method
+// Get mocks base method.
 func (m *MockInterface) Get() *rest.Request {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get")
@@ -111,13 +112,13 @@ func (m *MockInterface) Get() *rest.Request {
 	return ret0
 }
 
-// Get indicates an expected call of Get
+// Get indicates an expected call of Get.
 func (mr *MockInterfaceMockRecorder) Get() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterface)(nil).Get))
 }
 
-// GetRateLimiter mocks base method
+// GetRateLimiter mocks base method.
 func (m *MockInterface) GetRateLimiter() flowcontrol.RateLimiter {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRateLimiter")
@@ -125,13 +126,13 @@ func (m *MockInterface) GetRateLimiter() flowcontrol.RateLimiter {
 	return ret0
 }
 
-// GetRateLimiter indicates an expected call of GetRateLimiter
+// GetRateLimiter indicates an expected call of GetRateLimiter.
 func (mr *MockInterfaceMockRecorder) GetRateLimiter() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRateLimiter", reflect.TypeOf((*MockInterface)(nil).GetRateLimiter))
 }
 
-// Patch mocks base method
+// Patch mocks base method.
 func (m *MockInterface) Patch(arg0 types.PatchType) *rest.Request {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Patch", arg0)
@@ -139,13 +140,13 @@ func (m *MockInterface) Patch(arg0 types.PatchType) *rest.Request {
 	return ret0
 }
 
-// Patch indicates an expected call of Patch
+// Patch indicates an expected call of Patch.
 func (mr *MockInterfaceMockRecorder) Patch(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockInterface)(nil).Patch), arg0)
 }
 
-// Post mocks base method
+// Post mocks base method.
 func (m *MockInterface) Post() *rest.Request {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Post")
@@ -153,13 +154,13 @@ func (m *MockInterface) Post() *rest.Request {
 	return ret0
 }
 
-// Post indicates an expected call of Post
+// Post indicates an expected call of Post.
 func (mr *MockInterfaceMockRecorder) Post() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Post", reflect.TypeOf((*MockInterface)(nil).Post))
 }
 
-// Put mocks base method
+// Put mocks base method.
 func (m *MockInterface) Put() *rest.Request {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Put")
@@ -167,13 +168,13 @@ func (m *MockInterface) Put() *rest.Request {
 	return ret0
 }
 
-// Put indicates an expected call of Put
+// Put indicates an expected call of Put.
 func (mr *MockInterfaceMockRecorder) Put() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Put", reflect.TypeOf((*MockInterface)(nil).Put))
 }
 
-// Verb mocks base method
+// Verb mocks base method.
 func (m *MockInterface) Verb(arg0 string) *rest.Request {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Verb", arg0)
@@ -181,7 +182,7 @@ func (m *MockInterface) Verb(arg0 string) *rest.Request {
 	return ret0
 }
 
-// Verb indicates an expected call of Verb
+// Verb indicates an expected call of Verb.
 func (mr *MockInterfaceMockRecorder) Verb(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verb", reflect.TypeOf((*MockInterface)(nil).Verb), arg0)

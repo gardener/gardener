@@ -6,36 +6,37 @@ package clientmap
 
 import (
 	context "context"
+	reflect "reflect"
+
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockClientSetFactory is a mock of ClientSetFactory interface
+// MockClientSetFactory is a mock of ClientSetFactory interface.
 type MockClientSetFactory struct {
 	ctrl     *gomock.Controller
 	recorder *MockClientSetFactoryMockRecorder
 }
 
-// MockClientSetFactoryMockRecorder is the mock recorder for MockClientSetFactory
+// MockClientSetFactoryMockRecorder is the mock recorder for MockClientSetFactory.
 type MockClientSetFactoryMockRecorder struct {
 	mock *MockClientSetFactory
 }
 
-// NewMockClientSetFactory creates a new mock instance
+// NewMockClientSetFactory creates a new mock instance.
 func NewMockClientSetFactory(ctrl *gomock.Controller) *MockClientSetFactory {
 	mock := &MockClientSetFactory{ctrl: ctrl}
 	mock.recorder = &MockClientSetFactoryMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockClientSetFactory) EXPECT() *MockClientSetFactoryMockRecorder {
 	return m.recorder
 }
 
-// CalculateClientSetHash mocks base method
+// CalculateClientSetHash mocks base method.
 func (m *MockClientSetFactory) CalculateClientSetHash(arg0 context.Context, arg1 clientmap.ClientSetKey) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CalculateClientSetHash", arg0, arg1)
@@ -44,13 +45,13 @@ func (m *MockClientSetFactory) CalculateClientSetHash(arg0 context.Context, arg1
 	return ret0, ret1
 }
 
-// CalculateClientSetHash indicates an expected call of CalculateClientSetHash
+// CalculateClientSetHash indicates an expected call of CalculateClientSetHash.
 func (mr *MockClientSetFactoryMockRecorder) CalculateClientSetHash(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateClientSetHash", reflect.TypeOf((*MockClientSetFactory)(nil).CalculateClientSetHash), arg0, arg1)
 }
 
-// NewClientSet mocks base method
+// NewClientSet mocks base method.
 func (m *MockClientSetFactory) NewClientSet(arg0 context.Context, arg1 clientmap.ClientSetKey) (kubernetes.Interface, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewClientSet", arg0, arg1)
@@ -59,7 +60,7 @@ func (m *MockClientSetFactory) NewClientSet(arg0 context.Context, arg1 clientmap
 	return ret0, ret1
 }
 
-// NewClientSet indicates an expected call of NewClientSet
+// NewClientSet indicates an expected call of NewClientSet.
 func (mr *MockClientSetFactoryMockRecorder) NewClientSet(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewClientSet", reflect.TypeOf((*MockClientSetFactory)(nil).NewClientSet), arg0, arg1)

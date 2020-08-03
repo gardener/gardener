@@ -6,35 +6,36 @@ package kubernetes
 
 import (
 	context "context"
+	reflect "reflect"
+
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockApplier is a mock of Applier interface
+// MockApplier is a mock of Applier interface.
 type MockApplier struct {
 	ctrl     *gomock.Controller
 	recorder *MockApplierMockRecorder
 }
 
-// MockApplierMockRecorder is the mock recorder for MockApplier
+// MockApplierMockRecorder is the mock recorder for MockApplier.
 type MockApplierMockRecorder struct {
 	mock *MockApplier
 }
 
-// NewMockApplier creates a new mock instance
+// NewMockApplier creates a new mock instance.
 func NewMockApplier(ctrl *gomock.Controller) *MockApplier {
 	mock := &MockApplier{ctrl: ctrl}
 	mock.recorder = &MockApplierMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockApplier) EXPECT() *MockApplierMockRecorder {
 	return m.recorder
 }
 
-// ApplyManifest mocks base method
+// ApplyManifest mocks base method.
 func (m *MockApplier) ApplyManifest(arg0 context.Context, arg1 kubernetes.UnstructuredReader, arg2 kubernetes.MergeFuncs) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ApplyManifest", arg0, arg1, arg2)
@@ -42,13 +43,13 @@ func (m *MockApplier) ApplyManifest(arg0 context.Context, arg1 kubernetes.Unstru
 	return ret0
 }
 
-// ApplyManifest indicates an expected call of ApplyManifest
+// ApplyManifest indicates an expected call of ApplyManifest.
 func (mr *MockApplierMockRecorder) ApplyManifest(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyManifest", reflect.TypeOf((*MockApplier)(nil).ApplyManifest), arg0, arg1, arg2)
 }
 
-// DeleteManifest mocks base method
+// DeleteManifest mocks base method.
 func (m *MockApplier) DeleteManifest(arg0 context.Context, arg1 kubernetes.UnstructuredReader, arg2 ...kubernetes.DeleteManifestOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
@@ -60,7 +61,7 @@ func (m *MockApplier) DeleteManifest(arg0 context.Context, arg1 kubernetes.Unstr
 	return ret0
 }
 
-// DeleteManifest indicates an expected call of DeleteManifest
+// DeleteManifest indicates an expected call of DeleteManifest.
 func (mr *MockApplierMockRecorder) DeleteManifest(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)

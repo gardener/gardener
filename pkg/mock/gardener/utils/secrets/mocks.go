@@ -6,37 +6,38 @@ package secrets
 
 import (
 	context "context"
+	reflect "reflect"
+
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
 	kubernetes0 "k8s.io/client-go/kubernetes"
-	reflect "reflect"
 )
 
-// MockInterface is a mock of Interface interface
+// MockInterface is a mock of Interface interface.
 type MockInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfaceMockRecorder
 }
 
-// MockInterfaceMockRecorder is the mock recorder for MockInterface
+// MockInterfaceMockRecorder is the mock recorder for MockInterface.
 type MockInterfaceMockRecorder struct {
 	mock *MockInterface
 }
 
-// NewMockInterface creates a new mock instance
+// NewMockInterface creates a new mock instance.
 func NewMockInterface(ctrl *gomock.Controller) *MockInterface {
 	mock := &MockInterface{ctrl: ctrl}
 	mock.recorder = &MockInterfaceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 	return m.recorder
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockInterface) Delete(arg0 kubernetes0.Interface, arg1 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
@@ -44,13 +45,13 @@ func (m *MockInterface) Delete(arg0 kubernetes0.Interface, arg1 string) error {
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockInterfaceMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockInterface)(nil).Delete), arg0, arg1)
 }
 
-// Deploy mocks base method
+// Deploy mocks base method.
 func (m *MockInterface) Deploy(arg0 context.Context, arg1 kubernetes0.Interface, arg2 kubernetes.Interface, arg3 string) (map[string]*v1.Secret, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Deploy", arg0, arg1, arg2, arg3)
@@ -59,7 +60,7 @@ func (m *MockInterface) Deploy(arg0 context.Context, arg1 kubernetes0.Interface,
 	return ret0, ret1
 }
 
-// Deploy indicates an expected call of Deploy
+// Deploy indicates an expected call of Deploy.
 func (mr *MockInterfaceMockRecorder) Deploy(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Deploy", reflect.TypeOf((*MockInterface)(nil).Deploy), arg0, arg1, arg2, arg3)
