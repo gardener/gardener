@@ -156,11 +156,15 @@ func (d *network) Wait(ctx context.Context) error {
 
 // WaitCleanup waits until the Network CRD is deleted
 func (d *network) WaitCleanup(ctx context.Context) error {
-	return common.DeleteExtensionCR(
+	return common.WaitUntilExtensionCRDeleted(
 		ctx,
 		d.client,
+		d.logger,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Network{} },
+		"Network",
 		d.values.Namespace,
 		d.values.Name,
+		d.waitInterval,
+		d.waitTimeout,
 	)
 }
