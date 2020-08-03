@@ -24,7 +24,6 @@ import (
 	"flag"
 	"fmt"
 	"go/build"
-	"go/format"
 	"go/token"
 	"io"
 	"io/ioutil"
@@ -39,6 +38,8 @@ import (
 	"unicode"
 
 	"github.com/golang/mock/mockgen/model"
+
+	toolsimports "golang.org/x/tools/imports"
 )
 
 const (
@@ -151,6 +152,7 @@ func main() {
 		g.srcPackage = packageName
 		g.srcInterfaces = flag.Arg(1)
 	}
+	g.destination = *destination
 
 	if *mockNames != "" {
 		g.mockNames = parseMockNames(*mockNames)
@@ -210,6 +212,7 @@ type generator struct {
 	indent                    string
 	mockNames                 map[string]string // may be empty
 	filename                  string            // may be empty
+	destination               string            // may be empty
 	srcPackage, srcInterfaces string            // may be empty
 	copyrightHeader           string
 
@@ -376,7 +379,7 @@ func (g *generator) GenerateMockInterface(intf *model.Interface, outputPackagePa
 	mockType := g.mockName(intf.Name)
 
 	g.p("")
-	g.p("// %v is a mock of %v interface", mockType, intf.Name)
+	g.p("// %v is a mock of %v interface.", mockType, intf.Name)
 	g.p("type %v struct {", mockType)
 	g.in()
 	g.p("ctrl     *gomock.Controller")
@@ -385,7 +388,7 @@ func (g *generator) GenerateMockInterface(intf *model.Interface, outputPackagePa
 	g.p("}")
 	g.p("")
 
-	g.p("// %vMockRecorder is the mock recorder for %v", mockType, mockType)
+	g.p("// %vMockRecorder is the mock recorder for %v.", mockType, mockType)
 	g.p("type %vMockRecorder struct {", mockType)
 	g.in()
 	g.p("mock *%v", mockType)
@@ -398,7 +401,7 @@ func (g *generator) GenerateMockInterface(intf *model.Interface, outputPackagePa
 	// g.p("var _ %v = (*%v)(nil)", typeName, mockType)
 	// g.p("")
 
-	g.p("// New%v creates a new mock instance", mockType)
+	g.p("// New%v creates a new mock instance.", mockType)
 	g.p("func New%v(ctrl *gomock.Controller) *%v {", mockType, mockType)
 	g.in()
 	g.p("mock := &%v{ctrl: ctrl}", mockType)
@@ -409,7 +412,7 @@ func (g *generator) GenerateMockInterface(intf *model.Interface, outputPackagePa
 	g.p("")
 
 	// XXX: possible name collision here if someone has EXPECT in their interface.
-	g.p("// EXPECT returns an object that allows the caller to indicate expected use")
+	g.p("// EXPECT returns an object that allows the caller to indicate expected use.")
 	g.p("func (m *%v) EXPECT() *%vMockRecorder {", mockType, mockType)
 	g.in()
 	g.p("return m.recorder")
@@ -465,7 +468,7 @@ func (g *generator) GenerateMockMethod(mockType string, m *model.Method, pkgOver
 	ia := newIdentifierAllocator(argNames)
 	idRecv := ia.allocateIdentifier("m")
 
-	g.p("// %v mocks base method", m.Name)
+	g.p("// %v mocks base method.", m.Name)
 	g.p("func (%v *%v) %v(%v)%v {", idRecv, mockType, m.Name, argString, retString)
 	g.in()
 	g.p("%s.ctrl.T.Helper()", idRecv)
@@ -533,7 +536,7 @@ func (g *generator) GenerateMockRecorderMethod(mockType string, m *model.Method)
 	ia := newIdentifierAllocator(argNames)
 	idRecv := ia.allocateIdentifier("mr")
 
-	g.p("// %v indicates an expected call of %v", m.Name, m.Name)
+	g.p("// %v indicates an expected call of %v.", m.Name, m.Name)
 	g.p("func (%s *%vMockRecorder) %v(%v) *gomock.Call {", idRecv, mockType, m.Name, argString)
 	g.in()
 	g.p("%s.mock.ctrl.T.Helper()", idRecv)
@@ -617,7 +620,7 @@ func (o identifierAllocator) allocateIdentifier(want string) string {
 
 // Output returns the generator's output, formatted in the standard Go style.
 func (g *generator) Output() []byte {
-	src, err := format.Source(g.buf.Bytes())
+	src, err := toolsimports.Process(g.destination, g.buf.Bytes(), nil)
 	if err != nil {
 		log.Fatalf("Failed to format generated source code: %s\n%s", err, g.buf.String())
 	}

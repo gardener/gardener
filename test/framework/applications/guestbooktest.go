@@ -17,14 +17,15 @@ package applications
 import (
 	"context"
 	"fmt"
-	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/retry"
-	framework "github.com/gardener/gardener/test/framework"
-	"github.com/gardener/gardener/test/framework/resources/templates"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	framework "github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/framework/resources/templates"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

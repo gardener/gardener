@@ -16,6 +16,7 @@ package errors
 
 import (
 	"fmt"
+
 	"github.com/hashicorp/go-multierror"
 )
 

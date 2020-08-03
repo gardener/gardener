@@ -6,36 +6,37 @@ package controlplane
 
 import (
 	context "context"
+	reflect "reflect"
+
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensions "github.com/gardener/gardener/pkg/extensions"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
-// MockActuator is a mock of Actuator interface
+// MockActuator is a mock of Actuator interface.
 type MockActuator struct {
 	ctrl     *gomock.Controller
 	recorder *MockActuatorMockRecorder
 }
 
-// MockActuatorMockRecorder is the mock recorder for MockActuator
+// MockActuatorMockRecorder is the mock recorder for MockActuator.
 type MockActuatorMockRecorder struct {
 	mock *MockActuator
 }
 
-// NewMockActuator creates a new mock instance
+// NewMockActuator creates a new mock instance.
 func NewMockActuator(ctrl *gomock.Controller) *MockActuator {
 	mock := &MockActuator{ctrl: ctrl}
 	mock.recorder = &MockActuatorMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockActuator) EXPECT() *MockActuatorMockRecorder {
 	return m.recorder
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockActuator) Delete(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
@@ -43,13 +44,13 @@ func (m *MockActuator) Delete(arg0 context.Context, arg1 *v1alpha1.ControlPlane,
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockActuatorMockRecorder) Delete(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockActuator)(nil).Delete), arg0, arg1, arg2)
 }
 
-// Migrate mocks base method
+// Migrate mocks base method.
 func (m *MockActuator) Migrate(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Migrate", arg0, arg1, arg2)
@@ -57,13 +58,13 @@ func (m *MockActuator) Migrate(arg0 context.Context, arg1 *v1alpha1.ControlPlane
 	return ret0
 }
 
-// Migrate indicates an expected call of Migrate
+// Migrate indicates an expected call of Migrate.
 func (mr *MockActuatorMockRecorder) Migrate(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Migrate", reflect.TypeOf((*MockActuator)(nil).Migrate), arg0, arg1, arg2)
 }
 
-// Reconcile mocks base method
+// Reconcile mocks base method.
 func (m *MockActuator) Reconcile(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Reconcile", arg0, arg1, arg2)
@@ -72,13 +73,13 @@ func (m *MockActuator) Reconcile(arg0 context.Context, arg1 *v1alpha1.ControlPla
 	return ret0, ret1
 }
 
-// Reconcile indicates an expected call of Reconcile
+// Reconcile indicates an expected call of Reconcile.
 func (mr *MockActuatorMockRecorder) Reconcile(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reconcile", reflect.TypeOf((*MockActuator)(nil).Reconcile), arg0, arg1, arg2)
 }
 
-// Restore mocks base method
+// Restore mocks base method.
 func (m *MockActuator) Restore(arg0 context.Context, arg1 *v1alpha1.ControlPlane, arg2 *extensions.Cluster) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Restore", arg0, arg1, arg2)
@@ -87,7 +88,7 @@ func (m *MockActuator) Restore(arg0 context.Context, arg1 *v1alpha1.ControlPlane
 	return ret0, ret1
 }
 
-// Restore indicates an expected call of Restore
+// Restore indicates an expected call of Restore.
 func (mr *MockActuatorMockRecorder) Restore(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockActuator)(nil).Restore), arg0, arg1, arg2)

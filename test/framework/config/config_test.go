@@ -16,11 +16,12 @@ package config_test
 
 import (
 	"flag"
+	"io/ioutil"
+	"os"
+
 	"github.com/gardener/gardener/test/framework/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"io/ioutil"
-	"os"
 
 	"testing"
 )

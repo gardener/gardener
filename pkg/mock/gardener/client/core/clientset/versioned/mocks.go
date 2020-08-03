@@ -5,37 +5,38 @@
 package versioned
 
 import (
+	reflect "reflect"
+
 	v1alpha1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1alpha1"
 	v1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	gomock "github.com/golang/mock/gomock"
 	discovery "k8s.io/client-go/discovery"
-	reflect "reflect"
 )
 
-// MockInterface is a mock of Interface interface
+// MockInterface is a mock of Interface interface.
 type MockInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockInterfaceMockRecorder
 }
 
-// MockInterfaceMockRecorder is the mock recorder for MockInterface
+// MockInterfaceMockRecorder is the mock recorder for MockInterface.
 type MockInterfaceMockRecorder struct {
 	mock *MockInterface
 }
 
-// NewMockInterface creates a new mock instance
+// NewMockInterface creates a new mock instance.
 func NewMockInterface(ctrl *gomock.Controller) *MockInterface {
 	mock := &MockInterface{ctrl: ctrl}
 	mock.recorder = &MockInterfaceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 	return m.recorder
 }
 
-// CoreV1alpha1 mocks base method
+// CoreV1alpha1 mocks base method.
 func (m *MockInterface) CoreV1alpha1() v1alpha1.CoreV1alpha1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CoreV1alpha1")
@@ -43,13 +44,13 @@ func (m *MockInterface) CoreV1alpha1() v1alpha1.CoreV1alpha1Interface {
 	return ret0
 }
 
-// CoreV1alpha1 indicates an expected call of CoreV1alpha1
+// CoreV1alpha1 indicates an expected call of CoreV1alpha1.
 func (mr *MockInterfaceMockRecorder) CoreV1alpha1() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CoreV1alpha1", reflect.TypeOf((*MockInterface)(nil).CoreV1alpha1))
 }
 
-// CoreV1beta1 mocks base method
+// CoreV1beta1 mocks base method.
 func (m *MockInterface) CoreV1beta1() v1beta1.CoreV1beta1Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CoreV1beta1")
@@ -57,13 +58,13 @@ func (m *MockInterface) CoreV1beta1() v1beta1.CoreV1beta1Interface {
 	return ret0
 }
 
-// CoreV1beta1 indicates an expected call of CoreV1beta1
+// CoreV1beta1 indicates an expected call of CoreV1beta1.
 func (mr *MockInterfaceMockRecorder) CoreV1beta1() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CoreV1beta1", reflect.TypeOf((*MockInterface)(nil).CoreV1beta1))
 }
 
-// Discovery mocks base method
+// Discovery mocks base method.
 func (m *MockInterface) Discovery() discovery.DiscoveryInterface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Discovery")
@@ -71,7 +72,7 @@ func (m *MockInterface) Discovery() discovery.DiscoveryInterface {
 	return ret0
 }
 
-// Discovery indicates an expected call of Discovery
+// Discovery indicates an expected call of Discovery.
 func (mr *MockInterfaceMockRecorder) Discovery() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Discovery", reflect.TypeOf((*MockInterface)(nil).Discovery))

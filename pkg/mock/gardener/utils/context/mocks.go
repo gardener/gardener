@@ -6,35 +6,36 @@ package context
 
 import (
 	context "context"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 	time "time"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
-// MockOps is a mock of Ops interface
+// MockOps is a mock of Ops interface.
 type MockOps struct {
 	ctrl     *gomock.Controller
 	recorder *MockOpsMockRecorder
 }
 
-// MockOpsMockRecorder is the mock recorder for MockOps
+// MockOpsMockRecorder is the mock recorder for MockOps.
 type MockOpsMockRecorder struct {
 	mock *MockOps
 }
 
-// NewMockOps creates a new mock instance
+// NewMockOps creates a new mock instance.
 func NewMockOps(ctrl *gomock.Controller) *MockOps {
 	mock := &MockOps{ctrl: ctrl}
 	mock.recorder = &MockOpsMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockOps) EXPECT() *MockOpsMockRecorder {
 	return m.recorder
 }
 
-// WithTimeout mocks base method
+// WithTimeout mocks base method.
 func (m *MockOps) WithTimeout(arg0 context.Context, arg1 time.Duration) (context.Context, context.CancelFunc) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WithTimeout", arg0, arg1)
@@ -43,7 +44,7 @@ func (m *MockOps) WithTimeout(arg0 context.Context, arg1 time.Duration) (context
 	return ret0, ret1
 }
 
-// WithTimeout indicates an expected call of WithTimeout
+// WithTimeout indicates an expected call of WithTimeout.
 func (mr *MockOpsMockRecorder) WithTimeout(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WithTimeout", reflect.TypeOf((*MockOps)(nil).WithTimeout), arg0, arg1)

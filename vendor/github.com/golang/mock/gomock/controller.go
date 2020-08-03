@@ -50,9 +50,6 @@
 //         mockObj.EXPECT().SomeMethod(2, "second"),
 //         mockObj.EXPECT().SomeMethod(3, "third"),
 //     )
-//
-// TODO:
-//	- Handle different argument/return types (e.g. ..., chan, map, interface).
 package gomock
 
 import (
@@ -75,6 +72,15 @@ type TestReporter interface {
 type TestHelper interface {
 	TestReporter
 	Helper()
+}
+
+// cleanuper is used to check if TestHelper also has the `Cleanup` method. A
+// common pattern is to pass in a `*testing.T` to
+// `NewController(t TestReporter)`. In Go 1.14+, `*testing.T` has a cleanup
+// method. This can be utilized to call `Finish()` so the caller of this library
+// does not have to.
+type cleanuper interface {
+	Cleanup(func())
 }
 
 // A Controller represents the top-level control of a mock ecosystem.  It
@@ -115,29 +121,43 @@ type Controller struct {
 
 // NewController returns a new Controller. It is the preferred way to create a
 // Controller.
+//
+// New in go1.14+, if you are passing a *testing.T into this function you no
+// longer need to call ctrl.Finish() in your test methods
 func NewController(t TestReporter) *Controller {
 	h, ok := t.(TestHelper)
 	if !ok {
-		h = nopTestHelper{t}
+		h = &nopTestHelper{t}
 	}
-
-	return &Controller{
+	ctrl := &Controller{
 		T:             h,
 		expectedCalls: newCallSet(),
 	}
+	if c, ok := isCleanuper(ctrl.T); ok {
+		c.Cleanup(func() {
+			ctrl.T.Helper()
+			ctrl.Finish()
+		})
+	}
+
+	return ctrl
 }
 
 type cancelReporter struct {
-	TestHelper
+	t      TestHelper
 	cancel func()
 }
 
 func (r *cancelReporter) Errorf(format string, args ...interface{}) {
-	r.TestHelper.Errorf(format, args...)
+	r.t.Errorf(format, args...)
 }
 func (r *cancelReporter) Fatalf(format string, args ...interface{}) {
 	defer r.cancel()
-	r.TestHelper.Fatalf(format, args...)
+	r.t.Fatalf(format, args...)
+}
+
+func (r *cancelReporter) Helper() {
+	r.t.Helper()
 }
 
 // WithContext returns a new Controller and a Context, which is cancelled on any
@@ -145,15 +165,22 @@ func (r *cancelReporter) Fatalf(format string, args ...interface{}) {
 func WithContext(ctx context.Context, t TestReporter) (*Controller, context.Context) {
 	h, ok := t.(TestHelper)
 	if !ok {
-		h = nopTestHelper{t}
+		h = &nopTestHelper{t: t}
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	return NewController(&cancelReporter{h, cancel}), ctx
+	return NewController(&cancelReporter{t: h, cancel: cancel}), ctx
 }
 
 type nopTestHelper struct {
-	TestReporter
+	t TestReporter
+}
+
+func (h *nopTestHelper) Errorf(format string, args ...interface{}) {
+	h.t.Errorf(format, args...)
+}
+func (h *nopTestHelper) Fatalf(format string, args ...interface{}) {
+	h.t.Fatalf(format, args...)
 }
 
 func (h nopTestHelper) Helper() {}
@@ -197,7 +224,10 @@ func (ctrl *Controller) Call(receiver interface{}, method string, args ...interf
 
 		expected, err := ctrl.expectedCalls.FindMatch(receiver, method, args)
 		if err != nil {
-			origin := callerInfo(2)
+			// callerInfo's skip should be updated if the number of calls between the user's test
+			// and this line changes, i.e. this code is wrapped in another anonymous function.
+			// 0 is us, 1 is controller.Call(), 2 is the generated mock, and 3 is the user's test.
+			origin := callerInfo(3)
 			ctrl.T.Fatalf("Unexpected call to %T.%v(%v) at %s because: %s", receiver, method, args, origin, err)
 		}
 
@@ -236,7 +266,15 @@ func (ctrl *Controller) Finish() {
 	defer ctrl.mu.Unlock()
 
 	if ctrl.finished {
-		ctrl.T.Fatalf("Controller.Finish was called more than once. It has to be called exactly once.")
+		if _, ok := isCleanuper(ctrl.T); !ok {
+			ctrl.T.Fatalf("Controller.Finish was called more than once. It has to be called exactly once.")
+		}
+		// provide a log message to guide users to remove `defer ctrl.Finish()` in Go 1.14+
+		tr := unwrapTestReporter(ctrl.T)
+		if l, ok := tr.(interface{ Log(args ...interface{}) }); ok {
+			l.Log("In Go 1.14+ you no longer need to `ctrl.Finish()` if a *testing.T is passed to `NewController(...)`")
+		}
+		return
 	}
 	ctrl.finished = true
 
@@ -256,9 +294,35 @@ func (ctrl *Controller) Finish() {
 	}
 }
 
+// callerInfo returns the file:line of the call site. skip is the number
+// of stack frames to skip when reporting. 0 is callerInfo's call site.
 func callerInfo(skip int) string {
 	if _, file, line, ok := runtime.Caller(skip + 1); ok {
 		return fmt.Sprintf("%s:%d", file, line)
 	}
 	return "unknown file"
+}
+
+// isCleanuper checks it if t's base TestReporter has a Cleanup method.
+func isCleanuper(t TestReporter) (cleanuper, bool) {
+	tr := unwrapTestReporter(t)
+	c, ok := tr.(cleanuper)
+	return c, ok
+}
+
+// unwrapTestReporter unwraps TestReporter to the base implementation.
+func unwrapTestReporter(t TestReporter) TestReporter {
+	tr := t
+	switch nt := t.(type) {
+	case *cancelReporter:
+		tr = nt.t
+		if h, check := tr.(*nopTestHelper); check {
+			tr = h.t
+		}
+	case *nopTestHelper:
+		tr = nt.t
+	default:
+		// not wrapped
+	}
+	return tr
 }

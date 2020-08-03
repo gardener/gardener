@@ -5,35 +5,36 @@
 package time
 
 import (
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 	time "time"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
-// MockNow is a mock of Now interface
+// MockNow is a mock of Now interface.
 type MockNow struct {
 	ctrl     *gomock.Controller
 	recorder *MockNowMockRecorder
 }
 
-// MockNowMockRecorder is the mock recorder for MockNow
+// MockNowMockRecorder is the mock recorder for MockNow.
 type MockNowMockRecorder struct {
 	mock *MockNow
 }
 
-// NewMockNow creates a new mock instance
+// NewMockNow creates a new mock instance.
 func NewMockNow(ctrl *gomock.Controller) *MockNow {
 	mock := &MockNow{ctrl: ctrl}
 	mock.recorder = &MockNowMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockNow) EXPECT() *MockNowMockRecorder {
 	return m.recorder
 }
 
-// Do mocks base method
+// Do mocks base method.
 func (m *MockNow) Do() time.Time {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Do")
@@ -41,7 +42,7 @@ func (m *MockNow) Do() time.Time {
 	return ret0
 }
 
-// Do indicates an expected call of Do
+// Do indicates an expected call of Do.
 func (mr *MockNowMockRecorder) Do() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Do", reflect.TypeOf((*MockNow)(nil).Do))

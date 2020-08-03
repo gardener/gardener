@@ -17,6 +17,7 @@ package loader
 import (
 	"fmt"
 	"io/ioutil"
+
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes/scheme"
 

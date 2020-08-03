@@ -50,8 +50,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/gardener/gardener/pkg/utils"
 	"time"
+
+	"github.com/gardener/gardener/pkg/utils"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"

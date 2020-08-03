@@ -16,12 +16,13 @@ package framework
 
 import (
 	"bytes"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/mock/go/context"
-	"github.com/pkg/errors"
 	"html/template"
 	"os"
 	"path/filepath"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/mock/go/context"
+	"github.com/pkg/errors"
 )
 
 // RenderAndDeployTemplate renders a template from the resource template directory and deploys it to the cluster

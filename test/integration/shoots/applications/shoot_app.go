@@ -33,11 +33,12 @@ package applications
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/test/framework"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/test/framework/applications"

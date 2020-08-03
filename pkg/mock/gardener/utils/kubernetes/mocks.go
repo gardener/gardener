@@ -5,36 +5,37 @@
 package kubernetes
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	reflect "reflect"
 )
 
-// MockNodeLister is a mock of NodeLister interface
+// MockNodeLister is a mock of NodeLister interface.
 type MockNodeLister struct {
 	ctrl     *gomock.Controller
 	recorder *MockNodeListerMockRecorder
 }
 
-// MockNodeListerMockRecorder is the mock recorder for MockNodeLister
+// MockNodeListerMockRecorder is the mock recorder for MockNodeLister.
 type MockNodeListerMockRecorder struct {
 	mock *MockNodeLister
 }
 
-// NewMockNodeLister creates a new mock instance
+// NewMockNodeLister creates a new mock instance.
 func NewMockNodeLister(ctrl *gomock.Controller) *MockNodeLister {
 	mock := &MockNodeLister{ctrl: ctrl}
 	mock.recorder = &MockNodeListerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockNodeLister) EXPECT() *MockNodeListerMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockNodeLister) List(arg0 labels.Selector) ([]*v1.Node, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0)
@@ -43,7 +44,7 @@ func (m *MockNodeLister) List(arg0 labels.Selector) ([]*v1.Node, error) {
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockNodeListerMockRecorder) List(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNodeLister)(nil).List), arg0)

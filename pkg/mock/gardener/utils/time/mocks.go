@@ -5,35 +5,36 @@
 package time
 
 import (
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 	time "time"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
-// MockOps is a mock of Ops interface
+// MockOps is a mock of Ops interface.
 type MockOps struct {
 	ctrl     *gomock.Controller
 	recorder *MockOpsMockRecorder
 }
 
-// MockOpsMockRecorder is the mock recorder for MockOps
+// MockOpsMockRecorder is the mock recorder for MockOps.
 type MockOpsMockRecorder struct {
 	mock *MockOps
 }
 
-// NewMockOps creates a new mock instance
+// NewMockOps creates a new mock instance.
 func NewMockOps(ctrl *gomock.Controller) *MockOps {
 	mock := &MockOps{ctrl: ctrl}
 	mock.recorder = &MockOpsMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockOps) EXPECT() *MockOpsMockRecorder {
 	return m.recorder
 }
 
-// Now mocks base method
+// Now mocks base method.
 func (m *MockOps) Now() time.Time {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Now")
@@ -41,7 +42,7 @@ func (m *MockOps) Now() time.Time {
 	return ret0
 }
 
-// Now indicates an expected call of Now
+// Now indicates an expected call of Now.
 func (mr *MockOpsMockRecorder) Now() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Now", reflect.TypeOf((*MockOps)(nil).Now))

@@ -16,9 +16,10 @@ package kubernetes
 
 import (
 	"fmt"
+	"strings"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
-	"strings"
 
 	"github.com/Masterminds/semver"
 

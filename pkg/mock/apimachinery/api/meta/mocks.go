@@ -5,36 +5,37 @@
 package meta
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
-	reflect "reflect"
 )
 
-// MockRESTMapper is a mock of RESTMapper interface
+// MockRESTMapper is a mock of RESTMapper interface.
 type MockRESTMapper struct {
 	ctrl     *gomock.Controller
 	recorder *MockRESTMapperMockRecorder
 }
 
-// MockRESTMapperMockRecorder is the mock recorder for MockRESTMapper
+// MockRESTMapperMockRecorder is the mock recorder for MockRESTMapper.
 type MockRESTMapperMockRecorder struct {
 	mock *MockRESTMapper
 }
 
-// NewMockRESTMapper creates a new mock instance
+// NewMockRESTMapper creates a new mock instance.
 func NewMockRESTMapper(ctrl *gomock.Controller) *MockRESTMapper {
 	mock := &MockRESTMapper{ctrl: ctrl}
 	mock.recorder = &MockRESTMapperMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockRESTMapper) EXPECT() *MockRESTMapperMockRecorder {
 	return m.recorder
 }
 
-// KindFor mocks base method
+// KindFor mocks base method.
 func (m *MockRESTMapper) KindFor(arg0 schema.GroupVersionResource) (schema.GroupVersionKind, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "KindFor", arg0)
@@ -43,13 +44,13 @@ func (m *MockRESTMapper) KindFor(arg0 schema.GroupVersionResource) (schema.Group
 	return ret0, ret1
 }
 
-// KindFor indicates an expected call of KindFor
+// KindFor indicates an expected call of KindFor.
 func (mr *MockRESTMapperMockRecorder) KindFor(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KindFor", reflect.TypeOf((*MockRESTMapper)(nil).KindFor), arg0)
 }
 
-// KindsFor mocks base method
+// KindsFor mocks base method.
 func (m *MockRESTMapper) KindsFor(arg0 schema.GroupVersionResource) ([]schema.GroupVersionKind, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "KindsFor", arg0)
@@ -58,13 +59,13 @@ func (m *MockRESTMapper) KindsFor(arg0 schema.GroupVersionResource) ([]schema.Gr
 	return ret0, ret1
 }
 
-// KindsFor indicates an expected call of KindsFor
+// KindsFor indicates an expected call of KindsFor.
 func (mr *MockRESTMapperMockRecorder) KindsFor(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KindsFor", reflect.TypeOf((*MockRESTMapper)(nil).KindsFor), arg0)
 }
 
-// RESTMapping mocks base method
+// RESTMapping mocks base method.
 func (m *MockRESTMapper) RESTMapping(arg0 schema.GroupKind, arg1 ...string) (*meta.RESTMapping, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0}
@@ -77,14 +78,14 @@ func (m *MockRESTMapper) RESTMapping(arg0 schema.GroupKind, arg1 ...string) (*me
 	return ret0, ret1
 }
 
-// RESTMapping indicates an expected call of RESTMapping
+// RESTMapping indicates an expected call of RESTMapping.
 func (mr *MockRESTMapperMockRecorder) RESTMapping(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RESTMapping", reflect.TypeOf((*MockRESTMapper)(nil).RESTMapping), varargs...)
 }
 
-// RESTMappings mocks base method
+// RESTMappings mocks base method.
 func (m *MockRESTMapper) RESTMappings(arg0 schema.GroupKind, arg1 ...string) ([]*meta.RESTMapping, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0}
@@ -97,14 +98,14 @@ func (m *MockRESTMapper) RESTMappings(arg0 schema.GroupKind, arg1 ...string) ([]
 	return ret0, ret1
 }
 
-// RESTMappings indicates an expected call of RESTMappings
+// RESTMappings indicates an expected call of RESTMappings.
 func (mr *MockRESTMapperMockRecorder) RESTMappings(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RESTMappings", reflect.TypeOf((*MockRESTMapper)(nil).RESTMappings), varargs...)
 }
 
-// ResourceFor mocks base method
+// ResourceFor mocks base method.
 func (m *MockRESTMapper) ResourceFor(arg0 schema.GroupVersionResource) (schema.GroupVersionResource, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResourceFor", arg0)
@@ -113,13 +114,13 @@ func (m *MockRESTMapper) ResourceFor(arg0 schema.GroupVersionResource) (schema.G
 	return ret0, ret1
 }
 
-// ResourceFor indicates an expected call of ResourceFor
+// ResourceFor indicates an expected call of ResourceFor.
 func (mr *MockRESTMapperMockRecorder) ResourceFor(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceFor", reflect.TypeOf((*MockRESTMapper)(nil).ResourceFor), arg0)
 }
 
-// ResourceSingularizer mocks base method
+// ResourceSingularizer mocks base method.
 func (m *MockRESTMapper) ResourceSingularizer(arg0 string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResourceSingularizer", arg0)
@@ -128,13 +129,13 @@ func (m *MockRESTMapper) ResourceSingularizer(arg0 string) (string, error) {
 	return ret0, ret1
 }
 
-// ResourceSingularizer indicates an expected call of ResourceSingularizer
+// ResourceSingularizer indicates an expected call of ResourceSingularizer.
 func (mr *MockRESTMapperMockRecorder) ResourceSingularizer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceSingularizer", reflect.TypeOf((*MockRESTMapper)(nil).ResourceSingularizer), arg0)
 }
 
-// ResourcesFor mocks base method
+// ResourcesFor mocks base method.
 func (m *MockRESTMapper) ResourcesFor(arg0 schema.GroupVersionResource) ([]schema.GroupVersionResource, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResourcesFor", arg0)
@@ -143,7 +144,7 @@ func (m *MockRESTMapper) ResourcesFor(arg0 schema.GroupVersionResource) ([]schem
 	return ret0, ret1
 }
 
-// ResourcesFor indicates an expected call of ResourcesFor
+// ResourcesFor indicates an expected call of ResourcesFor.
 func (mr *MockRESTMapperMockRecorder) ResourcesFor(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourcesFor", reflect.TypeOf((*MockRESTMapper)(nil).ResourcesFor), arg0)

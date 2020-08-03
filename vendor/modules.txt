@@ -208,7 +208,7 @@ github.com/gogo/protobuf/vanity
 github.com/gogo/protobuf/vanity/command
 # github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7
 github.com/golang/groupcache/lru
-# github.com/golang/mock v1.4.3
+# github.com/golang/mock v1.4.4-0.20200731163441-8734ec565a4d
 ## explicit
 github.com/golang/mock/gomock
 github.com/golang/mock/mockgen
@@ -482,7 +482,9 @@ golang.org/x/crypto/ssh/terminal
 ## explicit
 golang.org/x/lint
 golang.org/x/lint/golint
-# golang.org/x/mod v0.2.0
+# golang.org/x/mod v0.3.0
+golang.org/x/mod/internal/lazyregexp
+golang.org/x/mod/modfile
 golang.org/x/mod/module
 golang.org/x/mod/semver
 # golang.org/x/net v0.0.0-20200301022130-244492dfa37a

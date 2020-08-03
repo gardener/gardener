@@ -16,11 +16,12 @@ package config
 
 import (
 	"flag"
+	"os"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"os"
 )
 
 // ParseConfigForFlags tries to read configuration from the specified config file

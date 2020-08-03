@@ -5,38 +5,39 @@
 package util
 
 import (
+	reflect "reflect"
+
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	gomock "github.com/golang/mock/gomock"
 	version "k8s.io/apimachinery/pkg/version"
 	kubernetes0 "k8s.io/client-go/kubernetes"
-	reflect "reflect"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// MockShootClients is a mock of ShootClients interface
+// MockShootClients is a mock of ShootClients interface.
 type MockShootClients struct {
 	ctrl     *gomock.Controller
 	recorder *MockShootClientsMockRecorder
 }
 
-// MockShootClientsMockRecorder is the mock recorder for MockShootClients
+// MockShootClientsMockRecorder is the mock recorder for MockShootClients.
 type MockShootClientsMockRecorder struct {
 	mock *MockShootClients
 }
 
-// NewMockShootClients creates a new mock instance
+// NewMockShootClients creates a new mock instance.
 func NewMockShootClients(ctrl *gomock.Controller) *MockShootClients {
 	mock := &MockShootClients{ctrl: ctrl}
 	mock.recorder = &MockShootClientsMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockShootClients) EXPECT() *MockShootClientsMockRecorder {
 	return m.recorder
 }
 
-// ChartApplier mocks base method
+// ChartApplier mocks base method.
 func (m *MockShootClients) ChartApplier() kubernetes.ChartApplier {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ChartApplier")
@@ -44,13 +45,13 @@ func (m *MockShootClients) ChartApplier() kubernetes.ChartApplier {
 	return ret0
 }
 
-// ChartApplier indicates an expected call of ChartApplier
+// ChartApplier indicates an expected call of ChartApplier.
 func (mr *MockShootClientsMockRecorder) ChartApplier() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChartApplier", reflect.TypeOf((*MockShootClients)(nil).ChartApplier))
 }
 
-// Client mocks base method
+// Client mocks base method.
 func (m *MockShootClients) Client() client.Client {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Client")
@@ -58,13 +59,13 @@ func (m *MockShootClients) Client() client.Client {
 	return ret0
 }
 
-// Client indicates an expected call of Client
+// Client indicates an expected call of Client.
 func (mr *MockShootClientsMockRecorder) Client() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Client", reflect.TypeOf((*MockShootClients)(nil).Client))
 }
 
-// Clientset mocks base method
+// Clientset mocks base method.
 func (m *MockShootClients) Clientset() kubernetes0.Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Clientset")
@@ -72,13 +73,13 @@ func (m *MockShootClients) Clientset() kubernetes0.Interface {
 	return ret0
 }
 
-// Clientset indicates an expected call of Clientset
+// Clientset indicates an expected call of Clientset.
 func (mr *MockShootClientsMockRecorder) Clientset() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Clientset", reflect.TypeOf((*MockShootClients)(nil).Clientset))
 }
 
-// GardenerClientset mocks base method
+// GardenerClientset mocks base method.
 func (m *MockShootClients) GardenerClientset() kubernetes.Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GardenerClientset")
@@ -86,13 +87,13 @@ func (m *MockShootClients) GardenerClientset() kubernetes.Interface {
 	return ret0
 }
 
-// GardenerClientset indicates an expected call of GardenerClientset
+// GardenerClientset indicates an expected call of GardenerClientset.
 func (mr *MockShootClientsMockRecorder) GardenerClientset() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GardenerClientset", reflect.TypeOf((*MockShootClients)(nil).GardenerClientset))
 }
 
-// Version mocks base method
+// Version mocks base method.
 func (m *MockShootClients) Version() *version.Info {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Version")
@@ -100,7 +101,7 @@ func (m *MockShootClients) Version() *version.Info {
 	return ret0
 }
 
-// Version indicates an expected call of Version
+// Version indicates an expected call of Version.
 func (mr *MockShootClientsMockRecorder) Version() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockShootClients)(nil).Version))
