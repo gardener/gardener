@@ -3,7 +3,7 @@
 IP_ROUTE=""
 IP_ADDRESS=""
 ADD_HOSTS=""
-if [[ "$(uname -s)" != *"Darwin"* ]]; then
+if ! ( [[ "$(uname -s)" == *"Darwin"* ]] || [[ "$(uname -s)" == "Linux" && "$(uname -r)" =~ "microsoft-standard" ]] ); then
   IP_ROUTE=$(ip route get 1)
   IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
   ADD_HOSTS="--add-host gardener.localhost:$IP_ADDRESS"
