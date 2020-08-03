@@ -44,7 +44,7 @@ spec:
       containers:
       - name: metrics-server
         image: {{ index .Values.images "metrics-server" }}
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         command:
         - /metrics-server
         - --profiling=false
