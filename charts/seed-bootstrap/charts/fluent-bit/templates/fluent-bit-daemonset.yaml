@@ -35,11 +35,11 @@ spec:
               fieldPath: spec.nodeName
         resources:
           limits:
-            cpu: 100m
-            memory: 100Mi
+            cpu: 300m
+            memory: 400Mi
           requests:
             cpu: 20m
-            memory: 40Mi
+            memory: 80Mi
         volumeMounts:
         - name: config
           mountPath: /fluent-bit/etc
