@@ -1390,7 +1390,7 @@ func schema_pkg_apis_core_v1alpha1_CloudProfileSpec(ref common.ReferenceCallback
 					},
 					"seedSelector": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile. An empty list means that all seeds of the same provider type are supported. This is useful for environments that are of the same type (like openstack) but may have different \"instances\"/landscapes.",
+							Description: "SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile. An empty list means that all seeds of the same provider type are supported. This is useful for environments that are of the same type (like openstack) but may have different \"instances\"/landscapes. Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider type of the seed must match the shoot's provider.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSelector"),
 						},
 					},
@@ -5049,7 +5049,7 @@ func schema_pkg_apis_core_v1alpha1_SeedSelector(ref common.ReferenceCallback) co
 				Description: "SeedSelector contains constraints for selecting seed to be usable for shoots using a profile",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"providers": {
+					"providerTypes": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.",
 							Type:        []string{"array"},
@@ -7283,7 +7283,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 					},
 					"seedSelector": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile. An empty list means that all seeds of the same provider type are supported. This is useful for environments that are of the same type (like openstack) but may have different \"instances\"/landscapes.",
+							Description: "SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile. An empty list means that all seeds of the same provider type are supported. This is useful for environments that are of the same type (like openstack) but may have different \"instances\"/landscapes. Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider type of the seed must match the shoot's provider.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector"),
 						},
 					},
@@ -10821,7 +10821,7 @@ func schema_pkg_apis_core_v1beta1_SeedSelector(ref common.ReferenceCallback) com
 				Description: "SeedSelector contains constraints for selecting seed to be usable for shoots using a profile",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"providers": {
+					"providerTypes": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.",
 							Type:        []string{"array"},

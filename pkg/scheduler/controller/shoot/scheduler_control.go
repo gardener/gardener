@@ -327,12 +327,12 @@ func getSeedWithLeastShootsDeployed(seedList []*gardencorev1beta1.Seed, shootLis
 	return bestCandidate, nil
 }
 
-func matchProvider(seed, shoot string, providers []string) bool {
-	if len(providers) == 0 {
-		return seed == shoot
+func matchProvider(seedProviderType, shootProviderType string, enabledProviderTypes []string) bool {
+	if len(enabledProviderTypes) == 0 {
+		return seedProviderType == shootProviderType
 	}
-	for _, p := range providers {
-		if p == "*" || p == seed {
+	for _, p := range enabledProviderTypes {
+		if p == "*" || p == seedProviderType {
 			return true
 		}
 	}
@@ -410,20 +410,20 @@ func orientation(name string) (normalized string, orientation string) {
 // regions with the same base but different orientations are basically nearer
 // to each other than two completely unrelated regions.
 func distance(seed, shoot string) int {
-	d, _ := _distance(seed, shoot)
+	d, _ := distanceValues(seed, shoot)
 	return d
 }
 
-func _distance(seed, shoot string) (int, int) {
-	seed_base, seed_orient := orientation(seed)
-	shoot_base, shoot_orient := orientation(shoot)
-	dist := levenshtein.DistanceForStrings([]rune(seed_base), []rune(shoot_base), levenshtein.DefaultOptionsWithSub)
+func distanceValues(seed, shoot string) (int, int) {
+	seedBase, seedOrient := orientation(seed)
+	shootBase, shootOrient := orientation(shoot)
+	dist := levenshtein.DistanceForStrings([]rune(seedBase), []rune(shootBase), levenshtein.DefaultOptionsWithSub)
 
-	if seed_orient != "" || shoot_orient != "" {
-		if seed_orient == "" || shoot_orient == "" {
+	if seedOrient != "" || shootOrient != "" {
+		if seedOrient == "" || shootOrient == "" {
 			return dist*2 + 1, dist
 		}
-		if seed_orient == shoot_orient {
+		if seedOrient == shootOrient {
 			return dist * 2, dist
 		}
 		return dist*2 + 2, dist

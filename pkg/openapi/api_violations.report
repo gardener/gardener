@@ -285,7 +285,6 @@ API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alp
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,KubeControllerManagerConfig,HorizontalPodAutoscalerConfig
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,KubeletConfig,PodPIDsLimit
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,MachineTypeStorage,StorageSize
-API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SeedSelector,ProviderTypes
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ServiceAccountConfig,SigningKeySecret
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ShootStatus,IsHibernated
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Volume,VolumeSize
@@ -294,7 +293,6 @@ API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1bet
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeControllerManagerConfig,HorizontalPodAutoscalerConfig
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,KubeletConfig,PodPIDsLimit
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineTypeStorage,StorageSize
-API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedSelector,ProviderTypes
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,ServiceAccountConfig,SigningKeySecret
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,ShootStatus,IsHibernated
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1beta1,Volume,VolumeSize

@@ -415,7 +415,9 @@ SeedSelector
 <em>(Optional)</em>
 <p>SeedSelector contains an optional list of labels on <code>Seed</code> resources that marks those seeds whose shoots may use this provider profile.
 An empty list means that all seeds of the same provider type are supported.
-This is useful for environments that are of the same type (like openstack) but may have different &ldquo;instances&rdquo;/landscapes.</p>
+This is useful for environments that are of the same type (like openstack) but may have different &ldquo;instances&rdquo;/landscapes.
+Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider
+type of the seed must match the shoot&rsquo;s provider.</p>
 </td>
 </tr>
 <tr>
@@ -2383,7 +2385,9 @@ SeedSelector
 <em>(Optional)</em>
 <p>SeedSelector contains an optional list of labels on <code>Seed</code> resources that marks those seeds whose shoots may use this provider profile.
 An empty list means that all seeds of the same provider type are supported.
-This is useful for environments that are of the same type (like openstack) but may have different &ldquo;instances&rdquo;/landscapes.</p>
+This is useful for environments that are of the same type (like openstack) but may have different &ldquo;instances&rdquo;/landscapes.
+Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider
+type of the seed must match the shoot&rsquo;s provider.</p>
 </td>
 </tr>
 <tr>
@@ -6827,7 +6831,7 @@ Kubernetes meta/v1.LabelSelector
 </tr>
 <tr>
 <td>
-<code>providers</code></br>
+<code>providerTypes</code></br>
 <em>
 []string
 </em>

@@ -31,23 +31,27 @@ However, the Gardener Scheduler on the other hand does not need a TLS configurat
 The scheduling strategy is defined in the _**candidateDeterminationStrategy**_ and can have the possible values `SameRegion` and `MinimalDistance`.
 The `SameRegion` strategy is the default strategy.
 
-### 1. Same Region strategy
-
+1. *Same Region strategy* \
 The Gardener Scheduler reads the `spec.provider.type` and `.spec.region` fields from the `Shoot` resource.
 It tries to find a Seed that has the identical `.spec.provider.type` and `.spec.provider.region` fields set.
 If it cannot find a suitable Seed, it adds an event to the shoot stating, that it is unschedulable.
 
-### 2. Minimal Distance strategy
-
-As a first step, the `SameRegion` strategy is being executed.
-If no seed in the same region could be found, the scheduler uses a lexicographical approach to determine a suitable seed cluster.
-This leverages the fact that most cloud providers (except from Azure) use geographically aligned region names.
-The scheduler takes into consideration the region names of all available seeds in the cluster of the desired infrastructure and picks the regions that match lexicographically the best (starting from the left letter to right letter of the region name).
-E.g. if the shoots wants a cluster in AWS eu-north-1, the scheduler picks all Seeds in region AWS eu-central-1, because at least the continent “eu-“ matches (even better with region instances like AWS ap-southeast-1 and AWS ap-southeast-2).
+2. *Minimal Distance strategy* \
+The Gardener Scheduler tries to find a valid seed with minimal distance to the shoot's intended region.
+The distance is calculated based on the Levenshtein distance of the region. Therefore the region name
+is split into a base name and an orientation. Possible orientations are `north`, `south`, `east`, `west` and `central`.
+The distance then is twice the Levenshtein distance of the region's base name plus a correction value based on the
+orientation and the provider.\
+If the orientations of shoot and seed candidate match, the correction value is 0, if they differ it is 2 and if
+either the seed's or the shoot`s region does not have an orientation it is 1.
+If the provider differs the correction value is additionally incremented by 2. \
+\
+Because of this a matching region with a matching provider is always prefered.
 
 In the last step, the scheduler picks the one seed having the least shoots currently deployed.
 
-In order to put the scheduling decision into effect, the scheduler sends an update request for the `Shoot` resource to the API server. After validation, the Gardener Aggregated API server updates the shoot to have the `spec.seedName` field set.
+In order to put the scheduling decision into effect, the scheduler sends an update request for the `Shoot` resource to
+the API server. After validation, the Gardener Aggregated API server updates the shoot to have the `spec.seedName` field set.
 Subsequently, the Gardenlet picks up and starts to create the cluster on the specified seed.
 
 ### Special handling based on shoot cluster purpose
@@ -76,6 +80,9 @@ It allows the user to provide a label selector that must match the labels of `Se
 The labels on `Seed`s are usually controlled by Gardener administrators/operators - end users cannot add arbitrary labels themselves.
 If provided, the Gardener Scheduler will only consider those seeds as "suitable" whose labels match those provided in the `.spec.seedSelector` of the `Shoot`.
 
+By default only seeds with the same provider than the shoot are selected. By adding a `providerTypes` field to the `seedSelector`
+a dedicated  set of possible providers (`*` means all provider types) can be selected.
+
 ## Failure to determine a suitable seed
 
 In case the scheduler fails to find a suitable seed, the operation is being retried with an exponential backoff - starting with the `retrySyncPeriod` (default of `15s`).
@@ -83,4 +90,3 @@ In case the scheduler fails to find a suitable seed, the operation is being retr
 ## Current Limitation / Future Plans
 
 - Azure has unfortunately a geographically non-hierarchical naming pattern and does not start with the continent. This is the reason why we will exchange the implementation of the `MinimalRegion` strategy with a more suitable one in the future.
-- Currently, shoots can only scheduled to seeds from the same cloud provider (`spec.provider.type`), however that is not a technical limitation and might be changed in the future.
