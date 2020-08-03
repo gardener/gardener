@@ -136,20 +136,20 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists),
 		})
 		generateSecrets = g.Add(flow.Task{
-			Name:         "Generating secrets and saving them into ShootState",
-			Fn:           flow.TaskFn(botanist.GenerateAndSaveSecrets),
-			Dependencies: flow.NewTaskIDs(deployNamespace, loadSecrets, ensureShootStateExists),
-		})
-		deploySecrets = g.Add(flow.Task{
-			Name: "Deploying Shoot certificates / keys",
-			Fn:   flow.TaskFn(botanist.DeploySecrets),
+			Name: "Generating secrets and saving them into ShootState",
+			Fn:   flow.TaskFn(botanist.GenerateAndSaveSecrets),
 			Dependencies: func() flow.TaskIDs {
-				taskIDs := flow.NewTaskIDs(deployNamespace, generateSecrets, ensureShootStateExists)
+				taskIDs := flow.NewTaskIDs(deployNamespace, loadSecrets, ensureShootStateExists)
 				if !dnsEnabled && !o.Shoot.HibernationEnabled {
 					taskIDs.Insert(waitUntilKubeAPIServerServiceIsReady)
 				}
 				return taskIDs
 			}(),
+		})
+		deploySecrets = g.Add(flow.Task{
+			Name:         "Deploying Shoot certificates / keys",
+			Fn:           flow.TaskFn(botanist.DeploySecrets),
+			Dependencies: flow.NewTaskIDs(deployNamespace, generateSecrets, ensureShootStateExists),
 		})
 		deployReferencedResources = g.Add(flow.Task{
 			Name:         "Deploying referenced resources",
