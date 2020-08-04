@@ -45,7 +45,7 @@ func (c *Controller) enqueueNamespaces() {
 	}
 
 	for _, namespace := range namespaces.Items {
-		key, err := cache.MetaNamespaceKeyFunc(namespace)
+		key, err := cache.MetaNamespaceKeyFunc(&namespace)
 		if err != nil {
 			c.log.Errorf("Failed to enqueue namespaces to update NetworkPolicy %q for namespace %q - couldn't get key for namespace: %v", helper.AllowToSeedAPIServer, namespace.Name, err)
 			continue
