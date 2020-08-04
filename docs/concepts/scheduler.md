@@ -31,22 +31,25 @@ However, the Gardener Scheduler on the other hand does not need a TLS configurat
 The scheduling strategy is defined in the _**candidateDeterminationStrategy**_ and can have the possible values `SameRegion` and `MinimalDistance`.
 The `SameRegion` strategy is the default strategy.
 
-1. *Same Region strategy* \
-The Gardener Scheduler reads the `spec.provider.type` and `.spec.region` fields from the `Shoot` resource.
+1. *Same Region strategy*
+
+   The Gardener Scheduler reads the `spec.provider.type` and `.spec.region` fields from the `Shoot` resource.
 It tries to find a Seed that has the identical `.spec.provider.type` and `.spec.provider.region` fields set.
 If it cannot find a suitable Seed, it adds an event to the shoot stating, that it is unschedulable.
 
-2. *Minimal Distance strategy* \
-The Gardener Scheduler tries to find a valid seed with minimal distance to the shoot's intended region.
+2. *Minimal Distance strategy*
+
+   The Gardener Scheduler tries to find a valid seed with minimal distance to the shoot's intended region.
 The distance is calculated based on the Levenshtein distance of the region. Therefore the region name
 is split into a base name and an orientation. Possible orientations are `north`, `south`, `east`, `west` and `central`.
 The distance then is twice the Levenshtein distance of the region's base name plus a correction value based on the
-orientation and the provider.\
-If the orientations of shoot and seed candidate match, the correction value is 0, if they differ it is 2 and if
+orientation and the provider.
+
+   If the orientations of shoot and seed candidate match, the correction value is 0, if they differ it is 2 and if
 either the seed's or the shoot's region does not have an orientation it is 1.
-If the provider differs the correction value is additionally incremented by 2. \
-\
-Because of this a matching region with a matching provider is always prefered.
+If the provider differs the correction value is additionally incremented by 2.
+
+   Because of this a matching region with a matching provider is always prefered.
 
 In the last step, the scheduler picks the one seed having the least shoots currently deployed.
 
@@ -81,7 +84,7 @@ The labels on `Seed`s are usually controlled by Gardener administrators/operator
 If provided, the Gardener Scheduler will only consider those seeds as "suitable" whose labels match those provided in the `.spec.seedSelector` of the `Shoot`.
 
 By default only seeds with the same provider than the shoot are selected. By adding a `providerTypes` field to the `seedSelector`
-a dedicated  set of possible providers (`*` means all provider types) can be selected.
+a dedicated set of possible providers (`*` means all provider types) can be selected.
 
 ## Failure to determine a suitable seed
 
