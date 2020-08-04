@@ -20,6 +20,9 @@ set -o pipefail
 
 CURRENT_DIR="$(dirname $0)"
 PROJECT_ROOT="${CURRENT_DIR}"/..
+if [ "${PROJECT_ROOT#/}" == "${PROJECT_ROOT}" ]; then
+  PROJECT_ROOT="./$PROJECT_ROOT"
+fi
 
 pushd "$PROJECT_ROOT" > /dev/null
 APIROOTS=${APIROOTS:-$(git grep --files-with-matches -e '// +k8s:protobuf-gen=package' cmd pkg | \

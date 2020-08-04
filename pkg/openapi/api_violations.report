@@ -41,6 +41,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SecretBinding,Quotas
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SecretBindingList,Items
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SeedList,Items
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SeedSelector,ProviderTypes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SeedSpec,BlockCIDRs
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SeedSpec,Taints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,SeedStatus,Conditions
@@ -102,6 +103,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SecretBindingList,Items
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedList,Items
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedNetworks,BlockCIDRs
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedSelector,ProviderTypes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedSpec,Taints
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedStatus,Conditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,SeedVolume,Providers
