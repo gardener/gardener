@@ -353,13 +353,8 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 				a.logger.V(6).Info(fmt.Sprintf("Machine deployment %s is performing a rolling update", deployment.Name))
 				// Already existing machine deployments with a rolling update should have > 1 machine sets
 				if len(machineSets) <= 1 {
-					return retryutils.MinorError(fmt.Errorf("waiting for the MachineControllerManager to create the machine sets for the machine deployment (%s/%s)...", deployment.Namespace, deployment.Name))
+					return retryutils.MinorError(fmt.Errorf("waiting for the MachineControllerManager to create the machine sets for the machine deployment (%s/%s)", deployment.Namespace, deployment.Name))
 				}
-			}
-
-			// make sure that the machine set with the correct machine class for the machine deployment is deployed already
-			if machineSet := workerhelper.GetMachineSetWithMachineClass(wantedDeployment.Name, wantedDeployment.ClassName, ownerReferenceToMachineSet); machineSet == nil {
-				return retryutils.MinorError(fmt.Errorf("waiting for the machine controller manager to create the updated machine set for the machine deployment (%s/%s)...", deployment.Namespace, deployment.Name))
 			}
 
 			// If the shoot get hibernated we want to wait until all wanted machine deployments have been deleted
@@ -367,6 +362,12 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			numberOfAwakeMachines += deployment.Status.Replicas
 			if controller.IsHibernated(cluster) {
 				continue
+			}
+
+			// If the Shoot is not hibernated we want to make sure that the machine set with the right
+			// machine class for the machine deployment is deployed by the machine controller manager
+			if machineSet := workerhelper.GetMachineSetWithMachineClass(wantedDeployment.Name, wantedDeployment.ClassName, ownerReferenceToMachineSet); machineSet == nil {
+				return retryutils.MinorError(fmt.Errorf("waiting for the machine controller manager to create the updated machine set for the machine deployment (%s/%s)", deployment.Namespace, deployment.Name))
 			}
 
 			// If the Shoot is not hibernated we want to wait until all wanted machine deployments have as many
