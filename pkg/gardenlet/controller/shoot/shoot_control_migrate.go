@@ -200,35 +200,10 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 			Fn:           flow.TaskFn(botanist.ScaleGardenerResourceManagerToOne).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(wakeUpKubeAPIServer),
 		})
-		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
-			Name:         "Configuring Managed Resources objects to be kept in the Shoot",
-			Fn:           flow.TaskFn(botanist.KeepManagedResourcesObjects).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
-		})
-		deleteAllManagedResourcesFromShootNamespace = g.Add(flow.Task{
-			Name:         "Deleting all Managed Resources from the Shoot's namespace",
-			Fn:           flow.TaskFn(botanist.DeleteAllManagedResourcesObjects),
-			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot),
-		})
-		waitForManagedResourcesDeletion = g.Add(flow.Task{
-			Name:         "Waiting until ManagedResources are deleted",
-			Fn:           flow.TaskFn(botanist.WaitUntilAllManagedResourcesDeleted).Timeout(10 * time.Minute),
-			Dependencies: flow.NewTaskIDs(deleteAllManagedResourcesFromShootNamespace),
-		})
-		prepareKubeAPIServerForMigration = g.Add(flow.Task{
-			Name:         "Preparing kube-apiserver in Shoot's namespace for migration, by deleting it and its respective hvpa",
-			Fn:           flow.TaskFn(botanist.PrepareKubeAPIServerForMigration).SkipIf(o.Shoot.HibernationEnabled || !kubeAPIServerDeploymentFound),
-			Dependencies: flow.NewTaskIDs(waitForManagedResourcesDeletion, waitUntilEtcdReady),
-		})
-		waitUntilAPIServerDeleted = g.Add(flow.Task{
-			Name:         "Waiting until kube-apiserver doesn't exist",
-			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerIsDeleted),
-			Dependencies: flow.NewTaskIDs(prepareKubeAPIServerForMigration),
-		})
 		annotateExtensionCRsForMigration = g.Add(flow.Task{
 			Name:         "Annotating Extensions CRs with operation - migration",
 			Fn:           botanist.AnnotateExtensionCRsForMigration,
-			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
+			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
 		})
 		waitForExtensionCRsOperationMigrateToSucceed = g.Add(flow.Task{
 			Name:         "Waiting until all extension CRs are with lastOperation Status Migrate = Succeeded",
@@ -238,7 +213,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		annotateBackupEntryInSeedForMigration = g.Add(flow.Task{
 			Name:         "Annotating BackupEntry in Seed with operation - migration",
 			Fn:           botanist.AnnotateBackupEntryInSeedForMigration,
-			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
+			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
 		})
 		waitForBackupEntryOperationMigrateToSucceed = g.Add(flow.Task{
 			Name:         "Waiting until BackupEntry in Seed has lastOperation Status Migrate = Succeeded",
@@ -254,6 +229,31 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 			Name:         "Deleting all extension CRs from the Shoot namespace",
 			Dependencies: flow.NewTaskIDs(waitForExtensionCRsOperationMigrateToSucceed),
 			Fn:           botanist.DeleteAllExtensionCRs,
+		})
+		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
+			Name:         "Configuring Managed Resources objects to be kept in the Shoot",
+			Fn:           flow.TaskFn(botanist.KeepManagedResourcesObjects).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(deleteAllExtensionCRs),
+		})
+		deleteAllManagedResourcesFromShootNamespace = g.Add(flow.Task{
+			Name:         "Deleting all Managed Resources from the Shoot's namespace",
+			Fn:           flow.TaskFn(botanist.DeleteAllManagedResourcesObjects),
+			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot, ensureResourceManagerScaledUp),
+		})
+		waitForManagedResourcesDeletion = g.Add(flow.Task{
+			Name:         "Waiting until ManagedResources are deleted",
+			Fn:           flow.TaskFn(botanist.WaitUntilAllManagedResourcesDeleted).Timeout(10 * time.Minute),
+			Dependencies: flow.NewTaskIDs(deleteAllManagedResourcesFromShootNamespace),
+		})
+		prepareKubeAPIServerForMigration = g.Add(flow.Task{
+			Name:         "Preparing kube-apiserver in Shoot's namespace for migration, by deleting it and its respective hvpa",
+			Fn:           flow.TaskFn(botanist.PrepareKubeAPIServerForMigration).SkipIf(o.Shoot.HibernationEnabled || !kubeAPIServerDeploymentFound),
+			Dependencies: flow.NewTaskIDs(waitForManagedResourcesDeletion, waitUntilEtcdReady),
+		})
+		waitUntilAPIServerDeleted = g.Add(flow.Task{
+			Name:         "Waiting until kube-apiserver doesn't exist",
+			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerIsDeleted),
+			Dependencies: flow.NewTaskIDs(prepareKubeAPIServerForMigration),
 		})
 		migrateIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating nginx ingress DNS record",
