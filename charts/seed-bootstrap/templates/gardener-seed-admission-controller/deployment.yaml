@@ -40,7 +40,7 @@ spec:
         imagePullPolicy: IfNotPresent
         command:
         - /gardener-seed-admission-controller
-        - --port=443
+        - --port={{ .Values.gardenerSeedAdmissionController.port }}
         - --tls-cert-path=/srv/gardener-seed-admission-controller/tls.crt
         - --tls-private-key-path=/srv/gardener-seed-admission-controller/tls.key
         {{- if .Values.gardenerSeedAdmissionController.resources }}
@@ -51,6 +51,8 @@ spec:
           - mountPath: /srv/gardener-seed-admission-controller
             name: gardener-seed-admission-controller-tls
             readOnly: true
+        ports:
+          - containerPort: {{ .Values.gardenerSeedAdmissionController.port }}
       serviceAccountName: gardener-seed-admission-controller
       volumes:
         - name: gardener-seed-admission-controller-tls

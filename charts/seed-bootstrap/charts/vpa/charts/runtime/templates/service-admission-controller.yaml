@@ -8,7 +8,7 @@ metadata:
 spec:
   ports:
     - port: 443
-      targetPort: 443
+      targetPort: {{ .Values.admissionController.port }}
   selector:
     app: vpa-admission-controller
 {{- end }}
