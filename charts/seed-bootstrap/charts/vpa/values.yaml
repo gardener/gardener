@@ -17,6 +17,7 @@ admissionController:
   podLabels: {}
   enableServiceAccount: true
   registerByURL: false
+  port: 10250
 
 exporter:
   replicas: 1

@@ -43,11 +43,11 @@ spec:
         - --tls-cert-file=/etc/tls-certs/tls.crt
         - --tls-private-key=/etc/tls-certs/tls.key
         - --address=:8944
-        - --port=443
+        - --port={{ .Values.admissionController.port }}
         {{- if .Values.admissionController.registerByURL }}
         - --register-by-url=true
         - --webhook-address=https://vpa-webhook.{{.Release.Namespace}}
-        - --webhook-port=443
+        - --webhook-port={{ .Values.admissionController.port }}
         {{- end }}
         image: {{ index .Values.global.images "vpa-admission-controller" }}
         imagePullPolicy: IfNotPresent
@@ -79,7 +79,7 @@ spec:
             cpu: 50m
             memory: 200Mi
         ports:
-        - containerPort: 443
+        - containerPort: {{ .Values.admissionController.port }}
       volumes:
         - name: vpa-tls-certs
           secret:

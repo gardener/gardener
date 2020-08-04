@@ -222,3 +222,4 @@ gardenerSeedAdmissionController:
       cpu: 100m
       memory: 100Mi
   replicas: 3
+  port: 10250
