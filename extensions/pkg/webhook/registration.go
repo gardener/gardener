@@ -29,7 +29,7 @@ import (
 )
 
 // RegisterWebhooks registers the given webhooks in the Kubernetes cluster targeted by the provided manager.
-func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, providerName string, port int, mode, url string, caBundle []byte, webhooks []*Webhook) (webhooksToRegisterSeed []admissionregistrationv1beta1.MutatingWebhook, webhooksToRegisterShoot []admissionregistrationv1beta1.MutatingWebhook, err error) {
+func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, providerName string, servicePort int, mode, url string, caBundle []byte, webhooks []*Webhook) (webhooksToRegisterSeed []admissionregistrationv1beta1.MutatingWebhook, webhooksToRegisterShoot []admissionregistrationv1beta1.MutatingWebhook, err error) {
 	var (
 		fail                             = admissionregistrationv1beta1.Fail
 		ignore                           = admissionregistrationv1beta1.Ignore
@@ -55,11 +55,11 @@ func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, provi
 		switch webhook.Target {
 		case TargetSeed:
 			webhookToRegister.FailurePolicy = &fail
-			webhookToRegister.ClientConfig = buildClientConfigFor(webhook, namespace, providerName, port, mode, url, caBundle)
+			webhookToRegister.ClientConfig = buildClientConfigFor(webhook, namespace, providerName, servicePort, mode, url, caBundle)
 			webhooksToRegisterSeed = append(webhooksToRegisterSeed, webhookToRegister)
 		case TargetShoot:
 			webhookToRegister.FailurePolicy = &ignore
-			webhookToRegister.ClientConfig = buildClientConfigFor(webhook, namespace, providerName, port, ModeURLWithServiceName, url, caBundle)
+			webhookToRegister.ClientConfig = buildClientConfigFor(webhook, namespace, providerName, servicePort, ModeURLWithServiceName, url, caBundle)
 			webhooksToRegisterShoot = append(webhooksToRegisterShoot, webhookToRegister)
 		default:
 			return nil, nil, fmt.Errorf("invalid webhook target: %s", webhook.Target)
@@ -111,7 +111,7 @@ func buildRule(mgr manager.Manager, t runtime.Object) (*admissionregistrationv1b
 	}, nil
 }
 
-func buildClientConfigFor(webhook *Webhook, namespace, providerName string, port int, mode, url string, caBundle []byte) admissionregistrationv1beta1.WebhookClientConfig {
+func buildClientConfigFor(webhook *Webhook, namespace, providerName string, servicePort int, mode, url string, caBundle []byte) admissionregistrationv1beta1.WebhookClientConfig {
 	path := "/" + webhook.Path
 
 	clientConfig := admissionregistrationv1beta1.WebhookClientConfig{
@@ -120,10 +120,10 @@ func buildClientConfigFor(webhook *Webhook, namespace, providerName string, port
 
 	switch mode {
 	case ModeURL:
-		url := fmt.Sprintf("https://%s:%d%s", url, port, path)
+		url := fmt.Sprintf("https://%s%s", url, path)
 		clientConfig.URL = &url
 	case ModeURLWithServiceName:
-		url := fmt.Sprintf("https://gardener-extension-%s.%s:%d%s", providerName, namespace, port, path)
+		url := fmt.Sprintf("https://gardener-extension-%s.%s:%d%s", providerName, namespace, servicePort, path)
 		clientConfig.URL = &url
 	case ModeService:
 		clientConfig.Service = &admissionregistrationv1beta1.ServiceReference{

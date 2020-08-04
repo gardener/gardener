@@ -32,6 +32,9 @@ const (
 	ModeFlag = "webhook-config-mode"
 	// URLFlag is the name of the command line flag to specify the URL that is used to register the webhooks in Kubernetes.
 	URLFlag = "webhook-config-url"
+	// ServicePortFlag is the name of the command line flag to specify the service port that exposes the webhook server.
+	// If not specified it will fallback to the webhook server port.
+	ServicePortFlag = "webhook-config-service-port"
 	// NamespaceFlag is the name of the command line flag to specify the webhook config namespace for 'service' mode.
 	NamespaceFlag = "webhook-config-namespace"
 )
@@ -42,6 +45,8 @@ type ServerOptions struct {
 	Mode string
 	// URL is the URl that is used to register the webhooks in Kubernetes.
 	URL string
+	// ServicePort is the service port that exposes the webhook server.
+	ServicePort int
 	// Namespace is the webhook config namespace for 'service' mode.
 	Namespace string
 
@@ -50,10 +55,12 @@ type ServerOptions struct {
 
 // ServerConfig is a completed webhook server configuration.
 type ServerConfig struct {
-	// Mode is the URl that is used to register the webhooks in Kubernetes.
+	// Mode is the webhook client config mode (service or url).
 	Mode string
-	// URL is the URl that is used to register the webhooks in Kubernetes.
+	// URL is the URL that is used to register the webhooks in Kubernetes.
 	URL string
+	// ServicePort is the service port that exposes the webhook server.
+	ServicePort int
 	// Namespace is the webhook config namespace for 'service' mode.
 	Namespace string
 }
@@ -61,9 +68,10 @@ type ServerConfig struct {
 // Complete implements Completer.Complete.
 func (w *ServerOptions) Complete() error {
 	w.config = &ServerConfig{
-		Mode:      w.Mode,
-		URL:       w.URL,
-		Namespace: w.Namespace,
+		Mode:        w.Mode,
+		URL:         w.URL,
+		ServicePort: w.ServicePort,
+		Namespace:   w.Namespace,
 	}
 
 	if len(w.Mode) == 0 {
@@ -81,7 +89,8 @@ func (w *ServerOptions) Completed() *ServerConfig {
 // AddFlags implements Flagger.AddFlags.
 func (w *ServerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&w.Mode, ModeFlag, w.Mode, "The webhook mode - either 'url' (when running outside the cluster) or 'service' (when running inside the cluster).")
-	fs.StringVar(&w.URL, URLFlag, w.URL, "The directory that contains the webhook URL when running outside of the cluster it is serving.")
+	fs.StringVar(&w.URL, URLFlag, w.URL, "The webhook URL when running outside of the cluster it is serving.")
+	fs.IntVar(&w.ServicePort, ServicePortFlag, w.ServicePort, "The service port that exposes the webhook server.  If not specified it will fallback to the webhook server port.")
 	fs.StringVar(&w.Namespace, NamespaceFlag, w.Namespace, "The webhook config namespace for 'service' mode.")
 }
 
@@ -215,8 +224,12 @@ func (c *AddToManagerConfig) AddToManager(mgr manager.Manager) ([]admissionregis
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could not create webhooks")
 	}
-
 	webhookServer := mgr.GetWebhookServer()
+
+	servicePort := webhookServer.Port
+	if (c.Server.Mode == extensionswebhook.ModeService || c.Server.Mode == extensionswebhook.ModeURLWithServiceName) && c.Server.ServicePort > 0 {
+		servicePort = c.Server.ServicePort
+	}
 
 	for _, wh := range webhooks {
 		if wh.Handler != nil {
@@ -231,7 +244,7 @@ func (c *AddToManagerConfig) AddToManager(mgr manager.Manager) ([]admissionregis
 		return nil, nil, errors.Wrap(err, "could not generate certificates")
 	}
 
-	seedWebhooks, shootWebhooks, err := extensionswebhook.RegisterWebhooks(ctx, mgr, c.Server.Namespace, c.serverName, webhookServer.Port, c.Server.Mode, c.Server.URL, caBundle, webhooks)
+	seedWebhooks, shootWebhooks, err := extensionswebhook.RegisterWebhooks(ctx, mgr, c.Server.Namespace, c.serverName, servicePort, c.Server.Mode, c.Server.URL, caBundle, webhooks)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not create webhooks")
 	}
