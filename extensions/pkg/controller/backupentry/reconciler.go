@@ -27,7 +27,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -86,7 +86,7 @@ func (r *reconciler) InjectStopChannel(stopCh <-chan struct{}) error {
 func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	be := &extensionsv1alpha1.BackupEntry{}
 	if err := r.client.Get(r.ctx, request.NamespacedName, be); err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
@@ -213,6 +213,21 @@ func (r *reconciler) delete(ctx context.Context, be *extensionsv1alpha1.BackupEn
 
 	r.logger.Info("Starting the deletion of backupentry", "backupentry", be.Name)
 	r.recorder.Event(be, corev1.EventTypeNormal, EventBackupEntryDeletion, "Deleting the backupentry")
+
+	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
+		}
+
+		r.logger.Info("Skipping deletion as referred secret does not exist any more - removing finalizer.", "backupentry", be.Name)
+		if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, be); err != nil {
+			return reconcile.Result{}, fmt.Errorf("error removing finalizer from backupentry: %+v", err)
+		}
+
+		return reconcile.Result{}, nil
+	}
+
 	if err := r.actuator.Delete(r.ctx, be); err != nil {
 		msg := "Error deleting backupentry"
 		r.recorder.Eventf(be, corev1.EventTypeWarning, EventBackupEntryDeletion, "%s: %+v", msg, err)
@@ -227,10 +242,6 @@ func (r *reconciler) delete(ctx context.Context, be *extensionsv1alpha1.BackupEn
 		return reconcile.Result{}, err
 	}
 
-	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
-	}
 	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, secret); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to remove finalizer on backup entry secret: %+v", err)
 	}
