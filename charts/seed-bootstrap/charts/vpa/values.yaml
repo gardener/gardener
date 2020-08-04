@@ -18,6 +18,7 @@ admissionController:
   enableServiceAccount: true
   registerByURL: false
   port: 10250
+  servicePort: 443
 
 exporter:
   replicas: 1
@@ -27,6 +28,8 @@ exporter:
   enableServiceAccount: true
   enableVPA: true
   enableService: true
+  port: 9570
+  servicePort: 9570
 
 recommender:
   replicas: 1
