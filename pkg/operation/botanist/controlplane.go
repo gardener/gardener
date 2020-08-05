@@ -695,6 +695,16 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 			"checksum/secret-" + name: b.CheckSums[name],
 		},
 		"replicas": b.Shoot.GetReplicas(1),
+		// We run one GRM per shoot control plane, and the GRM is doing its leader election via configmaps in the seed -
+		// by default every 2s. This can lead to a lot of PUT /v1/configmaps requests on the API server, and given that
+		// a seed is very busy anyways, we should not unnecessarily stress the API server with this leader election.
+		// The GRM's sync period is 1m anyways, so it doesn't matter too much if the leadership determination may take up
+		// to one minute.
+		"leaderElection": map[string]interface{}{
+			"leaseDuration": "40s",
+			"renewDeadline": "15s",
+			"retryPeriod":   "10s",
+		},
 	}
 
 	values, err := b.InjectSeedShootImages(defaultValues, common.GardenerResourceManagerImageName)
