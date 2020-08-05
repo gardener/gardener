@@ -108,8 +108,8 @@ func checkNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, d
 		case machinev1alpha1.MachineRunning, machinev1alpha1.MachineAvailable:
 			// machine is already running fine
 			continue
-		case machinev1alpha1.MachinePending:
-			// machine is being created
+		case machinev1alpha1.MachinePending, "": // https://github.com/gardener/machine-controller-manager/issues/466
+			// machine is in the process of being created
 			pendingMachines++
 		default:
 			// undesired machine phase
