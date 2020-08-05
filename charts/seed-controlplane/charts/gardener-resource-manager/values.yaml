@@ -11,6 +11,11 @@ resources:
 
 replicas: 1
 
+leaderElection: {}
+# leaseDuration: 15s
+# renewDeadline: 10s
+# retryPeriod: 2s
+
 controllers:
 #  cacheResyncPeriod: 24h0m0s
   managedResource:
