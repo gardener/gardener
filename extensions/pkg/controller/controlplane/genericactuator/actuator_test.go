@@ -32,6 +32,7 @@ import (
 	mocksecretsutil "github.com/gardener/gardener/pkg/mock/gardener/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
@@ -41,7 +42,7 @@ import (
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -75,10 +76,10 @@ var _ = Describe("Actuator", func() {
 	var (
 		ctrl *gomock.Controller
 
-		providerName          = "provider-test"
-		webhookServerPort     = 443
-		webhookPolicyPort     = intstr.FromInt(webhookServerPort)
-		webhookPolicyProtocol = corev1.ProtocolTCP
+		ctx               = context.TODO()
+		providerName      = "provider-test"
+		providerType      = "test"
+		webhookServerPort = 443
 
 		cp = &extensionsv1alpha1.ControlPlane{
 			ObjectMeta: metav1.ObjectMeta{Name: "control-plane", Namespace: namespace},
@@ -174,44 +175,8 @@ var _ = Describe("Actuator", func() {
 		}
 
 		resourceKeyShootWebhooksNetworkPolicy = client.ObjectKey{Namespace: namespace, Name: "gardener-extension-" + providerName}
-		createdNetworkPolicyForShootWebhooks  = &networkingv1.NetworkPolicy{
-			ObjectMeta: extensionswebhookshoot.GetNetworkPolicyMeta(namespace, providerName).ObjectMeta,
-			Spec: networkingv1.NetworkPolicySpec{
-				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-				Egress: []networkingv1.NetworkPolicyEgressRule{
-					{
-						Ports: []networkingv1.NetworkPolicyPort{
-							{
-								Port:     &webhookPolicyPort,
-								Protocol: &webhookPolicyProtocol,
-							},
-						},
-						To: []networkingv1.NetworkPolicyPeer{
-							{
-								NamespaceSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										v1beta1constants.LabelControllerRegistrationName: providerName,
-										v1beta1constants.GardenRole:                      v1beta1constants.GardenRoleExtension,
-									},
-								},
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"app.kubernetes.io/name": "gardener-extension-" + providerName,
-									},
-								},
-							},
-						},
-					},
-				},
-				PodSelector: metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
-						v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
-					},
-				},
-			},
-		}
-		deletedNetworkPolicyForShootWebhooks = &networkingv1.NetworkPolicy{
+		createdNetworkPolicyForShootWebhooks  = constructNetworkPolicy(providerName, namespace, webhookServerPort)
+		deletedNetworkPolicyForShootWebhooks  = &networkingv1.NetworkPolicy{
 			ObjectMeta: extensionswebhookshoot.GetNetworkPolicyMeta(namespace, providerName).ObjectMeta,
 		}
 
@@ -266,7 +231,7 @@ var _ = Describe("Actuator", func() {
 			"replicas": 1,
 		}
 
-		errNotFound = &errors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}}
+		errNotFound = &apierrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}}
 		logger      = log.Log.WithName("test")
 	)
 
@@ -280,8 +245,6 @@ var _ = Describe("Actuator", func() {
 
 	DescribeTable("#Reconcile",
 		func(configName string, checksums map[string]string, webhooks []admissionregistrationv1beta1.MutatingWebhook) {
-			ctx := context.TODO()
-
 			// Create mock client
 			client := mockclient.NewMockClient(ctrl)
 
@@ -370,8 +333,6 @@ var _ = Describe("Actuator", func() {
 
 	DescribeTable("#Delete",
 		func(configName string, webhooks []admissionregistrationv1beta1.MutatingWebhook) {
-			ctx := context.TODO()
-
 			// Create mock clients
 			client := mockclient.NewMockClient(ctrl)
 
@@ -381,8 +342,8 @@ var _ = Describe("Actuator", func() {
 			client.EXPECT().Delete(ctx, deleteMRForCPShootChart).Return(nil)
 			client.EXPECT().Delete(ctx, deletedMRSecretForCPShootChart).Return(nil)
 
-			client.EXPECT().Get(gomock.Any(), resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errors.NewNotFound(schema.GroupResource{}, deleteMRForStorageClassesChart.Name))
-			client.EXPECT().Get(gomock.Any(), resourceKeyCPShootChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errors.NewNotFound(schema.GroupResource{}, deleteMRForCPShootChart.Name))
+			client.EXPECT().Get(gomock.Any(), resourceKeyStorageClassesChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deleteMRForStorageClassesChart.Name))
+			client.EXPECT().Get(gomock.Any(), resourceKeyCPShootChart, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deleteMRForCPShootChart.Name))
 
 			// Create mock secrets and charts
 			secrets := mocksecretsutil.NewMockInterface(ctrl)
@@ -400,7 +361,7 @@ var _ = Describe("Actuator", func() {
 				client.EXPECT().Delete(ctx, deletedNetworkPolicyForShootWebhooks).Return(nil)
 				client.EXPECT().Delete(ctx, deletedMRForShootWebhooks).Return(nil)
 				client.EXPECT().Delete(ctx, deletedMRSecretForShootWebhooks).Return(nil)
-				client.EXPECT().Get(gomock.Any(), resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errors.NewNotFound(schema.GroupResource{}, deletedMRForShootWebhooks.Name))
+				client.EXPECT().Get(gomock.Any(), resourceKeyShootWebhooks, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, deletedMRForShootWebhooks.Name))
 			}
 
 			// Create actuator
@@ -419,8 +380,6 @@ var _ = Describe("Actuator", func() {
 
 	DescribeTable("#ReconcileExposure",
 		func() {
-			ctx := context.TODO()
-
 			// Create mock Gardener clientset and chart applier
 			gardenerClientset := mockkubernetes.NewMockInterface(ctrl)
 			gardenerClientset.EXPECT().Version().Return(seedVersion)
@@ -451,8 +410,6 @@ var _ = Describe("Actuator", func() {
 
 	DescribeTable("#DeleteExposure",
 		func() {
-			ctx := context.TODO()
-
 			// Create mock clients
 			client := mockclient.NewMockClient(ctrl)
 
@@ -475,6 +432,68 @@ var _ = Describe("Actuator", func() {
 		Entry("should delete secrets and charts"),
 	)
 
+	Describe("#ReconcileShootWebhooksForAllNamespaces", func() {
+		var (
+			labelSelector = client.MatchingLabels{
+				v1beta1constants.GardenRole:         v1beta1constants.GardenRoleShoot,
+				v1beta1constants.LabelShootProvider: providerType,
+			}
+			port              = 1234
+			networkPolicyName = "gardener-extension-" + providerName
+			shootWebhooks     = []admissionregistrationv1beta1.MutatingWebhook{{}}
+			data, _           = marshalWebhooks(shootWebhooks, providerName)
+		)
+
+		It("should behave correctly", func() {
+			c := mockclient.NewMockClient(ctrl)
+
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.NamespaceList{}), labelSelector).DoAndReturn(func(_ context.Context, list *corev1.NamespaceList, _ ...client.ListOption) error {
+				*list = corev1.NamespaceList{Items: []corev1.Namespace{
+					{ObjectMeta: metav1.ObjectMeta{Name: "namespace1"}},
+					{ObjectMeta: metav1.ObjectMeta{Name: "namespace2"}},
+					{ObjectMeta: metav1.ObjectMeta{Name: "namespace3"}},
+				}}
+				return nil
+			})
+			c.EXPECT().Get(ctx, kutil.Key("namespace1", networkPolicyName), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}))
+			c.EXPECT().Get(ctx, kutil.Key("namespace2", networkPolicyName), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(errNotFound)
+			c.EXPECT().Get(ctx, kutil.Key("namespace3", networkPolicyName), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}))
+
+			createdMRSecretForShootWebhooksNS1 := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: "namespace1"},
+				Data:       map[string][]byte{"mutatingwebhookconfiguration.yaml": data},
+				Type:       corev1.SecretTypeOpaque,
+			}
+			createdMRForShootWebhooksNS1 := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: "namespace1"},
+				Spec:       resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: ShootWebhooksResourceName}}},
+			}
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "namespace1", Name: networkPolicyName}, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(errNotFound)
+			c.EXPECT().Create(ctx, constructNetworkPolicy(providerName, "namespace1", port))
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "namespace1", Name: ShootWebhooksResourceName}, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(errNotFound)
+			c.EXPECT().Create(ctx, createdMRSecretForShootWebhooksNS1)
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "namespace1", Name: ShootWebhooksResourceName}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(errNotFound)
+			c.EXPECT().Create(ctx, createdMRForShootWebhooksNS1)
+
+			createdMRSecretForShootWebhooksNS3 := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: "namespace3"},
+				Data:       map[string][]byte{"mutatingwebhookconfiguration.yaml": data},
+				Type:       corev1.SecretTypeOpaque,
+			}
+			createdMRForShootWebhooksNS3 := &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{Name: ShootWebhooksResourceName, Namespace: "namespace3"},
+				Spec:       resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: ShootWebhooksResourceName}}},
+			}
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "namespace3", Name: networkPolicyName}, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}))
+			c.EXPECT().Update(ctx, constructNetworkPolicy(providerName, "namespace3", port))
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "namespace3", Name: ShootWebhooksResourceName}, gomock.AssignableToTypeOf(&corev1.Secret{}))
+			c.EXPECT().Update(ctx, createdMRSecretForShootWebhooksNS3)
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "namespace3", Name: ShootWebhooksResourceName}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))
+			c.EXPECT().Update(ctx, createdMRForShootWebhooksNS3)
+
+			Expect(ReconcileShootWebhooksForAllNamespaces(ctx, c, providerName, providerType, port, shootWebhooks))
+		})
+	})
 })
 
 func clientGet(result runtime.Object) interface{} {
@@ -493,4 +512,49 @@ func getPurposeExposure() *extensionsv1alpha1.Purpose {
 	purpose := new(extensionsv1alpha1.Purpose)
 	*purpose = extensionsv1alpha1.Exposure
 	return purpose
+}
+
+func constructNetworkPolicy(providerName, namespace string, webhookPort int) *networkingv1.NetworkPolicy {
+	var (
+		protocol = corev1.ProtocolTCP
+		port     = intstr.FromInt(webhookPort)
+	)
+
+	return &networkingv1.NetworkPolicy{
+		ObjectMeta: extensionswebhookshoot.GetNetworkPolicyMeta(namespace, providerName).ObjectMeta,
+		Spec: networkingv1.NetworkPolicySpec{
+			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+			Egress: []networkingv1.NetworkPolicyEgressRule{
+				{
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Port:     &port,
+							Protocol: &protocol,
+						},
+					},
+					To: []networkingv1.NetworkPolicyPeer{
+						{
+							NamespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									v1beta1constants.LabelControllerRegistrationName: providerName,
+									v1beta1constants.GardenRole:                      v1beta1constants.GardenRoleExtension,
+								},
+							},
+							PodSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"app.kubernetes.io/name": "gardener-extension-" + providerName,
+								},
+							},
+						},
+					},
+				},
+			},
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
+					v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
+				},
+			},
+		},
+	}
 }

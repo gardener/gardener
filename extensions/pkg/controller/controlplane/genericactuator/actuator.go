@@ -27,6 +27,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/chart"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -38,6 +39,8 @@ import (
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/kubernetes"
@@ -217,30 +220,8 @@ func (a *actuator) reconcileControlPlane(
 ) (bool, error) {
 
 	if len(a.shootWebhooks) > 0 {
-		// Deploy shoot webhook configurations
-		if err := extensionswebhookshoot.EnsureNetworkPolicy(ctx, a.client, cp.Namespace, a.providerName, a.webhookServerPort); err != nil {
-			return false, errors.Wrapf(err, "could not create or update network policy for shoot webhooks in namespace '%s'", cp.Namespace)
-		}
-
-		webhookConfiguration, err := marshalWebhooks(a.shootWebhooks, a.providerName)
-		if err != nil {
-			return false, err
-		}
-
-		if err := manager.
-			NewSecret(a.client).
-			WithNamespacedName(cp.Namespace, ShootWebhooksResourceName).
-			WithKeyValues(map[string][]byte{"mutatingwebhookconfiguration.yaml": webhookConfiguration}).
-			Reconcile(ctx); err != nil {
-			return false, errors.Wrapf(err, "could not create or update secret '%s/%s' of managed resource containing shoot webhooks", cp.Namespace, ShootWebhooksResourceName)
-		}
-
-		if err := manager.
-			NewManagedResource(a.client).
-			WithNamespacedName(cp.Namespace, ShootWebhooksResourceName).
-			WithSecretRef(ShootWebhooksResourceName).
-			Reconcile(ctx); err != nil {
-			return false, errors.Wrapf(err, "could not create or update managed resource '%s/%s' containing shoot webhooks", cp.Namespace, ShootWebhooksResourceName)
+		if err := ReconcileShootWebhooks(ctx, a.client, cp.Namespace, a.providerName, a.webhookServerPort, a.shootWebhooks); err != nil {
+			return false, errors.Wrapf(err, "could not reconcile shoot webhooks")
 		}
 	}
 
@@ -524,4 +505,70 @@ func (a *actuator) Migrate(
 	cluster *extensionscontroller.Cluster,
 ) error {
 	return a.Delete(ctx, cp, cluster)
+}
+
+// ReconcileShootWebhooks deploys the shoot webhook configuration, i.e., a network policy to allow the kube-apiserver to
+// talk to the provider extension, and a managed resource that contains the MutatingWebhookConfiguration.
+func ReconcileShootWebhooks(ctx context.Context, c client.Client, namespace, providerName string, serverPort int, shootWebhooks []admissionregistrationv1beta1.MutatingWebhook) error {
+	if err := extensionswebhookshoot.EnsureNetworkPolicy(ctx, c, namespace, providerName, serverPort); err != nil {
+		return errors.Wrapf(err, "could not create or update network policy for shoot webhooks in namespace '%s'", namespace)
+	}
+
+	webhookConfiguration, err := marshalWebhooks(shootWebhooks, providerName)
+	if err != nil {
+		return err
+	}
+
+	if err := manager.
+		NewSecret(c).
+		WithNamespacedName(namespace, ShootWebhooksResourceName).
+		WithKeyValues(map[string][]byte{"mutatingwebhookconfiguration.yaml": webhookConfiguration}).
+		Reconcile(ctx); err != nil {
+		return errors.Wrapf(err, "could not create or update secret '%s/%s' of managed resource containing shoot webhooks", namespace, ShootWebhooksResourceName)
+	}
+
+	if err := manager.
+		NewManagedResource(c).
+		WithNamespacedName(namespace, ShootWebhooksResourceName).
+		WithSecretRef(ShootWebhooksResourceName).
+		Reconcile(ctx); err != nil {
+		return errors.Wrapf(err, "could not create or update managed resource '%s/%s' containing shoot webhooks", namespace, ShootWebhooksResourceName)
+	}
+
+	return nil
+}
+
+// ReconcileShootWebhooksForAllNamespaces reconciles the shoot webhooks in all shoot namespaces of the given
+// provider type. This is necessary in case the webhook port is changed (otherwise, the network policy would only be
+// updated again as part of the ControlPlane reconciliation which might only happen in the next 24h).
+func ReconcileShootWebhooksForAllNamespaces(ctx context.Context, c client.Client, providerName, providerType string, port int, shootWebhooks []admissionregistrationv1beta1.MutatingWebhook) error {
+	namespaceList := &corev1.NamespaceList{}
+	if err := c.List(ctx, namespaceList, client.MatchingLabels{
+		v1beta1constants.GardenRole:         v1beta1constants.GardenRoleShoot,
+		v1beta1constants.LabelShootProvider: providerType,
+	}); err != nil {
+		return err
+	}
+
+	fns := make([]flow.TaskFn, 0, len(namespaceList.Items))
+
+	for _, namespace := range namespaceList.Items {
+		var (
+			networkPolicy     = extensionswebhookshoot.GetNetworkPolicyMeta(namespace.Name, providerName)
+			namespaceName     = namespace.Name
+			networkPolicyName = networkPolicy.Name
+		)
+
+		fns = append(fns, func(ctx context.Context) error {
+			if err := c.Get(ctx, kutil.Key(namespaceName, networkPolicyName), &networkingv1.NetworkPolicy{}); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return err
+				}
+				return nil
+			}
+			return ReconcileShootWebhooks(ctx, c, namespaceName, providerName, port, shootWebhooks)
+		})
+	}
+
+	return flow.Parallel(fns...)(ctx)
 }
