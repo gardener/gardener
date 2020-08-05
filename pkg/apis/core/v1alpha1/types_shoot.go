@@ -460,6 +460,15 @@ type KubeAPIServerConfig struct {
 	// of the kube-apiserver.
 	// +optional
 	ServiceAccountConfig *ServiceAccountConfig `json:"serviceAccountConfig,omitempty" protobuf:"bytes,8,opt,name=serviceAccountConfig"`
+	// WatchCacheSizes contains configuration of the API server's watch cache sizes.
+	// Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests
+	// and a lot of watching controllers (e.g. large shooted Seed clusters). When the API server's watch cache's
+	// capacity is too small to cope with the amount of update requests and watchers for a particular resource, it
+	// might happen that controller watches are permanently stopped with `too old resource version` errors.
+	// Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch
+	// cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
+	// +optional
+	WatchCacheSizes *WatchCacheSizes `json:"watchCacheSizes,omitempty" protobuf:"bytes,9,opt,name=watchCacheSizes"`
 }
 
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
@@ -545,6 +554,33 @@ type AdmissionPlugin struct {
 	// Config is the configuration of the plugin.
 	// +optional
 	Config *runtime.RawExtension `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`
+}
+
+// WatchCacheSizes contains configuration of the API server's watch cache sizes.
+type WatchCacheSizes struct {
+	// Default configures the default watch cache size of the kube-apiserver
+	// (flag `--default-watch-cache-size`, defaults to 100).
+	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+	// +optional
+	Default *int32 `json:"default,omitempty" protobuf:"varint,1,opt,name=default"`
+	// Resources configures the watch cache size of the kube-apiserver per resource
+	// (flag `--watch-cache-sizes`).
+	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+	// +optional
+	Resources []ResourceWatchCacheSize `json:"resources,omitempty" protobuf:"bytes,2,rep,name=resources"`
+}
+
+// ResourceWatchCacheSize contains configuration of the API server's watch cache size for one specific resource.
+type ResourceWatchCacheSize struct {
+	// APIGroup is the API group of the resource for which the watch cache size should be configured.
+	// An unset value is used to specify the legacy core API (e.g. for `secrets`).
+	// +optional
+	APIGroup *string `json:"apiGroup,omitempty" protobuf:"bytes,1,opt,name=apiGroup"`
+	// Resource is the name of the resource for which the watch cache size should be configured
+	// (in lowercase plural form, e.g. `secrets`).
+	Resource string `json:"resource" protobuf:"bytes,2,opt,name=resource"`
+	// CacheSize specifies the watch cache size that should be configured for the specified resource.
+	CacheSize int32 `json:"size" protobuf:"varint,3,opt,name=size"`
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.

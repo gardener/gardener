@@ -120,3 +120,20 @@ rules:
 {{- end }}
 {{- end -}}
 {{- end -}}
+
+{{- define "kube-apiserver.watchCacheSizes" -}}
+{{- with .Values.watchCacheSizes }}
+{{- if not (kindIs "invalid" .default) }}
+- --default-watch-cache-size={{ .default }}
+{{- end }}
+{{- with .resources }}
+- --watch-cache-sizes={{ include "kube-apiserver.resourceWatchCacheSize" . | trimSuffix "," }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{- define "kube-apiserver.resourceWatchCacheSize" -}}
+{{- range . }}
+{{- required ".resource is required" .resource }}{{ if .apiGroup }}.{{ .apiGroup }}{{ end }}#{{ .size }},
+{{- end -}}
+{{- end -}}

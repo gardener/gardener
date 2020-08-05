@@ -117,6 +117,7 @@ spec:
         - --client-ca-file=/srv/kubernetes/ca/ca.crt
         - --enable-aggregator-routing=true
         - --enable-bootstrap-token-auth=true
+        {{- include "kube-apiserver.watchCacheSizes" . | indent 8 }}
         - --http2-max-streams-per-connection=1000
         - --etcd-cafile=/srv/kubernetes/etcd/ca/ca.crt
         - --etcd-certfile=/srv/kubernetes/etcd/client/tls.crt

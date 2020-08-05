@@ -3857,6 +3857,26 @@ ServiceAccountConfig
 of the kube-apiserver.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>watchCacheSizes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.WatchCacheSizes">
+WatchCacheSizes
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>WatchCacheSizes contains configuration of the API server&rsquo;s watch cache sizes.
+Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests
+and a lot of watching controllers (e.g. large shooted Seed clusters). When the API server&rsquo;s watch cache&rsquo;s
+capacity is too small to cope with the amount of update requests and watchers for a particular resource, it
+might happen that controller watches are permanently stopped with <code>too old resource version</code> errors.
+Starting from kubernetes v1.19, the API server&rsquo;s watch cache size is adapted dynamically and setting the watch
+cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeControllerManagerConfig">KubeControllerManagerConfig
@@ -6557,6 +6577,61 @@ quality, reliability, access restrictions, etc.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ResourceWatchCacheSize">ResourceWatchCacheSize
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.WatchCacheSizes">WatchCacheSizes</a>)
+</p>
+<p>
+<p>ResourceWatchCacheSize contains configuration of the API server&rsquo;s watch cache size for one specific resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiGroup</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>APIGroup is the API group of the resource for which the watch cache size should be configured.
+An unset value is used to specify the legacy core API (e.g. for <code>secrets</code>).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resource</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Resource is the name of the resource for which the watch cache size should be configured
+(in lowercase plural form, e.g. <code>secrets</code>).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>size</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>CacheSize specifies the watch cache size that should be configured for the specified resource.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.SeedBackup">SeedBackup
 </h3>
 <p>
@@ -8312,6 +8387,55 @@ bool
 <td>
 <em>(Optional)</em>
 <p>Usable defines if the volume type can be used for shoot clusters.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.WatchCacheSizes">WatchCacheSizes
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>WatchCacheSizes contains configuration of the API server&rsquo;s watch cache sizes.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>default</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Default configures the default watch cache size of the kube-apiserver
+(flag <code>--default-watch-cache-size</code>, defaults to 100).
+See: <a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/">https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ResourceWatchCacheSize">
+[]ResourceWatchCacheSize
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources configures the watch cache size of the kube-apiserver per resource
+(flag <code>--watch-cache-sizes</code>).
+See: <a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/">https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/</a></p>
 </td>
 </tr>
 </tbody>

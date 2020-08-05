@@ -1117,6 +1117,10 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 				"auditPolicy": auditPolicy,
 			}
 		}
+
+		if watchCacheSizes := apiServerConfig.WatchCacheSizes; watchCacheSizes != nil {
+			defaultValues["watchCacheSizes"] = watchCacheSizes
+		}
 	}
 
 	serviceAccountConfigVals["issuer"] = serviceAccountTokenIssuerURL

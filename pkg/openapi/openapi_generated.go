@@ -125,6 +125,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.QuotaSpec":                             schema_pkg_apis_core_v1alpha1_QuotaSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Region":                                schema_pkg_apis_core_v1alpha1_Region(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ResourceData":                          schema_pkg_apis_core_v1alpha1_ResourceData(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ResourceWatchCacheSize":                schema_pkg_apis_core_v1alpha1_ResourceWatchCacheSize(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SecretBinding":                         schema_pkg_apis_core_v1alpha1_SecretBinding(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SecretBindingList":                     schema_pkg_apis_core_v1alpha1_SecretBindingList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Seed":                                  schema_pkg_apis_core_v1alpha1_Seed(ref),
@@ -159,6 +160,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.VerticalPodAutoscaler":                 schema_pkg_apis_core_v1alpha1_VerticalPodAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Volume":                                schema_pkg_apis_core_v1alpha1_Volume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.VolumeType":                            schema_pkg_apis_core_v1alpha1_VolumeType(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.WatchCacheSizes":                       schema_pkg_apis_core_v1alpha1_WatchCacheSizes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Worker":                                schema_pkg_apis_core_v1alpha1_Worker(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerKubernetes":                      schema_pkg_apis_core_v1alpha1_WorkerKubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerSystemComponents":                schema_pkg_apis_core_v1alpha1_WorkerSystemComponents(ref),
@@ -252,6 +254,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaList":                              schema_pkg_apis_core_v1beta1_QuotaList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaSpec":                              schema_pkg_apis_core_v1beta1_QuotaSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Region":                                 schema_pkg_apis_core_v1beta1_Region(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceWatchCacheSize":                 schema_pkg_apis_core_v1beta1_ResourceWatchCacheSize(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBinding":                          schema_pkg_apis_core_v1beta1_SecretBinding(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBindingList":                      schema_pkg_apis_core_v1beta1_SecretBindingList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Seed":                                   schema_pkg_apis_core_v1beta1_Seed(ref),
@@ -283,6 +286,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler":                  schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume":                                 schema_pkg_apis_core_v1beta1_Volume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType":                             schema_pkg_apis_core_v1beta1_VolumeType(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes":                        schema_pkg_apis_core_v1beta1_WatchCacheSizes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker":                                 schema_pkg_apis_core_v1beta1_Worker(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes":                       schema_pkg_apis_core_v1beta1_WorkerKubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerSystemComponents":                 schema_pkg_apis_core_v1beta1_WorkerSystemComponents(ref),
@@ -2615,11 +2619,17 @@ func schema_pkg_apis_core_v1alpha1_KubeAPIServerConfig(ref common.ReferenceCallb
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountConfig"),
 						},
 					},
+					"watchCacheSizes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WatchCacheSizes contains configuration of the API server's watch cache sizes. Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests and a lot of watching controllers (e.g. large shooted Seed clusters). When the API server's watch cache's capacity is too small to cope with the amount of update requests and watchers for a particular resource, it might happen that controller watches are permanently stopped with `too old resource version` errors. Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.WatchCacheSizes"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountConfig"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WatchCacheSizes"},
 	}
 }
 
@@ -4701,6 +4711,41 @@ func schema_pkg_apis_core_v1alpha1_ResourceData(ref common.ReferenceCallback) co
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_ResourceWatchCacheSize(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ResourceWatchCacheSize contains configuration of the API server's watch cache size for one specific resource.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"apiGroup": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIGroup is the API group of the resource for which the watch cache size should be configured. An unset value is used to specify the legacy core API (e.g. for `secrets`).",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"resource": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resource is the name of the resource for which the watch cache size should be configured (in lowercase plural form, e.g. `secrets`).",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"size": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CacheSize specifies the watch cache size that should be configured for the specified resource.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+				Required: []string{"resource", "size"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_SecretBinding(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6258,6 +6303,41 @@ func schema_pkg_apis_core_v1alpha1_VolumeType(ref common.ReferenceCallback) comm
 				Required: []string{"class", "name"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_WatchCacheSizes(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WatchCacheSizes contains configuration of the API server's watch cache sizes.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"default": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Default configures the default watch cache size of the kube-apiserver (flag `--default-watch-cache-size`, defaults to 100). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"resources": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resources configures the watch cache size of the kube-apiserver per resource (flag `--watch-cache-sizes`). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ResourceWatchCacheSize"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ResourceWatchCacheSize"},
 	}
 }
 
@@ -8416,11 +8496,17 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig"),
 						},
 					},
+					"watchCacheSizes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WatchCacheSizes contains configuration of the API server's watch cache sizes. Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests and a lot of watching controllers (e.g. large shooted Seed clusters). When the API server's watch cache's capacity is too small to cope with the amount of update requests and watchers for a particular resource, it might happen that controller watches are permanently stopped with `too old resource version` errors. Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes"},
 	}
 }
 
@@ -10459,6 +10545,41 @@ func schema_pkg_apis_core_v1beta1_Region(ref common.ReferenceCallback) common.Op
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ResourceWatchCacheSize(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ResourceWatchCacheSize contains configuration of the API server's watch cache size for one specific resource.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"apiGroup": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIGroup is the API group of the resource for which the watch cache size should be configured. An unset value is used to specify the legacy core API (e.g. for `secrets`).",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"resource": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resource is the name of the resource for which the watch cache size should be configured (in lowercase plural form, e.g. `secrets`).",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"size": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CacheSize specifies the watch cache size that should be configured for the specified resource.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+				Required: []string{"resource", "size"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_SecretBinding(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -11860,6 +11981,41 @@ func schema_pkg_apis_core_v1beta1_VolumeType(ref common.ReferenceCallback) commo
 				Required: []string{"class", "name"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_WatchCacheSizes(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WatchCacheSizes contains configuration of the API server's watch cache sizes.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"default": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Default configures the default watch cache size of the kube-apiserver (flag `--default-watch-cache-size`, defaults to 100). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"resources": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resources configures the watch cache size of the kube-apiserver per resource (flag `--watch-cache-sizes`). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceWatchCacheSize"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceWatchCacheSize"},
 	}
 }
 

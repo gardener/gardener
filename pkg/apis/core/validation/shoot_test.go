@@ -31,6 +31,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -1367,6 +1368,93 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("spec.kubernetes.kubeAPIServer.admissionPlugins[0].name"),
 				}))))
 			})
+		})
+
+		Context("WatchCacheSizes validation", func() {
+			var negativeSize int32 = -1
+
+			DescribeTable("watch cache size validation",
+				func(sizes *core.WatchCacheSizes, matcher gomegatypes.GomegaMatcher) {
+					Expect(ValidateWatchCacheSizes(sizes, nil)).To(matcher)
+				},
+
+				Entry("valid (unset)", nil, BeEmpty()),
+				Entry("valid (fields unset)", &core.WatchCacheSizes{}, BeEmpty()),
+				Entry("valid (default=0)", &core.WatchCacheSizes{
+					Default: pointer.Int32Ptr(0),
+				}, BeEmpty()),
+				Entry("valid (default>0)", &core.WatchCacheSizes{
+					Default: pointer.Int32Ptr(42),
+				}, BeEmpty()),
+				Entry("invalid (default<0)", &core.WatchCacheSizes{
+					Default: pointer.Int32Ptr(negativeSize),
+				}, ConsistOf(
+					field.Invalid(field.NewPath("default"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+				)),
+
+				// APIGroup unset (core group)
+				Entry("valid (core/secrets=0)", &core.WatchCacheSizes{
+					Resources: []core.ResourceWatchCacheSize{{
+						Resource:  "secrets",
+						CacheSize: 0,
+					}},
+				}, BeEmpty()),
+				Entry("valid (core/secrets=>0)", &core.WatchCacheSizes{
+					Resources: []core.ResourceWatchCacheSize{{
+						Resource:  "secrets",
+						CacheSize: 42,
+					}},
+				}, BeEmpty()),
+				Entry("invalid (core/secrets=<0)", &core.WatchCacheSizes{
+					Resources: []core.ResourceWatchCacheSize{{
+						Resource:  "secrets",
+						CacheSize: negativeSize,
+					}},
+				}, ConsistOf(
+					field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+				)),
+				Entry("invalid (core/resource empty)", &core.WatchCacheSizes{
+					Resources: []core.ResourceWatchCacheSize{{
+						Resource:  "",
+						CacheSize: 42,
+					}},
+				}, ConsistOf(
+					field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
+				)),
+
+				// APIGroup set
+				Entry("valid (apps/deployments=0)", &core.WatchCacheSizes{
+					Resources: []core.ResourceWatchCacheSize{{
+						APIGroup:  pointer.StringPtr("apps"),
+						Resource:  "deployments",
+						CacheSize: 0,
+					}},
+				}, BeEmpty()),
+				Entry("valid (apps/deployments=>0)", &core.WatchCacheSizes{
+					Resources: []core.ResourceWatchCacheSize{{
+						APIGroup:  pointer.StringPtr("apps"),
+						Resource:  "deployments",
+						CacheSize: 42,
+					}},
+				}, BeEmpty()),
+				Entry("invalid (apps/deployments=<0)", &core.WatchCacheSizes{
+					Resources: []core.ResourceWatchCacheSize{{
+						APIGroup:  pointer.StringPtr("apps"),
+						Resource:  "deployments",
+						CacheSize: negativeSize,
+					}},
+				}, ConsistOf(
+					field.Invalid(field.NewPath("resources[0].size"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
+				)),
+				Entry("invalid (apps/resource empty)", &core.WatchCacheSizes{
+					Resources: []core.ResourceWatchCacheSize{{
+						Resource:  "",
+						CacheSize: 42,
+					}},
+				}, ConsistOf(
+					field.Required(field.NewPath("resources[0].resource"), "must not be empty"),
+				)),
+			)
 		})
 
 		Context("KubeControllerManager validation < 1.12", func() {
