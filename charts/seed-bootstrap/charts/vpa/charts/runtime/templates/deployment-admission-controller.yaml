@@ -47,7 +47,10 @@ spec:
         {{- if .Values.admissionController.registerByURL }}
         - --register-by-url=true
         - --webhook-address=https://vpa-webhook.{{.Release.Namespace}}
-        - --webhook-port={{ .Values.admissionController.port }}
+        - --webhook-port={{ .Values.admissionController.servicePort }} # the port is only respected if register-by-url is true, that's why it's in this if-block
+                                                                       # if it's false it will not set the port during registration, i.e., it will be defaulted to 443,
+                                                                       # so the servicePort has to be 443 in this case
+                                                                       # see https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/pkg/admission-controller/config.go#L70-L74
         {{- end }}
         image: {{ index .Values.global.images "vpa-admission-controller" }}
         imagePullPolicy: IfNotPresent

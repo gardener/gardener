@@ -35,6 +35,7 @@ spec:
       containers:
       - command:
         - /usr/local/bin/vpa-exporter
+        - --port={{ .Values.exporter.port }}
         image: {{ index .Values.global.images "vpa-exporter" }}
         imagePullPolicy: IfNotPresent
         name: exporter
@@ -51,7 +52,7 @@ spec:
 {{- end }}
         ports:
         - name: metrics
-          containerPort: 9570
+          containerPort: {{ .Values.exporter.port }}
           protocol: TCP
         resources:
           requests:

@@ -15,6 +15,6 @@ spec:
   ports:
   - name: metrics
     protocol: TCP
-    port: 9570
-    targetPort: 9570
+    port: {{ .Values.exporter.servicePort }}
+    targetPort: {{ .Values.exporter.port }}
 {{- end }}

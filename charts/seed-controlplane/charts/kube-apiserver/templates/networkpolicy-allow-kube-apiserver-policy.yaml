@@ -42,7 +42,7 @@ spec:
           app: vpa-admission-controller
     ports:
     - protocol: TCP
-      port: 443
+      port: 10250
   {{- end }}
   ingress:
     # Allow connection from everything which needs to talk to the API server
