@@ -358,6 +358,14 @@ type KubeAPIServerConfig struct {
 	// ServiceAccountConfig contains configuration settings for the service account handling
 	// of the kube-apiserver.
 	ServiceAccountConfig *ServiceAccountConfig
+	// WatchCacheSizes contains configuration of the API server's watch cache sizes.
+	// Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests
+	// and a lot of watching controllers (e.g. large shooted Seed clusters). When the API server's watch cache's
+	// capacity is too small to cope with the amount of update requests and watchers for a particular resource, it
+	// might happen that controller watches are permanently stopped with `too old resource version` errors.
+	// Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch
+	// cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
+	WatchCacheSizes *WatchCacheSizes
 }
 
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
@@ -426,6 +434,30 @@ type AdmissionPlugin struct {
 	Name string
 	// Config is the configuration of the plugin.
 	Config *runtime.RawExtension
+}
+
+// WatchCacheSizes contains configuration of the API server's watch cache sizes.
+type WatchCacheSizes struct {
+	// Default configures the default watch cache size of the kube-apiserver
+	// (flag `--default-watch-cache-size`, defaults to 100).
+	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+	Default *int32
+	// Resources configures the watch cache size of the kube-apiserver per resource
+	// (flag `--watch-cache-sizes`).
+	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+	Resources []ResourceWatchCacheSize
+}
+
+// ResourceWatchCacheSize contains configuration of the API server's watch cache size for one specific resource.
+type ResourceWatchCacheSize struct {
+	// APIGroup is the API group of the resource for which the watch cache size should be configured.
+	// An unset value is used to specify the legacy core API (e.g. for `secrets`).
+	APIGroup *string
+	// Resource is the name of the resource for which the watch cache size should be configured
+	// (in lowercase plural form, e.g. `secrets`).
+	Resource string
+	// CacheSize specifies the watch cache size that should be configured for the specified resource.
+	CacheSize int32
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.

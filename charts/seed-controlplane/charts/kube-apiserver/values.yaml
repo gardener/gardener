@@ -155,3 +155,12 @@ limitsRequestsGapScaleParams:
 sni:
   enabled: false
   advertiseIP: 1.1.1.1
+
+# watchCacheSizes:
+#   default: 100
+#   resources:
+#     - resource: secrets
+#       size: 500
+#     - apiGroup: apps
+#       resource: deployments
+#       size: 500

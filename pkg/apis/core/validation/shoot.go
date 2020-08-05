@@ -583,6 +583,8 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 				allErrs = append(allErrs, validateAuditPolicyConfigMapReference(auditPolicy.ConfigMapRef, auditPath.Child("auditPolicy", "configMapRef"))...)
 			}
 		}
+
+		allErrs = append(allErrs, ValidateWatchCacheSizes(kubeAPIServer.WatchCacheSizes, fldPath.Child("watchCacheSizes"))...)
 	}
 
 	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.Version, kubernetes.KubeControllerManager, fldPath.Child("kubeControllerManager"))...)
@@ -632,6 +634,25 @@ func validateNetworking(networking core.Networking, fldPath *field.Path) field.E
 		allErrs = append(allErrs, cidrvalidation.ValidateCIDRIsCanonical(path, cidr.GetCIDR())...)
 	}
 
+	return allErrs
+}
+
+// ValidateWatchCacheSizes validates the given WatchCacheSizes fields.
+func ValidateWatchCacheSizes(sizes *core.WatchCacheSizes, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if sizes != nil {
+		if defaultSize := sizes.Default; defaultSize != nil {
+			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultSize), fldPath.Child("default"))...)
+		}
+
+		for idx, resourceWatchCacheSize := range sizes.Resources {
+			idxPath := fldPath.Child("resources").Index(idx)
+			if len(resourceWatchCacheSize.Resource) == 0 {
+				allErrs = append(allErrs, field.Required(idxPath.Child("resource"), "must not be empty"))
+			}
+			allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(resourceWatchCacheSize.CacheSize), idxPath.Child("size"))...)
+		}
+	}
 	return allErrs
 }
 

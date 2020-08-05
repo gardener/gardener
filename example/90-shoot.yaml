@@ -160,6 +160,14 @@ spec:
   #     auditPolicy:
   #       configMapRef:
   #         name: auditpolicy
+  #   watchCacheSizes: # See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+  #     default: 100
+  #     resources:
+  #     - resource: secrets
+  #       size: 500
+  #     - apiGroup: apps
+  #       resource: deployments
+  #       size: 500
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
   #   featureGates:
