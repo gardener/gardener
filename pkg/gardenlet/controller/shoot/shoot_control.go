@@ -193,7 +193,7 @@ func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Res
 	}
 
 	if shouldPrepareShootForMigration(shoot) {
-		if err := c.isSeedAvailable(seed, log); err != nil {
+		if err := c.isSeedAvailable(seed); err != nil {
 			return reconcile.Result{}, fmt.Errorf("target Seed is not available to host the Control Plane of Shoot %s: %v", shoot.GetName(), err)
 		}
 
@@ -348,7 +348,7 @@ func (c *Controller) finalizeShootDeletion(ctx context.Context, gardenClient kub
 	return reconcile.Result{}, c.removeFinalizerFrom(ctx, gardenClient, shoot)
 }
 
-func (c *Controller) isSeedAvailable(seed *gardencorev1beta1.Seed, logger *logrus.Entry) error {
+func (c *Controller) isSeedAvailable(seed *gardencorev1beta1.Seed) error {
 	if seed.DeletionTimestamp != nil {
 		return fmt.Errorf("seed is set for deletion")
 	}
@@ -444,25 +444,6 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 	// initialize a new operation and, eventually, start the reconciliation flow.
 	if err := c.checkSeedAndSyncClusterResource(ctx, o.Shoot.Info, project, cloudProfile, seed); err != nil {
 		return c.updateShootStatusAndRequeueOnSyncError(gardenClient.GardenCore(), o.Shoot.Info, err)
-	}
-
-	var dnsEnabled = !o.Shoot.DisableDNS
-
-	// TODO: timuthy - Only required for migration and can be removed in a future version once admission plugin
-	// forbids to create functionless DNS providers.
-	if dnsEnabled && o.Shoot.Info.Spec.DNS != nil {
-		updated, migrateErr := migrateDNSProviders(ctx, gardenClient.DirectClient(), o)
-		if migrateErr != nil {
-			c.recorder.Event(o.Shoot.Info, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "Cannot reconcile Shoot: Migrating DNS providers failed")
-			_, updateErr := c.updateShootStatusOperationError(gardenClient.GardenCore(), o.Shoot.Info, migrateErr.Error(), operationType, o.Shoot.Info.Status.LastErrors...)
-			return reconcile.Result{}, utilerrors.WithSuppressed(fmt.Errorf("migrating dns providers failed: %v", migrateErr), updateErr)
-		}
-		if updated {
-			message := "Requeue Shoot after migrating DNS providers"
-			o.Logger.Info(message)
-			c.recorder.Event(o.Shoot.Info, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, message)
-			return reconcile.Result{}, nil
-		}
 	}
 
 	if flowErr := c.runReconcileShootFlow(o); flowErr != nil {
@@ -634,41 +615,6 @@ func (c *Controller) updateShootStatusOperationError(g gardencore.Interface, sho
 	}
 
 	return kutil.TryUpdateShootLabels(g, retry.DefaultRetry, newShoot.ObjectMeta, StatusLabelTransform(StatusUnhealthy))
-}
-
-func migrateDNSProviders(ctx context.Context, c client.Client, o *operation.Operation) (bool, error) {
-	o.Logger.Info("Migration step - DNS providers")
-	if err := kutil.TryUpdate(ctx, retry.DefaultBackoff, c, o.Shoot.Info, func() error {
-		var (
-			dns                = o.Shoot.Info.Spec.DNS
-			primaryDNSProvider = gardencorev1beta1helper.FindPrimaryDNSProvider(dns.Providers)
-			usesDefaultDomain  = o.Shoot.ExternalClusterDomain != nil && garden.DomainIsDefaultDomain(*o.Shoot.ExternalClusterDomain, o.Garden.DefaultDomains) != nil
-		)
-		// Set primary DNS provider field
-		if !usesDefaultDomain && primaryDNSProvider != nil && primaryDNSProvider.Primary == nil {
-			for i, provider := range dns.Providers {
-				if provider.Type == primaryDNSProvider.Type && provider.SecretName == primaryDNSProvider.SecretName {
-					dns.Providers[i].Primary = pointer.BoolPtr(true)
-					break
-				}
-			}
-		}
-
-		// Remove functionless DNS providers
-		// TODO: timuthy - Validation should forbid to create functionless DNS providers in the future.
-		var providers []gardencorev1beta1.DNSProvider
-		for _, provider := range dns.Providers {
-			if utils.IsTrue(provider.Primary) || (provider.Type != nil && provider.SecretName != nil) {
-				providers = append(providers, provider)
-			}
-		}
-		dns.Providers = providers
-		return nil
-	}); err != nil {
-		return false, nil
-	}
-	updated := o.Shoot.Info.ObjectMeta.Generation > o.Shoot.Info.Status.ObservedGeneration
-	return updated, nil
 }
 
 func lastErrorsOperationInitializationFailure(lastErrors []gardencorev1beta1.LastError, err error) []gardencorev1beta1.LastError {
