@@ -243,7 +243,7 @@ var _ = Describe("health", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("should return progressing when detecting a regular scale up", func() {
+		It("should return progressing when detecting a regular scale up (pending status)", func() {
 			machineList := &machinev1alpha1.MachineList{
 				Items: []machinev1alpha1.Machine{
 					{
@@ -251,6 +251,20 @@ var _ = Describe("health", func() {
 							CurrentStatus: machinev1alpha1.CurrentStatus{Phase: machinev1alpha1.MachinePending},
 						},
 					},
+				},
+			}
+
+			status, reason, err := checkNodesScalingUp(machineList, 0, 1)
+
+			Expect(status).To(Equal(gardencorev1beta1.ConditionProgressing))
+			Expect(reason).To(Equal("PendingMachines"))
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should return progressing when detecting a regular scale up (no status)", func() {
+			machineList := &machinev1alpha1.MachineList{
+				Items: []machinev1alpha1.Machine{
+					{},
 				},
 			}
 
