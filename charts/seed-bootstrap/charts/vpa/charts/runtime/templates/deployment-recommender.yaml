@@ -10,6 +10,7 @@ metadata:
 {{ toYaml .Values.labels | indent 4 }}
 spec:
   replicas: {{ .Values.recommender.replicas }}
+  revisionHistoryLimit: 0
   selector:
     matchLabels:
       app: vpa-recommender

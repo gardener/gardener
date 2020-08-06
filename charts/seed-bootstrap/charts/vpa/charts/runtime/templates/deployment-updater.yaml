@@ -9,6 +9,7 @@ metadata:
 {{ toYaml .Values.labels | indent 4 }}
 spec:
   replicas: {{ .Values.updater.replicas }}
+  revisionHistoryLimit: 0
   selector:
     matchLabels:
       app: vpa-updater
