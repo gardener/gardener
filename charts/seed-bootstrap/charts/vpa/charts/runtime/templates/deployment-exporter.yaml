@@ -10,6 +10,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   replicas: {{ .Values.exporter.replicas }}
+  revisionHistoryLimit: 0
   selector:
     matchLabels:
       app: vpa-exporter
