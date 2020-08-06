@@ -1,4 +1,5 @@
-{{- if and .Values.global.apiserver.enabled .Values.global.apiserver.admissionConfig }}
+{{- if and .Values.global.apiserver.enabled (include "gardener-apiserver.hasAdmissionPlugins" .) }}
+{{- with .Values.global.apiserver.admission }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -7,10 +8,30 @@ metadata:
   labels:
     app: gardener
     role: apiserver
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-    release: "{{ .Release.Name }}"
-    heritage: "{{ .Release.Service }}"
+    chart: "{{ $.Chart.Name }}-{{ $.Chart.Version }}"
+    release: "{{ $.Release.Name }}"
+    heritage: "{{ $.Release.Service }}"
 data:
   configuration.yaml: |-
-{{ .Values.global.apiserver.admissionConfig | indent 4 }}
+    apiVersion: apiserver.config.k8s.io/v1
+    kind: AdmissionConfiguration
+    plugins:
+    {{- if .validatingWebhook.kubeconfig }}
+    - name: ValidatingAdmissionWebhook
+      configuration:
+        apiVersion: apiserver.config.k8s.io/v1
+        kind: WebhookAdmissionConfiguration
+        kubeConfigFile: /var/run/secrets/admission-kubeconfig/validating-webhook
+    {{- end }}
+    {{- if .mutatingWebhook.kubeconfig }}
+    - name: MutatingAdmissionWebhook
+      configuration:
+        apiVersion: apiserver.config.k8s.io/v1
+        kind: WebhookAdmissionConfiguration
+        kubeConfigFile: /var/run/secrets/admission-kubeconfig/mutating-webhook
+    {{- end }}
+    {{- if .plugins }}
+{{ toYaml .plugins | indent 4}}
+    {{- end }}
+{{- end }}
 {{- end }}

@@ -35,7 +35,7 @@ spec:
         checksum/secret-gardener-apiserver-encryption-config: {{ include (print $.Template.BasePath "/apiserver/secret-gardener-apiserver-encryption-config.yaml") . | sha256sum }}
         {{- end }}
         checksum/secret-gardener-apiserver-kubeconfig: {{ include (print $.Template.BasePath "/apiserver/secret-kubeconfig.yaml") . | sha256sum }}
-        {{- if .Values.global.apiserver.admissionConfig }}
+        {{- if (include "gardener-apiserver.hasAdmissionPlugins" .) }}
         checksum/configmap-gardener-apiserver-admission-config: {{ include (print $.Template.BasePath "/apiserver/configmap-admission-config.yaml") . | sha256sum }}
         {{- end }}
         {{- if .Values.global.apiserver.podAnnotations }}
@@ -79,7 +79,7 @@ spec:
         imagePullPolicy: {{ .Values.global.apiserver.image.pullPolicy }}
         command:
         - /gardener-apiserver
-        {{- if .Values.global.apiserver.admissionConfig }}
+        {{- if (include "gardener-apiserver.hasAdmissionPlugins" .) }}
         - --admission-control-config-file=/etc/gardener-apiserver/admission/configuration.yaml
         {{- end }}
         {{- if .Values.global.apiserver.audit.dynamicConfiguration }}
@@ -266,9 +266,17 @@ spec:
         - name: gardener-audit-webhook-config
           mountPath: /etc/gardener-apiserver/auditwebhook
         {{- end }}
-        {{- if .Values.global.apiserver.admissionConfig }}
+        {{- if (include "gardener-apiserver.hasAdmissionPlugins" .) }}
         - name: gardener-apiserver-admission-config
           mountPath: /etc/gardener-apiserver/admission
+        {{- end }}
+        {{- if (include "gardener-apiserver.hasAdmissionKubeconfig" .) }}
+        - name: gardener-apiserver-admission-kubeconfig
+          mountPath: /var/run/secrets/admission-kubeconfig
+        {{- end }}
+        {{- if (include "gardener-apiserver.hasWebhookTokens" .) }}
+        - name: gardener-apiserver-admission-tokens
+          mountPath: /var/run/secrets/admission-tokens
         {{- end }}
       {{- if .Values.global.apiserver.etcd.useSidecar }}
       - name: etcd
@@ -331,10 +339,32 @@ spec:
         secret:
           secretName: gardener-audit-webhook-config
       {{- end }}
-      {{- if .Values.global.apiserver.admissionConfig }}
+      {{- if (include "gardener-apiserver.hasAdmissionPlugins" .) }}
       - name: gardener-apiserver-admission-config
         configMap:
           name: gardener-apiserver-admission-config
+      {{- end }}
+      {{- if (include "gardener-apiserver.hasAdmissionKubeconfig" .) }}
+      - name: gardener-apiserver-admission-kubeconfig
+        secret:
+          secretName: gardener-apiserver-admission-kubeconfig
+      {{- end }}
+      {{- if (include "gardener-apiserver.hasWebhookTokens" .) }}
+      - name: gardener-apiserver-admission-tokens
+        projected:
+          sources:
+          {{- if .Values.global.apiserver.admission.validatingWebhook.token.enabled }}
+          - serviceAccountToken:
+              path: validating-webhook-token
+              expirationSeconds: {{ .Values.global.apiserver.admission.validatingWebhook.token.expirationSeconds }}
+              audience: {{ .Values.global.apiserver.admission.validatingWebhook.token.audience }}
+          {{- end }}
+          {{- if .Values.global.apiserver.admission.mutatingWebhook.token.enabled }}
+          - serviceAccountToken:
+              path: mutating-webhook-token
+              expirationSeconds: {{ .Values.global.apiserver.admission.mutatingWebhook.token.expirationSeconds }}
+              audience: {{ .Values.global.apiserver.admission.mutatingWebhook.token.audience }}
+          {{- end }}
       {{- end }}
 {{- if .Values.global.apiserver.etcd.useSidecar }}
 ---
