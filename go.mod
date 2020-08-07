@@ -73,4 +73,5 @@ replace (
 	k8s.io/component-base => k8s.io/component-base v0.17.9
 	k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.17.9
+	k8s.io/kube-openapi => github.com/gardener/kube-openapi v0.0.0-20200807191151-9232ec702af2
 )
