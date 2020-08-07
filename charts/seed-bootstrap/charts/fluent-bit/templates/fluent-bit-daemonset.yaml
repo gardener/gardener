@@ -52,6 +52,9 @@ spec:
       serviceAccountName: fluent-bit
       automountServiceAccountToken: true
       terminationGracePeriodSeconds: 10
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
       volumes:
       - name: config
         configMap:
