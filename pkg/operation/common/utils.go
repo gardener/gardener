@@ -525,7 +525,7 @@ func DeleteOldLoggingStack(ctx context.Context, k8sClient client.Client, namespa
 	}
 
 	for _, resource := range resources {
-		if err := k8sClient.Delete(ctx, resource); client.IgnoreNotFound(err) != nil {
+		if err := k8sClient.Delete(ctx, resource); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
 			return err
 		}
 	}
