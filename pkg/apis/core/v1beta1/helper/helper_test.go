@@ -791,7 +791,7 @@ var _ = Describe("helper", func() {
 		Entry("no providers", nil, BeNil()),
 		Entry("one non primary provider", []gardencorev1beta1.DNSProvider{
 			{Type: pointer.StringPtr("provider")},
-		}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.StringPtr("provider")})),
+		}, BeNil()),
 		Entry("one primary provider", []gardencorev1beta1.DNSProvider{{Type: pointer.StringPtr("provider"),
 			Primary: pointer.BoolPtr(true)}}, Equal(&gardencorev1beta1.DNSProvider{Type: pointer.StringPtr("provider"), Primary: pointer.BoolPtr(true)})),
 		Entry("multiple w/ one primary provider", []gardencorev1beta1.DNSProvider{

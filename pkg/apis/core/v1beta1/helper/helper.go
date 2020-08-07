@@ -761,10 +761,6 @@ func FindPrimaryDNSProvider(providers []gardencorev1beta1.DNSProvider) *gardenco
 			return &primaryProvider
 		}
 	}
-	// TODO: timuthy - Only required for migration and can be removed in a future version.
-	if len(providers) > 0 {
-		return &providers[0]
-	}
 	return nil
 }
 

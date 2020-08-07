@@ -28,10 +28,13 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
+	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
@@ -44,6 +47,13 @@ const (
 	// PluginName is the name of this admission plugin.
 	PluginName = "ShootDNS"
 )
+
+var log = logger.NewLogger("").WithField("admission", PluginName)
+
+// SetLogger sets the logger for this admission plugin.
+func SetLogger(logger *logrus.Entry) {
+	log = logger
+}
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
@@ -177,6 +187,7 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 				for i, provider := range shoot.Spec.DNS.Providers {
 					if reflect.DeepEqual(provider.Type, oldPrimaryProvider.Type) && reflect.DeepEqual(provider.SecretName, oldPrimaryProvider.SecretName) {
 						shoot.Spec.DNS.Providers[i].Primary = pointer.BoolPtr(true)
+						break
 					}
 				}
 			}
@@ -186,6 +197,7 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 			return nil
 		}
 		if oldShoot.Spec.SeedName != nil {
+			removeFunctionlessDNSProviders(shoot.Name, shoot.Namespace, shoot.Spec.DNS)
 			return nil
 		}
 	}
@@ -217,7 +229,29 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 		return err
 	}
 
+	removeFunctionlessDNSProviders(shoot.Name, shoot.Namespace, shoot.Spec.DNS)
+
 	return nil
+}
+
+func removeFunctionlessDNSProviders(shootName, namespace string, dns *core.DNS) {
+	if dns == nil {
+		return
+	}
+
+	// TODO: timuthy - Deny shoots with functionless DNS providers in the future instead of removing them here.
+	var providers []core.DNSProvider
+	for _, provider := range dns.Providers {
+		if !utils.IsTrue(provider.Primary) && (provider.Type == nil || provider.SecretName == nil) {
+			log.Warnf("Detected functionless DNS provider for shoot %s/%s. This will be forbidden in a future version of Gardener.", namespace, shootName)
+			continue
+		}
+
+		providers = append(providers, provider)
+		continue
+	}
+
+	dns.Providers = providers
 }
 
 func checkPrimaryDNSProvider(dns *core.DNS, defaultDomains []string) error {

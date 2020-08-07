@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/dns"
 
@@ -37,6 +38,9 @@ import (
 )
 
 var _ = Describe("dns", func() {
+	BeforeSuite(func() {
+		SetLogger(logger.NewNopLogger().WithField("test", "dns"))
+	})
 	Describe("#Admit", func() {
 		var (
 			admissionHandler    *DNS
@@ -273,14 +277,16 @@ var _ = Describe("dns", func() {
 				))
 			})
 
-			It("should re-set the correct primary DNS provider on updates", func() {
+			It("should re-assign the correct primary DNS provider on updates", func() {
 				var (
 					shootDomain = "my-shoot.my-private-domain.com"
+					secretName2 = "secret2"
 				)
 				shoot.Spec.DNS.Domain = &shootDomain
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type: &providerType,
+						Type:       &providerType,
+						SecretName: &secretName2,
 					},
 					{
 						Type:       &providerType,
@@ -307,6 +313,174 @@ var _ = Describe("dns", func() {
 						"Type":       Equal(pointer.StringPtr(providerType)),
 						"Primary":    Equal(pointer.BoolPtr(true)),
 						"SecretName": Equal(pointer.StringPtr(secretName)),
+					}),
+				))
+			})
+
+			It("should remove functionless DNS providers on create w/ seed assignment", func() {
+				var (
+					shootDomain = "my-shoot.my-private-domain.com"
+				)
+				shoot.Spec.DNS.Domain = &shootDomain
+				shoot.Spec.DNS.Providers = []core.DNSProvider{
+					{
+						Type: &providerType,
+					},
+					{
+						Type:       &providerType,
+						SecretName: &secretName,
+					},
+					{
+						SecretName: &secretName,
+					},
+				}
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
+				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":    Equal(pointer.StringPtr(providerType)),
+						"Primary": Equal(pointer.BoolPtr(true)),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":       Equal(pointer.StringPtr(providerType)),
+						"Primary":    BeNil(),
+						"SecretName": Equal(pointer.StringPtr(secretName)),
+					}),
+				))
+			})
+
+			It("should not remove functionless DNS providers on create w/o seed assignment", func() {
+				var (
+					shootDomain = "my-shoot.my-private-domain.com"
+				)
+				shoot.Spec.SeedName = nil
+				shoot.Spec.DNS.Domain = &shootDomain
+				shoot.Spec.DNS.Providers = []core.DNSProvider{
+					{
+						Type: &providerType,
+					},
+					{
+						Type:       &providerType,
+						SecretName: &secretName,
+					},
+					{
+						Type: &providerType,
+					},
+				}
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
+				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":    Equal(pointer.StringPtr(providerType)),
+						"Primary": BeNil(),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":       Equal(pointer.StringPtr(providerType)),
+						"Primary":    BeNil(),
+						"SecretName": Equal(pointer.StringPtr(secretName)),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":    Equal(pointer.StringPtr(providerType)),
+						"Primary": BeNil(),
+					}),
+				))
+			})
+
+			It("should remove functionless DNS providers on updates w/ seed assignment", func() {
+				var (
+					shootDomain = "my-shoot.my-private-domain.com"
+				)
+				shoot.Spec.DNS.Domain = &shootDomain
+				oldShoot := shoot.DeepCopy()
+
+				providers := []core.DNSProvider{
+					{
+						Type: &providerType,
+					},
+					{
+						Type:    &providerType,
+						Primary: pointer.BoolPtr(true),
+					},
+					{
+						Type: &providerType,
+					},
+				}
+
+				oldShoot.Spec.DNS.Providers = []core.DNSProvider{providers[1]}
+				shoot.Spec.DNS.Providers = providers
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
+				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":    Equal(pointer.StringPtr(providerType)),
+						"Primary": Equal(pointer.BoolPtr(true)),
+					}),
+				))
+			})
+
+			It("should not remove functionless DNS providers on updates w/o seed assignment", func() {
+				var (
+					shootDomain = "my-shoot.my-private-domain.com"
+				)
+				shoot.Spec.SeedName = nil
+				shoot.Spec.DNS.Domain = &shootDomain
+				oldShoot := shoot.DeepCopy()
+
+				providers := []core.DNSProvider{
+					{
+						Type: &providerType,
+					},
+					{
+						Type:    &providerType,
+						Primary: pointer.BoolPtr(true),
+					},
+					{
+						Type: &providerType,
+					},
+				}
+
+				oldShoot.Spec.DNS.Providers = []core.DNSProvider{providers[1]}
+				shoot.Spec.DNS.Providers = providers
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
+				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type": Equal(pointer.StringPtr(providerType)),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":    Equal(pointer.StringPtr(providerType)),
+						"Primary": Equal(pointer.BoolPtr(true)),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type": Equal(pointer.StringPtr(providerType)),
 					}),
 				))
 			})
