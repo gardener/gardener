@@ -128,7 +128,7 @@ func (b *Botanist) EnsureClusterIdentity(ctx context.Context) error {
 	}
 
 	latestShoot := &gardencorev1beta1.Shoot{}
-	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, b.Shoot.Info.Name), latestShoot); err != nil {
+	if err := b.K8sGardenClient.DirectClient().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, b.Shoot.Info.Name), latestShoot); err != nil {
 		return err
 	}
 
