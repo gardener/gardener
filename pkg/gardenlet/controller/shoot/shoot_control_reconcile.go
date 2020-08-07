@@ -118,7 +118,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Fn: flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerService.Deploy).
 				RetryUntilTimeout(defaultInterval, defaultTimeout).
 				SkipIf(o.Shoot.HibernationEnabled && !useSNI),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
+			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootClusterIdentity),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server service SNI settings in the Seed cluster",
@@ -331,7 +331,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		nginxLBReady = g.Add(flow.Task{
 			Name:         "Waiting until nginx ingress LoadBalancer is ready",
 			Fn:           flow.TaskFn(botanist.WaitUntilNginxIngressServiceIsReady).DoIf(botanist.Shoot.NginxIngressEnabled()).SkipIf(o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployManagedResources, initializeShootClients, waitUntilWorkerReady),
+			Dependencies: flow.NewTaskIDs(deployManagedResources, initializeShootClients, waitUntilWorkerReady, ensureShootClusterIdentity),
 		})
 		ensureIngressDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Ensuring nginx ingress DNS record",
