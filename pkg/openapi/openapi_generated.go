@@ -98,6 +98,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Machine":                               schema_pkg_apis_core_v1alpha1_Machine(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineControllerManagerSettings":      schema_pkg_apis_core_v1alpha1_MachineControllerManagerSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImage":                          schema_pkg_apis_core_v1alpha1_MachineImage(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImageVersion":                   schema_pkg_apis_core_v1alpha1_MachineImageVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineType":                           schema_pkg_apis_core_v1alpha1_MachineType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineTypeStorage":                    schema_pkg_apis_core_v1alpha1_MachineTypeStorage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Maintenance":                           schema_pkg_apis_core_v1alpha1_Maintenance(ref),
@@ -228,6 +229,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine":                                schema_pkg_apis_core_v1beta1_Machine(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings":       schema_pkg_apis_core_v1beta1_MachineControllerManagerSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage":                           schema_pkg_apis_core_v1beta1_MachineImage(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersion":                    schema_pkg_apis_core_v1beta1_MachineImageVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType":                            schema_pkg_apis_core_v1beta1_MachineType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineTypeStorage":                     schema_pkg_apis_core_v1beta1_MachineTypeStorage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance":                            schema_pkg_apis_core_v1beta1_Maintenance(ref),
@@ -3431,12 +3433,12 @@ func schema_pkg_apis_core_v1alpha1_MachineImage(ref common.ReferenceCallback) co
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "Versions contains versions and expiration dates of the machine image",
+							Description: "Versions contains versions, expiration dates and container runtimes of the machine image",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExpirableVersion"),
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImageVersion"),
 									},
 								},
 							},
@@ -3447,7 +3449,56 @@ func schema_pkg_apis_core_v1alpha1_MachineImage(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExpirableVersion"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImageVersion"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_MachineImageVersion(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MachineImageVersion is an expirable version with list of supported container runtimes and interfaces",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version is the version identifier.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"expirationDate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExpirationDate defines the time at which this version expires.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"classification": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Classification defines the state of a version (preview, supported, deprecated)",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"cri": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CRI list of supported container runtime and interfaces supported by this version",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"version"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -9308,12 +9359,12 @@ func schema_pkg_apis_core_v1beta1_MachineImage(ref common.ReferenceCallback) com
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "Versions contains versions and expiration dates of the machine image",
+							Description: "Versions contains versions, expiration dates and container runtimes of the machine image",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion"),
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersion"),
 									},
 								},
 							},
@@ -9324,7 +9375,56 @@ func schema_pkg_apis_core_v1beta1_MachineImage(ref common.ReferenceCallback) com
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersion"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MachineImageVersion is an expirable version with list of supported container runtimes and interfaces",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version is the version identifier.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"expirationDate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExpirationDate defines the time at which this version expires.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"classification": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Classification defines the state of a version (preview, supported, deprecated)",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"cri": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CRI list of supported container runtime and interfaces supported by this version",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"version"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

@@ -64,8 +64,14 @@ var _ = Describe("validator", func() {
 			baseDomain           = "example.com"
 
 			validMachineImageName     = "some-machineimage"
-			validMachineImageVersions = []core.ExpirableVersion{{Version: "0.0.1"}}
-			volumeType                = "volume-type-1"
+			validMachineImageVersions = []core.MachineImageVersion{
+				{
+					ExpirableVersion: core.ExpirableVersion{
+						Version: "0.0.1",
+					},
+				},
+			}
+			volumeType = "volume-type-1"
 
 			seedPodsCIDR     = "10.241.128.0/17"
 			seedServicesCIDR = "10.241.0.0/17"
@@ -1140,52 +1146,76 @@ var _ = Describe("validator", func() {
 					cloudProfileMachineImages = []core.MachineImage{
 						{
 							Name: imageName1,
-							Versions: []core.ExpirableVersion{
+							Versions: []core.MachineImageVersion{
 								{
-									Version:        previewVersion,
-									Classification: &classificationPreview,
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        previewVersion,
+										Classification: &classificationPreview,
+									},
 								},
 								{
-									Version: latestNonExpiredVersion,
+									ExpirableVersion: core.ExpirableVersion{
+										Version: latestNonExpiredVersion,
+									},
 								},
 								{
-									Version: nonExpiredVersion1,
+									ExpirableVersion: core.ExpirableVersion{
+										Version: nonExpiredVersion1,
+									},
 								},
 								{
-									Version: nonExpiredVersion2,
+									ExpirableVersion: core.ExpirableVersion{
+										Version: nonExpiredVersion2,
+									},
 								},
 								{
-									Version:        expiringVersion,
-									ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        expiringVersion,
+										ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
+									},
 								},
 								{
-									Version:        expiredVersion,
-									ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        expiredVersion,
+										ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+									},
 								},
 							},
 						}, {
 							Name: imageName2,
-							Versions: []core.ExpirableVersion{
+							Versions: []core.MachineImageVersion{
 								{
-									Version:        previewVersion,
-									Classification: &classificationPreview,
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        previewVersion,
+										Classification: &classificationPreview,
+									},
 								},
 								{
-									Version: latestNonExpiredVersion,
+									ExpirableVersion: core.ExpirableVersion{
+										Version: latestNonExpiredVersion,
+									},
 								},
 								{
-									Version: nonExpiredVersion1,
+									ExpirableVersion: core.ExpirableVersion{
+										Version: nonExpiredVersion1,
+									},
 								},
 								{
-									Version: nonExpiredVersion2,
+									ExpirableVersion: core.ExpirableVersion{
+										Version: nonExpiredVersion2,
+									},
 								},
 								{
-									Version:        expiringVersion,
-									ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        expiringVersion,
+										ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * 1000)},
+									},
 								},
 								{
-									Version:        expiredVersion,
-									ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        expiredVersion,
+										ExpirationDate: &metav1.Time{Time: metav1.Now().Add(time.Second * -1000)},
+									},
 								},
 							},
 						},
@@ -1279,6 +1309,169 @@ var _ = Describe("validator", func() {
 							Name:    imageName1,
 							Version: latestNonExpiredVersion,
 						}))
+					})
+
+					It("should allow supported CRI and CRs", func() {
+						shoot.Spec.Provider.Workers = []core.Worker{
+							{
+								CRI: &core.CRI{
+									Name: core.CRINameContainerD,
+									ContainerRuntimes: []core.ContainerRuntime{
+										{Type: "supported-cr-1"},
+										{Type: "supported-cr-2"},
+									},
+								},
+								Machine: core.Machine{
+									Image: &core.ShootMachineImage{
+										Name:    "cr-image-name",
+										Version: "1.2.3",
+									},
+								},
+							},
+						}
+
+						cloudProfile.Spec.MachineImages = append(
+							cloudProfile.Spec.MachineImages,
+							core.MachineImage{
+								Name: "cr-image-name",
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: "1.2.3",
+										},
+										CRI: []core.CRI{
+											{
+												Name: core.CRINameContainerD,
+												ContainerRuntimes: []core.ContainerRuntime{
+													{
+														Type: "supported-cr-1",
+													},
+													{
+														Type: "supported-cr-2",
+													},
+												},
+											},
+										},
+									},
+								},
+							})
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("should reject unsupported CRI", func() {
+						shoot.Spec.Provider.Workers = append(
+							shoot.Spec.Provider.Workers,
+							core.Worker{
+								CRI: &core.CRI{
+									Name: core.CRINameContainerD,
+									ContainerRuntimes: []core.ContainerRuntime{
+										{Type: "supported-cr-1"},
+										{Type: "supported-cr-2"},
+									},
+								},
+								Machine: core.Machine{
+									Image: &core.ShootMachineImage{
+										Name:    "cr-image-name",
+										Version: "1.2.3",
+									},
+								},
+							})
+
+						cloudProfile.Spec.MachineImages = append(
+							cloudProfile.Spec.MachineImages,
+							core.MachineImage{
+								Name: "cr-image-name",
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: "1.2.3",
+										},
+										CRI: []core.CRI{
+											{
+												Name: "unsupported-cri",
+												ContainerRuntimes: []core.ContainerRuntime{
+													{
+														Type: "supported-cr-1",
+													},
+													{
+														Type: "supported-cr-2",
+													},
+												},
+											},
+										},
+									},
+								},
+							})
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+					})
+
+					It("should reject unsupported CR", func() {
+						shoot.Spec.Provider.Workers = append(
+							shoot.Spec.Provider.Workers,
+							core.Worker{
+								CRI: &core.CRI{
+									Name: core.CRINameContainerD,
+									ContainerRuntimes: []core.ContainerRuntime{
+										{Type: "supported-cr-1"},
+										{Type: "supported-cr-2"},
+										{Type: "unsupported-cr-1"},
+									},
+								},
+								Machine: core.Machine{
+									Image: &core.ShootMachineImage{
+										Name:    "cr-image-name",
+										Version: "1.2.3",
+									},
+								},
+							})
+
+						cloudProfile.Spec.MachineImages = append(
+							cloudProfile.Spec.MachineImages,
+							core.MachineImage{
+								Name: "cr-image-name",
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: "1.2.3",
+										},
+										CRI: []core.CRI{
+											{
+												Name: core.CRINameContainerD,
+												ContainerRuntimes: []core.ContainerRuntime{
+													{Type: "supported-cr-1"},
+													{Type: "supported-cr-2"},
+												},
+											},
+										},
+									},
+								},
+							})
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).To(BeForbiddenError())
+						Expect(err.Error()).To(ContainSubstring("Unsupported value: core.ContainerRuntime{Type:\"unsupported-cr-1\""))
 					})
 				})
 

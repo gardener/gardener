@@ -451,12 +451,39 @@ var _ = Describe("helper", func() {
 	)
 
 	classificationPreview := core.ClassificationPreview
-	previewVersion := core.ExpirableVersion{Version: "1.1.1", Classification: &classificationPreview}
-	var versions = []core.ExpirableVersion{{Version: "1.0.0"}, {Version: "1.0.1"}, {Version: "1.0.2"}, {Version: "1.1.0"}, previewVersion}
+	previewVersion := core.MachineImageVersion{
+		ExpirableVersion: core.ExpirableVersion{
+			Version:        "1.1.1",
+			Classification: &classificationPreview,
+		},
+	}
+	var versions = []core.MachineImageVersion{
+		{
+			ExpirableVersion: core.ExpirableVersion{
+				Version: "1.0.0",
+			},
+		},
+		{
+			ExpirableVersion: core.ExpirableVersion{
+				Version: "1.0.1",
+			},
+		},
+		{
+			ExpirableVersion: core.ExpirableVersion{
+				Version: "1.0.2",
+			},
+		},
+		{
+			ExpirableVersion: core.ExpirableVersion{
+				Version: "1.1.0",
+			},
+		},
+		previewVersion,
+	}
 
-	DescribeTable("#DetermineLatestExpirableVersion",
-		func(versions []core.ExpirableVersion, filterPreviewVersions bool, expectation core.ExpirableVersion, expectError bool) {
-			result, err := DetermineLatestExpirableVersion(versions, filterPreviewVersions)
+	DescribeTable("#DetermineLatestMachineImageVersion",
+		func(versions []core.MachineImageVersion, filterPreviewVersions bool, expectation core.MachineImageVersion, expectError bool) {
+			result, err := DetermineLatestMachineImageVersion(versions, filterPreviewVersions)
 			if expectError {
 				Expect(err).To(HaveOccurred())
 				return
@@ -465,8 +492,8 @@ var _ = Describe("helper", func() {
 		},
 
 		Entry("should determine latest expirable version", versions, false, previewVersion, false),
-		Entry("should determine latest expirable version - without preview versions", versions, true, core.ExpirableVersion{Version: "1.1.0"}, false),
-		Entry("should return an error - only preview versions", []core.ExpirableVersion{previewVersion}, true, nil, true),
-		Entry("should return an error - empty version slice", []core.ExpirableVersion{}, true, nil, true),
+		Entry("should determine latest expirable version - without preview versions", versions, true, core.MachineImageVersion{ExpirableVersion: core.ExpirableVersion{Version: "1.1.0"}}, false),
+		Entry("should return an error - only preview versions", []core.MachineImageVersion{previewVersion}, true, nil, true),
+		Entry("should return an error - empty version slice", []core.MachineImageVersion{}, true, nil, true),
 	)
 })

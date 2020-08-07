@@ -352,7 +352,12 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				for _, newImage := range cloudProfile.Spec.MachineImages {
 					if oldImage.Name == newImage.Name {
 						imageFound = true
-						removedMachineImageVersions[oldImage.Name] = sets.StringKeySet(helper.GetRemovedVersions(oldImage.Versions, newImage.Versions))
+						removedMachineImageVersions[oldImage.Name] = sets.StringKeySet(
+							helper.GetRemovedVersions(
+								helper.ToExpirableVersions(oldImage.Versions),
+								helper.ToExpirableVersions(newImage.Versions),
+							),
+						)
 					}
 				}
 				if !imageFound {

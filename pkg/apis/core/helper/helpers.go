@@ -57,17 +57,34 @@ func QuotaScope(scopeRef corev1.ObjectReference) (string, error) {
 }
 
 // DetermineLatestMachineImageVersions determines the latest versions (semVer) of the given machine images from a slice of machine images
-func DetermineLatestMachineImageVersions(images []core.MachineImage) (map[string]core.ExpirableVersion, error) {
-	resultMapVersions := make(map[string]core.ExpirableVersion)
+func DetermineLatestMachineImageVersions(images []core.MachineImage) (map[string]core.MachineImageVersion, error) {
+	resultMapVersions := make(map[string]core.MachineImageVersion)
 
 	for _, image := range images {
-		latestMachineImageVersion, err := DetermineLatestExpirableVersion(image.Versions, false)
+		latestMachineImageVersion, err := DetermineLatestMachineImageVersion(image.Versions, false)
 		if err != nil {
 			return nil, fmt.Errorf("failed to determine latest machine image version for image '%s': %v", image.Name, err)
 		}
 		resultMapVersions[image.Name] = latestMachineImageVersion
 	}
 	return resultMapVersions, nil
+}
+
+// DetermineLatestMachineImageVersion determines the latest MachineImageVersion from a slice of MachineImageVersion
+// when filterPreviewVersions is set, versions with classification preview are not considered
+func DetermineLatestMachineImageVersion(versions []core.MachineImageVersion, filterPreviewVersions bool) (core.MachineImageVersion, error) {
+	latestVersion, err := DetermineLatestExpirableVersion(ToExpirableVersions(versions), filterPreviewVersions)
+	if err != nil {
+		return core.MachineImageVersion{}, err
+	}
+
+	for _, version := range versions {
+		if version.Version == latestVersion.Version {
+			return version, nil
+		}
+	}
+
+	return core.MachineImageVersion{}, fmt.Errorf("the latest machine version has been removed")
 }
 
 // DetermineLatestExpirableVersion determines the latest ExpirableVersion from a slice of ExpirableVersions
@@ -99,6 +116,15 @@ func DetermineLatestExpirableVersion(versions []core.ExpirableVersion, filterPre
 	}
 
 	return latestExpirableVersion, nil
+}
+
+// ToExpirableVersions converts MachineImageVersion to ExpirableVersion
+func ToExpirableVersions(versions []core.MachineImageVersion) []core.ExpirableVersion {
+	expirableVersions := []core.ExpirableVersion{}
+	for _, version := range versions {
+		expirableVersions = append(expirableVersions, version.ExpirableVersion)
+	}
+	return expirableVersions
 }
 
 // ShootWantsBasicAuthentication returns true if basic authentication is not configured or

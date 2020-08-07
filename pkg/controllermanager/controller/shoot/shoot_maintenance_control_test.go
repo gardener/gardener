@@ -57,13 +57,17 @@ var _ = Describe("Shoot Maintenance", func() {
 			It("should determine that forceUpdate is required", func() {
 				imageCloudProvider := gardencorev1beta1.MachineImage{
 					Name: "CoreOs",
-					Versions: []gardencorev1beta1.ExpirableVersion{
+					Versions: []gardencorev1beta1.MachineImageVersion{
 						{
-							Version: "1.0.1",
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version: "1.0.1",
+							},
 						},
 						{
-							Version:        "1.0.0",
-							ExpirationDate: &expirationDateInThePast,
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.0.0",
+								ExpirationDate: &expirationDateInThePast,
+							},
 						},
 					},
 				}
@@ -75,13 +79,17 @@ var _ = Describe("Shoot Maintenance", func() {
 			It("should determine that forceUpdate is not required", func() {
 				imageCloudProvider := gardencorev1beta1.MachineImage{
 					Name: "CoreOs",
-					Versions: []gardencorev1beta1.ExpirableVersion{
+					Versions: []gardencorev1beta1.MachineImageVersion{
 						{
-							Version: "1.0.1",
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version: "1.0.1",
+							},
 						},
 						{
-							Version:        "1.0.0",
-							ExpirationDate: &expirationDateInTheFuture,
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.0.0",
+								ExpirationDate: &expirationDateInTheFuture,
+							},
 						},
 					},
 				}
@@ -116,13 +124,17 @@ var _ = Describe("Shoot Maintenance", func() {
 					MachineImages: []gardencorev1beta1.MachineImage{
 						{
 							Name: "CoreOs",
-							Versions: []gardencorev1beta1.ExpirableVersion{
+							Versions: []gardencorev1beta1.MachineImageVersion{
 								{
-									Version: "1.0.0",
+									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+										Version: "1.0.0",
+									},
 								},
 								{
-									Version:        "1.1.1",
-									ExpirationDate: &expirationDateInTheFuture,
+									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+										Version:        "1.1.1",
+										ExpirationDate: &expirationDateInTheFuture,
+									},
 								},
 							},
 						},
@@ -175,8 +187,12 @@ var _ = Describe("Shoot Maintenance", func() {
 		It("should determine that the shoot worker machine images must be maintained - multiple worker pools", func() {
 			cloudProfile.Spec.MachineImages = append(cloudProfile.Spec.MachineImages, gardencorev1beta1.MachineImage{
 				Name: "gardenlinux",
-				Versions: []gardencorev1beta1.ExpirableVersion{
-					{Version: "1.0.0"},
+				Versions: []gardencorev1beta1.MachineImageVersion{
+					{
+						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+							Version: "1.0.0",
+						},
+					},
 				},
 			})
 
@@ -198,9 +214,11 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should update to latest non-preview version - MaintenanceAutoUpdate set to true", func() {
-			highestPreviewVersion := gardencorev1beta1.ExpirableVersion{
-				Version:        "1.1.2",
-				Classification: &previewClassification,
+			highestPreviewVersion := gardencorev1beta1.MachineImageVersion{
+				ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+					Version:        "1.1.2",
+					Classification: &previewClassification,
+				},
 			}
 			cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions, highestPreviewVersion)
 			workerImages, _, err := MaintainMachineImages(testlogger, shoot, cloudProfile)
@@ -225,12 +243,16 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{
 					Name: "CoreOs",
-					Versions: []gardencorev1beta1.ExpirableVersion{
+					Versions: []gardencorev1beta1.MachineImageVersion{
 						{
-							Version: "1.0.1",
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version: "1.0.1",
+							},
 						},
 						{
-							Version: highestVersion,
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version: highestVersion,
+							},
 						},
 					},
 				},
@@ -246,10 +268,12 @@ var _ = Describe("Shoot Maintenance", func() {
 			cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{
 					Name: "CoreOs",
-					Versions: []gardencorev1beta1.ExpirableVersion{
+					Versions: []gardencorev1beta1.MachineImageVersion{
 						{
-							Version:        "1.1.1",
-							ExpirationDate: &expirationDateInTheFuture,
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.1.1",
+								ExpirationDate: &expirationDateInTheFuture,
+							},
 						},
 					},
 				},
@@ -264,9 +288,11 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should determine that the Shoot is already using the latest qualifying version - Shoot is using a preview version (and there is no higher non-preview version).", func() {
-			highestExpiredVersion := gardencorev1beta1.ExpirableVersion{
-				Version:        "1.1.2",
-				Classification: &previewClassification,
+			highestExpiredVersion := gardencorev1beta1.MachineImageVersion{
+				ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+					Version:        "1.1.2",
+					Classification: &previewClassification,
+				},
 			}
 			cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions, highestExpiredVersion)
 			shoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestExpiredVersion.Version
@@ -285,10 +311,12 @@ var _ = Describe("Shoot Maintenance", func() {
 		})
 
 		It("should return an error - edge case: qualifying version from CloudProfile for machine image is lower than the Shoot's version. Should not downgrade shoot machine image version.", func() {
-			highestExpiredVersion := gardencorev1beta1.ExpirableVersion{
-				Version:        "1.1.2",
-				Classification: &deprecatedClassification,
-				ExpirationDate: &expirationDateInThePast,
+			highestExpiredVersion := gardencorev1beta1.MachineImageVersion{
+				ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+					Version:        "1.1.2",
+					Classification: &deprecatedClassification,
+					ExpirationDate: &expirationDateInThePast,
+				},
 			}
 			cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions, highestExpiredVersion)
 			shoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestExpiredVersion.Version

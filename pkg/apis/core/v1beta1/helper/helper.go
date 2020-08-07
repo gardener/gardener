@@ -665,11 +665,19 @@ func ShootMachineImageVersionExists(constraint gardencorev1beta1.MachineImage, i
 	return false, 0
 }
 
+func toExpirableVersions(versions []gardencorev1beta1.MachineImageVersion) []gardencorev1beta1.ExpirableVersion {
+	expVersions := []gardencorev1beta1.ExpirableVersion{}
+	for _, version := range versions {
+		expVersions = append(expVersions, version.ExpirableVersion)
+	}
+	return expVersions
+}
+
 // GetLatestQualifyingShootMachineImage determines the latest qualifying version in a machine image and returns that as a ShootMachineImage
 // A version qualifies if its classification is not preview and the version is not expired.
 func GetLatestQualifyingShootMachineImage(image gardencorev1beta1.MachineImage, predicates ...VersionPredicate) (bool, *gardencorev1beta1.ShootMachineImage, error) {
 	predicates = append(predicates, FilterExpiredVersion())
-	qualifyingVersionFound, latestImageVersion, err := GetLatestQualifyingVersion(image.Versions, predicates...)
+	qualifyingVersionFound, latestImageVersion, err := GetLatestQualifyingVersion(toExpirableVersions(image.Versions), predicates...)
 	if err != nil {
 		return false, nil, err
 	}
@@ -710,7 +718,7 @@ func KubernetesVersionExistsInCloudProfile(cloudProfile *gardencorev1beta1.Cloud
 }
 
 // SetMachineImageVersionsToMachineImage sets imageVersions to the matching imageName in the machineImages.
-func SetMachineImageVersionsToMachineImage(machineImages []gardencorev1beta1.MachineImage, imageName string, imageVersions []gardencorev1beta1.ExpirableVersion) ([]gardencorev1beta1.MachineImage, error) {
+func SetMachineImageVersionsToMachineImage(machineImages []gardencorev1beta1.MachineImage, imageName string, imageVersions []gardencorev1beta1.MachineImageVersion) ([]gardencorev1beta1.MachineImage, error) {
 	for index, image := range machineImages {
 		if strings.EqualFold(image.Name, imageName) {
 			machineImages[index].Versions = imageVersions

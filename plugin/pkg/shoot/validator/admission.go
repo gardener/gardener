@@ -423,6 +423,8 @@ func validateProvider(c *validationContext) field.ErrorList {
 		}
 		if ok, validMachineImages := validateMachineImagesConstraints(c.cloudProfile.Spec.MachineImages, worker.Machine.Image, oldWorker.Machine.Image); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machine", "image"), worker.Machine.Image, validMachineImages))
+		} else {
+			allErrs = append(allErrs, validateContainerRuntimeConstraints(c.cloudProfile.Spec.MachineImages, worker, oldWorker, idxPath.Child("cri"))...)
 		}
 		if ok, validVolumeTypes := validateVolumeTypes(c.cloudProfile.Spec.VolumeTypes, worker.Volume, oldWorker.Volume, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "type"), worker.Volume, validVolumeTypes))
@@ -719,7 +721,7 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string)
 		defaultImage = &machineImages[0]
 	}
 
-	latestMachineImageVersion, err := helper.DetermineLatestExpirableVersion(defaultImage.Versions, true)
+	latestMachineImageVersion, err := helper.DetermineLatestMachineImageVersion(defaultImage.Versions, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine latest machine image from cloud profile: %s", err.Error())
 	}
@@ -761,6 +763,85 @@ func validateMachineImagesConstraints(constraints []core.MachineImage, image, ol
 					return true, nil
 				}
 			}
+		}
+	}
+	return false, validValues
+}
+
+func validateContainerRuntimeConstraints(constraints []core.MachineImage, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {
+	if apiequality.Semantic.DeepEqual(worker.CRI, oldWorker.CRI) {
+		return nil
+	}
+
+	if worker.CRI == nil || worker.Machine.Image == nil {
+		return nil
+	}
+
+	var machineImage *core.MachineImage
+	var machineVersion *core.MachineImageVersion
+
+	for _, image := range constraints {
+		if image.Name == worker.Machine.Image.Name {
+			machineImage = &image
+			break
+		}
+	}
+
+	if machineImage == nil {
+		return nil
+	}
+
+	for _, version := range machineImage.Versions {
+		if version.Version == worker.Machine.Image.Version {
+			machineVersion = &version
+			break
+		}
+	}
+	if machineVersion == nil {
+		return nil
+	}
+	return validateCRI(machineVersion.CRI, worker.CRI, fldPath)
+}
+
+func validateCRI(constraints []core.CRI, cri *core.CRI, fldPath *field.Path) field.ErrorList {
+	if cri == nil {
+		return nil
+	}
+
+	var (
+		allErrors = field.ErrorList{}
+		validCRIs = []string{}
+		foundCRI  *core.CRI
+	)
+
+	for _, criConstraint := range constraints {
+		validCRIs = append(validCRIs, string(criConstraint.Name))
+		if cri.Name == criConstraint.Name {
+			foundCRI = &criConstraint
+			break
+		}
+	}
+	if foundCRI == nil {
+		allErrors = append(allErrors, field.NotSupported(fldPath.Child("name"), cri.Name, validCRIs))
+		return allErrors
+	}
+
+	for j, runtime := range cri.ContainerRuntimes {
+		jdxPath := fldPath.Child("containerRuntimes").Index(j)
+		if ok, validValues := validateCRMembership(foundCRI.ContainerRuntimes, runtime.Type); !ok {
+			allErrors = append(allErrors, field.NotSupported(jdxPath.Child("type"), runtime, validValues))
+		}
+	}
+
+	return allErrors
+}
+
+func validateCRMembership(constraints []core.ContainerRuntime, cr string) (bool, []string) {
+	validValues := []string{}
+	for _, constraint := range constraints {
+		validValues = append(validValues, constraint.Type)
+		if constraint.Type == cr {
+			return true, nil
 		}
 	}
 	return false, validValues

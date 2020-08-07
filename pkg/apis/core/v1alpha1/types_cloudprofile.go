@@ -109,10 +109,18 @@ type KubernetesSettings struct {
 type MachineImage struct {
 	// Name is the name of the image.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// Versions contains versions and expiration dates of the machine image
+	// Versions contains versions, expiration dates and container runtimes of the machine image
 	// +patchMergeKey=version
 	// +patchStrategy=merge
-	Versions []ExpirableVersion `json:"versions" patchStrategy:"merge" patchMergeKey:"version" protobuf:"bytes,2,rep,name=versions"`
+	Versions []MachineImageVersion `json:"versions" patchStrategy:"merge" patchMergeKey:"version" protobuf:"bytes,2,rep,name=versions"`
+}
+
+// MachineImageVersion is an expirable version with list of supported container runtimes and interfaces
+type MachineImageVersion struct {
+	ExpirableVersion `json:",inline" protobuf:"bytes,1,opt,name=expirableVersion"`
+	// CRI list of supported container runtime and interfaces supported by this version
+	// +optional
+	CRI []CRI `json:"cri,omitempty" protobuf:"bytes,2,rep,name=cri"`
 }
 
 // ExpirableVersion contains a version and an expiration date.
