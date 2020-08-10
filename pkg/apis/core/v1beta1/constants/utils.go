@@ -34,3 +34,12 @@ func getDeprecatedAnnotation(annotations map[string]string, annotationKey, depre
 
 	return val, ok
 }
+
+// GetShootVPADeploymentNames returns the names of all VPA related deployments related to shoot clusters.
+func GetShootVPADeploymentNames() []string {
+	return []string{
+		DeploymentNameVPAAdmissionController,
+		DeploymentNameVPARecommender,
+		DeploymentNameVPAUpdater,
+	}
+}

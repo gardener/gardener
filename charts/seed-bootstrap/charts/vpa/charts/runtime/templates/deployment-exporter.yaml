@@ -3,11 +3,11 @@
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
-  labels:
-    app: vpa-exporter
-{{ toYaml .Values.labels | indent 4 }}
   name: vpa-exporter
   namespace: {{ .Release.Namespace }}
+  labels:
+    app: vpa-exporter
+{{ toYaml .Values.deploymentLabels | indent 4 }}
 spec:
   replicas: {{ .Values.exporter.replicas }}
   revisionHistoryLimit: 0

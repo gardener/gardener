@@ -265,6 +265,12 @@ func computeRequiredControlPlaneDeployments(
 		}
 	}
 
+	if gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(shoot) {
+		for _, vpaDeployment := range v1beta1constants.GetShootVPADeploymentNames() {
+			requiredControlPlaneDeployments.Insert(vpaDeployment)
+		}
+	}
+
 	return requiredControlPlaneDeployments, nil
 }
 
