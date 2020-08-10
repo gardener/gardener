@@ -20,6 +20,12 @@ import (
 	"sync"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
@@ -32,15 +38,10 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/retry"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *Controller) shootCareAdd(obj interface{}) {
@@ -48,6 +49,20 @@ func (c *Controller) shootCareAdd(obj interface{}) {
 	if err != nil {
 		return
 	}
+
+	shoot, ok := obj.(*gardencorev1beta1.Shoot)
+	if !ok {
+		return
+	}
+
+	if shoot.Generation == shoot.Status.ObservedGeneration {
+		// spread shoot health checks across sync period to avoid checking on all Shoots roughly at the same time
+		// after startup of the gardenlet
+		c.shootCareQueue.AddAfter(key, utils.RandomDurationWithMetaDuration(c.config.Controllers.ShootCare.SyncPeriod))
+		return
+	}
+
+	// don't add random duration for enqueueing new Shoots, that have never been health checked
 	c.shootCareQueue.Add(key)
 }
 
