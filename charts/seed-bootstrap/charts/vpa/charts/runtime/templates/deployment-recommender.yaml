@@ -7,7 +7,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: vpa-recommender
-{{ toYaml .Values.labels | indent 4 }}
+{{ toYaml .Values.deploymentLabels | indent 4 }}
 spec:
   replicas: {{ .Values.recommender.replicas }}
   selector:

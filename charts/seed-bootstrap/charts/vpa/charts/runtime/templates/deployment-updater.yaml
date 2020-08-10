@@ -6,7 +6,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: vpa-updater
-{{ toYaml .Values.labels | indent 4 }}
+{{ toYaml .Values.deploymentLabels | indent 4 }}
 spec:
   replicas: {{ .Values.updater.replicas }}
   selector:

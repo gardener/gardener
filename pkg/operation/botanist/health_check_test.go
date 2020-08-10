@@ -158,6 +158,17 @@ func beConditionWithStatus(status gardencorev1beta1.ConditionStatus) types.Gomeg
 	}))
 }
 
+func beConditionWithMissingRequiredDeployment(deployments []*appsv1.Deployment) types.GomegaMatcher {
+	var names = make([]string, 0, len(deployments))
+	for _, deploy := range deployments {
+		names = append(names, deploy.Name)
+	}
+	return PointTo(MatchFields(IgnoreExtras, Fields{
+		"Status":  Equal(gardencorev1beta1.ConditionFalse),
+		"Message": ContainSubstring("%s", names),
+	}))
+}
+
 func beConditionWithStatusAndCodes(status gardencorev1beta1.ConditionStatus, codes ...gardencorev1beta1.ErrorCode) types.GomegaMatcher {
 	return PointTo(MatchFields(IgnoreExtras, Fields{
 		"Status": Equal(status),
@@ -193,6 +204,16 @@ var _ = Describe("health check", func() {
 			},
 		}
 
+		gcpShootWantsVPA = &gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
+						Enabled: true,
+					},
+				},
+			},
+		}
+
 		seedNamespace = "shoot--foo--bar"
 
 		// control plane deployments
@@ -208,6 +229,17 @@ var _ = Describe("health check", func() {
 			kubeControllerManagerDeployment,
 			kubeSchedulerDeployment,
 			clusterAutoscalerDeployment,
+		}
+
+		withVpaDeployments = func(deploys ...*appsv1.Deployment) []*appsv1.Deployment {
+			var deployments = make([]*appsv1.Deployment, 0, len(deploys))
+			for _, deploy := range deploys {
+				deployments = append(deployments, deploy)
+			}
+			for _, deploymentName := range v1beta1constants.GetShootVPADeploymentNames() {
+				deployments = append(deployments, newDeployment(seedNamespace, deploymentName, v1beta1constants.GardenRoleControlPlane, true))
+			}
+			return deployments
 		}
 
 		// control plane etcds
@@ -295,8 +327,24 @@ var _ = Describe("health check", func() {
 						State: gardencorev1beta1.LastOperationStateSucceeded}}}},
 			},
 			BeNil()),
-		Entry("missing required deployment",
-			gcpShoot,
+		Entry("all healthy (needs VPA)",
+			gcpShootWantsVPA,
+			"gcp",
+			withVpaDeployments(
+				gardenerResourceManagerDeployment,
+				kubeAPIServerDeployment,
+				kubeControllerManagerDeployment,
+				kubeSchedulerDeployment,
+			),
+			requiredControlPlaneEtcds,
+			[]*extensionsv1alpha1.Worker{
+				{Status: extensionsv1alpha1.WorkerStatus{DefaultStatus: extensionsv1alpha1.DefaultStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						State: gardencorev1beta1.LastOperationStateSucceeded}}}},
+			},
+			BeNil()),
+		Entry("missing required deployments",
+			gcpShootWantsVPA,
 			"gcp",
 			[]*appsv1.Deployment{
 				kubeAPIServerDeployment,
@@ -305,7 +353,7 @@ var _ = Describe("health check", func() {
 			},
 			requiredControlPlaneEtcds,
 			nil,
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
+			beConditionWithMissingRequiredDeployment(withVpaDeployments(gardenerResourceManagerDeployment))),
 		Entry("required deployment unhealthy",
 			gcpShoot,
 			"gcp",
@@ -1013,3 +1061,9 @@ var _ = Describe("health check", func() {
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 	)
 })
+
+func deployments(deploys ...*appsv1.Deployment) []*appsv1.Deployment {
+	var deployments []*appsv1.Deployment
+	deployments = append(deployments, deploys...)
+	return deployments
+}
