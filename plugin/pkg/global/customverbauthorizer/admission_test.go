@@ -164,6 +164,10 @@ var _ = Describe("customverbauthorizer", func() {
 				})
 
 				var (
+					owner = rbacv1.Subject{
+						Kind: rbacv1.UserKind,
+						Name: "owner",
+					}
 					projectMembersWithHumans = []core.ProjectMember{
 						{
 							Subject: rbacv1.Subject{
@@ -199,6 +203,13 @@ var _ = Describe("customverbauthorizer", func() {
 					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 				})
 
+				It("should always allow creating a project with only owner as member", func() {
+					project.Spec.Owner = &owner
+					project.Spec.Members = []core.ProjectMember{{Subject: owner}}
+					attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+					Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+				})
+
 				Describe("permissions granted", func() {
 					BeforeEach(func() {
 						auth.EXPECT().Authorize(ctx, authorizeAttributes).Return(authorizer.DecisionAllow, "", nil)
@@ -215,6 +226,13 @@ var _ = Describe("customverbauthorizer", func() {
 						It("should allow creating a project without human members if creator=owner", func() {
 							project.Spec.Members = projectMembersWithoutHumans
 							project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+						})
+
+						It("should allow creating a project with owner plus additional human members", func() {
+							project.Spec.Owner = &owner
+							project.Spec.Members = append([]core.ProjectMember{{Subject: owner}}, projectMembersWithHumans...)
 							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 						})
@@ -247,21 +265,63 @@ var _ = Describe("customverbauthorizer", func() {
 					})
 
 					Context("CREATE", func() {
-						It("should allow creating a project without human members if creator!=owner", func() {
+						It("should allow creating a project without human members if owner=nil (meaning creator=owner)", func() {
 							project.Spec.Members = projectMembersWithoutHumans
 							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
 						})
 
-						It("should forbid creating a project with human members if creator!=owner", func() {
+						It("should allow creating a project with owner plus additional human members if creator=owner", func() {
+							project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
+							project.Spec.Members = append([]core.ProjectMember{{Subject: owner}}, projectMembersWithHumans...)
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+						})
+
+						It("should allow creating a project with human members if owner=nil (meaning creator=owner)", func() {
 							project.Spec.Members = projectMembersWithHumans
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+						})
+
+						It("should forbid creating a project with human members if creator!=owner", func() {
+							project.Spec.Owner = &owner
+							project.Spec.Members = projectMembersWithHumans
+							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
+						})
+
+						It("should forbid creating a project with owner plus additional human members if creator!=owner", func() {
+							project.Spec.Owner = &owner
+							project.Spec.Members = append([]core.ProjectMember{{Subject: owner}}, projectMembersWithHumans...)
 							attrs = admission.NewAttributesRecord(project, nil, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, userInfo)
 							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
 						})
 					})
 
 					Context("UPDATE", func() {
-						It("should forbid to add human users", func() {
+						It("should allow to add human users (user=owner)", func() {
+							project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
+							project.Spec.Members = projectMembersWithoutHumans
+							oldProject := project.DeepCopy()
+							project.Spec.Members = append(projectMembersWithoutHumans, projectMembersWithHumans...)
+
+							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+						})
+
+						It("should allow to remove human users (user=owner)", func() {
+							project.Spec.Owner = &rbacv1.Subject{Kind: rbacv1.UserKind, Name: userInfo.Name}
+							project.Spec.Members = projectMembersWithHumans
+							oldProject := project.DeepCopy()
+							project.Spec.Members = projectMembersWithoutHumans
+
+							attrs = admission.NewAttributesRecord(project, oldProject, core.Kind("Project").WithVersion("version"), project.Namespace, project.Name, core.Resource("projects").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, userInfo)
+							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+						})
+
+						It("should forbid to add human users (user!=owner)", func() {
+							project.Spec.Owner = &owner
 							project.Spec.Members = projectMembersWithoutHumans
 							oldProject := project.DeepCopy()
 							project.Spec.Members = append(projectMembersWithoutHumans, projectMembersWithHumans...)
@@ -270,7 +330,8 @@ var _ = Describe("customverbauthorizer", func() {
 							Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).NotTo(Succeed())
 						})
 
-						It("should forbid to remove human users", func() {
+						It("should forbid to remove human users (user!=owner)", func() {
+							project.Spec.Owner = &owner
 							project.Spec.Members = projectMembersWithHumans
 							oldProject := project.DeepCopy()
 							project.Spec.Members = projectMembersWithoutHumans
