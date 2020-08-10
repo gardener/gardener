@@ -60,11 +60,11 @@ spec:
 {{- end }}
         resources:
           limits:
-            cpu: 200m
-            memory: 1000Mi
-          requests:
-            cpu: 50m
+            cpu: 120m
             memory: 500Mi
+          requests:
+            cpu: 30m
+            memory: 200Mi
         ports:
         - containerPort: 8080
 {{- if not .Values.updater.enableServiceAccount }}

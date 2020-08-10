@@ -57,13 +57,11 @@ spec:
           protocol: TCP
         resources:
           requests:
-            cpu: 50m
-            memory: 200Mi
-{{ if not .Values.exporter.enableVPA }}
+            cpu: 30m
+            memory: 50Mi
           limits:
-            cpu: 500m
-            memory: 1Gi
-{{ end }}
+            cpu: 120m
+            memory: 200Mi
 {{- if not .Values.exporter.enableServiceAccount }}
       volumes:
       - name: vpa-exporter
