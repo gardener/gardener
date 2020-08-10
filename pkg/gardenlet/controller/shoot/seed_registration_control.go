@@ -149,16 +149,21 @@ func (c *defaultSeedRegistrationControl) Reconcile(shootObj *gardencorev1beta1.S
 	}
 
 	if shoot.DeletionTimestamp == nil && shootedSeedConfig != nil {
-		if shoot.Status.LastOperation == nil || shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
+		if shoot.Generation != shoot.Status.ObservedGeneration || shoot.Status.LastOperation == nil || shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
 			shootLogger.Infof("[SHOOTED SEED REGISTRATION] Waiting for shoot %s to be reconciled before registering it as seed", shoot.Name)
 			return reconcile.Result{
 				RequeueAfter: 10 * time.Second,
 			}, nil
 		}
 
+		seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeedWithName(*shootObj.Spec.SeedName))
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to get seed client: %w", err)
+		}
+
 		if shootedSeedConfig.NoGardenlet {
 			shootLogger.Infof("[SHOOTED SEED REGISTRATION] Registering %s as seed as configuration says that no gardenlet is desired", shoot.Name)
-			if err := registerAsSeed(ctx, gardenClient.Client(), shoot, shootedSeedConfig); err != nil {
+			if err := registerAsSeed(ctx, gardenClient.Client(), seedClient.Client(), shoot, shootedSeedConfig); err != nil {
 				message := fmt.Sprintf("Could not register shoot %q as seed: %+v", shoot.Name, err)
 				shootLogger.Errorf(message)
 				c.recorder.Event(shoot, corev1.EventTypeWarning, "SeedRegistration", message)
@@ -171,7 +176,7 @@ func (c *defaultSeedRegistrationControl) Reconcile(shootObj *gardencorev1beta1.S
 			}
 
 			shootLogger.Infof("[SHOOTED SEED REGISTRATION] Deploying gardenlet into %s which will register shoot as seed", shoot.Name)
-			if err := deployGardenlet(ctx, gardenClient, shootedSeedClient, shoot, shootedSeedConfig, c.imageVector, c.config); err != nil {
+			if err := deployGardenlet(ctx, gardenClient, seedClient, shootedSeedClient, shoot, shootedSeedConfig, c.imageVector, c.config); err != nil {
 				message := fmt.Sprintf("Could not deploy Gardenlet into shoot %q: %+v", shoot.Name, err)
 				shootLogger.Errorf(message)
 				c.recorder.Event(shoot, corev1.EventTypeWarning, "GardenletDeployment", message)
@@ -287,19 +292,19 @@ func applySeedSecret(ctx context.Context, c client.Client, shoot *gardencorev1be
 	return err
 }
 
-func prepareSeedConfig(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed, secretRef *corev1.SecretReference) (*gardencorev1beta1.SeedSpec, error) {
-	shootSecret, err := getShootSecret(ctx, c, shoot)
+func prepareSeedConfig(ctx context.Context, gardenClient client.Client, seedClient client.Client, shoot *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed, secretRef *corev1.SecretReference) (*gardencorev1beta1.SeedSpec, error) {
+	shootSecret, err := getShootSecret(ctx, gardenClient, shoot)
 	if err != nil {
 		return nil, err
 	}
 
-	backupProfile, err := applySeedBackupConfig(ctx, c, shoot, shootSecret, shootedSeedConfig)
+	backupProfile, err := applySeedBackupConfig(ctx, gardenClient, shoot, shootSecret, shootedSeedConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	if secretRef != nil {
-		if err := applySeedSecret(ctx, c, shoot, shootSecret, secretRef.Name, secretRef.Namespace); err != nil {
+		if err := applySeedSecret(ctx, gardenClient, shoot, shootSecret, secretRef.Name, secretRef.Namespace); err != nil {
 			return nil, err
 		}
 	}
@@ -318,6 +323,11 @@ func prepareSeedConfig(ctx context.Context, c client.Client, shoot *gardencorev1
 		volume = &gardencorev1beta1.SeedVolume{
 			MinimumSize: &minimumSize,
 		}
+	}
+
+	vpaEnabled, err := mustEnableVPA(ctx, seedClient, shoot)
+	if err != nil {
+		return nil, err
 	}
 
 	return &gardencorev1beta1.SeedSpec{
@@ -347,7 +357,7 @@ func prepareSeedConfig(ctx context.Context, c client.Client, shoot *gardencorev1
 				Enabled: shootedSeedConfig.DisableDNS == nil || !*shootedSeedConfig.DisableDNS,
 			},
 			VerticalPodAutoscaler: &gardencorev1beta1.SeedSettingVerticalPodAutoscaler{
-				Enabled: !gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(shoot),
+				Enabled: vpaEnabled,
 			},
 		},
 		Taints: taints,
@@ -357,7 +367,7 @@ func prepareSeedConfig(ctx context.Context, c client.Client, shoot *gardencorev1
 }
 
 // registerAsSeed registers a Shoot cluster as a Seed in the Garden cluster.
-func registerAsSeed(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed) error {
+func registerAsSeed(ctx context.Context, gardenClient client.Client, seedClient client.Client, shoot *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed) error {
 	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
 		return errors.New("cannot register Shoot as Seed if it does not specify a domain")
 	}
@@ -375,12 +385,12 @@ func registerAsSeed(ctx context.Context, c client.Client, shoot *gardencorev1bet
 		}
 	)
 
-	seedSpec, err := prepareSeedConfig(ctx, c, shoot, shootedSeedConfig, secretRef)
+	seedSpec, err := prepareSeedConfig(ctx, gardenClient, seedClient, shoot, shootedSeedConfig, secretRef)
 	if err != nil {
 		return err
 	}
 
-	_, err = controllerutil.CreateOrUpdate(ctx, c, seed, func() error {
+	_, err = controllerutil.CreateOrUpdate(ctx, gardenClient, seed, func() error {
 		seed.Labels = utils.MergeStringMaps(shoot.Labels, map[string]string{
 			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleSeed,
 			v1beta1constants.GardenRole:           v1beta1constants.GardenRoleSeed,
@@ -433,7 +443,7 @@ const (
 	gardenletKubeconfigSecretName          = "gardenlet-kubeconfig"
 )
 
-func deployGardenlet(ctx context.Context, gardenClient, shootedSeedClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed, imageVector imagevector.ImageVector, cfg *config.GardenletConfiguration) error {
+func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed, imageVector imagevector.ImageVector, cfg *config.GardenletConfiguration) error {
 	// create bootstrap kubeconfig in case there is no existing gardenlet kubeconfig yet
 	var bootstrapKubeconfigValues map[string]interface{}
 	if err := shootedSeedClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, gardenletKubeconfigSecretName), &corev1.Secret{}); err != nil {
@@ -573,7 +583,7 @@ func deployGardenlet(ctx context.Context, gardenClient, shootedSeedClient kubern
 		}
 	}
 
-	seedSpec, err := prepareSeedConfig(ctx, gardenClient.Client(), shoot, shootedSeedConfig, secretRef)
+	seedSpec, err := prepareSeedConfig(ctx, gardenClient.Client(), seedClient.Client(), shoot, shootedSeedConfig, secretRef)
 	if err != nil {
 		return err
 	}
@@ -729,4 +739,18 @@ func checkSeedAssociations(ctx context.Context, c client.Client, seedName string
 	}
 
 	return nil
+}
+
+func mustEnableVPA(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {
+	if err := c.Get(ctx, kutil.Key(shoot.Status.TechnicalID, "vpa-admission-controller"), &appsv1.Deployment{}); err != nil {
+		if apierrors.IsNotFound(err) {
+			// VPA deployment in shoot namespace was not found, so we have to enable the VPA for this seed until it's
+			// being deployed.
+			return true, nil
+		}
+		return false, err
+	}
+
+	// VPA deployment in shoot namespace was found, so we don't need to enable the VPA for this seed.
+	return false, nil
 }
