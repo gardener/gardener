@@ -16,9 +16,11 @@ package backupentry
 
 import (
 	"fmt"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils"
 
 	"k8s.io/client-go/tools/cache"
 )
@@ -29,6 +31,20 @@ func (c *Controller) backupEntryAdd(obj interface{}) {
 		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
+
+	backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
+	if !ok {
+		return
+	}
+
+	if backupEntry.Generation == backupEntry.Status.ObservedGeneration {
+		// spread BackupEntry reconciliation across one minute to avoid reconciling all BackupEntries roughly at the
+		// same time after startup of the gardenlet
+		c.backupEntryQueue.AddAfter(key, utils.RandomDuration(time.Minute))
+		return
+	}
+
+	// don't add random duration for enqueueing new BackupBuckets, that have never been reconciled
 	c.backupEntryQueue.Add(key)
 }
 
