@@ -271,12 +271,6 @@ func (s *SecretsManager) generateInfoDataAndUpdateResourceList(secretConfig secr
 	if err != nil {
 		return err
 	}
-
-	// No data was generated, means that nothing should be saved in the ShootState
-	if data == nil {
-		return nil
-	}
-
 	return infodata.UpsertInfoData(&s.GardenerResourceDataList, secretConfig.GetName(), data)
 }
 
