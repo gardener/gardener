@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 )
 
@@ -114,7 +115,7 @@ func (c *CustomVerbAuthorizer) admitProjects(ctx context.Context, a admission.At
 		return c.authorize(ctx, a, CustomVerbModifyProjectTolerationsWhitelist, "modify .spec.tolerations.whitelist")
 	}
 
-	if mustCheckProjectMembers(oldObj.Spec.Members, obj.Spec.Members) {
+	if mustCheckProjectMembers(oldObj.Spec.Members, obj.Spec.Members, obj.Spec.Owner, a.GetUserInfo()) {
 		return c.authorize(ctx, a, CustomVerbProjectManageMembers, "manage human users or groups in .spec.members")
 	}
 
@@ -161,12 +162,22 @@ func mustCheckProjectTolerationsWhitelist(oldTolerations, tolerations *core.Proj
 	return !apiequality.Semantic.DeepEqual(oldTolerations.Whitelist, tolerations.Whitelist)
 }
 
-func mustCheckProjectMembers(oldMembers, members []core.ProjectMember) bool {
+func mustCheckProjectMembers(oldMembers, members []core.ProjectMember, owner *rbacv1.Subject, userInfo user.Info) bool {
 	if apiequality.Semantic.DeepEqual(oldMembers, members) {
 		return false
 	}
 
+	// If the user submitting this admission request is the owner then it will be/is bound to the `manage-members`
+	// custom verb anyways, so let's allow him to add/remove human users.
+	if userIsOwner(userInfo, owner) {
+		return false
+	}
+
 	var oldHumanUsers, newHumanUsers = findHumanUsers(oldMembers), findHumanUsers(members)
+	// Remove owner subject from `members` list to always allow it to be added
+	if owner != nil && isHumanUser(*owner) {
+		newHumanUsers.Delete(humanMemberKey(*owner))
+	}
 	return !oldHumanUsers.Equal(newHumanUsers)
 }
 
@@ -175,7 +186,7 @@ func findHumanUsers(members []core.ProjectMember) sets.String {
 
 	for _, member := range members {
 		if isHumanUser(member.Subject) {
-			result.Insert(member.Kind + member.Name)
+			result.Insert(humanMemberKey(member.Subject))
 		}
 	}
 
@@ -184,4 +195,31 @@ func findHumanUsers(members []core.ProjectMember) sets.String {
 
 func isHumanUser(subject rbacv1.Subject) bool {
 	return subject.Kind == rbacv1.UserKind && !strings.HasPrefix(subject.Name, serviceaccount.ServiceAccountUsernamePrefix)
+}
+
+func humanMemberKey(subject rbacv1.Subject) string {
+	return subject.Kind + subject.Name
+}
+
+func userIsOwner(userInfo user.Info, owner *rbacv1.Subject) bool {
+	if owner == nil { // no explicit owner is set, i.e., the creator will be defaulted to the owner
+		return true
+	}
+
+	switch owner.Kind {
+	case rbacv1.ServiceAccountKind:
+		namespace, name, err := serviceaccount.SplitUsername(userInfo.GetName())
+		if err != nil {
+			return false
+		}
+		return owner.Name == name && owner.Namespace == namespace
+
+	case rbacv1.UserKind:
+		return owner.Name == userInfo.GetName()
+
+	case rbacv1.GroupKind:
+		return sets.NewString(userInfo.GetGroups()...).Has(owner.Name)
+	}
+
+	return false
 }
