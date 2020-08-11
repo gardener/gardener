@@ -669,7 +669,7 @@ func validateZones(constraints []core.Region, region, oldRegion string, worker, 
 		jdxPath := fldPath.Child("zones").Index(j)
 		if ok, validZones := validateZone(constraints, region, zone); !ok {
 			if len(validZones) == 0 {
-				allErrs = append(allErrs, field.Invalid(jdxPath, region, "this region is not allowed"))
+				allErrs = append(allErrs, field.Invalid(jdxPath, region, "this region does not support availability zones, please do not configure them"))
 			} else {
 				allErrs = append(allErrs, field.NotSupported(jdxPath, zone, validZones))
 			}
