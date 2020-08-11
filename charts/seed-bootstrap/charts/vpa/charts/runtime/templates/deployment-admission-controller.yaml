@@ -77,10 +77,10 @@ spec:
 {{- end }}
         resources:
           limits:
-            cpu: 200m
+            cpu: 120m
             memory: 500Mi
           requests:
-            cpu: 50m
+            cpu: 30m
             memory: 200Mi
         ports:
         - containerPort: {{ .Values.admissionController.port }}

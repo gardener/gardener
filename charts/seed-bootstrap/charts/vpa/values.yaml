@@ -26,7 +26,6 @@ exporter:
   podAnnotations: {}
   podLabels: {}
   enableServiceAccount: true
-  enableVPA: true
   enableService: true
   port: 9570
   servicePort: 9570

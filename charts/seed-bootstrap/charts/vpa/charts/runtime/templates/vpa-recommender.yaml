@@ -1,14 +1,14 @@
-{{- if .Values.exporter.enabled  }}
+{{- if .Values.recommender.enabled }}
 apiVersion: "autoscaling.k8s.io/v1beta2"
 kind: VerticalPodAutoscaler
 metadata:
-  name: vpa-exporter-vpa
+  name: vpa-recommender
   namespace: {{ .Release.Namespace }}
 spec:
   targetRef:
     apiVersion: {{ include "deploymentversion" . }}
     kind: Deployment
-    name: vpa-exporter
+    name: vpa-recommender
   updatePolicy:
     updateMode: "Auto"
 {{- end }}
