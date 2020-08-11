@@ -75,6 +75,7 @@ rules:
   - druid.gardener.cloud
   resources:
   - etcds/status
+  - etcds/finalizers
   verbs:
   - get
   - update
