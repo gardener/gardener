@@ -7,7 +7,9 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: vpa-admission-controller
+{{- if .Values.deploymentLabels }}
 {{ toYaml .Values.deploymentLabels | indent 4 }}
+{{- end }}
 spec:
   replicas: {{ .Values.admissionController.replicas }}
   selector:
