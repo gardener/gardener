@@ -289,12 +289,19 @@ func (b *Botanist) deployCloudConfigExecutionManagedResource(ctx context.Context
 		}
 		data := renderedChart.AsSecretData()
 		secretName := "managedresource-" + name
+
+		// Copy labels into a new map to avoid concurrent map writes.
+		secretLabelsCopy := make(map[string]string)
+		for k, v := range secretLabels {
+			secretLabelsCopy[k] = v
+		}
+
 		fns = append(fns, func(ctx context.Context) error {
 			return manager.
 				NewSecret(b.K8sSeedClient.Client()).
 				WithNamespacedName(b.Shoot.SeedNamespace, secretName).
 				WithKeyValues(data).
-				WithLabels(secretLabels).
+				WithLabels(secretLabelsCopy).
 				Reconcile(ctx)
 		})
 		cloudConfigManagedResource.WithSecretRef(secretName)
