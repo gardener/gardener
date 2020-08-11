@@ -822,11 +822,6 @@ type KubeletConfigReserved struct {
 
 // Networking defines networking parameters for the shoot cluster.
 type Networking struct {
-	// Type identifies the type of the networking plugin.
-	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
-	// ProviderConfig is the configuration passed to network resource.
-	// +optional
-	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// Pods is the CIDR of the pod network.
 	// +optional
 	Pods *string `json:"pods,omitempty" protobuf:"bytes,3,opt,name=pods"`
@@ -836,6 +831,20 @@ type Networking struct {
 	// Services is the CIDR of the service network.
 	// +optional
 	Services *string `json:"services,omitempty" protobuf:"bytes,5,opt,name=services"`
+	// Type identifies the type of the networking plugin.
+	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
+	// ProviderConfig is the configuration passed to network resource.
+	// +optional
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
+	// MonitoringConfig is a structure containing monitoring configuration.
+	// +optional
+	MonitoringConfig *MonitoringConfig `json:"monitoringConfig,omitempty" protobuf:"bytes,6,opt,name=monitoringConfig"`
+}
+
+// Monitoring is a structure containing monitoring configuration.
+type MonitoringConfig struct {
+	// Enabled defines whether monitoring is enabled.
+	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
 }
 
 const (

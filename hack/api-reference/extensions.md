@@ -962,6 +962,20 @@ string
 <p>ServiceCIDR defines the CIDR that will be used for services.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>monitoringConfig</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.MonitoringConfig">
+MonitoringConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MonitoringConfig is a structure containing monitoring configuration.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -2669,6 +2683,36 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.MonitoringConfig">MonitoringConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.NetworkSpec">NetworkSpec</a>)
+</p>
+<p>
+<p>Monitoring is a structure containing monitoring configuration.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled defines whether monitoring is enabled.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="extensions.gardener.cloud/v1alpha1.NetworkSpec">NetworkSpec
 </h3>
 <p>
@@ -2722,6 +2766,20 @@ string
 </td>
 <td>
 <p>ServiceCIDR defines the CIDR that will be used for services.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>monitoringConfig</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.MonitoringConfig">
+MonitoringConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MonitoringConfig is a structure containing monitoring configuration.</p>
 </td>
 </tr>
 </tbody>

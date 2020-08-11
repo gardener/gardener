@@ -5622,6 +5622,36 @@ Alerting
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.MonitoringConfig">MonitoringConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.Networking">Networking</a>)
+</p>
+<p>
+<p>Monitoring is a structure containing monitoring configuration.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled defines whether monitoring is enabled.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.NamedResourceReference">NamedResourceReference
 </h3>
 <p>
@@ -5684,31 +5714,6 @@ Kubernetes autoscaling/v1.CrossVersionObjectReference
 <tbody>
 <tr>
 <td>
-<code>type</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Type identifies the type of the networking plugin.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
-k8s.io/apimachinery/pkg/runtime.RawExtension
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig is the configuration passed to network resource.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>pods</code></br>
 <em>
 string
@@ -5741,6 +5746,45 @@ string
 <td>
 <em>(Optional)</em>
 <p>Services is the CIDR of the service network.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type identifies the type of the networking plugin.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig is the configuration passed to network resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>monitoringConfig</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.MonitoringConfig">
+MonitoringConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MonitoringConfig is a structure containing monitoring configuration.</p>
 </td>
 </tr>
 </tbody>

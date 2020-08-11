@@ -658,16 +658,24 @@ type KubeletConfigReserved struct {
 
 // Networking defines networking parameters for the shoot cluster.
 type Networking struct {
-	// Type identifies the type of the networking plugin.
-	Type string
-	// ProviderConfig is the configuration passed to network resource.
-	ProviderConfig *runtime.RawExtension
 	// Pods is the CIDR of the pod network.
 	Pods *string
 	// Nodes is the CIDR of the entire node network.
 	Nodes *string
 	// Services is the CIDR of the service network.
 	Services *string
+	// Type identifies the type of the networking plugin.
+	Type string
+	// ProviderConfig is the configuration passed to network resource.
+	ProviderConfig *runtime.RawExtension
+	// MonitoringConfig is a structure containing monitoring configuration.
+	MonitoringConfig *MonitoringConfig
+}
+
+// Monitoring is a structure containing monitoring configuration.
+type MonitoringConfig struct {
+	// Enabled defines whether monitoring is enabled.
+	Enabled bool
 }
 
 const (

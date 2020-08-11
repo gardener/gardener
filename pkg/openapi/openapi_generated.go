@@ -105,6 +105,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MaintenanceAutoUpdate":                 schema_pkg_apis_core_v1alpha1_MaintenanceAutoUpdate(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MaintenanceTimeWindow":                 schema_pkg_apis_core_v1alpha1_MaintenanceTimeWindow(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Monitoring":                            schema_pkg_apis_core_v1alpha1_Monitoring(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MonitoringConfig":                      schema_pkg_apis_core_v1alpha1_MonitoringConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.NamedResourceReference":                schema_pkg_apis_core_v1alpha1_NamedResourceReference(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Networking":                            schema_pkg_apis_core_v1alpha1_Networking(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.NginxIngress":                          schema_pkg_apis_core_v1alpha1_NginxIngress(ref),
@@ -236,6 +237,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceAutoUpdate":                  schema_pkg_apis_core_v1beta1_MaintenanceAutoUpdate(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MaintenanceTimeWindow":                  schema_pkg_apis_core_v1beta1_MaintenanceTimeWindow(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring":                             schema_pkg_apis_core_v1beta1_Monitoring(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MonitoringConfig":                       schema_pkg_apis_core_v1beta1_MonitoringConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference":                 schema_pkg_apis_core_v1beta1_NamedResourceReference(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking":                             schema_pkg_apis_core_v1beta1_Networking(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.NginxIngress":                           schema_pkg_apis_core_v1beta1_NginxIngress(ref),
@@ -3703,6 +3705,27 @@ func schema_pkg_apis_core_v1alpha1_Monitoring(ref common.ReferenceCallback) comm
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_MonitoringConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Monitoring is a structure containing monitoring configuration.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled defines whether monitoring is enabled.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_NamedResourceReference(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3773,12 +3796,18 @@ func schema_pkg_apis_core_v1alpha1_Networking(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"monitoringConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MonitoringConfig is a structure containing monitoring configuration.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.MonitoringConfig"),
+						},
+					},
 				},
 				Required: []string{"type"},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MonitoringConfig", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -9659,6 +9688,27 @@ func schema_pkg_apis_core_v1beta1_Monitoring(ref common.ReferenceCallback) commo
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_MonitoringConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Monitoring is a structure containing monitoring configuration.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled defines whether monitoring is enabled.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_NamedResourceReference(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -9695,19 +9745,6 @@ func schema_pkg_apis_core_v1beta1_Networking(ref common.ReferenceCallback) commo
 				Description: "Networking defines networking parameters for the shoot cluster.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"type": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Type identifies the type of the networking plugin.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"providerConfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ProviderConfig is the configuration passed to network resource.",
-							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
-						},
-					},
 					"pods": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Pods is the CIDR of the pod network.",
@@ -9729,12 +9766,31 @@ func schema_pkg_apis_core_v1beta1_Networking(ref common.ReferenceCallback) commo
 							Format:      "",
 						},
 					},
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type identifies the type of the networking plugin.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to network resource.",
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+						},
+					},
+					"monitoringConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MonitoringConfig is a structure containing monitoring configuration.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MonitoringConfig"),
+						},
+					},
 				},
 				Required: []string{"type"},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MonitoringConfig", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 

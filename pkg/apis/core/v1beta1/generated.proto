@@ -1176,6 +1176,12 @@ message Monitoring {
   optional Alerting alerting = 1;
 }
 
+// Monitoring is a structure containing monitoring configuration.
+message MonitoringConfig {
+  // Enabled defines whether monitoring is enabled.
+  optional bool enabled = 1;
+}
+
 // NamedResourceReference is a named reference to a resource.
 message NamedResourceReference {
   // Name of the resource reference.
@@ -1187,13 +1193,6 @@ message NamedResourceReference {
 
 // Networking defines networking parameters for the shoot cluster.
 message Networking {
-  // Type identifies the type of the networking plugin.
-  optional string type = 1;
-
-  // ProviderConfig is the configuration passed to network resource.
-  // +optional
-  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
-
   // Pods is the CIDR of the pod network.
   // +optional
   optional string pods = 3;
@@ -1205,6 +1204,17 @@ message Networking {
   // Services is the CIDR of the service network.
   // +optional
   optional string services = 5;
+
+  // Type identifies the type of the networking plugin.
+  optional string type = 1;
+
+  // ProviderConfig is the configuration passed to network resource.
+  // +optional
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
+
+  // MonitoringConfig is a structure containing monitoring configuration.
+  // +optional
+  optional MonitoringConfig monitoringConfig = 6;
 }
 
 // NginxIngress describes configuration values for the nginx-ingress addon.

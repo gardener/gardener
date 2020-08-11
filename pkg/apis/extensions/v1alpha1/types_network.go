@@ -66,6 +66,15 @@ type NetworkSpec struct {
 	PodCIDR string `json:"podCIDR"`
 	// ServiceCIDR defines the CIDR that will be used for services.
 	ServiceCIDR string `json:"serviceCIDR"`
+	// MonitoringConfig is a structure containing monitoring configuration.
+	// +optional
+	MonitoringConfig *MonitoringConfig `json:"monitoringConfig,omitempty"`
+}
+
+// Monitoring is a structure containing monitoring configuration.
+type MonitoringConfig struct {
+	// Enabled defines whether monitoring is enabled.
+	Enabled bool `json:"enabled"`
 }
 
 // NetworkStatus is the status for an Network resource.

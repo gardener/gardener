@@ -1212,6 +1212,12 @@ message Monitoring {
   optional Alerting alerting = 1;
 }
 
+// Monitoring is a structure containing monitoring configuration.
+message MonitoringConfig {
+  // Enabled defines whether monitoring is enabled.
+  optional bool enabled = 1;
+}
+
 // NamedResourceReference is a named reference to a resource.
 message NamedResourceReference {
   // Name of the resource reference.
@@ -1241,6 +1247,10 @@ message Networking {
   // Services is the CIDR of the service network.
   // +optional
   optional string services = 5;
+
+  // MonitoringConfig is a structure containing monitoring configuration.
+  // +optional
+  optional MonitoringConfig monitoringConfig = 6;
 }
 
 // NginxIngress describes configuration values for the nginx-ingress addon.

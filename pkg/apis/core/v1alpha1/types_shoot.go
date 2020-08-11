@@ -839,6 +839,15 @@ type Networking struct {
 	// Services is the CIDR of the service network.
 	// +optional
 	Services *string `json:"services,omitempty" protobuf:"bytes,5,opt,name=services"`
+	// MonitoringConfig is a structure containing monitoring configuration.
+	// +optional
+	MonitoringConfig *MonitoringConfig `json:"monitoringConfig,omitempty" protobuf:"bytes,6,opt,name=monitoringConfig"`
+}
+
+// Monitoring is a structure containing monitoring configuration.
+type MonitoringConfig struct {
+	// Enabled defines whether monitoring is enabled.
+	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
 }
 
 const (
