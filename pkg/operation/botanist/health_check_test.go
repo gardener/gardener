@@ -233,9 +233,7 @@ var _ = Describe("health check", func() {
 
 		withVpaDeployments = func(deploys ...*appsv1.Deployment) []*appsv1.Deployment {
 			var deployments = make([]*appsv1.Deployment, 0, len(deploys))
-			for _, deploy := range deploys {
-				deployments = append(deployments, deploy)
-			}
+			deployments = append(deployments, deploys...)
 			for _, deploymentName := range v1beta1constants.GetShootVPADeploymentNames() {
 				deployments = append(deployments, newDeployment(seedNamespace, deploymentName, v1beta1constants.GardenRoleControlPlane, true))
 			}
@@ -1061,9 +1059,3 @@ var _ = Describe("health check", func() {
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 	)
 })
-
-func deployments(deploys ...*appsv1.Deployment) []*appsv1.Deployment {
-	var deployments []*appsv1.Deployment
-	deployments = append(deployments, deploys...)
-	return deployments
-}
