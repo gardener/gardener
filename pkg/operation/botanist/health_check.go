@@ -286,6 +286,10 @@ func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.String {
 	return requiredMonitoringStatefulSets
 }
 
+// deprecatedGardenRoleVPA is the role name for VPA deployments used by older Gardener versions.
+// TODO: remove in a future version
+const deprecatedGardenRoleVPA = "vpa"
+
 // CheckControlPlane checks whether the control plane components in the given listers are complete and healthy.
 func (b *HealthChecker) CheckControlPlane(
 	shoot *gardencorev1beta1.Shoot,
@@ -304,6 +308,15 @@ func (b *HealthChecker) CheckControlPlane(
 	if err != nil {
 		return nil, err
 	}
+
+	// Required for backwards compatibility
+	// TODO: remove in a future version
+	vpaDeployments, err := deploymentLister.Deployments(namespace).List(mustGardenRoleLabelSelector(deprecatedGardenRoleVPA))
+	if err != nil {
+		return nil, err
+	}
+	deployments = append(deployments, vpaDeployments...)
+
 	if exitCondition := b.checkRequiredDeployments(condition, requiredControlPlaneDeployments, deployments); exitCondition != nil {
 		return exitCondition, nil
 	}
@@ -733,6 +746,8 @@ var (
 		v1beta1constants.GardenRoleControlPlane,
 		v1beta1constants.GardenRoleMonitoring,
 		v1beta1constants.GardenRoleLogging,
+		// TODO: remove in a future version
+		deprecatedGardenRoleVPA,
 	)
 )
 
