@@ -98,6 +98,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		networks = map[string]interface{}{
 			"pods":     b.Shoot.Networks.Pods.String(),
 			"services": b.Shoot.Networks.Services.String(),
+			"type":     b.Shoot.Info.Spec.Networking.Type,
 		}
 		prometheusConfig = map[string]interface{}{
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
@@ -162,6 +163,12 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 	if v := b.Shoot.GetNodeNetwork(); v != nil {
 		networks["nodes"] = *v
+	}
+
+	if b.Shoot.Info.Spec.Networking.MonitoringConfig != nil {
+		networks["monitoringConfig"] = map[string]interface{}{
+			"enabled": b.Shoot.Info.Spec.Networking.MonitoringConfig.Enabled,
+		}
 	}
 	prometheusConfig["networks"] = networks
 
@@ -391,6 +398,16 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 			"enabled": b.Shoot.KonnectivityTunnelEnabled,
 		},
 	}, common.GrafanaImageName, common.BusyboxImageName)
+
+	if b.Shoot.Info.Spec.Networking.MonitoringConfig != nil {
+		if networkMonitoringEnabled := b.Shoot.Info.Spec.Networking.MonitoringConfig.Enabled; networkMonitoringEnabled {
+			values["networking"] = map[string]interface{}{
+				"type":    b.Shoot.Info.Spec.Networking.Type,
+				"enabled": networkMonitoringEnabled,
+			}
+		}
+	}
+
 	if err != nil {
 		return err
 	}

@@ -6,10 +6,10 @@ Gardener is an open-source project that provides a nested user model. Basically,
 - Hosted: operators utilize Gardener to provide their own managed version of Kubernetes (Cluster-Provisioner-as-a-service)
 
 
-Whether an operator or an end-user, it makes sense to provide choice. For example, for an end-user it might make sense to 
-choose a network-plugin that would support enforcing network policies (some plugins does not come with network-policy support by default). 
+Whether an operator or an end-user, it makes sense to provide choice. For example, for an end-user it might make sense to
+choose a network-plugin that would support enforcing network policies (some plugins does not come with network-policy support by default).
 For operators however, choice only matters for delegation purposes i.e., when providing an own managed-service, it becomes important to also provide choice over which network-plugins to use.
- 
+
 Furthermore, Gardener provisions clusters on different cloud-providers with different networking requirements. For example, Azure does not support Calico Networking [1], this leads to the introduction of manual exceptions in static add-on charts which is error prone and can lead to failures during upgrades.
 
 Finally, every provider is different, and thus the network always needs to adapt to the infrastructure needs to provide better performance. Consistency does not necessarily lie in the implementation but in the interface.
@@ -35,6 +35,8 @@ spec:
   podCIDR: 100.244.0.0/16
   serviceCIDR: 100.32.0.0/13
   type: calico
+  monitoringConfig:
+    enabled: true
   providerConfig:
     apiVersion: calico.networking.extensions.gardener.cloud/v1alpha1
     kind: NetworkConfig
@@ -46,8 +48,18 @@ spec:
 
 The above resources is divided into two parts (more information can be found [here](https://github.com/gardener/gardener-extension-networking-calico/blob/master/docs/usage-as-end-user.md)):
 
-- global configuration (e.g., podCIDR, serviceCIDR, and type)
+- global configuration (e.g., podCIDR, serviceCIDR, monitoringConfig, and type)
 - provider specific config (e.g., for calico we can choose to configure a `bird` backend)
+
+### Global Configuration
+
+Contains provider-agnostic values such as pod/service CIDRs, as well as network related configuration that would be used  to
+configure Gardener specific parameters such as `monitoringConfig`. To allow Gardener to expose monitoring charts / metrics for operators,
+the `spec.monitoringConfig.enabled` parameter needs to be set to `true`.
+
+### Provider Configuration
+
+This contains provider specific (e.g., Calico or Cilium) configuration. For example, which backend to use for routing, IPAM type, and so on.
 
 > **Note**: certain cloud-provider extensions might have webhooks that would modify the network-resource to fit into their network specific context. As previously mentioned, Azure does not support IPIP, as a result, the [Azure provider extension](https://github.com/gardener/gardener-extension-provider-azure) implements a [webhook](https://github.com/gardener/gardener-extension-provider-azure/blob/master/pkg/webhook/network/mutate.go) to mutate the backend and set it to `None` instead of `bird`.
 
@@ -65,6 +77,8 @@ spec:
   podCIDR: 100.244.0.0/16
   serviceCIDR: 100.32.0.0/13
   type: gardenet
+  monitoringConfig:
+    enabled: true
   providerConfig:
     apiVersion: gardenet.networking.extensions.gardener.cloud/v1alpha1
     kind: NetworkConfig

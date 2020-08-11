@@ -16,8 +16,12 @@ data:
 {{ end }}
 {{ else }}
 {{ range $name, $bytes := .Files.Glob "dashboards/**.json" }}
-  {{ if eq $name "dashboards/operators/vpn-dashboard.json" }}
-  {{ if not $.Values.konnectivityTunnel.enabled }}
+  {{ if and (eq $name "dashboards/operators/vpn-dashboard.json") (not $.Values.konnectivityTunnel.enabled)  }}
+  {{ base $name }}: |-
+{{ toString $bytes | indent 4}}
+  {{ end }}
+  {{ if or (eq $name "dashboards/operators/calico-felix-dashboard.json") (eq $name "dashboards/operators/calico-typha-dashboard.json")}}
+  {{ if and (eq $.Values.networking.type "calico") (eq $.Values.networking.enabled true) }}
   {{ base $name }}: |-
 {{ toString $bytes | indent 4}}
   {{ end }}

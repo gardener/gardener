@@ -32,7 +32,7 @@
   "panels": [
     {
       "collapsed": false,
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -46,7 +46,7 @@
     },
     {
       "cacheTimeout": null,
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "description": "These metrics are part of general information related to your Calico implementation.",
       "gridPos": {
         "h": 4,
@@ -108,7 +108,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -194,7 +194,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -280,7 +280,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -362,7 +362,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "description": "This graph shows you all the errors that Calico encounters, it is important to note occasional errors are acceptable. However, rise in the number of error or constant error counters means Calico is not working properly.",
       "fill": 1,
       "fillGradient": 0,
@@ -470,7 +470,7 @@
       }
     },
     {
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "description": "More policies on Felix means more effort required by Calico to manage packets. ",
       "gridPos": {
         "h": 4,
@@ -531,7 +531,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -617,7 +617,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -785,7 +785,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -871,7 +871,7 @@
     },
     {
       "collapsed": false,
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -888,7 +888,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "description": "Dataplane apply time can indicate how busy your Kubernetes instance is. This can slow down Calico performance",
       "fill": 2,
       "fillGradient": 4,
@@ -981,7 +981,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "fill": 2,
       "fillGradient": 4,
       "gridPos": {
@@ -1070,7 +1070,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "fill": 2,
       "fillGradient": 4,
       "gridPos": {
@@ -1173,7 +1173,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1262,7 +1262,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1351,7 +1351,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {

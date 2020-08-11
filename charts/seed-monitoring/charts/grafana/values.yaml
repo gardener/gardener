@@ -14,6 +14,9 @@ ports:
   grafana: 3000
 
 vpaEnabled: false
+networking:
+  type: calico
+  enabled: false
 role: operators
 extensions:
   dashboards: ""

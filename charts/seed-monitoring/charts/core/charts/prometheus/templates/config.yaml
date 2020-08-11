@@ -622,6 +622,55 @@ data:
         action: keep
         regex: ^{{ .Release.Namespace }}$
 
+{{- if .Values.networks.monitoringConfig.enabled }}
+{{- if eq .Values.networks.type "calico" }}
+    - job_name: 'felix_metrics'
+      scrape_interval: 5s
+      scheme: https
+      tls_config:
+        # This is needed because the kubelets' certificates are not are generated
+        # for a specific pod IP
+{{ include "prometheus.tls-config.kube-cert-auth-insecure" . | indent 8 }}
+      kubernetes_sd_configs:
+      - role: endpoints
+        api_server: https://kube-apiserver:443
+        tls_config:
+{{ include "prometheus.tls-config.kube-cert-auth" . | indent 10 }}
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name]
+        regex: felix-metrics-svc
+        action: keep
+      - target_label: __address__
+        replacement: kube-apiserver:443
+      - source_labels: [__meta_kubernetes_pod_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/namespaces/kube-system/pods/${1}:9091/proxy/metrics
+    - job_name: 'typha_metrics'
+      scrape_interval: 5s
+      scheme: https
+      tls_config:
+        # This is needed because the kubelets' certificates are not are generated
+        # for a specific pod IP
+{{ include "prometheus.tls-config.kube-cert-auth-insecure" . | indent 8 }}
+      kubernetes_sd_configs:
+      - role: endpoints
+        api_server: https://kube-apiserver:443
+        tls_config:
+{{ include "prometheus.tls-config.kube-cert-auth" . | indent 10 }}
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name]
+        regex: typha-metrics-svc
+        action: keep
+      - target_label: __address__
+        replacement: kube-apiserver:443
+      - source_labels: [__meta_kubernetes_pod_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/namespaces/kube-system/pods/${1}:9093/proxy/metrics
+{{- end  }}
+{{- end  }}
+
 {{- if  (index .Values.rules.optional "hvpa" ).enabled }}
     - job_name: 'hvpa-controller'
       kubernetes_sd_configs:

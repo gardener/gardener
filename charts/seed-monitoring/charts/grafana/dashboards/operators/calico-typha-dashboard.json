@@ -33,7 +33,7 @@
       "type": "row"
     },
     {
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "gridPos": {
         "h": 6,
         "w": 5,
@@ -93,7 +93,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -170,7 +170,7 @@
       "valueName": "current"
     },
     {
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "gridPos": {
         "h": 6,
         "w": 5,
@@ -230,7 +230,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -315,7 +315,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -400,7 +400,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -478,7 +478,7 @@
     },
     {
       "cacheTimeout": null,
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "gridPos": {
         "h": 6,
         "w": 5,
@@ -551,7 +551,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -637,7 +637,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -722,7 +722,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -807,7 +807,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -898,7 +898,7 @@
       "type": "row"
     },
     {
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "gridPos": {
         "h": 6,
         "w": 5,
@@ -958,7 +958,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -1039,7 +1039,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1132,7 +1132,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -1217,7 +1217,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -1302,7 +1302,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -1387,7 +1387,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -1472,7 +1472,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -1563,7 +1563,7 @@
       "type": "row"
     },
     {
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "gridPos": {
         "h": 6,
         "w": 5,
@@ -1633,7 +1633,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -1714,7 +1714,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1807,7 +1807,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -1903,7 +1903,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1992,7 +1992,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -2091,7 +2091,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -2176,7 +2176,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -2261,7 +2261,7 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "datasource": "calico-demo-prometheus",
+      "datasource": "prometheus",
       "format": "none",
       "gauge": {
         "maxValue": 100,
