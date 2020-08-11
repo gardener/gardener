@@ -627,9 +627,14 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 		"alertmanager": alertManagerConfig,
 		"vpa": map[string]interface{}{
 			"enabled": vpaEnabled,
-			"admissionController": map[string]interface{}{
-				"podAnnotations": map[string]interface{}{
-					"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),
+			"runtime": map[string]interface{}{
+				"deploymentLabels": map[string]interface{}{
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
+				},
+				"admissionController": map[string]interface{}{
+					"podAnnotations": map[string]interface{}{
+						"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),
+					},
 				},
 			},
 		},

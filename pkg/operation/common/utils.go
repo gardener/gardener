@@ -329,10 +329,10 @@ func DeleteHvpa(k8sClient kubernetes.Interface, namespace string) error {
 // DeleteVpa delete all resources required for the VPA in the given namespace.
 func DeleteVpa(ctx context.Context, c client.Client, namespace string, isShoot bool) error {
 	resources := []runtime.Object{
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "vpa-admission-controller", Namespace: namespace}},
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "vpa-exporter", Namespace: namespace}},
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "vpa-recommender", Namespace: namespace}},
-		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "vpa-updater", Namespace: namespace}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPAAdmissionController, Namespace: namespace}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPAExporter, Namespace: namespace}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPARecommender, Namespace: namespace}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPAUpdater, Namespace: namespace}},
 		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook", Namespace: namespace}},
 		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "vpa-exporter", Namespace: namespace}},
 		&autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "vpa-exporter-vpa", Namespace: namespace}},

@@ -78,6 +78,15 @@ const (
 	// the kube-state-metrics-seed pod.
 	DeploymentNameKubeStateMetricsSeed = "kube-state-metrics-seed"
 
+	// DeploymentNameVPAAdmissionController is a constant for the name of the VPA admission controller deployment.
+	DeploymentNameVPAAdmissionController = "vpa-admission-controller"
+	// DeploymentNameVPAExporter is a constant for the name of the VPA exporter deployment.
+	DeploymentNameVPAExporter = "vpa-exporter"
+	// DeploymentNameVPARecommender is a constant for the name of the VPA recommender deployment.
+	DeploymentNameVPARecommender = "vpa-recommender"
+	// DeploymentNameVPAUpdater is a constant for the name of the VPA updater deployment.
+	DeploymentNameVPAUpdater = "vpa-updater"
+
 	// StatefulSetNameAlertManager is a constant for the name of a Kubernetes stateful set object that contains
 	// the alertmanager pod.
 	StatefulSetNameAlertManager = "alertmanager"

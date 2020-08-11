@@ -253,7 +253,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 			)
 			return nil
 		},
-		// Fetch seed conditions of shoot is a seed
+		// Fetch seed conditions if shoot is a seed
 		func(ctx context.Context) error {
 			seedConditions, err = retrieveSeedConditions(ctx, botanist)
 			if err != nil {
