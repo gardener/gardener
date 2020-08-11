@@ -1,0 +1,27 @@
+kind: TestDefinition
+metadata:
+  name: register-seed
+spec:
+  owner: gardener-oq@listserv.sap.com
+  description: Tests the registration of a seed.
+  activeDeadlineSeconds: 7200
+
+  command: [bash, -c]
+  args:
+  - >-
+    go test -timeout=0 -mod=vendor ./test/system/seed_registration
+    --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
+    -kubecfg=$TM_KUBECONFIG_PATH/gardener.config
+    -seed-name=$SEED_NAME
+    -secret-binding=$SECRET_BINDING
+    -shoot-name=$SHOOT_NAME
+    -shoot-namespace=$PROJECT_NAMESPACE
+    -backup-secret-provider=$BACKUP_SECRET_PROVIDER
+    -provider-type=$PROVIDER_TYPE
+    -provider-region=$PROVIDER_REGION
+    -networking-blockcidrs=$NETWORKING_BLOCKCIDRS
+    -networking-pods=$NETWORKING_PODS
+    -networking-services=$NETWORKING_SERVICES
+    -networking-nodes=$NETWORKING_NODES
+    -deploy-gardenlet=$DEPLOY_GARDENLET
+image: golang:1.15.3

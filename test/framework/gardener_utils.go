@@ -578,3 +578,77 @@ func ScaleGardenerScheduler(setupContextTimeout time.Duration, client client.Cli
 func ScaleGardenerControllerManager(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32) (*int32, error) {
 	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-controller-manager", gardencorev1beta1constants.GardenNamespace)
 }
+
+// CreateSeed creates a seed from a seed Object and waits until it is successfully reconciled
+func (f *GardenerFramework) CreateSeed(ctx context.Context, seed *gardencorev1beta1.Seed) error {
+	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
+		err = f.GardenClient.DirectClient().Create(ctx, seed)
+		if apierrors.IsInvalid(err) || apierrors.IsForbidden(err) || apierrors.IsAlreadyExists(err) {
+			return retry.SevereError(err)
+		}
+		if err != nil {
+			f.Logger.Debugf("unable to create seed %s: %s", seed.Name, err.Error())
+			return retry.MinorError(err)
+		}
+		return retry.Ok()
+	})
+	if err != nil {
+		return err
+	}
+
+	// Then we wait for the seed to be created
+	return f.WaitForSeedToBeCreated(ctx, seed)
+}
+
+// WaitForSeedToBeCreated waits for the seed to be created
+func (f *GardenerFramework) WaitForSeedToBeCreated(ctx context.Context, seed *gardencorev1beta1.Seed) error {
+	return retry.UntilTimeout(ctx, 30*time.Second, 60*time.Minute, func(ctx context.Context) (done bool, err error) {
+		err = f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: seed.Name}, seed)
+		if err != nil {
+			f.Logger.Infof("Error while waiting for seed to be created: %s", err.Error())
+			return retry.MinorError(err)
+		}
+		err = health.CheckSeed(seed, seed.Status.Gardener)
+		if err == nil {
+			return retry.Ok()
+		}
+		f.Logger.Infof("Seed %s not yet created successfully (%s)", seed.Name, err)
+
+		return retry.MinorError(fmt.Errorf("seed %q was not successfully reconciled", seed.Name))
+	})
+}
+
+// DeleteSeedAndWaitForDeletion deletes the test seed and waits until it cannot be found any more
+func (f *GardenerFramework) DeleteSeedAndWaitForDeletion(ctx context.Context, seed *gardencorev1beta1.Seed) error {
+	if err := f.DeleteSeed(ctx, seed); err != nil {
+		return err
+	}
+	return f.WaitForSeedToBeDeleted(ctx, seed)
+}
+
+// DeleteSeed deletes the test seed
+func (f *GardenerFramework) DeleteSeed(ctx context.Context, seed *gardencorev1beta1.Seed) error {
+	return retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
+		err = f.GardenClient.DirectClient().Delete(ctx, seed)
+		if err != nil {
+			return retry.MinorError(err)
+		}
+		return retry.Ok()
+	})
+}
+
+// WaitForSeedToBeDeleted waits for the seed to be deleted
+func (f *GardenerFramework) WaitForSeedToBeDeleted(ctx context.Context, seed *gardencorev1beta1.Seed) error {
+	return retry.UntilTimeout(ctx, 30*time.Second, 60*time.Minute, func(ctx context.Context) (done bool, err error) {
+		err = f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: seed.Name}, seed)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return retry.Ok()
+			}
+			f.Logger.Infof("Error while waiting for seed to be deleted: %s", err.Error())
+			return retry.MinorError(err)
+		}
+		f.Logger.Infof("waiting for seed %s to be deleted", seed.Name)
+		return retry.MinorError(fmt.Errorf("seed %q still exists", seed.Name))
+	})
+}
