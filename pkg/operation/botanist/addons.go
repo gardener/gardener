@@ -208,8 +208,6 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 			common.ManagedResourceShootCoreName:     {false, b.generateCoreAddonsChart},
 			common.ManagedResourceCoreNamespaceName: {true, b.generateCoreNamespacesChart},
 			common.ManagedResourceAddonsName:        {false, b.generateOptionalAddonsChart},
-			// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
-			common.ManagedResourceKymaName: {false, b.generateTemporaryKymaAddonsChart},
 		}
 	)
 
@@ -635,14 +633,5 @@ func (b *Botanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, 
 		"global":               global,
 		"kubernetes-dashboard": kubernetesDashboard,
 		"nginx-ingress":        nginxIngress,
-	})
-}
-
-// generateTemporaryKymaAddonsChart renders the gardener-resource-manager chart for the kyma addon. After that it
-// creates a ManagedResource CRD that references the rendered manifests and creates it.
-// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
-func (b *Botanist) generateTemporaryKymaAddonsChart() (*chartrenderer.RenderedChart, error) {
-	return b.K8sShootClient.ChartRenderer().Render(filepath.Join(common.ChartPath, "shoot-addons-kyma"), "kyma", "kyma-installer", map[string]interface{}{
-		"kyma": common.GenerateAddonConfig(nil, metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, common.ShootExperimentalAddonKyma)),
 	})
 }

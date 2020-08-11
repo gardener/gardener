@@ -1,4 +1,0 @@
-apiVersion: v1
-description: An umbrella chart for the temporary Kyma chart
-name: shoot-addons-kyma
-version: 0.1.0
