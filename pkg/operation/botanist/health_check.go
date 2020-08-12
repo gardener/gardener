@@ -507,18 +507,18 @@ func (b *Botanist) checkControlPlane(
 ) (*gardencorev1beta1.Condition, error) {
 	cluster, err := gardenerextensions.GetCluster(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 	if err != nil {
-		msg := "failed to start control plane health check"
 		if apierrors.IsNotFound(err) {
-			msg = "control plane is not yet ready"
+			c := checker.FailedCondition(condition, "ControlPlaneNotReady", "Control plane is not yet ready because of missing cluster resource.")
+			return &c, nil
 		}
-		b.Logger.Errorf("%s: %v", msg, err)
-		return nil, errors.New(msg)
+		b.Logger.Errorf("Failed to execute control plane health checks: %v", err)
+		return nil, err
 	}
 	// Use shoot from cluster resource here because it reflects the actual or "active" spec to determine which health checks are required.
 	// With the "confineSpecUpdateRollout" feature enabled, shoot resources have a spec which is not yet active.
 	shoot := cluster.Shoot
 	if shoot == nil {
-		return nil, errors.New("failed to start control plane health check because shoot is not yet synced to cluster resource")
+		return nil, errors.New("failed to execute control plane health checks because shoot is missing in cluster resource")
 	}
 
 	if exitCondition, err := checker.CheckControlPlane(shoot, b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedEtcdLister, seedWorkerLister); err != nil || exitCondition != nil {
