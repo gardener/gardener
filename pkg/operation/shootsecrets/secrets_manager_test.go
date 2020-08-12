@@ -123,8 +123,8 @@ var _ = Describe("SecretsManager", func() {
 			},
 			certName: {
 				Data: map[string][]byte{
-					fmt.Sprintf("%s.crt", certName): []byte(cacert),
-					fmt.Sprintf("%s.key", certName): []byte(cakey),
+					secrets.ControlPlaneSecretDataKeyCertificatePEM(certName): []byte(cacert),
+					secrets.ControlPlaneSecretDataKeyPrivateKey(certName):     []byte(cakey),
 				},
 			},
 		}

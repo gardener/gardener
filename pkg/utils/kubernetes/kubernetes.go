@@ -18,14 +18,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
+	"strconv"
 	"time"
 
 	"github.com/gardener/gardener/pkg/utils/retry"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -213,4 +217,61 @@ func LookupObject(ctx context.Context, c client.Client, apiReader client.Reader,
 
 	// Try to get the obj, now by doing a live lookup instead of relying on the cache.
 	return apiReader.Get(ctx, key, obj)
+}
+
+// FeatureGatesToCommandLineParameter transforms feature gates given as string/bool map to a command line parameter that
+// is understood by Kubernetes components.
+func FeatureGatesToCommandLineParameter(fg map[string]bool) string {
+	if len(fg) == 0 {
+		return ""
+	}
+
+	keys := make([]string, 0, len(fg))
+	for k := range fg {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	out := "--feature-gates="
+	for _, key := range keys {
+		out += fmt.Sprintf("%s=%s,", key, strconv.FormatBool(fg[key]))
+	}
+	return out
+}
+
+// ReconcileServicePorts reconciles the existing service ports with the desired ports. This means that it takes the
+// existing port (identified by name), and applies the settings from the desired port to it. This way it can keep fields
+// that are defaulted by controllers, e.g. the node port. However, it does not keep ports that are not part of the
+// desired list.
+func ReconcileServicePorts(existingPorts []corev1.ServicePort, desiredPorts []corev1.ServicePort) []corev1.ServicePort {
+	var out []corev1.ServicePort
+
+	for _, desiredPort := range desiredPorts {
+		var port corev1.ServicePort
+
+		for _, existingPort := range existingPorts {
+			if existingPort.Name == desiredPort.Name {
+				port = existingPort
+				break
+			}
+		}
+
+		port.Name = desiredPort.Name
+		if len(desiredPort.Protocol) > 0 {
+			port.Protocol = desiredPort.Protocol
+		}
+		if desiredPort.Port != 0 {
+			port.Port = desiredPort.Port
+		}
+		if desiredPort.TargetPort.Type == intstr.Int || desiredPort.TargetPort.Type == intstr.String {
+			port.TargetPort = desiredPort.TargetPort
+		}
+		if desiredPort.NodePort != 0 {
+			port.NodePort = desiredPort.NodePort
+		}
+
+		out = append(out, port)
+	}
+
+	return out
 }
