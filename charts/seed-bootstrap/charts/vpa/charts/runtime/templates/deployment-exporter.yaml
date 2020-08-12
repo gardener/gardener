@@ -7,7 +7,9 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: vpa-exporter
+{{- if .Values.deploymentLabels }}
 {{ toYaml .Values.deploymentLabels | indent 4 }}
+{{- end }}
 spec:
   replicas: {{ .Values.exporter.replicas }}
   revisionHistoryLimit: 0
