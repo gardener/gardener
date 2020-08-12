@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -1306,40 +1307,31 @@ func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
 	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeControllerManager), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager, kubernetes.Values(values))
 }
 
-// DeployKubeScheduler deploys kube-scheduler deployment.
-func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
-	defaultValues := map[string]interface{}{
-		"replicas":          b.Shoot.GetReplicas(1),
-		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
-		"podAnnotations": map[string]interface{}{
-			"checksum/secret-kube-scheduler":        b.CheckSums[v1beta1constants.DeploymentNameKubeScheduler],
-			"checksum/secret-kube-scheduler-server": b.CheckSums[common.KubeSchedulerServerName],
-		},
-	}
-
-	if b.ShootedSeed != nil {
-		defaultValues["resources"] = map[string]interface{}{
-			"limits": map[string]interface{}{
-				"cpu":    "300m",
-				"memory": "512Mi",
-			},
-		}
-	}
-
-	if schedulerConfig := b.Shoot.Info.Spec.Kubernetes.KubeScheduler; schedulerConfig != nil {
-		defaultValues["featureGates"] = schedulerConfig.FeatureGates
-
-		if schedulerConfig.KubeMaxPDVols != nil {
-			defaultValues["kubeMaxPDVols"] = *schedulerConfig.KubeMaxPDVols
-		}
-	}
-
-	values, err := b.InjectSeedShootImages(defaultValues, common.KubeSchedulerImageName)
+// DefaultKubeScheduler returns a deployer for the kube-scheduler.
+func (b *Botanist) DefaultKubeScheduler() (controlplane.KubeScheduler, error) {
+	image, err := b.ImageVector.FindImage(common.KubeSchedulerImageName, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeScheduler), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeScheduler, kubernetes.Values(values))
+	return controlplane.NewKubeScheduler(
+		b.K8sSeedClient.DirectClient(),
+		b.Shoot.SeedNamespace,
+		b.Shoot.Info.Spec.Kubernetes.Version,
+		image.String(),
+		int32(b.Shoot.GetReplicas(1)),
+		b.Shoot.Info.Spec.Kubernetes.KubeScheduler,
+	)
+}
+
+// DeployKubeScheduler deploys the Kubernetes scehduler.
+func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
+	b.Shoot.Components.ControlPlane.KubeScheduler.SetSecrets(controlplane.KubeSchedulerSecrets{
+		Kubeconfig: controlplane.Secret{Name: "kube-scheduler", Checksum: b.CheckSums[v1beta1constants.DeploymentNameKubeScheduler]},
+		Server:     controlplane.Secret{Name: "kube-scheduler-server", Checksum: b.CheckSums[common.KubeSchedulerServerName]},
+	})
+
+	return b.Shoot.Components.ControlPlane.KubeScheduler.Deploy(ctx)
 }
 
 // DefaultKubeAPIServerService returns a deployer for kube-apiserver service.

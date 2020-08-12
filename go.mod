@@ -54,6 +54,7 @@ require (
 	k8s.io/klog v1.0.0
 	k8s.io/kube-aggregator v0.17.11
 	k8s.io/kube-openapi v0.0.0-20200410145947-bcb3869e6f29
+	k8s.io/kube-scheduler v0.17.11
 	k8s.io/kubelet v0.17.11
 	k8s.io/metrics v0.17.11
 	k8s.io/utils v0.0.0-20200327001022-6496210b90e8

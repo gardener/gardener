@@ -50,10 +50,8 @@ const (
 // object.
 func New(o *operation.Operation) (*Botanist, error) {
 	var (
+		b   = &Botanist{Operation: o}
 		err error
-		b   = &Botanist{
-			Operation: o,
-		}
 	)
 
 	// Determine all default domain secrets and check whether the used Shoot domain matches a default domain.
@@ -76,6 +74,7 @@ func New(o *operation.Operation) (*Botanist, error) {
 		return nil, err
 	}
 
+	// extension components
 	o.Shoot.Components.Extensions.DNS.ExternalProvider = b.DefaultExternalDNSProvider(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.DNS.ExternalOwner = b.DefaultExternalDNSOwner(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.DNS.ExternalEntry = b.DefaultExternalDNSEntry(b.K8sSeedClient.DirectClient())
@@ -91,9 +90,15 @@ func New(o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.Extensions.Infrastructure = b.DefaultInfrastructure(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.Network = b.DefaultNetwork(b.K8sSeedClient.DirectClient())
 
+	// control plane components
 	o.Shoot.Components.ControlPlane.KubeAPIServerService = b.DefaultKubeAPIServerService()
 	o.Shoot.Components.ControlPlane.KubeAPIServerSNI = b.DefaultKubeAPIServerSNI()
+	o.Shoot.Components.ControlPlane.KubeScheduler, err = b.DefaultKubeScheduler()
+	if err != nil {
+		return nil, err
+	}
 
+	// other components
 	o.Shoot.Components.ClusterIdentity = clusteridentity.New(o.Shoot.Info.Status.ClusterIdentity, o.GardenClusterIdentity, o.Shoot.Info.Name, o.Shoot.Info.Namespace, o.Shoot.SeedNamespace, string(o.Shoot.Info.Status.UID), b.K8sGardenClient.DirectClient(), b.K8sSeedClient.DirectClient(), b.Logger)
 
 	return b, nil

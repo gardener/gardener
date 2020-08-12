@@ -36,6 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -809,7 +810,7 @@ var _ = Describe("kubernetes", func() {
 		})
 	})
 
-	Context("#LookupObject", func() {
+	Describe("#LookupObject", func() {
 		var (
 			ctx       = context.TODO()
 			key       = Key(namespace, name)
@@ -850,4 +851,46 @@ var _ = Describe("kubernetes", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
+
+	DescribeTable("#FeatureGatesToCommandLineParameter",
+		func(fg map[string]bool, matcher types.GomegaMatcher) {
+			Expect(FeatureGatesToCommandLineParameter(fg)).To(matcher)
+		},
+		Entry("nil map", nil, BeEmpty()),
+		Entry("empty map", map[string]bool{}, BeEmpty()),
+		Entry("map with one entry", map[string]bool{"foo": true}, Equal("--feature-gates=foo=true,")),
+		Entry("map with multiple entries", map[string]bool{"foo": true, "bar": false, "baz": true}, Equal("--feature-gates=bar=false,baz=true,foo=true,")),
+	)
+
+	var (
+		port1 = corev1.ServicePort{
+			Name:     "port1",
+			Protocol: corev1.ProtocolTCP,
+			Port:     1234,
+		}
+		port2 = corev1.ServicePort{
+			Name:       "port2",
+			Port:       1234,
+			TargetPort: intstr.FromInt(5678),
+		}
+		port3 = corev1.ServicePort{
+			Name:       "port3",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       1234,
+			TargetPort: intstr.FromInt(5678),
+			NodePort:   9012,
+		}
+		desiredPorts = []corev1.ServicePort{port1, port2, port3}
+	)
+
+	DescribeTable("#ReconcileServicePorts",
+		func(existingPorts []corev1.ServicePort, matcher types.GomegaMatcher) {
+			Expect(ReconcileServicePorts(existingPorts, desiredPorts)).To(matcher)
+		},
+		Entry("existing ports is nil", nil, ConsistOf(port1, port2, port3)),
+		Entry("no existing ports", []corev1.ServicePort{}, ConsistOf(port1, port2, port3)),
+		Entry("existing but undesired ports", []corev1.ServicePort{{Name: "foo"}}, ConsistOf(port1, port2, port3)),
+		Entry("existing and desired ports", []corev1.ServicePort{{Name: port1.Name, NodePort: 1337}}, ConsistOf(corev1.ServicePort{Name: port1.Name, Protocol: port1.Protocol, Port: port1.Port, NodePort: 1337}, port2, port3)),
+		Entry("existing and both desired and undesired ports", []corev1.ServicePort{{Name: "foo"}, {Name: port1.Name, NodePort: 1337}}, ConsistOf(corev1.ServicePort{Name: port1.Name, Protocol: port1.Protocol, Port: port1.Port, NodePort: 1337}, port2, port3)),
+	)
 })
