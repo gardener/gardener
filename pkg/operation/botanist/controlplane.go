@@ -270,6 +270,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 				v1beta1constants.GardenRole:           v1beta1constants.GardenRoleControlPlane,
 				v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
 			},
+			"clusterType": "shoot",
 		}
 	)
 
@@ -925,7 +926,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"checksum/secret-service-account-key":    b.CheckSums["service-account-key"],
 			"checksum/secret-etcd-ca":                b.CheckSums[v1beta1constants.SecretNameCAETCD],
 			"checksum/secret-etcd-client-tls":        b.CheckSums["etcd-client-tls"],
-			"networkpolicy/vpa-enabled":              strconv.FormatBool(b.Shoot.WantsVerticalPodAutoscaler),
 			"networkpolicy/konnectivity-enabled":     strconv.FormatBool(b.Shoot.KonnectivityTunnelEnabled),
 		}
 		defaultValues = map[string]interface{}{
@@ -938,7 +938,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"konnectivityTunnel": map[string]interface{}{
 				"enabled": b.Shoot.KonnectivityTunnelEnabled,
 			},
-			"vpaEnabled": b.Shoot.WantsVerticalPodAutoscaler,
 			"hvpa": map[string]interface{}{
 				"enabled": hvpaEnabled,
 			},

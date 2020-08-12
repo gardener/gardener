@@ -34,16 +34,6 @@ spec:
       - protocol: TCP
         port: {{ required ".securePort is required" .Values.securePort }}
   {{- end }}
-  {{- if .Values.vpaEnabled }}
-  - to:
-    # Allow connections from the apiserver pod to the vpa-admission-controller
-    - podSelector:
-        matchLabels:
-          app: vpa-admission-controller
-    ports:
-    - protocol: TCP
-      port: 10250
-  {{- end }}
   ingress:
     # Allow connection from everything which needs to talk to the API server
   - from:
