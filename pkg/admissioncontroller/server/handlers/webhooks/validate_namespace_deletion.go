@@ -82,7 +82,7 @@ func (h *namespaceDeletionHandler) ValidateNamespaceDeletion(w http.ResponseWrit
 		deserializer   = h.codecs.UniversalDeserializer()
 		receivedReview = admissionv1beta1.AdmissionReview{}
 
-		wantedContentType = "application/json"
+		wantedContentType = runtime.ContentTypeJSON
 		wantedOperation   = admissionv1beta1.Delete
 	)
 

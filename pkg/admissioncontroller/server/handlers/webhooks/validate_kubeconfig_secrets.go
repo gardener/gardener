@@ -53,7 +53,7 @@ func (h *kubeconfigSecretValidator) ValidateKubeconfigSecrets(w http.ResponseWri
 		deserializer   = h.codecs.UniversalDeserializer()
 		receivedReview = admissionv1beta1.AdmissionReview{}
 
-		wantedContentType = "application/json"
+		wantedContentType = runtime.ContentTypeJSON
 	)
 
 	// Read HTTP request body into variable.

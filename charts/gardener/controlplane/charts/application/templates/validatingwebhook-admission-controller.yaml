@@ -54,4 +54,34 @@ webhooks:
     {{- end }}
     caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
   sideEffects: None
+{{- if .Values.global.admission.config.server.resourceAdmissionConfiguration }}
+- name: validate-resource-size.gardener.cloud
+  rules:
+    {{- range $i, $conf := .Values.global.admission.config.server.resourceAdmissionConfiguration.limits }}
+  - apiGroups:
+{{ toYaml $conf.apiGroups | indent 4 }}
+    apiVersions:
+{{ toYaml $conf.apiVersions | indent 4 }}
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+{{ toYaml $conf.resources | indent 4 }}
+    {{- end }}
+  failurePolicy: Fail
+  namespaceSelector:
+    matchLabels:
+      gardener.cloud/role: project
+  clientConfig:
+    {{- if .Values.global.deployment.virtualGarden.enabled }}
+    url: https://gardener-admission-controller.garden/webhooks/validate-resource-size
+    {{- else }}
+    service:
+      namespace: garden
+      name: gardener-admission-controller
+      path: /webhooks/validate-resource-size
+    {{- end }}
+    caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
+{{- end }}
+  sideEffects: None
 {{- end }}

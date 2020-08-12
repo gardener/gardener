@@ -231,6 +231,17 @@ global:
               -----BEGIN RSA PRIVATE KEY-----
               ...
               -----END RSA PRIVATE KEY-----
+    # resourceAdmissionConfiguration:
+    #   limits:
+    #   - apiGroups: ["core.gardener.cloud"]
+    #     apiVersions: ["*"]
+    #     resources: ["shoots", "plants"]
+    #     size: 100Ki
+    #   unrestrictedSubjects:
+    #   - kind: Group
+    #     name: gardener.cloud:system:seeds
+    #     apiGroup: rbac.authorization.k8s.io
+    #   operationMode: log
   # Gardener controller manager configuration values
   controller:
     enabled: true

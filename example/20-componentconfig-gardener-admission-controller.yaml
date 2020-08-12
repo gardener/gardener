@@ -13,3 +13,14 @@ server:
     tls:
       serverCertPath: dev/tls/gardener-admission-controller.crt
       serverKeyPath: dev/tls/gardener-admission-controller.key
+  resourceAdmissionConfiguration:
+    limits:
+    - apiGroups: ["core.gardener.cloud"]
+      apiVersions: ["*"]
+      resources: ["shoots", "plants"]
+      size: 100k
+    unrestrictedSubjects:
+    - kind: Group
+      name: gardener.cloud:system:seeds
+      apiGroup: rbac.authorization.k8s.io
+    operationMode: block
