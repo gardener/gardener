@@ -38,8 +38,8 @@ spec:
             cpu: 300m
             memory: 400Mi
           requests:
-            cpu: 20m
-            memory: 80Mi
+            cpu: 150m
+            memory: 150Mi
         ports:
         - name: metrics
           containerPort: 2020
