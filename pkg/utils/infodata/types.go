@@ -35,3 +35,16 @@ type InfoData interface {
 type Loader interface {
 	LoadFromSecretData(map[string][]byte) (InfoData, error)
 }
+
+type emptyInfoData struct{}
+
+func (*emptyInfoData) Marshal() ([]byte, error) {
+	return nil, nil
+}
+
+func (*emptyInfoData) TypeVersion() TypeVersion {
+	return ""
+}
+
+// EmptyInfoData is an infodata which does not contain any information.
+var EmptyInfoData = &emptyInfoData{}

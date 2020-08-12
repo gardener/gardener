@@ -69,6 +69,10 @@ func GetInfoData(resourceDataList gardencorev1alpha1helper.GardenerResourceDataL
 
 // UpsertInfoData updates or inserts an InfoData object into the GardenerResourceDataList
 func UpsertInfoData(resourceDataList *gardencorev1alpha1helper.GardenerResourceDataList, name string, data InfoData) error {
+	if _, ok := data.(*emptyInfoData); ok {
+		return nil
+	}
+
 	bytes, err := data.Marshal()
 	if err != nil {
 		return err

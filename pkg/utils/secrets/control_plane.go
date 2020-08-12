@@ -71,7 +71,7 @@ func (s *ControlPlaneSecretConfig) GenerateInfoData() (infodata.InfoData, error)
 	}
 
 	if len(cert.PrivateKeyPEM) == 0 && len(cert.CertificatePEM) == 0 {
-		return nil, nil
+		return infodata.EmptyInfoData, nil
 	}
 
 	return NewCertificateInfoData(cert.PrivateKeyPEM, cert.CertificatePEM), nil
@@ -115,6 +115,10 @@ func (s *ControlPlaneSecretConfig) GenerateFromInfoData(infoData infodata.InfoDa
 func (s *ControlPlaneSecretConfig) LoadFromSecretData(secretData map[string][]byte) (infodata.InfoData, error) {
 	privateKeyPEM := secretData[fmt.Sprintf("%s.key", s.Name)]
 	certificatePEM := secretData[fmt.Sprintf("%s.crt", s.Name)]
+
+	if len(privateKeyPEM) == 0 && len(certificatePEM) == 0 {
+		return infodata.EmptyInfoData, nil
+	}
 
 	return NewCertificateInfoData(privateKeyPEM, certificatePEM), nil
 }

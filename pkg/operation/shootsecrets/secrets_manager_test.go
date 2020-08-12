@@ -116,10 +116,16 @@ var _ = Describe("SecretsManager", func() {
 				},
 			},
 			caName: {
-				Data: map[string][]byte{},
+				Data: map[string][]byte{
+					secrets.DataKeyCertificateCA: []byte(cacert),
+					secrets.DataKeyPrivateKeyCA:  []byte(cakey),
+				},
 			},
 			certName: {
-				Data: map[string][]byte{},
+				Data: map[string][]byte{
+					fmt.Sprintf("%s.crt", certName): []byte(cacert),
+					fmt.Sprintf("%s.key", certName): []byte(cakey),
+				},
 			},
 		}
 	})

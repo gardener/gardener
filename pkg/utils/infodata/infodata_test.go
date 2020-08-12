@@ -144,6 +144,14 @@ var _ = Describe("InfoData", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(gardenerResourceDataList)).To(Equal(1))
 			})
+
+			It("should not do anything if provided infodata is emptyInfoData", func() {
+				gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList([]gardencorev1alpha1.GardenerResourceData{})
+
+				err := UpsertInfoData(&gardenerResourceDataList, "emptyData", EmptyInfoData)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(gardenerResourceDataList)).To(Equal(0))
+			})
 		})
 	})
 })
