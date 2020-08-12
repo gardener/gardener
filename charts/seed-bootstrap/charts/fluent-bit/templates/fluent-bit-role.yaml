@@ -7,6 +7,10 @@ metadata:
 rules:
 - apiGroups: [""]
   resources:
-  - namespaces
   - pods
+  verbs: ["get", "list", "watch"]
+- apiGroups:
+  - extensions.gardener.cloud
+  resources:
+  - clusters
   verbs: ["get", "list", "watch"]
