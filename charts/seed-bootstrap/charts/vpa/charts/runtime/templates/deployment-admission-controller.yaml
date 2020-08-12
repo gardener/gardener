@@ -9,6 +9,8 @@ metadata:
     app: vpa-admission-controller
 {{- if .Values.deploymentLabels }}
 {{ toYaml .Values.deploymentLabels | indent 4 }}
+{{- else }}
+{{ toYaml .Values.labels | indent 4 }}
 {{- end }}
 spec:
   replicas: {{ .Values.admissionController.replicas }}

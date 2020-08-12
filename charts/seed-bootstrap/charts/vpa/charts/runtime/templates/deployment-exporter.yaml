@@ -9,6 +9,8 @@ metadata:
     app: vpa-exporter
 {{- if .Values.deploymentLabels }}
 {{ toYaml .Values.deploymentLabels | indent 4 }}
+{{- else }}
+{{ toYaml .Values.labels | indent 4 }}
 {{- end }}
 spec:
   replicas: {{ .Values.exporter.replicas }}
