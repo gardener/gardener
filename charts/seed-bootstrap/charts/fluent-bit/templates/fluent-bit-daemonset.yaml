@@ -40,6 +40,10 @@ spec:
           requests:
             cpu: 20m
             memory: 80Mi
+        ports:
+        - name: metrics
+          containerPort: 2020
+          protocol: TCP
         volumeMounts:
         - name: config
           mountPath: /fluent-bit/etc
