@@ -222,6 +222,16 @@ spec:
           successThreshold: {{ .Values.global.apiserver.livenessProbe.successThreshold }}
           failureThreshold: {{ .Values.global.apiserver.livenessProbe.failureThreshold }}
           timeoutSeconds: {{ .Values.global.apiserver.livenessProbe.timeoutSeconds }}
+        readinessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /readyz
+            port: 443
+          initialDelaySeconds: {{ .Values.global.apiserver.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.global.apiserver.readinessProbe.periodSeconds }}
+          successThreshold: {{ .Values.global.apiserver.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.global.apiserver.readinessProbe.failureThreshold }}
+          timeoutSeconds: {{ .Values.global.apiserver.readinessProbe.timeoutSeconds }}
         {{- if .Values.global.apiserver.resources }}
         resources:
 {{ toYaml .Values.global.apiserver.resources | indent 10 }}
