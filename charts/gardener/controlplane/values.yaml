@@ -15,6 +15,12 @@ global:
       successThreshold: 1
       failureThreshold: 3
       timeoutSeconds: 15
+    readinessProbe:
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      successThreshold: 1
+      failureThreshold: 3
+      timeoutSeconds: 15
     resources:
       requests:
         cpu: 100m
