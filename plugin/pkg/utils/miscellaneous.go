@@ -45,3 +45,26 @@ func GetProject(namespace string, projectLister corelisters.ProjectLister) (*cor
 
 	return nil, fmt.Errorf("no project found for namespace %q", namespace)
 }
+
+// IsSeedUsedByShoot checks whether there is a shoot cluster refering the provided seed name
+func IsSeedUsedByShoot(seedName string, shoots []*core.Shoot) bool {
+	for _, shoot := range shoots {
+		if shoot.Spec.SeedName != nil && *shoot.Spec.SeedName == seedName {
+			return true
+		}
+		if shoot.Status.SeedName != nil && *shoot.Status.SeedName == seedName {
+			return true
+		}
+	}
+	return false
+}
+
+// IsSeedUsedByBackupBucket checks whether there is a backupbucket refering the provided seed name
+func IsSeedUsedByBackupBucket(seedName string, backupbuckets []*core.BackupBucket) bool {
+	for _, backupbucket := range backupbuckets {
+		if backupbucket.Spec.SeedName != nil && *backupbucket.Spec.SeedName == seedName {
+			return true
+		}
+	}
+	return false
+}
