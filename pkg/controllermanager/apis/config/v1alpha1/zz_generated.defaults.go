@@ -36,5 +36,8 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 
 func SetObjectDefaults_ControllerManagerConfiguration(in *ControllerManagerConfiguration) {
 	SetDefaults_ControllerManagerConfiguration(in)
+	if in.Controllers.Event != nil {
+		SetDefaults_EventControllerConfiguration(in.Controllers.Event)
+	}
 	SetDefaults_LeaderElectionConfiguration(&in.LeaderElection)
 }

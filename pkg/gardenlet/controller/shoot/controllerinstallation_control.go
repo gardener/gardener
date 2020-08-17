@@ -94,7 +94,8 @@ func (c *Controller) reconcileControllerInstallationKey(key string) error {
 		}
 
 		c.getShootQueue(shoot).Add(key)
-		c.recorder.Eventf(shoot, corev1.EventTypeNormal, "ExtensionUpdated", "Marked shoot for enqueueing because dependent extension installation was updated: %s", controllerInstallation.Name)
+		shootLogger := logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace)
+		shootLogger.Infof("[SHOOT CONTROLLERINSTALLATION] Marked shoot for enqueueing because dependent extension installation %q was updated", controllerInstallation.Name)
 	}
 
 	return nil

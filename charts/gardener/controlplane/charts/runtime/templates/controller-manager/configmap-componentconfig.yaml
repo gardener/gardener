@@ -73,6 +73,15 @@ data:
         shootMonitorPeriod: {{ .Values.global.controller.config.controllers.seed.shootMonitorPeriod }}
         {{- end }}
       {{- end }}
+      {{- if .Values.global.controller.config.controllers.event }}
+      event:
+        {{- if .Values.global.controller.config.controllers.event.concurrentSyncs }}
+        concurrentSyncs: {{ .Values.global.controller.config.controllers.event.concurrentSyncs }}
+        {{- end }}
+        {{- if .Values.global.controller.config.controllers.event.ttlNonShootEvents }}
+        ttlNonShootEvents: {{ .Values.global.controller.config.controllers.event.ttlNonShootEvents }}
+        {{- end }}
+      {{- end }}
       shootMaintenance:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.shootMaintenance.concurrentSyncs is required" .Values.global.controller.config.controllers.shootMaintenance.concurrentSyncs }}
         {{- if .Values.global.controller.config.controllers.shootMaintenance.enableShootControlPlaneRestarter }}

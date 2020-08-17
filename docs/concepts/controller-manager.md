@@ -54,6 +54,22 @@ The component configuration of the Gardener Controller Manager offers to configu
 * `staleGracePeriodDays`: Don't compute auto-delete timestamps for stale `Project`s that are unused for only less than `staleGracePeriodDays`. This is to not unnecessarily make people/end-users nervous "just because" they haven't actively used their `Project` for a given amount of time. When you change this value then already assigned auto-delete timestamps may be removed again if the new grace period is not yet exceeded.
 * `staleExpirationTimeDays`: Expiration time after which stale `Project`s are finally auto-deleted (after `.status.staleSinceTimestamp`). If this value is changed and an auto-delete timestamp got already assigned to the projects then the new value will only take effect if it's increased. Hence, decreasing the `staleExpirationTimeDays` will not decrease already assigned auto-delete timestamps.
 
+### Event Controller
+
+With the Gardener Event Controller you can prolong the lifespan of events related to Shoot clusters.
+This is an optional controller which will become active once you provide the below mentioned configuration.
+
+All events in K8s are deleted after a configurable time-to-live (controlled via a [kube-apiserver argument](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/) called `--event-ttl` (defaulting to 1 hour)).
+The need to prolong the time-to-live for Shoot cluster events frequently arises when debugging customer issues on live systems.
+This controller leaves events involving Shoots untouched while deleting all other events after a configured time.
+In order to activate it, provide the following configuration:
+
+* `concurrentSyncs`: The amount of goroutines scheduled for reconciling events.
+* `ttlNonShootEvents`: When an event reaches this time-to-live it gets deleted unless it is a Shoot-related event (defaults to `1h`, equivalent to the `event-ttl` default).
+
+> :warning: In addition, you should also configure the `--event-ttl` for the kube-apiserver to define an upper-limit of how long Shoot-related events should be stored.
+The `--event-ttl` should be larger than the `ttlNonShootEvents` or this controller will have no effect.
+
 ## Webhooks
 
 ℹ️ This document is incomplete and under construction.

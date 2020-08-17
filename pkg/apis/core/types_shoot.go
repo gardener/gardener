@@ -896,11 +896,14 @@ var (
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 const (
-	// ShootEventMaintenanceDone indicates that a maintenance operation has been performed.
-	ShootEventMaintenanceDone = "MaintenanceDone"
-	// ShootEventMaintenanceError indicates that a maintenance operation has failed.
-	ShootEventMaintenanceError = "MaintenanceError"
-
+	// ShootEventImageVersionMaintenance indicates that a maintenance operation regarding the image version has been performed.
+	ShootEventImageVersionMaintenance = "MachineImageVersionMaintenance"
+	// ShootEventK8sVersionMaintenance indicates that a maintenance operation regarding the K8s version has been performed.
+	ShootEventK8sVersionMaintenance = "KubernetesVersionMaintenance"
+	// ShootEventHibernationEnabled indicates that hibernation started.
+	ShootEventHibernationEnabled = "Hibernated"
+	// ShootEventHibernationDisabled indicates that hibernation ended.
+	ShootEventHibernationDisabled = "WokenUp"
 	// ShootEventSchedulingSuccessful indicates that a scheduling decision was taken successfully.
 	ShootEventSchedulingSuccessful = "SchedulingSuccessful"
 	// ShootEventSchedulingFailed indicates that a scheduling decision failed.
