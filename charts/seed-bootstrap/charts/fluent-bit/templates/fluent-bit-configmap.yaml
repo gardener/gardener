@@ -85,6 +85,7 @@ data:
         Systemd_Filter  _SYSTEMD_UNIT=kubelet-monitor.service
 
   filter-kubernetes.conf: |-
+    # Systemd Filters
     [FILTER]
         Name record_modifier
         Match journald.docker
@@ -126,7 +127,8 @@ data:
         Match journald.kubelet-monitor
         Record hostname ${NODE_NAME}
         Record unit kubelet-monitor
-    
+
+    # Shoot controlplane filters
     [FILTER]
         Name                parser
         Match               kubernetes.*kube-apiserver*kube-apiserver*
@@ -136,14 +138,14 @@ data:
 
     [FILTER]
         Name                parser
-        Match               kubernetes.*kube-controller-manager*kube-controller-manager*
+        Match               kubernetes.*kube-apiserver*vpn-seed*
         Key_Name            log
-        Parser              kubeapiserverParser
+        Parser              vpnshootParser
         Reserve_Data        True
 
     [FILTER]
         Name                parser
-        Match               kubernetes.*kube-scheduler*cloud-kube-scheduler*
+        Match               kubernetes.*kube-controller-manager*kube-controller-manager*
         Key_Name            log
         Parser              kubeapiserverParser
         Reserve_Data        True
@@ -171,13 +173,6 @@ data:
 
     [FILTER]
         Name                parser
-        Match               kubernetes.*kube-proxy*kube-proxy*
-        Key_Name            log
-        Parser              kubeapiserverParser
-        Reserve_Data        True
-
-    [FILTER]
-        Name                parser
         Match               kubernetes.*cluster-autoscaler*cluster-autoscaler*
         Key_Name            log
         Parser              kubeapiserverParser
@@ -185,9 +180,24 @@ data:
 
     [FILTER]
         Name                parser
-        Match               kubernetes.*alertmanager*alertmanager*
+        Match               kubernetes.*kube-state-metrics*kube-state-metrics*
         Key_Name            log
-        Parser              alertmanagerParser
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*addons-kubernetes-dashboard*kubernetes-dashboard*
+        Key_Name            log
+        Parser              kubernetesdashboardParser
+        Reserve_Data        True
+
+    # System components filters
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*kube-proxy*kube-proxy*
+        Key_Name            log
+        Parser              kubeapiserverParser
         Reserve_Data        True
 
     [FILTER]
@@ -206,13 +216,6 @@ data:
 
     [FILTER]
         Name                parser
-        Match               kubernetes.*kube-state-metrics*kube-state-metrics*
-        Key_Name            log
-        Parser              kubeapiserverParser
-        Reserve_Data        True
-
-    [FILTER]
-        Name                parser
         Match               kubernetes.*vpn-shoot*vpn-shoot*
         Key_Name            log
         Parser              vpnshootParser
@@ -220,16 +223,16 @@ data:
 
     [FILTER]
         Name                parser
-        Match               kubernetes.*vpn-seed*vpn-seed*
+        Match               kubernetes.*node-exporter*node-exporter*
         Key_Name            log
-        Parser              vpnshootParser
+        Parser              nodeexporterParser
         Reserve_Data        True
 
     [FILTER]
         Name                parser
-        Match               kubernetes.*addons-kubernetes-dashboard*kubernetes-dashboard*
+        Match               kubernetes.*node-problem-detector*node-problem-detector*
         Key_Name            log
-        Parser              kubernetesdashboardParser
+        Parser              kubeapiserverParser
         Reserve_Data        True
 
     [FILTER]
@@ -240,11 +243,12 @@ data:
         Parser              kubeapiserverParser
         Reserve_Data        True
 
+    # Garden filters
     [FILTER]
         Name                parser
-        Match               kubernetes.*node-exporter*node-exporter*
+        Match               kubernetes.*alertmanager*alertmanager*
         Key_Name            log
-        Parser              nodeexporterParser
+        Parser              alertmanagerParser
         Reserve_Data        True
 
     [FILTER]
@@ -270,11 +274,55 @@ data:
 
     [FILTER]
         Name                parser
-        Match               kubernetes.*gardener-resource-manager*gardener-resource-manager*
+        Match               kubernetes.*vpa-*
         Key_Name            log
-        Parser              addonmanagerParser
+        Parser              kubeapiserverParser
         Reserve_Data        True
 
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*hvpa-controller*hvpa-controller*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*dependency-watchdog*dependency-watchdog*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*gardener-resource-manager*gardener-resource-manager*
+        Key_Name            log
+        Parser              gardenerResourceManagerParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                modify
+        Match               kubernetes.*gardener-resource-manager*gardener-resource-manager*
+        Rename              level  severity
+        Rename              msg    log
+        Rename              logger source
+
+    # Extension filters
+    [FILTER]
+        Name                parser
+        Match               kubernetes.*gardener-extension*
+        Key_Name            log
+        Parser              extensionsParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                modify
+        Match               kubernetes.*gardener-extension*
+        Rename              level  severity
+        Rename              msg    log
+        Rename              logger source
+
+    # Kubernetes filter
     [FILTER]
         Name                kubernetes
         Match               kubernetes.*
@@ -286,36 +334,7 @@ data:
         tls.verify          Off
         K8S-Logging.Exclude Off
 
-    [FILTER]
-        Name record_modifier
-        Match *
-        Record type admin
-
-    [FILTER]
-        Name record_modifier
-        Match *kube-apiserver*
-        Record type user
-
-    [FILTER]
-        Name record_modifier
-        Match *kube-controller-manager*
-        Record type user
-
-    [FILTER]
-        Name record_modifier
-        Match *kube-scheduler*
-        Record type user
-
-    [FILTER]
-        Name record_modifier
-        Match *cloud-controller-manager*
-        Record type user
-
-    [FILTER]
-        Name record_modifier
-        Match *cluster-autoscaler*
-        Record type user
-
+    # Scripts
     [FILTER]
         Name                lua
         Match               kubernetes.*
@@ -402,6 +421,13 @@ data:
         Time_Format %Y-%m-%dT%H:%M:%S.%L
 
     [PARSER]
+        Name        corednsParser
+        Format      regex
+        Regex       ^(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+\[(?<severity>\w*[^\]])\]\s+(?<log>.*)
+        Time_Key    time
+        Time_Format  %Y-%m-%dT%H:%M:%S.%L
+
+    [PARSER]
         Name        vpnshootParser
         Format      regex
         Regex       ^(?<time>[^0-9]*\d{1,2}\s+[^\s]+\s+\d{4})\s+(?<log>.*)
@@ -414,13 +440,6 @@ data:
         Regex       ^(?<time>\d{4}\/\d{2}\/\d{2}\s+[^\s]*)\s+(?<log>.*)
         Time_Key    time
         Time_Format %Y/%m/%d %H:%M:%S
-
-    [PARSER]
-        Name        corednsParser
-        Format      regex
-        Regex       ^(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+\[(?<severity>\w*[^\]])\]\s+(?<log>.*)
-        Time_Key    time
-        Time_Format  %Y-%m-%dT%H:%M:%S.%L
 
     [PARSER]
         Name        nodeexporterParser
@@ -444,10 +463,16 @@ data:
         Time_Format %Y-%m-%dT%H:%M:%S%z
 
     [PARSER]
-        Name        addonmanagerParser
-        Format      regex
-        Regex       ^(?<severity>[A-Z]+):\s(?<log>.*)
+        Name        gardenerResourceManagerParser
+        Format      json
+        Time_Key    ts
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
 
+    [PARSER]
+        Name        extensionsParser
+        Format      json
+        Time_Key    ts
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
 
 {{ if .Values.extensions.parsers }}
 {{- toString .Values.extensions.parsers | indent 4 }}
@@ -482,7 +507,7 @@ data:
       elseif severity == "W" or severity == "WRN" or severity == "WARN" or severity == "WARNING" then
         record["severity"] = "WARN"
         modified = true
-      elseif severity == "E" or severity == "ERR" or severity == "ERROR" then
+      elseif severity == "E" or severity == "ERR" or severity == "ERROR" or severity == "EROR" then
         record["severity"] = "ERR"
         modified = true
       elseif severity == "D" or severity == "DBG" or severity == "DEBUG" then
