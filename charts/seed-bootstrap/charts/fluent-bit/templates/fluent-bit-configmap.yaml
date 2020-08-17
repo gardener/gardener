@@ -30,7 +30,7 @@ data:
         Parser            docker
         DB                /var/log/flb_kube.db
         Skip_Long_Lines   On
-        Mem_Buf_Limit     12MB
+        Mem_Buf_Limit     30MB
         Refresh_Interval  10
         Ignore_Older      1800s
 
@@ -347,6 +347,9 @@ data:
         DynamicHostPrefix http://loki.
         DynamicHostSulfix .svc:3100/loki/api/v1/push
         DynamicHostRegex shoot--
+        MaxRetries 3
+        Timeout 10
+        MinBackoff 30
 
     [Output]
         Name loki
@@ -362,6 +365,10 @@ data:
         DropSingleKey false
         RemoveKeys kubernetes,steram,hostname,unit
         LabelMapPath /fluent-bit/etc/systemd_label_map.json
+        MaxRetries 3
+        Timeout 10
+        MinBackoff 30
+
   parsers.conf: |-
     [PARSER]
         Name        docker
