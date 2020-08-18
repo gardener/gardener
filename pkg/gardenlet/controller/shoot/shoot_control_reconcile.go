@@ -394,11 +394,6 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Fn:           flow.TaskFn(botanist.WaitUntilExtensionResourcesDeleted).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Maintain shoot annotations",
-			Fn:           flow.TaskFn(botanist.MaintainShootAnnotations),
-			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
-		})
 		deployContainerRuntimeResources = g.Add(flow.Task{
 			Name:         "Deploying container runtime resources",
 			Fn:           flow.TaskFn(botanist.DeployContainerRuntimeResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -424,10 +419,15 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Fn:           flow.TaskFn(botanist.RestartControlPlanePods).DoIf(requestControlPlanePodsRestart),
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployControlPlane, deployControlPlaneExposure),
 		})
-		_ = g.Add(flow.Task{
+		deployVPA = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes vertical pod autoscaler",
 			Fn:           flow.TaskFn(botanist.DeployVerticalPodAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilKubeAPIServerIsReady, deployManagedResources, hibernateControlPlane),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Maintain shoot annotations",
+			Fn:           flow.TaskFn(botanist.MaintainShootAnnotations),
+			Dependencies: flow.NewTaskIDs(deployVPA),
 		})
 	)
 
