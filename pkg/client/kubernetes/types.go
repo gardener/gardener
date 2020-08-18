@@ -78,6 +78,7 @@ func init() {
 		dnsscheme.AddToScheme,
 		gardenextensionsscheme.AddToScheme,
 		resourcesscheme.AddToScheme,
+		autoscalingscheme.AddToScheme,
 		hvpav1alpha1.AddToScheme,
 		druidv1alpha1.AddToScheme,
 		apiextensionsscheme.AddToScheme,
