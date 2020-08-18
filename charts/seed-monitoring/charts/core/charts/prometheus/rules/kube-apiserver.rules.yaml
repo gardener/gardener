@@ -49,6 +49,31 @@ groups:
     expr: histogram_quantile(0.5, rate(apiserver_request_duration_seconds_bucket[5m]))
     labels:
       quantile: "0.5"
+  # TODO replace with better metrics in the future (wyb1)
+  - record: shoot:apiserver_watch_duration:quantile
+    expr: histogram_quantile(0.2, sum(rate(apiserver_request_duration_seconds_bucket{verb="WATCH",resource=~"configmaps|deployments|secrets|daemonsets|services|nodes|pods|namespaces|endpoints|statefulsets|clusterroles|roles"}[5m])) by (le,scope,resource))
+    labels:
+      quantile: "0.2"
+  - record: shoot:apiserver_watch_duration:quantile
+    expr: histogram_quantile(0.5, sum(rate(apiserver_request_duration_seconds_bucket{verb="WATCH",resource=~"configmaps|deployments|secrets|daemonsets|services|nodes|pods|namespaces|endpoints|statefulsets|clusterroles|roles"}[5m])) by (le,scope,resource))
+    labels:
+      quantile: "0.5"
+  - record: shoot:apiserver_watch_duration:quantile
+    expr: histogram_quantile(0.9, sum(rate(apiserver_request_duration_seconds_bucket{verb="WATCH",resource=~"configmaps|deployments|secrets|daemonsets|services|nodes|pods|namespaces|endpoints|statefulsets|clusterroles|roles"}[5m])) by (le,scope,resource))
+    labels:
+      quantile: "0.9"
+  - record: shoot:apiserver_watch_duration:quantile
+    expr: histogram_quantile(0.2, sum(rate(apiserver_request_duration_seconds_bucket{verb="WATCH",group=~".+garden.+"}[5m])) by (le,scope,resource))
+    labels:
+      quantile: "0.2"
+  - record: shoot:apiserver_watch_duration:quantile
+    expr: histogram_quantile(0.5, sum(rate(apiserver_request_duration_seconds_bucket{verb="WATCH",group=~".+garden.+"}[5m])) by (le,scope,resource))
+    labels:
+      quantile: "0.5"
+  - record: shoot:apiserver_watch_duration:quantile
+    expr: histogram_quantile(0.9, sum(rate(apiserver_request_duration_seconds_bucket{verb="WATCH",group=~".+garden.+"}[5m])) by (le,scope,resource))
+    labels:
+      quantile: "0.9"
   - alert: KubeApiServerTooManyOpenFileDescriptors
     expr: 100 * process_open_fds{job="kube-apiserver"} / process_max_fds > 50
     for: 30m
