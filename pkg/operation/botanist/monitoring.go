@@ -29,11 +29,15 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime"
+	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -413,47 +417,137 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
-	for _, obj := range []struct {
-		apiGroup string
-		version  string
-		kind     string
-		name     string
-	}{
-		{"", "v1", "ServiceAccount", "kube-state-metrics-seed"},
-		{"", "v1", "RoleBinding", "kube-state-metrics-seed"},
-		{"", "v1", "Service", "kube-state-metrics-seed"},
-		{"apps", "v1", "Deployment", "kube-state-metrics-seed"},
-		{"autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscaler", "kube-state-metrics-seed-vpa"},
+	for _, obj := range []runtime.Object{
+		&corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "kube-state-metrics-seed",
+			},
+		},
+		&rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "kube-state-metrics-seed",
+			},
+		},
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "kube-state-metrics-seed",
+			},
+		},
+		&appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "kube-state-metrics-seed",
+			},
+		},
+		&autoscalingv1beta2.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "kube-state-metrics-seed-vpa",
+			},
+		},
 
-		{"", "v1", "Service", "kube-state-metrics"},
-		{"autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscaler", "kube-state-metrics-vpa"},
-		{"apps", "v1", "Deployment", "kube-state-metrics"},
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "kube-state-metrics",
+			},
+		},
+		&autoscalingv1beta2.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "kube-state-metrics-vpa",
+			},
+		},
+		&appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "kube-state-metrics",
+			},
+		},
 
-		{"networking", "v1", "NetworkPolicy", "allow-from-prometheus"},
-		{"networking", "v1", "NetworkPolicy", "allow-prometheus"},
-		{"", "v1", "ConfigMap", "prometheus-config"},
-		{"", "v1", "ConfigMap", "prometheus-rules"},
-		{"", "v1", "ConfigMap", "blackbox-exporter-config-prometheus"},
-		{"", "v1", "Secret", "prometheus-basic-auth"},
-		{"extensions", "v1beta1", "Ingress", "prometheus"},
-		{"networking", "v1", "Ingress", "prometheus"},
-		{"autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscaler", "prometheus-vpa"},
-		{"", "v1", "ServiceAccount", "prometheus"},
-		{"", "v1", "Service", "prometheus"},
-		{"", "v1", "Service", "prometheus-web"},
-		{"apps", "v1", "StatefulSet", "prometheus"},
-		{"rbac", "v1", "ClusterRoleBinding", "prometheus-" + b.Shoot.SeedNamespace},
-		{"", "v1", "PersistentVolumeClaim", "prometheus-db-prometheus-0"},
+		&networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "allow-from-prometheus",
+			},
+		},
+		&networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "allow-prometheus",
+			},
+		},
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "prometheus-config",
+			},
+		},
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "prometheus-rules",
+			},
+		},
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "blackbox-exporter-config-prometheus",
+			},
+		},
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "prometheus-basic-auth",
+			},
+		},
+		&extensionsv1beta1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "prometheus",
+			},
+		},
+		&autoscalingv1beta2.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "prometheus-vpa",
+			},
+		},
+		&corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "prometheus",
+			},
+		},
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "prometheus-web",
+			},
+		},
+		&appsv1.StatefulSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "prometheus",
+			},
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "prometheus-" + b.Shoot.SeedNamespace,
+			},
+		},
+		&corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "prometheus-db-prometheus-0",
+			},
+		},
 	} {
-		u := &unstructured.Unstructured{}
-		u.SetName(obj.name)
-		u.SetNamespace(b.Shoot.SeedNamespace)
-		u.SetGroupVersionKind(schema.GroupVersionKind{
-			Group:   obj.apiGroup,
-			Version: obj.version,
-			Kind:    obj.kind,
-		})
-		if err := b.K8sSeedClient.Client().Delete(ctx, u); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
+		if err := b.K8sSeedClient.Client().Delete(ctx, obj); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
 			return err
 		}
 	}
