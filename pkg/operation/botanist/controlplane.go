@@ -1315,6 +1315,9 @@ func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
 			"checksum/secret-kube-scheduler":        b.CheckSums[v1beta1constants.DeploymentNameKubeScheduler],
 			"checksum/secret-kube-scheduler-server": b.CheckSums[common.KubeSchedulerServerName],
 		},
+		"podLabels": map[string]interface{}{
+			v1beta1constants.LabelPodMaintenanceRestart: "true",
+		},
 	}
 
 	if b.ShootedSeed != nil {
