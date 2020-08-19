@@ -140,7 +140,6 @@ func run(ctx context.Context, bindAddress string, port int, certPath, keyPath, k
 	}
 
 	mux.HandleFunc("/webhooks/validate-extension-crd-deletion", seedAdmissionController.validateExtensionCRDDeletion)
-	mux.HandleFunc("/webhooks/mutate-pods", seedAdmissionController.mutatePods)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", bindAddress, port),
@@ -249,21 +248,4 @@ func (g *GardenerSeedAdmissionController) validateExtensionCRDDeletion(w http.Re
 	}
 
 	respond(w, nil, admission.Allowed(""))
-}
-
-func (g *GardenerSeedAdmissionController) mutatePods(w http.ResponseWriter, r *http.Request) {
-	receivedReview, err := g.handleAdmissionReview(w, r)
-	if err != nil {
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
-	defer cancel()
-
-	patches, err := seedadmission.MutatePod(ctx, g.client, logger, receivedReview.Request)
-	if err != nil {
-		logger.Errorf(err.Error())
-		respond(w, nil, admission.Errored(http.StatusBadRequest, err))
-	}
-	respond(w, &admission.Request{AdmissionRequest: *receivedReview.Request}, admission.Patched("", patches...))
 }
