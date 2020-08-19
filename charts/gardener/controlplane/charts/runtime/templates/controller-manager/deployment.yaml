@@ -105,7 +105,6 @@ spec:
 {{- if .Values.global.controller.additionalVolumeMounts }}
 {{ toYaml .Values.global.controller.additionalVolumeMounts | indent 8 }}
 {{- end }}
-      terminationGracePeriodSeconds: 3600
       volumes:
       - name: gardener-controller-manager-cert
         secret:
