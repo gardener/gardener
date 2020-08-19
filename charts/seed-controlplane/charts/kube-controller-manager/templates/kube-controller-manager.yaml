@@ -62,9 +62,11 @@ spec:
         - --concurrent-namespace-syncs=50
         - --concurrent-replicaset-syncs=50
         - --concurrent-resource-quota-syncs=15
+        {{- if semverCompare ">= 1.16" .Values.kubernetesVersion }}
         - --concurrent-service-endpoint-syncs=15
-        - --concurrent-serviceaccount-token-syncs=15
         - --concurrent-statefulset-syncs=15
+        {{- end}}
+        - --concurrent-serviceaccount-token-syncs=15
         {{- include "kube-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
         {{- if semverCompare "< 1.12" .Values.kubernetesVersion }}
         - --horizontal-pod-autoscaler-downscale-delay={{ .Values.horizontalPodAutoscaler.downscaleDelay }}
