@@ -81,7 +81,6 @@ spec:
         {{- end }}
         - name: gardener-scheduler-config
           mountPath: /etc/gardener-scheduler/config
-      terminationGracePeriodSeconds: 3600
       volumes:
       {{- if .Values.global.scheduler.kubeconfig }}
       - name: gardener-scheduler-kubeconfig
