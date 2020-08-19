@@ -6,12 +6,9 @@
     [Unit]
     Description=kubelet daemon
     Documentation=https://kubernetes.io/docs/admin/kubelet
-    {{- if .Values.worker.cri }}
-    {{- if eq .Values.worker.cri.name .Values.osc.cri.names.containerd }}
-    After=containerd.service
-    {{- end }}
-    {{- else }}
-    After=docker.service
+    After=kubelet-initializer.service
+    Wants=kubelet-initializer.service
+    {{- if eq .Values.worker.cri.name .Values.osc.cri.names.docker }}
     Wants=docker.socket rpc-statd.service
     {{- end }}
     [Install]
@@ -21,11 +18,6 @@
     RestartSec=5
     EnvironmentFile=/etc/environment
     EnvironmentFile=-/var/lib/kubelet/extra_args
-    {{- if semverCompare "< 1.17" .Values.kubernetes.version }}
-    ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw {{ required "images.hyperkube is required" .Values.images.hyperkube }} /bin/sh -c "cp /usr/local/bin/kubelet /opt/bin"
-    {{- else }}
-    ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh {{ required "images.hyperkube is required" .Values.images.hyperkube }} -c "cp /usr/local/bin/kubelet /opt/bin"
-    {{- end }}
     ExecStart=/opt/bin/kubelet \
 {{ include "kubelet-flags" . | trim | replace "\n" " \\\n" | indent 8 }}
 {{- end -}}

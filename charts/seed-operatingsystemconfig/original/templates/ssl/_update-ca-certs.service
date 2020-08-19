@@ -15,7 +15,7 @@
     [Service]
     Type=oneshot
     ExecStart=/usr/sbin/update-ca-certificates
-    ExecStartPost=/bin/systemctl restart docker
+    ExecStartPost=/bin/systemctl restart {{ required ".Values.worker.containerRuntimeSystemdService is required" .Values.worker.containerRuntimeSystemdService }}
     [Install]
     WantedBy=multi-user.target
 {{- end -}}

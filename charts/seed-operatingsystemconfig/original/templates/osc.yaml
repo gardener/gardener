@@ -10,51 +10,52 @@ metadata:
 spec:
   type: {{ required ".osc.type is required" .Values.osc.type }}
   purpose: {{ required ".osc.purpose is required" .Values.osc.purpose }}
-  {{- if .Values.worker.cri }}
   criConfig:
     name: {{ .Values.worker.cri.name }}
-  {{- end }}
   {{- if .Values.osc.providerConfig }}
   providerConfig:
 {{ .Values.osc.providerConfig | indent 4 }}
   {{- end }}
   reloadConfigFilePath: {{ required ".osc.reloadConfigFilePath is required" .Values.osc.reloadConfigFilePath }}
   units:
+{{ include "download-crictl" . | indent 2 }}
 {{ include "var-lib-mount" . | indent 2 }}
 {{ include "update-ca-certs" . | indent 2 }}
-{{- if .Values.worker.cri }}
 {{- if eq .Values.worker.cri.name .Values.osc.cri.names.containerd }}
-{{ include "containerd-monitor" . | indent 2 }}
 {{ include "containerd-logrotate" . | indent 2 }}
 {{ include "containerd-logrotate-timer" . | indent 2 }}
+{{ include "containerd-initializer" . | indent 2 }}
 {{- end }}
-{{- else }}
-{{ include "docker-monitor" . | indent 2 }}
+{{- if eq .Values.worker.cri.name .Values.osc.cri.names.docker }}
 {{ include "docker-logrotate" . | indent 2 }}
 {{ include "docker-logrotate-timer" . | indent 2 }}
 {{- end }}
+{{ include "kubelet-initializer" . | indent 2 }}
 {{ include "kubelet" . | indent 2 }}
+{{ include "kubectl-initializer" . | indent 2 }}
 {{ include "kubelet-monitor" . | indent 2 }}
 {{ include "systemd-sysctl" . | indent 2 }}
 {{ include "gardener-user" . | indent 2 }}
-{{- if .Values.worker.cri }}
-{{- if eq .Values.worker.cri.name .Values.osc.cri.names.containerd }}
-{{ include "containerd-initializer" . | indent 2 }}
-{{- end }}
-{{- end }}
+{{ include "health-monitor" . | indent 2 }}
   files:
 {{ include "root-certs" . | indent 2 }}
-{{- if .Values.worker.cri }}
+{{ include "crictl-config-file" . | indent 2 }}
+{{- if ne .Values.worker.cri.name .Values.osc.cri.names.docker }}
+{{ include "cri-files" . | indent 2 }}
+{{- end -}}
 {{- if eq .Values.worker.cri.name .Values.osc.cri.names.containerd }}
 {{ include "init-containerd-config-script" . | indent 2 }}
 {{ include "containerd-require-initializer" . | indent 2 }}
 {{ include "containerd-logrotate-config" . | indent 2 }}
 {{- end }}
-{{- else }}
+{{- if eq .Values.worker.cri.name .Values.osc.cri.names.docker}}
 {{ include "docker-logrotate-config" . | indent 2 }}
 {{- end }}
 {{ include "journald-config" . | indent 2 }}
+{{ include "init-kubelet-script" . | indent 2 }}
+{{ include "init-kubectl-script" . | indent 2 }}
+{{ include "download-crictl-script" . | indent 2 }}
 {{ include "kubelet-binary" . | indent 2 }}
 {{ include "kernel-config" . | indent 2 }}
-{{ include "health-monitor" . | indent 2 }}
+{{ include "health-monitor-script" . | indent 2 }}
 {{ include "gardener-user-script" . | indent 2 }}

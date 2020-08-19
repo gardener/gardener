@@ -370,13 +370,16 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, ma
 		"kubeletDataVolume": worker.KubeletDataVolumeName,
 	}
 
-	if worker.CRI != nil {
-		workerConfig["cri"] = map[string]interface{}{
-			"name": worker.CRI.Name,
-		}
-		downloaderConfig["cri"] = workerConfig["cri"]
-	}
+	criName, criSocket, containerRuntimeSystemdService := getCRIConfig(worker)
 
+	workerConfig["cri"] = map[string]interface{}{
+		"name":   criName,
+		"socket": criSocket,
+	}
+	downloaderConfig["cri"] = workerConfig["cri"]
+	downloaderConfig["containerRuntimeSystemdService"] = containerRuntimeSystemdService
+
+	workerConfig["containerRuntimeSystemdService"] = containerRuntimeSystemdService
 	originalConfig["worker"] = workerConfig
 
 	var (
@@ -451,11 +454,17 @@ func (b *Botanist) applyAndWaitForShootOperatingSystemConfig(ctx context.Context
 func (b *Botanist) getGenerateCloudConfigExecutionChartFunc(releaseName string, worker gardencorev1beta1.Worker, tokenSecret *corev1.Secret) func() (*chartrenderer.RenderedChart, error) {
 	return func() (*chartrenderer.RenderedChart, error) {
 		oscData := b.Shoot.OperatingSystemConfigsMap[worker.Name]
+		criName, criSocket, _ := getCRIConfig(worker)
+
 		w := map[string]interface{}{
 			"name":        worker.Name,
 			"secretName":  b.Shoot.ComputeCloudConfigSecretName(worker.Name),
 			"cloudConfig": oscData.Original.Data.Content,
 			"units":       oscData.Original.Data.Units,
+			"cri": map[string]interface{}{
+				"name":   criName,
+				"socket": criSocket,
+			},
 		}
 		if cmd := oscData.Original.Data.Command; cmd != nil {
 			w["command"] = *cmd
@@ -533,4 +542,24 @@ func (b *Botanist) deleteOperatingSystemConfigs(ctx context.Context, wantedOSCNa
 			return !wantedOSCNames.Has(obj.GetName())
 		},
 	)
+}
+
+// getCRIConfig gets the CRI name, the socket path and the container runtime systemd service name based on the worker configuration
+func getCRIConfig(worker gardencorev1beta1.Worker) (string, string, string) {
+	var (
+		// default CRI
+		criName = "docker"
+		// default socket
+		criSocket = "unix:///var/run/dockershim.sock"
+		// default high level container runtime systemd service
+		// has to be provided by OS image (enabled by Gardener during node bootstrap)
+		containerRuntimeSystemdService = "docker.service"
+	)
+
+	if worker.CRI != nil && worker.CRI.Name == gardencorev1beta1.CRINameContainerD {
+		criName = string(gardencorev1beta1.CRINameContainerD)
+		criSocket = "unix:///run/containerd/containerd.sock"
+		containerRuntimeSystemdService = "containerd.service"
+	}
+	return criName, criSocket, containerRuntimeSystemdService
 }

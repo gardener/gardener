@@ -12,7 +12,8 @@ PATH_CLOUDCONFIG_OLD="${PATH_CLOUDCONFIG}.old"
 
 mkdir -p "$DIR_CLOUDCONFIG" "$DIR_KUBELET"
 
-function docker-preload() {
+{{- if eq .worker.cri.name "docker" }}
+function docker-image-preload(){
   name="$1"
   image="$2"
   echo "Checking whether to preload $name from $image"
@@ -22,6 +23,31 @@ function docker-preload() {
   else
     echo "No need to preload $name from $image"
   fi
+}
+{{- else }}
+function cri-image-preload() {
+  name="$1"
+  image="$2"
+  echo "Preloading $name from $image"
+  /usr/local/bin/crictl --image-endpoint {{ required "worker.cri.socket is required" .worker.cri.socket }} pull "$image"
+}
+{{- end }}
+
+function preload-images(){
+  {{- if eq .worker.cri.name "docker" }}
+  preload="docker-image-preload"
+  {{- else }}
+  /usr/local/bin/crictl --image-endpoint {{ required "worker.cri.socket is required" .worker.cri.socket }} images > /dev/null
+  if [ $? -ne 0 ];then
+    echo "Unable to preload image - CRI or crictl unavailable."
+    return 0
+  fi
+  preload="cri-image-preload"
+  {{- end }}
+
+  {{ range $name, $image := (required ".images is required" .images) -}}
+  $preload "{{ $name }}" "{{ $image }}"
+  {{ end -}}
 }
 
 {{- if .worker.kubeletDataVolume }}
@@ -49,9 +75,7 @@ function format-data-device() {
 format-data-device
 {{- end}}
 
-{{ range $name, $image := (required ".images is required" .images) -}}
-docker-preload "{{ $name }}" "{{ $image }}"
-{{ end }}
+preload-images
 
 cat << 'EOF' | base64 -d > "$PATH_CLOUDCONFIG"
 {{ .worker.cloudConfig | b64enc }}

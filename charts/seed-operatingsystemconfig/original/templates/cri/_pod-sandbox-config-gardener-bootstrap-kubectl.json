@@ -1,0 +1,15 @@
+{{- define "pod-sandbox-config-gardener-bootstrap-kubectl" -}}
+{
+  "metadata": {
+    "name": "gardener-node-bootstrap-sandbox-extract-kubectl"
+  },
+  "log_directory": "/var/lib/gardener-node-bootstrap",
+  "linux": {
+    "security_context": {
+      "namespace_options": {
+        "network": 2
+      }
+    }
+  }
+}
+{{- end -}}

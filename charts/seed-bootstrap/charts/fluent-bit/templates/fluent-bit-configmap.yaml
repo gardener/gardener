@@ -65,17 +65,10 @@ data:
 
     [INPUT]
         Name            systemd
-        Tag             journald.docker-monitor
+        Tag             journald.health-monitor
         Path            /var/log/journal/
         Read_From_Tail  True
-        Systemd_Filter  _SYSTEMD_UNIT=docker-monitor.service
-
-    [INPUT]
-        Name            systemd
-        Tag             journald.containerd-monitor
-        Path            /var/log/journal/
-        Read_From_Tail  True
-        Systemd_Filter  _SYSTEMD_UNIT=containerd-monitor.service
+        Systemd_Filter  _SYSTEMD_UNIT=health-monitor.service
 
     [INPUT]
         Name            systemd
@@ -111,9 +104,9 @@ data:
 
     [FILTER]
         Name record_modifier
-        Match journald.docker-monitor
+        Match journald.health-monitor
         Record hostname ${NODE_NAME}
-        Record unit docker-monitor
+        Record unit health-monitor
 
     [FILTER]
         Name record_modifier

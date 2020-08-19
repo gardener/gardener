@@ -1,0 +1,19 @@
+{{- define "health-monitor" -}}
+- name: health-monitor.service
+  command: start
+  enable: true
+  content: |
+    [Unit]
+    Description=Daemon monitoring the health of the Container Runtime
+    After={{ required ".Values.worker.containerRuntimeSystemdService is required" .Values.worker.containerRuntimeSystemdService }}
+    After=download-crictl.service
+    {{- if eq .Values.worker.cri.name .Values.osc.cri.names.docker }}
+    After=kubelet.service
+    {{- end }}
+    [Install]
+    WantedBy=multi-user.target
+    [Service]
+    Restart=always
+    EnvironmentFile=/etc/environment
+    ExecStart=/opt/bin/health-monitor CRI
+{{- end -}}

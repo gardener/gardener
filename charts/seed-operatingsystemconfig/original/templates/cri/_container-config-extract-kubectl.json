@@ -1,0 +1,55 @@
+{{- define "container-config-extract-kubectl" -}}
+{
+  "metadata": {
+    "name": "hyperkube-extract-kubectl"
+  },
+  "image": {
+    "image": "{{ required "images.hyperkube is required" .Values.images.hyperkube }}"
+  },
+  "command": ["/bin/sh"],
+  "args": ["-c", "cp /usr/local/bin/kubectl /opt/bin"],
+  "mounts": [
+    {
+      "container_path": "/opt/bin",
+      "host_path": "/opt/bin"
+    },
+    {
+      "container_path": "/var/lib/gardener-node-bootstrap",
+      "host_path": "/var/lib/gardener-node-bootstrap"
+    }
+  ],
+  "log_path": "hyperkube-extract-kubectl.log",
+  "linux": {
+    "resources": {
+      "cpu_period": 100000,
+      "cpu_shares": 2,
+      "oom_score_adj": 1000
+    },
+    "security_context": {
+      "namespace_options": {
+        "pid": 1
+      },
+      "run_as_user": {},
+      "masked_paths": [
+        "/proc/acpi",
+        "/proc/kcore",
+        "/proc/keys",
+        "/proc/latency_stats",
+        "/proc/timer_list",
+        "/proc/timer_stats",
+        "/proc/sched_debug",
+        "/proc/scsi",
+        "/sys/firmware"
+      ],
+      "readonly_paths": [
+        "/proc/asound",
+        "/proc/bus",
+        "/proc/fs",
+        "/proc/irq",
+        "/proc/sys",
+        "/proc/sysrq-trigger"
+      ]
+    }
+  }
+}
+{{- end -}}

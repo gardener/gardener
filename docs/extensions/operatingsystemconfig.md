@@ -76,12 +76,12 @@ spec:
       content: |
         [Service]
         Environment="DOCKER_OPTS=--log-opt max-size=60m --log-opt max-file=3"
-  - name: docker-monitor.service
+  - name: health-monitor.service
     command: start
     enable: true
     content: |
       [Unit]
-      Description=Docker-monitor daemon
+      Description=Health-monitor daemon
       After=kubelet.service
       [Install]
       WantedBy=multi-user.target
@@ -161,7 +161,7 @@ status:
     type: Reconcile
   observedGeneration: 5
   units:
-  - docker-monitor.service
+  - health-monitor.service
 ```
 
 (The `.status.command` field is optional and must only be provided if `.spec.reloadConfigFilePath` exists).

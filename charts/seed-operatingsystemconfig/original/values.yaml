@@ -9,6 +9,7 @@ osc:
     containerRuntimesBinaryPath: /var/bin/containerruntimes
     names:
       containerd: containerd
+      docker: docker
 # providerConfig:
 #   some-provider-specific-config
 
@@ -23,8 +24,10 @@ kubernetes:
   version: 1.11.2
 worker:
   name: cpu-worker
-# cri:
-#   name: containerd
+  containerRuntimeSystemdService: docker.service
+  cri:
+    name: docker
+    socket: unix:///var/run/dockershim.sock
   kubelet:
     caCert: abcd
     cpuCFSQuota: true

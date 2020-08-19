@@ -1,0 +1,5 @@
+{{- define "crictl-config" -}}
+runtime-endpoint: {{ required ".Values.cri.socket is required" .Values.worker.cri.socket }}
+image-endpoint: {{ required ".Values.cri.socket is required" .Values.worker.cri.socket }}
+timeout: 5
+{{- end -}}

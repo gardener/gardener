@@ -1,4 +1,4 @@
-{{- define "health-monitor" -}}
+{{- define "health-monitor-script" -}}
 - path: /opt/bin/health-monitor
   permissions: 0755
   content:
@@ -9,30 +9,19 @@
         set -o nounset
         set -o pipefail
 
-        function docker_monitoring {
-          echo "Docker monitor has started !"
+        function CRI_shim_monitoring {
+          echo "CRI monitor has started !"
           while [ 1 ]; do
-            if ! timeout 60 docker ps > /dev/null; then
-              echo "Docker daemon failed!"
-              pkill docker
+            if ! timeout 60 crictl pods > /dev/null; then
+              echo "CRI Shim is not reachable!"
+              systemctl restart {{ required ".Values.worker.containerRuntimeSystemdService is required" .Values.worker.containerRuntimeSystemdService }}
               sleep 30
             else
               sleep $SLEEP_SECONDS
             fi
           done
         }
-        function containerd_monitoring {
-          echo "ContainerD monitor has started !"
-          while [ 1 ]; do
-            if ! timeout 60 ctr c list > /dev/null; then
-              echo "ContainerD daemon failed!"
-              pkill containerd
-              sleep 30
-            else
-              sleep $SLEEP_SECONDS
-            fi
-          done
-        }
+
         function kubelet_monitoring {
           echo "Wait for 2 minutes for kubelet to be functional"
           sleep 120
@@ -146,10 +135,8 @@
         SLEEP_SECONDS=10
         component=$1
         echo "Start kubernetes health monitoring for $component"
-        if [[ $component == "docker" ]]; then
-          docker_monitoring
-        elif [[ $component == "containerd" ]]; then
-          containerd_monitoring
+        if [[ $component == "CRI" ]]; then
+          CRI_shim_monitoring
         elif [[ $component == "kubelet" ]]; then
           kubelet_monitoring
         else

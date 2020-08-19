@@ -8,6 +8,9 @@ worker:
   secretName: cloud-config-cpu-worker-ab234
   cloudConfig: generated-original-cloud-config-data
   command: /usr/bin/reload --path=<path>
+  cri:
+    name: docker
+    socket: unix:///var/run/dockershim.sock
   units:
   - kubelet.service
 #  kubeletDataVolume:

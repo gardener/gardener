@@ -1,0 +1,32 @@
+{{- define "cri-files" -}}
+- path: /var/lib/gardener-node-bootstrap/pod-sandbox-config-gardener-bootstrap-kubelet.json
+  permissions: 0644
+  content:
+    inline:
+      encoding: b64
+      data: {{ include "pod-sandbox-config-gardener-bootstrap-kubelet" . | b64enc }}
+- path: /var/lib/gardener-node-bootstrap/pod-sandbox-config-gardener-bootstrap-kubectl.json
+  permissions: 0644
+  content:
+    inline:
+      encoding: b64
+      data: {{ include "pod-sandbox-config-gardener-bootstrap-kubectl" . | b64enc }}
+- path: /var/lib/gardener-node-bootstrap/container-config-extract-kubelet.json
+  permissions: 0644
+  content:
+    inline:
+      encoding: b64
+      data: {{ include "container-config-extract-kubelet" . | b64enc }}
+- path: /var/lib/gardener-node-bootstrap/container-config-extract-kubectl.json
+  permissions: 0644
+  content:
+    inline:
+      encoding: b64
+      data: {{ include "container-config-extract-kubectl" . | b64enc }}
+- path: /var/lib/gardener-node-bootstrap/clean-sandbox-script.sh
+  permissions: 0744
+  content:
+    inline:
+      encoding: b64
+      data: {{ include "clean-sandbox-script" . | b64enc }}
+{{- end -}}

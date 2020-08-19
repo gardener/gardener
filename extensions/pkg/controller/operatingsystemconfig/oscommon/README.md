@@ -38,7 +38,7 @@ status:
       namespace: default
   command: <machine configuration command>
   units:
-  - docker-monitor.service
+  - health-monitor.service
   - kubelet-monitor.service
   - kubelet.service
 ```

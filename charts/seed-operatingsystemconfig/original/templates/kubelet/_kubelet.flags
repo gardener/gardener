@@ -24,10 +24,8 @@
 {{- end }}
 --volume-plugin-dir=/var/lib/kubelet/volumeplugins
 --v=2 $KUBELET_EXTRA_ARGS
-{{- if .Values.worker.cri }}
-{{- if eq .Values.worker.cri.name .Values.osc.cri.names.containerd }}
+{{- if ne .Values.worker.cri.name .Values.osc.cri.names.docker }}
 --container-runtime=remote
---container-runtime-endpoint=unix:///run/containerd/containerd.sock
-{{- end -}}
+--container-runtime-endpoint={{ required ".Values.cri.socket is required" .Values.worker.cri.socket }}
 {{- end -}}
 {{- end -}}

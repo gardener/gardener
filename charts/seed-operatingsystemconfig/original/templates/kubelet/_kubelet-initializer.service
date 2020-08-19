@@ -1,0 +1,20 @@
+{{- define "kubelet-initializer" -}}
+- name: kubelet-initializer.service
+  command: start
+  enable: true
+  content: |
+    [Unit]
+    Description=Service to extract the kubelet binary to /opt/bin/kubelet
+    After={{ required ".Values.worker.containerRuntimeSystemdService is required" .Values.worker.containerRuntimeSystemdService }}
+    {{- if eq .Values.worker.cri.name .Values.osc.cri.names.docker }}
+    Wants=docker.socket
+    {{- else }}
+    After=download-crictl.service
+    {{- end }}
+    [Install]
+    WantedBy=multi-user.target
+    [Service]
+    Restart=on-failure
+    RemainAfterExit=true
+    ExecStart=/opt/bin/init-kubelet
+{{- end -}}

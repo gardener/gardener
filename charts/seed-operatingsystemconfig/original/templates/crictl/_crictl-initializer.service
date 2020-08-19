@@ -1,0 +1,15 @@
+{{- define "download-crictl" -}}
+- name: download-crictl.service
+  command: start
+  enable: true
+  content: |
+    [Unit]
+    Description=Crictl downloader
+    After=network.target local-fs.target
+    [Install]
+    WantedBy=multi-user.target
+    [Service]
+    Restart=on-failure
+    RemainAfterExit=true
+    ExecStart=/opt/bin/download-crictl
+{{- end -}}

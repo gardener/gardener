@@ -19,10 +19,8 @@ spec:
   providerConfig:
 {{ .Values.providerConfig | indent 4 }}
   {{- end }}
-  {{- if .Values.cri }}
   criConfig:
     name: {{ .Values.cri.name }}
-  {{- end }}
   units:
   - name: cloud-config-downloader.service
     command: start
@@ -30,8 +28,11 @@ spec:
     content: |
       [Unit]
       Description=Downloads the actual cloud config from the Shoot API server and executes it
-      After=docker.service docker.socket
+      After={{ required ".Values.containerRuntimeSystemdService is required" .Values.containerRuntimeSystemdService }}
+      {{- if eq .Values.cri.name "docker" }}
+      After=docker.socket
       Wants=docker.socket
+      {{- end }}
       [Service]
       Restart=always
       RestartSec=30

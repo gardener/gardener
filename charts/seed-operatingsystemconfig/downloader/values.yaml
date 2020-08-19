@@ -6,5 +6,7 @@ annotationCurrentTimestamp: 2020-05-06T10:18:01Z
 #providerConfig:
 #  some-provider-specific-config
 
-# cri:
-#   name: containerd
+containerRuntimeSystemdService: docker.service
+cri:
+  name: docker
+  socket: unix:///var/run/dockershim.sock

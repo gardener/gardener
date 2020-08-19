@@ -1,0 +1,8 @@
+{{- define "crictl-config-file" -}}
+- path: /etc/crictl.yaml
+  permissions: 0644
+  content:
+    inline:
+      encoding: b64
+      data: {{ include "crictl-config" . | b64enc }}
+{{- end -}}
