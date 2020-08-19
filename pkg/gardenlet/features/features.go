@@ -26,8 +26,8 @@ var (
 	FeatureGate  = featuregate.NewFeatureGate()
 	featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 		features.Logging:              {Default: false, PreRelease: featuregate.Alpha},
-		features.HVPA:                 {Default: false, PreRelease: featuregate.Alpha},
-		features.HVPAForShootedSeed:   {Default: false, PreRelease: featuregate.Alpha},
+		features.HVPA:                 {Default: true, PreRelease: featuregate.Beta},
+		features.HVPAForShootedSeed:   {Default: true, PreRelease: featuregate.Beta},
 		features.ManagedIstio:         {Default: false, PreRelease: featuregate.Alpha},
 		features.KonnectivityTunnel:   {Default: false, PreRelease: featuregate.Alpha},
 		features.APIServerSNI:         {Default: false, PreRelease: featuregate.Alpha},

@@ -33,12 +33,12 @@ const (
 
 	// HVPA enables simultaneous horizontal and vertical scaling in Seed Clusters.
 	// owner @ggaurav10, @amshuman-kr
-	// alpha: v0.31.0
+	// alpha: v0.31.0, beta: v1.9.0
 	HVPA featuregate.Feature = "HVPA"
 
 	// HVPAForShootedSeed enables simultaneous horizontal and vertical scaling in shooted seed Clusters.
 	// owner @ggaurav10, @amshuman-kr
-	// alpha: v0.32.0
+	// alpha: v0.32.0, beta: v1.9.0
 	HVPAForShootedSeed featuregate.Feature = "HVPAForShootedSeed"
 
 	// ManagedIstio installs minimal Istio components in istio-system.
