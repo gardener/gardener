@@ -103,6 +103,11 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Name: "Deploying Shoot namespace in Seed",
 			Fn:   flow.TaskFn(botanist.DeployNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
+		deploySeedLogging = g.Add(flow.Task{
+			Name:         "Deploying shoot logging stack in Seed",
+			Fn:           flow.TaskFn(botanist.DeploySeedLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployNamespace),
+		})
 		ensureShootClusterIdentity = g.Add(flow.Task{
 			Name:         "Ensuring Shoot cluster identity",
 			Fn:           flow.TaskFn(botanist.EnsureClusterIdentity).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -347,11 +352,6 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Name:         "Deploying Shoot monitoring stack in Seed",
 			Fn:           flow.TaskFn(botanist.DeploySeedMonitoring).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady).InsertIf(!staticNodesCIDR, waitUntilInfrastructureReady),
-		})
-		deploySeedLogging = g.Add(flow.Task{
-			Name:         "Deploying shoot logging stack in Seed",
-			Fn:           flow.TaskFn(botanist.DeploySeedLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilTunnelConnectionExists, waitUntilWorkerReady),
 		})
 		deployClusterAutoscaler = g.Add(flow.Task{
 			Name:         "Deploying cluster autoscaler",
