@@ -4,12 +4,14 @@ kind: ConfigMap
 metadata:
   name: kube-scheduler-config
   namespace: {{ .Release.Namespace }}
+  labels:
+    {{- toYaml .Values.labels | nindent 4 }}
 data:
-  config.yaml: |-
+  {{ .Values.volumes.config.dataKey }}: |-
     ---
     apiVersion: {{ include "kube-scheduler.componentconfigversion" . }}
     kind: KubeSchedulerConfiguration
     clientConnection:
-      kubeconfig: /var/lib/kube-scheduler/kubeconfig
+      kubeconfig: {{ .Values.volumes.kubeconfig.mountPath }}/kubeconfig
     leaderElection:
       leaderElect: true

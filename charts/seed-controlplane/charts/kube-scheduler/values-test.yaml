@@ -1,0 +1,36 @@
+kubernetesVersion: 1.13.1
+replicas: 1
+labels:
+  app: kubernetes
+  garden.sapcloud.io/role: controlplane
+  role: scheduler
+podLabels:
+  networking.gardener.cloud/from-prometheus: allowed
+  networking.gardener.cloud/to-dns: allowed
+  networking.gardener.cloud/to-shoot-apiserver: allowed
+podAnnotations:
+  checksum/foo: bar
+featureGates: {}
+images:
+  kube-scheduler: image-repository
+resources: {}
+kubeMaxPDVols: "30"
+
+volumes:
+  kubeconfig:
+    name: kube-scheduler
+    secretName: kube-scheduler
+    mountPath: /var/lib/kube-scheduler
+  server:
+    name: kube-scheduler-server
+    secretName: kube-scheduler-server
+    mountPath: /var/lib/kube-scheduler-server
+  config:
+    name: kube-scheduler-config
+    configMapName: kube-scheduler-config
+    mountPath: /var/lib/kube-scheduler-config
+    dataKey: config.yaml
+
+ports:
+  metrics:
+    name: metrics

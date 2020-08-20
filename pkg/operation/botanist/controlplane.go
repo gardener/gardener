@@ -35,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -1309,17 +1308,18 @@ func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
 
 // DefaultKubeScheduler returns a deployer for the kube-scheduler.
 func (b *Botanist) DefaultKubeScheduler() (controlplane.KubeScheduler, error) {
-	image, err := b.ImageVector.FindImage(common.KubeSchedulerImageName, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	images, err := b.FindSeedShootImages(common.KubeSchedulerImageName)
 	if err != nil {
 		return nil, err
 	}
 
 	return controlplane.NewKubeScheduler(
-		b.K8sSeedClient.DirectClient(),
+		b.K8sSeedClient.ChartApplier(),
+		chartPathControlPlane,
 		b.Shoot.SeedNamespace,
 		b.Shoot.Info.Spec.Kubernetes.Version,
-		image.String(),
-		int32(b.Shoot.GetReplicas(1)),
+		images,
+		b.Shoot.GetReplicas(1),
 		b.Shoot.Info.Spec.Kubernetes.KubeScheduler,
 	)
 }

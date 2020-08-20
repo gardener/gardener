@@ -293,7 +293,7 @@ func (s *Shoot) ComputeCloudConfigSecretName(workerName string) string {
 }
 
 // GetReplicas returns the given <wokenUp> number if the shoot is not hibernated, or zero otherwise.
-func (s *Shoot) GetReplicas(wokenUp int) int {
+func (s *Shoot) GetReplicas(wokenUp int32) int32 {
 	if s.HibernationEnabled {
 		return 0
 	}

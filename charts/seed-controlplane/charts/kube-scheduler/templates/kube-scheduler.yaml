@@ -1,11 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: kube-scheduler
+  name: {{ .Release.Name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    app: kubernetes
-    role: scheduler
+    {{- toYaml .Values.labels | nindent 4 }}
 spec:
   type: ClusterIP
   clusterIP: None
@@ -14,8 +13,7 @@ spec:
     port: {{ include "kube-scheduler.port" . }}
     protocol: TCP
   selector:
-    app: kubernetes
-    role: scheduler
+    {{- toYaml .Values.labels | nindent 4 }}
 ---
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
@@ -23,30 +21,23 @@ metadata:
   name: kube-scheduler
   namespace: {{ .Release.Namespace }}
   labels:
-    garden.sapcloud.io/role: controlplane
-    app: kubernetes
-    role: scheduler
+    {{- toYaml .Values.labels | nindent 4 }}
 spec:
   revisionHistoryLimit: 0
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
-      app: kubernetes
-      role: scheduler
+      {{- toYaml .Values.labels | nindent 6 }}
   template:
     metadata:
       annotations:
         checksum/configmap-componentconfig: {{ include (print $.Template.BasePath "/componentconfig.yaml") . | sha256sum }}
-{{- if .Values.podAnnotations }}
-{{ toYaml .Values.podAnnotations | indent 8 }}
-{{- end }}
+        {{- if .Values.podAnnotations }}
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+        {{- end }}
       labels:
-        garden.sapcloud.io/role: controlplane
-        app: kubernetes
-        role: scheduler
-        networking.gardener.cloud/to-dns: allowed
-        networking.gardener.cloud/to-shoot-apiserver: allowed
-        networking.gardener.cloud/from-prometheus: allowed
+        {{- toYaml .Values.labels | nindent 8 }}
+        {{- toYaml .Values.podLabels | nindent 8 }}
     spec:
       containers:
       - name: kube-scheduler
@@ -63,13 +54,13 @@ spec:
         {{- else }}
         - /usr/local/bin/kube-scheduler
         {{- end }}
-        - --config=/var/lib/kube-scheduler-config/config.yaml
+        - --config={{ .Values.volumes.config.mountPath }}/{{ .Values.volumes.config.dataKey }}
         {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
-        - --authentication-kubeconfig=/var/lib/kube-scheduler/kubeconfig
-        - --authorization-kubeconfig=/var/lib/kube-scheduler/kubeconfig
-        - --client-ca-file=/var/lib/kube-scheduler-server/ca.crt
-        - --tls-cert-file=/var/lib/kube-scheduler-server/kube-scheduler-server.crt
-        - --tls-private-key-file=/var/lib/kube-scheduler-server/kube-scheduler-server.key
+        - --authentication-kubeconfig={{ .Values.volumes.kubeconfig.mountPath }}/kubeconfig
+        - --authorization-kubeconfig={{ .Values.volumes.kubeconfig.mountPath }}/kubeconfig
+        - --client-ca-file={{ .Values.volumes.server.mountPath }}/ca.crt
+        - --tls-cert-file={{ .Values.volumes.server.mountPath }}/kube-scheduler-server.crt
+        - --tls-private-key-file={{ .Values.volumes.server.mountPath }}/kube-scheduler-server.key
         - --secure-port={{ include "kube-scheduler.port" . }}
         - --port=0
         {{- end }}
@@ -90,9 +81,9 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 15
         ports:
-        - name: metrics
+        - name: {{ .Values.ports.metrics.name }}
           containerPort: {{ include "kube-scheduler.port" . }}
-          protocol: TCP
+          protocol: {{ .Values.ports.metrics.protocol }}
         {{- if .Values.kubeMaxPDVols }}
         env:
         - name: KUBE_MAX_PD_VOLS
@@ -102,26 +93,26 @@ spec:
         terminationMessagePolicy: File
         {{- if .Values.resources }}
         resources:
-{{ toYaml .Values.resources | indent 10 }}
+          {{- toYaml .Values.resources | nindent 10 }}
         {{- end }}
         volumeMounts:
-        - name: kube-scheduler
-          mountPath: /var/lib/kube-scheduler
-        - name: kube-scheduler-server
-          mountPath: /var/lib/kube-scheduler-server
-        - name: kube-scheduler-config
-          mountPath: /var/lib/kube-scheduler-config
+        - name: {{ .Values.volumes.kubeconfig.name }}
+          mountPath: {{ .Values.volumes.kubeconfig.mountPath }}
+        - name: {{ .Values.volumes.server.name }}
+          mountPath: {{ .Values.volumes.server.mountPath }}
+        - name: {{ .Values.volumes.config.name }}
+          mountPath: {{ .Values.volumes.config.mountPath }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
       terminationGracePeriodSeconds: 30
       volumes:
-      - name: kube-scheduler
+      - name: {{ .Values.volumes.kubeconfig.name }}
         secret:
-          secretName: kube-scheduler
-      - name: kube-scheduler-server
+          secretName: {{ .Values.volumes.kubeconfig.secretName }}
+      - name: {{ .Values.volumes.server.name }}
         secret:
-          secretName: kube-scheduler-server
-      - name: kube-scheduler-config
+          secretName: {{ .Values.volumes.server.secretName }}
+      - name: {{ .Values.volumes.config.name }}
         configMap:
-          name: kube-scheduler-config
+          name: {{ .Values.volumes.config.configMapName }}

@@ -3,10 +3,12 @@ kind: VerticalPodAutoscaler
 metadata:
   name: kube-scheduler-vpa
   namespace: {{ .Release.Namespace }}
+  labels:
+    {{- toYaml .Values.labels | nindent 4 }}
 spec:
   targetRef:
     apiVersion: {{ include "deploymentversion" . }}
     kind: Deployment
-    name: kube-scheduler
+    name: {{ .Release.Name }}
   updatePolicy:
     updateMode: "Auto"

@@ -182,8 +182,8 @@ func CopyValues(values map[string]interface{}) map[string]interface{} {
 }
 
 // ImageMapToValues transforms the given image name to image mapping into chart Values.
-func ImageMapToValues(m map[string]*imagevector.Image) map[string]interface{} {
-	out := make(map[string]interface{}, len(m))
+func ImageMapToValues(m map[string]*imagevector.Image) map[string]string {
+	out := make(map[string]string, len(m))
 	for k, v := range m {
 		out[k] = v.String()
 	}

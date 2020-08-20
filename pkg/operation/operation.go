@@ -424,6 +424,21 @@ func (o *Operation) InjectShootShootImages(values map[string]interface{}, names 
 	return chart.InjectImages(values, o.ImageVector, names, imagevector.RuntimeVersion(o.ShootVersion()), imagevector.TargetVersion(o.ShootVersion()))
 }
 
+// FindSeedSeedImages finds images that shall run on the Seed and target the Seed's Kubernetes version.
+func (o *Operation) FindSeedSeedImages(names ...string) (map[string]*imagevector.Image, error) {
+	return imagevector.FindImages(o.ImageVector, names, imagevector.RuntimeVersion(o.SeedVersion()), imagevector.TargetVersion(o.SeedVersion()))
+}
+
+// FindSeedShootImages finds images that shall run on the Seed but target the Shoot's Kubernetes version.
+func (o *Operation) FindSeedShootImages(names ...string) (map[string]*imagevector.Image, error) {
+	return imagevector.FindImages(o.ImageVector, names, imagevector.RuntimeVersion(o.SeedVersion()), imagevector.TargetVersion(o.ShootVersion()))
+}
+
+// FindShootShootImages finds images that shall run on the Shoot and target the Shoot's Kubernetes version.
+func (o *Operation) FindShootShootImages(names ...string) (map[string]*imagevector.Image, error) {
+	return imagevector.FindImages(o.ImageVector, names, imagevector.RuntimeVersion(o.ShootVersion()), imagevector.TargetVersion(o.ShootVersion()))
+}
+
 // EnsureShootStateExists creates the ShootState resource for the corresponding shoot and sets its ownerReferences to the Shoot.
 func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 	shootState := &gardencorev1alpha1.ShootState{
