@@ -32,6 +32,7 @@
 * [Seed Bootstrapping](usage/seed_bootstrapping.md)
 * [Seed Settings](usage/seed_settings.md)
 * [Shoot cluster purposes](usage/shoot_purposes.md)
+* [Shoot status](usage/shoot_status.md)
 * [Shoot Kubernetes and Operating System versioning](usage/shoot_versions.md)
 * [Shoot Maintenance](usage/shoot_maintenance.md)
 * [Supported Kubernetes versions](usage/supported_k8s_versions.md)

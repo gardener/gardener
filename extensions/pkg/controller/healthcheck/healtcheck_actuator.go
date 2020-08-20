@@ -103,7 +103,7 @@ type checkResultForConditionType struct {
 }
 
 // ExecuteHealthCheckFunctions executes all the health check functions, injects clients and logger & aggregates the results.
-// returns an Result for each HealthConditionTyp (e.g  ControlPlaneHealthy)
+// returns an Result for each HealthConditionType (e.g  ControlPlaneHealthy)
 func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request types.NamespacedName) (*[]Result, error) {
 	_, shootClient, err := util.NewClientForShoot(ctx, a.seedClient, request.Namespace, client.Options{})
 	if err != nil {
