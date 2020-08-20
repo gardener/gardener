@@ -357,9 +357,16 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 				}
 			}
 
-			// If the shoot get hibernated we want to wait until all wanted machine deployments have been deleted
-			// entirely.
+			// We want to wait until all wanted machine deployments have as many
+			// available replicas as desired (specified in the .spec.replicas).
+			// However, if we see any error in the status of the deployment then we return it.
+			if machineErrs := workerhelper.ReportFailedMachines(deployment.Status); machineErrs != nil {
+				return retryutils.SevereError(machineErrs)
+			}
+
 			numberOfAwakeMachines += deployment.Status.Replicas
+
+			// Skip further checks if cluster is hibernated because MachineControllerManager is usually scaled down during hibernation.
 			if controller.IsHibernated(cluster) {
 				continue
 			}
@@ -368,13 +375,6 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			// machine class for the machine deployment is deployed by the machine controller manager
 			if machineSet := workerhelper.GetMachineSetWithMachineClass(wantedDeployment.Name, wantedDeployment.ClassName, ownerReferenceToMachineSet); machineSet == nil {
 				return retryutils.MinorError(fmt.Errorf("waiting for the machine controller manager to create the updated machine set for the machine deployment (%s/%s)", deployment.Namespace, deployment.Name))
-			}
-
-			// If the Shoot is not hibernated we want to wait until all wanted machine deployments have as many
-			// available replicas as desired (specified in the .spec.replicas). However, if we see any error in the
-			// status of the deployment then we return it.
-			for _, failedMachine := range deployment.Status.FailedMachines {
-				return retryutils.SevereError(fmt.Errorf("machine %s failed: %s", failedMachine.Name, failedMachine.LastOperation.Description))
 			}
 
 			// If the Shoot is not hibernated we want to wait until all wanted machine deployments have as many

@@ -19,6 +19,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -148,5 +150,71 @@ var _ = Describe("Helper Tests", func() {
 		Entry("should not find machine set - unknown machine deployment name", "unknown-machine-deployment", machineClassName, ownerReferenceToMachineSet, nil),
 
 		Entry("should not find machine set - unknown machine class", machineDeploymentName, "unknown-machine-class", ownerReferenceToMachineSet, nil),
+	)
+
+	DescribeTable("#ReportFailedMachines",
+		func(status machinev1alpha1.MachineDeploymentStatus, matcher gomegatypes.GomegaMatcher) {
+			err := ReportFailedMachines(status)
+			Expect(err).To(matcher)
+		},
+		Entry("error should be nil because no failed machines in status", machinev1alpha1.MachineDeploymentStatus{}, Succeed()),
+		Entry("error should have one name and one description",
+			machinev1alpha1.MachineDeploymentStatus{
+				FailedMachines: []*machinev1alpha1.MachineSummary{
+					{
+						Name:          "machine1",
+						LastOperation: machinev1alpha1.LastOperation{Description: "foo"},
+					},
+				},
+			},
+			PointTo(MatchFields(IgnoreExtras, Fields{
+				"Errors": ConsistOf(MatchError("\"machine1\": foo")),
+			})),
+		),
+		Entry("error should have multiple names and one description",
+			machinev1alpha1.MachineDeploymentStatus{
+				FailedMachines: []*machinev1alpha1.MachineSummary{
+					{
+						Name:          "machine1",
+						LastOperation: machinev1alpha1.LastOperation{Description: "foo"},
+					},
+					{
+						Name:          "machine2",
+						LastOperation: machinev1alpha1.LastOperation{Description: "foo"},
+					},
+					{
+						Name:          "machine3",
+						LastOperation: machinev1alpha1.LastOperation{Description: "foo"},
+					},
+				},
+			},
+			PointTo(MatchFields(IgnoreExtras, Fields{
+				"Errors": ConsistOf(MatchError("\"machine1\", \"machine2\", \"machine3\": foo")),
+			})),
+		),
+		Entry("error should have multiple names and multiple descriptions",
+			machinev1alpha1.MachineDeploymentStatus{
+				FailedMachines: []*machinev1alpha1.MachineSummary{
+					{
+						Name:          "machine1",
+						LastOperation: machinev1alpha1.LastOperation{Description: "foo"},
+					},
+					{
+						Name:          "machine2",
+						LastOperation: machinev1alpha1.LastOperation{Description: "bar"},
+					},
+					{
+						Name:          "machine3",
+						LastOperation: machinev1alpha1.LastOperation{Description: "foo"},
+					},
+				},
+			},
+			PointTo(MatchFields(IgnoreExtras, Fields{
+				"Errors": ConsistOf(
+					MatchError("\"machine1\", \"machine3\": foo"),
+					MatchError("\"machine2\": bar"),
+				),
+			})),
+		),
 	)
 })
