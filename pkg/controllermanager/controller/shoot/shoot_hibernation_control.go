@@ -202,7 +202,7 @@ func (c *Controller) reconcileShootHibernationKey(key string) error {
 		return nil
 	}
 	if err != nil {
-		logger.Debugf("Unable to retrieve object from store: %v", key, err)
+		logger.Debugf("Unable to retrieve object %q from store: %v", key, err)
 		return err
 	}
 

@@ -69,3 +69,18 @@ In order to activate it, provide the following configuration:
 
 > :warning: In addition, you should also configure the `--event-ttl` for the kube-apiserver to define an upper-limit of how long Shoot-related events should be stored.
 The `--event-ttl` should be larger than the `ttlNonShootEvents` or this controller will have no effect.
+
+### Shoot Reference Controller
+
+Shoot objects may specify references to further objects in the Garden cluster which are required for certain features.
+For example, users can configure various DNS providers via `.spec.dns.providers` and usually need to refer to a corresponding `secret` with valid DNS provider credentials inside.
+Such objects need a special protection against deletion requests as long as they are still being referenced by one or multiple shoots.
+
+Therefore, the Shoot Reference Controller scans shoot clusters for referenced objects and adds the finalizer `gardener.cloud/reference-protection` to their `.metadata.finalizers` list.
+The scanned shoot also gets this finalizer to enable a proper garbage collection in case the Gardener-Controller-Manager is offline at the moment of an incoming deletion request.
+When an object is not actively referenced any more because the shoot specification has changed or all related shoots were deleted (are in deletion), the controller will remove the added finalizer again, so that the object can safely be deleted or garbage collected.
+
+The Shoot Reference Controller inspects the following references:
+- DNS provider secrets (`.spec.dns.provider`)
+
+Further checks might be added in the future.

@@ -23,6 +23,8 @@ controllers:
   shootQuota:
     concurrentSyncs: 5
     syncPeriod: 60m
+  shootReference:
+    concurrentSyncs: 5
   project:
     concurrentSyncs: 5
     minimumLifetimeDays: 30

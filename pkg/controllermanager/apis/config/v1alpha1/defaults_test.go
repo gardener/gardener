@@ -69,6 +69,9 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.Seed.SyncPeriod).To(Equal(metav1.Duration{Duration: 30 * time.Second}))
 			Expect(obj.Controllers.Seed.MonitorPeriod).To(PointTo(Equal(metav1.Duration{Duration: 40 * time.Second})))
 			Expect(obj.Controllers.Seed.ShootMonitorPeriod).To(PointTo(Equal(metav1.Duration{Duration: 200 * time.Second})))
+
+			Expect(obj.Controllers.ShootReference).NotTo(BeNil())
+			Expect(obj.Controllers.ShootReference.ConcurrentSyncs).To(Equal(5))
 		})
 	})
 	Describe("#SetDefaults_EventControllerConfiguration", func() {
