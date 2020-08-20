@@ -66,7 +66,7 @@ type Values struct {
 
 // New creates a new instance of DeployWaiter for a Network.
 func New(
-	logger *logrus.Entry,
+	logger logrus.FieldLogger,
 	client client.Client,
 	values *Values,
 	waitInterval time.Duration,
@@ -85,7 +85,7 @@ func New(
 
 type network struct {
 	values              *Values
-	logger              *logrus.Entry
+	logger              logrus.FieldLogger
 	client              client.Client
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration

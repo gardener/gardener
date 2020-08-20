@@ -49,7 +49,7 @@ var _ = Describe("#KubeAPIServerService", func() {
 		ctx                context.Context
 		c                  client.Client
 		expected           *corev1.Service
-		log                *logrus.Entry
+		log                logrus.FieldLogger
 		defaultDepWaiter   component.DeployWaiter
 		ingressIP          string
 		clusterIP          string
@@ -63,7 +63,7 @@ var _ = Describe("#KubeAPIServerService", func() {
 
 	BeforeEach(func() {
 		ctx = context.TODO()
-		log = logrus.NewEntry(logger.NewNopLogger())
+		log = logger.NewNopLogger()
 
 		s := runtime.NewScheme()
 		Expect(corev1.AddToScheme(s)).NotTo(HaveOccurred())

@@ -49,7 +49,7 @@ func NewKubeAPIService(
 	sniServiceKey *client.ObjectKey,
 	applier kubernetes.ChartApplier,
 	chartsRootPath string,
-	logger *logrus.Entry,
+	logger logrus.FieldLogger,
 	client client.Client,
 	waiter retry.Ops,
 	clusterIPFunc func(clusterIP string),
@@ -171,7 +171,7 @@ type kubeAPIService struct {
 	sniService *client.ObjectKey
 	kubernetes.ChartApplier
 	chartPath     string
-	logger        *logrus.Entry
+	logger        logrus.FieldLogger
 	client        client.Client
 	waiter        retry.Ops
 	clusterIPFunc func(clusterIP string)

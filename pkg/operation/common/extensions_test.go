@@ -48,7 +48,7 @@ import (
 var _ = Describe("extensions", func() {
 	var (
 		ctx     context.Context
-		log     *logrus.Entry
+		log     logrus.FieldLogger
 		ctrl    *gomock.Controller
 		mockNow *mocktime.MockNow
 		now     time.Time
@@ -67,7 +67,7 @@ var _ = Describe("extensions", func() {
 
 	BeforeEach(func() {
 		ctx = context.TODO()
-		log = logrus.NewEntry(logger.NewNopLogger())
+		log = logger.NewNopLogger()
 		ctrl = gomock.NewController(GinkgoT())
 		mockNow = mocktime.NewMockNow(ctrl)
 

@@ -74,7 +74,7 @@ type Values struct {
 
 // New creates a new instance of an Infrastructure deployer.
 func New(
-	logger *logrus.Entry,
+	logger logrus.FieldLogger,
 	client client.Client,
 	values *Values,
 ) shoot.Infrastructure {
@@ -90,7 +90,7 @@ func New(
 
 type infrastructure struct {
 	values              *Values
-	logger              *logrus.Entry
+	logger              logrus.FieldLogger
 	client              client.Client
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
