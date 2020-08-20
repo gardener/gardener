@@ -360,8 +360,8 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			// We want to wait until all wanted machine deployments have as many
 			// available replicas as desired (specified in the .spec.replicas).
 			// However, if we see any error in the status of the deployment then we return it.
-			for _, failedMachine := range deployment.Status.FailedMachines {
-				return retryutils.SevereError(fmt.Errorf("machine %s failed: %s", failedMachine.Name, failedMachine.LastOperation.Description))
+			if machineErrs := workerhelper.ReportFailedMachines(deployment.Status); machineErrs != nil {
+				return retryutils.SevereError(machineErrs)
 			}
 
 			numberOfAwakeMachines += deployment.Status.Replicas
