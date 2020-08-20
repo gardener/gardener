@@ -43,11 +43,11 @@ import (
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -58,6 +58,7 @@ import (
 	auditv1alpha1 "k8s.io/apiserver/pkg/apis/audit/v1alpha1"
 	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
 	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
+	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -1147,38 +1148,33 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	// If HVPA feature gate is enabled then we should delete the old HPA and VPA resources as
 	// the HVPA controller will create its own for the kube-apiserver deployment.
 	if hvpaEnabled {
-		for _, obj := range []struct {
-			apiGroup string
-			version  string
-			kind     string
-			name     string
-		}{
-			{"autoscaling", "v2beta1", "HorizontalPodAutoscaler", v1beta1constants.DeploymentNameKubeAPIServer},
-			{"autoscaling.k8s.io", "v1beta2", "VerticalPodAutoscaler", v1beta1constants.DeploymentNameKubeAPIServer + "-vpa"},
+		for _, obj := range []runtime.Object{
+			&autoscalingv2beta1.HorizontalPodAutoscaler{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: b.Shoot.SeedNamespace,
+					Name:      v1beta1constants.DeploymentNameKubeAPIServer,
+				},
+			},
+			&autoscalingv1beta2.VerticalPodAutoscaler{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: b.Shoot.SeedNamespace,
+					Name:      v1beta1constants.DeploymentNameKubeAPIServer + "-vpa",
+				},
+			},
 		} {
-			u := &unstructured.Unstructured{}
-			u.SetName(obj.name)
-			u.SetNamespace(b.Shoot.SeedNamespace)
-			u.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   obj.apiGroup,
-				Version: obj.version,
-				Kind:    obj.kind,
-			})
-			if err := b.K8sSeedClient.Client().Delete(context.TODO(), u); client.IgnoreNotFound(err) != nil {
+			if err := b.K8sSeedClient.Client().Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
 				return err
 			}
 		}
 	} else {
 		// If HVPA is disabled, delete any HVPA that was already deployed
-		u := &unstructured.Unstructured{}
-		u.SetName(v1beta1constants.DeploymentNameKubeAPIServer)
-		u.SetNamespace(b.Shoot.SeedNamespace)
-		u.SetGroupVersionKind(schema.GroupVersionKind{
-			Group:   "autoscaling.k8s.io",
-			Version: "v1alpha1",
-			Kind:    "Hvpa",
-		})
-		if err := b.K8sSeedClient.Client().Delete(context.TODO(), u); err != nil {
+		hvpa := &hvpav1alpha1.Hvpa{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      v1beta1constants.DeploymentNameKubeAPIServer,
+			},
+		}
+		if err := b.K8sSeedClient.Client().Delete(ctx, hvpa); err != nil {
 			if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
 				return err
 			}
@@ -1605,15 +1601,13 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 
 		if !hvpaEnabled {
 			// If HVPA is disabled, delete any HVPA that was already deployed
-			u := &unstructured.Unstructured{}
-			u.SetName(name)
-			u.SetNamespace(b.Shoot.SeedNamespace)
-			u.SetGroupVersionKind(schema.GroupVersionKind{
-				Group:   "autoscaling.k8s.io",
-				Version: "v1alpha1",
-				Kind:    "Hvpa",
-			})
-			if err := b.K8sSeedClient.Client().Delete(ctx, u); err != nil {
+			hvpa := &hvpav1alpha1.Hvpa{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: b.Shoot.SeedNamespace,
+					Name:      name,
+				},
+			}
+			if err := b.K8sSeedClient.Client().Delete(ctx, hvpa); err != nil {
 				if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
 					return err
 				}
