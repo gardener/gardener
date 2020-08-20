@@ -19,6 +19,7 @@ import (
 
 	"github.com/onsi/gomega/format"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -40,16 +41,23 @@ func (m *deepDerivativeMatcher) Match(actual interface{}) (success bool, err err
 }
 
 func (m *deepDerivativeMatcher) FailureMessage(actual interface{}) (message string) {
-	actualString, actualOK := actual.(string)
-	expectedString, expectedOK := m.expected.(string)
+	actualYAML, actualErr := yaml.Marshal(actual)
+	expectedYAML, expectedErr := yaml.Marshal(m.expected)
 
-	if actualOK && expectedOK {
-		return format.MessageWithDiff(actualString, "to deep derivative equal", expectedString)
+	if actualErr == nil && expectedErr == nil {
+		return format.MessageWithDiff(string(actualYAML), "to deep derivative equal", string(expectedYAML))
 	}
 
 	return format.Message(actual, "to deep derivative equal", m.expected)
 }
 
 func (m *deepDerivativeMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+	actualYAML, actualErr := yaml.Marshal(actual)
+	expectedYAML, expectedErr := yaml.Marshal(m.expected)
+
+	if actualErr == nil && expectedErr == nil {
+		return format.MessageWithDiff(string(actualYAML), "not to deep derivative equal", string(expectedYAML))
+	}
+
 	return format.Message(actual, "not to deep derivative equal", m.expected)
 }
