@@ -29,6 +29,9 @@ docker run -d --name kube-apiserver -l $LABEL $ADD_HOSTS --network gardener-dev 
   --tls-cert-file="/certs/kube-apiserver.crt" \
   --tls-private-key-file="/keys/kube-apiserver.key" \
   --requestheader-client-ca-file="/certs/ca.crt" \
+  --requestheader-extra-headers-prefix=X-Remote-Extra- \
+  --requestheader-group-headers=X-Remote-Group \
+  --requestheader-username-headers=X-Remote-User \
   --client-ca-file="/certs/ca.crt" \
   --proxy-client-key-file="/keys/front-proxy-client.key" \
   --proxy-client-cert-file="/certs/front-proxy-client.crt" \
