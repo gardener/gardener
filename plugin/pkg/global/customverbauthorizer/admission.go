@@ -176,8 +176,10 @@ func mustCheckProjectMembers(oldMembers, members []core.ProjectMember, owner *rb
 	var oldHumanUsers, newHumanUsers = findHumanUsers(oldMembers), findHumanUsers(members)
 	// Remove owner subject from `members` list to always allow it to be added
 	if owner != nil && isHumanUser(*owner) {
+		oldHumanUsers.Delete(humanMemberKey(*owner))
 		newHumanUsers.Delete(humanMemberKey(*owner))
 	}
+
 	return !oldHumanUsers.Equal(newHumanUsers)
 }
 
