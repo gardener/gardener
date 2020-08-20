@@ -1,6 +1,7 @@
 kubernetesVersion: 1.13.1
 replicas: 1
 podAnnotations: {}
+podLabels: {}
 featureGates: {}
   # CustomResourceValidation: true
   # RotateKubeletServerCertificate: false
