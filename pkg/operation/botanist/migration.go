@@ -32,15 +32,12 @@ import (
 
 // AnnotateExtensionCRsForMigration annotates extension CRs with migrate operation annotation
 func (b *Botanist) AnnotateExtensionCRsForMigration(ctx context.Context) (err error) {
-	if err = b.Shoot.Components.Extensions.Network.Migrate(ctx); err != nil {
-		return err
-	}
-
 	var fns []flow.TaskFn
 	fns, err = b.applyFuncToAllExtensionCRs(ctx, annotateObjectForMigrationFunc(ctx, b.K8sSeedClient.DirectClient()))
 	if err != nil {
 		return err
 	}
+	fns = append(fns, b.Shoot.Components.Extensions.Network.Migrate, b.Shoot.Components.Extensions.ContainerRuntime.Migrate)
 
 	return flow.Parallel(fns...)(ctx)
 }
@@ -54,10 +51,6 @@ func annotateObjectForMigrationFunc(ctx context.Context, client client.Client) f
 
 // WaitForExtensionsOperationMigrateToSucceed waits until extension CRs has lastOperation Migrate Succeeded
 func (b *Botanist) WaitForExtensionsOperationMigrateToSucceed(ctx context.Context) error {
-	if err := b.Shoot.Components.Extensions.Network.WaitMigrate(ctx); err != nil {
-		return err
-	}
-
 	fns, err := b.applyFuncToAllExtensionCRs(ctx, func(obj runtime.Object) error {
 		extensionObj, err := extensions.Accessor(obj)
 		if err != nil {
@@ -76,16 +69,13 @@ func (b *Botanist) WaitForExtensionsOperationMigrateToSucceed(ctx context.Contex
 	if err != nil {
 		return err
 	}
+	fns = append(fns, b.Shoot.Components.Extensions.Network.WaitMigrate, b.Shoot.Components.Extensions.ContainerRuntime.WaitMigrate)
 
 	return flow.Parallel(fns...)(ctx)
 }
 
 // DeleteAllExtensionCRs deletes all extension CRs from the Shoot namespace
 func (b *Botanist) DeleteAllExtensionCRs(ctx context.Context) error {
-	if err := b.Shoot.Components.Extensions.Network.Destroy(ctx); err != nil {
-		return err
-	}
-
 	fns, err := b.applyFuncToAllExtensionCRs(ctx, func(obj runtime.Object) error {
 		extensionObj, err := extensions.Accessor(obj)
 		if err != nil {
@@ -97,6 +87,8 @@ func (b *Botanist) DeleteAllExtensionCRs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	fns = append(fns, b.Shoot.Components.Extensions.Network.Destroy, b.Shoot.Components.Extensions.ContainerRuntime.Destroy)
+
 	return flow.Parallel(fns...)(ctx)
 }
 

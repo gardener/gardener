@@ -97,9 +97,10 @@ type ControlPlane struct {
 
 // Extensions contains references to extension resources.
 type Extensions struct {
-	DNS            *DNS
-	Infrastructure Infrastructure
-	Network        component.DeployMigrateWaiter
+	DNS              *DNS
+	Infrastructure   Infrastructure
+	Network          component.DeployMigrateWaiter
+	ContainerRuntime ContainerRuntime
 }
 
 // DNS contains references to internal and external DNSProvider and DNSEntry deployers.
@@ -122,6 +123,12 @@ type Infrastructure interface {
 	SetSSHPublicKey([]byte)
 	ProviderStatus() *runtime.RawExtension
 	NodesCIDR() *string
+}
+
+// ContainerRuntime contains references to a ContainerRuntime extension deployer.
+type ContainerRuntime interface {
+	component.DeployMigrateWaiter
+	DeleteStaleResources(ctx context.Context) error
 }
 
 // Networks contains pre-calculated subnets and IP address for various components.

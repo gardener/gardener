@@ -95,13 +95,12 @@ var _ = Describe("#Network", func() {
 		}
 
 		values = &network.Values{
-			Name:                                    "test-deploy",
-			Namespace:                               networkNs,
-			IsInRestorePhaseOfControlPlaneMigration: false,
-			Type:                                    networkType,
-			ProviderConfig:                          nil,
-			PodCIDR:                                 &podCIDR,
-			ServiceCIDR:                             &serviceCIDR,
+			Name:           "test-deploy",
+			Namespace:      networkNs,
+			Type:           networkType,
+			ProviderConfig: nil,
+			PodCIDR:        &podCIDR,
+			ServiceCIDR:    &serviceCIDR,
 		}
 
 		expected = &extensionsv1alpha1.Network{

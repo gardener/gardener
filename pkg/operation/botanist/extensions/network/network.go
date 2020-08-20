@@ -51,9 +51,6 @@ type Values struct {
 	Namespace string
 	// Name is the name of the Network extension. Commonly the Shoot's name.
 	Name string
-	// isInRestorePhaseOfControlPlaneMigration indicates if the Shoot is in the restore
-	// Phase of the ControlPlane migration
-	IsInRestorePhaseOfControlPlaneMigration bool
 	// Type is the type of Network plugin/extension (e.g calico)
 	Type string
 	// ProviderConfig contains the provider config for the Network extension.

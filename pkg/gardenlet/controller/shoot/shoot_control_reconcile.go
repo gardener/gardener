@@ -400,23 +400,23 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		})
 		deployContainerRuntimeResources = g.Add(flow.Task{
 			Name:         "Deploying container runtime resources",
-			Fn:           flow.TaskFn(botanist.DeployContainerRuntimeResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeployContainerRuntime).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, initializeShootClients),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until container runtime resources are ready",
-			Fn:           flow.TaskFn(botanist.WaitUntilContainerRuntimeResourcesReady),
+			Fn:           botanist.Shoot.Components.Extensions.ContainerRuntime.Wait,
 			Dependencies: flow.NewTaskIDs(deployContainerRuntimeResources),
 		})
-		deleteStaleContainerRuntimeResources = g.Add(flow.Task{
+		deleteStaleResources = g.Add(flow.Task{
 			Name:         "Delete stale container runtime resources",
-			Fn:           flow.TaskFn(botanist.DeleteStaleContainerRuntimeResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ContainerRuntime.DeleteStaleResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until stale container runtime resources are deleted",
-			Fn:           flow.TaskFn(botanist.WaitUntilContainerRuntimeResourcesDeleted).SkipIf(o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deleteStaleContainerRuntimeResources),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ContainerRuntime.WaitCleanup).SkipIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deleteStaleResources),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Restart control plane pods",

@@ -502,6 +502,37 @@ var _ = Describe("extensions", func() {
 		})
 	})
 
+	Describe("#MigrateExtensionCRs", func() {
+		It("should not return error if there are no extension resources", func() {
+			Expect(
+				MigrateExtensionCRs(ctx, c, &extensionsv1alpha1.BackupBucketList{}, func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupBucket{} }, namespace),
+			).To(Succeed())
+		})
+
+		It("should properly annotate all extension CRs for migration", func() {
+			for i := 0; i < 4; i++ {
+				containerRuntimeExtension := &extensionsv1alpha1.ContainerRuntime{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: namespace,
+						Name:      fmt.Sprintf("containerruntime-%d", i),
+					},
+				}
+				Expect(c.Create(ctx, containerRuntimeExtension)).To(Succeed())
+			}
+
+			Expect(
+				MigrateExtensionCRs(ctx, c, &extensionsv1alpha1.ContainerRuntimeList{}, func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ContainerRuntime{} }, namespace),
+			).To(Succeed())
+
+			containerRuntimeList := &extensionsv1alpha1.ContainerRuntimeList{}
+			Expect(c.List(ctx, containerRuntimeList, client.InNamespace(namespace))).To(Succeed())
+			Expect(len(containerRuntimeList.Items)).To(Equal(4))
+			for _, item := range containerRuntimeList.Items {
+				Expect(item.Annotations[v1beta1constants.GardenerOperation]).To(Equal(v1beta1constants.GardenerOperationMigrate))
+			}
+		})
+	})
+
 	Describe("#WaitUntilExtensionCRMigrated", func() {
 		It("should not return error if resource does not exist", func() {
 			err := WaitUntilExtensionCRMigrated(
@@ -539,6 +570,83 @@ var _ = Describe("extensions", func() {
 				State: gardencorev1beta1.LastOperationStateSucceeded,
 				Type:  gardencorev1beta1.LastOperationTypeMigrate,
 			}, Succeed),
+		)
+	})
+
+	Describe("#WaitUntilExtensionCRsMigrated", func() {
+		It("should not return error if there are no extension CRs", func() {
+			Expect(WaitUntilExtensionCRsMigrated(
+				ctx,
+				c,
+				&extensionsv1alpha1.WorkerList{},
+				func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Worker{} },
+				namespace,
+				defaultInterval,
+				defaultTimeout)).To(Succeed())
+		})
+
+		DescribeTable("should return error if migration times out",
+			func(lastOperations []*gardencorev1beta1.LastOperation, match func() GomegaMatcher) {
+				for i, lastOp := range lastOperations {
+					expected.Status.LastOperation = lastOp
+					expected.Name = fmt.Sprintf("worker-%d", i)
+					Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing worker succeeds")
+				}
+				err := WaitUntilExtensionCRsMigrated(
+					ctx,
+					c,
+					&extensionsv1alpha1.WorkerList{},
+					func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Worker{} },
+					namespace,
+					defaultInterval,
+					defaultTimeout)
+				Expect(err).To(match())
+			},
+			Entry("last operation is not Migrate",
+				[]*gardencorev1beta1.LastOperation{
+					{
+						State: gardencorev1beta1.LastOperationStateSucceeded,
+						Type:  gardencorev1beta1.LastOperationTypeReconcile,
+					},
+					{
+						State: gardencorev1beta1.LastOperationStateSucceeded,
+						Type:  gardencorev1beta1.LastOperationTypeReconcile,
+					},
+				},
+				HaveOccurred),
+			Entry("last operation is Migrate but not successful",
+				[]*gardencorev1beta1.LastOperation{
+					{
+						State: gardencorev1beta1.LastOperationStateProcessing,
+						Type:  gardencorev1beta1.LastOperationTypeMigrate,
+					},
+					{
+						State: gardencorev1beta1.LastOperationStateSucceeded,
+						Type:  gardencorev1beta1.LastOperationTypeReconcile,
+					},
+				}, HaveOccurred),
+			Entry("last operation is Migrate and successful on only one resource",
+				[]*gardencorev1beta1.LastOperation{
+					{
+						State: gardencorev1beta1.LastOperationStateProcessing,
+						Type:  gardencorev1beta1.LastOperationTypeMigrate,
+					},
+					{
+						State: gardencorev1beta1.LastOperationStateSucceeded,
+						Type:  gardencorev1beta1.LastOperationTypeMigrate,
+					},
+				}, HaveOccurred),
+			Entry("last operation is Migrate and successful on all resources",
+				[]*gardencorev1beta1.LastOperation{
+					{
+						State: gardencorev1beta1.LastOperationStateSucceeded,
+						Type:  gardencorev1beta1.LastOperationTypeMigrate,
+					},
+					{
+						State: gardencorev1beta1.LastOperationStateSucceeded,
+						Type:  gardencorev1beta1.LastOperationTypeMigrate,
+					},
+				}, Succeed),
 		)
 	})
 

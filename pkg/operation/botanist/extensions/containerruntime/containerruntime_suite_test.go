@@ -12,24 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package extensions
+package containerruntime_test
 
 import (
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-// GetShootNamespacedCRsLists returns an empty CR list struct, for each CR used for Shoot managment
-func GetShootNamespacedCRsLists() []runtime.Object {
-	return []runtime.Object{
-		&extensionsv1alpha1.ControlPlaneList{},
-		&extensionsv1alpha1.ExtensionList{},
-		&extensionsv1alpha1.InfrastructureList{},
-		//The Network CR is now handled as a shoot component
-		//&extensionsv1alpha1.NetworkList{},
-		&extensionsv1alpha1.OperatingSystemConfigList{},
-		&extensionsv1alpha1.WorkerList{},
-		//The ContainerRuntime CR is now handled as a shoot component
-		//&extensionsv1alpha1.ContainerRuntimeList{},
-	}
+func TestContainerRuntime(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Botanist Extensions Container Runtime Suite")
 }
