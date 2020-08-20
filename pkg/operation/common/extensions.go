@@ -119,7 +119,7 @@ func SyncClusterResourceToSeed(ctx context.Context, client client.Client, cluste
 func WaitUntilExtensionCRReady(
 	ctx context.Context,
 	c client.Client,
-	logger *logrus.Entry,
+	logger logrus.FieldLogger,
 	newObjFunc func() runtime.Object,
 	kind string,
 	namespace string,
@@ -150,7 +150,7 @@ func WaitUntilExtensionCRReady(
 func WaitUntilObjectReadyWithHealthFunction(
 	ctx context.Context,
 	c client.Client,
-	logger *logrus.Entry,
+	logger logrus.FieldLogger,
 	healthFunc func(obj runtime.Object) error,
 	newObjFunc func() runtime.Object,
 	kind string,
@@ -273,7 +273,7 @@ func DeleteExtensionCRs(
 func WaitUntilExtensionCRsDeleted(
 	ctx context.Context,
 	c client.Client,
-	logger *logrus.Entry,
+	logger logrus.FieldLogger,
 	listObj runtime.Object,
 	newObjFunc func() extensionsv1alpha1.Object,
 	kind string,
@@ -328,7 +328,7 @@ func WaitUntilExtensionCRsDeleted(
 func WaitUntilExtensionCRDeleted(
 	ctx context.Context,
 	c client.Client,
-	logger *logrus.Entry,
+	logger logrus.FieldLogger,
 	newObjFunc func() extensionsv1alpha1.Object,
 	kind string,
 	namespace string,

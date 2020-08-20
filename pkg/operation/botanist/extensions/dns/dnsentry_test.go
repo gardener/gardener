@@ -56,7 +56,7 @@ var _ = Describe("#DNSEntry", func() {
 		c                client.Client
 		expected         *dnsv1alpha1.DNSEntry
 		vals             *EntryValues
-		log              *logrus.Entry
+		log              logrus.FieldLogger
 		defaultDepWaiter component.DeployWaiter
 	)
 
@@ -64,7 +64,7 @@ var _ = Describe("#DNSEntry", func() {
 		ctrl = gomock.NewController(GinkgoT())
 
 		ctx = context.TODO()
-		log = logrus.NewEntry(logger.NewNopLogger())
+		log = logger.NewNopLogger()
 
 		s := runtime.NewScheme()
 		Expect(dnsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())

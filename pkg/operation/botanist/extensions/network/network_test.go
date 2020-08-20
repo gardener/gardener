@@ -62,7 +62,7 @@ var _ = Describe("#Network", func() {
 		c                client.Client
 		expected         *extensionsv1alpha1.Network
 		values           *network.Values
-		log              *logrus.Entry
+		log              logrus.FieldLogger
 		defaultDepWaiter component.DeployMigrateWaiter
 
 		mockNow *mocktime.MockNow
@@ -78,7 +78,7 @@ var _ = Describe("#Network", func() {
 		mockNow = mocktime.NewMockNow(ctrl)
 
 		ctx = context.TODO()
-		log = logrus.NewEntry(logger.NewNopLogger())
+		log = logger.NewNopLogger()
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())

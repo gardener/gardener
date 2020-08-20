@@ -48,7 +48,7 @@ func NewDNSEntry(
 	shootNamespace string,
 	applier kubernetes.ChartApplier,
 	chartsRootPath string,
-	logger *logrus.Entry,
+	logger logrus.FieldLogger,
 	client client.Client,
 	waiter retry.Ops,
 
@@ -73,7 +73,7 @@ type dnsEntry struct {
 	shootNamespace string
 	kubernetes.ChartApplier
 	chartPath string
-	logger    *logrus.Entry
+	logger    logrus.FieldLogger
 	client    client.Client
 	waiter    retry.Ops
 }

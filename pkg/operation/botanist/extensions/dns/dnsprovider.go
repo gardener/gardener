@@ -56,7 +56,7 @@ func NewDNSProvider(
 	shootNamespace string,
 	applier kubernetes.ChartApplier,
 	chartsRootPath string,
-	logger *logrus.Entry,
+	logger logrus.FieldLogger,
 	client client.Client,
 	waiter retry.Ops,
 ) component.DeployWaiter {
@@ -80,7 +80,7 @@ type dnsProvider struct {
 	shootNamespace string
 	kubernetes.ChartApplier
 	chartPath string
-	logger    *logrus.Entry
+	logger    logrus.FieldLogger
 	client    client.Client
 	waiter    retry.Ops
 }

@@ -56,7 +56,7 @@ var _ = Describe("#Infrastructure", func() {
 
 	var (
 		ctx context.Context
-		log *logrus.Entry
+		log logrus.FieldLogger
 
 		ctrl    *gomock.Controller
 		c       *mockclient.MockClient
@@ -77,7 +77,7 @@ var _ = Describe("#Infrastructure", func() {
 
 	BeforeEach(func() {
 		ctx = context.TODO()
-		log = logrus.NewEntry(logger.NewNopLogger())
+		log = logger.NewNopLogger()
 
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
