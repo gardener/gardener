@@ -11,7 +11,7 @@ The Shoot status consists of a set of conditions. A [Condition](https://gardener
 | `type`               | Name of the condition.                                                                                             |
 | `status`             | Indicates whether the condition is applicable, with possible values `True`, `False`, `Unknown`, or `Progressing`.  |
 | `lastTransitionTime` | Timestamp for when the condition last transitioned from one status to another.                                     |
-| `lastUpdateTime`     | Timestamp for when the condition was updated.                                                                      |
+| `lastUpdateTime`     | Timestamp for when the condition was updated. Usually changes when `reason` or `message` in condition is updated.  |
 | `reason`             | Machine-readable, UpperCamelCase text indicating the reason for the condition's last transition.                   |
 | `message`            | Human-readable message indicating details about the last status transition.                                        |
 | `codes`              | Well-defined error codes in case the condition reports a problem.                                                  |
@@ -73,4 +73,4 @@ Known error codes are:
 - `ERR_INFRA_DEPENDENCIES` - indicates that the last error occurred due to dependent objects on the infrastructure level
 - `ERR_INFRA_RESOURCES_DEPLETED` - indicates that the last error occurred due to depleted resource in the infrastructure
 - `ERR_CLEANUP_CLUSTER_RESOURCES` - indicates that the last error occurred due to resources in the cluster that are stuck in deletion
-- `ERR_CONFIGURATION_PROBLEM` - indicates that the last error occurred due a configuration problem
+- `ERR_CONFIGURATION_PROBLEM` - indicates that the last error occurred due to a configuration problem

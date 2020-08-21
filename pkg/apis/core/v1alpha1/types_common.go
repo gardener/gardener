@@ -32,7 +32,7 @@ const (
 	ErrorInfraResourcesDepleted ErrorCode = "ERR_INFRA_RESOURCES_DEPLETED"
 	// ErrorCleanupClusterResources indicates that the last error occurred due to resources in the cluster that are stuck in deletion.
 	ErrorCleanupClusterResources ErrorCode = "ERR_CLEANUP_CLUSTER_RESOURCES"
-	// ErrorConfigurationProblem indicates that the last error occurred due a configuration problem.
+	// ErrorConfigurationProblem indicates that the last error occurred due to a configuration problem.
 	ErrorConfigurationProblem ErrorCode = "ERR_CONFIGURATION_PROBLEM"
 )
 
