@@ -581,6 +581,17 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 		}
 	}
 
+	if shoot.Spec.DNS != nil && shoot.DeletionTimestamp == nil {
+		for _, dnsProvider := range shoot.Spec.DNS.Providers {
+			if dnsProvider.SecretName == nil {
+				continue
+			}
+			if err := r.lookupSecret(shoot.Namespace, *dnsProvider.SecretName); err != nil {
+				return fmt.Errorf("failed to reference DNS provider secret %v", err)
+			}
+		}
+	}
+
 	return nil
 }
 

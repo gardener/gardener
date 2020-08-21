@@ -595,6 +595,81 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				Expect(err).To(MatchError(ContainSubstring("failed to resolve shoot resource reference")))
 			})
+
+			It("should reject because the referenced DNS provider secret does not exist", func() {
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
+
+				shoot.Spec.DNS = &core.DNS{
+					Providers: []core.DNSProvider{
+						{SecretName: pointer.StringPtr("foo")},
+					},
+				}
+
+				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, nil, fmt.Errorf("nope, out of luck")
+				})
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(MatchError(ContainSubstring("failed to reference DNS provider secret")))
+			})
+
+			It("should pass because the referenced DNS provider secret does not exist but shoot has deletion timestamp", func() {
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
+
+				shoot.Spec.DNS = &core.DNS{
+					Providers: []core.DNSProvider{
+						{SecretName: pointer.StringPtr("foo")},
+					},
+				}
+
+				now := metav1.Now()
+				shoot.DeletionTimestamp = &now
+
+				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, nil, fmt.Errorf("nope, out of luck")
+				})
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+			})
+
+			It("should pass because the referenced DNS provider secret exists", func() {
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
+				Expect(kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)).To(Succeed())
+
+				shoot.Spec.DNS = &core.DNS{
+					Providers: []core.DNSProvider{
+						{SecretName: pointer.StringPtr("foo")},
+					},
+				}
+
+				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, nil, nil
+				})
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+			})
 		})
 
 		Context("tests for Project objects", func() {
