@@ -15,6 +15,7 @@
 package gomega
 
 import (
+	"github.com/onsi/gomega/format"
 	"github.com/onsi/gomega/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
@@ -23,6 +24,12 @@ import (
 // ignored (not compared). This allows us to focus on the fields that matter to
 // the semantic comparison.
 func DeepDerivativeEqual(expected interface{}) types.GomegaMatcher {
+	// if CharactersAroundMismatchToInclude is to small, then format.MessageWithDiff will be unable to output our
+	// mismatch message
+	if format.CharactersAroundMismatchToInclude < 10 {
+		format.CharactersAroundMismatchToInclude = 10
+	}
+
 	return &deepDerivativeMatcher{
 		expected: expected,
 	}
