@@ -30,7 +30,7 @@ tests:
     exp_alerts:
     - exp_labels:
         job: kube-kubelet
-        service: kube-kubelet-shoot
+        service: kube-kubelet
         severity: warning
         visibility: owner
         type: shoot
@@ -40,7 +40,7 @@ tests:
         summary: 'Shoot-kubelet has too many open file descriptors.'
     - exp_labels:
         job: kube-kubelet
-        service: kube-kubelet-shoot
+        service: kube-kubelet
         severity: critical
         type: shoot
         visibility: owner
@@ -53,7 +53,7 @@ tests:
     exp_alerts:
     - exp_labels:
         job: kube-kubelet-seed
-        service: kube-kubelet-seed
+        service: kube-kubelet
         severity: critical
         visibility: operator
         type: seed
@@ -66,7 +66,7 @@ tests:
     exp_alerts:
     - exp_labels:
         job: kube-kubelet
-        service: kube-kubelet-seed
+        service: kube-kubelet
         severity: critical
         type: seed
         visibility: operator
@@ -79,7 +79,7 @@ tests:
     exp_alerts:
     - exp_labels:
         job: kube-kubelet
-        service: kube-kubelet-seed
+        service: kube-kubelet
         severity: warning
         type: seed
         visibility: operator

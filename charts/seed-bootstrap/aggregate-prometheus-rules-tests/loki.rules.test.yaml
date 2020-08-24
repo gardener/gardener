@@ -5,6 +5,8 @@ evaluation_interval: 30s
 
 tests:
 - interval: 30s
+  external_labels:
+    seed: aws
   input_series:
   # LokiDown
   - series: 'up{app="loki"}'
@@ -14,11 +16,11 @@ tests:
     alertname: LokiDown
     exp_alerts:
     - exp_labels:
-        service: loki
+        service: logging
         severity: warning
         type: seed
         visibility: operator
       exp_annotations:
-        description: There are no running loki pods. No logs will be collected.
+        description: "There are no loki pods running on seed: aws. No logs will be collected."
         summary: Loki is down
 

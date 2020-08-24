@@ -5,10 +5,10 @@ groups:
     expr: absent(up{job="fluent-bit"} == 1)
     for: 15m
     labels:
-      service: fluent-bit
+      service: logging
       severity: warning
       type: seed
       visibility: operator
     annotations:
-      description: There are no running fluent-bit pods. No logs will be collected.
+      description: "There are no fluent-bit pods running on seed: {{ .ExternalLabels.seed }}. No logs will be collected."
       summary: Fluent-bit is down

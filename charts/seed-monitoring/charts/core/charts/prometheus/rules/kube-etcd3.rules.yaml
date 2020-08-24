@@ -67,9 +67,6 @@ groups:
         within the last hour.
       summary: High number of failed etcd proposals
 
-  - record: shoot:etcd_object_counts:sum_by_resource
-    expr: sum(etcd_object_counts) by (resource)
-
   # etcd DB size alerts
   - alert: KubeEtcd3DbSizeLimitApproaching
     expr: (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"} > bool 7516193000) + (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3"} <= bool 8589935000) == 2 # between 7GB and 8GB
@@ -128,3 +125,6 @@ groups:
     annotations:
       description: Etcd data restoration was triggered, but has failed.
       summary: Etcd data restoration failure.
+
+  - record: shoot:etcd_object_counts:sum_by_resource
+    expr: sum(etcd_object_counts) by (resource)

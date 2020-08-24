@@ -12,21 +12,11 @@ groups:
     annotations:
       description: The kubelet {{ $labels.instance }} has been unavailable/unreachable for more than 1 hour. Workloads on the affected node may not be schedulable.
       summary: Kubelet unavailable
-  - alert: KubeKubeletTooManyPods
-    expr: kubelet_running_pod_count > 100
-    for: 30m
-    labels:
-      service: kube-kubelet
-      severity: warning
-      visibility: owner
-    annotations:
-      description: Kubelet {{ $labels.instance }} is running {{ $value }} pods, close to the limit of 110
-      summary: Too many pods on node
   - alert: KubeletTooManyOpenFileDescriptorsShoot
     expr: 100 * process_open_fds{job=~"^(?:kube-kubelet)$"} / process_max_fds{job=~"^(?:kube-kubelet)$"} > 50
     for: 30m
     labels:
-      service: kube-kubelet-shoot
+      service: kube-kubelet
       severity: warning
       type: shoot
       visibility: owner
@@ -37,7 +27,7 @@ groups:
     expr: 100 * process_open_fds{job="kube-kubelet"} / process_max_fds{job="kube-kubelet"} > 80
     for: 30m
     labels:
-      service: kube-kubelet-shoot
+      service: kube-kubelet
       severity: critical
       type: shoot
       visibility: owner
@@ -48,7 +38,7 @@ groups:
     expr: 100 * process_open_fds{job="kube-kubelet-seed"} / process_max_fds{job="kube-kubelet-seed"} > 80
     for: 30m
     labels:
-      service: kube-kubelet-seed
+      service: kube-kubelet
       severity: critical
       type: seed
       visibility: operator
@@ -59,7 +49,7 @@ groups:
     expr: 100 * kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes < 5
     for: 1h
     labels:
-      service: kube-kubelet-seed
+      service: kube-kubelet
       severity: critical
       type: seed
       visibility: operator
@@ -77,7 +67,7 @@ groups:
       predict_linear(kubelet_volume_stats_available_bytes{type="seed", persistentvolumeclaim!~"loki-.*"}[30m], 4 * 24 * 3600) <= 0
     for: 1h
     labels:
-      service: kube-kubelet-seed
+      service: kube-kubelet
       severity: warning
       type: seed
       visibility: operator

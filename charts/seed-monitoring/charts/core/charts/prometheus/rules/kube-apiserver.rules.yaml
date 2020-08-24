@@ -23,10 +23,8 @@ groups:
     annotations:
       description: All API server replicas are down/unreachable, or all API server could not be found.
       summary: API server unreachable.
-  # Some verbs excluded because they are expected to be long-lasting:
-  # WATCHLIST is long-poll, CONNECT is `kubectl exec`.
-  - alert: KubeApiServerLatency
-    expr: histogram_quantile(0.99, sum without (instance,resource) (apiserver_request_duration_seconds_bucket{subresource!="log",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"})) > 3.0
+  - alert: KubeApiServerTooManyOpenFileDescriptors
+    expr: 100 * process_open_fds{job="kube-apiserver"} / process_max_fds > 50
     for: 30m
     labels:
       service: kube-apiserver
@@ -34,21 +32,32 @@ groups:
       type: seed
       visibility: owner
     annotations:
-      description: Kube API server latency for verb {{ $labels.verb }} is high. This could be because the shoot workers and the control plane are in different regions. 99th percentile of request latency is greater than 3 second.
+      description: 'The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.'
+      summary: 'The API server has too many open file descriptors'
+  - alert: KubeApiServerTooManyOpenFileDescriptors
+    expr: 100 * process_open_fds{job="kube-apiserver"} / process_max_fds{job="kube-apiserver"} > 80
+    for: 30m
+    labels:
+      service: kube-apiserver
+      severity: critical
+      type: seed
+      visibility: owner
+    annotations:
+      description: 'The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.'
+      summary: 'The API server has too many open file descriptors'
+  # Some verbs excluded because they are expected to be long-lasting:
+  # WATCHLIST is long-poll, CONNECT is `kubectl exec`.
+  - alert: KubeApiServerLatency
+    expr: histogram_quantile(0.99, sum without (instance,resource) (rate(apiserver_request_duration_seconds_bucket{subresource!="log",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"}[5m]))) > 3
+    for: 30m
+    labels:
+      service: kube-apiserver
+      severity: warning
+      type: seed
+      visibility: owner
+    annotations:
+      description: Kube API server latency for verb {{ $labels.verb }} is high. This could be because the shoot workers and the control plane are in different regions. 99th percentile of request latency is greater than 3 seconds.
       summary: Kubernetes API server latency is high
-  ### API latency ###
-  - record: apiserver_latency_seconds:quantile
-    expr: histogram_quantile(0.99, rate(apiserver_request_duration_seconds_bucket[5m]))
-    labels:
-      quantile: "0.99"
-  - record: apiserver_latency:quantile
-    expr: histogram_quantile(0.9, rate(apiserver_request_duration_seconds_bucket[5m]))
-    labels:
-      quantile: "0.9"
-  - record: apiserver_latency_seconds:quantile
-    expr: histogram_quantile(0.5, rate(apiserver_request_duration_seconds_bucket[5m]))
-    labels:
-      quantile: "0.5"
   # TODO replace with better metrics in the future (wyb1)
   - record: shoot:apiserver_watch_duration:quantile
     expr: histogram_quantile(0.2, sum(rate(apiserver_request_duration_seconds_bucket{verb="WATCH",resource=~"configmaps|deployments|secrets|daemonsets|services|nodes|pods|namespaces|endpoints|statefulsets|clusterroles|roles"}[5m])) by (le,scope,resource))
@@ -74,40 +83,31 @@ groups:
     expr: histogram_quantile(0.9, sum(rate(apiserver_request_duration_seconds_bucket{verb="WATCH",group=~".+garden.+"}[5m])) by (le,scope,resource))
     labels:
       quantile: "0.9"
-  - alert: KubeApiServerTooManyOpenFileDescriptors
-    expr: 100 * process_open_fds{job="kube-apiserver"} / process_max_fds > 50
-    for: 30m
-    labels:
-      service: kube-apiserver
-      severity: warning
-      type: seed
-      visibility: owner
-    annotations:
-      description: 'The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.'
-      summary: 'The API server has too many open file descriptors'
-  - alert: KubeApiServerTooManyOpenFileDescriptors
-    expr: 100 * process_open_fds{job="kube-apiserver"} / process_max_fds{job="kube-apiserver"} > 80
-    for: 30m
-    labels:
-      service: kube-apiserver
-      severity: critical
-      type: seed
-      visibility: owner
-    annotations:
-      description: 'The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.'
-      summary: 'The API server has too many open file descriptors'
   ### API auditlog ###
   - alert: KubeApiServerTooManyAuditlogFailures
     expr: sum(rate (apiserver_audit_error_total{plugin="webhook"} [5m])) by (app ,role) / ignoring(plugin) sum(rate(apiserver_audit_event_total [5m])) by (app, role) > 0.02
     for: 15m
     labels:
+      service: auditlog
       severity: critical
       type: seed
-      job: kube-apiserver
       visibility: operator
     annotations:
         description: 'The API servers cumulative failure rate in logging audit events is {{ printf "%0.2f" $value }}%. This may be caused by an unavailable/unreachable AuditSink(s) and/or improper API server audit configuration.'
         summary: 'The API server has too many failed attempts to log audit events'
+  ### API latency ###
+  - record: apiserver_latency_seconds:quantile
+    expr: histogram_quantile(0.99, rate(apiserver_request_duration_seconds_bucket[5m]))
+    labels:
+      quantile: "0.99"
+  - record: apiserver_latency:quantile
+    expr: histogram_quantile(0.9, rate(apiserver_request_duration_seconds_bucket[5m]))
+    labels:
+      quantile: "0.9"
+  - record: apiserver_latency_seconds:quantile
+    expr: histogram_quantile(0.5, rate(apiserver_request_duration_seconds_bucket[5m]))
+    labels:
+      quantile: "0.5"
 
   - record: shoot:kube_apiserver:sum_by_pod
     expr: sum(up{job="kube-apiserver"}) by (pod)

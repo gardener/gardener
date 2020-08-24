@@ -7,10 +7,10 @@ tests:
   input_series:
   # KubeStateMetricsShootDown
   - series: 'up{job="kube-state-metrics", type="shoot"}'
-    values: '0+0x20'
+    values: '0+0x30'
   # KubeStateMetricsSeedDown
   - series: 'up{job="kube-state-metrics", type="seed"}'
-    values: '0+0x20'
+    values: '0+0x30'
   # NoWorkerNodes
   - series: 'kube_node_spec_unschedulable'
     values: '2+0x20'
@@ -19,7 +19,7 @@ tests:
   - series: 'kube_node_info'
     values: '1+0x50'
   alert_rule_test:
-  - eval_time: 5m
+  - eval_time: 15m
     alertname: KubeStateMetricsShootDown
     exp_alerts:
     - exp_labels:
@@ -30,7 +30,7 @@ tests:
       exp_annotations:
         summary: Kube-state-metrics for shoot cluster metrics is down.
         description: There are no running kube-state-metric pods for the shoot cluster. No kubernetes resource metrics can be scraped.
-  - eval_time: 5m
+  - eval_time: 15m
     alertname: KubeStateMetricsSeedDown
     exp_alerts:
     - exp_labels:
