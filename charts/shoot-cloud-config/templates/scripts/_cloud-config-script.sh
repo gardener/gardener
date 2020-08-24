@@ -33,7 +33,7 @@ function format-data-device() {
     echo "Matching kubelet data device by size : {{.worker.kubeletDataVolume.size}}"
     TARGET_DEVICE_NAME=$(echo "$MATCHING_DEVICES" | head -n1 | cut -f2 -d\")
     echo "detected kubelet data device $TARGET_DEVICE_NAME"
-    mkfs.xfs -L $LABEL /dev/$TARGET_DEVICE_NAME
+    mkfs.ext4 -L $LABEL -O quota -E lazy_itable_init=0,lazy_journal_init=0,quotatype=usrquota:grpquota:prjquota  /dev/$TARGET_DEVICE_NAME
     echo "formatted and labeled data device $TARGET_DEVICE_NAME"
     mkdir /tmp/varlibcp
     mount LABEL=$LABEL /tmp/varlibcp
@@ -41,7 +41,7 @@ function format-data-device() {
     cp -a /var/lib/* /tmp/varlibcp/
     umount /tmp/varlibcp
     echo "copied /var/lib to data device $TARGET_DEVICE_NAME"
-    mount LABEL=$LABEL /var/lib
+    mount LABEL=$LABEL /var/lib -o defaults,prjquota,errors=remount-ro
     echo "mounted /var/lib on data device $TARGET_DEVICE_NAME"
   fi
 }
