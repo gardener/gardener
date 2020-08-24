@@ -29,8 +29,6 @@ kube-proxy:
   podAnnotations: {}
   images:
     kube-proxy: image-repository
-kube-scheduler:
-  enabled: true
 metrics-server:
   enabled: true
   images:

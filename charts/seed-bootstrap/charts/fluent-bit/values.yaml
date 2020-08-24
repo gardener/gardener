@@ -13,6 +13,6 @@ labels:
   role: logging
 ports:
   metrics: 2020
-extensions:
-  filters: ""
-  parsers: ""
+
+additionalFilters: ""
+additionalParsers: ""

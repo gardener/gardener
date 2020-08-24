@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -60,7 +61,28 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		usersDashboards     = strings.Builder{}
 	)
 
-	// Find extensions provider-specific monitoring configuration
+	// Fetch component-specific monitoring configuration
+	for _, component := range []component.MonitoringComponent{
+		b.Shoot.Components.ControlPlane.KubeScheduler,
+	} {
+		componentsScrapeConfigs, err := component.ScrapeConfigs()
+		if err != nil {
+			return err
+		}
+		for _, config := range componentsScrapeConfigs {
+			scrapeConfigs.WriteString(fmt.Sprintf("- %s\n", indent(config, 2)))
+		}
+
+		componentsAlertingRules, err := component.AlertingRules()
+		if err != nil {
+			return err
+		}
+		for filename, rule := range componentsAlertingRules {
+			alertingRules.WriteString(fmt.Sprintf("%s: |\n  %s\n", filename, indent(rule, 2)))
+		}
+	}
+
+	// Fetch extensions provider-specific monitoring configuration
 	existingConfigMaps := &corev1.ConfigMapList{}
 	if err := b.K8sSeedClient.Client().List(ctx, existingConfigMaps,
 		client.InNamespace(b.Shoot.SeedNamespace),
@@ -149,12 +171,10 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"name":                b.Shoot.Info.Name,
 				"project":             b.Garden.Project.Name,
 			},
-			"ignoreAlerts": b.Shoot.IgnoreAlerts,
-			"alerting":     alerting,
-			"extensions": map[string]interface{}{
-				"rules":         alertingRules.String(),
-				"scrapeConfigs": scrapeConfigs.String(),
-			},
+			"ignoreAlerts":            b.Shoot.IgnoreAlerts,
+			"alerting":                alerting,
+			"additionalRules":         alertingRules.String(),
+			"additionalScrapeConfigs": scrapeConfigs.String(),
 		}
 		kubeStateMetricsShootConfig = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
@@ -569,4 +589,7 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 	}
 
 	return nil
+}
+func indent(str string, spaces int) string {
+	return strings.ReplaceAll(str, "\n", "\n"+strings.Repeat(" ", spaces))
 }

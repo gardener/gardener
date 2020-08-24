@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/operation/botanist/constants"
+	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -34,19 +34,20 @@ func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
 		ctx,
 		&resourcesv1alpha1.ManagedResource{},
 		client.InNamespace(b.Shoot.SeedNamespace),
-		client.MatchingLabels{constants.ManagedResourceLabelKeyOrigin: constants.ManagedResourceLabelValueGardener},
+		client.MatchingLabels{common.ManagedResourceLabelKeyOrigin: common.ManagedResourceLabelValueGardener},
 	)
 }
 
 // WaitUntilManagedResourcesDeleted waits until all managed resources labeled with `origin=gardener` are gone or the context is cancelled.
 func (b *Botanist) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
-	return b.waitUntilManagedResourceAreDeleted(ctx, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{constants.ManagedResourceLabelKeyOrigin: constants.ManagedResourceLabelValueGardener})
+	return b.waitUntilManagedResourceAreDeleted(ctx, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{common.ManagedResourceLabelKeyOrigin: common.ManagedResourceLabelValueGardener})
 }
 
 // WaitUntilAllManagedResourcesDeleted waits until all managed resources are gone or the context is cancelled.
 func (b *Botanist) WaitUntilAllManagedResourcesDeleted(ctx context.Context) error {
 	return b.waitUntilManagedResourceAreDeleted(ctx, client.InNamespace(b.Shoot.SeedNamespace))
 }
+
 func (b *Botanist) waitUntilManagedResourceAreDeleted(ctx context.Context, listOpt ...client.ListOption) error {
 	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
 		managedResources := &resourcesv1alpha1.ManagedResourceList{}

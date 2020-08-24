@@ -20,19 +20,29 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
+// DeepEqual returns a Gomega matcher which checks whether the expected object is deeply equal with the object it is
+// being compared against.
+func DeepEqual(expected interface{}) types.GomegaMatcher {
+	// if CharactersAroundMismatchToInclude is too small, then format.MessageWithDiff will be unable to output our
+	// mismatch message
+	if format.CharactersAroundMismatchToInclude < 50 {
+		format.CharactersAroundMismatchToInclude = 50
+	}
+
+	return newDeepEqualMatcher(expected)
+}
+
 // DeepDerivativeEqual is similar to DeepEqual except that unset fields in actual are
 // ignored (not compared). This allows us to focus on the fields that matter to
 // the semantic comparison.
 func DeepDerivativeEqual(expected interface{}) types.GomegaMatcher {
-	// if CharactersAroundMismatchToInclude is to small, then format.MessageWithDiff will be unable to output our
+	// if CharactersAroundMismatchToInclude is too small, then format.MessageWithDiff will be unable to output our
 	// mismatch message
-	if format.CharactersAroundMismatchToInclude < 10 {
-		format.CharactersAroundMismatchToInclude = 10
+	if format.CharactersAroundMismatchToInclude < 50 {
+		format.CharactersAroundMismatchToInclude = 50
 	}
 
-	return &deepDerivativeMatcher{
-		expected: expected,
-	}
+	return newDeepDerivativeMatcher(expected)
 }
 
 // BeNotFoundError checks if error is NotFound.

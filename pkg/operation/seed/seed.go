@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed/istio"
 	"github.com/gardener/gardener/pkg/utils"
@@ -359,14 +360,27 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		if err := common.DeleteOldLoggingStack(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace); err != nil {
 			return err
 		}
-		// Read extension provider specific configuration
+
+		// Fetch component specific logging configurations
+		for _, componentFn := range []component.LoggingConfiguration{
+			kubescheduler.LoggingConfiguration,
+		} {
+			parser, filter, err := componentFn()
+			if err != nil {
+				return err
+			}
+
+			filters.WriteString(fmt.Sprintln(filter))
+			parsers.WriteString(fmt.Sprintln(parser))
+		}
+
+		// Read extension provider specific logging configuration
 		existingConfigMaps := &corev1.ConfigMapList{}
 		if err = k8sSeedClient.Client().List(ctx, existingConfigMaps,
 			client.InNamespace(v1beta1constants.GardenNamespace),
 			client.MatchingLabels{v1beta1constants.LabelExtensionConfiguration: v1beta1constants.LabelLogging}); err != nil {
 			return err
 		}
-
 		sort.Sort(byName(existingConfigMaps.Items))
 
 		// Read all filters and parsers coming from the extension provider configurations
@@ -621,11 +635,9 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			"secretName": grafanaTLSOverride,
 		},
 		"fluent-bit": map[string]interface{}{
-			"enabled": loggingEnabled,
-			"extensions": map[string]interface{}{
-				"parsers": parsers.String(),
-				"filters": filters.String(),
-			},
+			"enabled":           loggingEnabled,
+			"additionalParsers": parsers.String(),
+			"additionalFilters": filters.String(),
 		},
 		"loki": map[string]interface{}{
 			"enabled": loggingEnabled,

@@ -24,10 +24,8 @@ import (
 	. "github.com/gardener/gardener/test/gomega"
 )
 
-var _ = Describe("DeepDerivativeEqual", func() {
-	var (
-		actual, expected *corev1.Pod
-	)
+var _ = Describe("Deep", func() {
+	var actual, expected *corev1.Pod
 
 	BeforeEach(func() {
 		actual = &corev1.Pod{
@@ -46,19 +44,44 @@ var _ = Describe("DeepDerivativeEqual", func() {
 		}
 	})
 
-	It("should be true when expected has less info", func() {
-		Expect(actual).To(DeepDerivativeEqual(expected))
+	Describe("#DeepDerivativeEqual", func() {
+		It("should be true when expected has less info", func() {
+			Expect(actual).To(DeepDerivativeEqual(expected))
+		})
+
+		It("should be false when objects differ", func() {
+			expected.Name = "baz"
+			Expect(actual).ToNot(DeepDerivativeEqual(expected))
+		})
+
+		It("should throw error when both are nil", func() {
+			success, err := DeepDerivativeEqual(nil).Match(nil)
+
+			Expect(success).Should(BeFalse())
+			Expect(err).Should(HaveOccurred())
+		})
 	})
 
-	It("should be false when objects differ", func() {
-		expected.Name = "baz"
-		Expect(actual).ToNot(DeepDerivativeEqual(expected))
-	})
+	Describe("#DeepEqual", func() {
+		It("should be true when expected is equal", func() {
+			expected.TypeMeta = actual.TypeMeta
+			Expect(actual).To(DeepEqual(expected))
+		})
 
-	It("should throw error when both are nil", func() {
-		success, err := DeepDerivativeEqual(nil).Match(nil)
+		It("should be false when expected has less info", func() {
+			Expect(actual).NotTo(DeepEqual(expected))
+		})
 
-		Expect(success).Should(BeFalse())
-		Expect(err).Should(HaveOccurred())
+		It("should be false when objects differ", func() {
+			expected.Name = "baz"
+			Expect(actual).ToNot(DeepEqual(expected))
+		})
+
+		It("should throw error when both are nil", func() {
+			success, err := DeepEqual(nil).Match(nil)
+
+			Expect(success).Should(BeFalse())
+			Expect(err).Should(HaveOccurred())
+		})
 	})
 })

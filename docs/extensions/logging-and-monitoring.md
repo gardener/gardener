@@ -45,7 +45,6 @@ metadata:
     extensions.gardener.cloud/configuration: monitoring
 data:
   scrape_config: |
-    scrape_configs:
     - job_name: cloud-controller-manager
       scheme: https
       tls_config:
@@ -72,21 +71,22 @@ data:
       - process_max_fds
       - process_open_fds
 
-  alerting_rules:
-    groups:
-    - name: cloud-controller-manager.rules
-      rules:
-      - alert: CloudControllerManagerDown
-        expr: absent(up{job="cloud-controller-manager"} == 1)
-        for: 15m
-        labels:
-          service: cloud-controller-manager
-          severity: critical
-          type: seed
-          visibility: all
-        annotations:
-          description: All infrastructure specific operations cannot be completed (e.g. creating load balancers or persistent volumes).
-          summary: Cloud controller manager is down.
+  alerting_rules: |
+    cloud-controller-manager.rules.yaml: |
+      groups:
+      - name: cloud-controller-manager.rules
+        rules:
+        - alert: CloudControllerManagerDown
+          expr: absent(up{job="cloud-controller-manager"} == 1)
+          for: 15m
+          labels:
+            service: cloud-controller-manager
+            severity: critical
+            type: seed
+            visibility: all
+          annotations:
+            description: All infrastructure specific operations cannot be completed (e.g. creating load balancers or persistent volumes).
+            summary: Cloud controller manager is down.
 
   dashboard_operators:
     <some-json-describing-a-grafana-dashboard-for-operators>

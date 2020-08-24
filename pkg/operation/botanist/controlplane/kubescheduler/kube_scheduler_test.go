@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/test/gomega"
 
 	"github.com/Masterminds/semver"
+	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -66,10 +67,12 @@ var _ = Describe("KubeScheduler", func() {
 		secretChecksumServer     = "5678"
 		vpaUpdateMode            = autoscalingv1beta2.UpdateModeAuto
 
-		configMapName  = "kube-scheduler-config"
-		vpaName        = "kube-scheduler-vpa"
-		serviceName    = "kube-scheduler"
-		deploymentName = "kube-scheduler"
+		configMapName             = "kube-scheduler-config"
+		vpaName                   = "kube-scheduler-vpa"
+		serviceName               = "kube-scheduler"
+		deploymentName            = "kube-scheduler"
+		managedResourceName       = "shoot-core-kube-scheduler"
+		managedResourceSecretName = "managedresource-shoot-core-kube-scheduler"
 
 		configMapFor = func(version string) *corev1.ConfigMap {
 			componentConfigYAML, _ := componentConfigYAMLForKubernetesVersion(version)
@@ -252,6 +255,58 @@ var _ = Describe("KubeScheduler", func() {
 				},
 			}
 		}
+		clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: system:controller:kube-scheduler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: User
+  name: system:kube-scheduler
+`
+		roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  creationTimestamp: null
+  name: system:controller:kube-scheduler:auth-reader
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- kind: User
+  name: system:kube-scheduler
+`
+		managedResourceSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      managedResourceSecretName,
+				Namespace: namespace,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{
+				"clusterrolebinding.yaml": []byte(clusterRoleBindingYAML),
+				"rolebinding.yaml":        []byte(roleBindingYAML),
+			},
+		}
+		managedResource = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      managedResourceName,
+				Namespace: namespace,
+				Labels:    map[string]string{"origin": "gardener"},
+			},
+			Spec: resourcesv1alpha1.ManagedResourceSpec{
+				SecretRefs: []corev1.LocalObjectReference{
+					{Name: managedResourceSecretName},
+				},
+				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+				KeepObjects:  pointer.BoolPtr(false),
+			},
+		}
 	)
 
 	BeforeEach(func() {
@@ -332,6 +387,88 @@ var _ = Describe("KubeScheduler", func() {
 				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
 			})
 
+			It("should fail because the managed resource cannot be deleted", func() {
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}).Return(fakeErr),
+				)
+
+				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
+			})
+
+			It("should fail because the managed resource secret cannot be deleted", func() {
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretName, Namespace: namespace}}).Return(fakeErr),
+				)
+
+				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
+			})
+
+			Context("k8s 1.13 tests", func() {
+				BeforeEach(func() {
+					semverVersion, err := semver.NewVersion("1.13.4")
+					Expect(err).NotTo(HaveOccurred())
+
+					kubeScheduler = New(c, namespace, semverVersion, image, replicas, nil)
+					kubeScheduler.SetSecrets(Secrets{
+						Kubeconfig: Secret{Name: secretNameKubeconfig, Checksum: secretChecksumKubeconfig},
+						Server:     Secret{Name: secretNameServer, Checksum: secretChecksumServer},
+					})
+				})
+
+				It("should fail because the managed resource secret cannot be updated (k8s 1.13 only)", func() {
+					gomock.InOrder(
+						c.EXPECT().Get(ctx, kutil.Key(namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
+					)
+
+					Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
+				})
+
+				It("should fail because the managed resource cannot be updated (k8s 1.13 only)", func() {
+					gomock.InOrder(
+						c.EXPECT().Get(ctx, kutil.Key(namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
+					)
+
+					Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
+				})
+			})
+
 			DescribeTable("success tests for various kubernetes versions",
 				func(version string, config *gardencorev1beta1.KubeSchedulerConfig) {
 					semverVersion, err := semver.NewVersion(version)
@@ -346,21 +483,39 @@ var _ = Describe("KubeScheduler", func() {
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, kutil.Key(namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
-							Expect(obj).To(gomega.DeepDerivativeEqual(configMapFor(version)))
+							Expect(obj).To(gomega.DeepEqual(configMapFor(version)))
 						}),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
-							Expect(obj).To(gomega.DeepDerivativeEqual(vpa))
+							Expect(obj).To(gomega.DeepEqual(vpa))
 						}),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
-							Expect(obj).To(gomega.DeepDerivativeEqual(serviceFor(version)))
+							Expect(obj).To(gomega.DeepEqual(serviceFor(version)))
 						}),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
-							Expect(obj).To(gomega.DeepDerivativeEqual(deploymentFor(version, config)))
+							Expect(obj).To(gomega.DeepEqual(deploymentFor(version, config)))
 						}),
 					)
+
+					if k8sVersionEqual113, _ := versionutils.CompareVersions(version, "~", "1.13"); k8sVersionEqual113 {
+						gomock.InOrder(
+							c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+							c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
+								Expect(obj).To(gomega.DeepEqual(managedResourceSecret))
+							}),
+							c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+							c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
+								Expect(obj).To(gomega.DeepEqual(managedResource))
+							}),
+						)
+					} else {
+						gomock.InOrder(
+							c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
+							c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretName, Namespace: namespace}}),
+						)
+					}
 
 					Expect(kubeScheduler.Deploy(ctx)).To(Succeed())
 				},
@@ -383,8 +538,8 @@ var _ = Describe("KubeScheduler", func() {
 				Entry("kubernetes 1.17 w/ full config", "1.17.7", configFull),
 				Entry("kubernetes 1.18 w/o config", "1.18.8", configEmpty),
 				Entry("kubernetes 1.18 w/ full config", "1.18.8", configFull),
-				Entry("kubernetes 1.19 w/o config", "1.19.8", configEmpty),
-				Entry("kubernetes 1.19 w/ full config", "1.19.8", configFull),
+				Entry("kubernetes 1.19 w/o config", "1.19.9", configEmpty),
+				Entry("kubernetes 1.19 w/ full config", "1.19.9", configFull),
 			)
 		})
 	})

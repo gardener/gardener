@@ -166,13 +166,6 @@ data:
 
     [FILTER]
         Name                parser
-        Match               kubernetes.*kube-scheduler*kube-scheduler*
-        Key_Name            log
-        Parser              kubeapiserverParser
-        Reserve_Data        True
-
-    [FILTER]
-        Name                parser
         Match               kubernetes.*cluster-autoscaler*cluster-autoscaler*
         Key_Name            log
         Parser              kubeapiserverParser
@@ -341,11 +334,12 @@ data:
         script              modify_severity.lua
         call                cb_modify
 
-{{ if .Values.extensions.filters }}
-{{- toString .Values.extensions.filters | indent 4 }}
+    # Extensions
+{{ if .Values.additionalFilters }}
+{{- toString .Values.additionalFilters | indent 4 }}
 {{- end }}
 
-  output.conf: |   
+  output.conf: |
     [Output]
         Name loki
         Match kubernetes.*
@@ -390,7 +384,7 @@ data:
         LineFormat json
         ReplaceOutOfOrderTS true
         DropSingleKey false
-        RemoveKeys kubernetes,steram,hostname,unit
+        RemoveKeys kubernetes,stream,hostname,unit
         LabelMapPath /fluent-bit/etc/systemd_label_map.json
         MaxRetries 3
         Timeout 10
@@ -488,10 +482,10 @@ data:
         Time_Key    ts
         Time_Format %Y-%m-%dT%H:%M:%S.%L
 
-{{ if .Values.extensions.parsers }}
-{{- toString .Values.extensions.parsers | indent 4 }}
+{{ if .Values.additionalParsers }}
+{{- toString .Values.additionalParsers | indent 4 }}
 {{- end }}
-  
+
   plugin.conf: |-
     [PLUGINS]
         Path /fluent-bit/plugins/out_loki.so

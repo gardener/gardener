@@ -16,9 +16,9 @@ data:
 {{ toString $bytes | indent 4}}
   {{ end }}
 {{ end }}
-# provider-specific rules
-{{- if .Values.extensions.rules }}
-{{toString .Values.extensions.rules | indent 2}}
+# additional rules
+{{- if .Values.additionalRules }}
+{{toString .Values.additionalRules | indent 2}}
 {{- end}}
 # optional rules
 {{- $files := .Files }}

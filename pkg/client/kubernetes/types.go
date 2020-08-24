@@ -32,6 +32,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/version"
 	autoscalingscheme "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
@@ -64,6 +66,11 @@ var (
 		client.PropagationPolicy(metav1.DeletePropagationBackground),
 		client.GracePeriodSeconds(0),
 	}
+
+	// ShootSerializer is a YAML serializer using the Shoot scheme.
+	ShootSerializer = json.NewSerializerWithOptions(json.DefaultMetaFactory, ShootScheme, ShootScheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
+	// ShootCodec is a codec factory using the Shoot scheme.
+	ShootCodec = serializer.NewCodecFactory(ShootScheme)
 )
 
 // DefaultGetOptions are the default options for GET requests.
