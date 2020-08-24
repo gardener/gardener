@@ -61,7 +61,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/informers"
 	kubeinformers "k8s.io/client-go/informers"
-	k8s "k8s.io/client-go/kubernetes"
+	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
 )
@@ -321,10 +321,6 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	if err != nil {
 		return nil, err
 	}
-	k8sSeedClientLeaderElection, err := k8s.NewForConfig(seedRestCfg)
-	if err != nil {
-		return nil, err
-	}
 
 	// Set up leader election if enabled and prepare event recorder.
 	var (
@@ -332,7 +328,18 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		recorder             = utils.CreateRecorder(k8sGardenClient.Kubernetes(), "gardenlet")
 	)
 	if cfg.LeaderElection.LeaderElect {
-		leaderElectionConfig, err = utils.MakeLeaderElectionConfig(cfg.LeaderElection.LeaderElectionConfiguration, *cfg.LeaderElection.LockObjectNamespace, *cfg.LeaderElection.LockObjectName, k8sSeedClientLeaderElection, recorder)
+		k8sSeedClientLeaderElection, err := kubernetesclientset.NewForConfig(seedRestCfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create client for leader election: %w", err)
+		}
+
+		leaderElectionConfig, err = utils.MakeLeaderElectionConfig(
+			cfg.LeaderElection.LeaderElectionConfiguration,
+			*cfg.LeaderElection.LockObjectNamespace,
+			*cfg.LeaderElection.LockObjectName,
+			k8sSeedClientLeaderElection,
+			utils.CreateRecorder(k8sSeedClientLeaderElection, "gardenlet"),
+		)
 		if err != nil {
 			return nil, err
 		}
