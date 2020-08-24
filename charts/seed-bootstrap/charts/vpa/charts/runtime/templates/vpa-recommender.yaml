@@ -5,6 +5,12 @@ metadata:
   name: vpa-recommender
   namespace: {{ .Release.Namespace }}
 spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      minAllowed:
+        cpu: 10m
+        memory: 40Mi
   targetRef:
     apiVersion: {{ include "deploymentversion" . }}
     kind: Deployment
