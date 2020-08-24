@@ -47,6 +47,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/informers"
 	kubeinformers "k8s.io/client-go/informers"
+	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/leaderelection"
@@ -266,7 +267,18 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 		recorder             = utils.CreateRecorder(k8sGardenClient.Kubernetes(), "gardener-controller-manager")
 	)
 	if cfg.LeaderElection.LeaderElect {
-		leaderElectionConfig, err = utils.MakeLeaderElectionConfig(cfg.LeaderElection.LeaderElectionConfiguration, cfg.LeaderElection.LockObjectNamespace, cfg.LeaderElection.LockObjectName, k8sGardenClient.Kubernetes(), recorder)
+		k8sGardenClientLeaderElection, err := kubernetesclientset.NewForConfig(restCfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create garden client for leader election: %w", err)
+		}
+
+		leaderElectionConfig, err = utils.MakeLeaderElectionConfig(
+			cfg.LeaderElection.LeaderElectionConfiguration,
+			cfg.LeaderElection.LockObjectNamespace,
+			cfg.LeaderElection.LockObjectName,
+			k8sGardenClientLeaderElection,
+			recorder,
+		)
 		if err != nil {
 			return nil, err
 		}
