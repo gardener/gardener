@@ -98,7 +98,16 @@ allowedMetrics:
   - kube_hpa_status_current_replicas
   - kube_hpa_status_desired_replicas
 
-  fluentbit: []
+  fluentbit:
+  - fluentbit_input_bytes_total
+  - fluentbit_input_records_total
+  - fluentbit_output_proc_bytes_total
+  - fluentbit_output_proc_records_total
+  - fluentbit_output_errors_total
+  - fluentbit_output_retries_total
+  - fluentbit_output_retries_failed_total
+  - fluentbit_filter_add_records_total
+  - fluentbit_filter_drop_records_total
 
   vpa:
   - vpa_status_recommendation
