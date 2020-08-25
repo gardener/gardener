@@ -9,7 +9,7 @@ tests:
   - series: 'up{job="kube-state-metrics", type="shoot"}'
     values: '0+0x30'
   # KubeStateMetricsSeedDown
-  - series: 'up{job="kube-state-metrics", type="seed"}'
+  - series: 'up{job="kube-state-metrics-seed", type="seed"}'
     values: '0+0x30'
   # NoWorkerNodes
   - series: 'kube_node_spec_unschedulable'

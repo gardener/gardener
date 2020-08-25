@@ -1341,7 +1341,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "absent(up{job=\"kube-state-metrics\",type=\"seed\"} == 1)",
+          "expr": "absent(up{job=\"kube-state-metrics-seed\",type=\"seed\"} == 1)",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 10,

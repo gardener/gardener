@@ -156,9 +156,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"scrapeConfigs": scrapeConfigs.String(),
 			},
 		}
-		kubeStateMetricsSeedConfig = map[string]interface{}{
-			"replicas": b.Shoot.GetReplicas(1),
-		}
 		kubeStateMetricsShootConfig = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
 		}
@@ -186,10 +183,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	kubeStateMetricsSeed, err := b.InjectSeedShootImages(kubeStateMetricsSeedConfig, common.KubeStateMetricsImageName)
-	if err != nil {
-		return err
-	}
 	kubeStateMetricsShoot, err := b.InjectSeedShootImages(kubeStateMetricsShootConfig, common.KubeStateMetricsImageName)
 	if err != nil {
 		return err
@@ -202,8 +195,13 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			},
 		},
 		"prometheus":               prometheus,
-		"kube-state-metrics-seed":  kubeStateMetricsSeed,
 		"kube-state-metrics-shoot": kubeStateMetricsShoot,
+	}
+
+	// TODO: (wyb1) Remove in next minor release
+	err = b.DeleteKubeStateMetricsSeed(ctx)
+	if err != nil {
+		return err
 	}
 
 	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-monitoring", "charts", "core"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(coreValues)); err != nil {
@@ -401,22 +399,10 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-monitoring", "charts", "grafana"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values))
 }
 
-// DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts
-// during the deletion process. More precisely, the Alertmanager and Prometheus StatefulSets will be
-// deleted.
-func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
-	if err := common.DeleteAlertmanager(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace); err != nil {
-		return err
-	}
-
-	if err := common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaOperatorsRole); err != nil {
-		return err
-	}
-
-	if err := common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaUsersRole); err != nil {
-		return err
-	}
-
+// TODO: (wyb1) Delete in next minor release
+// DeleteKubeStateMetricsSeed will delete everything related to the kube-state-metrics-seed deployment
+// present in the shoot namespaces.
+func (b *Botanist) DeleteKubeStateMetricsSeed(ctx context.Context) error {
 	for _, obj := range []runtime.Object{
 		&corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
@@ -448,7 +434,37 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 				Name:      "kube-state-metrics-seed-vpa",
 			},
 		},
+	} {
+		if err := b.K8sSeedClient.Client().Delete(ctx, obj); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
+			return err
+		}
+	}
 
+	return nil
+}
+
+// DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts
+// during the deletion process. More precisely, the Alertmanager and Prometheus StatefulSets will be
+// deleted.
+func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
+	if err := common.DeleteAlertmanager(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace); err != nil {
+		return err
+	}
+
+	if err := common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaOperatorsRole); err != nil {
+		return err
+	}
+
+	if err := common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaUsersRole); err != nil {
+		return err
+	}
+
+	// TODO: (wyb1) Delete in next minor release
+	if err := b.DeleteKubeStateMetricsSeed(ctx); err != nil {
+		return err
+	}
+
+	for _, obj := range []runtime.Object{
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,
