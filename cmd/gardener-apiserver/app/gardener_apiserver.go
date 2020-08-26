@@ -42,6 +42,7 @@ import (
 	"github.com/gardener/gardener/plugin/pkg/global/extensionvalidation"
 	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 	plantvalidator "github.com/gardener/gardener/plugin/pkg/plant"
+	seedvalidator "github.com/gardener/gardener/plugin/pkg/seed/validator"
 	shootdns "github.com/gardener/gardener/plugin/pkg/shoot/dns"
 	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
 	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
@@ -164,6 +165,7 @@ func (o *Options) complete() error {
 	shootquotavalidator.Register(o.Recommended.Admission.Plugins)
 	shootdns.Register(o.Recommended.Admission.Plugins)
 	shootvalidator.Register(o.Recommended.Admission.Plugins)
+	seedvalidator.Register(o.Recommended.Admission.Plugins)
 	controllerregistrationresources.Register(o.Recommended.Admission.Plugins)
 	plantvalidator.Register(o.Recommended.Admission.Plugins)
 	openidconnectpreset.Register(o.Recommended.Admission.Plugins)
@@ -178,6 +180,7 @@ func (o *Options) complete() error {
 		shootdns.PluginName,
 		shootquotavalidator.PluginName,
 		shootvalidator.PluginName,
+		seedvalidator.PluginName,
 		controllerregistrationresources.PluginName,
 		plantvalidator.PluginName,
 		deletionconfirmation.PluginName,

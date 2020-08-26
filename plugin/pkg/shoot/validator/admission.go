@@ -25,6 +25,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
@@ -63,6 +64,7 @@ type ValidateShoot struct {
 	seedLister         corelisters.SeedLister
 	shootLister        corelisters.ShootLister
 	projectLister      corelisters.ProjectLister
+	backupBucketLister corelisters.BackupBucketLister
 	readyFunc          admission.ReadyFunc
 }
 
@@ -99,7 +101,17 @@ func (v *ValidateShoot) SetInternalCoreInformerFactory(f coreinformers.SharedInf
 	projectInformer := f.Core().InternalVersion().Projects()
 	v.projectLister = projectInformer.Lister()
 
-	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, projectInformer.Informer().HasSynced)
+	backupBucketInformer := f.Core().InternalVersion().BackupBuckets()
+	v.backupBucketLister = backupBucketInformer.Lister()
+
+	readyFuncs = append(
+		readyFuncs,
+		seedInformer.Informer().HasSynced,
+		shootInformer.Informer().HasSynced,
+		cloudProfileInformer.Informer().HasSynced,
+		projectInformer.Informer().HasSynced,
+		backupBucketInformer.Informer().HasSynced,
+	)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
@@ -115,6 +127,9 @@ func (v *ValidateShoot) ValidateInitialization() error {
 	}
 	if v.projectLister == nil {
 		return errors.New("missing project lister")
+	}
+	if v.backupBucketLister == nil {
+		return errors.New("missing backupbucket lister")
 	}
 	return nil
 }
@@ -236,6 +251,10 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 
 	if shoot.Spec.Provider.Type != cloudProfile.Spec.Type {
 		return apierrors.NewBadRequest(fmt.Sprintf("cloud provider in shoot (%s) is not equal to cloud provider in profile (%s)", shoot.Spec.Provider.Type, cloudProfile.Spec.Type))
+	}
+
+	if err := v.validateShootedSeed(a, shoot, oldShoot); err != nil {
+		return err
 	}
 
 	var (
@@ -884,4 +903,47 @@ func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []c
 	}
 
 	return getDefaultMachineImage(images, imageName)
+}
+
+func (v ValidateShoot) validateShootedSeed(a admission.Attributes, shoot, oldShoot *core.Shoot) error {
+	if shoot.Namespace != constants.GardenNamespace {
+		return nil
+	}
+
+	oldVal, oldOk := constants.GetShootUseAsSeedAnnotation(oldShoot.Annotations)
+	if !oldOk || len(oldVal) == 0 {
+		return nil
+	}
+
+	val, ok := constants.GetShootUseAsSeedAnnotation(shoot.Annotations)
+	if ok && len(val) != 0 {
+		return nil
+	}
+
+	if _, err := v.seedLister.Get(shoot.Name); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return apierrors.NewInternalError(fmt.Errorf("could not get seed '%s' to verify that annotation '%s' can be removed: %v", shoot.Name, constants.AnnotationShootUseAsSeed, err))
+	}
+
+	shoots, err := v.shootLister.List(labels.Everything())
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that annotation '%s' can be removed: %v", constants.AnnotationShootUseAsSeed, err))
+	}
+
+	backupbuckets, err := v.backupBucketLister.List(labels.Everything())
+	if err != nil {
+		return apierrors.NewInternalError(fmt.Errorf("could not list backupbuckets to verify that annotation '%s' can be removed: %v", constants.AnnotationShootUseAsSeed, err))
+	}
+
+	if admissionutils.IsSeedUsedByShoot(shoot.Name, shoots) {
+		return admission.NewForbidden(a, fmt.Errorf("cannot delete seed '%s' which is still used by shoot(s)", shoot.Name))
+	}
+
+	if admissionutils.IsSeedUsedByBackupBucket(shoot.Name, backupbuckets) {
+		return admission.NewForbidden(a, fmt.Errorf("cannot delete seed '%s' which is still used by backupbucket(s)", shoot.Name))
+	}
+
+	return nil
 }

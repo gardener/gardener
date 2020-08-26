@@ -68,15 +68,20 @@ However, it also has some special behaviours for certain resources:
 * `Seed`s: It rejects changing the `.spec.settings.shootDNS.enabled` value if there is at least one `Shoot` that refers to this seed.
 * `Shoot`s: It sets the `gardener.cloud/created-by=<username>` annotation for newly created `Shoot` resources.
 
+## `SeedValidator`
+
+_(enabled by default)_
+
+This admission controller reacts on `DELETE` operations for `Seed`s.
+It checks whether the seed cluster is referenced by a `BackupBucket`(s) and/or `Shoot`(s). If any of this is true, the deletion request is rejected.
+
 ## `ShootDNS`
 
 _(enabled by default)_
 
 This admission controller reacts on `CREATE` and `UPDATE` operations for `Shoot`s.
 It tries to assign a default domain to the `Shoot` if it gets scheduled to a seed that enables DNS for shoots (`.spec.settings.shootDNS.enabled=true`).
-It also validates that the DNS configuration (`.spec.dns`) is not set if the seed disables DNS for shoots. 
-
- 
+It also validates that the DNS configuration (`.spec.dns`) is not set if the seed disables DNS for shoots.
 
 ## `ShootQuotaValidator`
 

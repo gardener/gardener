@@ -62,6 +62,9 @@ var _ = Describe("validator", func() {
 
 			unmanagedDNSProvider = core.DNSUnmanaged
 			baseDomain           = "example.com"
+			useAsSeedValue       = "true,no-gardenlet,invisible"
+			useAsSeedKey         = "shoot.gardener.cloud/use-as-seed"
+			gardenNamespace      = "garden"
 
 			validMachineImageName     = "some-machineimage"
 			validMachineImageVersions = []core.MachineImageVersion{
@@ -408,6 +411,184 @@ var _ = Describe("validator", func() {
 				err = admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).NotTo(ContainSubstring("name must not exceed"))
+			})
+		})
+
+		Context(fmt.Sprintf("test '%s' annotation", useAsSeedKey), func() {
+			var (
+				oldShoot      *core.Shoot
+				gardenProject = core.Project{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: gardenNamespace,
+					},
+					Spec: core.ProjectSpec{
+						Namespace: &gardenNamespace,
+					},
+				}
+				shootedSeed core.Seed
+			)
+
+			BeforeEach(func() {
+				shoot = *shootBase.DeepCopy()
+				shoot.Annotations = make(map[string]string)
+				shoot.Annotations[useAsSeedKey] = useAsSeedValue
+				shoot.Namespace = gardenNamespace
+
+				shootedSeed = *seedBase.DeepCopy()
+				shootedSeed.Name = shoot.Name
+
+				oldShoot = shoot.DeepCopy()
+
+			})
+
+			It("should admit removing the use-as-seed annotation for shoots with namespace != garden", func() {
+				shoot.Namespace = namespaceName
+				oldShoot.Namespace = namespaceName
+
+				delete(shoot.Annotations, useAsSeedKey)
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should admit update of shoot with already removed annotation", func() {
+				delete(oldShoot.Annotations, useAsSeedKey)
+				shoot.Spec.Provider.Workers[0].Maximum++
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&gardenProject)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should admit update of shoot with already empty annotation", func() {
+				oldShoot.Annotations[useAsSeedKey] = ""
+				shoot.Spec.Provider.Workers[0].Maximum++
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&gardenProject)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should admit update of shoot which does not remove the use-as-seed annotation", func() {
+				shoot.Spec.Provider.Workers[0].Maximum++
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&gardenProject)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should admit removal of the annotation when there is no seed with name of the shoot", func() {
+				delete(shoot.Annotations, useAsSeedKey)
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&gardenProject)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should admit removal of the annotation when the respective seed is empty", func() {
+				delete(shoot.Annotations, useAsSeedKey)
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&gardenProject)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&shootedSeed)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should reject removal of the annotation when the respective seed hosts shoots", func() {
+				delete(shoot.Annotations, useAsSeedKey)
+
+				endShoot := *shootBase.DeepCopy()
+				endShoot.Spec.SeedName = &shoot.Name
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&gardenProject)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&shootedSeed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&endShoot)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(BeForbiddenError())
+			})
+
+			It("should reject removal of the annotation when the respective seed is used by backupbucket", func() {
+				bucket := core.BackupBucket{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "backupbucket",
+					},
+					Spec: core.BackupBucketSpec{
+						SeedName: &shoot.Name,
+					},
+				}
+				delete(shoot.Annotations, useAsSeedKey)
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&gardenProject)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&shootedSeed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().BackupBuckets().Informer().GetStore().Add(&bucket)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(BeForbiddenError())
+			})
+
+			It("should reject removal of the annotation when the respective seed is used by backupbucket", func() {
+				bucket := core.BackupBucket{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "backupbucket",
+					},
+					Spec: core.BackupBucketSpec{
+						SeedName: &shoot.Name,
+					},
+				}
+				delete(shoot.Annotations, useAsSeedKey)
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&gardenProject)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&shootedSeed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().BackupBuckets().Informer().GetStore().Add(&bucket)).To(Succeed())
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(BeForbiddenError())
 			})
 		})
 
