@@ -3,7 +3,7 @@ groups:
   rules:
   - alert: KubeStateMetricsShootDown
     expr: absent(up{job="kube-state-metrics", type="shoot"} == 1)
-    for: 5m
+    for: 15m
     labels:
       service: kube-state-metrics-shoot
       severity: info
@@ -15,7 +15,7 @@ groups:
 
   - alert: KubeStateMetricsSeedDown
     expr: absent(up{job="kube-state-metrics", type="seed"} == 1)
-    for: 5m
+    for: 15m
     labels:
       service: kube-state-metrics-seed
       severity: critical

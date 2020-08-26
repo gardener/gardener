@@ -75,6 +75,11 @@ spec:
         - --web.external-url=https://{{ .Values.ingress.host }}
         - --storage.path=/var/alertmanager/data
         - --log.level=info
+        # Since v0.16 alertmanager runs as the user nobody. To run its maintenance the alertmanager
+        # must be able to write to its volume or it logs an error message. The alertmanager now runs as root
+        # to prevent these error messages.
+        securityContext:
+          runAsUser: 0
         env:
         - name: ALERTMANAGER_NAMESPACE
           valueFrom:

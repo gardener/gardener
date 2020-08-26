@@ -5,6 +5,8 @@ evaluation_interval: 30s
 
 tests:
 - interval: 30s
+  external_labels:
+    seed: aws
   input_series:
   # FluentBitDown
   - series: 'up{job="fluent-bit"}'
@@ -14,11 +16,11 @@ tests:
     alertname: FluentBitDown
     exp_alerts:
     - exp_labels:
-        service: fluent-bit
+        service: logging
         severity: warning
         type: seed
         visibility: operator
       exp_annotations:
-        description: There are no running fluent-bit pods. No logs will be collected.
+        description: "There are no fluent-bit pods running on seed: aws. No logs will be collected."
         summary: Fluent-bit is down
 

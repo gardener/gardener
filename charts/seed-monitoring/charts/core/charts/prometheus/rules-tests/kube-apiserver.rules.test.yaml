@@ -18,10 +18,13 @@ tests:
   - series: 'process_max_fds{job="kube-apiserver", instance="instance"}'
     values: '100+0x60'
   # KubeApiServerLatency
-  - series: 'apiserver_request_duration_seconds_bucket{verb="POST", le="5000000"}'
-    values: '100+0x60'
+  # in this example the request duration is always greater than 3s and less than or equal to 5s.
   - series: 'apiserver_request_duration_seconds_bucket{verb="POST", le="+Inf"}'
-    values: '100+0x60'
+    values: '0+1x62'
+  - series: 'apiserver_request_duration_seconds_bucket{verb="POST", le="5"}'
+    values: '0+1x62'
+  - series: 'apiserver_request_duration_seconds_bucket{verb="POST", le="3"}'
+    values: '0+0x62'
   # KubeApiServerTooManyAuditlogFailures
   - series: 'apiserver_audit_error_total{plugin="webhook", job="kube-apiserver"}'
     values: '1+1x31'
@@ -75,7 +78,7 @@ tests:
       exp_annotations:
         description: 'The API server (instance) is using 81% of the available file/socket descriptors.'
         summary: 'The API server has too many open file descriptors'
-  - eval_time: 30m
+  - eval_time: 31m
     alertname: KubeApiServerLatency
     exp_alerts:
     - exp_labels:
@@ -85,15 +88,15 @@ tests:
         visibility: owner
         verb: POST
       exp_annotations:
-        description: Kube API server latency for verb POST is high. This could be because the shoot workers and the control plane are in different regions. 99th percentile of request latency is greater than 3 second.
+        description: Kube API server latency for verb POST is high. This could be because the shoot workers and the control plane are in different regions. 99th percentile of request latency is greater than 3 seconds.
         summary: Kubernetes API server latency is high
   - eval_time: 16m
     alertname: KubeApiServerTooManyAuditlogFailures
     exp_alerts:
     - exp_labels:
+        service: auditlog
         severity: critical
         type: seed
-        job: kube-apiserver
         visibility: operator
       exp_annotations:
         description: 'The API servers cumulative failure rate in logging audit events is 0.03%. This may be caused by an unavailable/unreachable AuditSink(s) and/or improper API server audit configuration.'
