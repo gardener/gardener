@@ -383,6 +383,8 @@ var _ = Describe("KubeScheduler", func() {
 				Entry("kubernetes 1.17 w/ full config", "1.17.7", configFull),
 				Entry("kubernetes 1.18 w/o config", "1.18.8", configEmpty),
 				Entry("kubernetes 1.18 w/ full config", "1.18.8", configFull),
+				Entry("kubernetes 1.19 w/o config", "1.19.8", configEmpty),
+				Entry("kubernetes 1.19 w/ full config", "1.19.8", configFull),
 			)
 		})
 	})
@@ -407,11 +409,15 @@ var _ = Describe("KubeScheduler", func() {
 })
 
 func componentConfigYAMLForKubernetesVersion(version string) (string, string) {
-	apiVersion, checksum := "componentconfig/v1alpha1", "a09f1f2d75393187666e68e29d3f405db81f8027d1111918ce40e4cb31c2e696"
-	if k8sVersionGreaterEqual118, _ := versionutils.CompareVersions(version, ">=", "1.18"); k8sVersionGreaterEqual118 {
+	var apiVersion, checksum string
+	if k8sVersionGreaterEqual119, _ := versionutils.CompareVersions(version, ">=", "1.19"); k8sVersionGreaterEqual119 {
+		apiVersion, checksum = "kubescheduler.config.k8s.io/v1beta1", "9988c880500b124fb153fd6e8c34435386b1924dcd48a39385fdb6d2bef492a9"
+	} else if k8sVersionGreaterEqual118, _ := versionutils.CompareVersions(version, ">=", "1.18"); k8sVersionGreaterEqual118 {
 		apiVersion, checksum = "kubescheduler.config.k8s.io/v1alpha2", "a1916d3e007de7f094bb829768c16eef1c4ec2ba30087e3bb1e564ecd2990fc5"
 	} else if k8sVersionGreaterEqual112, _ := versionutils.CompareVersions(version, ">=", "1.12"); k8sVersionGreaterEqual112 {
 		apiVersion, checksum = "kubescheduler.config.k8s.io/v1alpha1", "b1821b1b8e76431815e36877e29eda9a50fbdd9adc2a9e579f378fe69a6f744c"
+	} else {
+		apiVersion, checksum = "componentconfig/v1alpha1", "a09f1f2d75393187666e68e29d3f405db81f8027d1111918ce40e4cb31c2e696"
 	}
 
 	return `apiVersion: ` + apiVersion + `

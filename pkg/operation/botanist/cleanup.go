@@ -39,7 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
+	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"k8s.io/kube-aggregator/pkg/controllers/autoregister"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -202,7 +202,7 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 	)
 
 	return flow.Parallel(
-		cleanResourceFn(defaultOps, c, &apiregistrationv1beta1.APIServiceList{}, APIServiceCleanOption, GracePeriodFiveMinutes, FinalizeAfterOneHour),
+		cleanResourceFn(defaultOps, c, &apiregistrationv1.APIServiceList{}, APIServiceCleanOption, GracePeriodFiveMinutes, FinalizeAfterOneHour),
 		cleanResourceFn(crdCleanOps, c, &apiextensionsv1beta1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOption, GracePeriodFiveMinutes, FinalizeAfterOneHour),
 	)(ctx)
 }
