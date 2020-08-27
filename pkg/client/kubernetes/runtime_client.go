@@ -65,7 +65,7 @@ func NewRuntimeClientWithCache(config *rest.Config, options client.Options, stop
 
 	go func() {
 		if err := clientCache.Start(stopCh); err != nil {
-			logger.NewLogger(string(logrus.ErrorLevel)).Errorf("cache.Start returned error, which should never happen, ignoring.")
+			logger.NewLogger(fmt.Sprint(logrus.ErrorLevel)).Errorf("cache.Start returned error, which should never happen, ignoring.")
 		}
 	}()
 
