@@ -486,13 +486,16 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 	}
 
 	if kubeAPIServer := kubernetes.KubeAPIServer; kubeAPIServer != nil {
+		geqKubernetes111, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.11")
+		geqKubernetes119, _ := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.19")
+		// Errors are ignored here because we cannot do anything meaningful with them - variables will default to `false`.
+
+		if geqKubernetes119 && helper.ShootWantsBasicAuthentication(kubeAPIServer) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "enableBasicAuthentication"), "basic authentication has been removed in Kubernetes v1.19+"))
+		}
+
 		if oidc := kubeAPIServer.OIDCConfig; oidc != nil {
 			oidcPath := fldPath.Child("kubeAPIServer", "oidcConfig")
-
-			geqKubernetes111, err := versionutils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.11")
-			if err != nil {
-				geqKubernetes111 = false
-			}
 
 			if fieldNilOrEmptyString(oidc.ClientID) {
 				if oidc.ClientID != nil {
