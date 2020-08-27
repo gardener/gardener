@@ -1,0 +1,67 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: dnsowners.dns.gardener.cloud
+  labels:
+    gardener.cloud/deletion-protected: "true"
+spec:
+  conversion:
+    strategy: None
+  group: dns.gardener.cloud
+  names:
+    kind: DNSOwner
+    listKind: DNSOwnerList
+    plural: dnsowners
+    shortNames:
+      - dnso
+    singular: dnsowner
+  scope: Cluster
+  subresources:
+    status: {}
+  version: v1alpha1
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+  additionalPrinterColumns:
+    - JSONPath: .spec.ownerId
+      description: Owner Id
+      name: OWNERID
+      type: string
+    - JSONPath: .metadata.creationTimestamp
+      name: AGE
+      type: date
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          type: object
+          properties:
+             ownerId:
+               type: string
+             active:
+               type: boolean
+               nullable: true
+          required:
+            - ownerId
+        status:
+          properties:
+            amount:
+              type: int
+            types:
+              additionalProperties:
+                type: int
+              nullable: true
