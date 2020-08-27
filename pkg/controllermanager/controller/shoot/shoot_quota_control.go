@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -134,7 +136,7 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardencorev1beta1.Shoot, key 
 		expirationTime = shoot.CreationTimestamp.Add(time.Duration(*clusterLifeTime*24) * time.Hour).Format(time.RFC3339)
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.ShootExpirationTimestamp, expirationTime)
 
-		shootUpdated, err := gardenClient.GardenCore().CoreV1beta1().Shoots(shoot.Namespace).Update(shoot)
+		shootUpdated, err := gardenClient.GardenCore().CoreV1beta1().Shoots(shoot.Namespace).Update(ctx, shoot, kubernetes.DefaultUpdateOptions())
 		if err != nil {
 			return err
 		}
@@ -155,7 +157,7 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardencorev1beta1.Shoot, key 
 		}
 
 		// Now we are allowed to delete the Shoot (to set the deletionTimestamp).
-		if err := gardenClient.GardenCore().CoreV1beta1().Shoots(shoot.Namespace).Delete(shoot.Name, &metav1.DeleteOptions{}); err != nil {
+		if err := gardenClient.GardenCore().CoreV1beta1().Shoots(shoot.Namespace).Delete(ctx, shoot.Name, metav1.DeleteOptions{}); err != nil {
 			return err
 		}
 	}

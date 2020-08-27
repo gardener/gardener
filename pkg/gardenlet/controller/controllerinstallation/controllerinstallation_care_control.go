@@ -108,7 +108,7 @@ func (c *defaultCareControl) Care(controllerInstallationObj *gardencorev1beta1.C
 	}
 
 	defer func() {
-		if _, err := kutil.TryUpdateControllerInstallationStatusWithEqualFunc(gardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
+		if _, err := kutil.TryUpdateControllerInstallationStatusWithEqualFunc(ctx, gardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
 			func(controllerInstallation *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
 				controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, conditionControllerInstallationHealthy, conditionControllerInstallationInstalled)
 				return controllerInstallation, nil

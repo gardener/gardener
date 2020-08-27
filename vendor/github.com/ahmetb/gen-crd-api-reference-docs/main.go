@@ -36,6 +36,10 @@ var (
 	flOutFile  = flag.String("out-file", "", "path to output file to save the result")
 )
 
+const (
+	docCommentForceIncludes = "// +gencrdrefdocs:force"
+)
+
 type generatorConfig struct {
 	// HiddenMemberFields hides fields with specified names on all types.
 	HiddenMemberFields []string `json:"hideMemberFields"`
@@ -181,9 +185,9 @@ func main() {
 }
 
 // groupName extracts the "//+groupName" meta-comment from the specified
-// package's godoc, or returns empty string if it cannot be found.
+// package's comments, or returns empty string if it cannot be found.
 func groupName(pkg *types.Package) string {
-	m := types.ExtractCommentTags("+", pkg.DocComments)
+	m := types.ExtractCommentTags("+", pkg.Comments)
 	v := m["groupName"]
 	if len(v) == 1 {
 		return v[0]
@@ -214,7 +218,7 @@ func parseAPIPackages(dir string) ([]*types.Package, error) {
 			continue
 		}
 
-		if groupName(pkg) != "" && len(pkg.Types) > 0 {
+		if groupName(pkg) != "" && len(pkg.Types) > 0 || containsString(pkg.DocComments, docCommentForceIncludes) {
 			klog.V(3).Infof("package=%v has groupName and has types", p)
 			pkgNames = append(pkgNames, p)
 		}
@@ -226,6 +230,15 @@ func parseAPIPackages(dir string) ([]*types.Package, error) {
 		pkgs = append(pkgs, scan[p])
 	}
 	return pkgs, nil
+}
+
+func containsString(sl []string, str string) bool {
+	for _, s := range sl {
+		if str == s {
+			return true
+		}
+	}
+	return false
 }
 
 // combineAPIPackages groups the Go packages by the <apiGroup+apiVersion> they

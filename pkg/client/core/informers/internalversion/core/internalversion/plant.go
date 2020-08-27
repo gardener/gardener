@@ -19,6 +19,7 @@ limitations under the License.
 package internalversion
 
 import (
+	"context"
 	time "time"
 
 	core "github.com/gardener/gardener/pkg/apis/core"
@@ -61,13 +62,13 @@ func NewFilteredPlantInformer(client clientsetinternalversion.Interface, namespa
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Core().Plants(namespace).List(options)
+				return client.Core().Plants(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Core().Plants(namespace).Watch(options)
+				return client.Core().Plants(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&core.Plant{},

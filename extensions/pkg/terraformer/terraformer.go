@@ -202,7 +202,7 @@ func (t *terraformer) execute(ctx context.Context, scriptName string) error {
 	}
 
 	t.logger.Infof("Fetching the logs for all pods belonging to Terraformer '%s'...", t.name)
-	logList, err := t.retrievePodLogs(podList)
+	logList, err := t.retrievePodLogs(ctx, podList)
 	if err != nil {
 		t.logger.Errorf("Could not retrieve the logs of the pods belonging to Terraformer '%s': %s", t.name, err.Error())
 		logList = map[string]string{}
@@ -388,13 +388,13 @@ func (t *terraformer) listTerraformerPods(ctx context.Context) (*corev1.PodList,
 
 // retrievePodLogs fetches the logs of the created Pods by the Terraformer and returns them as a map whose
 // keys are pod names and whose values are the corresponding logs.
-func (t *terraformer) retrievePodLogs(podList *corev1.PodList) (map[string]string, error) {
+func (t *terraformer) retrievePodLogs(ctx context.Context, podList *corev1.PodList) (map[string]string, error) {
 	logChan := make(chan map[string]string, 1)
 	go func() {
 		var logList = map[string]string{}
 		for _, pod := range podList.Items {
 			name := pod.Name
-			logs, err := kubernetes.GetPodLogs(t.coreV1Client.Pods(pod.Namespace), name, &corev1.PodLogOptions{})
+			logs, err := kubernetes.GetPodLogs(ctx, t.coreV1Client.Pods(pod.Namespace), name, &corev1.PodLogOptions{})
 			if err != nil {
 				t.logger.Warnf("Could not retrieve the logs of Terraform pod %s: '%v'", name, err)
 				continue

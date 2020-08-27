@@ -5,8 +5,10 @@
 package manager
 
 import (
+	http "net/http"
 	reflect "reflect"
 
+	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -70,6 +72,20 @@ func (mr *MockManagerMockRecorder) AddHealthzCheck(arg0, arg1 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddHealthzCheck", reflect.TypeOf((*MockManager)(nil).AddHealthzCheck), arg0, arg1)
 }
 
+// AddMetricsExtraHandler mocks base method.
+func (m *MockManager) AddMetricsExtraHandler(arg0 string, arg1 http.Handler) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddMetricsExtraHandler", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddMetricsExtraHandler indicates an expected call of AddMetricsExtraHandler.
+func (mr *MockManagerMockRecorder) AddMetricsExtraHandler(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddMetricsExtraHandler", reflect.TypeOf((*MockManager)(nil).AddMetricsExtraHandler), arg0, arg1)
+}
+
 // AddReadyzCheck mocks base method.
 func (m *MockManager) AddReadyzCheck(arg0 string, arg1 healthz.Checker) error {
 	m.ctrl.T.Helper()
@@ -82,6 +98,20 @@ func (m *MockManager) AddReadyzCheck(arg0 string, arg1 healthz.Checker) error {
 func (mr *MockManagerMockRecorder) AddReadyzCheck(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddReadyzCheck", reflect.TypeOf((*MockManager)(nil).AddReadyzCheck), arg0, arg1)
+}
+
+// Elected mocks base method.
+func (m *MockManager) Elected() <-chan struct{} {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Elected")
+	ret0, _ := ret[0].(<-chan struct{})
+	return ret0
+}
+
+// Elected indicates an expected call of Elected.
+func (mr *MockManagerMockRecorder) Elected() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Elected", reflect.TypeOf((*MockManager)(nil).Elected))
 }
 
 // GetAPIReader mocks base method.
@@ -166,6 +196,20 @@ func (m *MockManager) GetFieldIndexer() client.FieldIndexer {
 func (mr *MockManagerMockRecorder) GetFieldIndexer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFieldIndexer", reflect.TypeOf((*MockManager)(nil).GetFieldIndexer))
+}
+
+// GetLogger mocks base method.
+func (m *MockManager) GetLogger() logr.Logger {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLogger")
+	ret0, _ := ret[0].(logr.Logger)
+	return ret0
+}
+
+// GetLogger indicates an expected call of GetLogger.
+func (mr *MockManagerMockRecorder) GetLogger() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogger", reflect.TypeOf((*MockManager)(nil).GetLogger))
 }
 
 // GetRESTMapper mocks base method.

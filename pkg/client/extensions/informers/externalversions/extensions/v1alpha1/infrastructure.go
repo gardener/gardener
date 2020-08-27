@@ -19,6 +19,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	time "time"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -61,13 +62,13 @@ func NewFilteredInfrastructureInformer(client versioned.Interface, namespace str
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ExtensionsV1alpha1().Infrastructures(namespace).List(options)
+				return client.ExtensionsV1alpha1().Infrastructures(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ExtensionsV1alpha1().Infrastructures(namespace).Watch(options)
+				return client.ExtensionsV1alpha1().Infrastructures(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&extensionsv1alpha1.Infrastructure{},

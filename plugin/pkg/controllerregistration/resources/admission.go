@@ -111,7 +111,7 @@ func (r *Resources) Validate(ctx context.Context, a admission.Attributes, o admi
 	}
 
 	// Live lookup to prevent missing any data
-	controllerRegistrationList, err := r.coreClient.Core().ControllerRegistrations().List(metav1.ListOptions{})
+	controllerRegistrationList, err := r.coreClient.Core().ControllerRegistrations().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}

@@ -15,8 +15,11 @@
 package kubernetes
 
 import (
+	"context"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -26,6 +29,7 @@ import (
 )
 
 func tryUpdateControllerInstallation(
+	ctx context.Context,
 	g gardencore.Interface,
 	backoff wait.Backoff,
 	meta metav1.ObjectMeta,
@@ -40,7 +44,7 @@ func tryUpdateControllerInstallation(
 	)
 	err := retry.RetryOnConflict(backoff, func() (err error) {
 		attempt++
-		cur, err := g.CoreV1beta1().ControllerInstallations().Get(meta.Name, metav1.GetOptions{})
+		cur, err := g.CoreV1beta1().ControllerInstallations().Get(ctx, meta.Name, kubernetes.DefaultGetOptions())
 		if err != nil {
 			return err
 		}
@@ -71,9 +75,9 @@ func tryUpdateControllerInstallation(
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the ControllerInstallation object. If the equal
 // func concludes a semantically equal ControllerInstallation, no update is done and the operation returns normally.
-func TryUpdateControllerInstallationWithEqualFunc(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error), equal func(cur, updated *gardencorev1beta1.ControllerInstallation) bool) (*gardencorev1beta1.ControllerInstallation, error) {
-	return tryUpdateControllerInstallation(g, backoff, meta, transform, func(g gardencore.Interface, controllerInstallation *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
-		return g.CoreV1beta1().ControllerInstallations().Update(controllerInstallation)
+func TryUpdateControllerInstallationWithEqualFunc(ctx context.Context, g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error), equal func(cur, updated *gardencorev1beta1.ControllerInstallation) bool) (*gardencorev1beta1.ControllerInstallation, error) {
+	return tryUpdateControllerInstallation(ctx, g, backoff, meta, transform, func(g gardencore.Interface, controllerInstallation *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
+		return g.CoreV1beta1().ControllerInstallations().Update(ctx, controllerInstallation, kubernetes.DefaultUpdateOptions())
 	}, equal)
 }
 
@@ -81,8 +85,8 @@ func TryUpdateControllerInstallationWithEqualFunc(g gardencore.Interface, backof
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the ControllerInstallation object. If the transformation
 // yields a semantically equal ControllerInstallation, no update is done and the operation returns normally.
-func TryUpdateControllerInstallation(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error)) (*gardencorev1beta1.ControllerInstallation, error) {
-	return TryUpdateControllerInstallationWithEqualFunc(g, backoff, meta, transform, func(cur, updated *gardencorev1beta1.ControllerInstallation) bool {
+func TryUpdateControllerInstallation(ctx context.Context, g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error)) (*gardencorev1beta1.ControllerInstallation, error) {
+	return TryUpdateControllerInstallationWithEqualFunc(ctx, g, backoff, meta, transform, func(cur, updated *gardencorev1beta1.ControllerInstallation) bool {
 		return equality.Semantic.DeepEqual(cur, updated)
 	})
 }
@@ -91,9 +95,9 @@ func TryUpdateControllerInstallation(g gardencore.Interface, backoff wait.Backof
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the ControllerInstallation object. If the equal
 // func concludes a semantically equal ControllerInstallation, no update is done and the operation returns normally.
-func TryUpdateControllerInstallationStatusWithEqualFunc(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error), equal func(cur, updated *gardencorev1beta1.ControllerInstallation) bool) (*gardencorev1beta1.ControllerInstallation, error) {
-	return tryUpdateControllerInstallation(g, backoff, meta, transform, func(g gardencore.Interface, controllerInstallation *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
-		return g.CoreV1beta1().ControllerInstallations().UpdateStatus(controllerInstallation)
+func TryUpdateControllerInstallationStatusWithEqualFunc(ctx context.Context, g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error), equal func(cur, updated *gardencorev1beta1.ControllerInstallation) bool) (*gardencorev1beta1.ControllerInstallation, error) {
+	return tryUpdateControllerInstallation(ctx, g, backoff, meta, transform, func(g gardencore.Interface, controllerInstallation *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
+		return g.CoreV1beta1().ControllerInstallations().UpdateStatus(ctx, controllerInstallation, kubernetes.DefaultUpdateOptions())
 	}, equal)
 }
 
@@ -101,8 +105,8 @@ func TryUpdateControllerInstallationStatusWithEqualFunc(g gardencore.Interface, 
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the ControllerInstallation object. If the transformation
 // yields a semantically equal ControllerInstallation, no update is done and the operation returns normally.
-func TryUpdateControllerInstallationStatus(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error)) (*gardencorev1beta1.ControllerInstallation, error) {
-	return TryUpdateControllerInstallationStatusWithEqualFunc(g, backoff, meta, transform, func(cur, updated *gardencorev1beta1.ControllerInstallation) bool {
+func TryUpdateControllerInstallationStatus(ctx context.Context, g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error)) (*gardencorev1beta1.ControllerInstallation, error) {
+	return TryUpdateControllerInstallationStatusWithEqualFunc(ctx, g, backoff, meta, transform, func(cur, updated *gardencorev1beta1.ControllerInstallation) bool {
 		return equality.Semantic.DeepEqual(cur.Status, updated.Status)
 	})
 }

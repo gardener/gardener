@@ -47,7 +47,7 @@ type Controller struct {
 }
 
 // NewController creates new controller that syncs extensions states to ShootState
-func NewController(gardenClient, seedClient kubernetes.Interface, seedName string, log *logrus.Entry, recorder record.EventRecorder) (*Controller, error) {
+func NewController(ctx context.Context, gardenClient, seedClient kubernetes.Interface, seedName string, log *logrus.Entry, recorder record.EventRecorder) (*Controller, error) {
 	controllerArtifacts := newControllerArtifacts()
 
 	controller := &Controller{
@@ -73,7 +73,7 @@ func NewController(gardenClient, seedClient kubernetes.Interface, seedName strin
 		},
 	}
 
-	if err := controllerArtifacts.initialize(seedClient); err != nil {
+	if err := controllerArtifacts.initialize(ctx, seedClient); err != nil {
 		return nil, err
 	}
 

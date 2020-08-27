@@ -15,7 +15,9 @@
 package kubernetes
 
 import (
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/mock/go/context"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -26,6 +28,7 @@ import (
 )
 
 func tryUpdateNamespace(
+	ctx context.Context,
 	k k8s.Interface,
 	backoff wait.Backoff,
 	meta metav1.ObjectMeta,
@@ -40,7 +43,7 @@ func tryUpdateNamespace(
 
 	err := retry.RetryOnConflict(backoff, func() (err error) {
 		attempt++
-		cur, err := k.CoreV1().Namespaces().Get(meta.Name, metav1.GetOptions{})
+		cur, err := k.CoreV1().Namespaces().Get(ctx, meta.Name, kubernetes.DefaultGetOptions())
 		if err != nil {
 			return err
 		}
@@ -69,18 +72,18 @@ func tryUpdateNamespace(
 }
 
 // TryUpdateNamespace tries to update a namespace and retries the operation with the given <backoff>.
-func TryUpdateNamespace(k k8s.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*corev1.Namespace) (*corev1.Namespace, error)) (*corev1.Namespace, error) {
-	return tryUpdateNamespace(k, backoff, meta, transform, func(k k8s.Interface, namespace *corev1.Namespace) (*corev1.Namespace, error) {
-		return k.CoreV1().Namespaces().Update(namespace)
+func TryUpdateNamespace(ctx context.Context, k k8s.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*corev1.Namespace) (*corev1.Namespace, error)) (*corev1.Namespace, error) {
+	return tryUpdateNamespace(ctx, k, backoff, meta, transform, func(k k8s.Interface, namespace *corev1.Namespace) (*corev1.Namespace, error) {
+		return k.CoreV1().Namespaces().Update(ctx, namespace, kubernetes.DefaultUpdateOptions())
 	}, func(cur, updated *corev1.Namespace) bool {
 		return equality.Semantic.DeepEqual(cur, updated)
 	})
 }
 
 // TryUpdateNamespaceLabels tries to update a namespace's labels and retries the operation with the given <backoff>.
-func TryUpdateNamespaceLabels(k k8s.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*corev1.Namespace) (*corev1.Namespace, error)) (*corev1.Namespace, error) {
-	return tryUpdateNamespace(k, backoff, meta, transform, func(k k8s.Interface, namespace *corev1.Namespace) (*corev1.Namespace, error) {
-		return k.CoreV1().Namespaces().Update(namespace)
+func TryUpdateNamespaceLabels(ctx context.Context, k k8s.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*corev1.Namespace) (*corev1.Namespace, error)) (*corev1.Namespace, error) {
+	return tryUpdateNamespace(ctx, k, backoff, meta, transform, func(k k8s.Interface, namespace *corev1.Namespace) (*corev1.Namespace, error) {
+		return k.CoreV1().Namespaces().Update(ctx, namespace, kubernetes.DefaultUpdateOptions())
 	}, func(cur, updated *corev1.Namespace) bool {
 		return equality.Semantic.DeepEqual(cur.Labels, updated.Labels)
 	})

@@ -29,14 +29,7 @@ var _ = Describe("Conversion", func() {
 
 	BeforeSuite(func() {
 		scheme = runtime.NewScheme()
-		Expect(scheme.AddConversionFuncs(
-			Convert_v1beta1_Project_To_core_Project,
-			Convert_core_Project_To_v1beta1_Project,
-			Convert_v1beta1_ProjectSpec_To_core_ProjectSpec,
-			Convert_core_ProjectSpec_To_v1beta1_ProjectSpec,
-			Convert_v1beta1_ProjectMember_To_core_ProjectMember,
-			Convert_core_ProjectMember_To_v1beta1_ProjectMember,
-		)).NotTo(HaveOccurred())
+		Expect(SchemeBuilder.AddToScheme(scheme)).ToNot(HaveOccurred())
 	})
 
 	Context("project conversions", func() {

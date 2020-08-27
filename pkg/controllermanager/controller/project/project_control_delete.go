@@ -41,13 +41,13 @@ func (c *defaultControl) delete(ctx context.Context, project *gardencorev1beta1.
 		released, err := c.releaseNamespace(ctx, gardenClient, project, *namespace)
 		if err != nil {
 			c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceDeletionFailed, err.Error())
-			_, _ = c.updateProjectStatus(gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
+			_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 			return false, err
 		}
 
 		if !released {
 			c.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceMarkedForDeletion, "Successfully marked namespace %q for deletion.", *namespace)
-			_, _ = c.updateProjectStatus(gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectTerminating))
+			_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectTerminating))
 			return true, nil
 		}
 	}

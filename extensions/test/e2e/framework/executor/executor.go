@@ -60,7 +60,7 @@ func NewExecutor(client kubernetes.Interface) Executor {
 // ExecCommandInContainerWithFullOutput executes a command in the
 // specified container and return stdout, stderr and error
 func (e *defaultExecutor) ExecCommandInContainerWithFullOutput(ctx context.Context, namespace, podName, containerName string, cmd ...string) (stdout, stderr string, err error) {
-	return execWithOptions(ctx, execOptions{
+	return execWithOptions(execOptions{
 		client:             e.client,
 		command:            cmd,
 		namespace:          namespace,
@@ -76,15 +76,14 @@ func (e *defaultExecutor) ExecCommandInContainerWithFullOutput(ctx context.Conte
 // execWithOptions executes a command in the specified container,
 // returning stdout, stderr and error. `options` allowed for
 // additional parameters to be passed.
-func execWithOptions(ctx context.Context, options execOptions) (stdout, stderr string, err error) {
+func execWithOptions(options execOptions) (stdout, stderr string, err error) {
 	const tty = false
 	req := options.client.Kubernetes().CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(options.podName).
 		Namespace(options.namespace).
 		SubResource("exec").
-		Param("container", options.containerName).
-		Context(ctx)
+		Param("container", options.containerName)
 	req.VersionedParams(&corev1.PodExecOptions{
 		Container: options.containerName,
 		Command:   options.command,

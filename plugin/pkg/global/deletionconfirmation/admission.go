@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 
 	multierror "github.com/hashicorp/go-multierror"
@@ -137,7 +138,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 			return d.shootLister.Shoots(a.GetNamespace()).Get(a.GetName())
 		}
 		liveLookup = func() (metav1.Object, error) {
-			return d.gardenCoreClient.Core().Shoots(a.GetNamespace()).Get(a.GetName(), metav1.GetOptions{})
+			return d.gardenCoreClient.Core().Shoots(a.GetNamespace()).Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
 		}
 		checkFunc = func(obj metav1.Object) error {
 			if shootIgnored(obj) {
@@ -162,7 +163,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 			return d.projectLister.Get(a.GetName())
 		}
 		liveLookup = func() (metav1.Object, error) {
-			return d.gardenCoreClient.Core().Projects().Get(a.GetName(), metav1.GetOptions{})
+			return d.gardenCoreClient.Core().Projects().Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
 		}
 		checkFunc = common.CheckIfDeletionIsConfirmed
 

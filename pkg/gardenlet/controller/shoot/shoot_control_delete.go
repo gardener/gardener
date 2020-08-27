@@ -44,7 +44,7 @@ import (
 
 // runDeleteShootFlow deletes a Shoot cluster entirely.
 // It receives an Operation object <o> which stores the Shoot object and an ErrorContext which contains error from the previous operation.
-func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
+func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	var (
 		botanist                             *botanistpkg.Botanist
 		shootNamespaceInDeletion             bool
@@ -111,7 +111,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 			if o.Shoot.Info.Namespace == v1beta1constants.GardenNamespace && o.ShootedSeed != nil {
 				// wait for seed object to be deleted before going on with shoot deletion
 				if err := retryutils.UntilTimeout(context.TODO(), time.Second, 300*time.Second, func(context.Context) (done bool, err error) {
-					_, err = o.K8sGardenClient.GardenCore().CoreV1beta1().Seeds().Get(o.Shoot.Info.Name, metav1.GetOptions{})
+					_, err = o.K8sGardenClient.GardenCore().CoreV1beta1().Seeds().Get(ctx, o.Shoot.Info.Name, kubernetes.DefaultGetOptions())
 					if apierrors.IsNotFound(err) {
 						return retryutils.Ok()
 					}
@@ -494,7 +494,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 }
 
 func (c *Controller) removeFinalizerFrom(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {
-	newShoot, err := c.updateShootStatusOperationSuccess(gardenClient.GardenCore(), shoot, "", gardencorev1beta1.LastOperationTypeDelete)
+	newShoot, err := c.updateShootStatusOperationSuccess(ctx, gardenClient.GardenCore(), shoot, "", gardencorev1beta1.LastOperationTypeDelete)
 	if err != nil {
 		return err
 	}

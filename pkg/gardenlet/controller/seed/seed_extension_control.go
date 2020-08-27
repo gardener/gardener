@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -205,6 +207,6 @@ func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencor
 	}
 	seed.Status.Conditions = helper.MergeConditions(seed.Status.Conditions, newCondition)
 
-	_, err = gardenClient.GardenCore().CoreV1beta1().Seeds().UpdateStatus(seed)
+	_, err = gardenClient.GardenCore().CoreV1beta1().Seeds().UpdateStatus(ctx, seed, kubernetes.DefaultUpdateOptions())
 	return err
 }

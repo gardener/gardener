@@ -125,6 +125,7 @@ var _ = Describe("Plant", func() {
 
 		DescribeTable("checkAPIServerAvailablility", func(response *http.Response, matcher types.GomegaMatcher) {
 			var (
+				ctx                = context.Background()
 				apiServerAvailable = gardencorev1beta1helper.InitCondition(gardencorev1beta1.PlantAPIServerAvailable)
 				restMockClient     = mockrest.NewMockInterface(ctrl)
 				body               = mockio.NewMockReadCloser(ctrl)
@@ -145,7 +146,7 @@ var _ = Describe("Plant", func() {
 				body.EXPECT().Close(),
 			)
 			_ = baseNode
-			actual := healthChecker.CheckAPIServerAvailability(apiServerAvailable)
+			actual := healthChecker.CheckAPIServerAvailability(ctx, apiServerAvailable)
 			Expect(hasConditonTrue(actual)).To(matcher)
 
 		},

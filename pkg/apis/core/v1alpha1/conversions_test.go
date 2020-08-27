@@ -17,7 +17,6 @@ package v1alpha1_test
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -29,17 +28,7 @@ var _ = Describe("Conversion", func() {
 
 	BeforeSuite(func() {
 		scheme = runtime.NewScheme()
-		Expect(scheme.AddConversionFuncs(
-			Convert_v1alpha1_Seed_To_core_Seed,
-			Convert_core_Seed_To_v1alpha1_Seed,
-
-			Convert_v1alpha1_Project_To_core_Project,
-			Convert_core_Project_To_v1alpha1_Project,
-			Convert_v1alpha1_ProjectSpec_To_core_ProjectSpec,
-			Convert_core_ProjectSpec_To_v1alpha1_ProjectSpec,
-			Convert_v1alpha1_ProjectMember_To_core_ProjectMember,
-			Convert_core_ProjectMember_To_v1alpha1_ProjectMember,
-		)).NotTo(HaveOccurred())
+		Expect(SchemeBuilder.AddToScheme(scheme)).ToNot(HaveOccurred())
 	})
 
 	Context("seed conversions", func() {

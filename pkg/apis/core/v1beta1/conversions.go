@@ -81,7 +81,7 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 	}
 
 	// Add non-generated conversion functions
-	return scheme.AddConversionFuncs()
+	return nil
 }
 
 func Convert_v1beta1_ProjectSpec_To_core_ProjectSpec(in *ProjectSpec, out *core.ProjectSpec, s conversion.Scope) error {

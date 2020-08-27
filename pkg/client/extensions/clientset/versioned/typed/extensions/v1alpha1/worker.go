@@ -19,6 +19,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"time"
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -37,15 +38,15 @@ type WorkersGetter interface {
 
 // WorkerInterface has methods to work with Worker resources.
 type WorkerInterface interface {
-	Create(*v1alpha1.Worker) (*v1alpha1.Worker, error)
-	Update(*v1alpha1.Worker) (*v1alpha1.Worker, error)
-	UpdateStatus(*v1alpha1.Worker) (*v1alpha1.Worker, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v1alpha1.Worker, error)
-	List(opts v1.ListOptions) (*v1alpha1.WorkerList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Worker, err error)
+	Create(ctx context.Context, worker *v1alpha1.Worker, opts v1.CreateOptions) (*v1alpha1.Worker, error)
+	Update(ctx context.Context, worker *v1alpha1.Worker, opts v1.UpdateOptions) (*v1alpha1.Worker, error)
+	UpdateStatus(ctx context.Context, worker *v1alpha1.Worker, opts v1.UpdateOptions) (*v1alpha1.Worker, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.Worker, error)
+	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.WorkerList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Worker, err error)
 	WorkerExpansion
 }
 
@@ -64,20 +65,20 @@ func newWorkers(c *ExtensionsV1alpha1Client, namespace string) *workers {
 }
 
 // Get takes name of the worker, and returns the corresponding worker object, and an error if there is any.
-func (c *workers) Get(name string, options v1.GetOptions) (result *v1alpha1.Worker, err error) {
+func (c *workers) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Worker, err error) {
 	result = &v1alpha1.Worker{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("workers").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of Workers that match those selectors.
-func (c *workers) List(opts v1.ListOptions) (result *v1alpha1.WorkerList, err error) {
+func (c *workers) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.WorkerList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -88,13 +89,13 @@ func (c *workers) List(opts v1.ListOptions) (result *v1alpha1.WorkerList, err er
 		Resource("workers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested workers.
-func (c *workers) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *workers) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -105,87 +106,90 @@ func (c *workers) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		Resource("workers").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a worker and creates it.  Returns the server's representation of the worker, and an error, if there is any.
-func (c *workers) Create(worker *v1alpha1.Worker) (result *v1alpha1.Worker, err error) {
+func (c *workers) Create(ctx context.Context, worker *v1alpha1.Worker, opts v1.CreateOptions) (result *v1alpha1.Worker, err error) {
 	result = &v1alpha1.Worker{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("workers").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(worker).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a worker and updates it. Returns the server's representation of the worker, and an error, if there is any.
-func (c *workers) Update(worker *v1alpha1.Worker) (result *v1alpha1.Worker, err error) {
+func (c *workers) Update(ctx context.Context, worker *v1alpha1.Worker, opts v1.UpdateOptions) (result *v1alpha1.Worker, err error) {
 	result = &v1alpha1.Worker{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("workers").
 		Name(worker.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(worker).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *workers) UpdateStatus(worker *v1alpha1.Worker) (result *v1alpha1.Worker, err error) {
+func (c *workers) UpdateStatus(ctx context.Context, worker *v1alpha1.Worker, opts v1.UpdateOptions) (result *v1alpha1.Worker, err error) {
 	result = &v1alpha1.Worker{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("workers").
 		Name(worker.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(worker).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the worker and deletes it. Returns an error if one occurs.
-func (c *workers) Delete(name string, options *v1.DeleteOptions) error {
+func (c *workers) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("workers").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *workers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *workers) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("workers").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched worker.
-func (c *workers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Worker, err error) {
+func (c *workers) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Worker, err error) {
 	result = &v1alpha1.Worker{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("workers").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

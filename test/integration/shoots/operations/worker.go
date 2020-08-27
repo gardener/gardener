@@ -111,7 +111,7 @@ var _ = ginkgo.Describe("Shoot worker operation testing", func() {
 			ginkgo.Skip("the test requires at least 2 different worker os images")
 		}
 
-		nodesList, err := f.ShootClient.Kubernetes().CoreV1().Nodes().List(metav1.ListOptions{})
+		nodesList, err := f.ShootClient.Kubernetes().CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 		framework.ExpectNoError(err)
 
 		nodeImages := map[string]bool{}

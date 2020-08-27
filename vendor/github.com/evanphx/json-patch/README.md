@@ -1,5 +1,5 @@
 # JSON-Patch
-`jsonpatch` is a library which provides functionality for both applying
+`jsonpatch` is a library which provides functionallity for both applying
 [RFC6902 JSON patches](http://tools.ietf.org/html/rfc6902) against documents, as
 well as for calculating & applying [RFC7396 JSON merge patches](https://tools.ietf.org/html/rfc7396).
 
@@ -11,11 +11,10 @@ well as for calculating & applying [RFC7396 JSON merge patches](https://tools.ie
 
 **Latest and greatest**: 
 ```bash
-go get -u github.com/evanphx/json-patch/v5
+go get -u github.com/evanphx/json-patch
 ```
 
 **Stable Versions**:
-* Version 5: `go get -u gopkg.in/evanphx/json-patch.v5`
 * Version 4: `go get -u gopkg.in/evanphx/json-patch.v4`
 
 (previous versions below `v3` are unavailable)
@@ -83,7 +82,7 @@ When ran, you get the following output:
 ```bash
 $ go run main.go
 patch document:   {"height":null,"name":"Jane"}
-updated alternative doc: {"age":28,"name":"Jane"}
+updated tina doc: {"age":28,"name":"Jane"}
 ```
 
 ## Create and apply a JSON Patch
@@ -165,7 +164,7 @@ func main() {
 	}
 
 	if !jsonpatch.Equal(original, different) {
-		fmt.Println(`"original" is _not_ structurally equal to "different"`)
+		fmt.Println(`"original" is _not_ structurally equal to "similar"`)
 	}
 }
 ```
@@ -174,7 +173,7 @@ When ran, you get the following output:
 ```bash
 $ go run main.go
 "original" is structurally equal to "similar"
-"original" is _not_ structurally equal to "different"
+"original" is _not_ structurally equal to "similar"
 ```
 
 ## Combine merge patches

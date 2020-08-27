@@ -19,6 +19,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	time "time"
 
 	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -60,13 +61,13 @@ func NewFilteredProjectInformer(client versioned.Interface, resyncPeriod time.Du
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CoreV1alpha1().Projects().List(options)
+				return client.CoreV1alpha1().Projects().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CoreV1alpha1().Projects().Watch(options)
+				return client.CoreV1alpha1().Projects().Watch(context.TODO(), options)
 			},
 		},
 		&corev1alpha1.Project{},

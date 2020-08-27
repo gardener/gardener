@@ -15,8 +15,11 @@
 package kubernetes
 
 import (
+	"context"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -26,6 +29,7 @@ import (
 )
 
 func tryUpdateProject(
+	ctx context.Context,
 	g gardencore.Interface,
 	backoff wait.Backoff,
 	meta metav1.ObjectMeta,
@@ -40,7 +44,7 @@ func tryUpdateProject(
 
 	err := retry.RetryOnConflict(backoff, func() (err error) {
 		attempt++
-		cur, err := g.CoreV1beta1().Projects().Get(meta.Name, metav1.GetOptions{})
+		cur, err := g.CoreV1beta1().Projects().Get(ctx, meta.Name, kubernetes.DefaultGetOptions())
 		if err != nil {
 			return err
 		}
@@ -69,18 +73,18 @@ func tryUpdateProject(
 }
 
 // TryUpdateProject tries to update a project and retries the operation with the given <backoff>.
-func TryUpdateProject(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.Project) (*gardencorev1beta1.Project, error)) (*gardencorev1beta1.Project, error) {
-	return tryUpdateProject(g, backoff, meta, transform, func(g gardencore.Interface, project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error) {
-		return g.CoreV1beta1().Projects().Update(project)
+func TryUpdateProject(ctx context.Context, g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.Project) (*gardencorev1beta1.Project, error)) (*gardencorev1beta1.Project, error) {
+	return tryUpdateProject(ctx, g, backoff, meta, transform, func(g gardencore.Interface, project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error) {
+		return g.CoreV1beta1().Projects().Update(ctx, project, kubernetes.DefaultUpdateOptions())
 	}, func(cur, updated *gardencorev1beta1.Project) bool {
 		return equality.Semantic.DeepEqual(cur, updated)
 	})
 }
 
 // TryUpdateProjectStatus tries to update a project's status and retries the operation with the given <backoff>.
-func TryUpdateProjectStatus(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.Project) (*gardencorev1beta1.Project, error)) (*gardencorev1beta1.Project, error) {
-	return tryUpdateProject(g, backoff, meta, transform, func(g gardencore.Interface, project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error) {
-		return g.CoreV1beta1().Projects().UpdateStatus(project)
+func TryUpdateProjectStatus(ctx context.Context, g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.Project) (*gardencorev1beta1.Project, error)) (*gardencorev1beta1.Project, error) {
+	return tryUpdateProject(ctx, g, backoff, meta, transform, func(g gardencore.Interface, project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error) {
+		return g.CoreV1beta1().Projects().UpdateStatus(ctx, project, kubernetes.DefaultUpdateOptions())
 	}, func(cur, updated *gardencorev1beta1.Project) bool {
 		return equality.Semantic.DeepEqual(cur.Status, updated.Status)
 	})

@@ -19,6 +19,7 @@ limitations under the License.
 package internalversion
 
 import (
+	"context"
 	time "time"
 
 	core "github.com/gardener/gardener/pkg/apis/core"
@@ -60,13 +61,13 @@ func NewFilteredCloudProfileInformer(client clientsetinternalversion.Interface, 
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Core().CloudProfiles().List(options)
+				return client.Core().CloudProfiles().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Core().CloudProfiles().Watch(options)
+				return client.Core().CloudProfiles().Watch(context.TODO(), options)
 			},
 		},
 		&core.CloudProfile{},

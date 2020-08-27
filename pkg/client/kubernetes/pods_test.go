@@ -15,6 +15,7 @@
 package kubernetes_test
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/url"
@@ -33,11 +34,13 @@ import (
 
 var _ = Describe("Pods", func() {
 	var (
+		ctx  context.Context
 		ctrl *gomock.Controller
 		pods *mockcorev1.MockPodInterface
 	)
 
 	BeforeEach(func() {
+		ctx = context.Background()
 		ctrl = gomock.NewController(GinkgoT())
 		pods = mockcorev1.NewMockPodInterface(ctrl)
 	})
@@ -67,7 +70,7 @@ var _ = Describe("Pods", func() {
 				body.EXPECT().Close(),
 			)
 
-			actual, err := GetPodLogs(pods, name, options.DeepCopy())
+			actual, err := GetPodLogs(ctx, pods, name, options.DeepCopy())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(Equal(logs))
 		})

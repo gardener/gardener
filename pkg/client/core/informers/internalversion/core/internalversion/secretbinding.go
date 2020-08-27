@@ -19,6 +19,7 @@ limitations under the License.
 package internalversion
 
 import (
+	"context"
 	time "time"
 
 	core "github.com/gardener/gardener/pkg/apis/core"
@@ -61,13 +62,13 @@ func NewFilteredSecretBindingInformer(client clientsetinternalversion.Interface,
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Core().SecretBindings(namespace).List(options)
+				return client.Core().SecretBindings(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Core().SecretBindings(namespace).Watch(options)
+				return client.Core().SecretBindings(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&core.SecretBinding{},

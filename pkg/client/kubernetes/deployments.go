@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -29,13 +28,13 @@ import (
 // HasDeploymentRolloutCompleted checks for the number of updated &
 // available replicas to be equal to the deployment's desired replicas count.
 // Thus confirming a successful rollout of the deployment.
-func HasDeploymentRolloutCompleted(ctx context.Context, client client.Client, namespace, name string) (bool, error) {
+func HasDeploymentRolloutCompleted(ctx context.Context, c client.Client, namespace, name string) (bool, error) {
 	var (
 		deployment      = &appsv1.Deployment{}
 		desiredReplicas = int32(0)
 	)
 
-	if err := client.Get(ctx, kutil.Key(namespace, name), deployment); err != nil {
+	if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, deployment); err != nil {
 		return retry.SevereError(err)
 	}
 

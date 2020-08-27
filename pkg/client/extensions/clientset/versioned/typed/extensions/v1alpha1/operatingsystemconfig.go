@@ -19,6 +19,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"time"
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -37,15 +38,15 @@ type OperatingSystemConfigsGetter interface {
 
 // OperatingSystemConfigInterface has methods to work with OperatingSystemConfig resources.
 type OperatingSystemConfigInterface interface {
-	Create(*v1alpha1.OperatingSystemConfig) (*v1alpha1.OperatingSystemConfig, error)
-	Update(*v1alpha1.OperatingSystemConfig) (*v1alpha1.OperatingSystemConfig, error)
-	UpdateStatus(*v1alpha1.OperatingSystemConfig) (*v1alpha1.OperatingSystemConfig, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v1alpha1.OperatingSystemConfig, error)
-	List(opts v1.ListOptions) (*v1alpha1.OperatingSystemConfigList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.OperatingSystemConfig, err error)
+	Create(ctx context.Context, operatingSystemConfig *v1alpha1.OperatingSystemConfig, opts v1.CreateOptions) (*v1alpha1.OperatingSystemConfig, error)
+	Update(ctx context.Context, operatingSystemConfig *v1alpha1.OperatingSystemConfig, opts v1.UpdateOptions) (*v1alpha1.OperatingSystemConfig, error)
+	UpdateStatus(ctx context.Context, operatingSystemConfig *v1alpha1.OperatingSystemConfig, opts v1.UpdateOptions) (*v1alpha1.OperatingSystemConfig, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.OperatingSystemConfig, error)
+	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.OperatingSystemConfigList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.OperatingSystemConfig, err error)
 	OperatingSystemConfigExpansion
 }
 
@@ -64,20 +65,20 @@ func newOperatingSystemConfigs(c *ExtensionsV1alpha1Client, namespace string) *o
 }
 
 // Get takes name of the operatingSystemConfig, and returns the corresponding operatingSystemConfig object, and an error if there is any.
-func (c *operatingSystemConfigs) Get(name string, options v1.GetOptions) (result *v1alpha1.OperatingSystemConfig, err error) {
+func (c *operatingSystemConfigs) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.OperatingSystemConfig, err error) {
 	result = &v1alpha1.OperatingSystemConfig{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("operatingsystemconfigs").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of OperatingSystemConfigs that match those selectors.
-func (c *operatingSystemConfigs) List(opts v1.ListOptions) (result *v1alpha1.OperatingSystemConfigList, err error) {
+func (c *operatingSystemConfigs) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.OperatingSystemConfigList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -88,13 +89,13 @@ func (c *operatingSystemConfigs) List(opts v1.ListOptions) (result *v1alpha1.Ope
 		Resource("operatingsystemconfigs").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested operatingSystemConfigs.
-func (c *operatingSystemConfigs) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *operatingSystemConfigs) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -105,87 +106,90 @@ func (c *operatingSystemConfigs) Watch(opts v1.ListOptions) (watch.Interface, er
 		Resource("operatingsystemconfigs").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a operatingSystemConfig and creates it.  Returns the server's representation of the operatingSystemConfig, and an error, if there is any.
-func (c *operatingSystemConfigs) Create(operatingSystemConfig *v1alpha1.OperatingSystemConfig) (result *v1alpha1.OperatingSystemConfig, err error) {
+func (c *operatingSystemConfigs) Create(ctx context.Context, operatingSystemConfig *v1alpha1.OperatingSystemConfig, opts v1.CreateOptions) (result *v1alpha1.OperatingSystemConfig, err error) {
 	result = &v1alpha1.OperatingSystemConfig{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("operatingsystemconfigs").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(operatingSystemConfig).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a operatingSystemConfig and updates it. Returns the server's representation of the operatingSystemConfig, and an error, if there is any.
-func (c *operatingSystemConfigs) Update(operatingSystemConfig *v1alpha1.OperatingSystemConfig) (result *v1alpha1.OperatingSystemConfig, err error) {
+func (c *operatingSystemConfigs) Update(ctx context.Context, operatingSystemConfig *v1alpha1.OperatingSystemConfig, opts v1.UpdateOptions) (result *v1alpha1.OperatingSystemConfig, err error) {
 	result = &v1alpha1.OperatingSystemConfig{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("operatingsystemconfigs").
 		Name(operatingSystemConfig.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(operatingSystemConfig).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *operatingSystemConfigs) UpdateStatus(operatingSystemConfig *v1alpha1.OperatingSystemConfig) (result *v1alpha1.OperatingSystemConfig, err error) {
+func (c *operatingSystemConfigs) UpdateStatus(ctx context.Context, operatingSystemConfig *v1alpha1.OperatingSystemConfig, opts v1.UpdateOptions) (result *v1alpha1.OperatingSystemConfig, err error) {
 	result = &v1alpha1.OperatingSystemConfig{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("operatingsystemconfigs").
 		Name(operatingSystemConfig.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(operatingSystemConfig).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the operatingSystemConfig and deletes it. Returns an error if one occurs.
-func (c *operatingSystemConfigs) Delete(name string, options *v1.DeleteOptions) error {
+func (c *operatingSystemConfigs) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("operatingsystemconfigs").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *operatingSystemConfigs) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *operatingSystemConfigs) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("operatingsystemconfigs").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched operatingSystemConfig.
-func (c *operatingSystemConfigs) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.OperatingSystemConfig, err error) {
+func (c *operatingSystemConfigs) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.OperatingSystemConfig, err error) {
 	result = &v1alpha1.OperatingSystemConfig{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("operatingsystemconfigs").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

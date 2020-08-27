@@ -54,47 +54,47 @@ func (mr *MockCacheMockRecorder) Get(arg0, arg1, arg2 interface{}) *gomock.Call 
 }
 
 // GetInformer mocks base method.
-func (m *MockCache) GetInformer(arg0 runtime.Object) (cache.Informer, error) {
+func (m *MockCache) GetInformer(arg0 context.Context, arg1 runtime.Object) (cache.Informer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetInformer", arg0)
+	ret := m.ctrl.Call(m, "GetInformer", arg0, arg1)
 	ret0, _ := ret[0].(cache.Informer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetInformer indicates an expected call of GetInformer.
-func (mr *MockCacheMockRecorder) GetInformer(arg0 interface{}) *gomock.Call {
+func (mr *MockCacheMockRecorder) GetInformer(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInformer", reflect.TypeOf((*MockCache)(nil).GetInformer), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInformer", reflect.TypeOf((*MockCache)(nil).GetInformer), arg0, arg1)
 }
 
 // GetInformerForKind mocks base method.
-func (m *MockCache) GetInformerForKind(arg0 schema.GroupVersionKind) (cache.Informer, error) {
+func (m *MockCache) GetInformerForKind(arg0 context.Context, arg1 schema.GroupVersionKind) (cache.Informer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetInformerForKind", arg0)
+	ret := m.ctrl.Call(m, "GetInformerForKind", arg0, arg1)
 	ret0, _ := ret[0].(cache.Informer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetInformerForKind indicates an expected call of GetInformerForKind.
-func (mr *MockCacheMockRecorder) GetInformerForKind(arg0 interface{}) *gomock.Call {
+func (mr *MockCacheMockRecorder) GetInformerForKind(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInformerForKind", reflect.TypeOf((*MockCache)(nil).GetInformerForKind), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInformerForKind", reflect.TypeOf((*MockCache)(nil).GetInformerForKind), arg0, arg1)
 }
 
 // IndexField mocks base method.
-func (m *MockCache) IndexField(arg0 runtime.Object, arg1 string, arg2 client.IndexerFunc) error {
+func (m *MockCache) IndexField(arg0 context.Context, arg1 runtime.Object, arg2 string, arg3 client.IndexerFunc) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IndexField", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "IndexField", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // IndexField indicates an expected call of IndexField.
-func (mr *MockCacheMockRecorder) IndexField(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockCacheMockRecorder) IndexField(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IndexField", reflect.TypeOf((*MockCache)(nil).IndexField), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IndexField", reflect.TypeOf((*MockCache)(nil).IndexField), arg0, arg1, arg2, arg3)
 }
 
 // List mocks base method.

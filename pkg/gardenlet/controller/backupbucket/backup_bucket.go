@@ -66,7 +66,7 @@ func NewBackupBucketController(ctx context.Context, clientMap clientmap.ClientMa
 		return nil, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	backupBucketInformer, err := gardenClient.Cache().GetInformer(&gardencorev1beta1.BackupBucket{})
+	backupBucketInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.BackupBucket{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get BackupBucket Informer: %w", err)
 	}

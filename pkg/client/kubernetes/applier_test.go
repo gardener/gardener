@@ -122,7 +122,7 @@ spec:
 			It("should create non-existent objects", func() {
 				cm := corev1.ConfigMap{
 					TypeMeta:   configMapTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{Name: "c", Namespace: "n", ResourceVersion: "1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "c", Namespace: "n"},
 				}
 				manifest := mkManifest(&cm)
 				manifestReader := kubernetes.NewManifestReader(manifest)
@@ -131,6 +131,7 @@ spec:
 				var actualCM corev1.ConfigMap
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "c", Namespace: "n"}, &actualCM)
 				Expect(err).NotTo(HaveOccurred())
+				cm.SetResourceVersion("1")
 				Expect(cm).To(DeepDerivativeEqual(actualCM))
 			})
 

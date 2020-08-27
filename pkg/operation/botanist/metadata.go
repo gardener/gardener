@@ -27,7 +27,7 @@ import (
 // MaintainShootAnnotations ensures that given deprecated Shoot annotations are maintained also
 // with their new equivalent in the Shoot metadata.
 func (b *Botanist) MaintainShootAnnotations(ctx context.Context) error {
-	if _, err := kutil.TryUpdateShootAnnotations(b.K8sGardenClient.GardenCore(), retry.DefaultRetry, b.Shoot.Info.ObjectMeta, func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+	if _, err := kutil.TryUpdateShootAnnotations(ctx, b.K8sGardenClient.GardenCore(), retry.DefaultRetry, b.Shoot.Info.ObjectMeta, func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 		deprecatedValue, deprecatedExists := shoot.Annotations[common.GardenCreatedByDeprecated]
 		_, newExists := shoot.Annotations[common.GardenCreatedBy]
 		if deprecatedExists {

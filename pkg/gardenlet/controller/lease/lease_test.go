@@ -15,6 +15,7 @@
 package lease
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -96,7 +97,7 @@ var _ = Describe("LeaseController", func() {
 
 			Expect(leaseController.Sync(holderName)).NotTo(HaveOccurred())
 
-			lease, err := k8sClientSet.CoordinationV1().Leases(testLeaseNamespace).Get(holderName, metav1.GetOptions{})
+			lease, err := k8sClientSet.CoordinationV1().Leases(testLeaseNamespace).Get(context.Background(), holderName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(lease).ShouldNot(BeNil())
 			Expect(lease.Spec.RenewTime).To(BeEquivalentTo(&metav1.MicroTime{Time: fakeNowFunc()}))
@@ -107,7 +108,7 @@ var _ = Describe("LeaseController", func() {
 			leaseController := NewLeaseController(fakeNowFunc, fakeClientMap, 2, testLeaseNamespace)
 			Expect(leaseController.Sync(holderName, ownerRef)).NotTo(HaveOccurred())
 
-			lease, err := k8sClientSet.CoordinationV1().Leases(testLeaseNamespace).Get(holderName, metav1.GetOptions{})
+			lease, err := k8sClientSet.CoordinationV1().Leases(testLeaseNamespace).Get(context.Background(), holderName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(lease).ShouldNot(BeNil())
 			Expect(lease.Spec.RenewTime).To(BeEquivalentTo(&metav1.MicroTime{Time: fakeNowFunc()}))
@@ -142,7 +143,7 @@ var _ = Describe("LeaseController", func() {
 			leaseController := NewLeaseController(fakeNowFunc, fakeClientMap, 2, testLeaseNamespace)
 			Expect(leaseController.Sync(holderName)).NotTo(HaveOccurred())
 
-			actualLease, err := k8sClientSet.CoordinationV1().Leases(testLeaseNamespace).Get(holderName, metav1.GetOptions{})
+			actualLease, err := k8sClientSet.CoordinationV1().Leases(testLeaseNamespace).Get(context.Background(), holderName, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actualLease.Spec.RenewTime).To(Equal(&metav1.MicroTime{Time: fakeNowFunc()}))
 		})

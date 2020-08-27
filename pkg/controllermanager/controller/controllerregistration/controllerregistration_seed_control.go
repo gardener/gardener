@@ -117,7 +117,7 @@ func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1be
 	}
 	// Live lookup to prevent working on a stale cache and trying to create multiple installations for the same
 	// registration/seed combination.
-	controllerInstallationList, err := gardenClient.GardenCore().CoreV1beta1().ControllerInstallations().List(metav1.ListOptions{})
+	controllerInstallationList, err := gardenClient.GardenCore().CoreV1beta1().ControllerInstallations().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1be
 	if err != nil {
 		return err
 	}
-	backupEntryList, err := gardenClient.GardenCore().CoreV1beta1().BackupEntries(metav1.NamespaceAll).List(metav1.ListOptions{
+	backupEntryList, err := gardenClient.GardenCore().CoreV1beta1().BackupEntries(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
 		FieldSelector: fields.SelectorFromSet(fields.Set{core.BackupEntrySeedName: seed.Name}).String(),
 	})
 	if err != nil {
@@ -549,13 +549,13 @@ func getShoots(ctx context.Context, g gardencoreclientset.Interface, seed *garde
 		err        error
 	)
 
-	if shootList, err = g.CoreV1beta1().Shoots(metav1.NamespaceAll).List(metav1.ListOptions{
+	if shootList, err = g.CoreV1beta1().Shoots(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
 		FieldSelector: fields.SelectorFromSet(fields.Set{core.ShootSeedName: seed.Name}).String(),
 	}); err != nil {
 		return nil, err
 	}
 
-	if shootList2, err = g.CoreV1beta1().Shoots(metav1.NamespaceAll).List(metav1.ListOptions{
+	if shootList2, err = g.CoreV1beta1().Shoots(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
 		FieldSelector: fields.SelectorFromSet(fields.Set{core.ShootStatusSeedName: seed.Name}).String(),
 	}); err != nil {
 		return nil, err

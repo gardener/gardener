@@ -236,7 +236,7 @@ func (f *CommonFramework) DumpLogsForPodsWithLabelsInNamespace(ctx context.Conte
 func (f *CommonFramework) DumpLogsForPodInNamespace(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, podNamespace, podName string) error {
 	f.Logger.Infof("%s [NAMESPACE %s] [POD %s] [LOGS]", ctxIdentifier, podNamespace, podName)
 	podIf := k8sClient.Kubernetes().CoreV1().Pods(podNamespace)
-	logs, err := kubernetes.GetPodLogs(podIf, podName, &corev1.PodLogOptions{})
+	logs, err := kubernetes.GetPodLogs(ctx, podIf, podName, &corev1.PodLogOptions{})
 	if err != nil {
 		return err
 	}

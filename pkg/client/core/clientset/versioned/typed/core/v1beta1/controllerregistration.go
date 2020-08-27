@@ -19,6 +19,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"context"
 	"time"
 
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -37,14 +38,14 @@ type ControllerRegistrationsGetter interface {
 
 // ControllerRegistrationInterface has methods to work with ControllerRegistration resources.
 type ControllerRegistrationInterface interface {
-	Create(*v1beta1.ControllerRegistration) (*v1beta1.ControllerRegistration, error)
-	Update(*v1beta1.ControllerRegistration) (*v1beta1.ControllerRegistration, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v1beta1.ControllerRegistration, error)
-	List(opts v1.ListOptions) (*v1beta1.ControllerRegistrationList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.ControllerRegistration, err error)
+	Create(ctx context.Context, controllerRegistration *v1beta1.ControllerRegistration, opts v1.CreateOptions) (*v1beta1.ControllerRegistration, error)
+	Update(ctx context.Context, controllerRegistration *v1beta1.ControllerRegistration, opts v1.UpdateOptions) (*v1beta1.ControllerRegistration, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.ControllerRegistration, error)
+	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.ControllerRegistrationList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ControllerRegistration, err error)
 	ControllerRegistrationExpansion
 }
 
@@ -61,19 +62,19 @@ func newControllerRegistrations(c *CoreV1beta1Client) *controllerRegistrations {
 }
 
 // Get takes name of the controllerRegistration, and returns the corresponding controllerRegistration object, and an error if there is any.
-func (c *controllerRegistrations) Get(name string, options v1.GetOptions) (result *v1beta1.ControllerRegistration, err error) {
+func (c *controllerRegistrations) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.ControllerRegistration, err error) {
 	result = &v1beta1.ControllerRegistration{}
 	err = c.client.Get().
 		Resource("controllerregistrations").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of ControllerRegistrations that match those selectors.
-func (c *controllerRegistrations) List(opts v1.ListOptions) (result *v1beta1.ControllerRegistrationList, err error) {
+func (c *controllerRegistrations) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.ControllerRegistrationList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -83,13 +84,13 @@ func (c *controllerRegistrations) List(opts v1.ListOptions) (result *v1beta1.Con
 		Resource("controllerregistrations").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested controllerRegistrations.
-func (c *controllerRegistrations) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *controllerRegistrations) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -99,66 +100,69 @@ func (c *controllerRegistrations) Watch(opts v1.ListOptions) (watch.Interface, e
 		Resource("controllerregistrations").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a controllerRegistration and creates it.  Returns the server's representation of the controllerRegistration, and an error, if there is any.
-func (c *controllerRegistrations) Create(controllerRegistration *v1beta1.ControllerRegistration) (result *v1beta1.ControllerRegistration, err error) {
+func (c *controllerRegistrations) Create(ctx context.Context, controllerRegistration *v1beta1.ControllerRegistration, opts v1.CreateOptions) (result *v1beta1.ControllerRegistration, err error) {
 	result = &v1beta1.ControllerRegistration{}
 	err = c.client.Post().
 		Resource("controllerregistrations").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(controllerRegistration).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a controllerRegistration and updates it. Returns the server's representation of the controllerRegistration, and an error, if there is any.
-func (c *controllerRegistrations) Update(controllerRegistration *v1beta1.ControllerRegistration) (result *v1beta1.ControllerRegistration, err error) {
+func (c *controllerRegistrations) Update(ctx context.Context, controllerRegistration *v1beta1.ControllerRegistration, opts v1.UpdateOptions) (result *v1beta1.ControllerRegistration, err error) {
 	result = &v1beta1.ControllerRegistration{}
 	err = c.client.Put().
 		Resource("controllerregistrations").
 		Name(controllerRegistration.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(controllerRegistration).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the controllerRegistration and deletes it. Returns an error if one occurs.
-func (c *controllerRegistrations) Delete(name string, options *v1.DeleteOptions) error {
+func (c *controllerRegistrations) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Resource("controllerregistrations").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *controllerRegistrations) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *controllerRegistrations) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Resource("controllerregistrations").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched controllerRegistration.
-func (c *controllerRegistrations) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.ControllerRegistration, err error) {
+func (c *controllerRegistrations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.ControllerRegistration, err error) {
 	result = &v1beta1.ControllerRegistration{}
 	err = c.client.Patch(pt).
 		Resource("controllerregistrations").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

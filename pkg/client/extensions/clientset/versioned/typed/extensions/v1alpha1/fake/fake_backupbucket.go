@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -38,7 +40,7 @@ var backupbucketsResource = schema.GroupVersionResource{Group: "extensions.garde
 var backupbucketsKind = schema.GroupVersionKind{Group: "extensions.gardener.cloud", Version: "v1alpha1", Kind: "BackupBucket"}
 
 // Get takes name of the backupBucket, and returns the corresponding backupBucket object, and an error if there is any.
-func (c *FakeBackupBuckets) Get(name string, options v1.GetOptions) (result *v1alpha1.BackupBucket, err error) {
+func (c *FakeBackupBuckets) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.BackupBucket, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(backupbucketsResource, name), &v1alpha1.BackupBucket{})
 	if obj == nil {
@@ -48,7 +50,7 @@ func (c *FakeBackupBuckets) Get(name string, options v1.GetOptions) (result *v1a
 }
 
 // List takes label and field selectors, and returns the list of BackupBuckets that match those selectors.
-func (c *FakeBackupBuckets) List(opts v1.ListOptions) (result *v1alpha1.BackupBucketList, err error) {
+func (c *FakeBackupBuckets) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.BackupBucketList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(backupbucketsResource, backupbucketsKind, opts), &v1alpha1.BackupBucketList{})
 	if obj == nil {
@@ -69,13 +71,13 @@ func (c *FakeBackupBuckets) List(opts v1.ListOptions) (result *v1alpha1.BackupBu
 }
 
 // Watch returns a watch.Interface that watches the requested backupBuckets.
-func (c *FakeBackupBuckets) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeBackupBuckets) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(backupbucketsResource, opts))
 }
 
 // Create takes the representation of a backupBucket and creates it.  Returns the server's representation of the backupBucket, and an error, if there is any.
-func (c *FakeBackupBuckets) Create(backupBucket *v1alpha1.BackupBucket) (result *v1alpha1.BackupBucket, err error) {
+func (c *FakeBackupBuckets) Create(ctx context.Context, backupBucket *v1alpha1.BackupBucket, opts v1.CreateOptions) (result *v1alpha1.BackupBucket, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(backupbucketsResource, backupBucket), &v1alpha1.BackupBucket{})
 	if obj == nil {
@@ -85,7 +87,7 @@ func (c *FakeBackupBuckets) Create(backupBucket *v1alpha1.BackupBucket) (result 
 }
 
 // Update takes the representation of a backupBucket and updates it. Returns the server's representation of the backupBucket, and an error, if there is any.
-func (c *FakeBackupBuckets) Update(backupBucket *v1alpha1.BackupBucket) (result *v1alpha1.BackupBucket, err error) {
+func (c *FakeBackupBuckets) Update(ctx context.Context, backupBucket *v1alpha1.BackupBucket, opts v1.UpdateOptions) (result *v1alpha1.BackupBucket, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(backupbucketsResource, backupBucket), &v1alpha1.BackupBucket{})
 	if obj == nil {
@@ -96,7 +98,7 @@ func (c *FakeBackupBuckets) Update(backupBucket *v1alpha1.BackupBucket) (result 
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeBackupBuckets) UpdateStatus(backupBucket *v1alpha1.BackupBucket) (*v1alpha1.BackupBucket, error) {
+func (c *FakeBackupBuckets) UpdateStatus(ctx context.Context, backupBucket *v1alpha1.BackupBucket, opts v1.UpdateOptions) (*v1alpha1.BackupBucket, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceAction(backupbucketsResource, "status", backupBucket), &v1alpha1.BackupBucket{})
 	if obj == nil {
@@ -106,22 +108,22 @@ func (c *FakeBackupBuckets) UpdateStatus(backupBucket *v1alpha1.BackupBucket) (*
 }
 
 // Delete takes name of the backupBucket and deletes it. Returns an error if one occurs.
-func (c *FakeBackupBuckets) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeBackupBuckets) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(backupbucketsResource, name), &v1alpha1.BackupBucket{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeBackupBuckets) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(backupbucketsResource, listOptions)
+func (c *FakeBackupBuckets) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(backupbucketsResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.BackupBucketList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched backupBucket.
-func (c *FakeBackupBuckets) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.BackupBucket, err error) {
+func (c *FakeBackupBuckets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.BackupBucket, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(backupbucketsResource, name, pt, data, subresources...), &v1alpha1.BackupBucket{})
 	if obj == nil {

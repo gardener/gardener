@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	core "github.com/gardener/gardener/pkg/apis/core"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var shootsResource = schema.GroupVersionResource{Group: "core.gardener.cloud", V
 var shootsKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "", Kind: "Shoot"}
 
 // Get takes name of the shoot, and returns the corresponding shoot object, and an error if there is any.
-func (c *FakeShoots) Get(name string, options v1.GetOptions) (result *core.Shoot, err error) {
+func (c *FakeShoots) Get(ctx context.Context, name string, options v1.GetOptions) (result *core.Shoot, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(shootsResource, c.ns, name), &core.Shoot{})
 
@@ -50,7 +52,7 @@ func (c *FakeShoots) Get(name string, options v1.GetOptions) (result *core.Shoot
 }
 
 // List takes label and field selectors, and returns the list of Shoots that match those selectors.
-func (c *FakeShoots) List(opts v1.ListOptions) (result *core.ShootList, err error) {
+func (c *FakeShoots) List(ctx context.Context, opts v1.ListOptions) (result *core.ShootList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(shootsResource, shootsKind, c.ns, opts), &core.ShootList{})
 
@@ -72,14 +74,14 @@ func (c *FakeShoots) List(opts v1.ListOptions) (result *core.ShootList, err erro
 }
 
 // Watch returns a watch.Interface that watches the requested shoots.
-func (c *FakeShoots) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeShoots) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(shootsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a shoot and creates it.  Returns the server's representation of the shoot, and an error, if there is any.
-func (c *FakeShoots) Create(shoot *core.Shoot) (result *core.Shoot, err error) {
+func (c *FakeShoots) Create(ctx context.Context, shoot *core.Shoot, opts v1.CreateOptions) (result *core.Shoot, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(shootsResource, c.ns, shoot), &core.Shoot{})
 
@@ -90,7 +92,7 @@ func (c *FakeShoots) Create(shoot *core.Shoot) (result *core.Shoot, err error) {
 }
 
 // Update takes the representation of a shoot and updates it. Returns the server's representation of the shoot, and an error, if there is any.
-func (c *FakeShoots) Update(shoot *core.Shoot) (result *core.Shoot, err error) {
+func (c *FakeShoots) Update(ctx context.Context, shoot *core.Shoot, opts v1.UpdateOptions) (result *core.Shoot, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(shootsResource, c.ns, shoot), &core.Shoot{})
 
@@ -102,7 +104,7 @@ func (c *FakeShoots) Update(shoot *core.Shoot) (result *core.Shoot, err error) {
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeShoots) UpdateStatus(shoot *core.Shoot) (*core.Shoot, error) {
+func (c *FakeShoots) UpdateStatus(ctx context.Context, shoot *core.Shoot, opts v1.UpdateOptions) (*core.Shoot, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(shootsResource, "status", c.ns, shoot), &core.Shoot{})
 
@@ -113,7 +115,7 @@ func (c *FakeShoots) UpdateStatus(shoot *core.Shoot) (*core.Shoot, error) {
 }
 
 // Delete takes name of the shoot and deletes it. Returns an error if one occurs.
-func (c *FakeShoots) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeShoots) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(shootsResource, c.ns, name), &core.Shoot{})
 
@@ -121,15 +123,15 @@ func (c *FakeShoots) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeShoots) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(shootsResource, c.ns, listOptions)
+func (c *FakeShoots) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(shootsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &core.ShootList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched shoot.
-func (c *FakeShoots) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *core.Shoot, err error) {
+func (c *FakeShoots) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *core.Shoot, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(shootsResource, c.ns, name, pt, data, subresources...), &core.Shoot{})
 

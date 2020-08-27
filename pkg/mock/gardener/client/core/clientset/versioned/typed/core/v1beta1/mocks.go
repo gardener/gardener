@@ -5,6 +5,7 @@
 package v1beta1
 
 import (
+	context "context"
 	reflect "reflect"
 
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -231,83 +232,83 @@ func (m *MockShootInterface) EXPECT() *MockShootInterfaceMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockShootInterface) Create(arg0 *v1beta1.Shoot) (*v1beta1.Shoot, error) {
+func (m *MockShootInterface) Create(arg0 context.Context, arg1 *v1beta1.Shoot, arg2 v1.CreateOptions) (*v1beta1.Shoot, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0)
+	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v1beta1.Shoot)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockShootInterfaceMockRecorder) Create(arg0 interface{}) *gomock.Call {
+func (mr *MockShootInterfaceMockRecorder) Create(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockShootInterface)(nil).Create), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockShootInterface)(nil).Create), arg0, arg1, arg2)
 }
 
 // Delete mocks base method.
-func (m *MockShootInterface) Delete(arg0 string, arg1 *v1.DeleteOptions) error {
+func (m *MockShootInterface) Delete(arg0 context.Context, arg1 string, arg2 v1.DeleteOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockShootInterfaceMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockShootInterfaceMockRecorder) Delete(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockShootInterface)(nil).Delete), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockShootInterface)(nil).Delete), arg0, arg1, arg2)
 }
 
 // DeleteCollection mocks base method.
-func (m *MockShootInterface) DeleteCollection(arg0 *v1.DeleteOptions, arg1 v1.ListOptions) error {
+func (m *MockShootInterface) DeleteCollection(arg0 context.Context, arg1 v1.DeleteOptions, arg2 v1.ListOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteCollection", arg0, arg1)
+	ret := m.ctrl.Call(m, "DeleteCollection", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteCollection indicates an expected call of DeleteCollection.
-func (mr *MockShootInterfaceMockRecorder) DeleteCollection(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockShootInterfaceMockRecorder) DeleteCollection(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCollection", reflect.TypeOf((*MockShootInterface)(nil).DeleteCollection), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCollection", reflect.TypeOf((*MockShootInterface)(nil).DeleteCollection), arg0, arg1, arg2)
 }
 
 // Get mocks base method.
-func (m *MockShootInterface) Get(arg0 string, arg1 v1.GetOptions) (*v1beta1.Shoot, error) {
+func (m *MockShootInterface) Get(arg0 context.Context, arg1 string, arg2 v1.GetOptions) (*v1beta1.Shoot, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1)
+	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v1beta1.Shoot)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockShootInterfaceMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockShootInterfaceMockRecorder) Get(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockShootInterface)(nil).Get), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockShootInterface)(nil).Get), arg0, arg1, arg2)
 }
 
 // List mocks base method.
-func (m *MockShootInterface) List(arg0 v1.ListOptions) (*v1beta1.ShootList, error) {
+func (m *MockShootInterface) List(arg0 context.Context, arg1 v1.ListOptions) (*v1beta1.ShootList, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0)
+	ret := m.ctrl.Call(m, "List", arg0, arg1)
 	ret0, _ := ret[0].(*v1beta1.ShootList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockShootInterfaceMockRecorder) List(arg0 interface{}) *gomock.Call {
+func (mr *MockShootInterfaceMockRecorder) List(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockShootInterface)(nil).List), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockShootInterface)(nil).List), arg0, arg1)
 }
 
 // Patch mocks base method.
-func (m *MockShootInterface) Patch(arg0 string, arg1 types.PatchType, arg2 []byte, arg3 ...string) (*v1beta1.Shoot, error) {
+func (m *MockShootInterface) Patch(arg0 context.Context, arg1 string, arg2 types.PatchType, arg3 []byte, arg4 v1.PatchOptions, arg5 ...string) (*v1beta1.Shoot, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1, arg2}
-	for _, a := range arg3 {
+	varargs := []interface{}{arg0, arg1, arg2, arg3, arg4}
+	for _, a := range arg5 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Patch", varargs...)
@@ -317,55 +318,55 @@ func (m *MockShootInterface) Patch(arg0 string, arg1 types.PatchType, arg2 []byt
 }
 
 // Patch indicates an expected call of Patch.
-func (mr *MockShootInterfaceMockRecorder) Patch(arg0, arg1, arg2 interface{}, arg3 ...interface{}) *gomock.Call {
+func (mr *MockShootInterfaceMockRecorder) Patch(arg0, arg1, arg2, arg3, arg4 interface{}, arg5 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1, arg2}, arg3...)
+	varargs := append([]interface{}{arg0, arg1, arg2, arg3, arg4}, arg5...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockShootInterface)(nil).Patch), varargs...)
 }
 
 // Update mocks base method.
-func (m *MockShootInterface) Update(arg0 *v1beta1.Shoot) (*v1beta1.Shoot, error) {
+func (m *MockShootInterface) Update(arg0 context.Context, arg1 *v1beta1.Shoot, arg2 v1.UpdateOptions) (*v1beta1.Shoot, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", arg0)
+	ret := m.ctrl.Call(m, "Update", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v1beta1.Shoot)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockShootInterfaceMockRecorder) Update(arg0 interface{}) *gomock.Call {
+func (mr *MockShootInterfaceMockRecorder) Update(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockShootInterface)(nil).Update), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockShootInterface)(nil).Update), arg0, arg1, arg2)
 }
 
 // UpdateStatus mocks base method.
-func (m *MockShootInterface) UpdateStatus(arg0 *v1beta1.Shoot) (*v1beta1.Shoot, error) {
+func (m *MockShootInterface) UpdateStatus(arg0 context.Context, arg1 *v1beta1.Shoot, arg2 v1.UpdateOptions) (*v1beta1.Shoot, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateStatus", arg0)
+	ret := m.ctrl.Call(m, "UpdateStatus", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v1beta1.Shoot)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateStatus indicates an expected call of UpdateStatus.
-func (mr *MockShootInterfaceMockRecorder) UpdateStatus(arg0 interface{}) *gomock.Call {
+func (mr *MockShootInterfaceMockRecorder) UpdateStatus(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockShootInterface)(nil).UpdateStatus), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockShootInterface)(nil).UpdateStatus), arg0, arg1, arg2)
 }
 
 // Watch mocks base method.
-func (m *MockShootInterface) Watch(arg0 v1.ListOptions) (watch.Interface, error) {
+func (m *MockShootInterface) Watch(arg0 context.Context, arg1 v1.ListOptions) (watch.Interface, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Watch", arg0)
+	ret := m.ctrl.Call(m, "Watch", arg0, arg1)
 	ret0, _ := ret[0].(watch.Interface)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Watch indicates an expected call of Watch.
-func (mr *MockShootInterfaceMockRecorder) Watch(arg0 interface{}) *gomock.Call {
+func (mr *MockShootInterfaceMockRecorder) Watch(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockShootInterface)(nil).Watch), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockShootInterface)(nil).Watch), arg0, arg1)
 }
 
 // MockSeedInterface is a mock of SeedInterface interface.
@@ -392,83 +393,83 @@ func (m *MockSeedInterface) EXPECT() *MockSeedInterfaceMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockSeedInterface) Create(arg0 *v1beta1.Seed) (*v1beta1.Seed, error) {
+func (m *MockSeedInterface) Create(arg0 context.Context, arg1 *v1beta1.Seed, arg2 v1.CreateOptions) (*v1beta1.Seed, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0)
+	ret := m.ctrl.Call(m, "Create", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v1beta1.Seed)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockSeedInterfaceMockRecorder) Create(arg0 interface{}) *gomock.Call {
+func (mr *MockSeedInterfaceMockRecorder) Create(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockSeedInterface)(nil).Create), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockSeedInterface)(nil).Create), arg0, arg1, arg2)
 }
 
 // Delete mocks base method.
-func (m *MockSeedInterface) Delete(arg0 string, arg1 *v1.DeleteOptions) error {
+func (m *MockSeedInterface) Delete(arg0 context.Context, arg1 string, arg2 v1.DeleteOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockSeedInterfaceMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockSeedInterfaceMockRecorder) Delete(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSeedInterface)(nil).Delete), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSeedInterface)(nil).Delete), arg0, arg1, arg2)
 }
 
 // DeleteCollection mocks base method.
-func (m *MockSeedInterface) DeleteCollection(arg0 *v1.DeleteOptions, arg1 v1.ListOptions) error {
+func (m *MockSeedInterface) DeleteCollection(arg0 context.Context, arg1 v1.DeleteOptions, arg2 v1.ListOptions) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteCollection", arg0, arg1)
+	ret := m.ctrl.Call(m, "DeleteCollection", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteCollection indicates an expected call of DeleteCollection.
-func (mr *MockSeedInterfaceMockRecorder) DeleteCollection(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockSeedInterfaceMockRecorder) DeleteCollection(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCollection", reflect.TypeOf((*MockSeedInterface)(nil).DeleteCollection), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCollection", reflect.TypeOf((*MockSeedInterface)(nil).DeleteCollection), arg0, arg1, arg2)
 }
 
 // Get mocks base method.
-func (m *MockSeedInterface) Get(arg0 string, arg1 v1.GetOptions) (*v1beta1.Seed, error) {
+func (m *MockSeedInterface) Get(arg0 context.Context, arg1 string, arg2 v1.GetOptions) (*v1beta1.Seed, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1)
+	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v1beta1.Seed)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get.
-func (mr *MockSeedInterfaceMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockSeedInterfaceMockRecorder) Get(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSeedInterface)(nil).Get), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSeedInterface)(nil).Get), arg0, arg1, arg2)
 }
 
 // List mocks base method.
-func (m *MockSeedInterface) List(arg0 v1.ListOptions) (*v1beta1.SeedList, error) {
+func (m *MockSeedInterface) List(arg0 context.Context, arg1 v1.ListOptions) (*v1beta1.SeedList, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0)
+	ret := m.ctrl.Call(m, "List", arg0, arg1)
 	ret0, _ := ret[0].(*v1beta1.SeedList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockSeedInterfaceMockRecorder) List(arg0 interface{}) *gomock.Call {
+func (mr *MockSeedInterfaceMockRecorder) List(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSeedInterface)(nil).List), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSeedInterface)(nil).List), arg0, arg1)
 }
 
 // Patch mocks base method.
-func (m *MockSeedInterface) Patch(arg0 string, arg1 types.PatchType, arg2 []byte, arg3 ...string) (*v1beta1.Seed, error) {
+func (m *MockSeedInterface) Patch(arg0 context.Context, arg1 string, arg2 types.PatchType, arg3 []byte, arg4 v1.PatchOptions, arg5 ...string) (*v1beta1.Seed, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1, arg2}
-	for _, a := range arg3 {
+	varargs := []interface{}{arg0, arg1, arg2, arg3, arg4}
+	for _, a := range arg5 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Patch", varargs...)
@@ -478,53 +479,53 @@ func (m *MockSeedInterface) Patch(arg0 string, arg1 types.PatchType, arg2 []byte
 }
 
 // Patch indicates an expected call of Patch.
-func (mr *MockSeedInterfaceMockRecorder) Patch(arg0, arg1, arg2 interface{}, arg3 ...interface{}) *gomock.Call {
+func (mr *MockSeedInterfaceMockRecorder) Patch(arg0, arg1, arg2, arg3, arg4 interface{}, arg5 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1, arg2}, arg3...)
+	varargs := append([]interface{}{arg0, arg1, arg2, arg3, arg4}, arg5...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockSeedInterface)(nil).Patch), varargs...)
 }
 
 // Update mocks base method.
-func (m *MockSeedInterface) Update(arg0 *v1beta1.Seed) (*v1beta1.Seed, error) {
+func (m *MockSeedInterface) Update(arg0 context.Context, arg1 *v1beta1.Seed, arg2 v1.UpdateOptions) (*v1beta1.Seed, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", arg0)
+	ret := m.ctrl.Call(m, "Update", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v1beta1.Seed)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockSeedInterfaceMockRecorder) Update(arg0 interface{}) *gomock.Call {
+func (mr *MockSeedInterfaceMockRecorder) Update(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockSeedInterface)(nil).Update), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockSeedInterface)(nil).Update), arg0, arg1, arg2)
 }
 
 // UpdateStatus mocks base method.
-func (m *MockSeedInterface) UpdateStatus(arg0 *v1beta1.Seed) (*v1beta1.Seed, error) {
+func (m *MockSeedInterface) UpdateStatus(arg0 context.Context, arg1 *v1beta1.Seed, arg2 v1.UpdateOptions) (*v1beta1.Seed, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateStatus", arg0)
+	ret := m.ctrl.Call(m, "UpdateStatus", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*v1beta1.Seed)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateStatus indicates an expected call of UpdateStatus.
-func (mr *MockSeedInterfaceMockRecorder) UpdateStatus(arg0 interface{}) *gomock.Call {
+func (mr *MockSeedInterfaceMockRecorder) UpdateStatus(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockSeedInterface)(nil).UpdateStatus), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockSeedInterface)(nil).UpdateStatus), arg0, arg1, arg2)
 }
 
 // Watch mocks base method.
-func (m *MockSeedInterface) Watch(arg0 v1.ListOptions) (watch.Interface, error) {
+func (m *MockSeedInterface) Watch(arg0 context.Context, arg1 v1.ListOptions) (watch.Interface, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Watch", arg0)
+	ret := m.ctrl.Call(m, "Watch", arg0, arg1)
 	ret0, _ := ret[0].(watch.Interface)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Watch indicates an expected call of Watch.
-func (mr *MockSeedInterfaceMockRecorder) Watch(arg0 interface{}) *gomock.Call {
+func (mr *MockSeedInterfaceMockRecorder) Watch(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockSeedInterface)(nil).Watch), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockSeedInterface)(nil).Watch), arg0, arg1)
 }

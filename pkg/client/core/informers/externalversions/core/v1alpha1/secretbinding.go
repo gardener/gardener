@@ -19,6 +19,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	time "time"
 
 	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -61,13 +62,13 @@ func NewFilteredSecretBindingInformer(client versioned.Interface, namespace stri
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CoreV1alpha1().SecretBindings(namespace).List(options)
+				return client.CoreV1alpha1().SecretBindings(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CoreV1alpha1().SecretBindings(namespace).Watch(options)
+				return client.CoreV1alpha1().SecretBindings(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&corev1alpha1.SecretBinding{},

@@ -19,6 +19,7 @@ limitations under the License.
 package internalversion
 
 import (
+	"context"
 	time "time"
 
 	core "github.com/gardener/gardener/pkg/apis/core"
@@ -60,13 +61,13 @@ func NewFilteredControllerInstallationInformer(client clientsetinternalversion.I
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Core().ControllerInstallations().List(options)
+				return client.Core().ControllerInstallations().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Core().ControllerInstallations().Watch(options)
+				return client.Core().ControllerInstallations().Watch(context.TODO(), options)
 			},
 		},
 		&core.ControllerInstallation{},

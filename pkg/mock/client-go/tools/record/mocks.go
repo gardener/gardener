@@ -8,7 +8,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -79,21 +78,4 @@ func (mr *MockEventRecorderMockRecorder) Eventf(arg0, arg1, arg2, arg3 interface
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1, arg2, arg3}, arg4...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Eventf", reflect.TypeOf((*MockEventRecorder)(nil).Eventf), varargs...)
-}
-
-// PastEventf mocks base method.
-func (m *MockEventRecorder) PastEventf(arg0 runtime.Object, arg1 v1.Time, arg2, arg3, arg4 string, arg5 ...interface{}) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1, arg2, arg3, arg4}
-	for _, a := range arg5 {
-		varargs = append(varargs, a)
-	}
-	m.ctrl.Call(m, "PastEventf", varargs...)
-}
-
-// PastEventf indicates an expected call of PastEventf.
-func (mr *MockEventRecorderMockRecorder) PastEventf(arg0, arg1, arg2, arg3, arg4 interface{}, arg5 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1, arg2, arg3, arg4}, arg5...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PastEventf", reflect.TypeOf((*MockEventRecorder)(nil).PastEventf), varargs...)
 }

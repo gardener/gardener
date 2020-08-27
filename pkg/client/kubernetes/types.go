@@ -23,7 +23,7 @@ import (
 	gardenextensionsscheme "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	dnsscheme "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme"
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	resourcesscheme "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -66,6 +66,15 @@ var (
 	}
 )
 
+// DefaultGetOptions are the default options for GET requests.
+func DefaultGetOptions() metav1.GetOptions { return metav1.GetOptions{} }
+
+// DefaultCreateOptions are the default options for CREATE requests.
+func DefaultCreateOptions() metav1.CreateOptions { return metav1.CreateOptions{} }
+
+// DefaultUpdateOptions are the default options for UPDATE requests.
+func DefaultUpdateOptions() metav1.UpdateOptions { return metav1.UpdateOptions{} }
+
 func init() {
 	gardenSchemeBuilder := runtime.NewSchemeBuilder(
 		corescheme.AddToScheme,
@@ -75,7 +84,7 @@ func init() {
 
 	seedSchemeBuilder := runtime.NewSchemeBuilder(
 		corescheme.AddToScheme,
-		dnsscheme.AddToScheme,
+		dnsv1alpha1.AddToScheme,
 		gardenextensionsscheme.AddToScheme,
 		resourcesscheme.AddToScheme,
 		autoscalingscheme.AddToScheme,

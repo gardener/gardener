@@ -58,8 +58,8 @@ func (h *HealthChecker) CheckPlantClusterNodes(ctx context.Context, condition ga
 }
 
 // CheckAPIServerAvailability checks if the API server of a Plant cluster is reachable and measure the response time.
-func (h *HealthChecker) CheckAPIServerAvailability(condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	return health.CheckAPIServerAvailability(condition, h.discoveryClient.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
+func (h *HealthChecker) CheckAPIServerAvailability(ctx context.Context, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
+	return health.CheckAPIServerAvailability(ctx, condition, h.discoveryClient.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
 		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, conditionType, message)
 	})
 }

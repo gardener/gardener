@@ -45,7 +45,7 @@ func NewPodExecutor(config *rest.Config) PodExecutor {
 
 // PodExecutor is the pod executor interface
 type PodExecutor interface {
-	Execute(ctx context.Context, namespace, name, containerName, command, commandArg string) (io.Reader, error)
+	Execute(namespace, name, containerName, command, commandArg string) (io.Reader, error)
 }
 
 type podExecutor struct {
@@ -53,7 +53,7 @@ type podExecutor struct {
 }
 
 // Execute executes a command on a pod
-func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerName, command, commandArg string) (io.Reader, error) {
+func (p *podExecutor) Execute(namespace, name, containerName, command, commandArg string) (io.Reader, error) {
 	client, err := corev1client.NewForConfig(p.config)
 	if err != nil {
 		return nil, err
@@ -71,8 +71,7 @@ func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerNam
 		Param("stdin", "true").
 		Param("stdout", "true").
 		Param("stderr", "true").
-		Param("tty", "false").
-		Context(ctx)
+		Param("tty", "false")
 
 	executor, err := remotecommand.NewSPDYExecutor(p.config, http.MethodPost, request.URL())
 	if err != nil {
@@ -93,10 +92,10 @@ func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerNam
 }
 
 // GetPodLogs retrieves the pod logs of the pod of the given name with the given options.
-func GetPodLogs(podInterface corev1client.PodInterface, name string, options *corev1.PodLogOptions) ([]byte, error) {
+func GetPodLogs(ctx context.Context, podInterface corev1client.PodInterface, name string, options *corev1.PodLogOptions) ([]byte, error) {
 	request := podInterface.GetLogs(name, options)
 
-	stream, err := request.Stream()
+	stream, err := request.Stream(ctx)
 	if err != nil {
 		return nil, err
 	}

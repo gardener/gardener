@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	utiltime "github.com/gardener/gardener/pkg/utils/time"
 
@@ -164,7 +165,7 @@ func (f *namespaceFinalizer) Finalize(ctx context.Context, c client.Client, obj 
 
 	// TODO (ialidzhikov): Use controller-runtime client once subresources are
 	// suported - https://github.com/kubernetes-sigs/controller-runtime/issues/172.
-	_, err := f.namespaceInterface.Finalize(namespace)
+	_, err := f.namespaceInterface.Finalize(ctx, namespace, kubernetes.DefaultUpdateOptions())
 	return err
 }
 

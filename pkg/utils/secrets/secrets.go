@@ -47,7 +47,7 @@ func (s *Secrets) Deploy(
 	namespace string,
 ) (map[string]*corev1.Secret, error) {
 	// Get existing secrets in the namespace
-	existingSecrets, err := getSecrets(cs, namespace)
+	existingSecrets, err := getSecrets(ctx, cs, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -69,17 +69,17 @@ func (s *Secrets) Deploy(
 }
 
 // Delete deletes the secrets from the given namespace.
-func (s *Secrets) Delete(cs kubernetes.Interface, namespace string) error {
+func (s *Secrets) Delete(ctx context.Context, cs kubernetes.Interface, namespace string) error {
 	for _, sc := range s.SecretConfigsFunc(nil, namespace) {
-		if err := deleteSecret(cs, namespace, sc.GetName()); err != nil {
+		if err := deleteSecret(ctx, cs, namespace, sc.GetName()); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func getSecrets(cs kubernetes.Interface, namespace string) (map[string]*corev1.Secret, error) {
-	secretList, err := cs.CoreV1().Secrets(namespace).List(metav1.ListOptions{})
+func getSecrets(ctx context.Context, cs kubernetes.Interface, namespace string) (map[string]*corev1.Secret, error) {
+	secretList, err := cs.CoreV1().Secrets(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not list secrets in namespace '%s'", namespace)
 	}
@@ -92,6 +92,6 @@ func getSecrets(cs kubernetes.Interface, namespace string) (map[string]*corev1.S
 	return result, nil
 }
 
-func deleteSecret(cs kubernetes.Interface, namespace, name string) error {
-	return cs.CoreV1().Secrets(namespace).Delete(name, &metav1.DeleteOptions{})
+func deleteSecret(ctx context.Context, cs kubernetes.Interface, namespace, name string) error {
+	return cs.CoreV1().Secrets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }

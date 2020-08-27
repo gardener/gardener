@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	core "github.com/gardener/gardener/pkg/apis/core"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -38,7 +40,7 @@ var controllerregistrationsResource = schema.GroupVersionResource{Group: "core.g
 var controllerregistrationsKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "", Kind: "ControllerRegistration"}
 
 // Get takes name of the controllerRegistration, and returns the corresponding controllerRegistration object, and an error if there is any.
-func (c *FakeControllerRegistrations) Get(name string, options v1.GetOptions) (result *core.ControllerRegistration, err error) {
+func (c *FakeControllerRegistrations) Get(ctx context.Context, name string, options v1.GetOptions) (result *core.ControllerRegistration, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(controllerregistrationsResource, name), &core.ControllerRegistration{})
 	if obj == nil {
@@ -48,7 +50,7 @@ func (c *FakeControllerRegistrations) Get(name string, options v1.GetOptions) (r
 }
 
 // List takes label and field selectors, and returns the list of ControllerRegistrations that match those selectors.
-func (c *FakeControllerRegistrations) List(opts v1.ListOptions) (result *core.ControllerRegistrationList, err error) {
+func (c *FakeControllerRegistrations) List(ctx context.Context, opts v1.ListOptions) (result *core.ControllerRegistrationList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(controllerregistrationsResource, controllerregistrationsKind, opts), &core.ControllerRegistrationList{})
 	if obj == nil {
@@ -69,13 +71,13 @@ func (c *FakeControllerRegistrations) List(opts v1.ListOptions) (result *core.Co
 }
 
 // Watch returns a watch.Interface that watches the requested controllerRegistrations.
-func (c *FakeControllerRegistrations) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeControllerRegistrations) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(controllerregistrationsResource, opts))
 }
 
 // Create takes the representation of a controllerRegistration and creates it.  Returns the server's representation of the controllerRegistration, and an error, if there is any.
-func (c *FakeControllerRegistrations) Create(controllerRegistration *core.ControllerRegistration) (result *core.ControllerRegistration, err error) {
+func (c *FakeControllerRegistrations) Create(ctx context.Context, controllerRegistration *core.ControllerRegistration, opts v1.CreateOptions) (result *core.ControllerRegistration, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(controllerregistrationsResource, controllerRegistration), &core.ControllerRegistration{})
 	if obj == nil {
@@ -85,7 +87,7 @@ func (c *FakeControllerRegistrations) Create(controllerRegistration *core.Contro
 }
 
 // Update takes the representation of a controllerRegistration and updates it. Returns the server's representation of the controllerRegistration, and an error, if there is any.
-func (c *FakeControllerRegistrations) Update(controllerRegistration *core.ControllerRegistration) (result *core.ControllerRegistration, err error) {
+func (c *FakeControllerRegistrations) Update(ctx context.Context, controllerRegistration *core.ControllerRegistration, opts v1.UpdateOptions) (result *core.ControllerRegistration, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(controllerregistrationsResource, controllerRegistration), &core.ControllerRegistration{})
 	if obj == nil {
@@ -95,22 +97,22 @@ func (c *FakeControllerRegistrations) Update(controllerRegistration *core.Contro
 }
 
 // Delete takes name of the controllerRegistration and deletes it. Returns an error if one occurs.
-func (c *FakeControllerRegistrations) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeControllerRegistrations) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(controllerregistrationsResource, name), &core.ControllerRegistration{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeControllerRegistrations) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(controllerregistrationsResource, listOptions)
+func (c *FakeControllerRegistrations) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(controllerregistrationsResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &core.ControllerRegistrationList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched controllerRegistration.
-func (c *FakeControllerRegistrations) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *core.ControllerRegistration, err error) {
+func (c *FakeControllerRegistrations) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *core.ControllerRegistration, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(controllerregistrationsResource, name, pt, data, subresources...), &core.ControllerRegistration{})
 	if obj == nil {

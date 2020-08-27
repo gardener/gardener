@@ -19,6 +19,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"time"
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -37,15 +38,15 @@ type NetworksGetter interface {
 
 // NetworkInterface has methods to work with Network resources.
 type NetworkInterface interface {
-	Create(*v1alpha1.Network) (*v1alpha1.Network, error)
-	Update(*v1alpha1.Network) (*v1alpha1.Network, error)
-	UpdateStatus(*v1alpha1.Network) (*v1alpha1.Network, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v1alpha1.Network, error)
-	List(opts v1.ListOptions) (*v1alpha1.NetworkList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Network, err error)
+	Create(ctx context.Context, network *v1alpha1.Network, opts v1.CreateOptions) (*v1alpha1.Network, error)
+	Update(ctx context.Context, network *v1alpha1.Network, opts v1.UpdateOptions) (*v1alpha1.Network, error)
+	UpdateStatus(ctx context.Context, network *v1alpha1.Network, opts v1.UpdateOptions) (*v1alpha1.Network, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.Network, error)
+	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.NetworkList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Network, err error)
 	NetworkExpansion
 }
 
@@ -64,20 +65,20 @@ func newNetworks(c *ExtensionsV1alpha1Client, namespace string) *networks {
 }
 
 // Get takes name of the network, and returns the corresponding network object, and an error if there is any.
-func (c *networks) Get(name string, options v1.GetOptions) (result *v1alpha1.Network, err error) {
+func (c *networks) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Network, err error) {
 	result = &v1alpha1.Network{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("networks").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of Networks that match those selectors.
-func (c *networks) List(opts v1.ListOptions) (result *v1alpha1.NetworkList, err error) {
+func (c *networks) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.NetworkList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -88,13 +89,13 @@ func (c *networks) List(opts v1.ListOptions) (result *v1alpha1.NetworkList, err 
 		Resource("networks").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested networks.
-func (c *networks) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *networks) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -105,87 +106,90 @@ func (c *networks) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		Resource("networks").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a network and creates it.  Returns the server's representation of the network, and an error, if there is any.
-func (c *networks) Create(network *v1alpha1.Network) (result *v1alpha1.Network, err error) {
+func (c *networks) Create(ctx context.Context, network *v1alpha1.Network, opts v1.CreateOptions) (result *v1alpha1.Network, err error) {
 	result = &v1alpha1.Network{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("networks").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(network).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a network and updates it. Returns the server's representation of the network, and an error, if there is any.
-func (c *networks) Update(network *v1alpha1.Network) (result *v1alpha1.Network, err error) {
+func (c *networks) Update(ctx context.Context, network *v1alpha1.Network, opts v1.UpdateOptions) (result *v1alpha1.Network, err error) {
 	result = &v1alpha1.Network{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("networks").
 		Name(network.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(network).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *networks) UpdateStatus(network *v1alpha1.Network) (result *v1alpha1.Network, err error) {
+func (c *networks) UpdateStatus(ctx context.Context, network *v1alpha1.Network, opts v1.UpdateOptions) (result *v1alpha1.Network, err error) {
 	result = &v1alpha1.Network{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("networks").
 		Name(network.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(network).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the network and deletes it. Returns an error if one occurs.
-func (c *networks) Delete(name string, options *v1.DeleteOptions) error {
+func (c *networks) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("networks").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *networks) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *networks) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("networks").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched network.
-func (c *networks) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Network, err error) {
+func (c *networks) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Network, err error) {
 	result = &v1alpha1.Network{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("networks").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

@@ -17,7 +17,6 @@
 package v1alpha1
 
 import (
-	"github.com/gardener/controller-manager-library/pkg/resources"
 	"github.com/gardener/external-dns-management/pkg/apis/dns"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,6 +35,9 @@ const (
 
 	DNSEntryKind   = "DNSEntry"
 	DNSEntryPlural = "dnsentries"
+
+	DNSAnnotationKind   = "DNSAnnotation"
+	DNSAnnotationPlural = "dnsannotations"
 )
 
 // SchemeGroupVersion is group version used to register these objects
@@ -65,11 +67,9 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&DNSProviderList{},
 		&DNSEntry{},
 		&DNSEntryList{},
+		&DNSAnnotation{},
+		&DNSAnnotationList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
-}
-
-func init() {
-	resources.Register(SchemeBuilder)
 }

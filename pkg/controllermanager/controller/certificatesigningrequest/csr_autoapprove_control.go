@@ -30,6 +30,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -144,7 +146,7 @@ func (c *defaultControl) Reconcile(csrObj *certificatesv1beta1.CertificateSignin
 			Reason:  "AutoApproved",
 			Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
 		})
-		_, err := gardenClient.Kubernetes().CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(csr)
+		_, err := gardenClient.Kubernetes().CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(ctx, csr, kubernetes.DefaultUpdateOptions())
 		return err
 	}
 
