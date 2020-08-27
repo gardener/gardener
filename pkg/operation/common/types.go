@@ -198,9 +198,6 @@ const (
 	// KonnectivityServerCertName is the name of the api-proxy konnectivity-server
 	KonnectivityServerCertName = "konnectivity-server"
 
-	// KubeSchedulerServerName is the name of the kube-scheduler server.
-	KubeSchedulerServerName = "kube-scheduler-server"
-
 	// CoreDNSDeploymentName is the name of the coredns deployment.
 	CoreDNSDeploymentName = "coredns"
 

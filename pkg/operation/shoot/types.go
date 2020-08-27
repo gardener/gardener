@@ -22,9 +22,11 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/operation/garden"
 
+	"github.com/Masterminds/semver"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -50,6 +52,7 @@ type Shoot struct {
 
 	SeedNamespace               string
 	KubernetesMajorMinorVersion string
+	KubernetesVersion           *semver.Version
 
 	DisableDNS            bool
 	InternalClusterDomain string
@@ -89,6 +92,7 @@ type Components struct {
 type ControlPlane struct {
 	KubeAPIServerService component.DeployWaiter
 	KubeAPIServerSNI     component.DeployWaiter
+	KubeScheduler        kubescheduler.KubeScheduler
 }
 
 // Extensions contains references to extension resources.

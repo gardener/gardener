@@ -45,7 +45,7 @@ func init() {
 // NewKubeletConfigCodec creates an returns a new KubeletConfigCodec.
 func NewKubeletConfigCodec(fciCodec FileContentInlineCodec) KubeletConfigCodec {
 	// Create codec for encoding / decoding to and from YAML
-	ser := json.NewYAMLSerializer(json.DefaultMetaFactory, scheme, scheme)
+	ser := json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
 	versions := schema.GroupVersions([]schema.GroupVersion{kubeletconfigv1beta1.SchemeGroupVersion})
 	codec := serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
 

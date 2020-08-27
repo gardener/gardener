@@ -187,6 +187,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 		return nil, err
 	}
 	shoot.KubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", v.Major(), v.Minor())
+	shoot.KubernetesVersion = v
 
 	kubernetesVersionGeq118, err := versionutils.CheckVersionMeetsConstraint(shoot.KubernetesMajorMinorVersion, ">= 1.18")
 	if err != nil {
@@ -293,7 +294,7 @@ func (s *Shoot) ComputeCloudConfigSecretName(workerName string) string {
 }
 
 // GetReplicas returns the given <wokenUp> number if the shoot is not hibernated, or zero otherwise.
-func (s *Shoot) GetReplicas(wokenUp int) int {
+func (s *Shoot) GetReplicas(wokenUp int32) int32 {
 	if s.HibernationEnabled {
 		return 0
 	}
