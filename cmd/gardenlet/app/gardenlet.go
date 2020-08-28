@@ -40,6 +40,7 @@ import (
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	configvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
+	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	"github.com/gardener/gardener/pkg/gardenlet/controller"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -157,7 +158,7 @@ func run(ctx context.Context, o *Options) error {
 	if len(o.ConfigFile) > 0 {
 		c, err := o.loadConfigFromFile(o.ConfigFile)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to read the configuration file: %v", err)
 		}
 
 		c, err = o.applyDefaults(c)
@@ -234,6 +235,7 @@ type Gardenlet struct {
 	Recorder               record.EventRecorder
 	LeaderElection         *leaderelection.LeaderElectionConfig
 	HealthManager          healthz.Manager
+	CertificateManager     *certificate.Manager
 }
 
 // NewGardenlet is the main entry point of instantiating a new Gardenlet.
@@ -269,16 +271,33 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		err                     error
 	)
 
+	// constructs a seed client for `SeedClientConnection.kubeconfig` or if not set,
+	// creates a seed client based on the service account token mounted into the gardenlet container running in Kubernetes
+	// when running outside of Kubernetes, `SeedClientConnection.kubeconfig` has to be set either directly or via the environment variable "KUBECONFIG"
+	seedClient, err := kubernetes.NewClientFromFile(
+		"",
+		cfg.SeedClientConnection.ClientConnectionConfiguration.Kubeconfig,
+		kubernetes.WithClientConnectionOptions(cfg.SeedClientConnection.ClientConnectionConfiguration),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	if cfg.GardenClientConnection.KubeconfigSecret != nil {
-		kubeconfigFromBootstrap, csrName, seedName, err = bootstrapKubeconfig(ctx, logger, cfg.GardenClientConnection, cfg.SeedClientConnection.ClientConnectionConfiguration, cfg.SeedConfig)
+		kubeconfigFromBootstrap, csrName, seedName, err = bootstrapKubeconfig(ctx, logger, seedClient.DirectClient(), cfg)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		logger.Info("No kubeconfig secret given in `.gardenClientConnection` configuration - skipping kubeconfig bootstrap process.")
+		logger.Info("No kubeconfig secret given in the configuration under `.gardenClientConnection.kubeconfigSecret`. Skipping the kubeconfig bootstrap process and certificate rotation.")
 	}
+
 	if kubeconfigFromBootstrap == nil {
-		logger.Info("No kubeconfig generated from bootstrap process found. Using kubeconfig specified in `.gardenClientConnection` in configuration")
+		logger.Info("Falling back to the kubeconfig specified in the configuration under `.gardenClientConnection.kubeconfig`")
+		if len(cfg.GardenClientConnection.Kubeconfig) == 0 {
+			return nil, fmt.Errorf("the configuration file needs to either specify a Garden API Server kubeconfig under `.gardenClientConnection.kubeconfig` or provide bootstrapping information. " +
+				"To configure the Gardenlet for bootstrapping, provide the secret containing the bootstrap kubeconfig under `.gardenClientConnection.kubeconfigSecret` and also the secret name where the created kubeconfig should be stored for further use via`.gardenClientConnection.kubeconfigSecret`")
+		}
 	}
 
 	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection.ClientConnectionConfiguration, kubeconfigFromBootstrap)
@@ -309,17 +328,12 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		return nil, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	// Delete bootstrap auth data if certificate was freshly acquired
-	if len(csrName) > 0 {
+	// Delete bootstrap auth data if certificate was newly acquired
+	if len(csrName) > 0 && len(seedName) > 0 {
 		logger.Infof("Deleting bootstrap authentication data used to request a certificate")
 		if err := bootstrap.DeleteBootstrapAuth(ctx, k8sGardenClient.DirectClient(), csrName, seedName); err != nil {
 			return nil, err
 		}
-	}
-
-	seedRestCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.SeedClientConnection.ClientConnectionConfiguration, nil)
-	if err != nil {
-		return nil, err
 	}
 
 	// Set up leader election if enabled and prepare event recorder.
@@ -328,6 +342,11 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		recorder             = utils.CreateRecorder(k8sGardenClient.Kubernetes(), "gardenlet")
 	)
 	if cfg.LeaderElection.LeaderElect {
+		seedRestCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.SeedClientConnection.ClientConnectionConfiguration, nil)
+		if err != nil {
+			return nil, err
+		}
+
 		k8sSeedClientLeaderElection, err := kubernetesclientset.NewForConfig(seedRestCfg)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create client for leader election: %w", err)
@@ -360,6 +379,12 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		return nil, errors.New("unable to extract Gardener`s cluster identity from cluster-identity ConfigMap")
 	}
 
+	// create the certificate manager to schedule certificate rotations
+	var certificateManager *certificate.Manager
+	if cfg.GardenClientConnection.KubeconfigSecret != nil {
+		certificateManager = certificate.NewCertificateManager(clientMap, seedClient.DirectClient(), cfg)
+	}
+
 	return &Gardenlet{
 		Identity:               identity,
 		GardenClusterIdentity:  clusterIdentity,
@@ -371,6 +396,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		K8sGardenCoreInformers: gardencoreinformers.NewSharedInformerFactory(k8sGardenClient.GardenCore(), 0),
 		KubeInformerFactory:    kubeinformers.NewSharedInformerFactory(k8sGardenClient.Kubernetes(), 0),
 		LeaderElection:         leaderElectionConfig,
+		CertificateManager:     certificateManager,
 	}, nil
 }
 
@@ -382,6 +408,10 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 
 	// Initialize /healthz manager.
 	g.HealthManager = healthz.NewPeriodicHealthz(seedcontroller.LeaseResyncGracePeriodSeconds * time.Second)
+
+	if g.CertificateManager != nil {
+		g.CertificateManager.ScheduleCertificateRotation(controllerCtx, controllerCancel, g.Recorder)
+	}
 
 	// Start HTTPS server.
 	if g.Config.Server.HTTPS.TLS == nil {

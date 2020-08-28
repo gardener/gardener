@@ -135,18 +135,9 @@ func RESTConfigFromClientConnectionConfiguration(cfg *componentbaseconfig.Client
 			return nil, err
 		}
 	} else {
-		clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
+		restConfig, err = RESTConfigFromKubeconfig(kubeconfig)
 		if err != nil {
-			return nil, err
-		}
-
-		if err := validateClientConfig(clientConfig); err != nil {
-			return nil, err
-		}
-
-		restConfig, err = clientConfig.ClientConfig()
-		if err != nil {
-			return nil, err
+			return restConfig, err
 		}
 	}
 
@@ -157,6 +148,24 @@ func RESTConfigFromClientConnectionConfiguration(cfg *componentbaseconfig.Client
 		restConfig.ContentType = cfg.ContentType
 	}
 
+	return restConfig, nil
+}
+
+// RESTConfigFromKubeconfig returns a rest.Config from the bytes of a kubeconfig
+func RESTConfigFromKubeconfig(kubeconfig []byte) (*rest.Config, error) {
+	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := validateClientConfig(clientConfig); err != nil {
+		return nil, err
+	}
+
+	restConfig, err := clientConfig.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
 	return restConfig, nil
 }
 
