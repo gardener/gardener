@@ -187,7 +187,7 @@ images:
 - name: loki
   sourceRepository: github.com/grafana/loki
   repository: grafana/loki
-  tag: "1.5.0"
+  tag: "1.6.0"
 
 # VPA
 - name: vpa-admission-controller
