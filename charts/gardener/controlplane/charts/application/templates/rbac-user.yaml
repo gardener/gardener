@@ -21,7 +21,29 @@ rules:
   resources:
   - namespaces
   verbs:
-  - get
+  - '*'
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - clusterrolebindings
+  - roles
+  - rolebindings
+  verbs:
+  - '*'
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - mutatingwebhookconfigurations
+  - validatingwebhookconfigurations
+  verbs:
+  - '*'
+- apiGroups:
+  - apiregistration.k8s.io
+  resources:
+  - apiservices
+  verbs:
+  - '*'
 
 # Aggregated cluster role specifying garden administrators.
 # IMPORTANT: You need to define a corresponding ClusterRoleBinding binding specific users
