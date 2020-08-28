@@ -13,8 +13,10 @@
     EnvironmentFile=/etc/environment
     {{- if semverCompare "< 1.17" .Values.kubernetes.version }}
     ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw {{ required "images.hyperkube is required" .Values.images.hyperkube }} /bin/sh -c "cp /usr/local/bin/kubectl /opt/bin"
-    {{- else }}
+    {{- else if semverCompare "< 1.19" .Values.kubernetes.version }}
     ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh {{ required "images.hyperkube is required" .Values.images.hyperkube }} -c "cp /usr/local/bin/kubectl /opt/bin"
+    {{- else }}
+    ExecStartPre=/usr/bin/env sh -c "ID=\"$(/usr/bin/docker run --rm -d -v /opt/bin:/opt/bin:rw {{ required "images.hyperkube is required" .Values.images.hyperkube }})\"; /usr/bin/docker cp \"$ID\":/kubectl /opt/bin; docker stop \"$ID\"; chmod +x /opt/bin/kubectl"
     {{- end }}
     ExecStart=/opt/bin/health-monitor kubelet
 {{- end -}}

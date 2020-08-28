@@ -23,8 +23,10 @@
     EnvironmentFile=-/var/lib/kubelet/extra_args
     {{- if semverCompare "< 1.17" .Values.kubernetes.version }}
     ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw {{ required "images.hyperkube is required" .Values.images.hyperkube }} /bin/sh -c "cp /usr/local/bin/kubelet /opt/bin"
-    {{- else }}
+    {{- else if semverCompare "< 1.19" .Values.kubernetes.version }}
     ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh {{ required "images.hyperkube is required" .Values.images.hyperkube }} -c "cp /usr/local/bin/kubelet /opt/bin"
+    {{- else }}
+    ExecStartPre=/usr/bin/env sh -c "ID=\"$(/usr/bin/docker run --rm -d -v /opt/bin:/opt/bin:rw {{ required "images.hyperkube is required" .Values.images.hyperkube }})\"; /usr/bin/docker cp \"$ID\":/kubelet /opt/bin; docker stop \"$ID\"; chmod +x /opt/bin/kubelet"
     {{- end }}
     ExecStart=/opt/bin/kubelet \
 {{ include "kubelet-flags" . | trim | replace "\n" " \\\n" | indent 8 }}

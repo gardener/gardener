@@ -31,9 +31,15 @@ images:
   tag: "v0.5.0"
 
 # Seed controlplane
-- name: hyperkube # used for kubectl + kubelet binaries on the worker nodes
+#   hyperkube is used for kubectl + kubelet binaries on the worker nodes
+- name: hyperkube
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/hyperkube
+  targetVersion: "< 1.19"
+- name: hyperkube
+  sourceRepository: github.com/gardener/hyperkube
+  repository: eu.gcr.io/gardener-project/hyperkube
+  targetVersion: ">= 1.19"
 - name: kube-apiserver
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/hyperkube
