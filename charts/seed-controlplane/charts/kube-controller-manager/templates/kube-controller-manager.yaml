@@ -130,6 +130,9 @@ spec:
           mountPath: /var/lib/kube-controller-manager
         - name: kube-controller-manager-server
           mountPath: /var/lib/kube-controller-manager-server
+        - name: usr-share-cacerts
+          mountPath: /usr/share/ca-certificates
+          readOnly: true
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -147,3 +150,7 @@ spec:
       - name: kube-controller-manager-server
         secret:
           secretName: kube-controller-manager-server
+      - hostPath:
+          path: /usr/share/ca-certificates
+          type: "DirectoryOrCreate"
+        name: usr-share-cacerts
