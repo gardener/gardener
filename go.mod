@@ -21,10 +21,10 @@ require (
 	github.com/googleapis/gnostic v0.3.1
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/huandu/xstrings v1.3.1
-	github.com/json-iterator/go v1.1.9
+	github.com/json-iterator/go v1.1.10
 	github.com/mholt/archiver v3.1.1+incompatible
-	github.com/onsi/ginkgo v1.11.0
-	github.com/onsi/gomega v1.8.1
+	github.com/onsi/ginkgo v1.12.1
+	github.com/onsi/gomega v1.10.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.3.0
 	github.com/robfig/cron v1.2.0
@@ -39,7 +39,7 @@ require (
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 	gomodules.xyz/jsonpatch/v2 v2.0.1
 	google.golang.org/grpc v1.26.0
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.17.11
 	k8s.io/apiextensions-apiserver v0.17.11
 	k8s.io/apimachinery v0.17.11
@@ -56,8 +56,8 @@ require (
 	k8s.io/kube-openapi v0.0.0-20200410145947-bcb3869e6f29
 	k8s.io/kubelet v0.17.11
 	k8s.io/metrics v0.17.11
-	k8s.io/utils v0.0.0-20200327001022-6496210b90e8
-	sigs.k8s.io/controller-runtime v0.5.5
+	k8s.io/utils v0.0.0-20200619165400-6e3d28b6ed19
+	sigs.k8s.io/controller-runtime v0.5.10
 	sigs.k8s.io/yaml v1.1.0
 )
 

@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -29,14 +30,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/internal/controller/metrics"
-	logf "sigs.k8s.io/controller-runtime/pkg/internal/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
-
-var log = logf.RuntimeLog.WithName("controller")
 
 var _ inject.Injector = &Controller{}
 
@@ -88,6 +86,9 @@ type Controller struct {
 
 	// watches maintains a list of sources, handlers, and predicates to start when the controller is started.
 	watches []watchDescription
+
+	// Log is used to log messages to users during reconciliation, or for example when a watch is started.
+	Log logr.Logger
 }
 
 // watchDescription contains all the information necessary to start a watch.
@@ -122,7 +123,7 @@ func (c *Controller) Watch(src source.Source, evthdler handler.EventHandler, prc
 
 	c.watches = append(c.watches, watchDescription{src: src, handler: evthdler, predicates: prct})
 	if c.Started {
-		log.Info("Starting EventSource", "controller", c.Name, "source", src)
+		c.Log.Info("Starting EventSource", "source", src)
 		return src.Start(evthdler, c.Queue, prct...)
 	}
 
@@ -148,14 +149,14 @@ func (c *Controller) Start(stop <-chan struct{}) error {
 		// caches to sync so that they have a chance to register their intendeded
 		// caches.
 		for _, watch := range c.watches {
-			log.Info("Starting EventSource", "controller", c.Name, "source", watch.src)
+			c.Log.Info("Starting EventSource", "source", watch.src)
 			if err := watch.src.Start(watch.handler, c.Queue, watch.predicates...); err != nil {
 				return err
 			}
 		}
 
 		// Start the SharedIndexInformer factories to begin populating the SharedIndexInformer caches
-		log.Info("Starting Controller", "controller", c.Name)
+		c.Log.Info("Starting Controller")
 
 		for _, watch := range c.watches {
 			syncingSource, ok := watch.src.(source.SyncingSource)
@@ -166,7 +167,7 @@ func (c *Controller) Start(stop <-chan struct{}) error {
 				// This code is unreachable in case of kube watches since WaitForCacheSync will never return an error
 				// Leaving it here because that could happen in the future
 				err := fmt.Errorf("failed to wait for %s caches to sync: %w", c.Name, err)
-				log.Error(err, "Could not wait for Cache to sync", "controller", c.Name)
+				c.Log.Error(err, "Could not wait for Cache to sync")
 				return err
 			}
 		}
@@ -176,7 +177,7 @@ func (c *Controller) Start(stop <-chan struct{}) error {
 		}
 
 		// Launch workers to process resources
-		log.Info("Starting workers", "controller", c.Name, "worker count", c.MaxConcurrentReconciles)
+		c.Log.Info("Starting workers", "worker count", c.MaxConcurrentReconciles)
 		for i := 0; i < c.MaxConcurrentReconciles; i++ {
 			// Process work items
 			go wait.Until(c.worker, c.JitterPeriod, stop)
@@ -190,7 +191,7 @@ func (c *Controller) Start(stop <-chan struct{}) error {
 	}
 
 	<-stop
-	log.Info("Stopping workers", "controller", c.Name)
+	c.Log.Info("Stopping workers")
 	return nil
 }
 
@@ -228,23 +229,23 @@ func (c *Controller) reconcileHandler(obj interface{}) bool {
 		c.updateMetrics(time.Since(reconcileStartTS))
 	}()
 
-	var req reconcile.Request
-	var ok bool
-	if req, ok = obj.(reconcile.Request); !ok {
+	// Make sure that the the object is a valid request.
+	req, ok := obj.(reconcile.Request)
+	if !ok {
 		// As the item in the workqueue is actually invalid, we call
 		// Forget here else we'd go into a loop of attempting to
 		// process a work item that is invalid.
 		c.Queue.Forget(obj)
-		log.Error(nil, "Queue item was not a Request",
-			"controller", c.Name, "type", fmt.Sprintf("%T", obj), "value", obj)
+		c.Log.Error(nil, "Queue item was not a Request", "type", fmt.Sprintf("%T", obj), "value", obj)
 		// Return true, don't take a break
 		return true
 	}
+
 	// RunInformersAndControllers the syncHandler, passing it the namespace/Name string of the
 	// resource to be synced.
 	if result, err := c.Do.Reconcile(req); err != nil {
 		c.Queue.AddRateLimited(req)
-		log.Error(err, "Reconciler error", "controller", c.Name, "request", req)
+		c.Log.Error(err, "Reconciler error", "name", req.Name, "namespace", req.Namespace)
 		ctrlmetrics.ReconcileErrors.WithLabelValues(c.Name).Inc()
 		ctrlmetrics.ReconcileTotal.WithLabelValues(c.Name, "error").Inc()
 		return false
@@ -268,7 +269,7 @@ func (c *Controller) reconcileHandler(obj interface{}) bool {
 	c.Queue.Forget(obj)
 
 	// TODO(directxman12): What does 1 mean?  Do we want level constants?  Do we want levels at all?
-	log.V(1).Info("Successfully Reconciled", "controller", c.Name, "request", req)
+	c.Log.V(1).Info("Successfully Reconciled", "name", req.Name, "namespace", req.Namespace)
 
 	ctrlmetrics.ReconcileTotal.WithLabelValues(c.Name, "success").Inc()
 	// Return true, don't take a break
