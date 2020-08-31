@@ -44,7 +44,6 @@ var _ = Describe("SecretsManager", func() {
 		staticTokenConfig            *secrets.StaticTokenSecretConfig
 		apiServerBasicAuthConfig     *secrets.BasicAuthSecretConfig
 		wantedCertificateAuthorities map[string]*secrets.CertificateSecretConfig
-		existingSecrets              map[string]*corev1.Secret
 		secretsConfigGenerator       func(basicAuthAPIServer *secrets.BasicAuth, staticToken *secrets.StaticToken, certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error)
 
 		caName   = "ca1"
@@ -102,57 +101,6 @@ var _ = Describe("SecretsManager", func() {
 				},
 			}, nil
 		}
-
-		existingSecrets = map[string]*corev1.Secret{
-			apiServerBasicAuthConfig.Name: {
-				Data: map[string][]byte{
-					secrets.DataKeyPassword: []byte("pass"),
-					secrets.DataKeyCSV:      []byte("pass,admin,admin,group"),
-				},
-			},
-			staticTokenConfig.Name: {
-				Data: map[string][]byte{
-					secrets.DataKeyStaticTokenCSV: []byte("foo,foo,bar,group"),
-				},
-			},
-			caName: {
-				Data: map[string][]byte{
-					secrets.DataKeyCertificateCA: []byte(cacert),
-					secrets.DataKeyPrivateKeyCA:  []byte(cakey),
-				},
-			},
-			certName: {
-				Data: map[string][]byte{
-					secrets.ControlPlaneSecretDataKeyCertificatePEM(certName): []byte(cacert),
-					secrets.ControlPlaneSecretDataKeyPrivateKey(certName):     []byte(cakey),
-				},
-			},
-		}
-	})
-
-	Describe("#Load", func() {
-		It("should load the secrets' infodata from the existing secrets", func() {
-			secretsManager := NewSecretsManager(gardencorev1alpha1helper.GardenerResourceDataList{}, staticTokenConfig, wantedCertificateAuthorities, secretsConfigGenerator)
-			secretsManager.WithAPIServerBasicAuthConfig(apiServerBasicAuthConfig)
-			err := secretsManager.WithExistingSecrets(existingSecrets).Load()
-			Expect(err).NotTo(HaveOccurred())
-
-			checkIfInfoDataUpsertedSuccessfully(secretsManager.GardenerResourceDataList,
-				ExpectedNameType{apiServerBasicAuthConfig.Name, secrets.BasicAuthDataType},
-				ExpectedNameType{staticTokenConfig.Name, secrets.StaticTokenDataType},
-				ExpectedNameType{caName, secrets.CertificateDataType},
-				ExpectedNameType{certName, secrets.CertificateDataType},
-			)
-		})
-
-		It("should not load basic auth InfoData if it is not added to the SecretsManager", func() {
-			secretsManager := NewSecretsManager(gardencorev1alpha1helper.GardenerResourceDataList{}, staticTokenConfig, wantedCertificateAuthorities, secretsConfigGenerator)
-			err := secretsManager.WithExistingSecrets(existingSecrets).Load()
-			Expect(err).NotTo(HaveOccurred())
-
-			basicAuthResourceData := secretsManager.GardenerResourceDataList.Get(apiServerBasicAuthConfig.Name)
-			Expect(basicAuthResourceData).To(BeNil())
-		})
 	})
 
 	Describe("#Generate", func() {
