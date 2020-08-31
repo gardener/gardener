@@ -282,6 +282,17 @@ func RemoveFinalizerWithError(o runtime.Object, finalizer string) error {
 	return nil
 }
 
+// ContainsFinalizer checks a metav1 object that the provided finalizer is present.
+func ContainsFinalizer(o Object, finalizer string) bool {
+	f := o.GetFinalizers()
+	for _, e := range f {
+		if e == finalizer {
+			return true
+		}
+	}
+	return false
+}
+
 // Object allows functions to work indistinctly with any resource that
 // implements both Object interfaces.
 type Object interface {

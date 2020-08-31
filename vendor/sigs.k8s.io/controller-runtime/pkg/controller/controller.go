@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/internal/controller"
+	"sigs.k8s.io/controller-runtime/pkg/internal/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/ratelimiter"
@@ -99,6 +100,7 @@ func New(name string, mgr manager.Manager, options Options) (Controller, error) 
 		},
 		MaxConcurrentReconciles: options.MaxConcurrentReconciles,
 		Name:                    name,
+		Log:                     log.RuntimeLog.WithName("controller").WithValues("controller", name),
 	}
 
 	// Add the controller as a Manager components
