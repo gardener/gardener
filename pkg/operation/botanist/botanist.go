@@ -89,6 +89,7 @@ func New(o *operation.Operation) (*Botanist, error) {
 	}
 	o.Shoot.Components.Extensions.Infrastructure = b.DefaultInfrastructure(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.Network = b.DefaultNetwork(b.K8sSeedClient.DirectClient())
+	o.Shoot.Components.Extensions.ContainerRuntime = b.DefaultContainerRuntime(b.K8sSeedClient.DirectClient())
 
 	// control plane components
 	o.Shoot.Components.ControlPlane.KubeAPIServerService = b.DefaultKubeAPIServerService()

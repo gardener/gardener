@@ -240,28 +240,18 @@ func DeleteExtensionCRs(
 	predicateFunc func(obj extensionsv1alpha1.Object) bool,
 	deleteOpts ...client.DeleteOption,
 ) error {
-	if err := c.List(ctx, listObj, client.InNamespace(namespace)); err != nil {
-		return err
-	}
+	fns, err := applyFuncToExtensionResources(ctx, c, listObj, namespace, predicateFunc, func(ctx context.Context, obj extensionsv1alpha1.Object) error {
+		return DeleteExtensionCR(
+			ctx,
+			c,
+			newObjFunc,
+			obj.GetNamespace(),
+			obj.GetName(),
+			deleteOpts...,
+		)
+	})
 
-	fns := make([]flow.TaskFn, 0, meta.LenList(listObj))
-
-	if err := meta.EachListItem(listObj, func(obj runtime.Object) error {
-		o, ok := obj.(extensionsv1alpha1.Object)
-		if !ok {
-			return fmt.Errorf("expected extensionsv1alpha1.Object but got %T", obj)
-		}
-
-		if predicateFunc != nil && !predicateFunc(o) {
-			return nil
-		}
-
-		fns = append(fns, func(ctx context.Context) error {
-			return DeleteExtensionCR(ctx, c, newObjFunc, o.GetNamespace(), o.GetName(), deleteOpts...)
-		})
-
-		return nil
-	}); err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -282,42 +272,36 @@ func WaitUntilExtensionCRsDeleted(
 	timeout time.Duration,
 	predicateFunc func(obj extensionsv1alpha1.Object) bool,
 ) error {
-	if err := c.List(ctx, listObj, client.InNamespace(namespace)); err != nil {
-		return err
-	}
-
-	fns := make([]flow.TaskFn, 0, meta.LenList(listObj))
-
-	if err := meta.EachListItem(listObj, func(obj runtime.Object) error {
-		o, ok := obj.(extensionsv1alpha1.Object)
-		if !ok {
-			return fmt.Errorf("expected extensionsv1alpha1.Object but got %T", obj)
-		}
-
-		if o.GetDeletionTimestamp() == nil {
-			return nil
-		}
-
-		if predicateFunc != nil && !predicateFunc(o) {
-			return nil
-		}
-
-		fns = append(fns, func(ctx context.Context) error {
+	fns, err := applyFuncToExtensionResources(
+		ctx,
+		c,
+		listObj,
+		namespace,
+		func(obj extensionsv1alpha1.Object) bool {
+			if obj.GetDeletionTimestamp() == nil {
+				return false
+			}
+			if predicateFunc != nil && !predicateFunc(obj) {
+				return false
+			}
+			return true
+		},
+		func(ctx context.Context, obj extensionsv1alpha1.Object) error {
 			return WaitUntilExtensionCRDeleted(
 				ctx,
 				c,
 				logger,
 				newObjFunc,
 				kind,
-				o.GetNamespace(),
-				o.GetName(),
+				obj.GetNamespace(),
+				obj.GetName(),
 				interval,
 				timeout,
 			)
-		})
+		},
+	)
 
-		return nil
-	}); err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -463,6 +447,25 @@ func MigrateExtensionCR(
 	return AnnotateExtensionObjectWithOperation(ctx, c, obj, v1beta1constants.GardenerOperationMigrate)
 }
 
+// MigrateExtensionCRs lists all extension resources of a given kind and annotates them with the Migrate operation.
+func MigrateExtensionCRs(
+	ctx context.Context,
+	c client.Client,
+	listObj runtime.Object,
+	newObjFunc func() extensionsv1alpha1.Object,
+	namespace string,
+) error {
+	fns, err := applyFuncToExtensionResources(ctx, c, listObj, namespace, nil, func(ctx context.Context, o extensionsv1alpha1.Object) error {
+		return MigrateExtensionCR(ctx, c, newObjFunc, o.GetNamespace(), o.GetName())
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return flow.Parallel(fns...)(ctx)
+}
+
 // WaitUntilExtensionCRMigrated waits until the migrate operation for the extension resource is successful.
 func WaitUntilExtensionCRMigrated(
 	ctx context.Context,
@@ -501,12 +504,77 @@ func WaitUntilExtensionCRMigrated(
 	})
 }
 
+// WaitUntilExtensionCRsMigrated lists all extension resources of a given kind and waits until they are migrated
+func WaitUntilExtensionCRsMigrated(
+	ctx context.Context,
+	c client.Client,
+	listObj runtime.Object,
+	newObjFunc func() extensionsv1alpha1.Object,
+	namespace string,
+	interval time.Duration,
+	timeout time.Duration,
+) error {
+	fns, err := applyFuncToExtensionResources(ctx, c, listObj, namespace, nil, func(ctx context.Context, object extensionsv1alpha1.Object) error {
+		return WaitUntilExtensionCRMigrated(
+			ctx,
+			c,
+			newObjFunc,
+			object.GetNamespace(),
+			object.GetName(),
+			interval,
+			timeout,
+		)
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return flow.Parallel(fns...)(ctx)
+}
+
 // AnnotateExtensionObjectWithOperation annotates the extension resource with the provided operation annotation value.
 func AnnotateExtensionObjectWithOperation(ctx context.Context, c client.Client, extensionObj extensionsv1alpha1.Object, operation string) error {
 	extensionObjCopy := extensionObj.DeepCopyObject()
 	kutil.SetMetaDataAnnotation(extensionObj, v1beta1constants.GardenerOperation, operation)
 	kutil.SetMetaDataAnnotation(extensionObj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 	return c.Patch(ctx, extensionObj, client.MergeFrom(extensionObjCopy))
+}
+
+func applyFuncToExtensionResources(
+	ctx context.Context,
+	c client.Client,
+	listObj runtime.Object,
+	namespace string,
+	predicateFunc func(obj extensionsv1alpha1.Object) bool,
+	applyFunc func(ctx context.Context, object extensionsv1alpha1.Object) error,
+) ([]flow.TaskFn, error) {
+	if err := c.List(ctx, listObj, client.InNamespace(namespace)); err != nil {
+		return nil, err
+	}
+
+	fns := make([]flow.TaskFn, 0, meta.LenList(listObj))
+
+	if err := meta.EachListItem(listObj, func(obj runtime.Object) error {
+		o, ok := obj.(extensionsv1alpha1.Object)
+		if !ok {
+			return fmt.Errorf("expected extensionsv1alpha1.Object but got %T", obj)
+		}
+
+		if predicateFunc != nil && !predicateFunc(o) {
+			return nil
+		}
+
+		fns = append(fns, func(ctx context.Context) error {
+			return applyFunc(ctx, o)
+		})
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return fns, nil
 }
 
 func extensionKey(kind, namespace, name string) string {
