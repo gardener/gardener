@@ -627,6 +627,15 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 		return err
 	}
 
+	loggingConfig := &configv1alpha1.Logging{}
+	if cfg.Logging != nil && cfg.Logging.FluentBit != nil {
+		loggingConfig.FluentBit = &configv1alpha1.FluentBit{
+			ServiceSection: cfg.Logging.FluentBit.ServiceSection,
+			InputSection:   cfg.Logging.FluentBit.InputSection,
+			OutputSection:  cfg.Logging.FluentBit.OutputSection,
+		}
+	}
+
 	values := map[string]interface{}{
 		"global": map[string]interface{}{
 			"gardenlet": map[string]interface{}{
@@ -677,6 +686,7 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 							Spec: *seedSpec,
 						},
 					},
+					"logging": loggingConfig,
 				},
 			},
 		},

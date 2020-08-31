@@ -7,82 +7,12 @@ metadata:
 {{ toYaml .Values.labels | indent 4 }}
 data:
   fluent-bit.conf: |-
-    [SERVICE]
-        Flush           30
-        Daemon          Off
-        Log_Level       info
-        Parsers_File    parsers.conf
-        HTTP_Server     On
-        HTTP_Listen     0.0.0.0
-        HTTP_PORT       {{ .Values.ports.metrics }}
+    # Service section
+{{- include "fluent-bit.conf" . }}
 
-    @INCLUDE input-kubernetes.conf
-    @INCLUDE input-systemd.conf
-    @INCLUDE filter-kubernetes.conf
-    @INCLUDE output.conf
-
-  input-kubernetes.conf: |
-    [INPUT]
-        Name              tail
-        Tag               kubernetes.*
-        Path              /var/log/containers/*.log
-        Exclude_Path      *_garden_fluent-bit-*.log,*_garden_loki-*.log
-        Parser            docker
-        DB                /var/log/flb_kube.db
-        Skip_Long_Lines   On
-        Mem_Buf_Limit     30MB
-        Refresh_Interval  10
-        Ignore_Older      1800s
-
-  input-systemd.conf: |-
-    [INPUT]
-        Name            systemd
-        Tag             journald.docker
-        Path            /var/log/journal/
-        Read_From_Tail  True
-        Systemd_Filter  _SYSTEMD_UNIT=docker.service
-
-    [INPUT]
-        Name            systemd
-        Tag             journald.kubelet
-        Path            /var/log/journal/
-        Read_From_Tail  True
-        Systemd_Filter  _SYSTEMD_UNIT=kubelet.service
-
-    [INPUT]
-        Name            systemd
-        Tag             journald.containerd
-        Path            /var/log/journal/
-        Read_From_Tail  True
-        Systemd_Filter  _SYSTEMD_UNIT=containerd.service
-
-    [INPUT]
-        Name            systemd
-        Tag             journald.cloud-config-downloader
-        Path            /var/log/journal/
-        Read_From_Tail  True
-        Systemd_Filter  _SYSTEMD_UNIT=cloud-config-downloader.service
-
-    [INPUT]
-        Name            systemd
-        Tag             journald.docker-monitor
-        Path            /var/log/journal/
-        Read_From_Tail  True
-        Systemd_Filter  _SYSTEMD_UNIT=docker-monitor.service
-
-    [INPUT]
-        Name            systemd
-        Tag             journald.containerd-monitor
-        Path            /var/log/journal/
-        Read_From_Tail  True
-        Systemd_Filter  _SYSTEMD_UNIT=containerd-monitor.service
-
-    [INPUT]
-        Name            systemd
-        Tag             journald.kubelet-monitor
-        Path            /var/log/journal/
-        Read_From_Tail  True
-        Systemd_Filter  _SYSTEMD_UNIT=kubelet-monitor.service
+  input.conf: |-
+    # Input section
+{{- include "input.conf" . }}
 
   filter-kubernetes.conf: |-
     # Systemd Filters
@@ -337,67 +267,13 @@ data:
         script              add_tag_to_record.lua
         call                add_tag_to_record
 
-  output.conf: |
-    [Output]
-        Name loki
-        Match kubernetes.*
-        Url http://loki.garden.svc:3100/loki/api/v1/push
-        LogLevel info
-        BatchWait 1
-        # (1sec)
-        BatchSize 30720
-        # (30KiB)
-        Labels {test="fluent-bit-go", lang="Golang"}
-        LineFormat json
-        ReplaceOutOfOrderTS true
-        DropSingleKey false
-        AutoKubernetesLabels true
-        LabelSelector gardener.cloud/role:shoot
-        RemoveKeys kubernetes,stream,type,time,tag
-        LabelMapPath /fluent-bit/etc/kubernetes_label_map.json
-        DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
-        DynamicHostPrefix http://loki.
-        DynamicHostSuffix .svc:3100/loki/api/v1/push
-        DynamicHostRegex shoot--
-        MaxRetries 3
-        Timeout 10
-        MinBackoff 30
-        Buffer true
-        BufferType dque
-        QueueDir  /fluent-bit/buffers
-        QueueSegmentSize 300
-        QueueSync normal
-        QueueName gardener-kubernetes
-        FallbackToTagWhenMetadataIsMissing true
-        TagKey tag
-        DropLogEntryWithoutK8sMetadata true
 
-    [Output]
-        Name loki
-        Match journald.*
-        Url http://loki.garden.svc:3100/loki/api/v1/push
-        LogLevel info
-        BatchWait 1
-        # (1sec)
-        BatchSize 30720
-        # (30KiB)
-        Labels {test="fluent-bit-go", lang="Golang"}
-        LineFormat json
-        ReplaceOutOfOrderTS true
-        DropSingleKey false
-        RemoveKeys kubernetes,stream,hostname,unit
-        LabelMapPath /fluent-bit/etc/systemd_label_map.json
-        MaxRetries 3
-        Timeout 10
-        MinBackoff 30
-        Buffer true
-        BufferType dque
-        QueueDir  /fluent-bit/buffers
-        QueueSegmentSize 300
-        QueueSync normal
-        QueueName gardener-journald
+  output.conf: |-
+    # Output section
+{{- include "output.conf" . }}
 
   parsers.conf: |-
+    # Custom parsers
     [PARSER]
         Name        docker
         Format      json

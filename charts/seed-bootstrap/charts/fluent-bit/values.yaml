@@ -16,3 +16,4 @@ ports:
 
 additionalFilters: ""
 additionalParsers: ""
+fluentBitConfigurationsOverwrites: {}

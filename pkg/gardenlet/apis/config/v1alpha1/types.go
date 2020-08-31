@@ -72,6 +72,10 @@ type GardenletConfiguration struct {
 	// be created by an operator/administrator.
 	// +optional
 	SeedSelector *metav1.LabelSelector `json:"seedSelector,omitempty"`
+	// Logging contains an optional configurations for the logging stack deployed
+	// by the Gardenlet in the seed clusters.
+	// +optional
+	Logging *Logging `json:"logging,omitempty"`
 }
 
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
@@ -303,6 +307,29 @@ type LeaderElectionConfiguration struct {
 // SeedConfig contains configuration for the seed cluster.
 type SeedConfig struct {
 	gardencorev1beta1.Seed `json:",inline"`
+}
+
+// FluentBit contains configuration for Fluent Bit.
+type FluentBit struct {
+	// ServiceSection defines [SERVICE] configuration for the fluent-bit.
+	// If it is nil, fluent-bit uses default service configuration.
+	// +optional
+	ServiceSection *string `json:"service,omitempty" yaml:"service,omitempty"`
+	// InputSection defines [INPUT] configuration for the fluent-bit.
+	// If it is nil, fluent-bit uses default input configuration.
+	// +optional
+	InputSection *string `json:"input,omitempty" yaml:"input,omitempty"`
+	// OutputSection defines [OUTPUT] configuration for the fluent-bit.
+	// If it is nil, fluent-bit uses default output configuration.
+	// +optional
+	OutputSection *string `json:"output,omitempty" yaml:"output,omitempty"`
+}
+
+// Logging contains configuration for the logging stack.
+type Logging struct {
+	// FluentBit contains configurations for the fluent-bit
+	// +optional
+	FluentBit *FluentBit `json:"fluentBit,omitempty" yaml:"fluentBit,omitempty"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.
