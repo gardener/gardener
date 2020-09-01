@@ -244,7 +244,7 @@ data:
       metrics_path: /federate
       params:
         'match[]':
-        - '{namespace="{{ .Release.Namespace }}"}'
+        - '{job="cadvisor",namespace="{{ .Release.Namespace }}"}'
       static_configs:
       - targets:
         - prometheus-web.garden.svc
