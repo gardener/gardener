@@ -109,5 +109,8 @@ rotateCertificates: true
 runtimeRequestTimeout: 2m0s
 serializeImagePulls: true
 syncFrequency: 1m0s
+{{- if semverCompare ">= 1.19" .Values.kubernetes.version }}
+VolumePluginDir: /var/lib/kubelet/volumeplugins
+{{- end }}
 volumeStatsAggPeriod: 1m0s
 {{- end -}}
