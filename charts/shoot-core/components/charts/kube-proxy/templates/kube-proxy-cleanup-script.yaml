@@ -27,5 +27,5 @@ data:
     {{- end }}
     {{- else }}
     /usr/local/bin/kube-proxy
-    {{- end }} --v=2 --cleanup --proxy-mode="${OLD_KUBE_PROXY_MODE}"
+    {{- end }} --v=2 --cleanup --config=/var/lib/kube-proxy-config/config.yaml --proxy-mode="${OLD_KUBE_PROXY_MODE}"
     echo "${KUBE_PROXY_MODE}" >"$1"

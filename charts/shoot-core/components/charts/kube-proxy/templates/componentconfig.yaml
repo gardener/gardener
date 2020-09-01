@@ -10,7 +10,7 @@ data:
     apiVersion: {{ include "proxycomponentconfigversion" . }}
     kind: KubeProxyConfiguration
     clientConnection:
-      kubeconfig: /var/lib/kube-proxy/kubeconfig
+      kubeconfig: /var/lib/kube-proxy-kubeconfig/kubeconfig
 {{- if not .Values.enableIPVS }}
     clusterCIDR: {{ .Values.global.podNetwork }}
 {{- end }}
