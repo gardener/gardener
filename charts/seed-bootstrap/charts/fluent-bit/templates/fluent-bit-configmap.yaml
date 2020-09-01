@@ -357,6 +357,7 @@ data:
         # (30KiB)
         Labels {test="fluent-bit-go", lang="Golang"}
         LineFormat json
+        ReplaceOutOfOrderTS true
         DropSingleKey false
         AutoKubernetesLabels true
         LabelSelector gardener.cloud/role:shoot
@@ -364,11 +365,17 @@ data:
         LabelMapPath /fluent-bit/etc/kubernetes_label_map.json
         DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
         DynamicHostPrefix http://loki.
-        DynamicHostSulfix .svc:3100/loki/api/v1/push
+        DynamicHostSuffix .svc:3100/loki/api/v1/push
         DynamicHostRegex shoot--
         MaxRetries 3
         Timeout 10
         MinBackoff 30
+        Buffer true
+        BufferType dque
+        QueueDir  /fluent-bit/buffers
+        QueueSegmentSize 300
+        QueueSync normal
+        QueueName gardener-kubernetes
 
     [Output]
         Name loki
@@ -381,12 +388,19 @@ data:
         # (30KiB)
         Labels {test="fluent-bit-go", lang="Golang"}
         LineFormat json
+        ReplaceOutOfOrderTS true
         DropSingleKey false
         RemoveKeys kubernetes,steram,hostname,unit
         LabelMapPath /fluent-bit/etc/systemd_label_map.json
         MaxRetries 3
         Timeout 10
         MinBackoff 30
+        Buffer true
+        BufferType dque
+        QueueDir  /fluent-bit/buffers
+        QueueSegmentSize 300
+        QueueSync normal
+        QueueName gardener-journald
 
   parsers.conf: |-
     [PARSER]
