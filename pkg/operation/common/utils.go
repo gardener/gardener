@@ -416,6 +416,7 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 		&rbacv1.RoleBindingList{},
 		&appsv1.DaemonSetList{},
 		&appsv1.DeploymentList{},
+		// TODO: Use autoscaling/v2beta2 for Kubernetes 1.19+ shoots once kubernetes-v1.19 golang dependencies were vendored.
 		&autoscalingv2beta1.HorizontalPodAutoscalerList{},
 		&extensionsv1beta1.IngressList{},
 		&corev1.SecretList{},

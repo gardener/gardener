@@ -28,7 +28,7 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	storagev1beta1 "k8s.io/api/storage/v1beta1"
+	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -199,17 +199,17 @@ var _ = Describe("reconciler", func() {
 					return nil
 				})
 
-				storageClass := &storagev1beta1.StorageClass{
+				storageClass := &storagev1.StorageClass{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: storageClassName,
 					},
 					Provisioner: storageClassProvisioner,
 				}
-				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&storagev1beta1.StorageClassList{})).DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
-					obj := &storagev1beta1.StorageClassList{
-						Items: []storagev1beta1.StorageClass{*storageClass},
+				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&storagev1.StorageClassList{})).DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
+					obj := &storagev1.StorageClassList{
+						Items: []storagev1.StorageClass{*storageClass},
 					}
-					obj.DeepCopyInto(list.(*storagev1beta1.StorageClassList))
+					obj.DeepCopyInto(list.(*storagev1.StorageClassList))
 					return nil
 				})
 				shootClient.EXPECT().Delete(ctx, storageClass)

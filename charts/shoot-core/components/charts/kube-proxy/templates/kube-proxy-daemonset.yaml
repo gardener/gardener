@@ -70,6 +70,10 @@ spec:
           mountPath: /var/lib/kube-proxy
         - name: kube-proxy-mode
           mountPath: /var/lib/kube-proxy/mode
+        - name: kubeconfig
+          mountPath: /var/lib/kube-proxy-kubeconfig
+        - name: kube-proxy-config
+          mountPath: /var/lib/kube-proxy-config
 {{- end }}
       priorityClassName: system-cluster-critical
       tolerations:
@@ -118,7 +122,7 @@ spec:
           name: metrics
         volumeMounts:
         - name: kubeconfig
-          mountPath: /var/lib/kube-proxy
+          mountPath: /var/lib/kube-proxy-kubeconfig
         - name: kube-proxy-config
           mountPath: /var/lib/kube-proxy-config
         - name: ssl-certs-hosts

@@ -1329,6 +1329,43 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
+		Context("basic authentication", func() {
+			BeforeEach(func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleDelay = nil
+				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.UpscaleDelay = nil
+			})
+
+			It("should allow basic authentication when kubernetes <= 1.18", func() {
+				shoot.Spec.Kubernetes.Version = "1.18.1"
+				shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(true)
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(HaveLen(0))
+			})
+
+			It("should forbid basic authentication when kubernetes >= 1.19", func() {
+				shoot.Spec.Kubernetes.Version = "1.19.1"
+				shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(true)
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.enableBasicAuthentication"),
+				}))))
+			})
+
+			It("should allow disabling basic authentication when kubernetes >= 1.19", func() {
+				shoot.Spec.Kubernetes.Version = "1.19.1"
+				shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(false)
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(HaveLen(0))
+			})
+		})
+
 		Context("admission plugin validation", func() {
 			It("should allow not specifying admission plugins", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = nil

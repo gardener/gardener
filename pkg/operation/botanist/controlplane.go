@@ -1151,6 +1151,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	// the HVPA controller will create its own for the kube-apiserver deployment.
 	if hvpaEnabled {
 		for _, obj := range []runtime.Object{
+			// TODO: Use autoscaling/v2beta2 for Kubernetes 1.19+ shoots once kubernetes-v1.19 golang dependencies were vendored.
 			&autoscalingv2beta1.HorizontalPodAutoscaler{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: b.Shoot.SeedNamespace,

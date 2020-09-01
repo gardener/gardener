@@ -22,7 +22,9 @@
 {{- if semverCompare "< 1.11" .Values.kubernetes.version }}
 --rotate-certificates=true
 {{- end }}
+{{- if semverCompare "< 1.19" .Values.kubernetes.version }}
 --volume-plugin-dir=/var/lib/kubelet/volumeplugins
+{{- end }}
 --v=2 $KUBELET_EXTRA_ARGS
 {{- if .Values.worker.cri }}
 {{- if eq .Values.worker.cri.name .Values.osc.cri.names.containerd }}

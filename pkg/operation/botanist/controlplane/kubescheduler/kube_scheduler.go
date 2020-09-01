@@ -332,7 +332,9 @@ func (k *kubeScheduler) computeEnvironmentVariables() []corev1.EnvVar {
 
 func (k *kubeScheduler) computeComponentConfig() (string, string, error) {
 	var apiVersion string
-	if versionConstraintK8sGreaterEqual118.Check(k.version) {
+	if versionConstraintK8sGreaterEqual119.Check(k.version) {
+		apiVersion = "kubescheduler.config.k8s.io/v1beta1"
+	} else if versionConstraintK8sGreaterEqual118.Check(k.version) {
 		apiVersion = "kubescheduler.config.k8s.io/v1alpha2"
 	} else if versionConstraintK8sGreaterEqual112.Check(k.version) {
 		apiVersion = "kubescheduler.config.k8s.io/v1alpha1"
@@ -394,6 +396,7 @@ var (
 	versionConstraintK8sGreaterEqual115 *semver.Constraints
 	versionConstraintK8sGreaterEqual117 *semver.Constraints
 	versionConstraintK8sGreaterEqual118 *semver.Constraints
+	versionConstraintK8sGreaterEqual119 *semver.Constraints
 )
 
 func init() {
@@ -415,6 +418,8 @@ func init() {
 	versionConstraintK8sGreaterEqual117, err = semver.NewConstraint(">= 1.17")
 	utilruntime.Must(err)
 	versionConstraintK8sGreaterEqual118, err = semver.NewConstraint(">= 1.18")
+	utilruntime.Must(err)
+	versionConstraintK8sGreaterEqual119, err = semver.NewConstraint(">= 1.19")
 	utilruntime.Must(err)
 }
 

@@ -30,7 +30,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	storagev1beta1 "k8s.io/api/storage/v1beta1"
+	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -182,7 +182,7 @@ func (r *reconciler) reconcile(ctx context.Context, cluster *extensionsv1alpha1.
 		// Delete legacy storage classes created by the extension controller to allow their recreation with the new CSI
 		// provisioner names and the same storage class names (the storage classes are immutable, hence, a regular UPDATE
 		// does not work).
-		storageClassList := &storagev1beta1.StorageClassList{}
+		storageClassList := &storagev1.StorageClassList{}
 		if err := shootClient.List(ctx, storageClassList); err != nil {
 			return reconcile.Result{}, err
 		}

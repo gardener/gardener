@@ -156,7 +156,7 @@ subsets:
 EOF
 
 cat <<EOF | kubectl apply -f -
-apiVersion: apiregistration.k8s.io/v1beta1
+apiVersion: apiregistration.k8s.io/v1
 kind: APIService
 metadata:
   name: $CORE_V1ALPHA1_APISERVICE_NAME
@@ -171,7 +171,7 @@ spec:
     namespace: garden
 $APISERVICE_PORT_STRING
 ---
-apiVersion: apiregistration.k8s.io/v1beta1
+apiVersion: apiregistration.k8s.io/v1
 kind: APIService
 metadata:
   name: $CORE_V1BETA1_APISERVICE_NAME
@@ -186,7 +186,7 @@ spec:
     namespace: garden
 $APISERVICE_PORT_STRING
 ---
-apiVersion: apiregistration.k8s.io/v1beta1
+apiVersion: apiregistration.k8s.io/v1
 kind: APIService
 metadata:
   name: $SETTINGS_APISERVICE_NAME
