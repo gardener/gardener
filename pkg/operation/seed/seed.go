@@ -640,6 +640,12 @@ func BootstrapCluster(k8sGardenClient, k8sSeedClient kubernetes.Interface, seed 
 					},
 				},
 			},
+			"application": map[string]interface{}{
+				"admissionController": map[string]interface{}{
+					"controlNamespace": v1beta1constants.GardenNamespace,
+					"caCert":           deployedSecretsMap["vpa-tls-certs"].Data[secretsutils.DataKeyCertificateCA],
+				},
+			},
 		},
 		"hvpa": map[string]interface{}{
 			"enabled": hvpaEnabled,

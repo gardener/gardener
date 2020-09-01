@@ -49,6 +49,7 @@ spec:
         - --tls-private-key=/etc/tls-certs/tls.key
         - --address=:8944
         - --port={{ .Values.admissionController.port }}
+        - --register-webhook={{.Values.admissionController.registerWebhook}}
         {{- if .Values.admissionController.registerByURL }}
         - --register-by-url=true
         - --webhook-address=https://vpa-webhook.{{.Release.Namespace}}

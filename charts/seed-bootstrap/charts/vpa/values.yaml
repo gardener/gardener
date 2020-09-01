@@ -16,6 +16,9 @@ admissionController:
   podAnnotations: {}
   podLabels: {}
   enableServiceAccount: true
+  registerWebhook: false
+  caCert: abcd
+  controlNamespace: abcd
   registerByURL: false
   port: 10250
   servicePort: 443
