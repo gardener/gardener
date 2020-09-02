@@ -143,6 +143,10 @@ const (
 	GardenRoleMonitoring = "monitoring"
 	// GardenRoleOptionalAddon is the value of the GardenRole key indicating type 'optional-addon'.
 	GardenRoleOptionalAddon = "optional-addon"
+	// GardenRoleKubeconfig is the value of the GardenRole key indicating type 'kubeconfig'.
+	GardenRoleKubeconfig = "kubeconfig"
+	// GardenRoleSSHKeyPair is the value of the GardenRole key indicating type 'ssh-keypair'.
+	GardenRoleSSHKeyPair = "ssh-keypair"
 
 	// DeprecatedShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
