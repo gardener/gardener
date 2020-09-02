@@ -19,6 +19,7 @@ limitations under the License.
 package internalversion
 
 import (
+	"context"
 	time "time"
 
 	core "github.com/gardener/gardener/pkg/apis/core"
@@ -61,13 +62,13 @@ func NewFilteredShootStateInformer(client clientsetinternalversion.Interface, na
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Core().ShootStates(namespace).List(options)
+				return client.Core().ShootStates(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.Core().ShootStates(namespace).Watch(options)
+				return client.Core().ShootStates(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&core.ShootState{},

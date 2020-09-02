@@ -155,7 +155,7 @@ var _ = Describe("Cleaner", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, nsKey, &nsWithFinalizer),
 					timeOps.EXPECT().Now().Return(now),
-					nsInterface.EXPECT().Finalize(&ns).Return(&ns, nil),
+					nsInterface.EXPECT().Finalize(ctx, &ns, metav1.UpdateOptions{}).Return(&ns, nil),
 				)
 
 				Expect(cleaner.Clean(ctx, c, &nsWithFinalizer, FinalizeGracePeriodSeconds(20))).To(Succeed())

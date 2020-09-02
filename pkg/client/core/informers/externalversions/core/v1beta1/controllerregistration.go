@@ -19,6 +19,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"context"
 	time "time"
 
 	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -60,13 +61,13 @@ func NewFilteredControllerRegistrationInformer(client versioned.Interface, resyn
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CoreV1beta1().ControllerRegistrations().List(options)
+				return client.CoreV1beta1().ControllerRegistrations().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.CoreV1beta1().ControllerRegistrations().Watch(options)
+				return client.CoreV1beta1().ControllerRegistrations().Watch(context.TODO(), options)
 			},
 		},
 		&corev1beta1.ControllerRegistration{},

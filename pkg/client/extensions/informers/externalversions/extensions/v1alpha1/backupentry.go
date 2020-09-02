@@ -19,6 +19,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	time "time"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -60,13 +61,13 @@ func NewFilteredBackupEntryInformer(client versioned.Interface, resyncPeriod tim
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ExtensionsV1alpha1().BackupEntries().List(options)
+				return client.ExtensionsV1alpha1().BackupEntries().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ExtensionsV1alpha1().BackupEntries().Watch(options)
+				return client.ExtensionsV1alpha1().BackupEntries().Watch(context.TODO(), options)
 			},
 		},
 		&extensionsv1alpha1.BackupEntry{},

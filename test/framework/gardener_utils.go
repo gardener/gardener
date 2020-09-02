@@ -162,13 +162,13 @@ func (f *GardenerFramework) DeleteShootAndWaitForDeletion(ctx context.Context, s
 // DeleteShoot deletes the test shoot
 func (f *GardenerFramework) DeleteShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
-		err = f.RemoveShootAnnotation(shoot, common.ShootIgnore)
+		err = f.RemoveShootAnnotation(ctx, shoot, common.ShootIgnore)
 		if err != nil {
 			return retry.MinorError(err)
 		}
 
 		// First we annotate the shoot to be deleted.
-		err = f.AnnotateShoot(shoot, map[string]string{
+		err = f.AnnotateShoot(ctx, shoot, map[string]string{
 			common.ConfirmationDeletion: "true",
 		})
 		if err != nil {
@@ -236,7 +236,7 @@ func (f *GardenerFramework) HibernateShoot(ctx context.Context, shoot *gardencor
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
 		newShoot := shoot.DeepCopy()
 		setHibernation(newShoot, true)
-		patchedShoot, err := f.MergePatchShoot(shoot, newShoot)
+		patchedShoot, err := f.MergePatchShoot(ctx, shoot, newShoot)
 		if err != nil {
 			return retry.MinorError(err)
 		}
@@ -268,7 +268,7 @@ func (f *GardenerFramework) WakeUpShoot(ctx context.Context, shoot *gardencorev1
 		newShoot := shoot.DeepCopy()
 		setHibernation(newShoot, false)
 
-		patchedShoot, err := f.MergePatchShoot(shoot, newShoot)
+		patchedShoot, err := f.MergePatchShoot(ctx, shoot, newShoot)
 		if err != nil {
 			return retry.MinorError(err)
 		}
@@ -361,14 +361,14 @@ func (f *GardenerFramework) WaitForShootToBeReconciled(ctx context.Context, shoo
 }
 
 // AnnotateShoot adds shoot annotation(s)
-func (f *GardenerFramework) AnnotateShoot(shoot *gardencorev1beta1.Shoot, annotations map[string]string) error {
+func (f *GardenerFramework) AnnotateShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot, annotations map[string]string) error {
 	shootCopy := shoot.DeepCopy()
 
 	for annotationKey, annotationValue := range annotations {
 		metav1.SetMetaDataAnnotation(&shootCopy.ObjectMeta, annotationKey, annotationValue)
 	}
 
-	if _, err := f.MergePatchShoot(shoot, shootCopy); err != nil {
+	if _, err := f.MergePatchShoot(ctx, shoot, shootCopy); err != nil {
 		return err
 	}
 
@@ -376,7 +376,7 @@ func (f *GardenerFramework) AnnotateShoot(shoot *gardencorev1beta1.Shoot, annota
 }
 
 // RemoveShootAnnotation removes an annotation with key <annotationKey> from a shoot object
-func (f *GardenerFramework) RemoveShootAnnotation(shoot *gardencorev1beta1.Shoot, annotationKey string) error {
+func (f *GardenerFramework) RemoveShootAnnotation(ctx context.Context, shoot *gardencorev1beta1.Shoot, annotationKey string) error {
 	shootCopy := shoot.DeepCopy()
 	if len(shootCopy.Annotations) == 0 {
 		return nil
@@ -388,7 +388,7 @@ func (f *GardenerFramework) RemoveShootAnnotation(shoot *gardencorev1beta1.Shoot
 	// start the update process with Kubernetes
 	delete(shootCopy.Annotations, annotationKey)
 
-	if _, err := f.MergePatchShoot(shoot, shootCopy); err != nil {
+	if _, err := f.MergePatchShoot(ctx, shoot, shootCopy); err != nil {
 		return err
 	}
 	return nil
@@ -408,7 +408,7 @@ func (f *GardenerFramework) WaitForShootToBeUnschedulable(ctx context.Context, s
 		uid := string(shoot.UID)
 		kind := "Shoot"
 		fieldSelector := f.GardenClient.Kubernetes().CoreV1().Events(shoot.Namespace).GetFieldSelector(&shoot.Name, &shoot.Namespace, &kind, &uid)
-		eventList, err := f.GardenClient.Kubernetes().CoreV1().Events(shoot.Namespace).List(metav1.ListOptions{FieldSelector: fieldSelector.String()})
+		eventList, err := f.GardenClient.Kubernetes().CoreV1().Events(shoot.Namespace).List(ctx, metav1.ListOptions{FieldSelector: fieldSelector.String()})
 		if err != nil {
 			return false, err
 		}
@@ -461,13 +461,13 @@ func shootIsUnschedulable(events []corev1.Event) bool {
 }
 
 // MergePatchShoot performs a two way merge patch operation on a shoot object
-func (f *GardenerFramework) MergePatchShoot(oldShoot, newShoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+func (f *GardenerFramework) MergePatchShoot(ctx context.Context, oldShoot, newShoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 	patchBytes, err := kutil.CreateTwoWayMergePatch(oldShoot, newShoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to patch bytes")
 	}
 
-	patchedShoot, err := f.GardenClient.GardenCore().CoreV1beta1().Shoots(oldShoot.GetNamespace()).Patch(oldShoot.GetName(), types.StrategicMergePatchType, patchBytes)
+	patchedShoot, err := f.GardenClient.GardenCore().CoreV1beta1().Shoots(oldShoot.GetNamespace()).Patch(ctx, oldShoot.GetName(), types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{})
 	if err == nil {
 		*oldShoot = *patchedShoot
 	}

@@ -262,7 +262,7 @@ func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResource
 		}
 		gardenerResourceDataList.Delete(secretName)
 	}
-	_, err := kutil.TryUpdateShootAnnotations(b.K8sGardenClient.GardenCore(), retry.DefaultRetry, b.Shoot.Info.ObjectMeta, func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+	_, err := kutil.TryUpdateShootAnnotations(ctx, b.K8sGardenClient.GardenCore(), retry.DefaultRetry, b.Shoot.Info.ObjectMeta, func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 		delete(shoot.Annotations, common.ShootOperationDeprecated)
 		return shoot, nil

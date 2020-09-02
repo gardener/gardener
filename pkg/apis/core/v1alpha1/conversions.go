@@ -53,24 +53,102 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 	}
 
 	// Add non-generated conversion functions
-	return scheme.AddConversionFuncs(
-		Convert_v1alpha1_BackupBucket_To_core_BackupBucket,
-		Convert_v1alpha1_BackupBucketSpec_To_core_BackupBucketSpec,
-		Convert_v1alpha1_BackupEntry_To_core_BackupEntry,
-		Convert_v1alpha1_BackupEntrySpec_To_core_BackupEntrySpec,
-		Convert_v1alpha1_Seed_To_core_Seed,
-		Convert_v1alpha1_SeedSpec_To_core_SeedSpec,
-		Convert_v1alpha1_SeedNetworks_To_core_SeedNetworks,
-		Convert_v1alpha1_ShootStatus_To_core_ShootStatus,
-		Convert_core_BackupBucket_To_v1alpha1_BackupBucket,
-		Convert_core_BackupBucketSpec_To_v1alpha1_BackupBucketSpec,
-		Convert_core_BackupEntry_To_v1alpha1_BackupEntry,
-		Convert_core_BackupEntrySpec_To_v1alpha1_BackupEntrySpec,
-		Convert_core_Seed_To_v1alpha1_Seed,
-		Convert_core_SeedSpec_To_v1alpha1_SeedSpec,
-		Convert_core_SeedNetworks_To_v1alpha1_SeedNetworks,
-		Convert_core_ShootStatus_To_v1alpha1_ShootStatus,
-	)
+	if err := scheme.AddConversionFunc((*BackupBucket)(nil), (*core.BackupBucket)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_BackupBucket_To_core_BackupBucket(a.(*BackupBucket), b.(*core.BackupBucket), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*BackupBucketSpec)(nil), (*core.BackupBucketSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_BackupBucketSpec_To_core_BackupBucketSpec(a.(*BackupBucketSpec), b.(*core.BackupBucketSpec), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*BackupEntry)(nil), (*core.BackupEntry)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_BackupEntry_To_core_BackupEntry(a.(*BackupEntry), b.(*core.BackupEntry), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*BackupEntrySpec)(nil), (*core.BackupEntrySpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_BackupEntrySpec_To_core_BackupEntrySpec(a.(*BackupEntrySpec), b.(*core.BackupEntrySpec), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*Seed)(nil), (*core.Seed)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_Seed_To_core_Seed(a.(*Seed), b.(*core.Seed), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*SeedSpec)(nil), (*core.SeedSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SeedSpec_To_core_SeedSpec(a.(*SeedSpec), b.(*core.SeedSpec), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*SeedNetworks)(nil), (*core.SeedNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SeedNetworks_To_core_SeedNetworks(a.(*SeedNetworks), b.(*core.SeedNetworks), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*ShootStatus)(nil), (*core.ShootStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ShootStatus_To_core_ShootStatus(a.(*ShootStatus), b.(*core.ShootStatus), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*core.BackupBucket)(nil), (*BackupBucket)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_BackupBucket_To_v1alpha1_BackupBucket(a.(*core.BackupBucket), b.(*BackupBucket), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*core.BackupBucketSpec)(nil), (*BackupBucketSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_BackupBucketSpec_To_v1alpha1_BackupBucketSpec(a.(*core.BackupBucketSpec), b.(*BackupBucketSpec), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*core.BackupEntry)(nil), (*BackupEntry)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_BackupEntry_To_v1alpha1_BackupEntry(a.(*core.BackupEntry), b.(*BackupEntry), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*core.BackupEntrySpec)(nil), (*BackupEntrySpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_BackupEntrySpec_To_v1alpha1_BackupEntrySpec(a.(*core.BackupEntrySpec), b.(*BackupEntrySpec), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*core.Seed)(nil), (*Seed)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Seed_To_v1alpha1_Seed(a.(*core.Seed), b.(*Seed), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*core.SeedSpec)(nil), (*SeedSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedSpec_To_v1alpha1_SeedSpec(a.(*core.SeedSpec), b.(*SeedSpec), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*core.SeedNetworks)(nil), (*SeedNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedNetworks_To_v1alpha1_SeedNetworks(a.(*core.SeedNetworks), b.(*SeedNetworks), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*core.ShootStatus)(nil), (*ShootStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootStatus_To_v1alpha1_ShootStatus(a.(*core.ShootStatus), b.(*ShootStatus), scope)
+	}); err != nil {
+		return err
+	}
+	return nil
 }
 
 func Convert_v1alpha1_BackupBucket_To_core_BackupBucket(in *BackupBucket, out *core.BackupBucket, s conversion.Scope) error {

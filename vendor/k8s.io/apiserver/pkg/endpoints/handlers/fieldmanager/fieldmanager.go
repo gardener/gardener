@@ -28,13 +28,17 @@ import (
 	"k8s.io/apiserver/pkg/endpoints/handlers/fieldmanager/internal"
 	"k8s.io/klog"
 	openapiproto "k8s.io/kube-openapi/pkg/util/proto"
-	"sigs.k8s.io/structured-merge-diff/v2/fieldpath"
+	"sigs.k8s.io/structured-merge-diff/v3/fieldpath"
 )
 
 // DefaultMaxUpdateManagers defines the default maximum retained number of managedFields entries from updates
 // if the number of update managers exceeds this, the oldest entries will be merged until the number is below the maximum.
 // TODO(jennybuckley): Determine if this is really the best value. Ideally we wouldn't unnecessarily merge too many entries.
 const DefaultMaxUpdateManagers int = 10
+
+// DefaultTrackOnCreateProbability defines the default probability that the field management of an object
+// starts being tracked from the object's creation, instead of from the first time the object is applied to.
+const DefaultTrackOnCreateProbability float32 = 1
 
 var atMostEverySecond = internal.NewAtMostEvery(time.Second)
 
@@ -56,7 +60,7 @@ type Manager interface {
 
 	// Apply is used when server-side apply is called, as it merges the
 	// object and updates the managed fields.
-	Apply(liveObj runtime.Object, patch []byte, managed Managed, fieldManager string, force bool) (runtime.Object, Managed, error)
+	Apply(liveObj, appliedObj runtime.Object, managed Managed, fieldManager string, force bool) (runtime.Object, Managed, error)
 }
 
 // FieldManager updates the managed fields and merge applied
@@ -95,9 +99,10 @@ func NewDefaultCRDFieldManager(models openapiproto.Models, objectConverter runti
 // newDefaultFieldManager is a helper function which wraps a Manager with certain default logic.
 func newDefaultFieldManager(f Manager, objectCreater runtime.ObjectCreater, kind schema.GroupVersionKind) *FieldManager {
 	f = NewStripMetaManager(f)
+	f = NewManagedFieldsUpdater(f)
 	f = NewBuildManagerInfoManager(f, kind.GroupVersion())
 	f = NewCapManagersManager(f, DefaultMaxUpdateManagers)
-	f = NewSkipNonAppliedManager(f, objectCreater, kind)
+	f = NewProbabilisticSkipNonAppliedManager(f, objectCreater, kind, DefaultTrackOnCreateProbability)
 	return NewFieldManager(f)
 }
 
@@ -180,7 +185,7 @@ func isResetManagedFields(managedFields []metav1.ManagedFieldsEntry) bool {
 
 // Apply is used when server-side apply is called, as it merges the
 // object and updates the managed fields.
-func (f *FieldManager) Apply(liveObj runtime.Object, patch []byte, manager string, force bool) (object runtime.Object, err error) {
+func (f *FieldManager) Apply(liveObj, appliedObj runtime.Object, manager string, force bool) (object runtime.Object, err error) {
 	// If the object doesn't have metadata, apply isn't allowed.
 	accessor, err := meta.Accessor(liveObj)
 	if err != nil {
@@ -195,7 +200,7 @@ func (f *FieldManager) Apply(liveObj runtime.Object, patch []byte, manager strin
 
 	internal.RemoveObjectManagedFields(liveObj)
 
-	if object, managed, err = f.fieldManager.Apply(liveObj, patch, managed, manager, force); err != nil {
+	if object, managed, err = f.fieldManager.Apply(liveObj, appliedObj, managed, manager, force); err != nil {
 		return nil, err
 	}
 

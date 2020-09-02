@@ -15,6 +15,7 @@
 package health
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -320,9 +321,9 @@ var Now = time.Now
 type conditionerFunc func(conditionType string, message string) gardencorev1beta1.Condition
 
 // CheckAPIServerAvailability checks if the API server of a cluster is reachable and measure the response time.
-func CheckAPIServerAvailability(condition gardencorev1beta1.Condition, restClient rest.Interface, conditioner conditionerFunc) gardencorev1beta1.Condition {
+func CheckAPIServerAvailability(ctx context.Context, condition gardencorev1beta1.Condition, restClient rest.Interface, conditioner conditionerFunc) gardencorev1beta1.Condition {
 	now := Now()
-	response := restClient.Get().AbsPath("/healthz").Do()
+	response := restClient.Get().AbsPath("/healthz").Do(ctx)
 	responseDurationText := fmt.Sprintf("[response_time:%dms]", Now().Sub(now).Nanoseconds()/time.Millisecond.Nanoseconds())
 	if response.Error() != nil {
 		message := fmt.Sprintf("Request to API server /healthz endpoint failed. %s (%s)", responseDurationText, response.Error().Error())

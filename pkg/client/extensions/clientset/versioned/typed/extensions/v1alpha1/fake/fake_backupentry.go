@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -38,7 +40,7 @@ var backupentriesResource = schema.GroupVersionResource{Group: "extensions.garde
 var backupentriesKind = schema.GroupVersionKind{Group: "extensions.gardener.cloud", Version: "v1alpha1", Kind: "BackupEntry"}
 
 // Get takes name of the backupEntry, and returns the corresponding backupEntry object, and an error if there is any.
-func (c *FakeBackupEntries) Get(name string, options v1.GetOptions) (result *v1alpha1.BackupEntry, err error) {
+func (c *FakeBackupEntries) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.BackupEntry, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(backupentriesResource, name), &v1alpha1.BackupEntry{})
 	if obj == nil {
@@ -48,7 +50,7 @@ func (c *FakeBackupEntries) Get(name string, options v1.GetOptions) (result *v1a
 }
 
 // List takes label and field selectors, and returns the list of BackupEntries that match those selectors.
-func (c *FakeBackupEntries) List(opts v1.ListOptions) (result *v1alpha1.BackupEntryList, err error) {
+func (c *FakeBackupEntries) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.BackupEntryList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(backupentriesResource, backupentriesKind, opts), &v1alpha1.BackupEntryList{})
 	if obj == nil {
@@ -69,13 +71,13 @@ func (c *FakeBackupEntries) List(opts v1.ListOptions) (result *v1alpha1.BackupEn
 }
 
 // Watch returns a watch.Interface that watches the requested backupEntries.
-func (c *FakeBackupEntries) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeBackupEntries) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(backupentriesResource, opts))
 }
 
 // Create takes the representation of a backupEntry and creates it.  Returns the server's representation of the backupEntry, and an error, if there is any.
-func (c *FakeBackupEntries) Create(backupEntry *v1alpha1.BackupEntry) (result *v1alpha1.BackupEntry, err error) {
+func (c *FakeBackupEntries) Create(ctx context.Context, backupEntry *v1alpha1.BackupEntry, opts v1.CreateOptions) (result *v1alpha1.BackupEntry, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(backupentriesResource, backupEntry), &v1alpha1.BackupEntry{})
 	if obj == nil {
@@ -85,7 +87,7 @@ func (c *FakeBackupEntries) Create(backupEntry *v1alpha1.BackupEntry) (result *v
 }
 
 // Update takes the representation of a backupEntry and updates it. Returns the server's representation of the backupEntry, and an error, if there is any.
-func (c *FakeBackupEntries) Update(backupEntry *v1alpha1.BackupEntry) (result *v1alpha1.BackupEntry, err error) {
+func (c *FakeBackupEntries) Update(ctx context.Context, backupEntry *v1alpha1.BackupEntry, opts v1.UpdateOptions) (result *v1alpha1.BackupEntry, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(backupentriesResource, backupEntry), &v1alpha1.BackupEntry{})
 	if obj == nil {
@@ -96,7 +98,7 @@ func (c *FakeBackupEntries) Update(backupEntry *v1alpha1.BackupEntry) (result *v
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeBackupEntries) UpdateStatus(backupEntry *v1alpha1.BackupEntry) (*v1alpha1.BackupEntry, error) {
+func (c *FakeBackupEntries) UpdateStatus(ctx context.Context, backupEntry *v1alpha1.BackupEntry, opts v1.UpdateOptions) (*v1alpha1.BackupEntry, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceAction(backupentriesResource, "status", backupEntry), &v1alpha1.BackupEntry{})
 	if obj == nil {
@@ -106,22 +108,22 @@ func (c *FakeBackupEntries) UpdateStatus(backupEntry *v1alpha1.BackupEntry) (*v1
 }
 
 // Delete takes name of the backupEntry and deletes it. Returns an error if one occurs.
-func (c *FakeBackupEntries) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeBackupEntries) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(backupentriesResource, name), &v1alpha1.BackupEntry{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeBackupEntries) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(backupentriesResource, listOptions)
+func (c *FakeBackupEntries) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(backupentriesResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.BackupEntryList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched backupEntry.
-func (c *FakeBackupEntries) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.BackupEntry, err error) {
+func (c *FakeBackupEntries) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.BackupEntry, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(backupentriesResource, name, pt, data, subresources...), &v1alpha1.BackupEntry{})
 	if obj == nil {

@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var quotasResource = schema.GroupVersionResource{Group: "core.gardener.cloud", V
 var quotasKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1alpha1", Kind: "Quota"}
 
 // Get takes name of the quota, and returns the corresponding quota object, and an error if there is any.
-func (c *FakeQuotas) Get(name string, options v1.GetOptions) (result *v1alpha1.Quota, err error) {
+func (c *FakeQuotas) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Quota, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(quotasResource, c.ns, name), &v1alpha1.Quota{})
 
@@ -50,7 +52,7 @@ func (c *FakeQuotas) Get(name string, options v1.GetOptions) (result *v1alpha1.Q
 }
 
 // List takes label and field selectors, and returns the list of Quotas that match those selectors.
-func (c *FakeQuotas) List(opts v1.ListOptions) (result *v1alpha1.QuotaList, err error) {
+func (c *FakeQuotas) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.QuotaList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(quotasResource, quotasKind, c.ns, opts), &v1alpha1.QuotaList{})
 
@@ -72,14 +74,14 @@ func (c *FakeQuotas) List(opts v1.ListOptions) (result *v1alpha1.QuotaList, err 
 }
 
 // Watch returns a watch.Interface that watches the requested quotas.
-func (c *FakeQuotas) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeQuotas) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(quotasResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a quota and creates it.  Returns the server's representation of the quota, and an error, if there is any.
-func (c *FakeQuotas) Create(quota *v1alpha1.Quota) (result *v1alpha1.Quota, err error) {
+func (c *FakeQuotas) Create(ctx context.Context, quota *v1alpha1.Quota, opts v1.CreateOptions) (result *v1alpha1.Quota, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(quotasResource, c.ns, quota), &v1alpha1.Quota{})
 
@@ -90,7 +92,7 @@ func (c *FakeQuotas) Create(quota *v1alpha1.Quota) (result *v1alpha1.Quota, err 
 }
 
 // Update takes the representation of a quota and updates it. Returns the server's representation of the quota, and an error, if there is any.
-func (c *FakeQuotas) Update(quota *v1alpha1.Quota) (result *v1alpha1.Quota, err error) {
+func (c *FakeQuotas) Update(ctx context.Context, quota *v1alpha1.Quota, opts v1.UpdateOptions) (result *v1alpha1.Quota, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(quotasResource, c.ns, quota), &v1alpha1.Quota{})
 
@@ -101,7 +103,7 @@ func (c *FakeQuotas) Update(quota *v1alpha1.Quota) (result *v1alpha1.Quota, err 
 }
 
 // Delete takes name of the quota and deletes it. Returns an error if one occurs.
-func (c *FakeQuotas) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeQuotas) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(quotasResource, c.ns, name), &v1alpha1.Quota{})
 
@@ -109,15 +111,15 @@ func (c *FakeQuotas) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeQuotas) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(quotasResource, c.ns, listOptions)
+func (c *FakeQuotas) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(quotasResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.QuotaList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched quota.
-func (c *FakeQuotas) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Quota, err error) {
+func (c *FakeQuotas) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Quota, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(quotasResource, c.ns, name, pt, data, subresources...), &v1alpha1.Quota{})
 

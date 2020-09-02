@@ -19,6 +19,7 @@ limitations under the License.
 package internalversion
 
 import (
+	"context"
 	"time"
 
 	core "github.com/gardener/gardener/pkg/apis/core"
@@ -37,15 +38,15 @@ type PlantsGetter interface {
 
 // PlantInterface has methods to work with Plant resources.
 type PlantInterface interface {
-	Create(*core.Plant) (*core.Plant, error)
-	Update(*core.Plant) (*core.Plant, error)
-	UpdateStatus(*core.Plant) (*core.Plant, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*core.Plant, error)
-	List(opts v1.ListOptions) (*core.PlantList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *core.Plant, err error)
+	Create(ctx context.Context, plant *core.Plant, opts v1.CreateOptions) (*core.Plant, error)
+	Update(ctx context.Context, plant *core.Plant, opts v1.UpdateOptions) (*core.Plant, error)
+	UpdateStatus(ctx context.Context, plant *core.Plant, opts v1.UpdateOptions) (*core.Plant, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*core.Plant, error)
+	List(ctx context.Context, opts v1.ListOptions) (*core.PlantList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *core.Plant, err error)
 	PlantExpansion
 }
 
@@ -64,20 +65,20 @@ func newPlants(c *CoreClient, namespace string) *plants {
 }
 
 // Get takes name of the plant, and returns the corresponding plant object, and an error if there is any.
-func (c *plants) Get(name string, options v1.GetOptions) (result *core.Plant, err error) {
+func (c *plants) Get(ctx context.Context, name string, options v1.GetOptions) (result *core.Plant, err error) {
 	result = &core.Plant{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("plants").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of Plants that match those selectors.
-func (c *plants) List(opts v1.ListOptions) (result *core.PlantList, err error) {
+func (c *plants) List(ctx context.Context, opts v1.ListOptions) (result *core.PlantList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -88,13 +89,13 @@ func (c *plants) List(opts v1.ListOptions) (result *core.PlantList, err error) {
 		Resource("plants").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested plants.
-func (c *plants) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *plants) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -105,87 +106,90 @@ func (c *plants) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		Resource("plants").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a plant and creates it.  Returns the server's representation of the plant, and an error, if there is any.
-func (c *plants) Create(plant *core.Plant) (result *core.Plant, err error) {
+func (c *plants) Create(ctx context.Context, plant *core.Plant, opts v1.CreateOptions) (result *core.Plant, err error) {
 	result = &core.Plant{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("plants").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(plant).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a plant and updates it. Returns the server's representation of the plant, and an error, if there is any.
-func (c *plants) Update(plant *core.Plant) (result *core.Plant, err error) {
+func (c *plants) Update(ctx context.Context, plant *core.Plant, opts v1.UpdateOptions) (result *core.Plant, err error) {
 	result = &core.Plant{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("plants").
 		Name(plant.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(plant).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *plants) UpdateStatus(plant *core.Plant) (result *core.Plant, err error) {
+func (c *plants) UpdateStatus(ctx context.Context, plant *core.Plant, opts v1.UpdateOptions) (result *core.Plant, err error) {
 	result = &core.Plant{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("plants").
 		Name(plant.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(plant).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the plant and deletes it. Returns an error if one occurs.
-func (c *plants) Delete(name string, options *v1.DeleteOptions) error {
+func (c *plants) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("plants").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *plants) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *plants) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("plants").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched plant.
-func (c *plants) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *core.Plant, err error) {
+func (c *plants) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *core.Plant, err error) {
 	result = &core.Plant{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("plants").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

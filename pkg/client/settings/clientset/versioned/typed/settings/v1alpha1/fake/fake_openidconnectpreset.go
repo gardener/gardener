@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var openidconnectpresetsResource = schema.GroupVersionResource{Group: "settings.
 var openidconnectpresetsKind = schema.GroupVersionKind{Group: "settings.gardener.cloud", Version: "v1alpha1", Kind: "OpenIDConnectPreset"}
 
 // Get takes name of the openIDConnectPreset, and returns the corresponding openIDConnectPreset object, and an error if there is any.
-func (c *FakeOpenIDConnectPresets) Get(name string, options v1.GetOptions) (result *v1alpha1.OpenIDConnectPreset, err error) {
+func (c *FakeOpenIDConnectPresets) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.OpenIDConnectPreset, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(openidconnectpresetsResource, c.ns, name), &v1alpha1.OpenIDConnectPreset{})
 
@@ -50,7 +52,7 @@ func (c *FakeOpenIDConnectPresets) Get(name string, options v1.GetOptions) (resu
 }
 
 // List takes label and field selectors, and returns the list of OpenIDConnectPresets that match those selectors.
-func (c *FakeOpenIDConnectPresets) List(opts v1.ListOptions) (result *v1alpha1.OpenIDConnectPresetList, err error) {
+func (c *FakeOpenIDConnectPresets) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.OpenIDConnectPresetList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(openidconnectpresetsResource, openidconnectpresetsKind, c.ns, opts), &v1alpha1.OpenIDConnectPresetList{})
 
@@ -72,14 +74,14 @@ func (c *FakeOpenIDConnectPresets) List(opts v1.ListOptions) (result *v1alpha1.O
 }
 
 // Watch returns a watch.Interface that watches the requested openIDConnectPresets.
-func (c *FakeOpenIDConnectPresets) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeOpenIDConnectPresets) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(openidconnectpresetsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a openIDConnectPreset and creates it.  Returns the server's representation of the openIDConnectPreset, and an error, if there is any.
-func (c *FakeOpenIDConnectPresets) Create(openIDConnectPreset *v1alpha1.OpenIDConnectPreset) (result *v1alpha1.OpenIDConnectPreset, err error) {
+func (c *FakeOpenIDConnectPresets) Create(ctx context.Context, openIDConnectPreset *v1alpha1.OpenIDConnectPreset, opts v1.CreateOptions) (result *v1alpha1.OpenIDConnectPreset, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(openidconnectpresetsResource, c.ns, openIDConnectPreset), &v1alpha1.OpenIDConnectPreset{})
 
@@ -90,7 +92,7 @@ func (c *FakeOpenIDConnectPresets) Create(openIDConnectPreset *v1alpha1.OpenIDCo
 }
 
 // Update takes the representation of a openIDConnectPreset and updates it. Returns the server's representation of the openIDConnectPreset, and an error, if there is any.
-func (c *FakeOpenIDConnectPresets) Update(openIDConnectPreset *v1alpha1.OpenIDConnectPreset) (result *v1alpha1.OpenIDConnectPreset, err error) {
+func (c *FakeOpenIDConnectPresets) Update(ctx context.Context, openIDConnectPreset *v1alpha1.OpenIDConnectPreset, opts v1.UpdateOptions) (result *v1alpha1.OpenIDConnectPreset, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(openidconnectpresetsResource, c.ns, openIDConnectPreset), &v1alpha1.OpenIDConnectPreset{})
 
@@ -101,7 +103,7 @@ func (c *FakeOpenIDConnectPresets) Update(openIDConnectPreset *v1alpha1.OpenIDCo
 }
 
 // Delete takes name of the openIDConnectPreset and deletes it. Returns an error if one occurs.
-func (c *FakeOpenIDConnectPresets) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeOpenIDConnectPresets) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(openidconnectpresetsResource, c.ns, name), &v1alpha1.OpenIDConnectPreset{})
 
@@ -109,15 +111,15 @@ func (c *FakeOpenIDConnectPresets) Delete(name string, options *v1.DeleteOptions
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeOpenIDConnectPresets) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(openidconnectpresetsResource, c.ns, listOptions)
+func (c *FakeOpenIDConnectPresets) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(openidconnectpresetsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.OpenIDConnectPresetList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched openIDConnectPreset.
-func (c *FakeOpenIDConnectPresets) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.OpenIDConnectPreset, err error) {
+func (c *FakeOpenIDConnectPresets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.OpenIDConnectPreset, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(openidconnectpresetsResource, c.ns, name, pt, data, subresources...), &v1alpha1.OpenIDConnectPreset{})
 

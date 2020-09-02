@@ -15,6 +15,7 @@
 package extensions
 
 import (
+	"context"
 	"fmt"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -136,9 +137,9 @@ func (c *controllerArtifacts) registerExtensionControllerArtifacts(controllerIns
 }
 
 // initialize obtains the informers for the enclosing artifacts.
-func (c *controllerArtifacts) initialize(seedClient kubernetes.Interface) error {
+func (c *controllerArtifacts) initialize(ctx context.Context, seedClient kubernetes.Interface) error {
 	initialize := func(a *artifact) error {
-		informer, err := seedClient.Cache().GetInformerForKind(a.gvk)
+		informer, err := seedClient.Cache().GetInformerForKind(ctx, a.gvk)
 		if err != nil {
 			return err
 		}

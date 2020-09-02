@@ -24,10 +24,10 @@ import (
 	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	corev1alpha1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 )
@@ -155,7 +155,7 @@ func (d *ValidateShootStateDeletion) validateDeleteCollection(ctx context.Contex
 }
 
 func (d *ValidateShootStateDeletion) validateDelete(ctx context.Context, attrs admission.Attributes) error {
-	if _, err := d.coreClient.Core().Shoots(attrs.GetNamespace()).Get(attrs.GetName(), metav1.GetOptions{}); err != nil {
+	if _, err := d.coreClient.Core().Shoots(attrs.GetNamespace()).Get(ctx, attrs.GetName(), kubernetes.DefaultGetOptions()); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}

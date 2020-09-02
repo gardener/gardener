@@ -270,7 +270,7 @@ func (c *defaultPlantControl) healthChecks(ctx context.Context, healthChecker *H
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		apiserverAvailability = healthChecker.CheckAPIServerAvailability(apiserverAvailability)
+		apiserverAvailability = healthChecker.CheckAPIServerAvailability(ctx, apiserverAvailability)
 	}()
 	go func() {
 		defer wg.Done()

@@ -28,6 +28,7 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -224,7 +225,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 		if utils.SkipVerification(operation, seed.ObjectMeta) {
 			return nil
 		}
-		err = r.ensureSeedReferences(seed)
+		err = r.ensureSeedReferences(ctx, seed)
 
 		if operation == admission.Update {
 			oldSeed, ok := a.GetOldObject().(*core.Seed)
@@ -458,7 +459,7 @@ func (r *ReferenceManager) ensureSecretBindingReferences(ctx context.Context, at
 		return errors.New("SecretBinding cannot reference a secret you are not allowed to read")
 	}
 
-	if err := r.lookupSecret(binding.SecretRef.Namespace, binding.SecretRef.Name); err != nil {
+	if err := r.lookupSecret(ctx, binding.SecretRef.Namespace, binding.SecretRef.Name); err != nil {
 		return err
 	}
 
@@ -508,11 +509,11 @@ func (r *ReferenceManager) ensureSecretBindingReferences(ctx context.Context, at
 	return nil
 }
 
-func (r *ReferenceManager) ensureSeedReferences(seed *core.Seed) error {
+func (r *ReferenceManager) ensureSeedReferences(ctx context.Context, seed *core.Seed) error {
 	if seed.Spec.SecretRef == nil {
 		return nil
 	}
-	return r.lookupSecret(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)
+	return r.lookupSecret(ctx, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)
 }
 
 func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes admission.Attributes, shoot *core.Shoot) error {
@@ -576,7 +577,7 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 		}
 
 		// Check if the resource actually exists
-		if err := r.lookupResource(gv.WithResource(apiResource.Name), shoot.Namespace, resource.ResourceRef.Name); err != nil {
+		if err := r.lookupResource(ctx, gv.WithResource(apiResource.Name), shoot.Namespace, resource.ResourceRef.Name); err != nil {
 			return fmt.Errorf("failed to resolve shoot resource reference %q: %v", resource.Name, err)
 		}
 	}
@@ -586,7 +587,7 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 			if dnsProvider.SecretName == nil {
 				continue
 			}
-			if err := r.lookupSecret(shoot.Namespace, *dnsProvider.SecretName); err != nil {
+			if err := r.lookupSecret(ctx, shoot.Namespace, *dnsProvider.SecretName); err != nil {
 				return fmt.Errorf("failed to reference DNS provider secret %v", err)
 			}
 		}
@@ -603,7 +604,7 @@ func hasAuditPolicy(apiServerConfig *core.KubeAPIServerConfig) bool {
 		len(apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name) != 0
 }
 
-func (r *ReferenceManager) lookupSecret(namespace, name string) error {
+func (r *ReferenceManager) lookupSecret(ctx context.Context, namespace, name string) error {
 	// First try to detect the secret in the cache.
 	var err error
 
@@ -630,7 +631,7 @@ func (r *ReferenceManager) lookupSecret(namespace, name string) error {
 	}
 
 	// Third try to detect the secret, now by doing a live lookup instead of relying on the cache.
-	if _, err := r.kubeClient.CoreV1().Secrets(namespace).Get(name, metav1.GetOptions{}); err != nil {
+	if _, err := r.kubeClient.CoreV1().Secrets(namespace).Get(ctx, name, clientkubernetes.DefaultGetOptions()); err != nil {
 		return err
 	}
 
@@ -650,8 +651,8 @@ func (r *ReferenceManager) getAPIResource(groupVersion, kind string) (*metav1.AP
 	return nil, nil
 }
 
-func (r *ReferenceManager) lookupResource(resource schema.GroupVersionResource, namespace, name string) error {
-	if _, err := r.dynamicClient.Resource(resource).Namespace(namespace).Get(name, metav1.GetOptions{}); err != nil {
+func (r *ReferenceManager) lookupResource(ctx context.Context, resource schema.GroupVersionResource, namespace, name string) error {
+	if _, err := r.dynamicClient.Resource(resource).Namespace(namespace).Get(ctx, name, clientkubernetes.DefaultGetOptions()); err != nil {
 		return err
 	}
 	return nil

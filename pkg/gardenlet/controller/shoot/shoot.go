@@ -23,6 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -196,7 +197,7 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers int
 		if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateProcessing {
 			newShoot := shoot.DeepCopy()
 			newShoot.Status.LastOperation.State = gardencorev1beta1.LastOperationStateAborted
-			if _, err := gardenClient.GardenCore().CoreV1beta1().Shoots(newShoot.Namespace).UpdateStatus(newShoot); err != nil {
+			if _, err := gardenClient.GardenCore().CoreV1beta1().Shoots(newShoot.Namespace).UpdateStatus(ctx, newShoot, kubernetes.DefaultUpdateOptions()); err != nil {
 				panic(fmt.Sprintf("Failed to update shoot status [%v]: %v ", newShoot.Name, err.Error()))
 			}
 		}

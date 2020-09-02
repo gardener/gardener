@@ -181,7 +181,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 				if err := botanist.WaitForInfrastructure(ctx); err != nil {
 					return err
 				}
-				return removeTaskAnnotation(o, generation, common.ShootTaskDeployInfrastructure)
+				return removeTaskAnnotation(ctx, o, generation, common.ShootTaskDeployInfrastructure)
 			},
 			Dependencies: flow.NewTaskIDs(deployInfrastructure),
 		})
@@ -424,7 +424,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 				if err := botanist.RestartControlPlanePods(ctx); err != nil {
 					return err
 				}
-				return removeTaskAnnotation(o, generation, common.ShootTaskRestartControlPlanePods)
+				return removeTaskAnnotation(ctx, o, generation, common.ShootTaskRestartControlPlanePods)
 			}).DoIf(requestControlPlanePodsRestart),
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployControlPlane, deployControlPlaneExposure),
 		})
@@ -467,8 +467,8 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 	return nil
 }
 
-func removeTaskAnnotation(o *operation.Operation, generation int64, tasksToRemove ...string) error {
-	newShoot, err := kutil.TryUpdateShootAnnotations(o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generation int64, tasksToRemove ...string) error {
+	newShoot, err := kutil.TryUpdateShootAnnotations(ctx, o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			if shoot.Generation == generation {
 				controllerutils.RemoveTasks(shoot.Annotations, tasksToRemove...)

@@ -158,7 +158,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	)
 
 	defer func() {
-		if _, err := updateConditions(gardenClient, controllerInstallation, conditionValid, conditionInstalled); err != nil {
+		if _, err := updateConditions(ctx, gardenClient, controllerInstallation, conditionValid, conditionInstalled); err != nil {
 			logger.Errorf("Failed to update the conditions : %+v", err)
 		}
 	}()
@@ -294,7 +294,7 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 	}
 
 	defer func() {
-		if _, err := updateConditions(gardenClient, controllerInstallation, conditionValid, conditionInstalled); client.IgnoreNotFound(err) != nil {
+		if _, err := updateConditions(ctx, gardenClient, controllerInstallation, conditionValid, conditionInstalled); client.IgnoreNotFound(err) != nil {
 			logger.Errorf("Failed to update the conditions when trying to delete: %+v", err)
 		}
 	}()
@@ -349,8 +349,8 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 	return controllerutils.RemoveFinalizer(ctx, gardenClient.DirectClient(), controllerInstallation.DeepCopy(), FinalizerName)
 }
 
-func updateConditions(gardenClient kubernetes.Interface, controllerInstallation *gardencorev1beta1.ControllerInstallation, conditions ...gardencorev1beta1.Condition) (*gardencorev1beta1.ControllerInstallation, error) {
-	return kutil.TryUpdateControllerInstallationStatusWithEqualFunc(gardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
+func updateConditions(ctx context.Context, gardenClient kubernetes.Interface, controllerInstallation *gardencorev1beta1.ControllerInstallation, conditions ...gardencorev1beta1.Condition) (*gardencorev1beta1.ControllerInstallation, error) {
+	return kutil.TryUpdateControllerInstallationStatusWithEqualFunc(ctx, gardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
 		func(controllerInstallation *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
 			controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, conditions...)
 			return controllerInstallation, nil

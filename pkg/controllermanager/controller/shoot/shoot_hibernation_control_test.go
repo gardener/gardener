@@ -14,6 +14,7 @@
 package shoot_test
 
 import (
+	"context"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -269,11 +270,11 @@ var _ = Describe("Shoot Hibernation", func() {
 				gomock.InOrder(
 					c.EXPECT().CoreV1beta1().Return(gardenIface),
 					gardenIface.EXPECT().Shoots(namespace).Return(shootIface),
-					shootIface.EXPECT().Get(name, metav1.GetOptions{}).Return(&shoot, nil),
+					shootIface.EXPECT().Get(context.Background(), name, metav1.GetOptions{}).Return(&shoot, nil),
 
 					c.EXPECT().CoreV1beta1().Return(gardenIface),
 					gardenIface.EXPECT().Shoots(namespace).Return(shootIface),
-					shootIface.EXPECT().Update(gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Do(func(actual *gardencorev1beta1.Shoot) {
+					shootIface.EXPECT().Update(context.Background(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), metav1.UpdateOptions{}).Do(func(_ context.Context, actual *gardencorev1beta1.Shoot, _ metav1.UpdateOptions) {
 						Expect(actual.Spec.Hibernation).To(Equal(&gardencorev1beta1.Hibernation{
 							Enabled: &enabled,
 						}))
@@ -290,11 +291,11 @@ var _ = Describe("Shoot Hibernation", func() {
 
 				gomock.InOrder(c.EXPECT().CoreV1beta1().Return(gardenIface),
 					gardenIface.EXPECT().Shoots(namespace).Return(shootIface),
-					shootIface.EXPECT().Get(name, metav1.GetOptions{}).Return(&shoot, nil),
+					shootIface.EXPECT().Get(context.Background(), name, metav1.GetOptions{}).Return(&shoot, nil),
 
 					c.EXPECT().CoreV1beta1().Return(gardenIface),
 					gardenIface.EXPECT().Shoots(namespace).Return(shootIface),
-					shootIface.EXPECT().Update(gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Do(func(actual *gardencorev1beta1.Shoot) {
+					shootIface.EXPECT().Update(context.Background(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), metav1.UpdateOptions{}).Do(func(_ context.Context, actual *gardencorev1beta1.Shoot, _ metav1.UpdateOptions) {
 						Expect(actual.Spec.Hibernation).To(Equal(&gardencorev1beta1.Hibernation{
 							Enabled: &enabled,
 						}))

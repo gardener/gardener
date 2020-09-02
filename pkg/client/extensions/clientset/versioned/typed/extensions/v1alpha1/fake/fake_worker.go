@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var workersResource = schema.GroupVersionResource{Group: "extensions.gardener.cl
 var workersKind = schema.GroupVersionKind{Group: "extensions.gardener.cloud", Version: "v1alpha1", Kind: "Worker"}
 
 // Get takes name of the worker, and returns the corresponding worker object, and an error if there is any.
-func (c *FakeWorkers) Get(name string, options v1.GetOptions) (result *v1alpha1.Worker, err error) {
+func (c *FakeWorkers) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Worker, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(workersResource, c.ns, name), &v1alpha1.Worker{})
 
@@ -50,7 +52,7 @@ func (c *FakeWorkers) Get(name string, options v1.GetOptions) (result *v1alpha1.
 }
 
 // List takes label and field selectors, and returns the list of Workers that match those selectors.
-func (c *FakeWorkers) List(opts v1.ListOptions) (result *v1alpha1.WorkerList, err error) {
+func (c *FakeWorkers) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.WorkerList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(workersResource, workersKind, c.ns, opts), &v1alpha1.WorkerList{})
 
@@ -72,14 +74,14 @@ func (c *FakeWorkers) List(opts v1.ListOptions) (result *v1alpha1.WorkerList, er
 }
 
 // Watch returns a watch.Interface that watches the requested workers.
-func (c *FakeWorkers) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeWorkers) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(workersResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a worker and creates it.  Returns the server's representation of the worker, and an error, if there is any.
-func (c *FakeWorkers) Create(worker *v1alpha1.Worker) (result *v1alpha1.Worker, err error) {
+func (c *FakeWorkers) Create(ctx context.Context, worker *v1alpha1.Worker, opts v1.CreateOptions) (result *v1alpha1.Worker, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(workersResource, c.ns, worker), &v1alpha1.Worker{})
 
@@ -90,7 +92,7 @@ func (c *FakeWorkers) Create(worker *v1alpha1.Worker) (result *v1alpha1.Worker, 
 }
 
 // Update takes the representation of a worker and updates it. Returns the server's representation of the worker, and an error, if there is any.
-func (c *FakeWorkers) Update(worker *v1alpha1.Worker) (result *v1alpha1.Worker, err error) {
+func (c *FakeWorkers) Update(ctx context.Context, worker *v1alpha1.Worker, opts v1.UpdateOptions) (result *v1alpha1.Worker, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(workersResource, c.ns, worker), &v1alpha1.Worker{})
 
@@ -102,7 +104,7 @@ func (c *FakeWorkers) Update(worker *v1alpha1.Worker) (result *v1alpha1.Worker, 
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeWorkers) UpdateStatus(worker *v1alpha1.Worker) (*v1alpha1.Worker, error) {
+func (c *FakeWorkers) UpdateStatus(ctx context.Context, worker *v1alpha1.Worker, opts v1.UpdateOptions) (*v1alpha1.Worker, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(workersResource, "status", c.ns, worker), &v1alpha1.Worker{})
 
@@ -113,7 +115,7 @@ func (c *FakeWorkers) UpdateStatus(worker *v1alpha1.Worker) (*v1alpha1.Worker, e
 }
 
 // Delete takes name of the worker and deletes it. Returns an error if one occurs.
-func (c *FakeWorkers) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeWorkers) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(workersResource, c.ns, name), &v1alpha1.Worker{})
 
@@ -121,15 +123,15 @@ func (c *FakeWorkers) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeWorkers) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(workersResource, c.ns, listOptions)
+func (c *FakeWorkers) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(workersResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.WorkerList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched worker.
-func (c *FakeWorkers) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Worker, err error) {
+func (c *FakeWorkers) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Worker, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(workersResource, c.ns, name, pt, data, subresources...), &v1alpha1.Worker{})
 

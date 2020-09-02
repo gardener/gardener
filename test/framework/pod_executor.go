@@ -56,8 +56,7 @@ func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerNam
 		Param("stdin", "true").
 		Param("stdout", "true").
 		Param("stderr", "true").
-		Param("tty", "false").
-		Context(ctx)
+		Param("tty", "false")
 
 	executor, err := remotecommand.NewSPDYExecutor(p.client.RESTConfig(), http.MethodPost, request.URL())
 	if err != nil {

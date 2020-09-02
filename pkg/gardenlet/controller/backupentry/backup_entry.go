@@ -61,7 +61,7 @@ func NewBackupEntryController(ctx context.Context, clientMap clientmap.ClientMap
 		return nil, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	backupEntryInformer, err := gardenClient.Cache().GetInformer(&gardencorev1beta1.BackupEntry{})
+	backupEntryInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.BackupEntry{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get BackupEntry Informer: %w", err)
 	}

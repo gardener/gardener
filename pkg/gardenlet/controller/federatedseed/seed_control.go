@@ -69,7 +69,7 @@ func NewFederatedSeedController(ctx context.Context, clientMap clientmap.ClientM
 	if err != nil {
 		return nil, err
 	}
-	seedInformer, err := gardenClient.Cache().GetInformer(&gardencorev1beta1.Seed{})
+	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +248,7 @@ func (f *federatedSeedControllerManager) createExtensionControllers(ctx context.
 		return fmt.Errorf("failed to get seed client: %w", err)
 	}
 
-	extensionsController, err := extensions.NewController(gardenClient, seedClient, seedName, seedLogger, recorder)
+	extensionsController, err := extensions.NewController(ctx, gardenClient, seedClient, seedName, seedLogger, recorder)
 	if err != nil {
 		return err
 	}

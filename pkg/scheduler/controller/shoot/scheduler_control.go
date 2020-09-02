@@ -135,7 +135,7 @@ func (c *defaultControl) ScheduleShoot(ctx context.Context, obj *gardencorev1bet
 
 	updateShoot := func(ctx context.Context, shootToUpdate *gardencorev1beta1.Shoot) error {
 		// need retry logic, because the controller-manager is acting on it at the same time: setting Status to Pending until scheduled
-		_, err = kutil.TryUpdateShoot(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, shootToUpdate.ObjectMeta, func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+		_, err = kutil.TryUpdateShoot(ctx, c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, shootToUpdate.ObjectMeta, func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			if shoot.Spec.SeedName != nil {
 				alreadyScheduledErr := common.NewAlreadyScheduledError(fmt.Sprintf("shoot has already a seed assigned when trying to schedule the shoot to %s", *shootToUpdate.Spec.SeedName))
 				return nil, &alreadyScheduledErr

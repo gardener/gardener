@@ -18,6 +18,7 @@ import (
 	"errors"
 	"io"
 
+	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/api"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -32,6 +33,7 @@ import (
 	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardenexternalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	settingsclientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	"github.com/gardener/gardener/pkg/openapi"
@@ -288,33 +290,35 @@ func (o Options) run(stopCh <-chan struct{}) error {
 		return err
 	}
 
+	ctx := utils.ContextFromStopChannel(stopCh)
+
 	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-garden-cluster", func(context genericapiserver.PostStartHookContext) error {
-		if _, err := kubeClient.CoreV1().Namespaces().Get(gardencorev1beta1.GardenerSeedLeaseNamespace, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
+		if _, err := kubeClient.CoreV1().Namespaces().Get(ctx, gardencorev1beta1.GardenerSeedLeaseNamespace, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
 			return err
 		} else if err == nil {
 			// Namespace already exists
 			return nil
 		}
 
-		_, err = kubeClient.CoreV1().Namespaces().Create(&corev1.Namespace{
+		_, err = kubeClient.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: gardencorev1beta1.GardenerSeedLeaseNamespace,
 			},
-		})
+		}, clientkubernetes.DefaultCreateOptions())
 		return err
 	}); err != nil {
 		return err
 	}
 
 	if err := server.GenericAPIServer.AddPostStartHook("bootstrap-cluster-identity", func(context genericapiserver.PostStartHookContext) error {
-		if _, err := kubeClient.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(v1beta1constants.ClusterIdentity, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
+		if _, err := kubeClient.CoreV1().ConfigMaps(metav1.NamespaceSystem).Get(ctx, v1beta1constants.ClusterIdentity, metav1.GetOptions{}); client.IgnoreNotFound(err) != nil {
 			return err
 		} else if err == nil {
 			// Cluster identity ConfigMap already exists
 			return nil
 		}
 
-		_, err = kubeClient.CoreV1().ConfigMaps(metav1.NamespaceSystem).Create(&corev1.ConfigMap{
+		_, err = kubeClient.CoreV1().ConfigMaps(metav1.NamespaceSystem).Create(ctx, &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      v1beta1constants.ClusterIdentity,
 				Namespace: metav1.NamespaceSystem,
@@ -322,7 +326,7 @@ func (o Options) run(stopCh <-chan struct{}) error {
 			Data: map[string]string{
 				v1beta1constants.ClusterIdentity: o.ExtraOptions.ClusterIdentity,
 			},
-		})
+		}, clientkubernetes.DefaultCreateOptions())
 		return err
 	}); err != nil {
 		return err

@@ -65,11 +65,11 @@ type Controller struct {
 
 // NewController instantiates a new controller.
 func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDefaultNamespaceKubeInformer kubeinformers.SharedInformerFactory, seedLogger *logrus.Entry, recorder record.EventRecorder, seedName string) (*Controller, error) {
-	networkPoliciesInformer, err := seedClient.Cache().GetInformer(&networkingv1.NetworkPolicy{})
+	networkPoliciesInformer, err := seedClient.Cache().GetInformer(ctx, &networkingv1.NetworkPolicy{})
 	if err != nil {
 		return nil, err
 	}
-	namespaceInformer, err := seedClient.Cache().GetInformer(&corev1.Namespace{})
+	namespaceInformer, err := seedClient.Cache().GetInformer(ctx, &corev1.Namespace{})
 	if err != nil {
 		return nil, err
 	}

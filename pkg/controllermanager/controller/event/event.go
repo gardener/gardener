@@ -68,7 +68,7 @@ func (c *Controller) Run(ctx context.Context) {
 		return
 	}
 
-	eventInformer, err := gardenClient.Cache().GetInformer(&corev1.Event{})
+	eventInformer, err := gardenClient.Cache().GetInformer(ctx, &corev1.Event{})
 	if err != nil {
 		logger.Logger.Errorf("failed to get event informer: %v", err)
 		return

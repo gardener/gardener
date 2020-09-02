@@ -174,7 +174,7 @@ func (b *Botanist) CreateETCDSnapshot(ctx context.Context) error {
 	}
 	etcdMainPod := podsList.Items[0]
 
-	_, err := executor.Execute(ctx, b.Shoot.SeedNamespace, etcdMainPod.GetName(), "backup-restore", "/bin/sh", "curl -k https://etcd-main-local:8080/snapshot/full")
+	_, err := executor.Execute(b.Shoot.SeedNamespace, etcdMainPod.GetName(), "backup-restore", "/bin/sh", "curl -k https://etcd-main-local:8080/snapshot/full")
 	return err
 }
 

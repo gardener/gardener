@@ -15,8 +15,11 @@
 package kubernetes
 
 import (
+	"context"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -26,6 +29,7 @@ import (
 )
 
 func tryUpdateShoot(
+	ctx context.Context,
 	g gardencore.Interface,
 	backoff wait.Backoff,
 	meta metav1.ObjectMeta,
@@ -40,7 +44,7 @@ func tryUpdateShoot(
 	)
 	err := retry.RetryOnConflict(backoff, func() (err error) {
 		attempt++
-		cur, err := g.CoreV1beta1().Shoots(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
+		cur, err := g.CoreV1beta1().Shoots(meta.Namespace).Get(ctx, meta.Name, kubernetes.DefaultGetOptions())
 		if err != nil {
 			return err
 		}
@@ -71,9 +75,9 @@ func tryUpdateShoot(
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the Shoot object. If the transformation
 // yields a semantically equal Shoot, no update is done and the operation returns normally.
-func TryUpdateShoot(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error)) (*gardencorev1beta1.Shoot, error) {
-	return tryUpdateShoot(g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-		return g.CoreV1beta1().Shoots(shoot.Namespace).Update(shoot)
+func TryUpdateShoot(ctx context.Context, g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error)) (*gardencorev1beta1.Shoot, error) {
+	return tryUpdateShoot(ctx, g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+		return g.CoreV1beta1().Shoots(shoot.Namespace).Update(ctx, shoot, kubernetes.DefaultUpdateOptions())
 	}, func(cur, updated *gardencorev1beta1.Shoot) bool {
 		return equality.Semantic.DeepEqual(cur, updated)
 	})
@@ -83,9 +87,9 @@ func TryUpdateShoot(g gardencore.Interface, backoff wait.Backoff, meta metav1.Ob
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the Shoot object. If the transformation
 // yields a semantically equal Shoot, no update is done and the operation returns normally.
-func TryUpdateShootHibernation(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error)) (*gardencorev1beta1.Shoot, error) {
-	return tryUpdateShoot(g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-		return g.CoreV1beta1().Shoots(shoot.Namespace).Update(shoot)
+func TryUpdateShootHibernation(ctx context.Context, g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error)) (*gardencorev1beta1.Shoot, error) {
+	return tryUpdateShoot(ctx, g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+		return g.CoreV1beta1().Shoots(shoot.Namespace).Update(ctx, shoot, kubernetes.DefaultUpdateOptions())
 	}, func(cur, updated *gardencorev1beta1.Shoot) bool {
 		return equality.Semantic.DeepEqual(cur.Spec.Hibernation, updated.Spec.Hibernation)
 	})
@@ -95,9 +99,9 @@ func TryUpdateShootHibernation(g gardencore.Interface, backoff wait.Backoff, met
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the Shoot object. If the transformation
 // yields a semantically equal Shoot (regarding Status), no update is done and the operation returns normally.
-func TryUpdateShootStatus(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error)) (*gardencorev1beta1.Shoot, error) {
-	return tryUpdateShoot(g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-		return g.CoreV1beta1().Shoots(shoot.Namespace).UpdateStatus(shoot)
+func TryUpdateShootStatus(ctx context.Context, g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error)) (*gardencorev1beta1.Shoot, error) {
+	return tryUpdateShoot(ctx, g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+		return g.CoreV1beta1().Shoots(shoot.Namespace).UpdateStatus(ctx, shoot, kubernetes.DefaultUpdateOptions())
 	}, func(cur, updated *gardencorev1beta1.Shoot) bool {
 		return equality.Semantic.DeepEqual(cur.Status, updated.Status)
 	})
@@ -107,9 +111,9 @@ func TryUpdateShootStatus(g gardencore.Interface, backoff wait.Backoff, meta met
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the Shoot object. If the transformation
 // yields a semantically equal Shoot (regarding labels), no update is done and the operation returns normally.
-func TryUpdateShootLabels(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error)) (*gardencorev1beta1.Shoot, error) {
-	return tryUpdateShoot(g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-		return g.CoreV1beta1().Shoots(shoot.Namespace).Update(shoot)
+func TryUpdateShootLabels(ctx context.Context, g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error)) (*gardencorev1beta1.Shoot, error) {
+	return tryUpdateShoot(ctx, g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+		return g.CoreV1beta1().Shoots(shoot.Namespace).Update(ctx, shoot, kubernetes.DefaultUpdateOptions())
 	}, func(cur, updated *gardencorev1beta1.Shoot) bool {
 		return equality.Semantic.DeepEqual(cur.Labels, updated.Labels)
 	})
@@ -119,9 +123,9 @@ func TryUpdateShootLabels(g gardencore.Interface, backoff wait.Backoff, meta met
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the Shoot object. If the transformation
 // yields a semantically equal Shoot (regarding conditions), no update is done and the operation returns normally.
-func TryUpdateShootAnnotations(g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error)) (*gardencorev1beta1.Shoot, error) {
-	return tryUpdateShoot(g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-		return g.CoreV1beta1().Shoots(shoot.Namespace).Update(shoot)
+func TryUpdateShootAnnotations(ctx context.Context, g gardencore.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error)) (*gardencorev1beta1.Shoot, error) {
+	return tryUpdateShoot(ctx, g, backoff, meta, transform, func(g gardencore.Interface, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+		return g.CoreV1beta1().Shoots(shoot.Namespace).Update(ctx, shoot, kubernetes.DefaultUpdateOptions())
 	}, func(cur, updated *gardencorev1beta1.Shoot) bool {
 		return equality.Semantic.DeepEqual(cur.Annotations, updated.Annotations)
 	})

@@ -272,7 +272,7 @@ func (b *Botanist) WaitForControllersToBeActive(ctx context.Context) error {
 				}
 
 				// Check if the controller is active by reading its leader election record.
-				leaderElectionRecord, err := common.ReadLeaderElectionRecord(b.K8sShootClient, resourcelock.EndpointsResourceLock, metav1.NamespaceSystem, controller.name)
+				leaderElectionRecord, err := common.ReadLeaderElectionRecord(ctx, b.K8sShootClient, resourcelock.EndpointsResourceLock, metav1.NamespaceSystem, controller.name)
 				if err != nil {
 					out <- &checkOutput{controllerName: controller.name, err: err}
 					return

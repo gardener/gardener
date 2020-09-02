@@ -371,8 +371,8 @@ func (b *HealthChecker) FailedCondition(condition gardencorev1beta1.Condition, r
 }
 
 // checkAPIServerAvailability checks if the API server of a Shoot cluster is reachable and measure the response time.
-func (b *Botanist) checkAPIServerAvailability(checker *HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	return health.CheckAPIServerAvailability(condition, b.K8sShootClient.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
+func (b *Botanist) checkAPIServerAvailability(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
+	return health.CheckAPIServerAvailability(ctx, condition, b.K8sShootClient.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
 		return checker.FailedCondition(condition, conditionType, message)
 	})
 }
@@ -801,7 +801,7 @@ func (b *Botanist) healthChecks(
 	}
 
 	_ = flow.Parallel(func(ctx context.Context) error {
-		apiserverAvailability = b.checkAPIServerAvailability(checker, apiserverAvailability)
+		apiserverAvailability = b.checkAPIServerAvailability(ctx, checker, apiserverAvailability)
 		return nil
 	}, func(ctx context.Context) error {
 		newControlPlane, err := b.checkControlPlane(ctx, checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedEtcdLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)

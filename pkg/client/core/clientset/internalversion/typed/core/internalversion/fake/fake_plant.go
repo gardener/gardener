@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	core "github.com/gardener/gardener/pkg/apis/core"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var plantsResource = schema.GroupVersionResource{Group: "core.gardener.cloud", V
 var plantsKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "", Kind: "Plant"}
 
 // Get takes name of the plant, and returns the corresponding plant object, and an error if there is any.
-func (c *FakePlants) Get(name string, options v1.GetOptions) (result *core.Plant, err error) {
+func (c *FakePlants) Get(ctx context.Context, name string, options v1.GetOptions) (result *core.Plant, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(plantsResource, c.ns, name), &core.Plant{})
 
@@ -50,7 +52,7 @@ func (c *FakePlants) Get(name string, options v1.GetOptions) (result *core.Plant
 }
 
 // List takes label and field selectors, and returns the list of Plants that match those selectors.
-func (c *FakePlants) List(opts v1.ListOptions) (result *core.PlantList, err error) {
+func (c *FakePlants) List(ctx context.Context, opts v1.ListOptions) (result *core.PlantList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(plantsResource, plantsKind, c.ns, opts), &core.PlantList{})
 
@@ -72,14 +74,14 @@ func (c *FakePlants) List(opts v1.ListOptions) (result *core.PlantList, err erro
 }
 
 // Watch returns a watch.Interface that watches the requested plants.
-func (c *FakePlants) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakePlants) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(plantsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a plant and creates it.  Returns the server's representation of the plant, and an error, if there is any.
-func (c *FakePlants) Create(plant *core.Plant) (result *core.Plant, err error) {
+func (c *FakePlants) Create(ctx context.Context, plant *core.Plant, opts v1.CreateOptions) (result *core.Plant, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(plantsResource, c.ns, plant), &core.Plant{})
 
@@ -90,7 +92,7 @@ func (c *FakePlants) Create(plant *core.Plant) (result *core.Plant, err error) {
 }
 
 // Update takes the representation of a plant and updates it. Returns the server's representation of the plant, and an error, if there is any.
-func (c *FakePlants) Update(plant *core.Plant) (result *core.Plant, err error) {
+func (c *FakePlants) Update(ctx context.Context, plant *core.Plant, opts v1.UpdateOptions) (result *core.Plant, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(plantsResource, c.ns, plant), &core.Plant{})
 
@@ -102,7 +104,7 @@ func (c *FakePlants) Update(plant *core.Plant) (result *core.Plant, err error) {
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakePlants) UpdateStatus(plant *core.Plant) (*core.Plant, error) {
+func (c *FakePlants) UpdateStatus(ctx context.Context, plant *core.Plant, opts v1.UpdateOptions) (*core.Plant, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(plantsResource, "status", c.ns, plant), &core.Plant{})
 
@@ -113,7 +115,7 @@ func (c *FakePlants) UpdateStatus(plant *core.Plant) (*core.Plant, error) {
 }
 
 // Delete takes name of the plant and deletes it. Returns an error if one occurs.
-func (c *FakePlants) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakePlants) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(plantsResource, c.ns, name), &core.Plant{})
 
@@ -121,15 +123,15 @@ func (c *FakePlants) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakePlants) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(plantsResource, c.ns, listOptions)
+func (c *FakePlants) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(plantsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &core.PlantList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched plant.
-func (c *FakePlants) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *core.Plant, err error) {
+func (c *FakePlants) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *core.Plant, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(plantsResource, c.ns, name, pt, data, subresources...), &core.Plant{})
 

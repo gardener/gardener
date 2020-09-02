@@ -217,7 +217,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 
 		operation.Logger.Error(message)
 
-		_, _ = updateShootStatus(gardenClient.GardenCore(),
+		_, _ = updateShootStatus(ctx, gardenClient.GardenCore(),
 			shoot,
 			[]gardencorev1beta1.Condition{
 				conditionAPIServerAvailable,
@@ -269,7 +269,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 	)(ctx)
 
 	// Update Shoot status
-	updatedShoot, err := updateShootStatus(gardenClient.GardenCore(),
+	updatedShoot, err := updateShootStatus(ctx, gardenClient.GardenCore(),
 		shoot,
 		append(
 			[]gardencorev1beta1.Condition{
@@ -291,6 +291,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 
 	// Mark Shoot as healthy/unhealthy
 	_, err = kutil.TryUpdateShootLabels(
+		ctx,
 		gardenClient.GardenCore(),
 		retry.DefaultBackoff,
 		updatedShoot.ObjectMeta,
@@ -313,8 +314,8 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 	return nil // We do not want to run in the exponential backoff for the condition checks.
 }
 
-func updateShootStatus(g gardencore.Interface, shoot *gardencorev1beta1.Shoot, conditions, constraints []gardencorev1beta1.Condition) (*gardencorev1beta1.Shoot, error) {
-	newShoot, err := kutil.TryUpdateShootStatus(g, retry.DefaultBackoff, shoot.ObjectMeta,
+func updateShootStatus(ctx context.Context, g gardencore.Interface, shoot *gardencorev1beta1.Shoot, conditions, constraints []gardencorev1beta1.Condition) (*gardencorev1beta1.Shoot, error) {
+	newShoot, err := kutil.TryUpdateShootStatus(ctx, g, retry.DefaultBackoff, shoot.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			shoot.Status.Conditions = conditions
 			shoot.Status.Constraints = constraints

@@ -409,11 +409,11 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
-	if err := common.DeleteGrafanaByRole(b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaOperatorsRole); err != nil {
+	if err := common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaOperatorsRole); err != nil {
 		return err
 	}
 
-	if err := common.DeleteGrafanaByRole(b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaUsersRole); err != nil {
+	if err := common.DeleteGrafanaByRole(ctx, b.K8sSeedClient, b.Shoot.SeedNamespace, common.GrafanaUsersRole); err != nil {
 		return err
 	}
 

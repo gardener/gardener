@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,21 +61,21 @@ func (c *leaseController) Sync(holderIdentity string, ownerReferences ...metav1.
 	}
 	leaseClient := gardenClient.Kubernetes().CoordinationV1().Leases(c.namespace)
 
-	return c.tryUpdateOrCreateLease(leaseClient, holderIdentity, ownerReferences...)
+	return c.tryUpdateOrCreateLease(ctx, leaseClient, holderIdentity, ownerReferences...)
 }
 
 // tryUpdateOrCreateLease updates or creates the lease if it does not exist.
-func (c *leaseController) tryUpdateOrCreateLease(leaseClient coordclientset.LeaseInterface, holderIdentity string, ownerReferences ...metav1.OwnerReference) error {
-	lease, err := leaseClient.Get(holderIdentity, metav1.GetOptions{})
+func (c *leaseController) tryUpdateOrCreateLease(ctx context.Context, leaseClient coordclientset.LeaseInterface, holderIdentity string, ownerReferences ...metav1.OwnerReference) error {
+	lease, err := leaseClient.Get(ctx, holderIdentity, kubernetes.DefaultGetOptions())
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			_, err2 := leaseClient.Create(c.newLease(nil, holderIdentity, ownerReferences...))
+			_, err2 := leaseClient.Create(ctx, c.newLease(nil, holderIdentity, ownerReferences...), kubernetes.DefaultCreateOptions())
 			return err2
 		}
 		return err
 	}
 
-	_, err = leaseClient.Update(c.newLease(lease, holderIdentity, ownerReferences...))
+	_, err = leaseClient.Update(ctx, c.newLease(lease, holderIdentity, ownerReferences...), kubernetes.DefaultUpdateOptions())
 	return err
 }
 

@@ -182,7 +182,7 @@ func (c *defaultControl) Reconcile(seedObj *gardencorev1beta1.Seed) (fastRequeue
 		}
 
 		fns = append(fns, func(ctx context.Context) error {
-			return setShootStatusToUnknown(gardenClient.GardenCore(), shoot)
+			return setShootStatusToUnknown(ctx, gardenClient.GardenCore(), shoot)
 		})
 	}
 
@@ -193,7 +193,7 @@ func (c *defaultControl) Reconcile(seedObj *gardencorev1beta1.Seed) (fastRequeue
 	return false, nil
 }
 
-func setShootStatusToUnknown(g gardencore.Interface, shoot *gardencorev1beta1.Shoot) error {
+func setShootStatusToUnknown(ctx context.Context, g gardencore.Interface, shoot *gardencorev1beta1.Shoot) error {
 	var (
 		reason = "StatusUnknown"
 		msg    = "Gardenlet stopped sending heartbeats."
@@ -222,7 +222,7 @@ func setShootStatusToUnknown(g gardencore.Interface, shoot *gardencorev1beta1.Sh
 		constraints[conditionType] = c
 	}
 
-	_, err := kutil.TryUpdateShootStatus(g, retry.DefaultBackoff, shoot.ObjectMeta,
+	_, err := kutil.TryUpdateShootStatus(ctx, g, retry.DefaultBackoff, shoot.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			shoot.Status.Conditions = gardencorev1beta1helper.MergeConditions(shoot.Status.Conditions, conditionMapToConditions(conditions)...)
 			shoot.Status.Constraints = gardencorev1beta1helper.MergeConditions(shoot.Status.Constraints, conditionMapToConditions(constraints)...)

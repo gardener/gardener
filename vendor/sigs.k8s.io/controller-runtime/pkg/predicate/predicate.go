@@ -17,6 +17,9 @@ limitations under the License.
 package predicate
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/internal/log"
 )
@@ -89,6 +92,26 @@ func (p Funcs) Generic(e event.GenericEvent) bool {
 		return p.GenericFunc(e)
 	}
 	return true
+}
+
+// NewPredicateFuncs returns a predicate funcs that applies the given filter function
+// on CREATE, UPDATE, DELETE and GENERIC events. For UPDATE events, the filter is applied
+// to the new object.
+func NewPredicateFuncs(filter func(meta metav1.Object, object runtime.Object) bool) Funcs {
+	return Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return filter(e.Meta, e.Object)
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return filter(e.MetaNew, e.ObjectNew)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return filter(e.Meta, e.Object)
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return filter(e.Meta, e.Object)
+		},
+	}
 }
 
 // ResourceVersionChangedPredicate implements a default update predicate function on resource version change

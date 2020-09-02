@@ -19,6 +19,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"time"
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -37,15 +38,15 @@ type ControlPlanesGetter interface {
 
 // ControlPlaneInterface has methods to work with ControlPlane resources.
 type ControlPlaneInterface interface {
-	Create(*v1alpha1.ControlPlane) (*v1alpha1.ControlPlane, error)
-	Update(*v1alpha1.ControlPlane) (*v1alpha1.ControlPlane, error)
-	UpdateStatus(*v1alpha1.ControlPlane) (*v1alpha1.ControlPlane, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v1alpha1.ControlPlane, error)
-	List(opts v1.ListOptions) (*v1alpha1.ControlPlaneList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.ControlPlane, err error)
+	Create(ctx context.Context, controlPlane *v1alpha1.ControlPlane, opts v1.CreateOptions) (*v1alpha1.ControlPlane, error)
+	Update(ctx context.Context, controlPlane *v1alpha1.ControlPlane, opts v1.UpdateOptions) (*v1alpha1.ControlPlane, error)
+	UpdateStatus(ctx context.Context, controlPlane *v1alpha1.ControlPlane, opts v1.UpdateOptions) (*v1alpha1.ControlPlane, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.ControlPlane, error)
+	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ControlPlaneList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ControlPlane, err error)
 	ControlPlaneExpansion
 }
 
@@ -64,20 +65,20 @@ func newControlPlanes(c *ExtensionsV1alpha1Client, namespace string) *controlPla
 }
 
 // Get takes name of the controlPlane, and returns the corresponding controlPlane object, and an error if there is any.
-func (c *controlPlanes) Get(name string, options v1.GetOptions) (result *v1alpha1.ControlPlane, err error) {
+func (c *controlPlanes) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ControlPlane, err error) {
 	result = &v1alpha1.ControlPlane{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("controlplanes").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of ControlPlanes that match those selectors.
-func (c *controlPlanes) List(opts v1.ListOptions) (result *v1alpha1.ControlPlaneList, err error) {
+func (c *controlPlanes) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ControlPlaneList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -88,13 +89,13 @@ func (c *controlPlanes) List(opts v1.ListOptions) (result *v1alpha1.ControlPlane
 		Resource("controlplanes").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested controlPlanes.
-func (c *controlPlanes) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *controlPlanes) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -105,87 +106,90 @@ func (c *controlPlanes) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		Resource("controlplanes").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a controlPlane and creates it.  Returns the server's representation of the controlPlane, and an error, if there is any.
-func (c *controlPlanes) Create(controlPlane *v1alpha1.ControlPlane) (result *v1alpha1.ControlPlane, err error) {
+func (c *controlPlanes) Create(ctx context.Context, controlPlane *v1alpha1.ControlPlane, opts v1.CreateOptions) (result *v1alpha1.ControlPlane, err error) {
 	result = &v1alpha1.ControlPlane{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("controlplanes").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(controlPlane).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a controlPlane and updates it. Returns the server's representation of the controlPlane, and an error, if there is any.
-func (c *controlPlanes) Update(controlPlane *v1alpha1.ControlPlane) (result *v1alpha1.ControlPlane, err error) {
+func (c *controlPlanes) Update(ctx context.Context, controlPlane *v1alpha1.ControlPlane, opts v1.UpdateOptions) (result *v1alpha1.ControlPlane, err error) {
 	result = &v1alpha1.ControlPlane{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("controlplanes").
 		Name(controlPlane.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(controlPlane).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *controlPlanes) UpdateStatus(controlPlane *v1alpha1.ControlPlane) (result *v1alpha1.ControlPlane, err error) {
+func (c *controlPlanes) UpdateStatus(ctx context.Context, controlPlane *v1alpha1.ControlPlane, opts v1.UpdateOptions) (result *v1alpha1.ControlPlane, err error) {
 	result = &v1alpha1.ControlPlane{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("controlplanes").
 		Name(controlPlane.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(controlPlane).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the controlPlane and deletes it. Returns an error if one occurs.
-func (c *controlPlanes) Delete(name string, options *v1.DeleteOptions) error {
+func (c *controlPlanes) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("controlplanes").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *controlPlanes) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *controlPlanes) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("controlplanes").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched controlPlane.
-func (c *controlPlanes) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.ControlPlane, err error) {
+func (c *controlPlanes) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ControlPlane, err error) {
 	result = &v1alpha1.ControlPlane{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("controlplanes").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

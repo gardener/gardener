@@ -88,7 +88,8 @@ func requestCertificate(ctx context.Context, logger logrus.FieldLogger, certific
 
 	logger.Info("Creating certificate signing request...")
 
-	req, err := csr.RequestCertificate(certificateClient, csrData, name, usages, privateKey)
+	// LegacyUnkownSignerName based on https://github.com/kubernetes/kubernetes/blob/db4ca87d9d872b3c31df58860bac996c70df6b5b/pkg/apis/certificates/v1beta1/defaults.go#L52.
+	req, err := csr.RequestCertificate(certificateClient, csrData, name, certificatesv1beta1.LegacyUnknownSignerName, usages, privateKey)
 	if err != nil {
 		return nil, "", err
 	}

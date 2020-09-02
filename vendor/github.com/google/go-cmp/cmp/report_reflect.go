@@ -74,7 +74,7 @@ func (opts formatOptions) FormatType(t reflect.Type, s textNode) textNode {
 
 // FormatValue prints the reflect.Value, taking extra care to avoid descending
 // into pointers already in m. As pointers are visited, m is also updated.
-func (opts formatOptions) FormatValue(v reflect.Value, withinSlice bool, m visitedPointers) (out textNode) {
+func (opts formatOptions) FormatValue(v reflect.Value, m visitedPointers) (out textNode) {
 	if !v.IsValid() {
 		return nil
 	}
@@ -108,15 +108,12 @@ func (opts formatOptions) FormatValue(v reflect.Value, withinSlice bool, m visit
 		return textLine(fmt.Sprint(v.Bool()))
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return textLine(fmt.Sprint(v.Int()))
-	case reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return textLine(fmt.Sprint(v.Uint()))
-	case reflect.Uint8:
-		if withinSlice {
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		// Unnamed uints are usually bytes or words, so use hexadecimal.
+		if t.PkgPath() == "" || t.Kind() == reflect.Uintptr {
 			return textLine(formatHex(v.Uint()))
 		}
 		return textLine(fmt.Sprint(v.Uint()))
-	case reflect.Uintptr:
-		return textLine(formatHex(v.Uint()))
 	case reflect.Float32, reflect.Float64:
 		return textLine(fmt.Sprint(v.Float()))
 	case reflect.Complex64, reflect.Complex128:
@@ -132,7 +129,7 @@ func (opts formatOptions) FormatValue(v reflect.Value, withinSlice bool, m visit
 			if value.IsZero(vv) {
 				continue // Elide fields with zero values
 			}
-			s := opts.WithTypeMode(autoType).FormatValue(vv, false, m)
+			s := opts.WithTypeMode(autoType).FormatValue(vv, m)
 			list = append(list, textRecord{Key: t.Field(i).Name, Value: s})
 		}
 		return textWrap{"{", list, "}"}
@@ -159,7 +156,7 @@ func (opts formatOptions) FormatValue(v reflect.Value, withinSlice bool, m visit
 					continue
 				}
 			}
-			s := opts.WithTypeMode(elideType).FormatValue(vi, true, m)
+			s := opts.WithTypeMode(elideType).FormatValue(vi, m)
 			list = append(list, textRecord{Value: s})
 		}
 		return textWrap{ptr + "{", list, "}"}
@@ -174,7 +171,7 @@ func (opts formatOptions) FormatValue(v reflect.Value, withinSlice bool, m visit
 		var list textList
 		for _, k := range value.SortKeys(v.MapKeys()) {
 			sk := formatMapKey(k)
-			sv := opts.WithTypeMode(elideType).FormatValue(v.MapIndex(k), false, m)
+			sv := opts.WithTypeMode(elideType).FormatValue(v.MapIndex(k), m)
 			list = append(list, textRecord{Key: sk, Value: sv})
 		}
 		if opts.PrintAddresses {
@@ -192,7 +189,7 @@ func (opts formatOptions) FormatValue(v reflect.Value, withinSlice bool, m visit
 			ptr = formatPointer(v)
 		}
 		skipType = true // Let the underlying value print the type instead
-		return textWrap{"&" + ptr, opts.FormatValue(v.Elem(), false, m), ""}
+		return textWrap{"&" + ptr, opts.FormatValue(v.Elem(), m), ""}
 	case reflect.Interface:
 		if v.IsNil() {
 			return textNil
@@ -200,7 +197,7 @@ func (opts formatOptions) FormatValue(v reflect.Value, withinSlice bool, m visit
 		// Interfaces accept different concrete types,
 		// so configure the underlying value to explicitly print the type.
 		skipType = true // Print the concrete type instead
-		return opts.WithTypeMode(emitType).FormatValue(v.Elem(), false, m)
+		return opts.WithTypeMode(emitType).FormatValue(v.Elem(), m)
 	default:
 		panic(fmt.Sprintf("%v kind not handled", v.Kind()))
 	}
@@ -212,7 +209,7 @@ func formatMapKey(v reflect.Value) string {
 	var opts formatOptions
 	opts.TypeMode = elideType
 	opts.ShallowPointers = true
-	s := opts.FormatValue(v, false, visitedPointers{}).String()
+	s := opts.FormatValue(v, visitedPointers{}).String()
 	return strings.TrimSpace(s)
 }
 

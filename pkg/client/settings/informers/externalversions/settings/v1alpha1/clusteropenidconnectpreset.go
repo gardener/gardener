@@ -19,6 +19,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	time "time"
 
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
@@ -60,13 +61,13 @@ func NewFilteredClusterOpenIDConnectPresetInformer(client versioned.Interface, r
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SettingsV1alpha1().ClusterOpenIDConnectPresets().List(options)
+				return client.SettingsV1alpha1().ClusterOpenIDConnectPresets().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SettingsV1alpha1().ClusterOpenIDConnectPresets().Watch(options)
+				return client.SettingsV1alpha1().ClusterOpenIDConnectPresets().Watch(context.TODO(), options)
 			},
 		},
 		&settingsv1alpha1.ClusterOpenIDConnectPreset{},

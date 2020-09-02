@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	core "github.com/gardener/gardener/pkg/apis/core"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var secretbindingsResource = schema.GroupVersionResource{Group: "core.gardener.c
 var secretbindingsKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "", Kind: "SecretBinding"}
 
 // Get takes name of the secretBinding, and returns the corresponding secretBinding object, and an error if there is any.
-func (c *FakeSecretBindings) Get(name string, options v1.GetOptions) (result *core.SecretBinding, err error) {
+func (c *FakeSecretBindings) Get(ctx context.Context, name string, options v1.GetOptions) (result *core.SecretBinding, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(secretbindingsResource, c.ns, name), &core.SecretBinding{})
 
@@ -50,7 +52,7 @@ func (c *FakeSecretBindings) Get(name string, options v1.GetOptions) (result *co
 }
 
 // List takes label and field selectors, and returns the list of SecretBindings that match those selectors.
-func (c *FakeSecretBindings) List(opts v1.ListOptions) (result *core.SecretBindingList, err error) {
+func (c *FakeSecretBindings) List(ctx context.Context, opts v1.ListOptions) (result *core.SecretBindingList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(secretbindingsResource, secretbindingsKind, c.ns, opts), &core.SecretBindingList{})
 
@@ -72,14 +74,14 @@ func (c *FakeSecretBindings) List(opts v1.ListOptions) (result *core.SecretBindi
 }
 
 // Watch returns a watch.Interface that watches the requested secretBindings.
-func (c *FakeSecretBindings) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeSecretBindings) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(secretbindingsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a secretBinding and creates it.  Returns the server's representation of the secretBinding, and an error, if there is any.
-func (c *FakeSecretBindings) Create(secretBinding *core.SecretBinding) (result *core.SecretBinding, err error) {
+func (c *FakeSecretBindings) Create(ctx context.Context, secretBinding *core.SecretBinding, opts v1.CreateOptions) (result *core.SecretBinding, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(secretbindingsResource, c.ns, secretBinding), &core.SecretBinding{})
 
@@ -90,7 +92,7 @@ func (c *FakeSecretBindings) Create(secretBinding *core.SecretBinding) (result *
 }
 
 // Update takes the representation of a secretBinding and updates it. Returns the server's representation of the secretBinding, and an error, if there is any.
-func (c *FakeSecretBindings) Update(secretBinding *core.SecretBinding) (result *core.SecretBinding, err error) {
+func (c *FakeSecretBindings) Update(ctx context.Context, secretBinding *core.SecretBinding, opts v1.UpdateOptions) (result *core.SecretBinding, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(secretbindingsResource, c.ns, secretBinding), &core.SecretBinding{})
 
@@ -101,7 +103,7 @@ func (c *FakeSecretBindings) Update(secretBinding *core.SecretBinding) (result *
 }
 
 // Delete takes name of the secretBinding and deletes it. Returns an error if one occurs.
-func (c *FakeSecretBindings) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeSecretBindings) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(secretbindingsResource, c.ns, name), &core.SecretBinding{})
 
@@ -109,15 +111,15 @@ func (c *FakeSecretBindings) Delete(name string, options *v1.DeleteOptions) erro
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeSecretBindings) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(secretbindingsResource, c.ns, listOptions)
+func (c *FakeSecretBindings) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(secretbindingsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &core.SecretBindingList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched secretBinding.
-func (c *FakeSecretBindings) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *core.SecretBinding, err error) {
+func (c *FakeSecretBindings) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *core.SecretBinding, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(secretbindingsResource, c.ns, name, pt, data, subresources...), &core.SecretBinding{})
 

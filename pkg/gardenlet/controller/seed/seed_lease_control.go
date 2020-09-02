@@ -138,7 +138,7 @@ func (c *Controller) checkSeedConnection(ctx context.Context, seed *gardencorev1
 		return fmt.Errorf("failed to get seed client: %w", err)
 	}
 
-	result := client.RESTClient().Get().AbsPath("/healthz").Do()
+	result := client.RESTClient().Get().AbsPath("/healthz").Do(ctx)
 	if result.Error() != nil {
 		return fmt.Errorf("failed to execute call to Kubernetes API Server: %v", result.Error())
 	}

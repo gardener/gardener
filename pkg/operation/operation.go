@@ -362,7 +362,7 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 		lastUpdateTime = metav1.Now()
 	)
 
-	newShoot, err := kutil.TryUpdateShootStatus(o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+	newShoot, err := kutil.TryUpdateShootStatus(ctx, o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			if shoot.Status.LastOperation == nil {
 				return nil, fmt.Errorf("last operation of Shoot %s/%s is unset", shoot.Namespace, shoot.Name)
@@ -385,8 +385,8 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 
 // CleanShootTaskError removes the error with taskID from the Shoot's status.LastErrors array.
 // If the status.LastErrors array is empty then status.LastError is also removed.
-func (o *Operation) CleanShootTaskError(_ context.Context, taskID string) {
-	newShoot, err := kutil.TryUpdateShootStatus(o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+func (o *Operation) CleanShootTaskError(ctx context.Context, taskID string) {
+	newShoot, err := kutil.TryUpdateShootStatus(ctx, o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(o.Shoot.Info.Status.LastErrors, taskID)
 			return shoot, nil

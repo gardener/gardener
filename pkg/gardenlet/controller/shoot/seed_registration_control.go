@@ -403,7 +403,7 @@ func registerAsSeed(ctx context.Context, gardenClient client.Client, seedClient 
 
 // deregisterAsSeed de-registers a Shoot cluster as a Seed in the Garden cluster.
 func deregisterAsSeed(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {
-	seed, err := gardenClient.GardenCore().CoreV1beta1().Seeds().Get(shoot.Name, metav1.GetOptions{})
+	seed, err := gardenClient.GardenCore().CoreV1beta1().Seeds().Get(ctx, shoot.Name, kubernetes.DefaultGetOptions())
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
@@ -411,7 +411,7 @@ func deregisterAsSeed(ctx context.Context, gardenClient kubernetes.Interface, sh
 		return err
 	}
 
-	if err := gardenClient.GardenCore().CoreV1beta1().Seeds().Delete(seed.Name, nil); client.IgnoreNotFound(err) != nil {
+	if err := gardenClient.GardenCore().CoreV1beta1().Seeds().Delete(ctx, seed.Name, metav1.DeleteOptions{}); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 

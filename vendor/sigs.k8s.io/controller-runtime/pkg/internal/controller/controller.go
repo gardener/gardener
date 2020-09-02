@@ -22,12 +22,9 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/internal/controller/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -51,12 +48,6 @@ type Controller struct {
 	// Defaults to the DefaultReconcileFunc.
 	Do reconcile.Reconciler
 
-	// Client is a lazily initialized Client.  The controllerManager will initialize this when Start is called.
-	Client client.Client
-
-	// Scheme is injected by the controllerManager when controllerManager.Start is called
-	Scheme *runtime.Scheme
-
 	// MakeQueue constructs the queue for this controller once the controller is ready to start.
 	// This exists because the standard Kubernetes workqueues start themselves immediately, which
 	// leads to goroutine leaks if something calls controller.New repeatedly.
@@ -77,10 +68,6 @@ type Controller struct {
 
 	// Started is true if the Controller has been Started
 	Started bool
-
-	// Recorder is an event recorder for recording Event resources to the
-	// Kubernetes API.
-	Recorder record.EventRecorder
 
 	// TODO(community): Consider initializing a logger with the Controller Name as the tag
 
@@ -241,11 +228,13 @@ func (c *Controller) reconcileHandler(obj interface{}) bool {
 		return true
 	}
 
+	log := c.Log.WithValues("name", req.Name, "namespace", req.Namespace)
+
 	// RunInformersAndControllers the syncHandler, passing it the namespace/Name string of the
 	// resource to be synced.
 	if result, err := c.Do.Reconcile(req); err != nil {
 		c.Queue.AddRateLimited(req)
-		c.Log.Error(err, "Reconciler error", "name", req.Name, "namespace", req.Namespace)
+		log.Error(err, "Reconciler error")
 		ctrlmetrics.ReconcileErrors.WithLabelValues(c.Name).Inc()
 		ctrlmetrics.ReconcileTotal.WithLabelValues(c.Name, "error").Inc()
 		return false
@@ -269,7 +258,7 @@ func (c *Controller) reconcileHandler(obj interface{}) bool {
 	c.Queue.Forget(obj)
 
 	// TODO(directxman12): What does 1 mean?  Do we want level constants?  Do we want levels at all?
-	c.Log.V(1).Info("Successfully Reconciled", "name", req.Name, "namespace", req.Namespace)
+	log.V(1).Info("Successfully Reconciled")
 
 	ctrlmetrics.ReconcileTotal.WithLabelValues(c.Name, "success").Inc()
 	// Return true, don't take a break

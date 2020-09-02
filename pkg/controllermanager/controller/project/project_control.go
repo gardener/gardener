@@ -128,6 +128,7 @@ func newProjectLogger(project *gardencorev1beta1.Project) logrus.FieldLogger {
 
 func (c *defaultControl) ReconcileProject(obj *gardencorev1beta1.Project) (bool, error) {
 	var (
+		ctx           = context.TODO()
 		project       = obj.DeepCopy()
 		projectLogger = newProjectLogger(project)
 	)
@@ -135,14 +136,14 @@ func (c *defaultControl) ReconcileProject(obj *gardencorev1beta1.Project) (bool,
 	projectLogger.Infof("[PROJECT RECONCILE]")
 
 	if project.DeletionTimestamp != nil {
-		return c.delete(context.TODO(), project)
+		return c.delete(ctx, project)
 	}
 
-	return false, c.reconcile(context.TODO(), project)
+	return false, c.reconcile(ctx, project)
 }
 
-func (c *defaultControl) updateProjectStatus(g gardencore.Interface, objectMeta metav1.ObjectMeta, transform func(project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error)) (*gardencorev1beta1.Project, error) {
-	project, err := kutils.TryUpdateProjectStatus(g, retry.DefaultRetry, objectMeta, transform)
+func updateProjectStatus(ctx context.Context, g gardencore.Interface, objectMeta metav1.ObjectMeta, transform func(project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error)) (*gardencorev1beta1.Project, error) {
+	project, err := kutils.TryUpdateProjectStatus(ctx, g, retry.DefaultRetry, objectMeta, transform)
 	if err != nil {
 		newProjectLogger(project).Errorf("Error updating the status of the project: %q", err.Error())
 	}

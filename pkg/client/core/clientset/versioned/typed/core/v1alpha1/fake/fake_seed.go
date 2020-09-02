@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -38,7 +40,7 @@ var seedsResource = schema.GroupVersionResource{Group: "core.gardener.cloud", Ve
 var seedsKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1alpha1", Kind: "Seed"}
 
 // Get takes name of the seed, and returns the corresponding seed object, and an error if there is any.
-func (c *FakeSeeds) Get(name string, options v1.GetOptions) (result *v1alpha1.Seed, err error) {
+func (c *FakeSeeds) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Seed, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(seedsResource, name), &v1alpha1.Seed{})
 	if obj == nil {
@@ -48,7 +50,7 @@ func (c *FakeSeeds) Get(name string, options v1.GetOptions) (result *v1alpha1.Se
 }
 
 // List takes label and field selectors, and returns the list of Seeds that match those selectors.
-func (c *FakeSeeds) List(opts v1.ListOptions) (result *v1alpha1.SeedList, err error) {
+func (c *FakeSeeds) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.SeedList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(seedsResource, seedsKind, opts), &v1alpha1.SeedList{})
 	if obj == nil {
@@ -69,13 +71,13 @@ func (c *FakeSeeds) List(opts v1.ListOptions) (result *v1alpha1.SeedList, err er
 }
 
 // Watch returns a watch.Interface that watches the requested seeds.
-func (c *FakeSeeds) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeSeeds) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(seedsResource, opts))
 }
 
 // Create takes the representation of a seed and creates it.  Returns the server's representation of the seed, and an error, if there is any.
-func (c *FakeSeeds) Create(seed *v1alpha1.Seed) (result *v1alpha1.Seed, err error) {
+func (c *FakeSeeds) Create(ctx context.Context, seed *v1alpha1.Seed, opts v1.CreateOptions) (result *v1alpha1.Seed, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(seedsResource, seed), &v1alpha1.Seed{})
 	if obj == nil {
@@ -85,7 +87,7 @@ func (c *FakeSeeds) Create(seed *v1alpha1.Seed) (result *v1alpha1.Seed, err erro
 }
 
 // Update takes the representation of a seed and updates it. Returns the server's representation of the seed, and an error, if there is any.
-func (c *FakeSeeds) Update(seed *v1alpha1.Seed) (result *v1alpha1.Seed, err error) {
+func (c *FakeSeeds) Update(ctx context.Context, seed *v1alpha1.Seed, opts v1.UpdateOptions) (result *v1alpha1.Seed, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(seedsResource, seed), &v1alpha1.Seed{})
 	if obj == nil {
@@ -96,7 +98,7 @@ func (c *FakeSeeds) Update(seed *v1alpha1.Seed) (result *v1alpha1.Seed, err erro
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeSeeds) UpdateStatus(seed *v1alpha1.Seed) (*v1alpha1.Seed, error) {
+func (c *FakeSeeds) UpdateStatus(ctx context.Context, seed *v1alpha1.Seed, opts v1.UpdateOptions) (*v1alpha1.Seed, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateSubresourceAction(seedsResource, "status", seed), &v1alpha1.Seed{})
 	if obj == nil {
@@ -106,22 +108,22 @@ func (c *FakeSeeds) UpdateStatus(seed *v1alpha1.Seed) (*v1alpha1.Seed, error) {
 }
 
 // Delete takes name of the seed and deletes it. Returns an error if one occurs.
-func (c *FakeSeeds) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeSeeds) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(seedsResource, name), &v1alpha1.Seed{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeSeeds) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(seedsResource, listOptions)
+func (c *FakeSeeds) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(seedsResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.SeedList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched seed.
-func (c *FakeSeeds) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Seed, err error) {
+func (c *FakeSeeds) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Seed, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(seedsResource, name, pt, data, subresources...), &v1alpha1.Seed{})
 	if obj == nil {

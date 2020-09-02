@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var infrastructuresResource = schema.GroupVersionResource{Group: "extensions.gar
 var infrastructuresKind = schema.GroupVersionKind{Group: "extensions.gardener.cloud", Version: "v1alpha1", Kind: "Infrastructure"}
 
 // Get takes name of the infrastructure, and returns the corresponding infrastructure object, and an error if there is any.
-func (c *FakeInfrastructures) Get(name string, options v1.GetOptions) (result *v1alpha1.Infrastructure, err error) {
+func (c *FakeInfrastructures) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Infrastructure, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(infrastructuresResource, c.ns, name), &v1alpha1.Infrastructure{})
 
@@ -50,7 +52,7 @@ func (c *FakeInfrastructures) Get(name string, options v1.GetOptions) (result *v
 }
 
 // List takes label and field selectors, and returns the list of Infrastructures that match those selectors.
-func (c *FakeInfrastructures) List(opts v1.ListOptions) (result *v1alpha1.InfrastructureList, err error) {
+func (c *FakeInfrastructures) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.InfrastructureList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(infrastructuresResource, infrastructuresKind, c.ns, opts), &v1alpha1.InfrastructureList{})
 
@@ -72,14 +74,14 @@ func (c *FakeInfrastructures) List(opts v1.ListOptions) (result *v1alpha1.Infras
 }
 
 // Watch returns a watch.Interface that watches the requested infrastructures.
-func (c *FakeInfrastructures) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeInfrastructures) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(infrastructuresResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a infrastructure and creates it.  Returns the server's representation of the infrastructure, and an error, if there is any.
-func (c *FakeInfrastructures) Create(infrastructure *v1alpha1.Infrastructure) (result *v1alpha1.Infrastructure, err error) {
+func (c *FakeInfrastructures) Create(ctx context.Context, infrastructure *v1alpha1.Infrastructure, opts v1.CreateOptions) (result *v1alpha1.Infrastructure, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(infrastructuresResource, c.ns, infrastructure), &v1alpha1.Infrastructure{})
 
@@ -90,7 +92,7 @@ func (c *FakeInfrastructures) Create(infrastructure *v1alpha1.Infrastructure) (r
 }
 
 // Update takes the representation of a infrastructure and updates it. Returns the server's representation of the infrastructure, and an error, if there is any.
-func (c *FakeInfrastructures) Update(infrastructure *v1alpha1.Infrastructure) (result *v1alpha1.Infrastructure, err error) {
+func (c *FakeInfrastructures) Update(ctx context.Context, infrastructure *v1alpha1.Infrastructure, opts v1.UpdateOptions) (result *v1alpha1.Infrastructure, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(infrastructuresResource, c.ns, infrastructure), &v1alpha1.Infrastructure{})
 
@@ -102,7 +104,7 @@ func (c *FakeInfrastructures) Update(infrastructure *v1alpha1.Infrastructure) (r
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeInfrastructures) UpdateStatus(infrastructure *v1alpha1.Infrastructure) (*v1alpha1.Infrastructure, error) {
+func (c *FakeInfrastructures) UpdateStatus(ctx context.Context, infrastructure *v1alpha1.Infrastructure, opts v1.UpdateOptions) (*v1alpha1.Infrastructure, error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateSubresourceAction(infrastructuresResource, "status", c.ns, infrastructure), &v1alpha1.Infrastructure{})
 
@@ -113,7 +115,7 @@ func (c *FakeInfrastructures) UpdateStatus(infrastructure *v1alpha1.Infrastructu
 }
 
 // Delete takes name of the infrastructure and deletes it. Returns an error if one occurs.
-func (c *FakeInfrastructures) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeInfrastructures) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(infrastructuresResource, c.ns, name), &v1alpha1.Infrastructure{})
 
@@ -121,15 +123,15 @@ func (c *FakeInfrastructures) Delete(name string, options *v1.DeleteOptions) err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeInfrastructures) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(infrastructuresResource, c.ns, listOptions)
+func (c *FakeInfrastructures) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(infrastructuresResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.InfrastructureList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched infrastructure.
-func (c *FakeInfrastructures) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Infrastructure, err error) {
+func (c *FakeInfrastructures) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.Infrastructure, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(infrastructuresResource, c.ns, name, pt, data, subresources...), &v1alpha1.Infrastructure{})
 
