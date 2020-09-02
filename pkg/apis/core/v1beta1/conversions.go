@@ -80,7 +80,6 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 		return err
 	}
 
-	// Add non-generated conversion functions
 	return nil
 }
 

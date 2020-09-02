@@ -136,7 +136,7 @@ func (c *defaultControl) ReconcileProject(obj *gardencorev1beta1.Project) (bool,
 	projectLogger.Infof("[PROJECT RECONCILE]")
 
 	if project.DeletionTimestamp != nil {
-		return c.delete(context.TODO(), project)
+		return c.delete(ctx, project)
 	}
 
 	return false, c.reconcile(ctx, project)
