@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -71,6 +70,11 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 		return 1, nil
 	}
 
+	// Deploy machine dependencies.
+	if err := workerDelegate.DeployMachineDependencies(ctx); err != nil {
+		return errors.Wrap(err, "failed to deploy machine dependencies")
+	}
+
 	// Deploy the machine-controller-manager into the cluster.
 	if err := a.deployMachineControllerManager(ctx, logger, worker, cluster, workerDelegate, replicaFunc); err != nil {
 		return err
@@ -106,14 +110,9 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 		return errors.Wrapf(err, "failed to deploy the machine classes")
 	}
 
-	// Store machine image information in worker provider status.
-	logger.Info("Storing machine images in worker status")
-	machineImages, err := workerDelegate.GetMachineImages(ctx)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get the machine images")
-	}
-	if err := a.updateWorkerStatusMachineImages(ctx, worker, machineImages); err != nil {
-		return errors.Wrapf(err, "failed to update the machine images in worker status")
+	// Update the machine images in the worker provider status.
+	if err := workerDelegate.UpdateMachineImagesStatus(ctx); err != nil {
+		return errors.Wrapf(err, "failed to update the machine image status")
 	}
 
 	// Get the list of all existing machine deployments.
@@ -205,6 +204,11 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 
 	if err := a.updateWorkerStatusMachineDeployments(ctx, worker, wantedMachineDeployments, false); err != nil {
 		return errors.Wrapf(err, "failed to update the machine deployments in worker status")
+	}
+
+	// Cleanup machine dependencies.
+	if err := workerDelegate.CleanupMachineDependencies(ctx); err != nil {
+		return errors.Wrap(err, "failed to cleanup machine dependencies")
 	}
 
 	return nil
@@ -522,17 +526,6 @@ func buildRollingUpdateCondition(conditions []gardencorev1beta1.Condition, isRol
 
 	condition, _ := bldr.WithNowFunc(metav1.Now).Build()
 	return condition, nil
-}
-
-func (a *genericActuator) updateWorkerStatusMachineImages(ctx context.Context, worker *extensionsv1alpha1.Worker, machineImages runtime.Object) error {
-	if machineImages == nil {
-		return nil
-	}
-
-	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, a.client, worker, func() error {
-		worker.Status.ProviderStatus = &runtime.RawExtension{Object: machineImages}
-		return nil
-	})
 }
 
 // Helper functions
