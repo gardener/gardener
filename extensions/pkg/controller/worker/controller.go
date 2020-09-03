@@ -65,7 +65,7 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 	}
 
 	return []predicate.Predicate{
-		extensionspredicate.Or(
+		predicate.Or(
 			extensionspredicate.HasOperationAnnotation(),
 			extensionspredicate.LastOperationNotSuccessful(),
 			extensionspredicate.IsDeleting(),
@@ -115,7 +115,7 @@ func addStateUpdatingController(mgr manager.Manager, options controller.Options,
 		}
 
 		machinePredicates = []predicate.Predicate{
-			extensionspredicate.Or(
+			predicate.Or(
 				MachineStatusHasChanged(),
 				predicate.GenerationChangedPredicate{},
 			),

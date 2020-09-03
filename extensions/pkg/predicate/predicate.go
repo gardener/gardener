@@ -174,9 +174,8 @@ func AddTypePredicate(predicates []predicate.Predicate, extensionTypes ...string
 	for _, extensionType := range extensionTypes {
 		orPreds = append(orPreds, HasType(extensionType))
 	}
-	orPred := Or(orPreds...)
 
-	return append(resultPredicates, orPred)
+	return append(resultPredicates, predicate.Or(orPreds...))
 }
 
 // HasPurpose filters the incoming Controlplanes  for the given spec.purpose
