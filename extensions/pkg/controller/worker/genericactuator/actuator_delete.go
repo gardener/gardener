@@ -18,18 +18,20 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
+
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/flow"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
-
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -38,6 +40,8 @@ const (
 )
 
 func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
+	logger := a.logger.WithValues("worker", kutil.KeyFromObject(worker), "operation", "delete")
+
 	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
 	if err != nil {
 		return errors.Wrapf(err, "could not instantiate actuator context")
@@ -49,20 +53,18 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 	}
 
 	// Deploy the machine-controller-manager into the cluster to make sure worker nodes can be removed.
-	a.logger.Info("Deploying the machine-controller-manager", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
-	if err := a.deployMachineControllerManager(ctx, worker, cluster, workerDelegate, replicaFunc); err != nil {
+	if err := a.deployMachineControllerManager(ctx, logger, worker, cluster, workerDelegate, replicaFunc); err != nil {
 		return err
 	}
 
 	// Redeploy generated machine classes to update credentials machine-controller-manager used.
-	a.logger.Info("Deploying the machine classes", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
+	logger.Info("Deploying the machine classes")
 	if err := workerDelegate.DeployMachineClasses(ctx); err != nil {
 		return errors.Wrapf(err, "failed to deploy the machine classes")
 	}
 
 	// Mark all existing machines to become forcefully deleted.
-	a.logger.Info("Deleting all machines", "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
-	if err := a.markAllMachinesForcefulDeletion(ctx, worker.Namespace); err != nil {
+	if err := a.markAllMachinesForcefulDeletion(ctx, logger, worker.Namespace); err != nil {
 		return errors.Wrapf(err, "marking all machines for forceful deletion failed")
 	}
 
@@ -73,27 +75,27 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 	}
 
 	// Delete all machine deployments.
-	if err := a.cleanupMachineDeployments(ctx, existingMachineDeployments, nil); err != nil {
+	if err := a.cleanupMachineDeployments(ctx, logger, existingMachineDeployments, nil); err != nil {
 		return errors.Wrapf(err, "cleaning up machine deployments failed")
 	}
 
 	// Delete all machine classes.
-	if err := a.cleanupMachineClasses(ctx, worker.Namespace, workerDelegate.MachineClassList(), nil); err != nil {
+	if err := a.cleanupMachineClasses(ctx, logger, worker.Namespace, workerDelegate.MachineClassList(), nil); err != nil {
 		return errors.Wrapf(err, "cleaning up machine classes failed")
 	}
 
 	// Delete all machine class secrets.
-	if err := a.cleanupMachineClassSecrets(ctx, worker.Namespace, nil); err != nil {
+	if err := a.cleanupMachineClassSecrets(ctx, logger, worker.Namespace, nil); err != nil {
 		return errors.Wrapf(err, "cleaning up machine class secrets failed")
 	}
 
 	// Wait until all machine resources have been properly deleted.
-	if err := a.waitUntilMachineResourcesDeleted(ctx, worker, workerDelegate); err != nil {
+	if err := a.waitUntilMachineResourcesDeleted(ctx, logger, worker, workerDelegate); err != nil {
 		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error()))
 	}
 
 	// Delete the machine-controller-manager.
-	if err := a.deleteMachineControllerManager(ctx, worker); err != nil {
+	if err := a.deleteMachineControllerManager(ctx, logger, worker); err != nil {
 		return errors.Wrapf(err, "failed deleting machine-controller-manager")
 	}
 
@@ -101,32 +103,24 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 }
 
 // Mark all existing machines to become forcefully deleted.
-func (a *genericActuator) markAllMachinesForcefulDeletion(ctx context.Context, namespace string) error {
+func (a *genericActuator) markAllMachinesForcefulDeletion(ctx context.Context, logger logr.Logger, namespace string) error {
+	logger.Info("Marking all machines for forceful deletion")
 	// Mark all existing machines to become forcefully deleted.
 	existingMachines := &machinev1alpha1.MachineList{}
 	if err := a.client.List(ctx, existingMachines, client.InNamespace(namespace)); err != nil {
 		return err
 	}
 
-	var (
-		errorList []error
-		wg        sync.WaitGroup
-	)
-
-	// TODO: Use github.com/gardener/gardener/pkg/utils/flow.Parallel as soon as we can vendor a new Gardener version again.
+	var tasks []flow.TaskFn
 	for _, machine := range existingMachines.Items {
-		wg.Add(1)
-		go func(m machinev1alpha1.Machine) {
-			defer wg.Done()
-			if err := a.markMachineForcefulDeletion(ctx, &m); err != nil {
-				errorList = append(errorList, err)
-			}
-		}(machine)
+		m := machine
+		tasks = append(tasks, func(ctx context.Context) error {
+			return a.markMachineForcefulDeletion(ctx, &m)
+		})
 	}
 
-	wg.Wait()
-	if len(errorList) > 0 {
-		return fmt.Errorf("labelling machines (to become forcefully deleted) failed: %v", errorList)
+	if err := flow.Parallel(tasks...)(ctx); err != nil {
+		return fmt.Errorf("failed labelling machines for forceful deletion: %v", err)
 	}
 
 	return nil
@@ -149,7 +143,7 @@ func (a *genericActuator) markMachineForcefulDeletion(ctx context.Context, machi
 // waitUntilMachineResourcesDeleted waits for a maximum of 30 minutes until all machine resources have been properly
 // deleted by the machine-controller-manager. It polls the status every 5 seconds.
 // TODO: Parallelise this?
-func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, worker *extensionsv1alpha1.Worker, workerDelegate WorkerDelegate) error {
+func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker, workerDelegate WorkerDelegate) error {
 	var (
 		countMachines            = -1
 		countMachineSets         = -1
@@ -157,6 +151,7 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 		countMachineClasses      = -1
 		countMachineClassSecrets = -1
 	)
+	logger.Info("Waiting until all machine resources have been deleted")
 
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
 		msg := ""
@@ -230,7 +225,7 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 
 		if countMachines != 0 || countMachineSets != 0 || countMachineDeployments != 0 || countMachineClasses != 0 || countMachineClassSecrets != 0 {
 			msg := fmt.Sprintf("Waiting until the following machine resources have been deleted: %s", strings.TrimSuffix(msg, ", "))
-			a.logger.Info(msg, "worker", fmt.Sprintf("%s/%s", worker.Namespace, worker.Name))
+			logger.Info(msg)
 			return retryutils.MinorError(errors.New(msg))
 		}
 

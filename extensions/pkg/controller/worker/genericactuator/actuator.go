@@ -20,17 +20,6 @@ import (
 	"strings"
 	"time"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/controller/worker"
-	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/utils/chart"
-	"github.com/gardener/gardener/pkg/utils/flow"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
-
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -45,7 +34,19 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/controller/worker"
+	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils/chart"
+	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // GardenPurposeMachineClass is a constant for the 'machineclass' value in a label.
@@ -62,6 +63,7 @@ type genericActuator struct {
 
 	client               client.Client
 	clientset            kubernetes.Interface
+	scheme               *runtime.Scheme
 	decoder              runtime.Decoder
 	gardenerClientset    gardenerkubernetes.Interface
 	chartApplier         gardenerkubernetes.ChartApplier
@@ -94,6 +96,7 @@ func (a *genericActuator) InjectClient(client client.Client) error {
 }
 
 func (a *genericActuator) InjectScheme(scheme *runtime.Scheme) error {
+	a.scheme = scheme
 	a.decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
 	return nil
 }
@@ -116,7 +119,8 @@ func (a *genericActuator) InjectConfig(config *rest.Config) error {
 	return nil
 }
 
-func (a *genericActuator) cleanupMachineDeployments(ctx context.Context, existingMachineDeployments *machinev1alpha1.MachineDeploymentList, wantedMachineDeployments worker.MachineDeployments) error {
+func (a *genericActuator) cleanupMachineDeployments(ctx context.Context, logger logr.Logger, existingMachineDeployments *machinev1alpha1.MachineDeploymentList, wantedMachineDeployments worker.MachineDeployments) error {
+	logger.Info("Cleaning up machine deployments")
 	for _, existingMachineDeployment := range existingMachineDeployments.Items {
 		if !wantedMachineDeployments.HasDeployment(existingMachineDeployment.Name) {
 			if err := a.client.Delete(ctx, &existingMachineDeployment); err != nil {
@@ -149,7 +153,8 @@ func (a *genericActuator) listMachineClassNames(ctx context.Context, namespace s
 	return classNames, nil
 }
 
-func (a *genericActuator) cleanupMachineClasses(ctx context.Context, namespace string, machineClassList runtime.Object, wantedMachineDeployments worker.MachineDeployments) error {
+func (a *genericActuator) cleanupMachineClasses(ctx context.Context, logger logr.Logger, namespace string, machineClassList runtime.Object, wantedMachineDeployments worker.MachineDeployments) error {
+	logger.Info("Cleaning up machine classes")
 	if err := a.client.List(ctx, machineClassList, client.InNamespace(namespace)); err != nil {
 		return err
 	}
@@ -161,7 +166,7 @@ func (a *genericActuator) cleanupMachineClasses(ctx context.Context, namespace s
 		}
 
 		if !wantedMachineDeployments.HasClass(accessor.GetName()) {
-			a.logger.V(6).Info("Deleting machine class", "name", accessor.GetName(), "namespace", accessor.GetNamespace())
+			logger.Info("Deleting machine class", "machineClass", machineClass)
 			if err := a.client.Delete(ctx, machineClass); err != nil {
 				return err
 			}
@@ -209,7 +214,8 @@ func (a *genericActuator) listMachineClassSecrets(ctx context.Context, namespace
 
 // cleanupMachineClassSecrets deletes all unused machine class secrets (i.e., those which are not part
 // of the provided list <usedSecrets>.
-func (a *genericActuator) cleanupMachineClassSecrets(ctx context.Context, namespace string, wantedMachineDeployments worker.MachineDeployments) error {
+func (a *genericActuator) cleanupMachineClassSecrets(ctx context.Context, logger logr.Logger, namespace string, wantedMachineDeployments worker.MachineDeployments) error {
+	logger.Info("Cleaning up machine class secrets")
 	secretList, err := a.listMachineClassSecrets(ctx, namespace)
 	if err != nil {
 		return err
@@ -229,7 +235,8 @@ func (a *genericActuator) cleanupMachineClassSecrets(ctx context.Context, namesp
 
 // shallowDeleteMachineClassSecrets deletes all unused machine class secrets (i.e., those which are not part
 // of the provided list <usedSecrets>) without waiting for MCM to do this.
-func (a *genericActuator) shallowDeleteMachineClassSecrets(ctx context.Context, namespace string, wantedMachineDeployments worker.MachineDeployments) error {
+func (a *genericActuator) shallowDeleteMachineClassSecrets(ctx context.Context, logger logr.Logger, namespace string, wantedMachineDeployments worker.MachineDeployments) error {
+	logger.Info("Shallow deleting machine class secrets")
 	secretList, err := a.listMachineClassSecrets(ctx, namespace)
 	if err != nil {
 		return err
@@ -250,7 +257,8 @@ func (a *genericActuator) shallowDeleteMachineClassSecrets(ctx context.Context, 
 }
 
 // cleanupMachineClassSecrets deletes MachineSets having number of desired and actual replicas equaling 0
-func (a *genericActuator) cleanupMachineSets(ctx context.Context, namespace string) error {
+func (a *genericActuator) cleanupMachineSets(ctx context.Context, logger logr.Logger, namespace string) error {
+	logger.Info("Cleaning up machine sets")
 	machineSetList := &machinev1alpha1.MachineSetList{}
 	if err := a.client.List(ctx, machineSetList, client.InNamespace(namespace)); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -261,7 +269,7 @@ func (a *genericActuator) cleanupMachineSets(ctx context.Context, namespace stri
 
 	for _, machineSet := range machineSetList.Items {
 		if machineSet.Spec.Replicas == 0 && machineSet.Status.Replicas == 0 {
-			a.logger.Info("Deleting MachineSet as the number of desired and actual replicas is 0.", "name", machineSet.Name)
+			logger.Info("Deleting MachineSet as the number of desired and actual replicas is 0", "machineSet", &machineSet)
 			if err := a.client.Delete(ctx, machineSet.DeepCopy()); client.IgnoreNotFound(err) != nil {
 				return err
 			}
@@ -270,7 +278,13 @@ func (a *genericActuator) cleanupMachineSets(ctx context.Context, namespace stri
 	return nil
 }
 
-func (a *genericActuator) shallowDeleteAllObjects(ctx context.Context, namespace string, objectList runtime.Object) error {
+func (a *genericActuator) shallowDeleteAllObjects(ctx context.Context, logger logr.Logger, namespace string, objectList runtime.Object) error {
+	var objectKind interface{} = strings.TrimSuffix(fmt.Sprintf("%T", objectList), "List")
+	if gvk, err := apiutil.GVKForObject(objectList, a.scheme); err == nil {
+		objectKind = gvk
+	}
+	logger.Info("Shallow deleting all objects of kind", "kind", objectKind)
+
 	if err := a.client.List(ctx, objectList, client.InNamespace(namespace)); err != nil {
 		return err
 	}

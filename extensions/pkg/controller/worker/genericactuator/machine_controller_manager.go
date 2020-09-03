@@ -19,20 +19,23 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
+	"github.com/pkg/errors"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-
-	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
@@ -47,7 +50,9 @@ const (
 // ReplicaCount determines the number of replicas.
 type ReplicaCount func() (int32, error)
 
-func (a *genericActuator) deployMachineControllerManager(ctx context.Context, workerObj *extensionsv1alpha1.Worker, cluster *controller.Cluster, workerDelegate WorkerDelegate, replicas ReplicaCount) error {
+func (a *genericActuator) deployMachineControllerManager(ctx context.Context, logger logr.Logger, workerObj *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster, workerDelegate WorkerDelegate, replicas ReplicaCount) error {
+	logger.Info("Deploying the machine-controller-manager")
+
 	mcmValues, err := workerDelegate.GetMachineControllerManagerChartValues(ctx)
 	if err != nil {
 		return err
@@ -75,6 +80,7 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, wo
 		return errors.Wrapf(err, "could not apply machine-controller-manager shoot chart")
 	}
 
+	logger.Info("Waiting until rollout of machine-controller-manager Deployment is completed")
 	if err := kubernetes.WaitUntilDeploymentRolloutIsComplete(ctx, a.client, workerObj.Namespace, McmDeploymentName, 5*time.Second, 300*time.Second); err != nil {
 		return errors.Wrapf(err, "waiting until deployment/%s is updated", McmDeploymentName)
 	}
@@ -82,16 +88,16 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, wo
 	return nil
 }
 
-func (a *genericActuator) deleteMachineControllerManager(ctx context.Context, workerObj *extensionsv1alpha1.Worker) error {
-	a.logger.Info("Deleting the machine-controller-manager", "worker", fmt.Sprintf("%s/%s", workerObj.Namespace, workerObj.Name))
-
+func (a *genericActuator) deleteMachineControllerManager(ctx context.Context, logger logr.Logger, workerObj *extensionsv1alpha1.Worker) error {
+	logger.Info("Deleting the machine-controller-manager")
 	if err := managedresources.DeleteManagedResource(ctx, a.client, workerObj.Namespace, McmShootResourceName); err != nil {
 		return errors.Wrapf(err, "could not delete managed resource containing mcm chart for worker '%s'", kutil.ObjectName(workerObj))
 	}
 
-	timeoutCtx3, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	logger.Info("Waiting for machine-controller-manager ManagedResource to be deleted")
+	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
-	if err := managedresources.WaitUntilManagedResourceDeleted(timeoutCtx3, a.client, workerObj.Namespace, McmShootResourceName); err != nil {
+	if err := managedresources.WaitUntilManagedResourceDeleted(timeoutCtx, a.client, workerObj.Namespace, McmShootResourceName); err != nil {
 		return errors.Wrapf(err, "error while waiting for managed resource containing mcm for '%s' to be deleted", kutil.ObjectName(workerObj))
 	}
 
@@ -100,6 +106,26 @@ func (a *genericActuator) deleteMachineControllerManager(ctx context.Context, wo
 	}
 
 	return nil
+}
+
+func (a *genericActuator) waitUntilMachineControllerManagerIsDeleted(ctx context.Context, logger logr.Logger, namespace string) error {
+	logger.Info("Waiting until machine-controller-manager is deleted")
+	return wait.PollUntil(5*time.Second, func() (bool, error) {
+		machineControllerManagerDeployment := &appsv1.Deployment{}
+		if err := a.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: McmDeploymentName}, machineControllerManagerDeployment); err != nil {
+			if apierrors.IsNotFound(err) {
+				return true, nil
+			}
+			return false, err
+		}
+
+		return false, nil
+	}, ctx.Done())
+}
+
+func (a *genericActuator) scaleMachineControllerManager(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker, replicas int32) error {
+	logger.Info("Scaling machine-controller-manager", "replicas", replicas)
+	return kubernetes.ScaleDeployment(ctx, a.client, kutil.Key(worker.Namespace, McmDeploymentName), replicas)
 }
 
 func (a *genericActuator) applyMachineControllerManagerShootChart(ctx context.Context, workerDelegate WorkerDelegate, workerObj *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
