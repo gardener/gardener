@@ -41,7 +41,7 @@ var _ = Describe("Periodic", func() {
 		Describe("#Start", func() {
 			It("should start the manager", func() {
 				p.Start()
-				Expect(p.health).To(BeTrue())
+				Expect(p.Get()).To(BeTrue())
 				Expect(p.timer).NotTo(BeNil())
 				Expect(p.started).To(BeTrue())
 			})
@@ -50,18 +50,11 @@ var _ = Describe("Periodic", func() {
 		Describe("#Stop", func() {
 			It("should stop the manager", func() {
 				p.Start()
-
-				stopReceived := false
-				go func() {
-					<-p.stopCh
-					stopReceived = true
-				}()
-
 				p.Stop()
 
-				Expect(p.health).To(BeFalse())
+				Expect(p.Get()).To(BeFalse())
 				Expect(p.started).To(BeFalse())
-				Eventually(func() bool { return stopReceived }, time.Second, 100*time.Millisecond).Should(BeTrue())
+				Expect(p.stopCh).To(BeClosed())
 			})
 
 			It("should not panic if called twice", func() {
@@ -72,7 +65,7 @@ var _ = Describe("Periodic", func() {
 					p.Stop()
 				}).NotTo(Panic())
 
-				Expect(p.health).To(BeFalse())
+				Expect(p.Get()).To(BeFalse())
 				Expect(p.started).To(BeFalse())
 			})
 		})
@@ -81,34 +74,34 @@ var _ = Describe("Periodic", func() {
 			It("should correctly set the status to true", func() {
 				p.Start()
 				p.Set(true)
-				Expect(p.health).To(BeTrue())
+				Expect(p.Get()).To(BeTrue())
 			})
 
 			It("should correctly set the status to false", func() {
 				p.Start()
 				p.Set(false)
-				Expect(p.health).To(BeFalse())
+				Expect(p.Get()).To(BeFalse())
 			})
 
 			It("should not set the status to true (HealthManager not started)", func() {
 				p.Set(true)
-				Expect(p.health).To(BeFalse())
+				Expect(p.Get()).To(BeFalse())
 			})
 
 			It("should not set the status to true (HealthManager already stopped)", func() {
 				p.Start()
-				Expect(p.health).To(BeTrue())
+				Expect(p.Get()).To(BeTrue())
 				p.Stop()
-				Expect(p.health).To(BeFalse())
+				Expect(p.Get()).To(BeFalse())
 
 				p.Set(true)
-				Expect(p.health).To(BeFalse())
+				Expect(p.Get()).To(BeFalse())
 			})
 
 			It("should correctly set the status to false after the reset duration", func() {
 				p.Start()
 
-				Expect(p.health).To(BeTrue())
+				Expect(p.Get()).To(BeTrue())
 				time.Sleep(p.resetDuration)
 				Eventually(p.Get, 2*p.resetDuration, p.resetDuration/5).Should(BeFalse())
 			})
@@ -116,12 +109,12 @@ var _ = Describe("Periodic", func() {
 			It("should correctly reset the timer if status is changed to true", func() {
 				p.Start()
 
-				Expect(p.health).To(BeTrue())
+				Expect(p.Get()).To(BeTrue())
 				time.Sleep(p.resetDuration / 2)
 				Eventually(p.Get, 2*p.resetDuration, p.resetDuration/5).Should(BeFalse())
 
 				p.Set(true)
-				Expect(p.health).To(BeTrue())
+				Expect(p.Get()).To(BeTrue())
 				time.Sleep(p.resetDuration)
 				Eventually(p.Get, 2*p.resetDuration, p.resetDuration/5).Should(BeFalse())
 			})
