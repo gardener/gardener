@@ -75,9 +75,9 @@ var _ = Describe("extensions", func() {
 		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
 		c = fake.NewFakeClientWithScheme(s)
 
-		defaultInterval = 1 * time.Second
-		defaultTimeout = 1 * time.Second
-		defaultThreshold = 1 * time.Second
+		defaultInterval = 1 * time.Millisecond
+		defaultTimeout = 1 * time.Millisecond
+		defaultThreshold = 1 * time.Millisecond
 
 		namespace = "test-namespace"
 		name = "test-name"
@@ -588,9 +588,10 @@ var _ = Describe("extensions", func() {
 		DescribeTable("should return error if migration times out",
 			func(lastOperations []*gardencorev1beta1.LastOperation, match func() GomegaMatcher) {
 				for i, lastOp := range lastOperations {
-					expected.Status.LastOperation = lastOp
-					expected.Name = fmt.Sprintf("worker-%d", i)
-					Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing worker succeeds")
+					existing := expected.DeepCopy()
+					existing.Status.LastOperation = lastOp
+					existing.Name = fmt.Sprintf("worker-%d", i)
+					Expect(c.Create(ctx, existing)).ToNot(HaveOccurred(), "adding pre-existing worker succeeds")
 				}
 				err := WaitUntilExtensionCRsMigrated(
 					ctx,
