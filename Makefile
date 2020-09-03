@@ -165,12 +165,12 @@ format:
 
 .PHONY: test
 test:
-	@./hack/test.sh -r ./cmd/... ./extensions/... ./pkg/... ./plugin/...
+	@./hack/test.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/...
 	$(MAKE) test-prometheus
 
 .PHONY: test-cov
 test-cov:
-	@./hack/test-cover.sh -r ./cmd/... ./extensions/... ./pkg/... ./plugin/...
+	@./hack/test-cover.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/...
 	$(MAKE) test-prometheus
 
 .PHONY: test-cov-clean

@@ -17,7 +17,7 @@ set -e
 
 echo "> Test Cover"
 
-"$(dirname $0)"/test.sh -cover $@
+GO111MODULE=on ginkgo -cover -race -mod=vendor $@
 
 COVERPROFILE="$(dirname $0)/../test.coverprofile"
 COVERPROFILE_TMP="$(dirname $0)/../test.coverprofile.tmp"
