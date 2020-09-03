@@ -202,20 +202,15 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Name: "Deploying cloud provider account secret",
 			Fn:   flow.TaskFn(botanist.DeployCloudProviderSecret).SkipIf(shootNamespaceInDeletion),
 		})
-		loadSecrets = g.Add(flow.Task{
-			Name:         "Loading existing secrets into ShootState",
-			Fn:           flow.TaskFn(botanist.LoadExistingSecretsIntoShootState).SkipIf(shootNamespaceInDeletion),
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
-		})
 		generateSecrets = g.Add(flow.Task{
 			Name:         "Generating secrets and saving them into ShootState",
 			Fn:           flow.TaskFn(botanist.GenerateAndSaveSecrets).SkipIf(shootNamespaceInDeletion),
-			Dependencies: flow.NewTaskIDs(loadSecrets, ensureShootStateExists),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
 		})
 		deploySecrets = g.Add(flow.Task{
 			Name:         "Deploying Shoot certificates / keys",
 			Fn:           flow.TaskFn(botanist.DeploySecrets).SkipIf(shootNamespaceInDeletion),
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists, loadSecrets, generateSecrets),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists, generateSecrets),
 		})
 		// Redeploy the control plane to make sure all components that depend on the cloud provider secret are restarted
 		// in case it has changed. Also, it's needed for other control plane components like the kube-apiserver or kube-

@@ -18,7 +18,9 @@ import (
 	"context"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mock "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/operation"
@@ -35,6 +37,7 @@ import (
 	"github.com/onsi/gomega/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 var _ = Describe("operation", func() {
@@ -108,7 +111,7 @@ var _ = Describe("operation", func() {
 
 		It("should retrieve ShouldState and add it to the Operation struct", func() {
 			gomock.InOrder(
-				gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
+				gardenClient.EXPECT().DirectClient().Return(k8sGardenRuntimeClient),
 				k8sGardenRuntimeClient.EXPECT().Get(context.TODO(), kutil.Key("bar", "foo"), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).Return(nil),
 				k8sGardenRuntimeClient.EXPECT().Update(context.TODO(), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).Return(nil),
 			)
@@ -120,7 +123,7 @@ var _ = Describe("operation", func() {
 
 		It("should create ShootState with correct ownerReferences and add it to the Operation struct", func() {
 			gomock.InOrder(
-				gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
+				gardenClient.EXPECT().DirectClient().Return(k8sGardenRuntimeClient),
 				k8sGardenRuntimeClient.EXPECT().Get(context.TODO(), kutil.Key("bar", "foo"), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).DoAndReturn(
 					func(_ context.Context, _ client.ObjectKey, csr *gardencorev1alpha1.ShootState) error {
 						return apierrors.NewNotFound(gardencorev1alpha1.Resource("shootstate"), "foo")
@@ -138,6 +141,44 @@ var _ = Describe("operation", func() {
 			Expect(*o.ShootState.OwnerReferences[0].BlockOwnerDeletion).To(BeFalse())
 			Expect(o.ShootState.OwnerReferences[0].Controller).ToNot(BeNil())
 			Expect(*o.ShootState.OwnerReferences[0].Controller).To(BeTrue())
+		})
+	})
+
+	Describe("#SaveGardenerResourcesInShootState", func() {
+		var (
+			o                      *Operation
+			ctrl                   *gomock.Controller
+			k8sGardenRuntimeClient *mockclient.MockClient
+		)
+
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+			k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
+			o = &Operation{
+				K8sGardenClient: fakeclientset.NewClientSetBuilder().WithClient(k8sGardenRuntimeClient).WithDirectClient(k8sGardenRuntimeClient).Build(),
+				ShootState:      &gardencorev1alpha1.ShootState{},
+			}
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		It("should save the gardener resource list in the shootstate", func() {
+			gardenerResourceList := gardencorev1alpha1helper.GardenerResourceDataList{
+				{
+					Name: "test",
+					Type: "test",
+					Data: runtime.RawExtension{Raw: []byte{}},
+				},
+			}
+
+			shootState := o.ShootState.DeepCopy()
+			shootState.Spec.Gardener = gardenerResourceList
+			k8sGardenRuntimeClient.EXPECT().Patch(context.TODO(), shootState, client.MergeFrom(o.ShootState))
+
+			Expect(o.SaveGardenerResourcesInShootState(context.TODO(), gardenerResourceList)).To(Succeed())
+			Expect(o.ShootState.Spec.Gardener).To(BeEquivalentTo(gardenerResourceList))
 		})
 	})
 })

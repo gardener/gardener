@@ -17,8 +17,8 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"reflect"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -37,49 +37,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// LoadExistingSecretsIntoShootState loads secrets which are already present in the Shoot's Control Plane
-// extracts their metadata and saves them into the ShootState.
-// TODO: This step can be removed in a future version, once secrets for all existing shoots have been synced to the ShootState.
-func (b *Botanist) LoadExistingSecretsIntoShootState(ctx context.Context) error {
-	gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(b.ShootState.Spec.Gardener)
-	existingSecretsMap, err := b.fetchExistingSecrets(ctx)
-	if err != nil {
-		return err
-	}
-
-	secretsManager := shootsecrets.NewSecretsManager(
-		gardenerResourceDataList,
-		b.generateStaticTokenConfig(),
-		wantedCertificateAuthorities,
-		b.generateWantedSecretConfigs,
-	)
-
-	if gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info) {
-		secretsManager = secretsManager.WithAPIServerBasicAuthConfig(basicAuthSecretAPIServer)
-	}
-
-	if err := secretsManager.WithExistingSecrets(existingSecretsMap).Load(); err != nil {
-		return err
-	}
-
-	shootState := &gardencorev1alpha1.ShootState{ObjectMeta: kutil.ObjectMeta(b.Shoot.Info.Namespace, b.Shoot.Info.Name)}
-	if _, err = controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), shootState, func() error {
-		shootState.Spec.Gardener = secretsManager.GardenerResourceDataList
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	b.ShootState = shootState
-	return nil
-}
-
 // GenerateAndSaveSecrets creates a CA certificate for the Shoot cluster and uses it to sign the server certificate
 // used by the kube-apiserver, and all client certificates used for communication. It also creates RSA key
 // pairs for SSH connections to the nodes/VMs and for the VPN tunnel. Moreover, basic authentication
 // credentials are computed which will be used to secure the Ingress resources and the kube-apiserver itself.
 // Server certificates for the exposed monitoring endpoints (via Ingress) are generated as well.
-// In the end it saves the generated secrets in the ShootState
 func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 	gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(b.ShootState.Spec.Gardener)
 
@@ -124,16 +86,10 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 		return err
 	}
 
-	shootState := &gardencorev1alpha1.ShootState{ObjectMeta: kutil.ObjectMeta(b.Shoot.Info.Namespace, b.Shoot.Info.Name)}
-	if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), shootState, func() error {
-		shootState.Spec.Gardener = secretsManager.GardenerResourceDataList
+	if reflect.DeepEqual(secretsManager.GardenerResourceDataList, gardencorev1alpha1helper.GardenerResourceDataList(b.ShootState.Spec.Gardener)) {
 		return nil
-	}); err != nil {
-		return err
 	}
-
-	b.ShootState = shootState
-	return nil
+	return b.SaveGardenerResourcesInShootState(ctx, secretsManager.GardenerResourceDataList)
 }
 
 // DeploySecrets takes all existing secrets from the ShootState resource and deploys them in the shoot's control plane.

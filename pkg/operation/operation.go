@@ -436,7 +436,7 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 	blockOwnerDeletion := false
 	ownerReference.BlockOwnerDeletion = &blockOwnerDeletion
 
-	_, err := controllerutil.CreateOrUpdate(ctx, o.K8sGardenClient.Client(), shootState, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, o.K8sGardenClient.DirectClient(), shootState, func() error {
 		shootState.OwnerReferences = []metav1.OwnerReference{*ownerReference}
 		return nil
 	})
@@ -448,6 +448,17 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 	gardenerResourceList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 	o.Shoot.ETCDEncryption, err = etcdencryption.GetEncryptionConfig(gardenerResourceList)
 	return err
+}
+
+// SaveGardenerResourcesInShootState saves the provided GardenerResourcesDataList in the ShootState's `gardener` field
+func (o *Operation) SaveGardenerResourcesInShootState(ctx context.Context, resourceList gardencorev1alpha1helper.GardenerResourceDataList) error {
+	shootState := o.ShootState.DeepCopy()
+	shootState.Spec.Gardener = resourceList
+	if err := o.K8sGardenClient.Client().Patch(ctx, shootState, client.MergeFrom(o.ShootState)); err != nil {
+		return err
+	}
+	o.ShootState = shootState
+	return nil
 }
 
 // DeleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.

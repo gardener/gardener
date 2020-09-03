@@ -34,7 +34,7 @@ import (
 type SecretConfigGeneratorFunc func(*secrets.BasicAuth, *secrets.StaticToken, map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error)
 
 // SecretsManager holds the configurations of all required shoot secrets that have to be preserved in the ShootState.
-// It uses these configurations to load infodata from existing secrets into the ShootState, generate new secret infodata and save it into the ShootState
+// It uses these configurations to generate new secret infodata and save it into the ShootState
 // or create kubernetes secret objects from infodata available in the ShootState and deploy them.
 type SecretsManager struct {
 	apiServerBasicAuthConfig    *secrets.BasicAuthSecretConfig
@@ -81,39 +81,6 @@ func (s *SecretsManager) WithExistingSecrets(existingSecrets map[string]*corev1.
 func (s *SecretsManager) WithAPIServerBasicAuthConfig(config *secrets.BasicAuthSecretConfig) *SecretsManager {
 	s.apiServerBasicAuthConfig = config
 	return s
-}
-
-// Load gets the InfoData from all existing secrets in the shoot's control plane which are managed by gardener
-// and adds it to the SecretManager's GardenerResourceDataList
-func (s *SecretsManager) Load() error {
-	if s.apiServerBasicAuthConfig != nil {
-		if err := s.loadExistingSecretInfoDataAndUpdateResourceList(s.apiServerBasicAuthConfig); err != nil {
-			return err
-		}
-	}
-
-	if err := s.loadExistingSecretInfoDataAndUpdateResourceList(s.staticTokenConfig); err != nil {
-		return err
-	}
-
-	for _, caConfig := range s.certificateAuthorityConfigs {
-		if err := s.loadExistingSecretInfoDataAndUpdateResourceList(caConfig); err != nil {
-			return err
-		}
-	}
-
-	secretConfigs, err := s.secretConfigGenerator(nil, nil, nil)
-	if err != nil {
-		return err
-	}
-
-	for _, config := range secretConfigs {
-		if err := s.loadExistingSecretInfoDataAndUpdateResourceList(config); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // Generate generates InfoData for all shoot secrets managed by gardener and adds it to the SecretManager's
@@ -284,25 +251,6 @@ func (s *SecretsManager) getInfoDataAndGenerateSecret(secretConfig secrets.Confi
 	}
 
 	return secretConfig.GenerateFromInfoData(secretInfoData)
-}
-
-func (s *SecretsManager) loadExistingSecretInfoDataAndUpdateResourceList(secretConfig secrets.ConfigInterface) error {
-	name := secretConfig.GetName()
-	if s.GardenerResourceDataList.Get(name) != nil {
-		return nil
-	}
-
-	secret, ok := s.existingSecrets[name]
-	if !ok {
-		return nil
-	}
-
-	infodataLoader := secretConfig.(infodata.Loader)
-	infoData, err := infodataLoader.LoadFromSecretData(secret.Data)
-	if err != nil {
-		return err
-	}
-	return infodata.UpsertInfoData(&s.GardenerResourceDataList, name, infoData)
 }
 
 // DeployBasicAuthSecret deploys the APIServer BasicAuth secret
