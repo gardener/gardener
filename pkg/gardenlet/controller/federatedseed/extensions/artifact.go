@@ -181,9 +181,9 @@ func newControllerInstallationArtifact(gvk schema.GroupVersionKind, newObjFunc f
 
 	a.addEventHandlerFn = func() {
 		a.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-			AddFunc:    createEnqueueFunc(a.queue),
-			UpdateFunc: createEnqueueOnUpdateFunc(a.queue, a.predicate),
-			DeleteFunc: createEnqueueFunc(a.queue),
+			AddFunc:    createEnqueueEmptyRequestFunc(a.queue),
+			UpdateFunc: createEnqueueEmptyRequestOnUpdateFunc(a.queue, a.predicate),
+			DeleteFunc: createEnqueueEmptyRequestFunc(a.queue),
 		})
 	}
 

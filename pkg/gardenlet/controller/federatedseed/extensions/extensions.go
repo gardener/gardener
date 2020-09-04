@@ -146,6 +146,15 @@ func createEnqueueFunc(queue workqueue.RateLimitingInterface) func(extensionObje
 	}
 }
 
+// createEnqueueEmptyRequestFunc creates a func that enqueues an empty reconcile.Request into the given queue, which
+// can serve as a trigger for a reconciler that actually doesn't care about which object was created/deleted, but
+// only about that some object of a given kind was created/deleted.
+func createEnqueueEmptyRequestFunc(queue workqueue.RateLimitingInterface) func(extensionObject interface{}) {
+	return func(_ interface{}) {
+		queue.Add(reconcile.Request{})
+	}
+}
+
 func createEnqueueOnUpdateFunc(queue workqueue.RateLimitingInterface, predicateFunc func(new, old interface{}) bool) func(newExtensionObject, oldExtensionObject interface{}) {
 	return func(newObj, oldObj interface{}) {
 		if predicateFunc != nil && !predicateFunc(newObj, oldObj) {
@@ -153,6 +162,18 @@ func createEnqueueOnUpdateFunc(queue workqueue.RateLimitingInterface, predicateF
 		}
 
 		enqueue(queue, newObj)
+	}
+}
+
+// createEnqueueEmptyRequestOnUpdateFunc is similar to createEnqueueEmptyRequestFunc in that it enqueues an empty
+// reconcile.Request, but it only does it if an update matched the given predicateFunc.
+func createEnqueueEmptyRequestOnUpdateFunc(queue workqueue.RateLimitingInterface, predicateFunc func(new, old interface{}) bool) func(newExtensionObject, oldExtensionObject interface{}) {
+	return func(newObj, oldObj interface{}) {
+		if predicateFunc != nil && !predicateFunc(newObj, oldObj) {
+			return
+		}
+
+		queue.Add(reconcile.Request{})
 	}
 }
 
