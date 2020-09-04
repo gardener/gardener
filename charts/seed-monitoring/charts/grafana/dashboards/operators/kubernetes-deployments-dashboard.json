@@ -339,7 +339,6 @@
         "lineColor": "rgb(31, 120, 193)",
         "show": false
       },
-      "tableColumn": "{deployment=\"aws-lb-readvertiser\", job=\"kube-state-metrics\", namespace=\"kube-system\", type=\"seed\"}",
       "targets": [
         {
           "expr": "max(kube_deployment_spec_replicas{instance=\"kube-state-metrics\",deployment=\"$deployment_name\"}) without (instance, pod)",
@@ -430,7 +429,6 @@
         "lineColor": "rgb(31, 120, 193)",
         "show": false
       },
-      "tableColumn": "{deployment=\"aws-lb-readvertiser\", job=\"kube-state-metrics\", namespace=\"kube-system\", type=\"seed\"}",
       "targets": [
         {
           "expr": "min(kube_deployment_status_replicas_available{instance=\"kube-state-metrics\",deployment=\"$deployment_name\"}) without (instance, pod)",
@@ -610,7 +608,7 @@
         "lineColor": "rgb(31, 120, 193)",
         "show": false
       },
-      "tableColumn": "{deployment=\"aws-lb-readvertiser\", job=\"kube-state-metrics\", namespace=\"kube-system\", type=\"seed\"}",
+      "tableColumn": "{deployment=\"aws-lb-readvertiser\", job=\"kube-state-metrics-seed\", namespace=\"kube-system\", type=\"seed\"}",
       "targets": [
         {
           "expr": "max(kube_deployment_metadata_generation{instance=\"kube-state-metrics\",deployment=\"$deployment_name\"}) without (instance, pod)",

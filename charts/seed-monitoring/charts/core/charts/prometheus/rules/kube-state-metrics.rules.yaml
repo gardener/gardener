@@ -14,7 +14,7 @@ groups:
       description: There are no running kube-state-metric pods for the shoot cluster. No kubernetes resource metrics can be scraped.
 
   - alert: KubeStateMetricsSeedDown
-    expr: absent(up{job="kube-state-metrics", type="seed"} == 1)
+    expr: absent(up{job="kube-state-metrics-seed", type="seed"} == 1)
     for: 15m
     labels:
       service: kube-state-metrics-seed

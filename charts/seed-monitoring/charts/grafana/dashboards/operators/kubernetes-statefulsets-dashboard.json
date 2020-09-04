@@ -339,7 +339,6 @@
         "lineColor": "rgb(31, 120, 193)",
         "show": false
       },
-      "tableColumn": "{job=\"kube-state-metrics\", namespace=\"kube-system\", statefulset=\"etcd-events\", type=\"seed\"}",
       "targets": [
         {
           "expr": "max(kube_statefulset_replicas{instance=\"kube-state-metrics\", statefulset=\"$statefulset_name\"}) without (instance, pod)",
@@ -431,7 +430,7 @@
         "lineColor": "rgb(31, 120, 193)",
         "show": false
       },
-      "tableColumn": "{job=\"kube-state-metrics\", namespace=\"kube-system\", statefulset=\"etcd-events\", type=\"seed\"}",
+      "tableColumn": "{job=\"kube-state-metrics-seed\", namespace=\"kube-system\", statefulset=\"etcd-events\", type=\"seed\"}",
       "targets": [
         {
           "expr": "min(kube_statefulset_status_replicas_ready{instance=\"kube-state-metrics\",statefulset=\"$statefulset_name\"}) without (instance, pod)",
@@ -522,7 +521,6 @@
         "lineColor": "rgb(31, 120, 193)",
         "show": false
       },
-      "tableColumn": "{job=\"kube-state-metrics\", namespace=\"kube-system\", statefulset=\"etcd-events\", type=\"seed\"}",
       "targets": [
         {
           "expr": "max(kube_statefulset_status_observed_generation{instance=\"kube-state-metrics\",statefulset=\"$statefulset_name\"}) without (instance, pod)",
@@ -612,7 +610,6 @@
         "lineColor": "rgb(31, 120, 193)",
         "show": false
       },
-      "tableColumn": "{job=\"kube-state-metrics\", namespace=\"kube-system\", statefulset=\"etcd-events\", type=\"seed\"}",
       "targets": [
         {
           "expr": "max(kube_statefulset_metadata_generation{instance=\"kube-state-metrics\",statefulset=\"$statefulset_name\"}) without (instance, pod)",
