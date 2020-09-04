@@ -156,8 +156,13 @@ images:
 - name: kubernetes-dashboard
   sourceRepository: github.com/kubernetes/dashboard
   repository: kubernetesui/dashboard
-  tag: v2.0.0
-  targetVersion: ">= 1.16"
+  tag: v2.0.3
+  targetVersion: ">= 1.16, < 1.19"
+- name: kubernetes-dashboard
+  sourceRepository: github.com/kubernetes/dashboard
+  repository: kubernetesui/dashboard
+  tag: v2.0.4
+  targetVersion: ">= 1.19"
 - name: kubernetes-dashboard-metrics-scraper
   sourceRepository: github.com/kubernetes/dashboard
   repository: kubernetesui/metrics-scraper
