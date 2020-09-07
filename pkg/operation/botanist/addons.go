@@ -408,7 +408,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			"admissionController": map[string]interface{}{
 				"enableServiceAccount": false,
 				"controlNamespace":     b.Shoot.SeedNamespace,
-				"registerByURL":        true,
 			},
 			"exporter":    map[string]interface{}{"enableServiceAccount": false},
 			"recommender": map[string]interface{}{"enableServiceAccount": false},
@@ -434,8 +433,8 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		nodeNetwork = b.Shoot.GetNodeNetwork()
 	)
 
-	if _, ok := b.Secrets["vpa-tls-certs"]; ok {
-		verticalPodAutoscaler["admissionController"].(map[string]interface{})["caCert"] = b.Secrets["vpa-tls-certs"].Data[secrets.DataKeyCertificateCA]
+	if _, ok := b.Secrets[common.VPASecretName]; ok {
+		verticalPodAutoscaler["admissionController"].(map[string]interface{})["caCert"] = b.Secrets[common.VPASecretName].Data[secrets.DataKeyCertificateCA]
 	}
 
 	proxyConfig := b.Shoot.Info.Spec.Kubernetes.KubeProxy

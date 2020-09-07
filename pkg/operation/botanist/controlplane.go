@@ -228,14 +228,13 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 		admissionController = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
 			"podAnnotations": map[string]interface{}{
-				"checksum/secret-vpa-tls-certs":            b.CheckSums["vpa-tls-certs"],
+				"checksum/secret-vpa-tls-certs":            b.CheckSums[common.VPASecretName],
 				"checksum/secret-vpa-admission-controller": b.CheckSums["vpa-admission-controller"],
 			},
 			"podLabels": utils.MergeMaps(podLabels, map[string]interface{}{
 				v1beta1constants.LabelNetworkPolicyFromShootAPIServer: "allowed",
 			}),
 			"enableServiceAccount": false,
-			"registerByURL":        true,
 		}
 		exporter = map[string]interface{}{
 			"enabled":  false,

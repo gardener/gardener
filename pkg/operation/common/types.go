@@ -240,6 +240,9 @@ const (
 	// StaticTokenSecretName is the name of the secret containing static tokens for the kube-apiserver.
 	StaticTokenSecretName = "static-token"
 
+	// VPASecretName is the name of the secret used by VPA
+	VPASecretName = "vpa-tls-certs"
+
 	// ProjectPrefix is the prefix of namespaces representing projects.
 	ProjectPrefix = "garden-"
 

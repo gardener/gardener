@@ -1,7 +1,6 @@
 {{- if .Values.admissionController.enabled }}
-{{- if not .Values.admissionController.registerWebhook }}
 ---
-apiVersion: admissionregistration.k8s.io/v1beta1
+apiVersion: {{ include "webhookadmissionregistration" . }}
 kind: MutatingWebhookConfiguration
 metadata:
   name: vpa-webhook-config
@@ -10,7 +9,7 @@ webhooks:
   - v1beta1
   clientConfig:
     caBundle: {{ .Values.admissionController.caCert }}
-{{- if .Values.admissionController.registerByURL }}
+{{- if eq .Values.clusterType "shoot" }}
     url: https://vpa-webhook.{{.Values.admissionController.controlNamespace}}:{{.Values.admissionController.servicePort}} # the port is only respected if register-by-url is true, that's why it's in this if-block
                                                                                                                           # if it's false it will not set the port during registration, i.e., it will be defaulted to 443,
                                                                                                                           # so the servicePort has to be 443 in this case
@@ -47,5 +46,4 @@ webhooks:
     scope: '*'
   sideEffects: None
   timeoutSeconds: 10
-  {{- end }}
   {{- end }}
