@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	unit "github.com/coreos/go-systemd/unit"
+	unit "github.com/coreos/go-systemd/v22/unit"
 	v1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	genericmutator "github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
 	v1alpha10 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"

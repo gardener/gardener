@@ -17,7 +17,7 @@ package genericmutator
 import (
 	"context"
 
-	"github.com/coreos/go-systemd/unit"
+	"github.com/coreos/go-systemd/v22/unit"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"

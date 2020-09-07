@@ -18,7 +18,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/coreos/go-systemd/unit"
+	"github.com/coreos/go-systemd/v22/unit"
 )
 
 // UnitSerializer contains methods for serializing and deserializing a slice of systemd unit options to and from a string.
