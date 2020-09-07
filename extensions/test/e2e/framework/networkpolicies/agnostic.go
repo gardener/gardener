@@ -231,24 +231,6 @@ func (a *Agnostic) Grafana() *SourcePod {
 	}
 }
 
-// KubeStateMetricsSeed points to cloud-agnostic kube-state-metrics-seed instance.
-func (a *Agnostic) KubeStateMetricsSeed() *SourcePod {
-	return &SourcePod{
-		Ports: NewSinglePort(8080),
-		Pod: NewPod("kube-state-metrics-seed", labels.Set{
-			"component":               "kube-state-metrics",
-			"garden.sapcloud.io/role": "monitoring",
-			"type":                    "seed",
-		}),
-		ExpectedPolicies: sets.NewString(
-			"allow-from-prometheus",
-			"allow-to-dns",
-			"allow-to-seed-apiserver",
-			"deny-all",
-		),
-	}
-}
-
 // KubeStateMetricsShoot points to cloud-agnostic kube-state-metrics-shoot instance.
 func (a *Agnostic) KubeStateMetricsShoot() *SourcePod {
 	return &SourcePod{
