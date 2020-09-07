@@ -680,7 +680,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		)
 
 		secretList = append(secretList, &secrets.CertificateSecretConfig{
-			Name:       "vpa-tls-certs",
+			Name:       common.VPASecretName,
 			CommonName: commonName,
 			DNSNames:   dnsNames,
 			CertType:   secrets.ServerCert,

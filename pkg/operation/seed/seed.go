@@ -157,7 +157,7 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 
 	secretList := []secretsutils.ConfigInterface{
 		&secretsutils.CertificateSecretConfig{
-			Name: "vpa-tls-certs",
+			Name: common.VPASecretName,
 
 			CommonName:   "vpa-webhook.garden.svc",
 			Organization: nil,
@@ -409,7 +409,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	if err != nil {
 		return err
 	}
-	jsonString, err := json.Marshal(deployedSecretsMap["vpa-tls-certs"].Data)
+	jsonString, err := json.Marshal(deployedSecretsMap[common.VPASecretName].Data)
 	if err != nil {
 		return err
 	}
@@ -638,6 +638,12 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 					"podAnnotations": map[string]interface{}{
 						"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),
 					},
+				},
+			},
+			"application": map[string]interface{}{
+				"admissionController": map[string]interface{}{
+					"controlNamespace": v1beta1constants.GardenNamespace,
+					"caCert":           deployedSecretsMap[common.VPASecretName].Data[secretsutils.DataKeyCertificateCA],
 				},
 			},
 		},
