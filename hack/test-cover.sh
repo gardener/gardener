@@ -15,6 +15,8 @@
 # limitations under the License.
 set -e
 
+source "$(dirname $0)/setup-envtest.sh"
+
 echo "> Test Cover"
 
 GO111MODULE=on ginkgo -cover -race -mod=vendor $@
