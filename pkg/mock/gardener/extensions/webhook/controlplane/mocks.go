@@ -7,7 +7,7 @@ package controlplane
 import (
 	reflect "reflect"
 
-	unit "github.com/coreos/go-systemd/unit"
+	unit "github.com/coreos/go-systemd/v22/unit"
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gomock "github.com/golang/mock/gomock"
 	v1beta1 "k8s.io/kubelet/config/v1beta1"

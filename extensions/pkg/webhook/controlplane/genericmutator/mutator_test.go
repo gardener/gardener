@@ -29,7 +29,7 @@ import (
 	mockcontrolplane "github.com/gardener/gardener/pkg/mock/gardener/extensions/webhook/controlplane"
 	mockgenericmutator "github.com/gardener/gardener/pkg/mock/gardener/extensions/webhook/controlplane/genericmutator"
 
-	"github.com/coreos/go-systemd/unit"
+	"github.com/coreos/go-systemd/v22/unit"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"

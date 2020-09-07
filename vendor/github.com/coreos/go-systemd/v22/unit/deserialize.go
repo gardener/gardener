@@ -43,37 +43,99 @@ var (
 	ErrLineTooLong = fmt.Errorf("line too long (max %d bytes)", SYSTEMD_LINE_MAX)
 )
 
-// Deserialize parses a systemd unit file into a list of UnitOption objects.
-func Deserialize(f io.Reader) (opts []*UnitOption, err error) {
-	lexer, optchan, errchan := newLexer(f)
-	go lexer.lex()
-
-	for opt := range optchan {
-		opts = append(opts, &(*opt))
-	}
-
-	err = <-errchan
-	return opts, err
+// DeserializeOptions parses a systemd unit file into a list of UnitOptions
+func DeserializeOptions(f io.Reader) (opts []*UnitOption, err error) {
+	_, options, err := deserializeAll(f)
+	return options, err
 }
 
-func newLexer(f io.Reader) (*lexer, <-chan *UnitOption, <-chan error) {
-	optchan := make(chan *UnitOption)
+// DeserializeSections deserializes into a list of UnitSections.
+func DeserializeSections(f io.Reader) ([]*UnitSection, error) {
+	sections, _, err := deserializeAll(f)
+	return sections, err
+}
+
+// Deserialize parses a systemd unit file into a list of UnitOptions.
+// Note: this function is deprecated in favor of DeserializeOptions
+// and will be removed at a future date.
+func Deserialize(f io.Reader) (opts []*UnitOption, err error) {
+	return DeserializeOptions(f)
+}
+
+type lexDataType int
+
+const (
+	sectionKind lexDataType = iota
+	optionKind
+)
+
+// lexChanData - support either datatype in the lex channel.
+// Poor man's union data type.
+type lexData struct {
+	Type    lexDataType
+	Option  *UnitOption
+	Section *UnitSection
+}
+
+// deserializeAll deserializes into UnitSections and UnitOptions.
+func deserializeAll(f io.Reader) ([]*UnitSection, []*UnitOption, error) {
+
+	lexer, lexchan, errchan := newLexer(f)
+
+	go lexer.lex()
+
+	sections := []*UnitSection{}
+	options := []*UnitOption{}
+
+	for ld := range lexchan {
+		switch ld.Type {
+		case optionKind:
+			if ld.Option != nil {
+				// add to options
+				opt := ld.Option
+				options = append(options, &(*opt))
+
+				// sanity check. "should not happen" as sectionKind is first in code flow.
+				if len(sections) == 0 {
+					return nil, nil, fmt.Errorf(
+						"Unit file misparse: option before section")
+				}
+
+				// add to newest section entries.
+				s := len(sections) - 1
+				sections[s].Entries = append(sections[s].Entries,
+					&UnitEntry{Name: opt.Name, Value: opt.Value})
+			}
+		case sectionKind:
+			if ld.Section != nil {
+				sections = append(sections, ld.Section)
+			}
+		}
+	}
+
+	err := <-errchan
+
+	return sections, options, err
+}
+
+func newLexer(f io.Reader) (*lexer, <-chan *lexData, <-chan error) {
+	lexchan := make(chan *lexData)
 	errchan := make(chan error, 1)
 	buf := bufio.NewReader(f)
 
-	return &lexer{buf, optchan, errchan, ""}, optchan, errchan
+	return &lexer{buf, lexchan, errchan, ""}, lexchan, errchan
 }
 
 type lexer struct {
 	buf     *bufio.Reader
-	optchan chan *UnitOption
+	lexchan chan *lexData
 	errchan chan error
 	section string
 }
 
 func (l *lexer) lex() {
 	defer func() {
-		close(l.optchan)
+		close(l.lexchan)
 		close(l.errchan)
 	}()
 	next := l.lexNextSection
@@ -123,7 +185,13 @@ func (l *lexer) lexSectionSuffixFunc(section string) lexStep {
 
 		garbage = bytes.TrimSpace(garbage)
 		if len(garbage) > 0 {
-			return nil, fmt.Errorf("found garbage after section name %s: %v", l.section, garbage)
+			return nil, fmt.Errorf("found garbage after section name %s: %q", l.section, garbage)
+		}
+
+		l.lexchan <- &lexData{
+			Type:    sectionKind,
+			Section: &UnitSection{Section: section, Entries: []*UnitEntry{}},
+			Option:  nil,
 		}
 
 		return l.lexNextSectionOrOptionFunc(section), nil
@@ -252,7 +320,11 @@ func (l *lexer) lexOptionValueFunc(section, name string, partial bytes.Buffer) l
 		} else {
 			val = strings.TrimSpace(val)
 		}
-		l.optchan <- &UnitOption{Section: section, Name: name, Value: val}
+		l.lexchan <- &lexData{
+			Type:    optionKind,
+			Section: nil,
+			Option:  &UnitOption{Section: section, Name: name, Value: val},
+		}
 
 		return l.lexNextSectionOrOptionFunc(section), nil
 	}

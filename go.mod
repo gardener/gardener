@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/ahmetb/gen-crd-api-reference-docs v0.2.0
 	github.com/coreos/etcd v3.3.17+incompatible
-	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f
+	github.com/coreos/go-systemd/v22 v22.1.0
 	github.com/gardener/etcd-druid v0.3.0
 	github.com/gardener/external-dns-management v0.7.18
 	github.com/gardener/gardener-resource-manager v0.13.1
