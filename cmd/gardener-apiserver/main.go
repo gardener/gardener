@@ -17,7 +17,6 @@ package main
 import (
 	"flag"
 	"os"
-	"runtime"
 
 	"github.com/gardener/gardener/cmd/gardener-apiserver/app"
 	"github.com/gardener/gardener/pkg/apiserver/features"
@@ -31,10 +30,6 @@ func main() {
 
 	logs.InitLogs()
 	defer logs.FlushLogs()
-
-	if len(os.Getenv("GOMAXPROCS")) == 0 {
-		runtime.GOMAXPROCS(runtime.NumCPU())
-	}
 
 	stopCh := genericapiserver.SetupSignalHandler()
 	command := app.NewCommandStartGardenerAPIServer(os.Stdout, os.Stderr, stopCh)

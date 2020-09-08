@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 
 	"github.com/gardener/gardener/cmd/gardener-controller-manager/app"
@@ -27,10 +26,6 @@ import (
 )
 
 func main() {
-	if len(os.Getenv("GOMAXPROCS")) == 0 {
-		runtime.GOMAXPROCS(runtime.NumCPU())
-	}
-
 	features.RegisterFeatureGates()
 
 	// Setup signal handler if running inside a Kubernetes cluster
