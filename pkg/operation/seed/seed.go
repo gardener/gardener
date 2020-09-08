@@ -357,10 +357,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	)
 
 	if loggingEnabled {
-		if err := common.DeleteOldLoggingStack(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace); err != nil {
-			return err
-		}
-
 		// Fetch component specific logging configurations
 		for _, componentFn := range []component.LoggingConfiguration{
 			kubescheduler.LoggingConfiguration,

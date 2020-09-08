@@ -28,11 +28,6 @@ import (
 
 // DeploySeedLogging will install the Helm release "seed-bootstrap/charts/loki" in the Seed clusters.
 func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
-	err := common.DeleteOldLoggingStack(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
-	if err != nil {
-		return err
-	}
-
 	if b.Shoot.GetPurpose() == gardencorev1beta1.ShootPurposeTesting || !gardenletfeatures.FeatureGate.Enabled(features.Logging) {
 		return common.DeleteLoggingStack(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 	}
