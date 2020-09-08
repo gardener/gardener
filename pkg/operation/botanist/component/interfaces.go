@@ -47,6 +47,17 @@ type MigrateWaiter interface {
 	WaitMigrate(ctx context.Context) error
 }
 
+// MonitoringComponent exposes configuration for Prometheus as well as the AlertManager.
+type MonitoringComponent interface {
+	// ScrapeConfigs returns the scrape configurationsv for Prometheus.
+	ScrapeConfigs() ([]string, error)
+	// AlertingRules returns the alerting rules configs for AlertManager (mapping file name to rule config).
+	AlertingRules() (map[string]string, error)
+}
+
+// LoggingConfiguration is a function alias for returning logging parsers and filters.
+type LoggingConfiguration func() (string, string, error)
+
 // DeployWaiter controls and waits for life-cycle operations of a component.
 type DeployWaiter interface {
 	Deployer

@@ -22,19 +22,26 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	"github.com/Masterminds/semver"
+	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apiserver/pkg/authentication/user"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,6 +49,8 @@ import (
 )
 
 const (
+	// ServiceName is the name of the service of the kube-scheduler.
+	ServiceName = "kube-scheduler"
 	// SecretName is a constant for the secret name for the kube-scheduler's kubeconfig secret.
 	SecretName = "kube-scheduler"
 	// SecretNameServer is the name of the kube-scheduler server certificate secret.
@@ -58,6 +67,8 @@ const (
 	volumeMountPathServer     = "/var/lib/kube-scheduler-server"
 	volumeMountPathConfig     = "/var/lib/kube-scheduler-config"
 
+	managedResourceName = "shoot-core-kube-scheduler"
+
 	componentConfigTmpl = `apiVersion: {{ .apiVersion }}
 kind: KubeSchedulerConfiguration
 clientConnection:
@@ -66,9 +77,10 @@ leaderElection:
   leaderElect: true`
 )
 
-// KubeScheduler contains function for a kube-scheduler deployer.
+// KubeScheduler contains functions for a kube-scheduler deployer.
 type KubeScheduler interface {
 	component.DeployWaiter
+	component.MonitoringComponent
 	// SetSecrets sets the secrets for the kube-scheduler.
 	SetSecrets(Secrets)
 }
@@ -282,7 +294,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return nil
+	return k.reconcileShootResources(ctx)
 }
 
 func (k *kubeScheduler) SetSecrets(secrets Secrets)          { k.secrets = secrets }
@@ -299,11 +311,77 @@ func (k *kubeScheduler) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
 }
 
 func (k *kubeScheduler) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "kube-scheduler", Namespace: k.namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ServiceName, Namespace: k.namespace}}
 }
 
 func (k *kubeScheduler) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler, Namespace: k.namespace}}
+}
+
+func (k *kubeScheduler) emptyManagedResource() *resourcesv1alpha1.ManagedResource {
+	return &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: k.namespace}}
+}
+
+func (k *kubeScheduler) emptyManagedResourceSecret() *corev1.Secret {
+	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: common.ManagedResourceSecretName(managedResourceName), Namespace: k.namespace}}
+}
+
+func (k *kubeScheduler) reconcileShootResources(ctx context.Context) error {
+	if versionConstraintK8sEqual113.Check(k.version) {
+		return common.DeployManagedResource(ctx, k.client, managedResourceName, k.namespace, false, k.computeShootResourcesData())
+	}
+
+	for _, obj := range []runtime.Object{k.emptyManagedResource(), k.emptyManagedResourceSecret()} {
+		if err := k.client.Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (k *kubeScheduler) computeShootResourcesData() map[string][]byte {
+	var (
+		versions = schema.GroupVersions([]schema.GroupVersion{rbacv1.SchemeGroupVersion})
+		codec    = kubernetes.ShootCodec.CodecForVersions(kubernetes.ShootSerializer, kubernetes.ShootSerializer, versions, versions)
+
+		subjects = []rbacv1.Subject{{
+			Kind: "User",
+			Name: user.KubeScheduler,
+		}}
+
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "system:controller:kube-scheduler",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "system:auth-delegator",
+			},
+			Subjects: subjects,
+		}
+		clusterRoleBindingYAML, _ = runtime.Encode(codec, clusterRoleBinding)
+
+		roleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "system:controller:kube-scheduler:auth-reader",
+				Namespace: metav1.NamespaceSystem,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     "extension-apiserver-authentication-reader",
+			},
+			Subjects: subjects,
+		}
+		roleBindingYAML, _ = runtime.Encode(codec, roleBinding)
+	)
+
+	return map[string][]byte{
+		"clusterrolebinding.yaml": clusterRoleBindingYAML,
+		"rolebinding.yaml":        roleBindingYAML,
+	}
 }
 
 func (k *kubeScheduler) computeServerPort() int32 {
@@ -390,6 +468,7 @@ var (
 	componentConfigTemplate *template.Template
 
 	versionConstraintK8sEqual110        *semver.Constraints
+	versionConstraintK8sEqual113        *semver.Constraints
 	versionConstraintK8sGreaterEqual110 *semver.Constraints
 	versionConstraintK8sGreaterEqual112 *semver.Constraints
 	versionConstraintK8sGreaterEqual113 *semver.Constraints
@@ -406,6 +485,8 @@ func init() {
 	utilruntime.Must(err)
 
 	versionConstraintK8sEqual110, err = semver.NewConstraint("~ 1.10")
+	utilruntime.Must(err)
+	versionConstraintK8sEqual113, err = semver.NewConstraint("~ 1.13")
 	utilruntime.Must(err)
 	versionConstraintK8sGreaterEqual110, err = semver.NewConstraint(">= 1.10")
 	utilruntime.Must(err)

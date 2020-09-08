@@ -122,7 +122,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		}, kubernetes.DNSNamesForService("kubernetes", "default")...)
 
 		kubeControllerManagerCertDNSNames = kubernetes.DNSNamesForService("kube-controller-manager", b.Shoot.SeedNamespace)
-		kubeSchedulerCertDNSNames         = kubernetes.DNSNamesForService("kube-scheduler", b.Shoot.SeedNamespace)
+		kubeSchedulerCertDNSNames         = kubernetes.DNSNamesForService(kubescheduler.ServiceName, b.Shoot.SeedNamespace)
 
 		konnectivityServerDNSNames = append([]string{
 			common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),

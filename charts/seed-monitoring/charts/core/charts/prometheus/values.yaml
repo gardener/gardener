@@ -31,9 +31,8 @@ replicas: 1
 apiserverServiceIP: 100.10.10.10
 port: 9090
 
-extensions:
-  rules: ""
-  scrapeConfigs: ""
+additionalScrapeConfigs: ""
+additionalRules: ""
 
 allowedMetrics:
   alertManager:
@@ -132,13 +131,6 @@ allowedMetrics:
   - kubeproxy_sync_proxy_rules_duration_seconds_bucket
   - kubeproxy_sync_proxy_rules_duration_seconds_count
   - kubeproxy_sync_proxy_rules_duration_seconds_sum
-  kubeScheduler:
-  - scheduler_binding_latency_microseconds_bucket
-  - scheduler_e2e_scheduling_latency_microseconds_bucket
-  - scheduler_scheduling_algorithm_latency_microseconds_bucket
-  - rest_client_requests_total
-  - process_max_fds
-  - process_open_fds
   kubeStateMetrics:
   - kube_daemonset_metadata_generation
   - kube_daemonset_status_current_number_scheduled

@@ -16,7 +16,6 @@ package matchers
 
 import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	botanistconstants "github.com/gardener/gardener/pkg/operation/botanist/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
 
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
@@ -53,8 +52,8 @@ var (
 		v1beta1constants.GardenerPurpose: metav1.NamespaceSystem,
 	}
 	podsLabels = labels.Set{
-		common.ShootNoCleanup:                           "true",
-		botanistconstants.ManagedResourceLabelKeyOrigin: botanistconstants.ManagedResourceLabelValueGardener,
+		common.ShootNoCleanup:                "true",
+		common.ManagedResourceLabelKeyOrigin: common.ManagedResourceLabelValueGardener,
 	}
 	// WebhookConstraintMatchers contains a list of all api resources which can break
 	// the waking up of a cluster.
