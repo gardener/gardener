@@ -17,7 +17,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"runtime"
 
 	"github.com/gardener/gardener/cmd/gardener-seed-admission-controller/app"
 	"github.com/gardener/gardener/cmd/utils"
@@ -26,10 +25,6 @@ import (
 )
 
 func main() {
-	if len(os.Getenv("GOMAXPROCS")) == 0 {
-		runtime.GOMAXPROCS(runtime.NumCPU())
-	}
-
 	ctx := utils.ContextFromStopChannel(signals.SetupSignalHandler())
 	command := app.NewCommandStartGardenerSeedAdmissionController(ctx)
 

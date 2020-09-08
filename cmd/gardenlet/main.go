@@ -19,7 +19,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"runtime"
 	"syscall"
 
 	"github.com/gardener/gardener/cmd/gardenlet/app"
@@ -31,10 +30,6 @@ func main() {
 
 	if err := exec.Command("which", "openvpn").Run(); err != nil {
 		panic("openvpn is not installed or not executable. cannot start gardenlet.")
-	}
-
-	if len(os.Getenv("GOMAXPROCS")) == 0 {
-		runtime.GOMAXPROCS(runtime.NumCPU())
 	}
 
 	// Setup signal handler if running inside a Kubernetes cluster
