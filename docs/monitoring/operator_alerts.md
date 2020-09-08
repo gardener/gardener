@@ -22,7 +22,6 @@
 |KubePersistentVolumeFullInFourDays|warning|seed|`Based on recent sampling, the PersistentVolume claimed by {{ $labels.persistentvolumeclaim }} is expected to fill up within four days. Currently {{ printf "%0.2f" $value }}% is available.`|
 |KubePodPendingControlPlane|warning|seed|`Pod {{ $labels.pod }} is stuck in "Pending" state for more than 30 minutes.`|
 |KubePodNotReadyControlPlane|warning||`Pod {{ $labels.pod }} is not ready for more than 30 minutes.`|
-|KubeSchedulerDown|critical|seed|`New pods are not being assigned to nodes.`|
 |KubeStateMetricsShootDown|info|seed|`There are no running kube-state-metric pods for the shoot cluster. No kubernetes resource metrics can be scraped.`|
 |KubeStateMetricsSeedDown|critical|seed|`There are no running kube-state-metric pods for the seed cluster. No kubernetes resource metrics can be scraped.`|
 |NoWorkerNodes|blocker||`There are no worker nodes in the cluster or all of the worker nodes in the cluster are not schedulable.`|
