@@ -85,16 +85,16 @@ groups:
       quantile: "0.9"
   ### API auditlog ###
   - alert: KubeApiServerTooManyAuditlogFailures
-    expr: sum(rate (apiserver_audit_error_total{plugin="webhook"} [5m])) by (app ,role) / ignoring(plugin) sum(rate(apiserver_audit_event_total [5m])) by (app, role) > 0.02
+    expr: sum(rate (apiserver_audit_error_total{plugin="webhook",job="kube-apiserver"}[5m])) / sum(rate(apiserver_audit_event_total{job="kube-apiserver"}[5m])) > bool 0.02 == 1
     for: 15m
     labels:
       service: auditlog
-      severity: critical
+      severity: warning
       type: seed
       visibility: operator
     annotations:
-        description: 'The API servers cumulative failure rate in logging audit events is {{ printf "%0.2f" $value }}%. This may be caused by an unavailable/unreachable AuditSink(s) and/or improper API server audit configuration.'
-        summary: 'The API server has too many failed attempts to log audit events'
+      description: 'The API servers cumulative failure rate in logging audit events is greater than 2%.'
+      summary: 'The kubernetes API server has too many failed attempts to log audit events'
   ### API latency ###
   - record: apiserver_latency_seconds:quantile
     expr: histogram_quantile(0.99, rate(apiserver_request_duration_seconds_bucket[5m]))
