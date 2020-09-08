@@ -260,13 +260,11 @@ var _ = Describe("health check", func() {
 
 		grafanaDeploymentOperators      = newDeployment(seedNamespace, v1beta1constants.DeploymentNameGrafanaOperators, v1beta1constants.GardenRoleMonitoring, true)
 		grafanaDeploymentUsers          = newDeployment(seedNamespace, v1beta1constants.DeploymentNameGrafanaUsers, v1beta1constants.GardenRoleMonitoring, true)
-		kubeStateMetricsSeedDeployment  = newDeployment(seedNamespace, v1beta1constants.DeploymentNameKubeStateMetricsSeed, v1beta1constants.GardenRoleMonitoring, true)
 		kubeStateMetricsShootDeployment = newDeployment(seedNamespace, v1beta1constants.DeploymentNameKubeStateMetricsShoot, v1beta1constants.GardenRoleMonitoring, true)
 
 		requiredMonitoringControlPlaneDeployments = []*appsv1.Deployment{
 			grafanaDeploymentOperators,
 			grafanaDeploymentUsers,
-			kubeStateMetricsSeedDeployment,
 			kubeStateMetricsShootDeployment,
 		}
 
@@ -670,7 +668,6 @@ var _ = Describe("health check", func() {
 			BeNil()),
 		Entry("required deployment set missing",
 			[]*appsv1.Deployment{
-				kubeStateMetricsSeedDeployment,
 				kubeStateMetricsShootDeployment,
 			},
 			requiredMonitoringControlPlaneStatefulSets,
@@ -689,7 +686,6 @@ var _ = Describe("health check", func() {
 			[]*appsv1.Deployment{
 				newDeployment(grafanaDeploymentOperators.Namespace, grafanaDeploymentOperators.Name, roleOf(grafanaDeploymentOperators), false),
 				grafanaDeploymentUsers,
-				kubeStateMetricsSeedDeployment,
 				kubeStateMetricsShootDeployment,
 			},
 			requiredMonitoringControlPlaneStatefulSets,

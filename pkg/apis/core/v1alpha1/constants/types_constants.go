@@ -68,9 +68,6 @@ const (
 	// DeploymentNameKubeStateMetricsShoot is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-state-metrics pod.
 	DeploymentNameKubeStateMetricsShoot = "kube-state-metrics"
-	// DeploymentNameKubeStateMetricsSeed is a constant for the name of a Kubernetes deployment object that contains
-	// the kube-state-metrics-seed pod.
-	DeploymentNameKubeStateMetricsSeed = "kube-state-metrics-seed"
 
 	// StatefulSetNameAlertManager is a constant for the name of a Kubernetes stateful set object that contains
 	// the alertmanager pod.
