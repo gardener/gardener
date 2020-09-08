@@ -235,9 +235,6 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 
 	initializeShootClients := shootClientInitializer(ctx, botanist)
 
-	// Trigger garbage collection
-	go garbageCollection(ctx, initializeShootClients, botanist)
-
 	_ = flow.Parallel(
 		// Trigger health check
 		func(ctx context.Context) error {
@@ -264,6 +261,12 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		// Trigger constraint checks
 		func(ctx context.Context) error {
 			constraintHibernationPossible = botanist.ConstraintsChecks(ctx, initializeShootClients, constraintHibernationPossible)
+			return nil
+		},
+		// Trigger garbage collection
+		func(ctx context.Context) error {
+			garbageCollection(ctx, initializeShootClients, botanist)
+			// errors during garbage collection are only being logged and do not cause the care operation to fail
 			return nil
 		},
 	)(ctx)
