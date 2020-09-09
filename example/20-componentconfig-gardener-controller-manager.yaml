@@ -44,11 +44,5 @@ server:
   http:
     bindAddress: 0.0.0.0
     port: 2718
-  https:
-    bindAddress: 0.0.0.0
-    port: 2719
-    tls:
-      serverCertPath: dev/tls/gardener-controller-manager.crt
-      serverKeyPath: dev/tls/gardener-controller-manager.key
 featureGates:
   CachedRuntimeClients: true

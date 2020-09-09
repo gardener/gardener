@@ -1,0 +1,14 @@
+{{- if .Values.global.admission.vpa }}
+apiVersion: autoscaling.k8s.io/v1beta2
+kind: VerticalPodAutoscaler
+metadata:
+  name: gardener-admission-controller-vpa
+  namespace: garden
+spec:
+  targetRef:
+    apiVersion: {{ include "deploymentversion" . }}
+    kind: Deployment
+    name: gardener-admission-controller
+  updatePolicy:
+    updateMode: Auto
+{{- end }}

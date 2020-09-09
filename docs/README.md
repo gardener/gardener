@@ -9,6 +9,7 @@
 ## Concepts
 
 * Components
+    * [Gardener Admission Controller](concepts/admission-controller.md)
     * [Gardener API server](concepts/apiserver.md)
       * [In-Tree admission plugins](concepts/apiserver_admission_plugins.md)
     * [Gardener Controller Manager](concepts/controller-manager.md)

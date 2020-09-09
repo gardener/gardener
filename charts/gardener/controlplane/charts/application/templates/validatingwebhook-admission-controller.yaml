@@ -1,4 +1,4 @@
-{{- if .Values.global.controller.enabled }}
+{{- if .Values.global.admission.enabled }}
 apiVersion: {{ include "webhookadmissionregistration" . }}
 kind: ValidatingWebhookConfiguration
 metadata:
@@ -20,14 +20,14 @@ webhooks:
       gardener.cloud/role: project
   clientConfig:
     {{- if .Values.global.deployment.virtualGarden.enabled }}
-    url: https://gardener-controller-manager.garden/webhooks/validate-namespace-deletion
+    url: https://gardener-admission-controller.garden/webhooks/validate-namespace-deletion
     {{- else }}
     service:
       namespace: garden
-      name: gardener-controller-manager
+      name: gardener-admission-controller
       path: /webhooks/validate-namespace-deletion
     {{- end }}
-    caBundle: {{ required ".Values.global.controller.config.server.https.tls.caBundle is required" (b64enc .Values.global.controller.config.server.https.tls.caBundle) }}
+    caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
 - name: validate-kubeconfig-secrets.gardener.cloud
   rules:
   - apiGroups:
@@ -45,13 +45,13 @@ webhooks:
       gardener.cloud/role: project
   clientConfig:
     {{- if .Values.global.deployment.virtualGarden.enabled }}
-    url: https://gardener-controller-manager.garden/webhooks/validate-kubeconfig-secrets
+    url: https://gardener-admission-controller.garden/webhooks/validate-kubeconfig-secrets
     {{- else }}
     service:
       namespace: garden
-      name: gardener-controller-manager
+      name: gardener-admission-controller
       path: /webhooks/validate-kubeconfig-secrets
     {{- end }}
-    caBundle: {{ required ".Values.global.controller.config.server.https.tls.caBundle is required" (b64enc .Values.global.controller.config.server.https.tls.caBundle) }}
+    caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
   sideEffects: None
 {{- end }}

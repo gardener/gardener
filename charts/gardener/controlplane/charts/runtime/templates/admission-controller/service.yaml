@@ -1,0 +1,23 @@
+{{- if .Values.global.admission.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: gardener-admission-controller
+  namespace: garden
+  labels:
+    app: gardener
+    role: admission-controller
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  selector:
+    app: gardener
+    role: admission-controller
+    release: {{ .Release.Name }}
+  ports:
+  - name: https
+    protocol: TCP
+    port: 443
+    targetPort: {{ required ".Values.global.admission.config.server.https.port is required" .Values.global.admission.config.server.https.port }}
+{{- end }}

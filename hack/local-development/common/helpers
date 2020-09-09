@@ -23,7 +23,7 @@ KIND_NODE_NAME_SUFFIX="-control-plane"
 NODELESS="nodeless"
 
 API_SERVER_SECURE_PORT="${API_SERVER_SECURE_PORT:-8443}"
-CONTROLLER_MANAGER_SECURE_PORT="${CONTROLLER_MANAGER_SECURE_PORT:-2719}"
+ADMISSION_CONTROLLER_SECURE_PORT="${CONTROLLER_MANAGER_SECURE_PORT:-2719}"
 
 __k8s_nodename=""
 k8s_nodename() {
@@ -113,4 +113,20 @@ cleanup_tls_dir() {
         rm -rf "$__tmp_tls_dir"
         __tmp_tls_dir=""
     fi
+}
+
+cleanup_controller_manager_webhook() {
+  local CONTROLLER_MANAGER_SERVICE_NAME="gardener-controller-manager"
+  local CONTROLLER_MANAGER_ENDPOINT_NAME="gardener-controller-manager"
+
+  if kubectl -n garden get endpoints "$CONTROLLER_MANAGER_ENDPOINT_NAME" &> /dev/null; then
+    kubectl -n garden delete endpoints $CONTROLLER_MANAGER_ENDPOINT_NAME
+  fi
+  if kubectl -n garden get services "$CONTROLLER_MANAGER_SERVICE_NAME" &> /dev/null; then
+    kubectl -n garden delete services "$CONTROLLER_MANAGER_SERVICE_NAME"
+  fi
+
+  if kubectl get validatingwebhookconfiguration "gardener-controller-manager" &> /dev/null; then
+    kubectl delete validatingwebhookconfiguration "gardener-controller-manager"
+  fi
 }

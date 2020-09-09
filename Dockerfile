@@ -55,6 +55,15 @@ WORKDIR /
 
 ENTRYPOINT ["/gardenlet"]
 
+############# admission-controller #############
+FROM base AS admission-controller
+
+COPY --from=builder /go/bin/gardener-admission-controller /gardener-admission-controller
+
+WORKDIR /
+
+ENTRYPOINT ["/gardener-admission-controller"]
+
 ############# seed-admission-controller #############
 FROM base AS seed-admission-controller
 
