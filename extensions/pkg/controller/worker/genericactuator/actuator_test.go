@@ -42,74 +42,47 @@ import (
 var _ = Describe("Actuator", func() {
 	Describe("#listMachineClassSecrets", func() {
 		const (
-			ns      = "test-ns"
-			purpose = "machineclass"
+			ns = "test-ns"
 		)
 
 		var (
-			existing    *corev1.Secret
-			expected    corev1.Secret
-			allExisting []runtime.Object
-			allExpected []interface{}
+			expected *corev1.Secret
+			all      []runtime.Object
 		)
 
 		BeforeEach(func() {
-			existing = &corev1.Secret{
+			expected = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "new",
+					Name:      "machineclass-secret1",
 					Namespace: ns,
-					Labels:    map[string]string{},
+					Labels:    map[string]string{"gardener.cloud/purpose": "machineclass"},
 				},
 			}
-			allExisting = []runtime.Object{}
-			allExpected = []interface{}{}
-			expected = *existing.DeepCopy()
+			all = []runtime.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "machineclass-secret3",
+						Namespace: "other-ns",
+						Labels:    map[string]string{"gardener.cloud/purpose": "machineclass"},
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "machineclass-secret4",
+						Namespace: ns,
+					},
+				},
+				expected,
+			}
 		})
 
-		AfterEach(func() {
-			a := &genericActuator{client: fake.NewFakeClient(allExisting...)}
-			sl, err := a.listMachineClassSecrets(context.TODO(), ns)
+		It("should return secrets matching the label selector", func() {
+			a := &genericActuator{client: fake.NewFakeClient(all...)}
+			actual, err := a.listMachineClassSecrets(context.TODO(), ns)
+
 			Expect(err).ToNot(HaveOccurred())
-			Expect(sl).ToNot(BeNil())
-			Expect(sl.Items).To(ConsistOf(allExpected...))
-		})
-
-		It("only classes with new label exists", func() {
-			existing.Labels["gardener.cloud/purpose"] = purpose
-			expected = *existing.DeepCopy()
-
-			allExisting = append(allExisting, existing)
-			allExpected = append(allExpected, expected)
-		})
-
-		It("only classes with old label exists", func() {
-			existing.Labels["garden.sapcloud.io/purpose"] = purpose
-			expected := *existing.DeepCopy()
-
-			allExisting = append(allExisting, existing)
-			allExpected = append(allExpected, expected)
-		})
-
-		It("secret is labeled with both labels", func() {
-			existing.Labels["garden.sapcloud.io/purpose"] = purpose
-			existing.Labels["gardener.cloud/purpose"] = purpose
-			expected := *existing.DeepCopy()
-
-			allExisting = append(allExisting, existing)
-			allExpected = append(allExpected, expected)
-		})
-
-		It("one old and one new secret exists", func() {
-			oldExisting := existing.DeepCopy()
-			oldExisting.Name = "old-deprecated"
-			oldExisting.Labels["garden.sapcloud.io/purpose"] = purpose
-
-			existing.Labels["gardener.cloud/purpose"] = purpose
-			expected := *existing.DeepCopy()
-			expectedOld := *oldExisting.DeepCopy()
-
-			allExisting = append(allExisting, existing, oldExisting)
-			allExpected = append(allExpected, expected, expectedOld)
+			Expect(actual.Items).To(HaveLen(1))
+			Expect(actual.Items[0].Name).To(Equal(expected.Name))
 		})
 	})
 
