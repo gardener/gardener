@@ -224,6 +224,7 @@ func tryUpdate(ctx context.Context, backoff wait.Backoff, c client.Client, obj r
 		return err
 	}
 
+	resetCopy := obj.DeepCopyObject()
 	return exponentialBackoff(ctx, backoff, func() (bool, error) {
 		if err := c.Get(ctx, key, obj); err != nil {
 			return false, err
@@ -240,6 +241,7 @@ func tryUpdate(ctx context.Context, backoff wait.Backoff, c client.Client, obj r
 
 		if err := updateFunc(ctx, obj); err != nil {
 			if apierrors.IsConflict(err) {
+				reflect.ValueOf(obj).Elem().Set(reflect.ValueOf(resetCopy).Elem())
 				return false, nil
 			}
 			return false, err
