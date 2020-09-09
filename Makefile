@@ -185,4 +185,4 @@ test-prometheus:
 verify: check format test
 
 .PHONY: verify-extended
-verify-extended: install-requirements check-generate check format test-cov test-cov-clean test-prometheus
+verify-extended: install-requirements check-generate check format test-cov test-cov-clean

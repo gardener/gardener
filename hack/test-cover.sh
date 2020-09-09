@@ -24,8 +24,8 @@ COVERPROFILE_TMP="$(dirname $0)/../test.coverprofile.tmp"
 COVERPROFILE_HTML="$(dirname $0)/../test.coverage.html"
 
 echo "mode: set" > "$COVERPROFILE_TMP"
-find . -name "*.coverprofile" -type f | xargs cat | grep -v mode: | sort -r | awk '{if($$1 != last) {print $$0;last=$$1}}' >> "$COVERPROFILE_TMP"
-cat "$COVERPROFILE_TMP" | grep -vE "\.pb\.go|\/test\/|zz_generated" > "$COVERPROFILE"
+find . -name "*.coverprofile" -type f | xargs cat | grep -v mode: | sort -r | awk '{if($1 != last) {print $0;last=$1}}' >> "$COVERPROFILE_TMP"
+cat "$COVERPROFILE_TMP" | grep -vE "\.pb\.go|zz_generated" > "$COVERPROFILE"
 rm -rf "$COVERPROFILE_TMP"
 go tool cover -html="$COVERPROFILE" -o="$COVERPROFILE_HTML"
 
