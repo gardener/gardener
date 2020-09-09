@@ -173,9 +173,16 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 		return errors.Wrapf(err, "failed to cleanup the orphaned machine class secrets")
 	}
 
-	// Wait until all unwanted machine deployments are deleted from the system.
-	if err := a.waitUntilUnwantedMachineDeploymentsDeleted(ctx, logger, worker, wantedMachineDeployments); err != nil {
-		return errors.Wrapf(err, "error while waiting for all undesired machine deployments to be deleted")
+	replicas, err := replicaFunc()
+	if err != nil {
+		return errors.Wrapf(err, "failed to get machine-controller-manager replicas")
+	}
+
+	if replicas > 0 {
+		// Wait until all unwanted machine deployments are deleted from the system.
+		if err := a.waitUntilUnwantedMachineDeploymentsDeleted(ctx, logger, worker, wantedMachineDeployments); err != nil {
+			return errors.Wrapf(err, "error while waiting for all undesired machine deployments to be deleted")
+		}
 	}
 
 	// Delete MachineSets having number of desired and actual replicas equaling 0
