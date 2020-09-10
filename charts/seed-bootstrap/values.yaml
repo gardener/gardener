@@ -2,7 +2,7 @@ cloudProvider: aws
 
 prometheus:
   port: 9090
-  storage: 10Gi
+  storage: 20Gi
 
 aggregatePrometheus:
   port: 9090
