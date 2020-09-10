@@ -46,7 +46,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "probe_success{job=\"vpn-connection\", type=\"seed\"}",
+          "expr": "probe_success{job=\"tunnel-probe-apiserver-proxy\", type=\"seed\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "API Server Proxy test ({{instance}})",
@@ -750,7 +750,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "probe_success{job=\"vpn-connection\",type=\"seed\"}",
+              "expr": "probe_success{job=\"tunnel-probe-apiserver-proxy\",type=\"seed\"}",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "API Server Proxy test ({{instance}})",
