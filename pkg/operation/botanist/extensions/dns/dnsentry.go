@@ -37,7 +37,7 @@ import (
 type EntryValues struct {
 	Name    string   `json:"name,omitempty"`
 	DNSName string   `json:"dnsName,omitempty"`
-	TTL     int      `json:"ttl,omitempty"`
+	TTL     string    `json:"ttl,omitempty"`
 	Targets []string `json:"targets,omitempty"`
 	OwnerID string   `json:"ownerID,omitempty"`
 }

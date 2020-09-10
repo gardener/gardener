@@ -151,9 +151,9 @@ func (b *Botanist) DefaultExternalDNSProvider(seedClient client.Client) componen
 
 // DefaultExternalDNSEntry returns DeployWaiter which removes the external DNSEntry.
 func (b *Botanist) DefaultExternalDNSEntry(seedClient client.Client) component.DeployWaiter {
-	ttl := 120
+	ttl := "120"
 	if b.Seed.Info.Spec.Provider.Type == "alicloud" {
-		ttl = 600
+		ttl = "600"
 	}
 
 	return component.OpDestroy(dns.NewDNSEntry(
@@ -226,9 +226,10 @@ func (b *Botanist) DefaultInternalDNSProvider(seedClient client.Client) componen
 
 // DefaultInternalDNSEntry returns DeployWaiter which removes the internal DNSEntry.
 func (b *Botanist) DefaultInternalDNSEntry(seedClient client.Client) component.DeployWaiter {
-	ttl := 120
+	ttl := "120"
+
 	if b.Seed.Info.Spec.Provider.Type == "alicloud" {
-		ttl = 600
+		ttl = "600"
 	}
 
 	return component.OpDestroy(dns.NewDNSEntry(
