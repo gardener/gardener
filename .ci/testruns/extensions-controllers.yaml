@@ -1,0 +1,11 @@
+apiVersion: testmachinery.sapcloud.io/v1beta1
+kind: Testrun
+metadata:
+  generateName: tm-gardener-extensions-controllers-
+  namespace: default
+spec:
+  ttlSecondsAfterFinished: 172800 # 2 days
+  testflow:
+  - name: extensions-controllers
+    definition:
+      name: extensions-controllers

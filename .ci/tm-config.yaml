@@ -1,3 +1,5 @@
+test-single:
+  testrunPath: .ci/testruns/extensions-controllers.yaml
 
 # configure default values for pull request tests
 test:
