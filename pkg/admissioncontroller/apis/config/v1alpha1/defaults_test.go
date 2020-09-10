@@ -12,24 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package v1alpha1_test
 
 import (
-	"fmt"
-	"os"
+	. "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 
-	"github.com/gardener/gardener/cmd/gardener-admission-controller/app"
-	"github.com/gardener/gardener/cmd/utils"
-
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-func main() {
-	ctx := utils.ContextFromStopChannel(signals.SetupSignalHandler())
-	command := app.NewCommandStartGardenerAdmissionController()
+var _ = Describe("Defaults", func() {
+	Describe("#SetDefaults_AdmissionControllerConfiguration", func() {
+		var obj *AdmissionControllerConfiguration
 
-	if err := command.ExecuteContext(ctx); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-}
+		BeforeEach(func() {
+			obj = &AdmissionControllerConfiguration{}
+		})
+
+		It("should correctly default the controller manager configuration", func() {
+			SetDefaults_AdmissionControllerConfiguration(obj)
+
+			Expect(obj.LogLevel).To(Equal("info"))
+			Expect(obj.Server.HTTPS.BindAddress).To(Equal("0.0.0.0"))
+			Expect(obj.Server.HTTPS.Port).To(Equal(2721))
+		})
+	})
+})

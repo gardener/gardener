@@ -12,24 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package server
 
-import (
-	"fmt"
-	"os"
+import "net/http"
 
-	"github.com/gardener/gardener/cmd/gardener-admission-controller/app"
-	"github.com/gardener/gardener/cmd/utils"
-
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-)
-
-func main() {
-	ctx := utils.ContextFromStopChannel(signals.SetupSignalHandler())
-	command := app.NewCommandStartGardenerAdmissionController()
-
-	if err := command.ExecuteContext(ctx); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+// StaticOKHandler returns a http handler which returns 200/ok on every call.
+func StaticOKHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		if _, err := w.Write([]byte("ok")); err != nil {
+			w.WriteHeader(500)
+		}
+	})
 }

@@ -9,11 +9,11 @@
 ## Concepts
 
 * Components
-    * [Gardener Admission Controller](concepts/admission-controller.md)
     * [Gardener API server](concepts/apiserver.md)
       * [In-Tree admission plugins](concepts/apiserver_admission_plugins.md)
     * [Gardener Controller Manager](concepts/controller-manager.md)
     * [Gardener Scheduler](concepts/scheduler.md)
+    * [Gardener Admission Controller](concepts/admission-controller.md)
     * [Gardener Seed Admission Controller](concepts/seed-admission-controller.md)
     * [Gardenlet](concepts/gardenlet.md)
 * [Backup Restore](concepts/backup-restore.md)

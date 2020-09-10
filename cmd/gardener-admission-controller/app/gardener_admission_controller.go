@@ -1,3 +1,17 @@
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package app
 
 import (
@@ -25,15 +39,15 @@ import (
 
 // options has all the context and parameters needed to run a Gardener admission controller.
 type options struct {
-	// ConfigFile is the location of the Gardener controller manager's configuration file.
-	ConfigFile string
+	// configFile is the location of the Gardener controller manager's configuration file.
+	configFile string
 	scheme     *runtime.Scheme
 	codecs     serializer.CodecFactory
 }
 
 // addFlags adds flags for a specific Gardener controller manager to the specified FlagSet.
 func (o *options) addFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.ConfigFile, "config", o.ConfigFile, "Path to configuration file.")
+	fs.StringVar(&o.configFile, "config", o.configFile, "Path to configuration file.")
 }
 
 // newOptions returns a new Options object.
@@ -65,8 +79,8 @@ func (o *options) loadConfigFromFile(file string) (*config.AdmissionControllerCo
 }
 
 func (o *options) configFileSpecified() error {
-	if len(o.ConfigFile) == 0 {
-		return fmt.Errorf("missing Gardener controller manager config file")
+	if len(o.configFile) == 0 {
+		return fmt.Errorf("missing Gardener admission controller config file")
 	}
 	return nil
 }
@@ -116,7 +130,7 @@ type AdmissionController struct {
 }
 
 func (o *options) run(ctx context.Context) error {
-	c, err := o.loadConfigFromFile(o.ConfigFile)
+	c, err := o.loadConfigFromFile(o.configFile)
 	if err != nil {
 		return err
 	}
@@ -180,14 +194,21 @@ func (a *AdmissionController) Run(ctx context.Context) error {
 		return err
 	}
 
+	namespaceValidationHandler, err := webhooks.NewValidateNamespaceDeletionHandler(ctx, k8sGardenClient)
+	if err != nil {
+		return err
+	}
+
 	// Start webhook server
 	server.
 		NewBuilder().
 		WithBindAddress(a.Config.Server.HTTPS.BindAddress).
 		WithPort(a.Config.Server.HTTPS.Port).
 		WithTLS(a.Config.Server.HTTPS.TLS.ServerCertPath, a.Config.Server.HTTPS.TLS.ServerKeyPath).
-		WithHandler("/webhooks/validate-namespace-deletion", webhooks.NewValidateNamespaceDeletionHandler(k8sGardenClient)).
+		WithHandler("/webhooks/validate-namespace-deletion", namespaceValidationHandler).
 		WithHandler("/webhooks/validate-kubeconfig-secrets", webhooks.NewValidateKubeconfigSecretsHandler()).
+		WithHandler("/healthz", server.StaticOKHandler()).
+		WithHandler("/readyz", server.StaticOKHandler()).
 		Build().
 		Start(ctx)
 
@@ -195,7 +216,7 @@ func (a *AdmissionController) Run(ctx context.Context) error {
 }
 
 // NewCommandStartGardenerControllerManager creates a *cobra.Command object with default parameters.
-func NewCommandStartGardenerAdmissionController(ctx context.Context) *cobra.Command {
+func NewCommandStartGardenerAdmissionController() *cobra.Command {
 	opts, err := newOptions()
 	if err != nil {
 		panic(err)
@@ -207,12 +228,12 @@ func NewCommandStartGardenerAdmissionController(ctx context.Context) *cobra.Comm
 		Long:  `The Gardener admission controller serves a validation webhook endpoint for resources in the garden cluster.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.configFileSpecified(); err != nil {
-				panic(err)
+				return err
 			}
 			if err := opts.validate(args); err != nil {
-				panic(err)
+				return err
 			}
-			return opts.run(ctx)
+			return opts.run(cmd.Context())
 		},
 	}
 

@@ -38,7 +38,7 @@ spec:
       {{- if not .Values.global.admission.kubeconfig }}
       serviceAccountName: {{ required ".Values.global.admission.serviceAccountName is required" .Values.global.admission.serviceAccountName }}
       {{- end }}
-      {{- if gt (int .Values.global.admission.replicaCountreplicaCount) 1 }}
+      {{- if gt (int .Values.global.admission.replicaCount) 1 }}
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -65,6 +65,20 @@ spec:
         resources:
 {{ toYaml .Values.global.admission.resources | indent 10 }}
         {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ required ".Values.global.admission.config.server.https.port is required" .Values.global.admission.config.server.https.port }}
+            scheme: HTTPS
+          initialDelaySeconds: 300
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ required ".Values.global.admission.config.server.https.port is required" .Values.global.admission.config.server.https.port }}
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:

@@ -1,6 +1,6 @@
 # Gardener Admission Controller
 
-While the Gardener API server works with [admission plugins](./apiserver_admission_plugins.md) to validate and mutate resources belonging to Gardener related API groups, e.g. `core.gardener.cloud`, the same is needed for resources belonging to non-Gardener API groups as well.
+While the Gardener API server works with [admission plugins](./apiserver_admission_plugins.md) to validate and mutate resources belonging to Gardener related API groups, e.g. `core.gardener.cloud`, the same is needed for resources belonging to non-Gardener API groups as well, e.g. `Secret`s in the `core` API group.
 Therefore, the Gardener Admission Controller runs a http(s) server with the following handlers which serve as validating/mutating endpoints for [admission webhooks](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/).
 
 ### Kubeconfig Secret Validator

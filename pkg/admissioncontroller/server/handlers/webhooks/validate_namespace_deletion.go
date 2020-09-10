@@ -16,6 +16,7 @@ package webhooks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -27,13 +28,13 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -43,14 +44,34 @@ type namespaceDeletionHandler struct {
 	codecs serializer.CodecFactory
 }
 
+const waitForCachesToSyncTimeout = 5 * time.Minute
+
 // NewValidateNamespaceDeletionHandler creates a new handler for validating namespace deletions.
-func NewValidateNamespaceDeletionHandler(k8sGardenClient kubernetes.Interface) http.HandlerFunc {
+func NewValidateNamespaceDeletionHandler(ctx context.Context, k8sGardenClient kubernetes.Interface) (http.HandlerFunc, error) {
+	// Initialize caches here to ensure http requests can be served quicker with pre-syncronized caches.
+	var hasSyncFuncs []cache.InformerSynced
+	informer, err := k8sGardenClient.Cache().GetInformer(ctx, &corev1.Secret{})
+	if err != nil {
+		return nil, err
+	}
+	hasSyncFuncs = append(hasSyncFuncs, informer.HasSynced)
+	informer, err = k8sGardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	if err != nil {
+		return nil, err
+	}
+	hasSyncFuncs = append(hasSyncFuncs, informer.HasSynced)
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, waitForCachesToSyncTimeout)
+	defer cancel()
+	if !cache.WaitForCacheSync(timeoutCtx.Done(), hasSyncFuncs...) {
+		return nil, errors.New("timed out waiting for caches to sync")
+	}
+
 	scheme := runtime.NewScheme()
 	utilruntime.Must(corev1.AddToScheme(scheme))
-	utilruntime.Must(admissionregistrationv1beta1.AddToScheme(scheme))
 
 	h := &namespaceDeletionHandler{k8sGardenClient, serializer.NewCodecFactory(scheme)}
-	return h.ValidateNamespaceDeletion
+	return h.ValidateNamespaceDeletion, nil
 }
 
 // ValidateNamespaceDeletion is a HTTP handler for validating whether a namespace deletion is allowed or not.

@@ -12,29 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1_test
+package server_test
 
 import (
-	. "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	"net/http/httptest"
 
+	. "github.com/gardener/gardener/pkg/server"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Defaults", func() {
-	Describe("#SetDefaults_AdmissionControllerConfiguration", func() {
-		var obj *AdmissionControllerConfiguration
+var _ = Describe("Handler", func() {
+	Describe("#StaticOKHandler", func() {
+		It("Should write 200/ok", func() {
+			var (
+				response = httptest.NewRecorder()
+				handler  = StaticOKHandler()
+			)
+			handler.ServeHTTP(response, nil)
 
-		BeforeEach(func() {
-			obj = &AdmissionControllerConfiguration{}
-		})
-
-		It("should correctly default the controller manager configuration", func() {
-			SetDefaults_AdmissionControllerConfiguration(obj)
-
-			Expect(obj.LogLevel).To(Equal("info"))
-			Expect(obj.Server.HTTPS.BindAddress).To(Equal("0.0.0.0"))
-			Expect(obj.Server.HTTPS.Port).To(Equal(2719))
+			Expect(response.Code).To(Equal(200))
+			Expect(response.Body.Bytes()).To(Equal([]byte("ok")))
 		})
 	})
 })

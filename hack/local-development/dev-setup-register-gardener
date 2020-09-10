@@ -119,10 +119,6 @@ metadata:
   namespace: garden
 spec:
   ports:
-  - name: http
-    protocol: TCP
-    port: 80
-    targetPort: 2718
   - name: https
     protocol: TCP
     port: $ADMISSION_CONTROLLER_SERVICE_PORT

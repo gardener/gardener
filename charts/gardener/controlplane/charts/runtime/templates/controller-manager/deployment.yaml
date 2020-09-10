@@ -44,7 +44,7 @@ spec:
       {{- if not .Values.global.controller.kubeconfig }}
       serviceAccountName: {{ required ".Values.global.controller.serviceAccountName is required" .Values.global.controller.serviceAccountName }}
       {{- end }}
-      {{- if gt (int .Values.global.controller.replicaCountreplicaCount) 1 }}
+      {{- if gt (int .Values.global.controller.replicaCount) 1 }}
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

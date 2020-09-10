@@ -43,7 +43,7 @@ type ServerConfiguration struct {
 type Server struct {
 	// BindAddress is the IP address on which to listen for the specified port.
 	BindAddress string `json:"bindAddress"`
-	// Port is the port on which to serve unsecured, unauthenticated access.
+	// Port is the port on which to serve requests.
 	Port int `json:"port"`
 }
 

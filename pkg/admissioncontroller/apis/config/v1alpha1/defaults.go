@@ -31,6 +31,6 @@ func SetDefaults_AdmissionControllerConfiguration(obj *AdmissionControllerConfig
 		obj.Server.HTTPS.BindAddress = "0.0.0.0"
 	}
 	if obj.Server.HTTPS.Port == 0 {
-		obj.Server.HTTPS.Port = 2719
+		obj.Server.HTTPS.Port = 2721
 	}
 }
