@@ -23,6 +23,7 @@ spec:
         app: konnectivity-agent
         gardener.cloud/role: system-component
         garden.sapcloud.io/role: system-component
+        origin: gardener
       annotations:
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
