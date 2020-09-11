@@ -84,6 +84,8 @@ global:
       minReplicas: 1
       targetAverageUtilizationCpu: 80
       targetAverageUtilizationMemory: 80
+      vpaScaleUpMode: "Auto"
+      vpaScaleDownMode: "Auto"
       vpaScaleUpStabilization:
         stabilizationDuration: "3m"
         minChange:
