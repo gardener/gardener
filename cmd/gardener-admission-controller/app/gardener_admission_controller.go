@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
 
@@ -199,6 +200,13 @@ func (a *AdmissionController) Run(ctx context.Context) error {
 		return err
 	}
 
+	healthManager := healthz.NewDefaultHealthz()
+	defer healthManager.Stop()
+	healthManager.Start()
+	// Set health manager always to `true` since we don't run any real health checks yet.
+	// It is only required to identify a healthy and ready webhook after it successfully synced required caches.
+	healthManager.Set(true)
+
 	// Start webhook server
 	server.
 		NewBuilder().
@@ -207,8 +215,8 @@ func (a *AdmissionController) Run(ctx context.Context) error {
 		WithTLS(a.Config.Server.HTTPS.TLS.ServerCertPath, a.Config.Server.HTTPS.TLS.ServerKeyPath).
 		WithHandler("/webhooks/validate-namespace-deletion", namespaceValidationHandler).
 		WithHandler("/webhooks/validate-kubeconfig-secrets", webhooks.NewValidateKubeconfigSecretsHandler()).
-		WithHandler("/healthz", server.StaticOKHandler()).
-		WithHandler("/readyz", server.StaticOKHandler()).
+		WithHandlerFunc("/healthz", healthz.HandlerFunc(healthManager)).
+		WithHandlerFunc("/readyz", healthz.HandlerFunc(healthManager)).
 		Build().
 		Start(ctx)
 
