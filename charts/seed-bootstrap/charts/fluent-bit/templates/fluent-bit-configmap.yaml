@@ -327,6 +327,10 @@ data:
         tls.verify          Off
         K8S-Logging.Exclude Off
 
+    # Extensions
+{{ if .Values.additionalFilters }}
+{{- toString .Values.additionalFilters | indent 4 }}
+{{- end }}
     # Scripts
     [FILTER]
         Name                lua
@@ -334,10 +338,11 @@ data:
         script              modify_severity.lua
         call                cb_modify
 
-    # Extensions
-{{ if .Values.additionalFilters }}
-{{- toString .Values.additionalFilters | indent 4 }}
-{{- end }}
+    [FILTER]
+        Name                lua
+        Match               kubernetes.*
+        script              add_tag_to_record.lua
+        call                add_tag_to_record
 
   output.conf: |
     [Output]
@@ -355,7 +360,7 @@ data:
         DropSingleKey false
         AutoKubernetesLabels true
         LabelSelector gardener.cloud/role:shoot
-        RemoveKeys kubernetes,stream,type,time
+        RemoveKeys kubernetes,stream,type,time,tag
         LabelMapPath /fluent-bit/etc/kubernetes_label_map.json
         DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
         DynamicHostPrefix http://loki.
@@ -370,6 +375,9 @@ data:
         QueueSegmentSize 300
         QueueSync normal
         QueueName gardener-kubernetes
+        FallbackToTagWhenMetadataIsMissing true
+        TagKey tag
+        DropLogEntryWithoutK8sMetadata true
 
     [Output]
         Name loki
@@ -534,6 +542,12 @@ data:
 
     function trim(s)
       return (s:gsub("^%s*(.-)%s*$", "%1"))
+    end
+
+  add_tag_to_record.lua: |-
+    function add_tag_to_record(tag, timestamp, record)
+      record["tag"] = tag
+      return 1, timestamp, record
     end
 
   kubernetes_label_map.json: |-
