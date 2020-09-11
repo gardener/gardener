@@ -12,6 +12,11 @@ metadata:
     heritage: "{{ .Release.Service }}"
 spec:
   replicas: {{ required ".Values.global.apiserver.replicaCount is required" .Values.global.apiserver.replicaCount }}
+  minReadySeconds: {{ .Values.global.apiserver.minReadySeconds }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+{{ toYaml .Values.global.apiserver.rollingUpdate | indent 6 }}
   selector:
     matchLabels:
       app: gardener

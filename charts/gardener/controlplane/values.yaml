@@ -30,6 +30,10 @@ global:
         memory: 256Mi
   # podAnnotations: # YAML formated annotations used for pod template
   # podLabels: # YAML formated labels used for pod template
+    minReadySeconds: 30
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
     encryption:
       config: |
         apiVersion: apiserver.config.k8s.io/v1
