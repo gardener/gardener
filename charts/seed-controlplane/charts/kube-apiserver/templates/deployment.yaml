@@ -270,6 +270,9 @@ spec:
         - name: fedora-rhel6-alpine-openelec-cabundle
           mountPath: /etc/ssl
           readOnly: true
+        - name: usr-share-ca-certificates
+          mountPath: /usr/share/ca-certificates
+          readOnly: true
         {{- end }}
       {{- if .Values.konnectivityTunnel.enabled }}
       - name: konnectivity-server
@@ -459,4 +462,8 @@ spec:
           path: /etc/ssl
           type: "DirectoryOrCreate"
         name: fedora-rhel6-alpine-openelec-cabundle
+      - hostPath:
+          path: /usr/share/ca-certificates
+          type: "DirectoryOrCreate"
+        name: usr-share-ca-certificates
       {{- end }}
