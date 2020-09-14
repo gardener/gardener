@@ -5,6 +5,12 @@ metadata:
   name: addons-nginx-ingress-controller
   namespace: {{ .Release.Namespace }}
 spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      minAllowed:
+        cpu: 100m
+        memory: 128Mi
   targetRef:
     apiVersion: {{ include "deploymentversion" . }}
     kind: Deployment
