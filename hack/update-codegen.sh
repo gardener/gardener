@@ -86,6 +86,25 @@ bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh 
   --extra-peer-dirs=github.com/gardener/gardener/pkg/controllermanager/apis/config,github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/component-base/config,k8s.io/component-base/config/v1alpha1 \
   -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
 
+# Componentconfig for admission controller
+
+bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+  deepcopy,defaulter \
+  github.com/gardener/gardener/pkg/client/admissioncontrollerconfig \
+  github.com/gardener/gardener/pkg/admissioncontroller/apis \
+  github.com/gardener/gardener/pkg/admissioncontroller/apis \
+  "config:v1alpha1" \
+  -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+
+bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+  conversion \
+  github.com/gardener/gardener/pkg/client/admissioncontrollerconfig \
+  github.com/gardener/gardener/pkg/admissioncontroller/apis \
+  github.com/gardener/gardener/pkg/admissioncontroller/apis \
+  "config:v1alpha1" \
+  --extra-peer-dirs=github.com/gardener/gardener/pkg/admissioncontroller/apis/config,github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/component-base/config,k8s.io/component-base/config/v1alpha1 \
+  -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+
 # Configuration for gardener scheduler
 
 bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \

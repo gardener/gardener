@@ -69,7 +69,3 @@ In order to activate it, provide the following configuration:
 
 > :warning: In addition, you should also configure the `--event-ttl` for the kube-apiserver to define an upper-limit of how long Shoot-related events should be stored.
 The `--event-ttl` should be larger than the `ttlNonShootEvents` or this controller will have no effect.
-
-## Webhooks
-
-ℹ️ This document is incomplete and under construction.

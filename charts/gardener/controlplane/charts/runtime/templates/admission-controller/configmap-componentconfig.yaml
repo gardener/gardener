@@ -1,0 +1,36 @@
+{{- if .Values.global.admission.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gardener-admission-controller-configmap
+  namespace: garden
+  labels:
+    app: gardener
+    role: admission-controller
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+data:
+  config.yaml: |
+    ---
+    apiVersion: admissioncontroller.config.gardener.cloud/v1alpha1
+    kind: AdmissionControllerConfiguration
+    gardenClientConnection:
+      acceptContentTypes: {{ required ".Values.global.admission.config.gardenClientConnection.acceptContentTypes is required" .Values.global.admission.config.gardenClientConnection.acceptContentTypes }}
+      contentType: {{ required ".Values.global.admission.config.gardenClientConnection.contentType is required" .Values.global.admission.config.gardenClientConnection.contentType }}
+      qps: {{ required ".Values.global.admission.config.gardenClientConnection.qps is required" .Values.global.admission.config.gardenClientConnection.qps }}
+      burst: {{ required ".Values.global.admission.config.gardenClientConnection.burst is required" .Values.global.admission.config.gardenClientConnection.burst }}
+      {{- if .Values.global.admission.config.gardenClientConnection.kubeconfig }}
+      kubeconfig: {{ .Values.global.admission.config.gardenClientConnection.kubeconfig }}
+      {{- end }}
+      {{- if .Values.global.admission.kubeconfig }}
+      kubeconfig: /etc/gardener-admission-controller/kubeconfig/kubeconfig
+      {{- end }}
+    server:
+      https:
+        bindAddress: {{ required ".Values.global.admission.config.server.https.bindAddress is required" .Values.global.admission.config.server.https.bindAddress }}
+        port: {{ required ".Values.global.admission.config.server.https.port is required" .Values.global.admission.config.server.https.port }}
+        tls:
+          serverCertPath: /etc/gardener-admission-controller/srv/gardener-admission-controller.crt
+          serverKeyPath: /etc/gardener-admission-controller/srv/gardener-admission-controller.key
+{{- end }}

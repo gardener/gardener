@@ -16,45 +16,62 @@ package webhooks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
 
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type namespaceDeletionHandler struct {
 	k8sGardenClient kubernetes.Interface
 
-	projectLister gardencorelisters.ProjectLister
-	shootLister   gardencorelisters.ShootLister
-
 	codecs serializer.CodecFactory
 }
 
+const waitForCachesToSyncTimeout = 5 * time.Minute
+
 // NewValidateNamespaceDeletionHandler creates a new handler for validating namespace deletions.
-func NewValidateNamespaceDeletionHandler(k8sGardenClient kubernetes.Interface, projectLister gardencorelisters.ProjectLister, shootLister gardencorelisters.ShootLister) http.HandlerFunc {
+func NewValidateNamespaceDeletionHandler(ctx context.Context, k8sGardenClient kubernetes.Interface) (http.HandlerFunc, error) {
+	// Initialize caches here to ensure http requests can be served quicker with pre-syncronized caches.
+	var hasSyncFuncs []cache.InformerSynced
+	informer, err := k8sGardenClient.Cache().GetInformer(ctx, &corev1.Secret{})
+	if err != nil {
+		return nil, err
+	}
+	hasSyncFuncs = append(hasSyncFuncs, informer.HasSynced)
+	informer, err = k8sGardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	if err != nil {
+		return nil, err
+	}
+	hasSyncFuncs = append(hasSyncFuncs, informer.HasSynced)
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, waitForCachesToSyncTimeout)
+	defer cancel()
+	if !cache.WaitForCacheSync(timeoutCtx.Done(), hasSyncFuncs...) {
+		return nil, errors.New("timed out waiting for caches to sync")
+	}
+
 	scheme := runtime.NewScheme()
 	utilruntime.Must(corev1.AddToScheme(scheme))
-	utilruntime.Must(admissionregistrationv1beta1.AddToScheme(scheme))
 
-	h := &namespaceDeletionHandler{k8sGardenClient, projectLister, shootLister, serializer.NewCodecFactory(scheme)}
-	return h.ValidateNamespaceDeletion
+	h := &namespaceDeletionHandler{k8sGardenClient, serializer.NewCodecFactory(scheme)}
+	return h.ValidateNamespaceDeletion, nil
 }
 
 // ValidateNamespaceDeletion is a HTTP handler for validating whether a namespace deletion is allowed or not.
@@ -124,7 +141,7 @@ func (h *namespaceDeletionHandler) admitNamespaces(request *admissionv1beta1.Adm
 	}
 
 	// Determine project object for given namespace.
-	project, err := common.ProjectForNamespace(h.projectLister, request.Name)
+	project, err := common.ProjectForNamespaceWithClient(ctx, h.k8sGardenClient.Client(), request.Name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Namespace does not belong to a project. Deletion is allowed.
@@ -148,7 +165,7 @@ func (h *namespaceDeletionHandler) admitNamespaces(request *admissionv1beta1.Adm
 		// Namespace is already marked to be deleted so we can allow the request.
 		return admissionResponse(true, "")
 	case project.DeletionTimestamp != nil:
-		namespaceEmpty, err := h.isNamespaceEmpty(namespace.Name)
+		namespaceEmpty, err := h.isNamespaceEmpty(ctx, namespace.Name)
 		if err != nil {
 			return errToAdmissionResponse(err)
 		}
@@ -164,11 +181,11 @@ func (h *namespaceDeletionHandler) admitNamespaces(request *admissionv1beta1.Adm
 	return admissionResponse(false, fmt.Sprintf("Direct deletion of namespace %q is not permitted (you must delete the corresponding project %q).", namespace.Name, project.Name))
 }
 
-func (h *namespaceDeletionHandler) isNamespaceEmpty(namespace string) (bool, error) {
-	shootList, err := h.shootLister.Shoots(namespace).List(labels.Everything())
-	if err != nil {
+func (h *namespaceDeletionHandler) isNamespaceEmpty(ctx context.Context, namespace string) (bool, error) {
+	shoots := &gardencorev1beta1.ShootList{}
+	if err := h.k8sGardenClient.Client().List(ctx, shoots, client.InNamespace(namespace)); err != nil {
 		return false, err
 	}
 
-	return len(shootList) == 0, nil
+	return len(shoots.Items) == 0, nil
 }

@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,7 +40,6 @@ type kubeconfigSecretValidator struct {
 func NewValidateKubeconfigSecretsHandler() http.HandlerFunc {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(corev1.AddToScheme(scheme))
-	utilruntime.Must(admissionregistrationv1beta1.AddToScheme(scheme))
 
 	h := &kubeconfigSecretValidator{serializer.NewCodecFactory(scheme)}
 	return h.ValidateKubeconfigSecrets

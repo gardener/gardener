@@ -1,0 +1,107 @@
+{{- if .Values.global.admission.enabled }}
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: gardener-admission-controller
+  namespace: garden
+  labels:
+    app: gardener
+    role: admission-controller
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  replicas: {{ required ".Values.global.admission.replicaCount is required" .Values.global.admission.replicaCount }}
+  selector:
+    matchLabels:
+      app: gardener
+      role: admission-controller
+  template:
+    metadata:
+      annotations:
+        checksum/configmap-gardener-admission-controller-config: {{ include (print $.Template.BasePath "/admission-controller/configmap-componentconfig.yaml") . | sha256sum }}
+        checksum/secret-admission-controller-cert: {{ include (print $.Template.BasePath "/admission-controller/secret-cert.yaml") . | sha256sum }}
+        checksum/secret-gardener-admission-controller-kubeconfig: {{ include (print $.Template.BasePath "/admission-controller/secret-kubeconfig.yaml") . | sha256sum }}
+        {{- if .Values.global.admission.podAnnotations }}
+{{ toYaml .Values.global.admission.podAnnotations | indent 8 }}
+        {{- end }}
+      labels:
+        app: gardener
+        role: admission-controller
+        chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+        release: "{{ .Release.Name }}"
+        heritage: "{{ .Release.Service }}"
+        {{- if .Values.global.admission.podLabels }}
+{{ toYaml .Values.global.admission.podLabels | indent 8 }}
+        {{- end }}
+    spec:
+      {{- if not .Values.global.admission.kubeconfig }}
+      serviceAccountName: {{ required ".Values.global.admission.serviceAccountName is required" .Values.global.admission.serviceAccountName }}
+      {{- end }}
+      {{- if gt (int .Values.global.admission.replicaCount) 1 }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - gardener
+              - key: role
+                operator: In
+                values:
+                - admission-controller
+            topologyKey: kubernetes.io/hostname
+      {{- end }}
+      containers:
+      - name: gardener-admission-controller
+        image: {{ include "utils-templates.image" .Values.global.admission.image }}
+        imagePullPolicy: {{ .Values.global.admission.image.pullPolicy }}
+        command:
+        - /gardener-admission-controller
+        - --config=/etc/gardener-admission-controller/config/config.yaml
+        {{- if .Values.global.admission.resources }}
+        resources:
+{{ toYaml .Values.global.admission.resources | indent 10 }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ required ".Values.global.admission.config.server.https.port is required" .Values.global.admission.config.server.https.port }}
+            scheme: HTTPS
+          initialDelaySeconds: 300
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ required ".Values.global.admission.config.server.https.port is required" .Values.global.admission.config.server.https.port }}
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - name: gardener-admission-controller-cert
+          mountPath: /etc/gardener-admission-controller/srv
+          readOnly: true
+        {{- if .Values.global.admission.kubeconfig }}
+        - name: gardener-admission-controller-kubeconfig
+          mountPath: /etc/gardener-admission-controller/kubeconfig
+          readOnly: true
+        {{- end }}
+        - name: gardener-admission-controller-config
+          mountPath: /etc/gardener-admission-controller-config/config
+      volumes:
+      - name: gardener-admission-controller-cert
+        secret:
+          secretName: gardener-admission-controller-cert
+      {{- if .Values.global.admission.kubeconfig }}
+      - name: gardener-admission-controller-kubeconfig
+        secret:
+          secretName: gardener-admission-controller-kubeconfig
+      {{- end }}
+      - name: gardener-admission-controller-config
+        configMap:
+          name: gardener-admission-controller-configmap
+{{- end}}

@@ -33,7 +33,6 @@ import (
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
-	"github.com/gardener/gardener/pkg/controllermanager/server/handlers/webhooks"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
@@ -49,7 +48,6 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
 )
@@ -301,34 +299,6 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 
 	// Prepare a reusable run function.
 	run := func(ctx context.Context) {
-		var (
-			projects        = g.K8sGardenCoreInformers.Core().V1beta1().Projects()
-			projectInformer = projects.Informer()
-			shoots          = g.K8sGardenCoreInformers.Core().V1beta1().Shoots()
-			shootInformer   = shoots.Informer()
-		)
-
-		k8sGardenClient, err := g.ClientMap.GetClient(ctx, keys.ForGarden())
-		if err != nil {
-			panic(fmt.Errorf("failed to get garden client: %+v", err))
-		}
-
-		g.K8sGardenCoreInformers.Start(ctx.Done())
-		if !cache.WaitForCacheSync(ctx.Done(), projectInformer.HasSynced, shootInformer.HasSynced) {
-			panic("Timed out waiting for Garden caches to sync")
-		}
-
-		// Start webhook server
-		go server.
-			NewBuilder().
-			WithBindAddress(g.Config.Server.HTTPS.BindAddress).
-			WithPort(g.Config.Server.HTTPS.Port).
-			WithTLS(g.Config.Server.HTTPS.TLS.ServerCertPath, g.Config.Server.HTTPS.TLS.ServerKeyPath).
-			WithHandler("/webhooks/validate-namespace-deletion", webhooks.NewValidateNamespaceDeletionHandler(k8sGardenClient, projects.Lister(), shoots.Lister())).
-			WithHandler("/webhooks/validate-kubeconfig-secrets", webhooks.NewValidateKubeconfigSecretsHandler()).
-			Build().
-			Start(ctx)
-
 		// Start controllers
 		g.startControllers(ctx)
 	}
