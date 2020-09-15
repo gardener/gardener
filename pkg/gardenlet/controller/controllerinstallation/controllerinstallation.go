@@ -64,7 +64,7 @@ type Controller struct {
 }
 
 // NewController instantiates a new ControllerInstallation controller.
-func NewController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder, gardenNamespace *corev1.Namespace) *Controller {
+func NewController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder, gardenNamespace *corev1.Namespace, gardenClusterIdentity string) *Controller {
 	var (
 		gardenCoreInformer = gardenCoreInformerFactory.Core().V1beta1()
 
@@ -83,7 +83,7 @@ func NewController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gard
 	)
 
 	controller := &Controller{
-		controllerInstallationControl: NewDefaultControllerInstallationControl(clientMap, gardenCoreInformerFactory, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace),
+		controllerInstallationControl: NewDefaultControllerInstallationControl(clientMap, gardenCoreInformerFactory, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace, gardenClusterIdentity),
 		careControl:                   NewDefaultCareControl(clientMap, config),
 
 		config:   config,

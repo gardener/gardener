@@ -110,8 +110,8 @@ type ControlInterface interface {
 // NewDefaultControllerInstallationControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for ControllerInstallations. You should use an instance returned from
 // NewDefaultControllerInstallationControl() for any scenario other than testing.
-func NewDefaultControllerInstallationControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, config *config.GardenletConfiguration, seedLister gardencorelisters.SeedLister, controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, controllerInstallationLister gardencorelisters.ControllerInstallationLister, gardenNamespace *corev1.Namespace) ControlInterface {
-	return &defaultControllerInstallationControl{clientMap, k8sGardenCoreInformers, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace}
+func NewDefaultControllerInstallationControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, config *config.GardenletConfiguration, seedLister gardencorelisters.SeedLister, controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, controllerInstallationLister gardencorelisters.ControllerInstallationLister, gardenNamespace *corev1.Namespace, gardenClusterIdentity string) ControlInterface {
+	return &defaultControllerInstallationControl{clientMap, k8sGardenCoreInformers, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace, gardenClusterIdentity}
 }
 
 type defaultControllerInstallationControl struct {
@@ -123,6 +123,7 @@ type defaultControllerInstallationControl struct {
 	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
 	controllerInstallationLister gardencorelisters.ControllerInstallationLister
 	gardenNamespace              *corev1.Namespace
+	gardenClusterIdentity        string
 }
 
 func (c *defaultControllerInstallationControl) Reconcile(obj *gardencorev1beta1.ControllerInstallation) error {
@@ -216,14 +217,21 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		}
 	}
 
+	if seed.Status.ClusterIdentity == nil {
+		return fmt.Errorf("cluster-identity of seed '%s' not set", seed.Name)
+	}
+	seedClusterIdentity := *seed.Status.ClusterIdentity
+
 	// Mix-in some standard values for garden and seed.
 	gardenerValues := map[string]interface{}{
 		"gardener": map[string]interface{}{
 			"garden": map[string]interface{}{
-				"identity": c.gardenNamespace.UID,
+				"identity":        c.gardenNamespace.UID, // 'identity' value is deprecated to be replaced by 'clusterIdentity'. Should be removed in a future version.
+				"clusterIdentity": c.gardenClusterIdentity,
 			},
 			"seed": map[string]interface{}{
-				"identity":        seed.Name,
+				"identity":        seed.Name, // 'identity' value is deprecated to be replaced by 'clusterIdentity'. Should be removed in a future version.
+				"clusterIdentity": seedClusterIdentity,
 				"annotations":     seed.Annotations,
 				"labels":          seed.Labels,
 				"provider":        seed.Spec.Provider.Type,
