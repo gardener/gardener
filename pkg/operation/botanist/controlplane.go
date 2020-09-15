@@ -1149,7 +1149,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	// If HVPA feature gate is enabled then we should delete the old HPA and VPA resources as
 	// the HVPA controller will create its own for the kube-apiserver deployment.
 	if hvpaEnabled {
-		for _, obj := range []runtime.Object{
+		objects := []runtime.Object{
 			// TODO: Use autoscaling/v2beta2 for Kubernetes 1.19+ shoots once kubernetes-v1.19 golang dependencies were vendored.
 			&autoscalingv2beta1.HorizontalPodAutoscaler{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1163,10 +1163,10 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 					Name:      v1beta1constants.DeploymentNameKubeAPIServer + "-vpa",
 				},
 			},
-		} {
-			if err := b.K8sSeedClient.Client().Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
-				return err
-			}
+		}
+
+		if err := kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(), objects...); err != nil {
+			return err
 		}
 	} else {
 		// If HVPA is disabled, delete any HVPA that was already deployed

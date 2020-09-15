@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -35,7 +36,6 @@ import (
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
@@ -423,7 +423,7 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 // DeleteKubeStateMetricsSeed will delete everything related to the kube-state-metrics-seed deployment
 // present in the shoot namespaces.
 func (b *Botanist) DeleteKubeStateMetricsSeed(ctx context.Context) error {
-	for _, obj := range []runtime.Object{
+	objects := []runtime.Object{
 		&corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,
@@ -454,13 +454,9 @@ func (b *Botanist) DeleteKubeStateMetricsSeed(ctx context.Context) error {
 				Name:      "kube-state-metrics-seed-vpa",
 			},
 		},
-	} {
-		if err := b.K8sSeedClient.Client().Delete(ctx, obj); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
-			return err
-		}
 	}
 
-	return nil
+	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(), objects...)
 }
 
 // DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts
@@ -484,7 +480,7 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
-	for _, obj := range []runtime.Object{
+	objects := []runtime.Object{
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,
@@ -582,14 +578,11 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 				Name:      "prometheus-db-prometheus-0",
 			},
 		},
-	} {
-		if err := b.K8sSeedClient.Client().Delete(ctx, obj); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
-			return err
-		}
 	}
 
-	return nil
+	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(), objects...)
 }
+
 func indent(str string, spaces int) string {
 	return strings.ReplaceAll(str, "\n", "\n"+strings.Repeat(" ", spaces))
 }

@@ -35,17 +35,17 @@ import (
 
 	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/gomega"
 )
 
 const (
@@ -163,7 +163,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("deleting reserve-capacity deployment")
-		err = framework.DeleteResource(ctx, f.ShootClient, &appsv1.Deployment{
+		err = kutil.DeleteObject(ctx, f.ShootClient.Client(), &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: reserveCapacityDeploymentNamespace,
 				Name:      reserveCapacityDeploymentName,
@@ -289,7 +289,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("deleting reserve-capacity deployment")
-		err = framework.DeleteResource(ctx, f.ShootClient, &appsv1.Deployment{
+		err = kutil.DeleteObject(ctx, f.ShootClient.Client(), &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: reserveCapacityDeploymentNamespace,
 				Name:      reserveCapacityDeploymentName,

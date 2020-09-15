@@ -531,13 +531,7 @@ func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace 
 		},
 	}
 
-	for _, obj := range objs {
-		if err := k8sClient.Delete(ctx, obj, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
-	return nil
+	return kutil.DeleteObjects(ctx, k8sClient, objs...)
 }
 
 // DeleteGrafanaByRole deletes the monitoring stack for the shoot owner.

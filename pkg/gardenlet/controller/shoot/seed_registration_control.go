@@ -47,7 +47,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -698,7 +697,9 @@ func deleteGardenlet(ctx context.Context, c client.Client) error {
 	vpa.SetName("gardenlet-vpa")
 	vpa.SetNamespace(v1beta1constants.GardenNamespace)
 
-	for _, obj := range []runtime.Object{
+	return kutil.DeleteObjects(
+		ctx,
+		c,
 		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: v1beta1constants.GardenNamespace}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet-configmap", Namespace: v1beta1constants.GardenNamespace}},
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet-imagevector-overwrite", Namespace: v1beta1constants.GardenNamespace}},
@@ -707,13 +708,7 @@ func deleteGardenlet(ctx context.Context, c client.Client) error {
 		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: v1beta1constants.GardenNamespace}},
 		&policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "gardenlet", Namespace: v1beta1constants.GardenNamespace}},
 		vpa,
-	} {
-		if err := c.Delete(ctx, obj); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
-			return err
-		}
-	}
-
-	return nil
+	)
 }
 
 func checkSeedAssociations(ctx context.Context, c client.Client, seedName string) error {
