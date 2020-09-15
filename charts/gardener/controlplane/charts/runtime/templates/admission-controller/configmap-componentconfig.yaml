@@ -33,4 +33,12 @@ data:
         tls:
           serverCertPath: /etc/gardener-admission-controller/srv/gardener-admission-controller.crt
           serverKeyPath: /etc/gardener-admission-controller/srv/gardener-admission-controller.key
+      {{- if .Values.global.admission.config.server.resourceAdmissionConfiguration }}
+      resourceAdmissionConfiguration:
+        limits:
+{{ toYaml .Values.global.admission.config.server.resourceAdmissionConfiguration.limits | indent 8 }}
+        unrestrictedSubjects:
+{{ toYaml .Values.global.admission.config.server.resourceAdmissionConfiguration.unrestrictedSubjects | indent 8 }}
+        operationMode: {{ required ".Values.global.admission.config.server.resourceAdmissionConfiguration.operationMode is required" .Values.global.admission.config.server.resourceAdmissionConfiguration.operationMode }}
+      {{- end }}
 {{- end }}

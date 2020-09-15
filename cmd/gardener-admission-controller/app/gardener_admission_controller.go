@@ -23,6 +23,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	configvalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
 	"github.com/gardener/gardener/pkg/admissioncontroller/server/handlers/webhooks"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -140,6 +141,10 @@ func (o *options) run(ctx context.Context) error {
 		return err
 	}
 
+	if errs := configvalidation.ValidateAdmissionControllerConfiguration(c); len(errs) > 0 {
+		return errs.ToAggregate()
+	}
+
 	admissionController, err := NewAdmissionController(c)
 	if err != nil {
 		return err
@@ -215,6 +220,7 @@ func (a *AdmissionController) Run(ctx context.Context) error {
 		WithTLS(a.Config.Server.HTTPS.TLS.ServerCertPath, a.Config.Server.HTTPS.TLS.ServerKeyPath).
 		WithHandler("/webhooks/validate-namespace-deletion", namespaceValidationHandler).
 		WithHandler("/webhooks/validate-kubeconfig-secrets", webhooks.NewValidateKubeconfigSecretsHandler()).
+		WithHandler("/webhooks/validate-resource-size", webhooks.NewValidateResourceSizeHandler(a.Config.Server.ResourceAdmissionConfiguration)).
 		WithHandlerFunc("/healthz", healthz.HandlerFunc(healthManager)).
 		WithHandlerFunc("/readyz", healthz.HandlerFunc(healthManager)).
 		Build().

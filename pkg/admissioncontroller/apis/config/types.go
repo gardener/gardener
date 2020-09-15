@@ -15,6 +15,8 @@
 package config
 
 import (
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfig "k8s.io/component-base/config"
 )
@@ -37,6 +39,36 @@ type AdmissionControllerConfiguration struct {
 type ServerConfiguration struct {
 	// HTTPS is the configuration for the HTTPS server.
 	HTTPS HTTPSServer
+	// ResourceAdmissionConfiguration is the configuration for the resource admission.
+	ResourceAdmissionConfiguration *ResourceAdmissionConfiguration
+}
+
+// ResourceAdmissionConfiguration contains settings about arbitrary kinds and the size each resource should have at most.
+type ResourceAdmissionConfiguration struct {
+	// Limits contains configuration for resources which are subjected to size limitations.
+	Limits []ResourceLimit
+	// UnrestrictedSubjects contains references to users, groups, or service accounts which aren't subjected to any resource size limit.
+	UnrestrictedSubjects []rbacv1.Subject
+	// OperationMode specifies the mode the webhooks operates in. Allowed values are "block" and "log". Defaults to "block".
+	OperationMode *ResourceAdmissionWebhookMode
+}
+
+// ResourceAdmissionWebhookMode is an alias type for the resource admission webhook mode.
+type ResourceAdmissionWebhookMode string
+
+// WildcardAll is a character which represents all elements in a set.
+const WildcardAll = "*"
+
+// ResourceLimit contains settings about a kind and the size each resource should have at most.
+type ResourceLimit struct {
+	// APIGroup is the name of the APIGroup that contains the limited resource. WildcardAll represents all groups.
+	APIGroups []string
+	// APIVersions is the version of the resource. WildcardAll represents all versions.
+	APIVersions []string
+	// Resource is the name of the resource this rule applies to. WildcardAll represents all resources.
+	Resources []string
+	// Size specifies the imposed limit.
+	Size resource.Quantity
 }
 
 // Server contains information for HTTP(S) server configuration.
@@ -62,3 +94,10 @@ type TLSServer struct {
 	// ServerKeyPath is the path to the private key file.
 	ServerKeyPath string
 }
+
+const (
+	// AdmissionModeBlock specifies that the webhook should block violating requests.
+	AdmissionModeBlock ResourceAdmissionWebhookMode = "block"
+	// AdmissionModeLog specifies that the webhook should only log violating requests.
+	AdmissionModeLog ResourceAdmissionWebhookMode = "log"
+)
