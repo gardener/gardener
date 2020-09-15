@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed/istio"
@@ -359,6 +360,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	if loggingEnabled {
 		// Fetch component specific logging configurations
 		for _, componentFn := range []component.LoggingConfiguration{
+			clusterautoscaler.LoggingConfiguration,
 			kubescheduler.LoggingConfiguration,
 		} {
 			parser, filter, err := componentFn()
@@ -672,7 +674,20 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		"cluster-identity": map[string]interface{}{"clusterIdentity": &seed.Info.Status.ClusterIdentity},
 	})
 
-	return chartApplier.Apply(ctx, filepath.Join("charts", chartName), v1beta1constants.GardenNamespace, chartName, values, applierOptions)
+	if err := chartApplier.Apply(ctx, filepath.Join("charts", chartName), v1beta1constants.GardenNamespace, chartName, values, applierOptions); err != nil {
+		return err
+	}
+
+	// Deploy component specific resources
+	for _, componentFn := range []component.BootstrapSeed{
+		clusterautoscaler.BootstrapSeed,
+	} {
+		if err := componentFn(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace, k8sSeedClient.Version()); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // DesiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes

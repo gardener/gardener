@@ -190,21 +190,6 @@ func (b *Botanist) waitUntilNamespaceDeleted(ctx context.Context, namespace stri
 	})
 }
 
-// WaitUntilClusterAutoscalerDeleted waits until the cluster-autoscaler deployment within the Seed cluster has
-// been deleted.
-func (b *Botanist) WaitUntilClusterAutoscalerDeleted(ctx context.Context) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 600*time.Second, func(ctx context.Context) (done bool, err error) {
-		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameClusterAutoscaler), &appsv1.Deployment{}); err != nil {
-			if apierrors.IsNotFound(err) {
-				return retry.Ok()
-			}
-			return retry.SevereError(err)
-		}
-		b.Logger.Infof("Waiting until the %s has been deleted in the Seed cluster...", v1beta1constants.DeploymentNameClusterAutoscaler)
-		return retry.MinorError(fmt.Errorf("deployment %q is still present", v1beta1constants.DeploymentNameClusterAutoscaler))
-	})
-}
-
 // WaitForControllersToBeActive checks whether kube-controller-manager has
 // recently written to the Endpoint object holding the leader information. If yes, it is active.
 func (b *Botanist) WaitForControllersToBeActive(ctx context.Context) error {

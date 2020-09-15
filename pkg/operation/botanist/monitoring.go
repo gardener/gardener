@@ -62,9 +62,15 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	)
 
 	// Fetch component-specific monitoring configuration
-	for _, component := range []component.MonitoringComponent{
+	monitoringComponents := []component.MonitoringComponent{
 		b.Shoot.Components.ControlPlane.KubeScheduler,
-	} {
+	}
+
+	if b.Shoot.WantsClusterAutoscaler {
+		monitoringComponents = append(monitoringComponents, b.Shoot.Components.ControlPlane.ClusterAutoscaler)
+	}
+
+	for _, component := range monitoringComponents {
 		componentsScrapeConfigs, err := component.ScrapeConfigs()
 		if err != nil {
 			return err
@@ -146,9 +152,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			},
 			"rules": map[string]interface{}{
 				"optional": map[string]interface{}{
-					"cluster-autoscaler": map[string]interface{}{
-						"enabled": b.Shoot.WantsClusterAutoscaler,
-					},
 					"alertmanager": map[string]interface{}{
 						"enabled": b.Shoot.WantsAlertmanager,
 					},

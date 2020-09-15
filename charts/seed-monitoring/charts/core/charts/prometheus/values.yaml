@@ -67,9 +67,6 @@ allowedMetrics:
   - rest_client_requests_total
   - process_max_fds
   - process_open_fds
-  clusterAutoscaler:
-  - process_max_fds
-  - process_open_fds
   kubeAPIServer:
   - apiserver_registered_watchers
   - apiserver_request_count
@@ -300,8 +297,6 @@ shoot:
 
 rules:
   optional:
-    cluster-autoscaler:
-      enabled: true
     alertmanager:
       enabled: false
     hvpa:

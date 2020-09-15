@@ -32,6 +32,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -157,61 +158,35 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptions...))
 }
 
-// DeployClusterAutoscaler deploys the cluster-autoscaler into the Shoot namespace in the Seed cluster. It is responsible
-// for automatically scaling the worker pools of the Shoot.
-func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
-	if !b.Shoot.WantsClusterAutoscaler {
-		return b.DeleteClusterAutoscaler(ctx)
-	}
-
-	var workerPools []map[string]interface{}
-	for _, worker := range b.Shoot.MachineDeployments {
-
-		workerPools = append(workerPools, map[string]interface{}{
-			"name": worker.Name,
-			"min":  worker.Minimum,
-			"max":  worker.Maximum,
-		})
-	}
-
-	defaultValues := map[string]interface{}{
-		"podAnnotations": map[string]interface{}{
-			"checksum/secret-cluster-autoscaler": b.CheckSums[v1beta1constants.DeploymentNameClusterAutoscaler],
-		},
-		"namespace": map[string]interface{}{
-			"uid": b.SeedNamespaceObject.UID,
-		},
-		"replicas":    b.Shoot.GetReplicas(1),
-		"workerPools": workerPools,
-	}
-
-	if clusterAutoscalerConfig := b.Shoot.Info.Spec.Kubernetes.ClusterAutoscaler; clusterAutoscalerConfig != nil {
-		if val := clusterAutoscalerConfig.ScaleDownUtilizationThreshold; val != nil {
-			defaultValues["scaleDownUtilizationThreshold"] = *val
-		}
-		if val := clusterAutoscalerConfig.ScaleDownUnneededTime; val != nil {
-			defaultValues["scaleDownUnneededTime"] = *val
-		}
-		if val := clusterAutoscalerConfig.ScaleDownDelayAfterAdd; val != nil {
-			defaultValues["scaleDownDelayAfterAdd"] = *val
-		}
-		if val := clusterAutoscalerConfig.ScaleDownDelayAfterFailure; val != nil {
-			defaultValues["scaleDownDelayAfterFailure"] = *val
-		}
-		if val := clusterAutoscalerConfig.ScaleDownDelayAfterDelete; val != nil {
-			defaultValues["scaleDownDelayAfterDelete"] = *val
-		}
-		if val := clusterAutoscalerConfig.ScanInterval; val != nil {
-			defaultValues["scanInterval"] = *val
-		}
-	}
-
-	values, err := b.InjectSeedShootImages(defaultValues, common.ClusterAutoscalerImageName)
+// DefaultClusterAutoscaler returns a deployer for the cluster-autoscaler.
+func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.ClusterAutoscaler, error) {
+	image, err := b.ImageVector.FindImage(common.ClusterAutoscalerImageName, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameClusterAutoscaler), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameClusterAutoscaler, kubernetes.Values(values))
+	return clusterautoscaler.New(
+		b.K8sSeedClient.Client(),
+		b.Shoot.SeedNamespace,
+		image.String(),
+		b.Shoot.GetReplicas(1),
+		b.Shoot.Info.Spec.Kubernetes.ClusterAutoscaler,
+	), nil
+}
+
+// DeployClusterAutoscaler deploys the Kubernetes cluster-autoscaler.
+func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
+	if b.Shoot.WantsClusterAutoscaler {
+		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetSecrets(clusterautoscaler.Secrets{
+			Kubeconfig: component.Secret{Name: clusterautoscaler.SecretName, Checksum: b.CheckSums[clusterautoscaler.SecretName]},
+		})
+		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetNamespaceUID(b.SeedNamespaceObject.UID)
+		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetMachineDeployments(b.Shoot.MachineDeployments)
+
+		return b.Shoot.Components.ControlPlane.ClusterAutoscaler.Deploy(ctx)
+	}
+
+	return b.Shoot.Components.ControlPlane.ClusterAutoscaler.Destroy(ctx)
 }
 
 // DeployVerticalPodAutoscaler deploys the VPA into the shoot namespace in the seed.
