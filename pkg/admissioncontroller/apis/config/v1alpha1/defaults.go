@@ -35,12 +35,14 @@ func SetDefaults_AdmissionControllerConfiguration(obj *AdmissionControllerConfig
 		obj.Server.HTTPS.Port = 2721
 	}
 
+	if obj.Server.ResourceAdmissionConfiguration == nil {
+		obj.Server.ResourceAdmissionConfiguration = &ResourceAdmissionConfiguration{}
+	}
+
 	resourceAdmission := obj.Server.ResourceAdmissionConfiguration
-	if resourceAdmission != nil {
-		for i, subject := range resourceAdmission.UnrestrictedSubjects {
-			if (subject.Kind == rbacv1.UserKind || subject.Kind == rbacv1.GroupKind) && subject.APIGroup == "" {
-				resourceAdmission.UnrestrictedSubjects[i].APIGroup = rbacv1.GroupName
-			}
+	for i, subject := range resourceAdmission.UnrestrictedSubjects {
+		if (subject.Kind == rbacv1.UserKind || subject.Kind == rbacv1.GroupKind) && subject.APIGroup == "" {
+			resourceAdmission.UnrestrictedSubjects[i].APIGroup = rbacv1.GroupName
 		}
 	}
 }

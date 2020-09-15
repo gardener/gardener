@@ -95,7 +95,7 @@ type TLSServer struct {
 	ServerKeyPath string
 }
 
-var (
+const (
 	// AdmissionModeBlock specifies that the webhook should block violating requests.
 	AdmissionModeBlock ResourceAdmissionWebhookMode = "block"
 	// AdmissionModeLog specifies that the webhook should only log violating requests.

@@ -37,6 +37,7 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.LogLevel).To(Equal("info"))
 				Expect(obj.Server.HTTPS.BindAddress).To(Equal("0.0.0.0"))
 				Expect(obj.Server.HTTPS.Port).To(Equal(2721))
+				Expect(obj.Server.ResourceAdmissionConfiguration).To(Equal(&ResourceAdmissionConfiguration{}))
 			})
 		})
 
