@@ -37,10 +37,9 @@ import (
 )
 
 type objectSizeHandler struct {
-	config         *apisconfig.ResourceAdmissionConfiguration
-	codecs         serializer.CodecFactory
-	logger         logrus.FieldLogger
-	maxRequestBody int64
+	config *apisconfig.ResourceAdmissionConfiguration
+	codecs serializer.CodecFactory
+	logger logrus.FieldLogger
 }
 
 const (
@@ -56,10 +55,6 @@ func NewValidateResourceSizeHandler(config *apisconfig.ResourceAdmissionConfigur
 		config: config,
 		codecs: serializer.NewCodecFactory(scheme),
 		logger: logger.NewFieldLogger(logger.Logger, "component", validatorName),
-
-		// Take the same, fixed value from API server for general safety to reduce the odds of OOM issues while reading the body.
-		// https://github.com/kubernetes/kubernetes/blob/d8eac8df28e6b50cd0f5380e23fc57daaf92972e/staging/src/k8s.io/apiserver/pkg/server/config.go#L322
-		maxRequestBody: int64(3 * 1024 * 1024),
 	}
 	return h.ValidateResourceSize
 }
@@ -71,7 +66,7 @@ func (h *objectSizeHandler) ValidateResourceSize(w http.ResponseWriter, r *http.
 		receivedReview = &admissionv1beta1.AdmissionReview{}
 	)
 
-	if err := DecodeAdmissionRequest(r, deserializer, receivedReview, h.maxRequestBody); err != nil {
+	if err := DecodeAdmissionRequest(r, deserializer, receivedReview, maxRequestBody); err != nil {
 		h.logger.Errorf(err.Error())
 		respond(w, errToAdmissionResponse(err))
 		return
