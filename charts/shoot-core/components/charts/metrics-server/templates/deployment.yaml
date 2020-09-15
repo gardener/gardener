@@ -59,6 +59,18 @@ spec:
         - --tls-cert-file=/srv/metrics-server/tls/tls.crt
         - --tls-private-key-file=/srv/metrics-server/tls/tls.key
         - --v=2
+        readinessProbe:
+          tcpSocket:
+            port: 8443
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 1
+        livenessProbe:
+          tcpSocket:
+            port: 8443
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          failureThreshold: 1
         resources:
           requests:
             cpu: 20m
