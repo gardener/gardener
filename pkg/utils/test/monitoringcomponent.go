@@ -25,9 +25,15 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// AlertingRules is a utility test function for MonitoringComponents in order to test the alerting rules with the
-// promtool binary.
-func AlertingRules(c component.MonitoringComponent, expectedAlertingRules map[string]string, filenameRulesTest string) {
+// ScapeConfigs is a utility test function for MonitoringComponents in order to test the scape configurations.
+func ScapeConfigs(c component.MonitoringComponent, expectedScrapeConfig string) {
+	scrapeConfigs, err := c.ScrapeConfigs()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(scrapeConfigs).To(ConsistOf(Equal(expectedScrapeConfig)))
+}
+
+// AlertingRules is a utility test function for MonitoringComponents in order to test the alerting rules.
+func AlertingRules(c component.MonitoringComponent, expectedAlertingRules map[string]string) {
 	alertingRules, err := c.AlertingRules()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(alertingRules).To(HaveLen(len(expectedAlertingRules)))
@@ -35,6 +41,12 @@ func AlertingRules(c component.MonitoringComponent, expectedAlertingRules map[st
 	for filename, rule := range expectedAlertingRules {
 		Expect(alertingRules).To(HaveKeyWithValue(filename, rule))
 	}
+}
+
+// ExecutePromtool execute the promtool tests for the alerting rules.
+func ExecutePromtool(c component.MonitoringComponent, filenameRulesTest string) {
+	alertingRules, err := c.AlertingRules()
+	Expect(err).NotTo(HaveOccurred())
 
 	for filename, rule := range alertingRules {
 		Expect(ioutil.WriteFile(filename, []byte(rule), 0644)).To(Succeed())
@@ -46,4 +58,10 @@ func AlertingRules(c component.MonitoringComponent, expectedAlertingRules map[st
 
 		Expect(os.Remove(filename)).To(Succeed())
 	}
+}
+
+// AlertingRulesWithPromtool tests the alerting rules and execute promtool tests.
+func AlertingRulesWithPromtool(c component.MonitoringComponent, expectedAlertingRules map[string]string, filenameRulesTest string) {
+	AlertingRules(c, expectedAlertingRules)
+	ExecutePromtool(c, filenameRulesTest)
 }

@@ -29,7 +29,7 @@ const (
 `
 	loggingFilter = `[FILTER]
     Name                parser
-    Match               kubernetes.*` + v1beta1constants.DeploymentNameKubeScheduler + `*` + v1beta1constants.DeploymentNameKubeScheduler + `*
+    Match               kubernetes.*` + v1beta1constants.DeploymentNameKubeScheduler + `*` + containerName + `*
     Key_Name            log
     Parser              ` + loggingParserName + `
     Reserve_Data        True

@@ -1321,11 +1321,11 @@ func (b *Botanist) DefaultKubeScheduler() (kubescheduler.KubeScheduler, error) {
 	), nil
 }
 
-// DeployKubeScheduler deploys the Kubernetes scehduler.
+// DeployKubeScheduler deploys the Kubernetes scheduler.
 func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.KubeScheduler.SetSecrets(kubescheduler.Secrets{
-		Kubeconfig: kubescheduler.Secret{Name: kubescheduler.SecretName, Checksum: b.CheckSums[kubescheduler.SecretName]},
-		Server:     kubescheduler.Secret{Name: kubescheduler.SecretNameServer, Checksum: b.CheckSums[kubescheduler.SecretNameServer]},
+		Kubeconfig: component.Secret{Name: kubescheduler.SecretName, Checksum: b.CheckSums[kubescheduler.SecretName]},
+		Server:     component.Secret{Name: kubescheduler.SecretNameServer, Checksum: b.CheckSums[kubescheduler.SecretNameServer]},
 	})
 
 	return b.Shoot.Components.ControlPlane.KubeScheduler.Deploy(ctx)

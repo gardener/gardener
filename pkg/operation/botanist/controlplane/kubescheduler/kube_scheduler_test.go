@@ -21,6 +21,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -65,7 +66,10 @@ var _ = Describe("KubeScheduler", func() {
 		secretChecksumKubeconfig = "1234"
 		secretNameServer         = "server-secret"
 		secretChecksumServer     = "5678"
-		vpaUpdateMode            = autoscalingv1beta2.UpdateModeAuto
+		secrets                  = Secrets{
+			Kubeconfig: component.Secret{Name: secretNameKubeconfig, Checksum: secretChecksumKubeconfig},
+			Server:     component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
+		}
 
 		configMapName             = "kube-scheduler-config"
 		vpaName                   = "kube-scheduler-vpa"
@@ -81,7 +85,8 @@ var _ = Describe("KubeScheduler", func() {
 				Data:       map[string]string{"config.yaml": componentConfigYAML},
 			}
 		}
-		vpa = &autoscalingv1beta2.VerticalPodAutoscaler{
+		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
+		vpa           = &autoscalingv1beta2.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace},
 			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -326,17 +331,14 @@ subjects:
 			})
 
 			It("should return an error because the kubeconfig secret information is not provided", func() {
-				kubeScheduler.SetSecrets(Secrets{Kubeconfig: Secret{Name: secretNameKubeconfig, Checksum: secretChecksumKubeconfig}})
+				kubeScheduler.SetSecrets(Secrets{Kubeconfig: component.Secret{Name: secretNameKubeconfig, Checksum: secretChecksumKubeconfig}})
 				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(ContainSubstring("missing server secret information")))
 			})
 		})
 
 		Context("secret information available", func() {
 			BeforeEach(func() {
-				kubeScheduler.SetSecrets(Secrets{
-					Kubeconfig: Secret{Name: secretNameKubeconfig, Checksum: secretChecksumKubeconfig},
-					Server:     Secret{Name: secretNameServer, Checksum: secretChecksumServer},
-				})
+				kubeScheduler.SetSecrets(secrets)
 			})
 
 			It("should fail because the configmap cannot be created", func() {
@@ -348,23 +350,10 @@ subjects:
 				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
 			})
 
-			It("should fail because the vpa cannot be created", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})).Return(fakeErr),
-				)
-
-				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
-			})
-
 			It("should fail because the service cannot be created", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kutil.Key(namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})).Return(fakeErr),
 				)
@@ -376,8 +365,6 @@ subjects:
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kutil.Key(namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
@@ -387,16 +374,31 @@ subjects:
 				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
 			})
 
-			It("should fail because the managed resource cannot be deleted", func() {
+			It("should fail because the vpa cannot be created", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kutil.Key(namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})).Return(fakeErr),
+				)
+
+				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
+			})
+
+			It("should fail because the managed resource cannot be deleted", func() {
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}).Return(fakeErr),
 				)
 
@@ -407,12 +409,12 @@ subjects:
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kutil.Key(namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretName, Namespace: namespace}}).Return(fakeErr),
 				)
@@ -426,22 +428,19 @@ subjects:
 					Expect(err).NotTo(HaveOccurred())
 
 					kubeScheduler = New(c, namespace, semverVersion, image, replicas, nil)
-					kubeScheduler.SetSecrets(Secrets{
-						Kubeconfig: Secret{Name: secretNameKubeconfig, Checksum: secretChecksumKubeconfig},
-						Server:     Secret{Name: secretNameServer, Checksum: secretChecksumServer},
-					})
+					kubeScheduler.SetSecrets(secrets)
 				})
 
 				It("should fail because the managed resource secret cannot be updated (k8s 1.13 only)", func() {
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, kutil.Key(namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
 					)
@@ -453,12 +452,12 @@ subjects:
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, kutil.Key(namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
@@ -475,19 +474,12 @@ subjects:
 					Expect(err).NotTo(HaveOccurred())
 
 					kubeScheduler = New(c, namespace, semverVersion, image, replicas, config)
-					kubeScheduler.SetSecrets(Secrets{
-						Kubeconfig: Secret{Name: secretNameKubeconfig, Checksum: secretChecksumKubeconfig},
-						Server:     Secret{Name: secretNameServer, Checksum: secretChecksumServer},
-					})
+					kubeScheduler.SetSecrets(secrets)
 
 					gomock.InOrder(
 						c.EXPECT().Get(ctx, kutil.Key(namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
 							Expect(obj).To(gomega.DeepEqual(configMapFor(version)))
-						}),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
-							Expect(obj).To(gomega.DeepEqual(vpa))
 						}),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
@@ -496,6 +488,10 @@ subjects:
 						c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
 							Expect(obj).To(gomega.DeepEqual(deploymentFor(version, config)))
+						}),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
+							Expect(obj).To(gomega.DeepEqual(vpa))
 						}),
 					)
 
