@@ -281,9 +281,7 @@ spec:
           - /proxy-server
         args:
         - --uds-name=/etc/srv/kubernetes/konnectivity-server/konnectivity-server.socket
-        - --log-file=/var/log/konnectivity-server/info.log
-        - --logtostderr=false
-        - --log-file-max-size=12
+        - --logtostderr=true
         - --cluster-cert=/certs/konnectivity-server/konnectivity-server.crt
         - --cluster-key=/certs/konnectivity-server/konnectivity-server.key
         - --agent-namespace={{ .Values.konnectivityTunnel.agentNamespace }}
@@ -310,9 +308,6 @@ spec:
             mountPath: /etc/srv/kubernetes/konnectivity-server-kubeconfig
           - name: konnectivity-uds
             mountPath: /etc/srv/kubernetes/konnectivity-server
-            readOnly: false
-          - name: konnectivity-server-log
-            mountPath: /var/log/konnectivity-server
             readOnly: false
       {{- else }}
       - name: vpn-seed
@@ -430,8 +425,6 @@ spec:
       - name: egress-selection-config
         configMap:
           name: kube-apiserver-egress-selector-configuration
-      - name: konnectivity-server-log
-        emptyDir: {}
       {{- else }}
       - name: vpn-seed
         secret:
