@@ -55,6 +55,10 @@ var (
 // If the given Kubernetes version does not explicitly define admission plugins the set of names for the next
 // available version will be returned (e.g., for version X not defined the set of version X-1 will be returned).
 func GetAdmissionPluginsForVersion(v string) []gardencorev1beta1.AdmissionPlugin {
+	return copyPlugins(getAdmissionPluginsForVersionInternal(v))
+}
+
+func getAdmissionPluginsForVersionInternal(v string) []gardencorev1beta1.AdmissionPlugin {
 	version, err := semver.NewVersion(v)
 	if err != nil {
 		return admissionPlugins[lowestSupportedKubernetesVersionMajorMinor]
@@ -78,4 +82,13 @@ func GetAdmissionPluginsForVersion(v string) []gardencorev1beta1.AdmissionPlugin
 
 func formatMajorMinor(major, minor int64) string {
 	return fmt.Sprintf("%d.%d", major, minor)
+}
+
+func copyPlugins(admissionPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
+	dst := make([]gardencorev1beta1.AdmissionPlugin, 0)
+	for _, plugin := range admissionPlugins {
+		pluginPointer := &plugin
+		dst = append(dst, *pluginPointer.DeepCopy())
+	}
+	return dst
 }
