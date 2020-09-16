@@ -73,5 +73,17 @@ var _ = Describe("kubernetes", func() {
 				Expect(plugins).To(ContainElement(gardencorev1beta1.AdmissionPlugin{Name: plugin}))
 			}
 		})
+
+		It("should return copy of the default plugins", func() {
+			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "DefaultTolerationSeconds", "ResourceQuota", "StorageObjectInUseProtection", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
+
+			plugins := GetAdmissionPluginsForVersion("1.14.0")
+			plugins2 := GetAdmissionPluginsForVersion("1.14.0")
+			plugins[0].Name = "MissingPlugin"
+
+			for _, plugin := range expected {
+				Expect(plugins2).To(ContainElement(gardencorev1beta1.AdmissionPlugin{Name: plugin}))
+			}
+		})
 	})
 })
