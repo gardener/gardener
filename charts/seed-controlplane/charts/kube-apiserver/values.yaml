@@ -52,7 +52,7 @@ admissionPlugins:
 - name: ValidatingAdmissionWebhook
 - name: ResourceQuota
 # - name: PodNodeSelector
-#   config: |
+#   config:
 #     podNodeSelectorPluginConfig:
 #       clusterDefaultNodeSelector: <node-selectors-labels>
 #       namespace1: <node-selectors-labels>
