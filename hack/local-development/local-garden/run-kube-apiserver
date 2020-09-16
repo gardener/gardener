@@ -13,7 +13,7 @@ LABEL=${1:-local-garden}
 
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 
-IMAGE=k8s.gcr.io/kube-apiserver:v1.17.3
+IMAGE=k8s.gcr.io/kube-apiserver:v1.17.9
 MOUNTS="-v $SCRIPTPATH/certificates/certs:/certs -v $SCRIPTPATH/certificates/keys:/keys"
 ETCD_PORT=12379
 LISTEN_PORT="2443"

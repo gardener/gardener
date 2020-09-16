@@ -14,6 +14,14 @@ make test-cov
 open gardener.coverage.html
 make test-cov-clean
 ```
+### sigs.k8s.io/controller-runtime env test
+
+Some of the integration tests in Gardener are using the `sigs.k8s.io/controller-runtime/pkg/envtest` package.
+It sets up a temporary control plane (etcd + kube-apiserver) against the integration tests can run.
+The `test` and `test-cov` rules in the `Makefile` prepare this env test automatically by downloading the respective binaries (if not yet present) and set the necessary environment variables.
+
+You can also run `go test` or `ginkgo` without the `test`/`test-cov` rules.
+In this case you have to set the `KUBEBUILDER_ASSETS` environment variable to the path that contains the etcd + kube-apiserver binaries or you need to have the binaries pre-installed under `/usr/local/kubebuilder/bin`.
 
 ## Dependency Management
 

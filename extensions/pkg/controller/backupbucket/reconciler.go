@@ -53,7 +53,7 @@ type reconciler struct {
 }
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
-// backupbucket resources of Gardener's `extensions.gardener.cloud` API group.
+// BackupBucket resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler {
 	return extensionscontroller.OperationAnnotationWrapper(
 		&extensionsv1alpha1.BackupBucket{},

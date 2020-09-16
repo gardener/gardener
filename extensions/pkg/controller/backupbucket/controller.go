@@ -50,11 +50,12 @@ type AddArgs struct {
 	Type string
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
 	// If the annotation is not ignored, the extension controller will only reconcile
-	// with a present operation annotation typically set during a reconcile (e.g in the maintenance time) by the Gardenlet
+	// with a present operation annotation typically set during a reconcile (e.g in the maintenance time) by the
+	// gardenlet.
 	IgnoreOperationAnnotation bool
 }
 
-// DefaultPredicates returns the default predicates for a controlplane reconciler.
+// DefaultPredicates returns the default predicates for a BackupBucket reconciler.
 func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 	if ignoreOperationAnnotation {
 		return []predicate.Predicate{

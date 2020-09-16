@@ -15,6 +15,8 @@
 # limitations under the License.
 set -e
 
+source "$(dirname $0)/setup-envtest.sh"
+
 echo "> Test"
 
 GO111MODULE=on go test -race -mod=vendor $@ | grep -v 'no test files'
