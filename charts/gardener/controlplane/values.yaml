@@ -111,10 +111,10 @@ global:
       limitsRequestsGapScaleParams:
         cpu:
           value: "1"
-          percentage: 40
+          percentage: 70
         memory:
           value: "1G"
-          percentage: 40
+          percentage: 70
 
     audit:
  #    dynamicConfiguration: false                             Enables dynamic audit configuration. This feature also requires the DynamicAuditing feature flag

@@ -146,10 +146,10 @@ scaleDownStabilization:
 limitsRequestsGapScaleParams:
   cpu:
     value: "1"
-    percentage: 40
+    percentage: 70
   memory:
     value: "1G"
-    percentage: 40
+    percentage: 70
 
 sni:
   enabled: false
