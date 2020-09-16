@@ -2,10 +2,11 @@
   "annotations": {
     "list": []
   },
-  "editable": false,
+  "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1591607086411,
+  "id": 20,
+  "iteration": 1600241474190,
   "links": [],
   "panels": [
     {
@@ -404,7 +405,6 @@
       },
       "yaxes": [
         {
-          "$$hashKey": "object:199",
           "decimals": null,
           "format": "short",
           "label": "requests/s",
@@ -412,7 +412,6 @@
           "show": true
         },
         {
-          "$$hashKey": "object:200",
           "format": "short",
           "logBase": 1,
           "show": true
@@ -535,6 +534,110 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
+      "decimals": 0,
+      "description": "Shows the number of API Resources that are in the cluster.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "hiddenSeries": false,
+      "id": 53,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sideWidth": null,
+        "sort": "current",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(max(etcd_object_counts) by (resource)) by (resource)",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{resource}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "API Resources",
+      "tooltip": {
+        "shared": false,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 10,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
       "datasource": "prometheus",
       "description": "Shows the request rate per resource for the API server.",
       "editable": false,
@@ -555,7 +658,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 33
       },
       "hiddenSeries": false,
       "id": 48,
@@ -662,7 +765,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 32
+        "y": 41
       },
       "hiddenSeries": false,
       "id": 45,
