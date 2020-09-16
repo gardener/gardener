@@ -7,6 +7,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/gardener/gardener)](https://goreportcard.com/report/github.com/gardener/gardener)
 [![GoDoc](https://godoc.org/github.com/gardener/gardener?status.svg)](https://godoc.org/github.com/gardener/gardener)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/1822/badge)](https://bestpractices.coreinfrastructure.org/projects/1822)
+[![reuse compliant](https://reuse.software/badge/reuse-compliant.svg)](https://reuse.software/)
 
 Gardener implements the automated management and operation of [Kubernetes](https://kubernetes.io/) clusters as a service and provides a fully validated extensibility framework that can be adjusted to any programmatic cloud or infrastructure provider.
 
