@@ -17,6 +17,6 @@ data:
 {{- range $i, $plugin := .Values.admissionPlugins }}
 {{- if $plugin.config }}
   {{ lower $plugin.name }}.yaml: |
-{{ $plugin.config | indent 4 }}
+{{ toYaml $plugin.config | indent 4 }}
 {{- end }}
 {{- end }}
