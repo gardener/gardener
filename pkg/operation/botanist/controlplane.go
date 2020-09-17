@@ -1511,7 +1511,7 @@ func (b *Botanist) DeployETCD(ctx context.Context) error {
 			foundStatefulset = false
 		}
 
-		defragmentSchedule, err := DetermineDefragmentSchedule(b.Shoot.Info, etcd)
+		defragmentSchedule, err := DetermineDefragmentSchedule(b.Shoot.Info, etcd, b.ShootedSeed, role)
 		if err != nil {
 			return err
 		}
@@ -1667,12 +1667,16 @@ func DetermineBackupSchedule(shoot *gardencorev1beta1.Shoot, etcd *druidv1alpha1
 }
 
 // DetermineDefragmentSchedule determines the defragment schedule based on the shoot creation and maintenance time window.
-func DetermineDefragmentSchedule(shoot *gardencorev1beta1.Shoot, etcd *druidv1alpha1.Etcd) (string, error) {
+func DetermineDefragmentSchedule(shoot *gardencorev1beta1.Shoot, etcd *druidv1alpha1.Etcd, shootedSeed *gardencorev1beta1helper.ShootedSeed, role string) (string, error) {
 	if etcd.Spec.Etcd.DefragmentationSchedule != nil {
 		return *etcd.Spec.Etcd.DefragmentationSchedule, nil
 	}
 
 	schedule := "%d %d */3 * *"
+	if shootedSeed != nil && role == common.EtcdRoleMain {
+		// defrag etcd-main of shooted seeds daily in the maintenance window
+		schedule = "%d %d * * *"
+	}
 
 	return determineSchedule(shoot, schedule, func(maintenanceTimeWindow *utils.MaintenanceTimeWindow, shootUID types.UID) string {
 		// Randomize the defragment timing but within the maintainence window.
