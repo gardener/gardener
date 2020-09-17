@@ -267,6 +267,32 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "datasource": "loki",
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "id": 8,
+      "options": {
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "expr": "{container_name=\"cluster-autoscaler\"} |~ \"$search\"",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "cluster-autoscaler logs",
+      "type": "logs"
     }
   ],
   "refresh": false,
