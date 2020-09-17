@@ -501,9 +501,11 @@ func (f *GardenerFramework) DumpState(ctx context.Context) {
 		f.Logger.Errorf("unable to dump seed status: %s", err.Error())
 	}
 
-	// dump all events if no shoot is given
-	if err := f.dumpEventsInAllNamespace(ctx, ctxIdentifier, f.GardenClient); err != nil {
-		f.Logger.Errorf("unable to dump Events from namespaces gardener: %s", err.Error())
+	// dump events if project namespace set
+	if f.ProjectNamespace != "" {
+		if err := f.dumpEventsInNamespace(ctx, ctxIdentifier, f.GardenClient, f.ProjectNamespace); err != nil {
+			f.Logger.Errorf("unable to dump gardener events from project namespace %s: %s", f.ProjectNamespace, err.Error())
+		}
 	}
 }
 
