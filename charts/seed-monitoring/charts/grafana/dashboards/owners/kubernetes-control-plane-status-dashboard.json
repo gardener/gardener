@@ -1091,7 +1091,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(etcd_object_counts) by (resource)",
+          "expr": "sum(max(etcd_object_counts) by (resource)) by (resource)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{resource}}",
