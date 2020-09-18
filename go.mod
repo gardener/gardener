@@ -5,7 +5,6 @@ go 1.14
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/ahmetb/gen-crd-api-reference-docs v0.2.0
-	github.com/coreos/etcd v3.3.17+incompatible
 	github.com/coreos/go-systemd/v22 v22.1.0
 	github.com/gardener/etcd-druid v0.3.0
 	github.com/gardener/external-dns-management v0.7.18
@@ -38,7 +37,6 @@ require (
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 	gomodules.xyz/jsonpatch/v2 v2.0.1
-	google.golang.org/grpc v1.26.0
 	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.18.8
 	k8s.io/apiextensions-apiserver v0.18.8
