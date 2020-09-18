@@ -152,6 +152,7 @@ check-generate:
 check:
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 	@hack/check-charts.sh ./charts
+	@hack/check-license-headers.sh
 
 .PHONY: generate
 generate:
