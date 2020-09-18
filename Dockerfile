@@ -72,12 +72,3 @@ COPY --from=builder /go/bin/gardener-seed-admission-controller /gardener-seed-ad
 WORKDIR /
 
 ENTRYPOINT ["/gardener-seed-admission-controller"]
-
-############# registry-migrator #############
-FROM base AS registry-migrator
-
-COPY --from=builder /go/bin/registry-migrator /registry-migrator
-
-WORKDIR /
-
-ENTRYPOINT ["/registry-migrator"]
