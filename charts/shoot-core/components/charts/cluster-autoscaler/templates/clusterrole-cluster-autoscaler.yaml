@@ -76,6 +76,7 @@ rules:
   - storage.k8s.io
   resources:
   - storageclasses
+  - csinodes
   verbs:
   - watch
   - list
@@ -96,3 +97,37 @@ rules:
   - delete
   - get
   - update
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resourceNames:
+  - cluster-autoscaler
+  resources:
+  - leases
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - batch
+  - extensions
+  resources:
+  - jobs
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  - cronjobs
+  verbs:
+  - watch
+  - list
+  - get
