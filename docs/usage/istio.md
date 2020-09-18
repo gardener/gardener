@@ -8,7 +8,8 @@ When enabled in gardenlet the `ManagedIstio` feature gate can be used to deploy 
 
 ## Prerequisites
 
-Third-party JWT is used, therefore each Seed cluster where this feature is enabled must have [Service Account Token Volume Projection](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection) enabled.
+- Third-party JWT is used, therefore each Seed cluster where this feature is enabled must have [Service Account Token Volume Projection](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection) enabled.
+- Kubernetes 1.16+
 
 ## Differences with Istio's default profile
 

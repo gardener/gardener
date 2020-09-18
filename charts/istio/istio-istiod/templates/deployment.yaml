@@ -24,7 +24,7 @@ spec:
     spec:
       serviceAccountName: istiod
       securityContext:
-        fsGroup: 0
+        fsGroup: 1337
       containers:
       - name: discovery
         image: "{{ .Values.image }}"
@@ -96,14 +96,12 @@ spec:
             cpu: 1000m
             memory: 2048Mi
         securityContext:
-          runAsUser: 0
-          runAsGroup: 0
-          runAsNonRoot: false
           capabilities:
             drop:
             - ALL
-            add:
-            - NET_BIND_SERVICE
+          runAsGroup: 1337
+          runAsNonRoot: true
+          runAsUser: 1337
         volumeMounts:
         - name: config-volume
           mountPath: /etc/istio/config

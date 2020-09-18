@@ -15,5 +15,3 @@ data:
             # Fix for https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-8663
             # https://istio.io/latest/news/security/istio-security-2020-007/
             global_downstream_max_connections: 750000
-      - name: admin
-        admin_layer: {}

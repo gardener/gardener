@@ -19,16 +19,28 @@ spec:
       labels:
 {{ .Values.labels | toYaml | indent 8 }}
         service.istio.io/canonical-name: "istio-ingressgateway"
-        service.istio.io/canonical-revision: "1.5"
+        service.istio.io/canonical-revision: "1.7"
       annotations:
         sidecar.istio.io/inject: "false"
         checksum/configmap-bootstrap-config-override: {{ include (print $.Template.BasePath "/bootstrap-config-override.yaml") . | sha256sum }}
     spec:
       serviceAccountName: istio-ingressgateway
+      securityContext:
+        fsGroup: 1337
+        runAsGroup: 1337
+        runAsNonRoot: true
+        runAsUser: 1337
       containers:
       - name: istio-proxy
         image: {{ .Values.image }}
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
         ports:
         - containerPort: 15021
         {{- range .Values.ports }}
@@ -131,6 +143,8 @@ spec:
         - name: ISTIO_BOOTSTRAP_OVERRIDE
           value: /etc/istio/custom-bootstrap/custom_bootstrap.yaml
         volumeMounts:
+        - mountPath: /etc/istio/proxy
+          name: istio-envoy
         - mountPath: /var/run/secrets/istio
           name: istiod-ca-cert
         - mountPath: /etc/istio/custom-bootstrap
@@ -159,6 +173,8 @@ spec:
           - path: "annotations"
             fieldRef:
               fieldPath: metadata.annotations
+      - emptyDir: {}
+        name: istio-envoy
       - name: ingressgatewaysdsudspath
         emptyDir: {}
       - name: istio-token

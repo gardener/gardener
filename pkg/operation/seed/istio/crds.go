@@ -21,7 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -30,7 +30,7 @@ type crds struct {
 	kubernetes.ChartApplier
 	chartPath      string
 	client         crclient.Client
-	deprecatedCRDs []apiextensionsv1beta1.CustomResourceDefinition
+	deprecatedCRDs []apiextensionsv1.CustomResourceDefinition
 }
 
 // NewIstioCRD can be used to deploy istio CRDs.
@@ -44,11 +44,17 @@ func NewIstioCRD(
 		ChartApplier: applier,
 		chartPath:    filepath.Join(chartsRootPath, "istio", "istio-crds"),
 		client:       client,
-		deprecatedCRDs: []apiextensionsv1beta1.CustomResourceDefinition{
-			// TODO: remove this after several gardener releases
+		deprecatedCRDs: []apiextensionsv1.CustomResourceDefinition{
+			{ObjectMeta: metav1.ObjectMeta{Name: "attributemanifests.config.istio.io"}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "clusterrbacconfigs.rbac.istio.io"}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "handlers.config.istio.io"}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "instances.config.istio.io"}},
 			{ObjectMeta: metav1.ObjectMeta{Name: "meshpolicies.authentication.istio.io"}},
-			// TODO: remove this after several gardener releases
 			{ObjectMeta: metav1.ObjectMeta{Name: "policies.authentication.istio.io"}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "rbacconfigs.rbac.istio.io"}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "rules.config.istio.io"}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "servicerolebindings.rbac.istio.io"}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "serviceroles.rbac.istio.io"}},
 		},
 	}
 }

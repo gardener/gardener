@@ -560,7 +560,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
 			ports := []corev1.ServicePort{
 				{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
-				{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(443)},
+				{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(9443)},
 			}
 
 			if gardenletfeatures.FeatureGate.Enabled(features.KonnectivityTunnel) {
