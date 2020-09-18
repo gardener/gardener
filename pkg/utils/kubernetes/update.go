@@ -43,6 +43,7 @@ func tryUpdate(ctx context.Context, backoff wait.Backoff, c client.Client, obj r
 		return err
 	}
 
+	resetCopy := obj.DeepCopyObject()
 	return exponentialBackoff(ctx, backoff, func() (bool, error) {
 		if err := c.Get(ctx, key, obj); err != nil {
 			return false, err
@@ -59,6 +60,12 @@ func tryUpdate(ctx context.Context, backoff wait.Backoff, c client.Client, obj r
 
 		if err := updateFunc(ctx, obj); err != nil {
 			if apierrors.IsConflict(err) {
+				// In case of a conflict we are resetting the obj to its original version, as it was
+				// passed to the function, to ensure that, on the next iteration the
+				// equality check of the obj recieved from the server and the object after
+				// its transformation would be valid. Otherwise the obj would be with mutated
+				// fields in result of the transform function from previous iteration.
+				reflect.ValueOf(obj).Elem().Set(reflect.ValueOf(resetCopy).Elem())
 				return false, nil
 			}
 			return false, err
