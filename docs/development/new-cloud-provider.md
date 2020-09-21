@@ -57,6 +57,6 @@ To add a new cloud provider, you need some or all of the following. Each reposit
 
 |Type|Purpose|Location|Documentation|
 |---|---|---|---|
-|Seed or Shoot|Machine Lifecycle|[machine-controller-manager](https://github.com/gardener/machine-controller-manager)| [MCM new cloud provider](https://github.com/gardener/machine-controller-manager/blob/master/docs/development/new_cp_support.md) |
+|Seed or Shoot|Machine Lifecycle|[machine-controller-manager](https://github.com/gardener/machine-controller-manager)| [MCM new cloud provider](https://github.com/gardener/machine-controller-manager/blob/master/docs/development/cp_support_new.md) |
 |Seed only|etcd backup/restore|[etcd-backup-restore](https://github.com/gardener/etcd-backup-restore/)| In process |
 |All|Extension implementation|[gardener](https://github.com/gardener/gardener)| [Extension controller](../extensions/overview.md) |

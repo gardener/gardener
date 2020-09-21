@@ -116,4 +116,4 @@ Apart from these constraints, there is no special migration task required.
 With previous Gardener versions, you had deployed the Gardener Helm chart (incorporating the API server, controller-manager, and scheduler).
 With v1, this will stay the same, but you now have to deploy the Gardenlet Helm chart as well (into all of your seed (if they are not shooted, see above)).
 
-Please follow the [general deployment guide](../deployment/kubernetes.md) for all instructions.
+Please follow the [general deployment guide](../deployment/setup_gardener.md) for all instructions.

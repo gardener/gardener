@@ -43,7 +43,7 @@ On MacOS run
 brew install kubernetes-helm
 ```
 
-On other OS please check the [Helm installation documentation](https://github.com/kubernetes/helm/blob/master/docs/install.md).
+On other OS please check the [Helm installation documentation](https://helm.sh/docs/intro/install/).
 
 ## Installing git
 
@@ -133,12 +133,16 @@ This setup is only meant to be used for developing purposes, which means that on
 
 ### Get the sources
 
-Clone the repository from GitHub.
+Clone the repository from GitHub into your `$GOPATH`.
 
 ```bash
+mkdir -p $GOPATH/src/github.com/gardener
+cd $GOPATH/src/github.com/gardener
 git clone git@github.com:gardener/gardener.git
 cd gardener
 ```
+
+> Note: Gardener is using Go modules and cloning the repository into `$GOPATH` is not a hard requirement. However it is still recommended to clone into `$GOPATH` because `k8s.io/code-generator` does not work yet outside of `$GOPATH` - [kubernetes/kubernetes#86753](https://github.com/kubernetes/kubernetes/issues/86753).
 
 ### Start the Gardener
 
@@ -310,34 +314,53 @@ to operate against your local running Gardener API Server.
 
 > Note: It may take several seconds until the `minikube` cluster recognizes that the Gardener API server has been started and is available. `No resources found` is the expected result of our initial development setup.
 
-#### Limitations of local development setup
+### Create a Shoot
 
-You can run Gardener (API server, controller manager, scheduler, gardenlet) against any local Kubernetes cluster, however, your seed and shoot clusters must be deployed to a "real" provider.
-Currently, it is not possible to run Gardener entirely isolated from any cloud provider.
-We are planning to support a setup that can run completely locally (see [this for details](https://github.com/gardener/gardener-extension-provider-mock)), however, it does not yet exist.
-This means that - after you have setup Gardener - you need to register an external seed cluster (e.g., one created in AWS).
-Only after that step you can start creating shoot clusters with your locally running Gardener.
+The steps below describe the general process of creating a Shoot. Have in mind that the steps do not provide full example manifests. The reader needs to check the provider documentation and adapt the manifests accordingly.
 
-Some time ago, we had a local setup based on VirtualBox/Vagrant.
-However, as we have progressed with the [Extensibility epic](https://github.com/gardener/gardener/issues/308) we noticed that this implementation/setup does no longer fit into how we envision external providers to be.
-Moreover, it hid too many things and came with a bunch of limitations, making the development scenario too "artificial":
+#### 1. Copy the example manifests to dev/
 
-- No integration with machine-controller-manager.
-- The Shoot API Server is exposed via a NodePort. In a cloud setup a LoadBalancer would be used.
-- It was not possible to create Shoot clusters consisting of more than one worker node. Cluster auto-scaling therefore is not supported.
-- It was not possible to create two or more Shoot clusters in parallel.
-- The communication between the Seed and the Shoot Clusters uses VPN tunnel. In this setup tunnels are not needed since all components run on localhost.
+The next steps require modifications of the example manifests. These modifications are part of local setup and should not be `git push`-ed. To do not interfere with git, let's copy the example manifests to `dev/` which is ignored by git.
 
-## Additional information
+```bash
+cp example/*.yaml dev/
+```
 
-To make sure that a specific Seed cluster will be chosen, specify the `.spec.seedName` field (see [here](../../example/90-shoot.yaml#L265-L266) for an example Shoot manifest).
+#### 2. Create a Project
 
-Please take a look at the [example manifests folder](../../example) to see which resource objects you need to install into your Garden cluster.
+Every Shoot is associated with a Project. Check the corresponding example manifests `dev/00-namespace-garden-dev.yaml` and `dev/05-project-dev.yaml`. Adapt them and create them.
 
+```bash
+kubectl apply -f dev/00-namespace-garden-dev.yaml
+kubectl apply -f dev/05-project-dev.yaml
+```
 
-# Appendix
+Make sure that the Project is successfully reconciled:
 
-## Configure Seed clusters for local development
+```bash
+$ k get project dev
+NAME   NAMESPACE    STATUS   OWNER                  CREATOR            AGE
+dev    garden-dev   Ready    john.doe@example.com   kubernetes-admin   6s
+```
+
+#### 3. Create a CloudProfile
+
+The `CloudProfile` resource is provider specific and describes the underlying cloud provider (available machine types, regions, machine images, etc.). Check the corresponding example manifest `dev/30-cloudprofile.yaml`. Check also the documentation and example manifests of the provider extension. Adapt `dev/30-cloudprofile.yaml` and apply it. 
+
+```bash
+kubectl apply -f dev/30-cloudprofile.yaml
+```
+
+#### 4. Create the required ControllerRegistrations
+
+The [Known Extension Implementations](../../extensions/README.md#known-extension-implementations) section contains a list of available extension implementations. You need to create a ControllerRegistration for at least one infrastructure provider, dns provider (if the DNS for the Seed is not disabled), at least one operating system extension and at least one network plugin extension.
+As a convention, example ControllerRegistration manifest for an extension is located under `example/controller-registration.yaml` in the corresponding repository (for example for AWS the ControllerRegistration can be found [here](https://github.com/gardener/gardener-extension-provider-aws/blob/master/example/controller-registration.yaml)). An example creation of ControllerRegistration for provider-aws:
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-aws/$VERSION/example/controller-registration.yaml
+```
+
+#### 5. Register a Seed
 
 When using the Gardenlet in a local development scenario with `make start-gardenlet` then the Gardenlet component configuration is setup with a [seed selector](../concepts/gardenlet.md#seed-config-vs-seed-selector) that targets all available Seed clusters.
 However, a `Seed` resource needs to be configured to allow being reconciled by a Gardenlet which such a configuration.
@@ -347,32 +370,53 @@ the Gardenlet either needs to be supplied with a kubeconfig for the particular S
 Having said that, if the Gardenlet is configured to manage multiple Seed clusters based on a label selector, it needs to fetch the kubeconfig of each Seed cluster at runtime from somewhere.
 That is why the `Seed` resource needs to be configured with an additional secret reference that contains the kubeconfig of the Seed cluster.
 
-Create a secret containing the base64 encoded kubeconfig of the Seed cluster (the scope of the permissions should be identical to the kubeconfig that the Gardenlet creates during bootstrapping - for now, `cluster-admin` privileges are recommended).
+Check the corresponding example manifest `dev/40-secret-seed.yaml` and `dev/50-seed.yaml`. Update `dev/40-secret-seed.yaml` with base64 encoded kubeconfig of the cluster that will be used as Seed (the scope of the permissions should be identical to the kubeconfig that the Gardenlet creates during bootstrapping - for now, `cluster-admin` privileges are recommended).
 
-Create the secret in the Garden cluster:
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: sweet-seed
-  namespace: garden
-type: Opaque
-data:
-  kubeconfig: <base64-seed-kubeconfig>.
+```bash
+kubectl apply -f dev/40-secret-seed.yaml
 ```
 
-Adjust the `Seed` resource to reference the secret in `spec.secretRef` like so:
+Adapt `dev/50-seed.yaml` - adjust `.spec.secretRef` to refer the newly created Secret, adjust `.spec.provider` with the Seed cluster provider and revise the other fields.
 
-```yaml
-apiVersion: core.gardener.cloud/v1beta1
-kind: Seed
-metadata:
-  name: my-sweet-seed
-spec:
-  ...
-  secretRef:
-    name: sweet-seed
-    namespace: garden
+```bash
+kubectl apply -f dev/50-seed.yaml
 ```
 
+Make sure that the Seed is successfully reconciled:
+
+```bash
+kubectl get seed
+NAME       STATUS    PROVIDER    REGION      AGE    VERSION       K8S VERSION
+seed-aws   Ready     aws         eu-west-1   4m     v1.11.0-dev   v1.17.12
+```
+
+### 6. Create a Shoot
+
+A Shoot requires a SecretBinding. The SecretBinding refers to a Secret that contains the cloud provider credentials. The Secret data keys are provider specific and you need to check the documentation of the provider to find out which data keys are expected (for example for AWS the related documentation can be found [here](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage-as-end-user.md#provider-secret-data)). Adapt `dev/70-secret-provider.yaml` and `dev/80-secretbinding.yaml` and apply them.
+
+```bash
+kubectl apply -f dev/70-secret-provider.yaml
+kubectl apply -f dev/80-secretbinding.yaml
+```
+
+After the SecretBinding creation, you are ready to proceed with the Shoot creation. You need to check the documentation of the provider to find out the expected configuration (for example for AWS the related documentation and example Shoot manifest can be found [here](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage-as-end-user.md)). Adapt `dev/90-shoot.yaml` and apply it.
+
+To make sure that a specific Seed cluster will be chosen or to skip the scheduling (the sheduling requires Gardener Scheduler to be running), specify the `.spec.seedName` field (see [here](../../example/90-shoot.yaml#L317-L318)).
+
+```bash
+kubectl apply -f dev/90-shoot.yaml
+```
+
+Watch the progress of the operation and make sure that the Shoot will be successfully created.
+
+```bash
+watch kubectl get shoot --all-namespaces
+```
+
+#### Limitations of local development setup
+
+You can run Gardener (API server, controller manager, scheduler, gardenlet) against any local Kubernetes cluster, however, your seed and shoot clusters must be deployed to a "real" provider.
+Currently, it is not possible to run Gardener entirely isolated from any cloud provider.
+We are planning to support a setup that can run completely locally (see [this for details](https://github.com/gardener/gardener-extension-provider-mock)), however, it does not yet exist.
+This means that - after you have setup Gardener - you need to register an external seed cluster (e.g., one created in AWS).
+Only after that step you can start creating shoot clusters with your locally running Gardener.

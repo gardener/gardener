@@ -216,7 +216,7 @@ etcd-for-test-0   2/2     Running   0          1m
 
 ## Deploy Gardener Helm Chart
 
-Check (current releases)[https://github.com/gardener/gardener/releases] and
+Check [current releases](https://github.com/gardener/gardener/releases) and
 pick a suitable one to install.
 
 ```

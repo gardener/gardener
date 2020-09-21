@@ -1,13 +1,13 @@
 # Network Policies in the Seed Cluster
 
 This document describes the [Kubernetes network policies](https://kubernetes.io/docs/concepts/services-networking/network-policies/) deployed by Gardener into the Seed cluster.
-For network policies deployed into the Shoot `kube-system` namespace, please see the [usage section](https://github.com/gardener/gardener/tree/master/docs/development/shoot_network_policies.md).
+For network policies deployed into the Shoot `kube-system` namespace, please see the [usage section](../usage/shoot_network_policies.md).
 
 Network policies deployed by Gardener have names and annotations describing their purpose, so this document does only highlight a subset of the policies in detail.
 
 ## Network policies in the Shoot namespace in the Seed
 
-The network policies in the Shoot namespace in the Seed can roughly be grouped into policies required for the control plane components and for logging & monitoring.   
+The network policies in the Shoot namespace in the Seed can roughly be grouped into policies required for the control plane components and for logging & monitoring.
 
 The network policy `deny-all` plays a special role. This policy [denies all ingress and egress traffic](https://kubernetes.io/docs/concepts/services-networking/network-policies/#default-deny-all-ingress-and-all-egress-traffic) from each pod in the Shoot namespace.
 So per default, a pod running in the control plane cannot talk to any other pod in the whole Seed cluster.
