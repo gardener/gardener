@@ -5,4 +5,4 @@ labels:
   istio: pilot
 deployNamespace: false
 ports:
-  https: 443
+  https: 10250
