@@ -3,10 +3,6 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: apiserver-proxy.enabled
-- name: cluster-autoscaler
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: cluster-autoscaler.enabled
 - name: coredns
   repository: http://localhost:10191
   version: 0.1.0

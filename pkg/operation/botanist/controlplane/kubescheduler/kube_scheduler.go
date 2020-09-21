@@ -55,19 +55,16 @@ const (
 	SecretName = "kube-scheduler"
 	// SecretNameServer is the name of the kube-scheduler server certificate secret.
 	SecretNameServer = "kube-scheduler-server"
-	// LabelRole is a constant for the value of a label with key 'role' whose value is 'scheduler'.
-	LabelRole = "scheduler"
-	// DataKeyComponentConfig is a constant for the key of the data map in a ConfigMap whose value is the
-	// component configuration of the kube-scheduler.
-	DataKeyComponentConfig = "config.yaml"
-	// PortNameMetrics is a constant for the name of the metrics port of the kube-scheduler.
-	PortNameMetrics = "metrics"
+
+	labelRole              = "scheduler"
+	managedResourceName    = "shoot-core-kube-scheduler"
+	containerName          = v1beta1constants.DeploymentNameKubeScheduler
+	portNameMetrics        = "metrics"
+	dataKeyComponentConfig = "config.yaml"
 
 	volumeMountPathKubeconfig = "/var/lib/kube-scheduler"
 	volumeMountPathServer     = "/var/lib/kube-scheduler-server"
 	volumeMountPathConfig     = "/var/lib/kube-scheduler-config"
-
-	managedResourceName = "shoot-core-kube-scheduler"
 
 	componentConfigTmpl = `apiVersion: {{ .apiVersion }}
 kind: KubeSchedulerConfiguration
@@ -81,7 +78,7 @@ leaderElection:
 type KubeScheduler interface {
 	component.DeployWaiter
 	component.MonitoringComponent
-	// SetSecrets sets the secrets for the kube-scheduler.
+	// SetSecrets sets the secrets.
 	SetSecrets(Secrets)
 }
 
@@ -111,7 +108,8 @@ type kubeScheduler struct {
 	image     string
 	replicas  int32
 	config    *gardencorev1beta1.KubeSchedulerConfig
-	secrets   Secrets
+
+	secrets Secrets
 }
 
 func (k *kubeScheduler) Deploy(ctx context.Context) error {
@@ -130,7 +128,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 
 		labels = map[string]string{
 			v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
-			v1beta1constants.LabelRole: LabelRole,
+			v1beta1constants.LabelRole: labelRole,
 		}
 		labelsWithControlPlaneRole = utils.MergeStringMaps(labels, map[string]string{
 			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
@@ -149,21 +147,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 	}
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, k.client, configMap, func() error {
-		configMap.Data = map[string]string{DataKeyComponentConfig: componentConfigYAML}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	if _, err := controllerutil.CreateOrUpdate(ctx, k.client, vpa, func() error {
-		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
-			APIVersion: appsv1.SchemeGroupVersion.String(),
-			Kind:       "Deployment",
-			Name:       v1beta1constants.DeploymentNameKubeScheduler,
-		}
-		vpa.Spec.UpdatePolicy = &autoscalingv1beta2.PodUpdatePolicy{
-			UpdateMode: &vpaUpdateMode,
-		}
+		configMap.Data = map[string]string{dataKeyComponentConfig: componentConfigYAML}
 		return nil
 	}); err != nil {
 		return err
@@ -175,7 +159,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.Ports = kutil.ReconcileServicePorts(service.Spec.Ports, []corev1.ServicePort{
 			{
-				Name:     PortNameMetrics,
+				Name:     portNameMetrics,
 				Protocol: corev1.ProtocolTCP,
 				Port:     port,
 			},
@@ -207,7 +191,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
 					{
-						Name:            v1beta1constants.DeploymentNameKubeScheduler,
+						Name:            containerName,
 						Image:           k.image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Command:         command,
@@ -227,7 +211,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 						},
 						Ports: []corev1.ContainerPort{
 							{
-								Name:          PortNameMetrics,
+								Name:          portNameMetrics,
 								ContainerPort: port,
 								Protocol:      corev1.ProtocolTCP,
 							},
@@ -294,13 +278,27 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if _, err := controllerutil.CreateOrUpdate(ctx, k.client, vpa, func() error {
+		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
+			APIVersion: appsv1.SchemeGroupVersion.String(),
+			Kind:       "Deployment",
+			Name:       v1beta1constants.DeploymentNameKubeScheduler,
+		}
+		vpa.Spec.UpdatePolicy = &autoscalingv1beta2.PodUpdatePolicy{
+			UpdateMode: &vpaUpdateMode,
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	return k.reconcileShootResources(ctx)
 }
 
-func (k *kubeScheduler) SetSecrets(secrets Secrets)          { k.secrets = secrets }
 func (k *kubeScheduler) Destroy(_ context.Context) error     { return nil }
 func (k *kubeScheduler) Wait(_ context.Context) error        { return nil }
 func (k *kubeScheduler) WaitCleanup(_ context.Context) error { return nil }
+func (k *kubeScheduler) SetSecrets(secrets Secrets)          { k.secrets = secrets }
 
 func (k *kubeScheduler) emptyConfigMap() *corev1.ConfigMap {
 	return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-scheduler-config", Namespace: k.namespace}}
@@ -331,57 +329,7 @@ func (k *kubeScheduler) reconcileShootResources(ctx context.Context) error {
 		return common.DeployManagedResource(ctx, k.client, managedResourceName, k.namespace, false, k.computeShootResourcesData())
 	}
 
-	for _, obj := range []runtime.Object{k.emptyManagedResource(), k.emptyManagedResourceSecret()} {
-		if err := k.client.Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (k *kubeScheduler) computeShootResourcesData() map[string][]byte {
-	var (
-		versions = schema.GroupVersions([]schema.GroupVersion{rbacv1.SchemeGroupVersion})
-		codec    = kubernetes.ShootCodec.CodecForVersions(kubernetes.ShootSerializer, kubernetes.ShootSerializer, versions, versions)
-
-		subjects = []rbacv1.Subject{{
-			Kind: "User",
-			Name: user.KubeScheduler,
-		}}
-
-		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "system:controller:kube-scheduler",
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     "system:auth-delegator",
-			},
-			Subjects: subjects,
-		}
-		clusterRoleBindingYAML, _ = runtime.Encode(codec, clusterRoleBinding)
-
-		roleBinding = &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "system:controller:kube-scheduler:auth-reader",
-				Namespace: metav1.NamespaceSystem,
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "Role",
-				Name:     "extension-apiserver-authentication-reader",
-			},
-			Subjects: subjects,
-		}
-		roleBindingYAML, _ = runtime.Encode(codec, roleBinding)
-	)
-
-	return map[string][]byte{
-		"clusterrolebinding.yaml": clusterRoleBindingYAML,
-		"rolebinding.yaml":        roleBindingYAML,
-	}
+	return kutil.DeleteObjects(ctx, k.client, k.emptyManagedResource(), k.emptyManagedResourceSecret())
 }
 
 func (k *kubeScheduler) computeServerPort() int32 {
@@ -439,7 +387,7 @@ func (k *kubeScheduler) computeCommand(port int32) []string {
 		command = append(command, "/hyperkube", "scheduler")
 	}
 
-	command = append(command, fmt.Sprintf("--config=%s/%s", volumeMountPathConfig, DataKeyComponentConfig))
+	command = append(command, fmt.Sprintf("--config=%s/%s", volumeMountPathConfig, dataKeyComponentConfig))
 
 	if versionConstraintK8sGreaterEqual113.Check(k.version) {
 		command = append(command,
@@ -462,6 +410,50 @@ func (k *kubeScheduler) computeCommand(port int32) []string {
 
 	command = append(command, "--v=2")
 	return command
+}
+
+func (k *kubeScheduler) computeShootResourcesData() map[string][]byte {
+	var (
+		versions = schema.GroupVersions([]schema.GroupVersion{rbacv1.SchemeGroupVersion})
+		codec    = kubernetes.ShootCodec.CodecForVersions(kubernetes.ShootSerializer, kubernetes.ShootSerializer, versions, versions)
+
+		subjects = []rbacv1.Subject{{
+			Kind: rbacv1.UserKind,
+			Name: user.KubeScheduler,
+		}}
+
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "system:controller:kube-scheduler",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "system:auth-delegator",
+			},
+			Subjects: subjects,
+		}
+		clusterRoleBindingYAML, _ = runtime.Encode(codec, clusterRoleBinding)
+
+		roleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "system:controller:kube-scheduler:auth-reader",
+				Namespace: metav1.NamespaceSystem,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     "extension-apiserver-authentication-reader",
+			},
+			Subjects: subjects,
+		}
+		roleBindingYAML, _ = runtime.Encode(codec, roleBinding)
+	)
+
+	return map[string][]byte{
+		"clusterrolebinding.yaml": clusterRoleBindingYAML,
+		"rolebinding.yaml":        roleBindingYAML,
+	}
 }
 
 var (
@@ -507,15 +499,7 @@ func init() {
 // Secrets is collection of secrets for the kube-scheduler.
 type Secrets struct {
 	// Kubeconfig is a secret which can be used by the kube-scheduler to communicate to the kube-apiserver.
-	Kubeconfig Secret
+	Kubeconfig component.Secret
 	// Server is a secret for the HTTPS server inside the kube-scheduler (which is used for metrics and health checks).
-	Server Secret
-}
-
-// Secret is a structure that contains information about a Kubernetes secret which is managed externally.
-type Secret struct {
-	// Name is the name of the Kubernetes secret object.
-	Name string
-	// Checksum is the checksum of the secret's data.
-	Checksum string
+	Server component.Secret
 }

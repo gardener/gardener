@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
@@ -86,7 +87,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 				Name:      logger,
 			},
 		}
-		err := framework.DeleteResource(ctx, f.SeedClient, loggerDeploymentToDelete)
+		err := kutil.DeleteObject(ctx, f.SeedClient.Client(), loggerDeploymentToDelete)
 		framework.ExpectNoError(err)
 	}, loggerDeploymentCleanupTimeout))
 })

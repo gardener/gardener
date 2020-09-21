@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubescheduler
+package clusterautoscaler
 
 import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 const (
-	loggingParserName = "kubeSchedulerParser"
+	loggingParserName = "clusterAutoscalerParser"
 	loggingParser     = `[PARSER]
     Name        ` + loggingParserName + `
     Format      regex
@@ -29,14 +29,14 @@ const (
 `
 	loggingFilter = `[FILTER]
     Name                parser
-    Match               kubernetes.*` + v1beta1constants.DeploymentNameKubeScheduler + `*` + containerName + `*
+    Match               kubernetes.*` + v1beta1constants.DeploymentNameClusterAutoscaler + `*` + containerName + `*
     Key_Name            log
     Parser              ` + loggingParserName + `
     Reserve_Data        True
 `
 )
 
-// LoggingConfiguration returns a fluent-bit parser and filter for the kube-scheduler logs.
+// LoggingConfiguration returns a fluent-bit parser and filter for the cluster-autoscaler logs.
 func LoggingConfiguration() (string, string, error) {
 	return loggingParser, loggingFilter, nil
 }

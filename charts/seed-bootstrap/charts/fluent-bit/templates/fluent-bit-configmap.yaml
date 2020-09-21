@@ -166,13 +166,6 @@ data:
 
     [FILTER]
         Name                parser
-        Match               kubernetes.*cluster-autoscaler*cluster-autoscaler*
-        Key_Name            log
-        Parser              kubeapiserverParser
-        Reserve_Data        True
-
-    [FILTER]
-        Name                parser
         Match               kubernetes.*kube-state-metrics*kube-state-metrics*
         Key_Name            log
         Parser              kubeapiserverParser

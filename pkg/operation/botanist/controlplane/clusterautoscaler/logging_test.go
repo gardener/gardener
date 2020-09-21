@@ -12,31 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubescheduler
+package clusterautoscaler_test
 
 import (
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-const (
-	loggingParserName = "kubeSchedulerParser"
-	loggingParser     = `[PARSER]
-    Name        ` + loggingParserName + `
+var _ = Describe("Logging", func() {
+	Describe("#LoggingConfiguration", func() {
+		It("should return the expected logging parser and filter", func() {
+			parser, filter, err := LoggingConfiguration()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(parser).To(Equal(`[PARSER]
+    Name        clusterAutoscalerParser
     Format      regex
     Regex       ^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<log>.*)$
     Time_Key    time
     Time_Format %m%d %H:%M:%S.%L
-`
-	loggingFilter = `[FILTER]
-    Name                parser
-    Match               kubernetes.*` + v1beta1constants.DeploymentNameKubeScheduler + `*` + containerName + `*
-    Key_Name            log
-    Parser              ` + loggingParserName + `
-    Reserve_Data        True
-`
-)
+`))
 
-// LoggingConfiguration returns a fluent-bit parser and filter for the kube-scheduler logs.
-func LoggingConfiguration() (string, string, error) {
-	return loggingParser, loggingFilter, nil
-}
+			Expect(filter).To(Equal(`[FILTER]
+    Name                parser
+    Match               kubernetes.*cluster-autoscaler*cluster-autoscaler*
+    Key_Name            log
+    Parser              clusterAutoscalerParser
+    Reserve_Data        True
+`))
+		})
+	})
+})

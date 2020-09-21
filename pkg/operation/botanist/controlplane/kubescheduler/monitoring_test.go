@@ -31,9 +31,7 @@ var _ = Describe("Monitoring", func() {
 			Expect(err).NotTo(HaveOccurred())
 			kubeScheduler := New(nil, "", semverVersion, "", 0, nil)
 
-			scrapeConfigs, err := kubeScheduler.ScrapeConfigs()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(scrapeConfigs).To(ConsistOf(Equal(expectedScrapeConfig)))
+			test.ScapeConfigs(kubeScheduler, expectedScrapeConfig)
 		},
 
 		Entry("kubernetes 1.10", "1.10.0", expectedScrapeConfigK8sLess113),
@@ -53,7 +51,7 @@ var _ = Describe("Monitoring", func() {
 		Expect(err).NotTo(HaveOccurred())
 		kubeScheduler := New(nil, "", semverVersion, "", 0, nil)
 
-		test.AlertingRules(
+		test.AlertingRulesWithPromtool(
 			kubeScheduler,
 			map[string]string{"kube-scheduler.rules.yaml": expectedAlertingRule},
 			"monitoring_alertingrules.test.yaml",

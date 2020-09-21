@@ -136,11 +136,5 @@ func DeleteBootstrapAuth(ctx context.Context, c client.Client, csrName, seedName
 		)
 	}
 
-	for _, obj := range resourcesToDelete {
-		if err := c.Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
-	return nil
+	return kutil.DeleteObjects(ctx, c, resourcesToDelete...)
 }
