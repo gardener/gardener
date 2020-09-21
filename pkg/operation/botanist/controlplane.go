@@ -883,6 +883,7 @@ func (b *Botanist) DeployNetworkPolicies(ctx context.Context) error {
 func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	var (
 		hvpaEnabled               = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
+		mountHostCADirectories    = gardenletfeatures.FeatureGate.Enabled(features.MountHostCADirectories)
 		memoryMetricForHpaEnabled = false
 	)
 
@@ -1106,6 +1107,10 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	serviceAccountConfigVals["issuer"] = serviceAccountTokenIssuerURL
 	defaultValues["serviceAccountConfig"] = serviceAccountConfigVals
 	defaultValues["admissionPlugins"] = admissionPlugins
+
+	defaultValues["mountHostCADirectories"] = map[string]interface{}{
+		"enabled": mountHostCADirectories,
+	}
 
 	tunnelComponentImageName := common.VPNSeedImageName
 	if b.Shoot.KonnectivityTunnelEnabled {

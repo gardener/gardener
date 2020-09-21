@@ -85,6 +85,7 @@ featureGates:
   APIServerSNI: false
   CachedRuntimeClients: true
   NodeLocalDNS: true
+  MountHostCADirectories: false
 seedSelector: {} # selects all seeds, only use for development purposes
 # seedConfig:
 #   metadata:

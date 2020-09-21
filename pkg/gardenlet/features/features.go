@@ -25,14 +25,15 @@ var (
 	// FeatureGate is a shared global FeatureGate for Gardenlet flags.
 	FeatureGate  = featuregate.NewFeatureGate()
 	featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-		features.Logging:              {Default: false, PreRelease: featuregate.Alpha},
-		features.HVPA:                 {Default: false, PreRelease: featuregate.Alpha},
-		features.HVPAForShootedSeed:   {Default: false, PreRelease: featuregate.Alpha},
-		features.ManagedIstio:         {Default: false, PreRelease: featuregate.Alpha},
-		features.KonnectivityTunnel:   {Default: false, PreRelease: featuregate.Alpha},
-		features.APIServerSNI:         {Default: false, PreRelease: featuregate.Alpha},
-		features.CachedRuntimeClients: {Default: false, PreRelease: featuregate.Alpha},
-		features.NodeLocalDNS:         {Default: false, PreRelease: featuregate.Alpha},
+		features.Logging:                {Default: false, PreRelease: featuregate.Alpha},
+		features.HVPA:                   {Default: false, PreRelease: featuregate.Alpha},
+		features.HVPAForShootedSeed:     {Default: false, PreRelease: featuregate.Alpha},
+		features.ManagedIstio:           {Default: false, PreRelease: featuregate.Alpha},
+		features.KonnectivityTunnel:     {Default: false, PreRelease: featuregate.Alpha},
+		features.APIServerSNI:           {Default: false, PreRelease: featuregate.Alpha},
+		features.CachedRuntimeClients:   {Default: false, PreRelease: featuregate.Alpha},
+		features.NodeLocalDNS:           {Default: false, PreRelease: featuregate.Alpha},
+		features.MountHostCADirectories: {Default: false, PreRelease: featuregate.Alpha},
 	}
 )
 

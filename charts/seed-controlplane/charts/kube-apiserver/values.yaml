@@ -155,6 +155,9 @@ sni:
   enabled: false
   advertiseIP: 1.1.1.1
 
+mountHostCADirectories:
+  enabled: false
+
 # watchCacheSizes:
 #   default: 100
 #   resources:
