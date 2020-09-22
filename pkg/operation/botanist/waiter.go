@@ -21,7 +21,6 @@ import (
 	"net"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -39,7 +38,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -200,6 +198,13 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 	})
 }
 
+// WaitForKubeControllerManagerToBeActive waits for the kube controller manager of a Shoot cluster has acquired leader election, thus is active.
+func (b *Botanist) WaitForKubeControllerManagerToBeActive(ctx context.Context) error {
+	b.Shoot.Components.ControlPlane.KubeControllerManager.SetShootClient(b.K8sShootClient.Client())
+
+	return b.Shoot.Components.ControlPlane.KubeControllerManager.WaitForControllerToBeActive(ctx)
+}
+
 // WaitUntilTunnelConnectionExists waits until a port forward connection to the tunnel pod (vpn-shoot or konnectivity-agent) in the kube-system
 // namespace of the Shoot cluster can be established.
 func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
@@ -229,107 +234,6 @@ func (b *Botanist) waitUntilNamespaceDeleted(ctx context.Context, namespace stri
 		}
 		b.Logger.Infof("Waiting until the namespace '%s' has been cleaned up and deleted in the Seed cluster...", namespace)
 		return retry.MinorError(fmt.Errorf("namespace %q is not yet cleaned up", namespace))
-	})
-}
-
-// WaitForControllersToBeActive checks whether kube-controller-manager has
-// recently written to the Endpoint object holding the leader information. If yes, it is active.
-func (b *Botanist) WaitForControllersToBeActive(ctx context.Context) error {
-	type controllerInfo struct {
-		name   string
-		labels map[string]string
-	}
-
-	type checkOutput struct {
-		controllerName string
-		ready          bool
-		err            error
-	}
-
-	var (
-		controllers  = []controllerInfo{}
-		pollInterval = 5 * time.Second
-	)
-
-	// Check whether the kube-controller-manager deployment exists
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager), &appsv1.Deployment{}); err == nil {
-		controllers = append(controllers, controllerInfo{
-			name: v1beta1constants.DeploymentNameKubeControllerManager,
-			labels: map[string]string{
-				"app":  "kubernetes",
-				"role": "controller-manager",
-			},
-		})
-	} else if client.IgnoreNotFound(err) != nil {
-		return err
-	}
-
-	return retry.UntilTimeout(context.TODO(), pollInterval, 90*time.Second, func(ctx context.Context) (done bool, err error) {
-		var (
-			wg  sync.WaitGroup
-			out = make(chan *checkOutput)
-		)
-
-		for _, controller := range controllers {
-			wg.Add(1)
-
-			go func(controller controllerInfo) {
-				defer wg.Done()
-
-				podList := &corev1.PodList{}
-				err := b.K8sSeedClient.Client().List(ctx, podList,
-					client.InNamespace(b.Shoot.SeedNamespace),
-					client.MatchingLabels(controller.labels))
-				if err != nil {
-					out <- &checkOutput{controllerName: controller.name, err: err}
-					return
-				}
-
-				// Check that only one replica of the controller exists.
-				if len(podList.Items) != 1 {
-					b.Logger.Infof("Waiting for %s to have exactly one replica", controller.name)
-					out <- &checkOutput{controllerName: controller.name}
-					return
-				}
-				// Check that the existing replica is not in getting deleted.
-				if podList.Items[0].DeletionTimestamp != nil {
-					b.Logger.Infof("Waiting for a new replica of %s", controller.name)
-					out <- &checkOutput{controllerName: controller.name}
-					return
-				}
-
-				// Check if the controller is active by reading its leader election record.
-				leaderElectionRecord, err := common.ReadLeaderElectionRecord(ctx, b.K8sShootClient, resourcelock.EndpointsResourceLock, metav1.NamespaceSystem, controller.name)
-				if err != nil {
-					out <- &checkOutput{controllerName: controller.name, err: err}
-					return
-				}
-
-				if delta := metav1.Now().UTC().Sub(leaderElectionRecord.RenewTime.Time.UTC()); delta <= pollInterval-time.Second {
-					out <- &checkOutput{controllerName: controller.name, ready: true}
-					return
-				}
-
-				b.Logger.Infof("Waiting for %s to be active", controller.name)
-				out <- &checkOutput{controllerName: controller.name}
-			}(controller)
-		}
-
-		go func() {
-			wg.Wait()
-			close(out)
-		}()
-
-		for result := range out {
-			if result.err != nil {
-				return retry.SevereError(fmt.Errorf("could not check whether controller %s is active: %+v", result.controllerName, result.err))
-			}
-			if !result.ready {
-				return retry.MinorError(fmt.Errorf("controller %s is not active", result.controllerName))
-			}
-		}
-
-		return retry.Ok()
 	})
 }
 

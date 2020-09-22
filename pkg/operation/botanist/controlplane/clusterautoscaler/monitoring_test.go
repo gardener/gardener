@@ -24,9 +24,9 @@ import (
 var _ = Describe("Monitoring", func() {
 	clusterAutoscaler := New(nil, "", "", 0, nil)
 
-	Describe("#ScapeConfig", func() {
-		It("should successfully test the scape configuration", func() {
-			test.ScapeConfigs(clusterAutoscaler, expectedScrapeConfig)
+	Describe("#ScrapeConfig", func() {
+		It("should successfully test the scrape configuration", func() {
+			test.ScrapeConfigs(clusterAutoscaler, expectedScrapeConfig)
 		})
 	})
 

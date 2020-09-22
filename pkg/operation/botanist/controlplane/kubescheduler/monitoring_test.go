@@ -31,7 +31,7 @@ var _ = Describe("Monitoring", func() {
 			Expect(err).NotTo(HaveOccurred())
 			kubeScheduler := New(nil, "", semverVersion, "", 0, nil)
 
-			test.ScapeConfigs(kubeScheduler, expectedScrapeConfig)
+			test.ScrapeConfigs(kubeScheduler, expectedScrapeConfig)
 		},
 
 		Entry("kubernetes 1.10", "1.10.0", expectedScrapeConfigK8sLess113),

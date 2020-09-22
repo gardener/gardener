@@ -64,6 +64,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	// Fetch component-specific monitoring configuration
 	monitoringComponents := []component.MonitoringComponent{
 		b.Shoot.Components.ControlPlane.KubeScheduler,
+		b.Shoot.Components.ControlPlane.KubeControllerManager,
 	}
 
 	if b.Shoot.WantsClusterAutoscaler {

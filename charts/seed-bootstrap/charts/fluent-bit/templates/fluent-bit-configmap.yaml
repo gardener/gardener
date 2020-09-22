@@ -75,13 +75,6 @@ data:
 
     [FILTER]
         Name                parser
-        Match               kubernetes.*kube-controller-manager*kube-controller-manager*
-        Key_Name            log
-        Parser              kubeapiserverParser
-        Reserve_Data        True
-
-    [FILTER]
-        Name                parser
         Match               kubernetes.*etcd*etcd*
         Key_Name            log
         Parser              etcdeventsParser

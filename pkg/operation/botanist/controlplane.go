@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -1196,67 +1197,69 @@ func IsValidAuditPolicyVersion(shootVersion string, schemaVersion *schema.GroupV
 	return true, nil
 }
 
-// DeployKubeControllerManager deploys kube-controller-manager deployment.
-func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
-	defaultValues := map[string]interface{}{
-		"clusterName":       b.Shoot.SeedNamespace,
-		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
-		"podNetwork":        b.Shoot.Networks.Pods.String(),
-		"serviceNetwork":    b.Shoot.Networks.Services.String(),
-		"podAnnotations": map[string]interface{}{
-			"checksum/secret-ca":                             b.CheckSums[v1beta1constants.SecretNameCACluster],
-			"checksum/secret-kube-controller-manager":        b.CheckSums[v1beta1constants.DeploymentNameKubeControllerManager],
-			"checksum/secret-kube-controller-manager-server": b.CheckSums[common.KubeControllerManagerServerName],
-			"checksum/secret-service-account-key":            b.CheckSums["service-account-key"],
-		},
-		"podLabels": map[string]interface{}{
-			v1beta1constants.LabelPodMaintenanceRestart: "true",
-		},
+// DefaultKubeControllerManager returns a deployer for the kube-controller-manager.
+func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.KubeControllerManager, error) {
+	image, err := b.ImageVector.FindImage(common.KubeControllerManagerImageName, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	if err != nil {
+		return nil, err
 	}
 
+	return kubecontrollermanager.New(
+		b.Logger.WithField("component", "kube-controller-manager"),
+		b.K8sSeedClient.Client(),
+		b.Shoot.SeedNamespace,
+		b.Shoot.KubernetesVersion,
+		image.String(),
+		b.Shoot.Info.Spec.Kubernetes.KubeControllerManager,
+		b.Shoot.Networks.Pods,
+		b.Shoot.Networks.Services,
+	), nil
+}
+
+// DeployKubeControllerManager deploys the Kubernetes Controller Manager.
+func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
+	replicaCount, err := b.getWantedReplicaCountKubeControllerManager(ctx)
+	if err != nil {
+		return err
+	}
+
+	b.Shoot.Components.ControlPlane.KubeControllerManager.SetReplicaCount(replicaCount)
+
+	b.Shoot.Components.ControlPlane.KubeControllerManager.SetSecrets(kubecontrollermanager.Secrets{
+		CA:                component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.CheckSums[v1beta1constants.SecretNameCACluster]},
+		ServiceAccountKey: component.Secret{Name: v1beta1constants.SecretNameServiceAccountKey, Checksum: b.CheckSums[v1beta1constants.SecretNameServiceAccountKey]},
+		Kubeconfig:        component.Secret{Name: kubecontrollermanager.SecretName, Checksum: b.CheckSums[kubecontrollermanager.SecretName]},
+		Server:            component.Secret{Name: kubecontrollermanager.SecretNameServer, Checksum: b.CheckSums[kubecontrollermanager.SecretNameServer]},
+	})
+	return b.Shoot.Components.ControlPlane.KubeControllerManager.Deploy(ctx)
+}
+
+func (b *Botanist) getWantedReplicaCountKubeControllerManager(ctx context.Context) (int32, error) {
+	var replicaCount int32
 	if b.Shoot.Info.Status.LastOperation != nil && b.Shoot.Info.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate {
 		if b.Shoot.HibernationEnabled {
 			// shoot is being created with .spec.hibernation.enabled=true, don't deploy KCM at all
-			defaultValues["replicas"] = 0
+			replicaCount = 0
 		} else {
 			// shoot is being created with .spec.hibernation.enabled=false, deploy KCM
-			defaultValues["replicas"] = 1
+			replicaCount = 1
 		}
 	} else {
 		if b.Shoot.HibernationEnabled == b.Shoot.Info.Status.IsHibernated {
 			// shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated, so keep the replicas which
 			// are controlled by the dependency-watchdog
-			replicaCount, err := common.CurrentReplicaCount(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager)
+			replicas, err := common.CurrentReplicaCount(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager)
 			if err != nil {
-				return err
+				return 0, err
 			}
-			defaultValues["replicas"] = replicaCount
+			replicaCount = replicas
 		} else {
 			// shoot is being reconciled with .spec.hibernation.enabled!=.status.isHibernated, so deploy KCM. in case the
 			// shoot is being hibernated then it will be scaled down to zero later after all machines are gone
-			defaultValues["replicas"] = 1
+			replicaCount = 1
 		}
 	}
-
-	controllerManagerConfig := b.Shoot.Info.Spec.Kubernetes.KubeControllerManager
-	if controllerManagerConfig != nil {
-		defaultValues["featureGates"] = controllerManagerConfig.FeatureGates
-
-		if controllerManagerConfig.HorizontalPodAutoscalerConfig != nil {
-			defaultValues["horizontalPodAutoscaler"] = controllerManagerConfig.HorizontalPodAutoscalerConfig
-		}
-
-		if controllerManagerConfig.NodeCIDRMaskSize != nil {
-			defaultValues["nodeCIDRMaskSize"] = *controllerManagerConfig.NodeCIDRMaskSize
-		}
-	}
-
-	values, err := b.InjectSeedShootImages(defaultValues, common.KubeControllerManagerImageName)
-	if err != nil {
-		return err
-	}
-
-	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeControllerManager), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager, kubernetes.Values(values))
+	return replicaCount, nil
 }
 
 // DefaultKubeScheduler returns a deployer for the kube-scheduler.

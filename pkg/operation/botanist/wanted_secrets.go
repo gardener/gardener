@@ -21,6 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -122,7 +123,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 		}, kubernetes.DNSNamesForService("kubernetes", "default")...)
 
-		kubeControllerManagerCertDNSNames = kubernetes.DNSNamesForService("kube-controller-manager", b.Shoot.SeedNamespace)
+		kubeControllerManagerCertDNSNames = kubernetes.DNSNamesForService(kubecontrollermanager.ServiceName, b.Shoot.SeedNamespace)
 		kubeSchedulerCertDNSNames         = kubernetes.DNSNamesForService(kubescheduler.ServiceName, b.Shoot.SeedNamespace)
 
 		konnectivityServerDNSNames = append([]string{
@@ -194,7 +195,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		// Secret definition for kube-controller-manager
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "kube-controller-manager",
+				Name: kubecontrollermanager.SecretName,
 
 				CommonName:   user.KubeControllerManager,
 				Organization: nil,
@@ -213,7 +214,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		// Secret definition for kube-controller-manager server
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: common.KubeControllerManagerServerName,
+				Name: kubecontrollermanager.SecretNameServer,
 
 				CommonName:   v1beta1constants.DeploymentNameKubeControllerManager,
 				Organization: nil,
@@ -460,7 +461,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 		// Secret definition for service-account-key
 		&secrets.RSASecretConfig{
-			Name:       "service-account-key",
+			Name:       v1beta1constants.SecretNameServiceAccountKey,
 			Bits:       4096,
 			UsedForSSH: false,
 		},
