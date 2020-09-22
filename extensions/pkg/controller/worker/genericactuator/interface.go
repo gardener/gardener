@@ -43,10 +43,17 @@ type WorkerDelegate interface {
 	// GenerateMachineDeployments generates the configuration for the desired machine deployments.
 	GenerateMachineDeployments(context.Context) (worker.MachineDeployments, error)
 
-	// GetMachineImages returns the list of used machine images for this `Worker` resource. It will be stored in the
-	// `.status.providerStatus` field of the `Worker` resource such that the controller can look up its provider-specific
-	// machine image information in case the required version has been removed from its componentconfig.
-	GetMachineImages(context.Context) (runtime.Object, error)
+	// UpdateMachineImagesStatus will store a list of machine images used by the
+	// machines associated with this Worker resource in its provider status.
+	// The controller can look up its provider-specific machine image information
+	// in case the required version has been removed from the `CloudProfile`.
+	UpdateMachineImagesStatus(context.Context) error
+
+	// DeployMachineDependencies is a hook to create external machine dependencies.
+	DeployMachineDependencies(context.Context) error
+
+	// CleanupMachineDependencies is a hook to cleanup external machine dependencies.
+	CleanupMachineDependencies(context.Context) error
 }
 
 // DelegateFactory acts upon Worker resources.

@@ -99,6 +99,11 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 		return errors.Wrapf(err, "failed deleting machine-controller-manager")
 	}
 
+	// Cleanup machine dependencies.
+	if err := workerDelegate.CleanupMachineDependencies(ctx); err != nil {
+		return errors.Wrap(err, "failed to cleanup machine dependencies")
+	}
+
 	return nil
 }
 
