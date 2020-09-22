@@ -53,12 +53,12 @@ var _ = Describe("#KubeAPIServerService", func() {
 		defaultDepWaiter   component.DeployWaiter
 		ingressIP          string
 		clusterIP          string
-		enableSNI          bool
+		sniPhase           component.Phase
 		enableKonnectivity bool
 		clusterIPFunc      func(string)
 		ingressIPFunc      func(string)
 		serviceObjKey      client.ObjectKey
-		sniServiceObjKey   *client.ObjectKey
+		sniServiceObjKey   client.ObjectKey
 	)
 
 	BeforeEach(func() {
@@ -72,10 +72,10 @@ var _ = Describe("#KubeAPIServerService", func() {
 
 		ingressIP = ""
 		clusterIP = ""
-		enableSNI = false
+		sniPhase = component.PhaseUnknown
 		enableKonnectivity = false
 		serviceObjKey = client.ObjectKey{Name: serviceName, Namespace: deployNS}
-		sniServiceObjKey = &client.ObjectKey{Name: "foo", Namespace: "bar"}
+		sniServiceObjKey = client.ObjectKey{Name: "foo", Namespace: "bar"}
 
 		clusterIPFunc = func(c string) { clusterIP = c }
 		ingressIPFunc = func(c string) { ingressIP = c }
@@ -101,6 +101,7 @@ var _ = Describe("#KubeAPIServerService", func() {
 					"app":  "kubernetes",
 					"role": "apiserver",
 				},
+				ClusterIP: "1.1.1.1",
 			},
 		}
 
@@ -112,40 +113,38 @@ var _ = Describe("#KubeAPIServerService", func() {
 	})
 
 	JustBeforeEach(func() {
+		defaultDepWaiter = NewKubeAPIService(
+			&KubeAPIServiceValues{
+				Annotations:               map[string]string{"foo": "bar"},
+				KonnectivityTunnelEnabled: enableKonnectivity,
+				SNIPhase:                  sniPhase,
+			},
+			serviceObjKey,
+			sniServiceObjKey,
+			ca,
+			chartsRoot(),
+			log,
+			c,
+			&fakeOps{},
+			clusterIPFunc,
+			ingressIPFunc,
+		)
 
-		if enableSNI {
-			defaultDepWaiter = NewKubeAPIService(
-				&KubeAPIServiceValues{
-					Annotations:               map[string]string{"foo": "bar"},
-					KonnectivityTunnelEnabled: enableKonnectivity,
+		sniService := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: "bar",
+			},
+			Status: corev1.ServiceStatus{
+				LoadBalancer: corev1.LoadBalancerStatus{
+					Ingress: []corev1.LoadBalancerIngress{{IP: "2.2.2.2"}},
 				},
-				serviceObjKey,
-				sniServiceObjKey,
-				ca,
-				chartsRoot(),
-				log,
-				c,
-				&fakeOps{},
-				clusterIPFunc,
-				ingressIPFunc,
-			)
-		} else {
-			defaultDepWaiter = NewKubeAPIService(
-				&KubeAPIServiceValues{
-					Annotations:               map[string]string{"foo": "bar"},
-					KonnectivityTunnelEnabled: enableKonnectivity,
-				},
-				serviceObjKey,
-				nil,
-				ca,
-				chartsRoot(),
-				log,
-				c,
-				&fakeOps{},
-				clusterIPFunc,
-				ingressIPFunc,
-			)
+			},
 		}
+
+		Expect(c.Create(ctx, sniService)).NotTo(HaveOccurred())
+		Expect(c.Create(ctx, expected)).NotTo(HaveOccurred())
+		expected.ResourceVersion = "2"
 	})
 
 	Context("Konnectivity enabled", func() {
@@ -169,17 +168,12 @@ var _ = Describe("#KubeAPIServerService", func() {
 			Expect(actual).To(DeepDerivativeEqual(expected))
 
 			Expect(ingressIP).To(BeEmpty())
-			Expect(clusterIP).To(BeEmpty())
+			Expect(clusterIP).To(Equal("1.1.1.1"))
 		})
 
 	})
 
-	Context("SNI disabled", func() {
-		BeforeEach(func() {
-			enableSNI = false
-			expected.Annotations = map[string]string{"foo": "bar"}
-		})
-
+	var assertDisabledSNI = func() {
 		It("deploys service", func() {
 			Expect(defaultDepWaiter.Deploy(ctx)).NotTo(HaveOccurred())
 
@@ -189,7 +183,7 @@ var _ = Describe("#KubeAPIServerService", func() {
 			Expect(actual).To(DeepDerivativeEqual(expected))
 
 			Expect(ingressIP).To(BeEmpty())
-			Expect(clusterIP).To(BeEmpty())
+			Expect(clusterIP).To(Equal("1.1.1.1"))
 		})
 
 		It("waits for service", func() {
@@ -197,25 +191,15 @@ var _ = Describe("#KubeAPIServerService", func() {
 
 			expected.Status = corev1.ServiceStatus{
 				LoadBalancer: corev1.LoadBalancerStatus{
-					Ingress: []corev1.LoadBalancerIngress{{IP: "2.2.2.2"}},
+					Ingress: []corev1.LoadBalancerIngress{{IP: "3.3.3.3"}},
 				},
 			}
 
 			key, _ := client.ObjectKeyFromObject(expected)
 			Expect(c.Get(ctx, key, expected)).NotTo(HaveOccurred())
 			Expect(c.Status().Update(ctx, expected)).NotTo(HaveOccurred())
-
 			Expect(defaultDepWaiter.Wait(ctx)).NotTo(HaveOccurred())
-
-			Expect(ingressIP).To(Equal("2.2.2.2"))
-		})
-
-		It("fails to wait for service", func() {
-			Expect(defaultDepWaiter.Deploy(ctx)).NotTo(HaveOccurred())
-
-			Expect(defaultDepWaiter.Wait(ctx)).To(HaveOccurred())
-
-			Expect(ingressIP).To(BeEmpty())
+			Expect(ingressIP).To(Equal("3.3.3.3"))
 		})
 
 		It("deletes service", func() {
@@ -230,25 +214,12 @@ var _ = Describe("#KubeAPIServerService", func() {
 
 			Expect(c.Get(ctx, serviceObjKey, &corev1.Service{})).To(BeNotFoundError())
 		})
-	})
+	}
 
-	Context("SNI enabled", func() {
-		BeforeEach(func() {
-			enableSNI = true
-			expected.Annotations = map[string]string{
-				"foo":                          "bar",
-				"networking.istio.io/exportTo": "*",
-			}
-			expected.Spec.Type = corev1.ServiceTypeClusterIP
-			expected.Spec.ClusterIP = "1.1.1.1"
-			expected.Labels["core.gardener.cloud/apiserver-exposure"] = "gardener-managed"
-			Expect(c.Create(ctx, expected)).NotTo(HaveOccurred())
-		})
-
+	var assertEnabledSNI = func() {
 		It("deploys service", func() {
 			Expect(defaultDepWaiter.Deploy(ctx)).NotTo(HaveOccurred())
 
-			expected.ResourceVersion = "2"
 			actual := &corev1.Service{}
 			Expect(c.Get(ctx, serviceObjKey, actual)).NotTo(HaveOccurred())
 
@@ -257,31 +228,10 @@ var _ = Describe("#KubeAPIServerService", func() {
 		})
 
 		It("waits for service", func() {
-			sniService := &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "bar",
-				},
-				Status: corev1.ServiceStatus{
-					LoadBalancer: corev1.LoadBalancerStatus{
-						Ingress: []corev1.LoadBalancerIngress{{IP: "2.2.2.2"}},
-					},
-				},
-			}
-
-			Expect(c.Create(ctx, sniService)).NotTo(HaveOccurred())
-
 			Expect(defaultDepWaiter.Deploy(ctx)).NotTo(HaveOccurred())
 			Expect(defaultDepWaiter.Wait(ctx)).NotTo(HaveOccurred())
 
 			Expect(ingressIP).To(Equal("2.2.2.2"))
-		})
-
-		It("fails to wait for service", func() {
-			Expect(defaultDepWaiter.Deploy(ctx)).NotTo(HaveOccurred())
-			Expect(defaultDepWaiter.Wait(ctx)).To(HaveOccurred())
-
-			Expect(ingressIP).To(BeEmpty())
 		})
 
 		It("deletes service", func() {
@@ -296,5 +246,55 @@ var _ = Describe("#KubeAPIServerService", func() {
 
 			Expect(c.Get(ctx, serviceObjKey, &corev1.Service{})).To(BeNotFoundError())
 		})
+	}
+
+	Context("SNI disabled", func() {
+		BeforeEach(func() {
+			sniPhase = component.PhaseDisabled
+			expected.Annotations = map[string]string{"foo": "bar"}
+		})
+
+		assertDisabledSNI()
+	})
+
+	Context("SNI being disabled", func() {
+		BeforeEach(func() {
+			sniPhase = component.PhaseDisabling
+			expected.Annotations = map[string]string{
+				"foo":                          "bar",
+				"networking.istio.io/exportTo": "*",
+			}
+			expected.Spec.Type = corev1.ServiceTypeLoadBalancer
+			expected.Labels["core.gardener.cloud/apiserver-exposure"] = "gardener-managed"
+		})
+
+		assertDisabledSNI()
+	})
+
+	Context("SNI enabled", func() {
+		BeforeEach(func() {
+			sniPhase = component.PhaseEnabled
+			expected.Annotations = map[string]string{
+				"foo":                          "bar",
+				"networking.istio.io/exportTo": "*",
+			}
+			expected.Spec.Type = corev1.ServiceTypeClusterIP
+			expected.Labels["core.gardener.cloud/apiserver-exposure"] = "gardener-managed"
+		})
+
+		assertEnabledSNI()
+	})
+
+	Context("SNI being enabled", func() {
+		BeforeEach(func() {
+			sniPhase = component.PhaseEnabling
+			expected.Annotations = map[string]string{
+				"foo":                          "bar",
+				"networking.istio.io/exportTo": "*",
+			}
+			expected.Spec.Type = corev1.ServiceTypeLoadBalancer
+		})
+
+		assertEnabledSNI()
 	})
 })

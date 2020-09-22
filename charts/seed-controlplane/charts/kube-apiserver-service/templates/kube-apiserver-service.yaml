@@ -15,11 +15,11 @@ metadata:
   labels:
     app: kubernetes
     role: apiserver
-{{- if .Values.enableSNI }}
+{{- if .Values.gardenerManaged }}
     core.gardener.cloud/apiserver-exposure: gardener-managed
 {{- end }}
 spec:
-  type: {{ if .Values.enableSNI }}ClusterIP{{ else }}LoadBalancer{{ end }}
+  type: {{ .Values.serviceType }}
   selector:
     app: kubernetes
     role: apiserver

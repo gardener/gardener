@@ -91,6 +91,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		staticNodesCIDR                = o.Shoot.Info.Spec.Networking.Nodes != nil
 		useSNI                         = botanist.APIServerSNIEnabled()
 		generation                     = o.Shoot.Info.Generation
+		sniPhase                       = botanist.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase
 		requestControlPlanePodsRestart = controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskRestartControlPlanePods)
 
 		g                      = flow.NewGraph("Shoot cluster reconciliation")
@@ -119,7 +120,9 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		})
 		deployKubeAPIServerService = g.Add(flow.Task{
 			Name: "Deploying Kubernetes API server service in the Seed cluster",
-			Fn: flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerService.Deploy).
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.DeployKubeAPIService(ctx, sniPhase)
+			}).
 				RetryUntilTimeout(defaultInterval, defaultTimeout).
 				SkipIf(o.Shoot.HibernationEnabled && !useSNI),
 			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootClusterIdentity),
@@ -346,6 +349,23 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
 			Fn:           flow.TaskFn(botanist.WaitUntilTunnelConnectionExists).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployManagedResources, waitUntilNetworkIsReady, waitUntilWorkerReady),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Finishing Kubernetes API server service SNI transition",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.DeployKubeAPIService(ctx, sniPhase.Done())
+			}).
+				RetryUntilTimeout(defaultInterval, defaultTimeout).
+				SkipIf(o.Shoot.HibernationEnabled).
+				DoIf(sniPhase == component.PhaseEnabling || sniPhase == component.PhaseDisabling),
+			Dependencies: flow.NewTaskIDs(waitUntilTunnelConnectionExists),
+		})
+		_ = g.Add(flow.Task{
+			Name: "Deleting SNI resources if SNI is disabled",
+			Fn: flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerSNI.Destroy).
+				RetryUntilTimeout(defaultInterval, defaultTimeout).
+				DoIf(sniPhase.Done() == component.PhaseDisabled),
+			Dependencies: flow.NewTaskIDs(waitUntilTunnelConnectionExists),
 		})
 		deploySeedMonitoring = g.Add(flow.Task{
 			Name:         "Deploying Shoot monitoring stack in Seed",

@@ -52,6 +52,7 @@ func New(o *operation.Operation) (*Botanist, error) {
 	var (
 		b   = &Botanist{Operation: o}
 		err error
+		ctx = context.TODO()
 	)
 
 	// Determine all default domain secrets and check whether the used Shoot domain matches a default domain.
@@ -83,7 +84,7 @@ func New(o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.Extensions.DNS.InternalEntry = b.DefaultInternalDNSEntry(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.DNS.NginxOwner = b.DefaultNginxIngressDNSOwner(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.DNS.NginxEntry = b.DefaultNginxIngressDNSEntry(b.K8sSeedClient.DirectClient())
-	o.Shoot.Components.Extensions.DNS.AdditionalProviders, err = b.AdditionalDNSProviders(context.TODO(), b.K8sGardenClient.Client(), b.K8sSeedClient.DirectClient())
+	o.Shoot.Components.Extensions.DNS.AdditionalProviders, err = b.AdditionalDNSProviders(ctx, b.K8sGardenClient.Client(), b.K8sSeedClient.DirectClient())
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +92,15 @@ func New(o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.Extensions.Network = b.DefaultNetwork(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.ContainerRuntime = b.DefaultContainerRuntime(b.K8sSeedClient.DirectClient())
 
+	sniPhase, err := b.SNIPhase(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	o.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase = sniPhase
+
 	// control plane components
-	o.Shoot.Components.ControlPlane.KubeAPIServerService = b.DefaultKubeAPIServerService()
+	o.Shoot.Components.ControlPlane.KubeAPIServerService = b.DefaultKubeAPIServerService(sniPhase)
 	o.Shoot.Components.ControlPlane.KubeAPIServerSNI = b.DefaultKubeAPIServerSNI()
 	o.Shoot.Components.ControlPlane.KubeScheduler, err = b.DefaultKubeScheduler()
 	if err != nil {

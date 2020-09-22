@@ -540,7 +540,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		}
 
 		chartApplier := k8sSeedClient.ChartApplier()
-		istioCRDs := istio.NewIstioCRD(chartApplier, "charts", k8sSeedClient.Client())
+		istioCRDs := istio.NewIstioCRD(chartApplier, common.ChartPath, k8sSeedClient.Client())
 		istiod := istio.NewIstiod(
 			&istio.IstiodValues{
 				TrustDomain: "cluster.local",
@@ -548,7 +548,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			},
 			common.IstioNamespace,
 			chartApplier,
-			"charts",
+			common.ChartPath,
 			k8sSeedClient.Client(),
 		)
 
@@ -576,7 +576,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			igwConfig,
 			common.IstioIngressGatewayNamespace,
 			chartApplier,
-			"charts",
+			common.ChartPath,
 			k8sSeedClient.Client(),
 		)
 
@@ -585,7 +585,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		}
 	}
 
-	proxy := istio.NewProxyProtocolGateway(common.IstioIngressGatewayNamespace, chartApplier, "charts")
+	proxy := istio.NewProxyProtocolGateway(common.IstioIngressGatewayNamespace, chartApplier, common.ChartPath)
 
 	if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
 		if err := proxy.Deploy(ctx); err != nil {
@@ -674,7 +674,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		"cluster-identity": map[string]interface{}{"clusterIdentity": &seed.Info.Status.ClusterIdentity},
 	})
 
-	if err := chartApplier.Apply(ctx, filepath.Join("charts", chartName), v1beta1constants.GardenNamespace, chartName, values, applierOptions); err != nil {
+	if err := chartApplier.Apply(ctx, filepath.Join(common.ChartPath, chartName), v1beta1constants.GardenNamespace, chartName, values, applierOptions); err != nil {
 		return err
 	}
 

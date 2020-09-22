@@ -39,6 +39,7 @@ const (
 type KubeAPIServiceValues struct {
 	Annotations               map[string]string
 	KonnectivityTunnelEnabled bool
+	SNIPhase                  component.Phase
 }
 
 // NewKubeAPIService creates a new instance of DeployWaiter for a specific DNS entry.
@@ -46,16 +47,18 @@ type KubeAPIServiceValues struct {
 func NewKubeAPIService(
 	values *KubeAPIServiceValues,
 	serviceKey client.ObjectKey,
-	sniServiceKey *client.ObjectKey,
+	sniServiceKey client.ObjectKey,
 	applier kubernetes.ChartApplier,
 	chartsRootPath string,
 	logger logrus.FieldLogger,
-	client client.Client,
+	crclient client.Client,
 	waiter retry.Ops,
 	clusterIPFunc func(clusterIP string),
 	ingressFunc func(ingressIP string),
 
 ) component.DeployWaiter {
+	var loadBalancerServiceKey client.ObjectKey
+
 	if waiter == nil {
 		waiter = retry.DefaultOps()
 	}
@@ -69,26 +72,50 @@ func NewKubeAPIService(
 	}
 
 	internalValues := &kubeAPIServiceValues{
-		EnableSNI: sniServiceKey != nil && sniServiceKey.Name != "" && sniServiceKey.Namespace != "",
-		Name:      serviceKey.Name,
+		Name: serviceKey.Name,
 	}
 
 	if values != nil {
+		switch values.SNIPhase {
+		case component.PhaseEnabled:
+			internalValues.ServiceType = corev1.ServiceTypeClusterIP
+			internalValues.EnableSNI = true
+			internalValues.GardenerManaged = true
+			loadBalancerServiceKey = sniServiceKey
+		case component.PhaseEnabling:
+			// existing traffic must still access the old loadbalancer
+			// IP (due to DNS cache).
+			internalValues.ServiceType = corev1.ServiceTypeLoadBalancer
+			internalValues.EnableSNI = true
+			internalValues.GardenerManaged = false
+			loadBalancerServiceKey = sniServiceKey
+		case component.PhaseDisabling:
+			internalValues.ServiceType = corev1.ServiceTypeLoadBalancer
+			internalValues.EnableSNI = true
+			internalValues.GardenerManaged = true
+			loadBalancerServiceKey = serviceKey
+		default:
+			internalValues.ServiceType = corev1.ServiceTypeLoadBalancer
+			internalValues.EnableSNI = false
+			internalValues.GardenerManaged = false
+			loadBalancerServiceKey = serviceKey
+		}
+
 		internalValues.Annotations = values.Annotations
 		internalValues.EnableKonnectivityTunnel = values.KonnectivityTunnelEnabled
 	}
 
 	return &kubeAPIService{
-		ChartApplier:  applier,
-		chartPath:     filepath.Join(chartsRootPath, "seed-controlplane", "charts", kubeAPIServerChartName),
-		client:        client,
-		logger:        logger,
-		values:        internalValues,
-		service:       serviceKey,
-		sniService:    sniServiceKey,
-		waiter:        waiter,
-		clusterIPFunc: clusterIPFunc,
-		ingressFunc:   ingressFunc,
+		ChartApplier:           applier,
+		chartPath:              filepath.Join(chartsRootPath, "seed-controlplane", "charts", kubeAPIServerChartName),
+		client:                 crclient,
+		logger:                 logger,
+		values:                 internalValues,
+		service:                serviceKey,
+		loadBalancerServicekey: loadBalancerServiceKey,
+		waiter:                 waiter,
+		clusterIPFunc:          clusterIPFunc,
+		ingressFunc:            ingressFunc,
 	}
 }
 
@@ -101,10 +128,6 @@ func (d *kubeAPIService) Deploy(ctx context.Context) error {
 		kubernetes.Values(d.values),
 	); err != nil {
 		return err
-	}
-
-	if !d.values.EnableSNI {
-		return nil
 	}
 
 	service := &corev1.Service{}
@@ -125,25 +148,22 @@ func (d *kubeAPIService) Wait(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	svcNS := d.service.Namespace
-	svcName := d.service.Name
-
-	if d.values.EnableSNI {
-		svcNS = d.sniService.Namespace
-		svcName = d.sniService.Name
-	}
-
 	return d.waiter.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-		loadBalancerIngress, err := kutil.GetLoadBalancerIngress(ctx, d.client, svcNS, svcName)
+		// this ingress can be either the kube-apiserver's service or istio's IGW loadbalancer.
+		loadBalancerIngress, err := kutil.GetLoadBalancerIngress(
+			ctx,
+			d.client,
+			d.loadBalancerServicekey.Namespace,
+			d.loadBalancerServicekey.Name,
+		)
 		if err != nil {
-			d.logger.Info("Waiting until the API Server LoadBalancer deployed in the Seed cluster is ready...")
+			d.logger.Info("Waiting until the KubeAPI Server ingress LoadBalancer deployed in the Seed cluster is ready...")
 			// TODO(AC): This is a quite optimistic check / we should differentiate here
-			return retry.MinorError(fmt.Errorf("API Server LoadBalancer deployed in the Seed cluster is not ready: %v", err))
+			return retry.MinorError(fmt.Errorf("KubeAPI Server ingress LoadBalancer deployed in the Seed cluster is ready: %v", err))
 		}
 		d.ingressFunc(loadBalancerIngress)
 		return retry.Ok()
 	})
-
 }
 
 func (d *kubeAPIService) WaitCleanup(ctx context.Context) error {
@@ -159,16 +179,18 @@ func (d *kubeAPIService) getService() *corev1.Service {
 // this one is not exposed as not all values should be configured
 // from the outside.
 type kubeAPIServiceValues struct {
-	EnableSNI                bool              `json:"enableSNI,omitempty"`
-	EnableKonnectivityTunnel bool              `json:"enableKonnectivityTunnel,omitempty"`
-	Name                     string            `json:"name,omitempty"`
-	Annotations              map[string]string `json:"annotations,omitempty"`
+	EnableSNI                bool               `json:"enableSNI,omitempty"`
+	EnableKonnectivityTunnel bool               `json:"enableKonnectivityTunnel,omitempty"`
+	GardenerManaged          bool               `json:"gardenerManaged,omitempty"`
+	Name                     string             `json:"name,omitempty"`
+	Annotations              map[string]string  `json:"annotations,omitempty"`
+	ServiceType              corev1.ServiceType `json:"serviceType,omitempty"`
 }
 
 type kubeAPIService struct {
-	values     *kubeAPIServiceValues
-	service    client.ObjectKey
-	sniService *client.ObjectKey
+	values                 *kubeAPIServiceValues
+	service                client.ObjectKey
+	loadBalancerServicekey client.ObjectKey
 	kubernetes.ChartApplier
 	chartPath     string
 	logger        logrus.FieldLogger

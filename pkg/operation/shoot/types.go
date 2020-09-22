@@ -91,10 +91,11 @@ type Components struct {
 
 // ControlPlane contains references to K8S control plane components.
 type ControlPlane struct {
-	KubeAPIServerService component.DeployWaiter
-	KubeAPIServerSNI     component.DeployWaiter
-	KubeScheduler        kubescheduler.KubeScheduler
-	ClusterAutoscaler    clusterautoscaler.ClusterAutoscaler
+	ClusterAutoscaler     clusterautoscaler.ClusterAutoscaler
+	KubeAPIServerService  component.DeployWaiter
+	KubeAPIServerSNI      component.DeployWaiter
+	KubeAPIServerSNIPhase component.Phase
+	KubeScheduler         kubescheduler.KubeScheduler
 }
 
 // Extensions contains references to extension resources.
