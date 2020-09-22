@@ -323,6 +323,12 @@ func (c *clusterAutoscaler) computeCommand() []string {
 	var (
 		scaleDownUnneededTime  = metav1.Duration{Duration: 30 * time.Minute}
 		scaleDownDelayAfterAdd = metav1.Duration{Duration: time.Hour}
+		balancingIgnoreLabels  = []string{
+			v1beta1constants.LabelWorkerPool,
+			v1beta1constants.LabelWorkerPoolDeprecated,
+			corev1.LabelZoneFailureDomainStable,
+			corev1.LabelZoneRegionStable,
+		}
 
 		command = []string{
 			"./cluster-autoscaler",
@@ -367,6 +373,10 @@ func (c *clusterAutoscaler) computeCommand() []string {
 
 	for _, machineDeployment := range c.machineDeployments {
 		command = append(command, fmt.Sprintf("--nodes=%d:%d:%s.%s", machineDeployment.Minimum, machineDeployment.Maximum, c.namespace, machineDeployment.Name))
+	}
+
+	for _, ignoreLabel := range balancingIgnoreLabels {
+		command = append(command, fmt.Sprintf("--balancing-ignore-label=%s", ignoreLabel))
 	}
 
 	return command
