@@ -836,8 +836,9 @@ func (b *Botanist) deployNetworkPolicies(ctx context.Context, denyAll bool) erro
 
 	switch b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase { //nolint:exhaustive
 	case component.PhaseEnabled, component.PhaseEnabling, component.PhaseDisabling:
-		// SNI needs to be enabled as the control plane is transitioning between states
-		// to ensure that traffic from old clients is still going to reach the API server.
+		// Enable network policies for SNI
+		// When disabling SNI (previously enabled), the control plane is transitioning between states, thus
+		// it needs to be ensured that the traffic from old clients can still reach the API server.
 		globalNetworkPoliciesValues["sniEnabled"] = true
 	default:
 		globalNetworkPoliciesValues["sniEnabled"] = false
@@ -1342,7 +1343,7 @@ func (b *Botanist) kubeAPIServiceService(sniPhase component.Phase) component.Dep
 	)
 }
 
-// SNIPhase returns the current phase of the SNI entablement of kube-apiserver's service.
+// SNIPhase returns the current phase of the SNI enablement of kube-apiserver's service.
 func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
 	var (
 		svc        = &corev1.Service{}
@@ -1353,11 +1354,17 @@ func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
 		ctx,
 		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
 		svc,
-	); err != nil {
+	); client.IgnoreNotFound(err) != nil {
 		return component.PhaseUnknown, err
 	}
 
 	switch {
+	case svc == nil && sniEnabled:
+		// initial cluster creation with SNI enabled (enabling only relevant for migration)
+		return component.PhaseEnabled, nil
+	case svc == nil && !sniEnabled:
+		// initial cluster creation without SNI enabled
+		return component.PhaseDisabled, nil
 	case svc.Spec.Type == corev1.ServiceTypeLoadBalancer && sniEnabled:
 		return component.PhaseEnabling, nil
 	case svc.Spec.Type == corev1.ServiceTypeClusterIP && sniEnabled:
