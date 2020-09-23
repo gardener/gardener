@@ -91,7 +91,7 @@ spec:
           readOnly: true
         {{- end }}
         - name: gardener-admission-controller-config
-          mountPath: /etc/gardener-admission-controller-config/config
+          mountPath: /etc/gardener-admission-controller/config
       volumes:
       - name: gardener-admission-controller-cert
         secret:
