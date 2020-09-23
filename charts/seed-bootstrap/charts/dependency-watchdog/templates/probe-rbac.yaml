@@ -24,6 +24,14 @@ metadata:
   name: gardener.cloud:dependency-watchdog-probe:cluster-role
 rules:
 - apiGroups:
+  - extensions.gardener.cloud
+  resources:
+  - clusters
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
   - ""
   resources:
   - namespaces
