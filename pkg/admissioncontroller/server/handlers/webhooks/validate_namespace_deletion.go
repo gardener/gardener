@@ -50,16 +50,16 @@ const waitForCachesToSyncTimeout = 5 * time.Minute
 func NewValidateNamespaceDeletionHandler(ctx context.Context, k8sGardenClient kubernetes.Interface) (http.HandlerFunc, error) {
 	// Initialize caches here to ensure http requests can be served quicker with pre-syncronized caches.
 	var hasSyncFuncs []cache.InformerSynced
-	informer, err := k8sGardenClient.Cache().GetInformer(ctx, &corev1.Secret{})
+	projectInformer, err := k8sGardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Project{})
 	if err != nil {
 		return nil, err
 	}
-	hasSyncFuncs = append(hasSyncFuncs, informer.HasSynced)
-	informer, err = k8sGardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	hasSyncFuncs = append(hasSyncFuncs, projectInformer.HasSynced)
+	shootInformer, err := k8sGardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
 	if err != nil {
 		return nil, err
 	}
-	hasSyncFuncs = append(hasSyncFuncs, informer.HasSynced)
+	hasSyncFuncs = append(hasSyncFuncs, shootInformer.HasSynced)
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, waitForCachesToSyncTimeout)
 	defer cancel()
