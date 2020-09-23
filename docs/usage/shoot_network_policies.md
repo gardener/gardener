@@ -1,6 +1,6 @@
 ## Network policies in the Shoot Cluster
 
-In addition to deploying network policies [into the Seed](https://github.com/gardener/gardener/tree/master/docs/development/network_policies.md),
+In addition to deploying network policies [into the Seed](../development/seed_network_policies.md),
 Gardener deploys network policies into the `kube-system` namespace of the Shoot.
 These network policies are used by Shoot system components (that are not part of the control plane).
 Other namespaces in the Shoot do not contain network policies deployed by Gardener. 
