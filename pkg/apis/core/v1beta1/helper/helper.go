@@ -36,31 +36,15 @@ var Now = metav1.Now
 
 // InitCondition initializes a new Condition with an Unknown status.
 func InitCondition(conditionType gardencorev1beta1.ConditionType) gardencorev1beta1.Condition {
+	now := Now()
 	return gardencorev1beta1.Condition{
 		Type:               conditionType,
 		Status:             gardencorev1beta1.ConditionUnknown,
 		Reason:             "ConditionInitialized",
 		Message:            "The condition has been initialized but its semantic check has not been performed yet.",
-		LastTransitionTime: Now(),
+		LastTransitionTime: now,
+		LastUpdateTime:     now,
 	}
-}
-
-// NewConditions initializes the provided conditions based on an existing list. If a condition type does not exist
-// in the list yet, it will be set to default values.
-func NewConditions(conditions []gardencorev1beta1.Condition, conditionTypes ...gardencorev1beta1.ConditionType) []*gardencorev1beta1.Condition {
-	newConditions := []*gardencorev1beta1.Condition{}
-
-	// We retrieve the current conditions in order to update them appropriately.
-	for _, conditionType := range conditionTypes {
-		if c := GetCondition(conditions, conditionType); c != nil {
-			newConditions = append(newConditions, c)
-			continue
-		}
-		initializedCondition := InitCondition(conditionType)
-		newConditions = append(newConditions, &initializedCondition)
-	}
-
-	return newConditions
 }
 
 // GetCondition returns the condition with the given <conditionType> out of the list of <conditions>.
@@ -86,19 +70,27 @@ func GetOrInitCondition(conditions []gardencorev1beta1.Condition, conditionType 
 
 // UpdatedCondition updates the properties of one specific condition.
 func UpdatedCondition(condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
-	newCondition := gardencorev1beta1.Condition{
-		Type:               condition.Type,
-		Status:             status,
-		Reason:             reason,
-		Message:            message,
-		LastTransitionTime: condition.LastTransitionTime,
-		LastUpdateTime:     Now(),
-		Codes:              codes,
-	}
+	var (
+		newCondition = gardencorev1beta1.Condition{
+			Type:               condition.Type,
+			Status:             status,
+			Reason:             reason,
+			Message:            message,
+			LastTransitionTime: condition.LastTransitionTime,
+			LastUpdateTime:     condition.LastUpdateTime,
+			Codes:              codes,
+		}
+		now = Now()
+	)
 
 	if condition.Status != status {
-		newCondition.LastTransitionTime = Now()
+		newCondition.LastTransitionTime = now
 	}
+
+	if condition.Reason != reason || condition.Message != message || !apiequality.Semantic.DeepEqual(condition.Codes, codes) {
+		newCondition.LastUpdateTime = now
+	}
+
 	return newCondition
 }
 
@@ -195,7 +187,7 @@ func ComputeOperationType(meta metav1.ObjectMeta, lastOperation *gardencorev1bet
 		return gardencorev1beta1.LastOperationTypeCreate
 	case lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded:
 		return gardencorev1beta1.LastOperationTypeMigrate
-	case (lastOperation.Type == gardencorev1beta1.LastOperationTypeRestore && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded):
+	case lastOperation.Type == gardencorev1beta1.LastOperationTypeRestore && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded:
 		return gardencorev1beta1.LastOperationTypeRestore
 	}
 	return gardencorev1beta1.LastOperationTypeReconcile
