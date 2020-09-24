@@ -3,7 +3,7 @@
 apiVersion: {{ include "webhookadmissionregistration" . }}
 kind: MutatingWebhookConfiguration
 metadata:
-  name: vpa-webhook-config
+  name: vpa-webhook-config-{{ .Values.clusterType }}
 webhooks:
 - admissionReviewVersions:
   - v1beta1
