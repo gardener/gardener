@@ -15,22 +15,37 @@
 package backupbucket
 
 import (
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
+	"time"
 
 	"k8s.io/client-go/tools/cache"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 func (c *Controller) backupBucketAdd(obj interface{}) {
+	backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
+	if !ok {
+		logger.Logger.Errorf("Couldn't convert object: %T", obj)
+		return
+	}
+
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
-	c.backupBucketQueue.Add(key)
+
+	addAfter := controllerutils.ReconcileOncePer24hDuration(backupBucket.ObjectMeta, backupBucket.Status.ObservedGeneration, backupBucket.Status.LastOperation)
+	if addAfter > 0 {
+		logger.Logger.Infof("Scheduled next reconciliation for BackupBucket %q in %s (%s)", key, addAfter, time.Now().Add(addAfter))
+	}
+
+	c.backupBucketQueue.AddAfter(key, addAfter)
 }
 
-func (c *Controller) backupBucketUpdate(oldObj, newObj interface{}) {
+func (c *Controller) backupBucketUpdate(_, newObj interface{}) {
 	var (
 		newBackupBucket    = newObj.(*gardencorev1beta1.BackupBucket)
 		backupBucketLogger = logger.NewFieldLogger(logger.Logger, "backupbucket", newBackupBucket.Name)
@@ -52,7 +67,6 @@ func (c *Controller) backupBucketUpdate(oldObj, newObj interface{}) {
 	// }
 
 	c.backupBucketAdd(newObj)
-
 }
 
 func (c *Controller) backupBucketDelete(obj interface{}) {
