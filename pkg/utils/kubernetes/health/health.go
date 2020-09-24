@@ -341,10 +341,10 @@ func CheckAPIServerAvailability(condition gardencorev1beta1.Condition, restClien
 		} else {
 			body = string(bodyRaw)
 		}
-		message := fmt.Sprintf("API server /healthz endpoint endpoint check returned a non ok status code %d. %s (%s)", statusCode, responseDurationText, body)
+		message := fmt.Sprintf("API server /healthz endpoint check returned a non ok status code %d. (%s)", statusCode, body)
 		return conditioner("HealthzRequestError", message)
 	}
 
-	message := fmt.Sprintf("API server /healthz endpoint responded with success status code. %s", responseDurationText)
+	message := "API server /healthz endpoint responded with success status code."
 	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "HealthzRequestSucceeded", message)
 }
