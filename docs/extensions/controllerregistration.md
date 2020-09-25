@@ -172,7 +172,7 @@ Again, similar to how Gardener is deployed to the garden cluster, these componen
 
 ### `Extension` resource configurations
 
-The `Extension` resource allows to inject arbitrary steps into the shoot reconciliation flow that are unknown to Gardener.
+The `Extension` resource allows injecting arbitrary steps into the shoot reconciliation flow that are unknown to Gardener.
 Hence, it is slightly special and allows further configuration when registering it:
 
 ```yaml
@@ -199,7 +199,8 @@ The `.spec.deployment` resource allows to configure a deployment `policy`.
 There are the following policies:
 
 * `OnDemand` (default): Gardener will demand the deployment and deletion of the extension controller to/from seed clusters dynamically. It will automatically determine (based on other resources like `Shoot`s) whether it is required and decide accordingly.
-* `Always`: Gardener will demand the deployment of the extension controller to seed clusters independent of whether it is actually required or not. This might be helpful if you want to add a new component/controller to all seed clusters by default. Another use-case is to minimize the durations until extension controllers are deployed and ready in case you have highly fluctuating seed clusters.
+* `Always`: Gardener will demand the deployment of the extension controller to seed clusters independent of whether it is actually required or not. This might be helpful if you want to add a new component/controller to all seed clusters by default. Another use-case is to minimize the durations until extension controllers get deployed and ready in case you have highly fluctuating seed clusters.
+* `AlwaysExceptNoShoots`: Similar to `Always`, but if the seed does not have any shoots then the extension is not being deployed. It will be deleted from a seed after the last shoot has been removed from it.
 
 Also, the `.spec.deployment.seedSelector` allows to specify a label selector for seed clusters.
 Only if it matches the labels of a seed then it will be deployed to it.

@@ -160,7 +160,7 @@ func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1be
 						Union(wantedKindTypeCombinationForShoots)
 	)
 
-	wantedControllerRegistrationNames, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, seed.Labels, seed.Name)
+	wantedControllerRegistrationNames, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, len(shootList), seed.ObjectMeta)
 	if err != nil {
 		return err
 	}
@@ -277,24 +277,23 @@ func computeKindTypesForShoots(
 }
 
 type controllerRegistration struct {
-	obj          *gardencorev1beta1.ControllerRegistration
-	deployAlways bool
+	obj                        *gardencorev1beta1.ControllerRegistration
+	deployAlways               bool
+	deployAlwaysExceptNoShoots bool
 }
 
-// computeControllerRegistrationMaps computes two maps and a string slice. The first map maps the name of a
-// ControllerRegistration to the *gardencorev1beta1.ControllerRegistration object. The second map maps the registered
-// kind/type combinations to the supporting *gardencorev1beta1.ControllerRegistration objects. If the ControllerRegistration
-// specifies a seed selector then it will be validated against the provided seed labels map. Only if it matches then the
-// ControllerRegistration will be considered. The string slice contains the list of names of ControllerRegistrations
-// having the 'Always' deployment policy.
+// computeControllerRegistrationMaps computes a map which maps the name of a ControllerRegistration to the
+// *gardencorev1beta1.ControllerRegistration object. It also specifies whether the ControllerRegistration shall be
+// always deployed.
 func computeControllerRegistrationMaps(
 	controllerRegistrationList []*gardencorev1beta1.ControllerRegistration,
 ) map[string]controllerRegistration {
 	var out = make(map[string]controllerRegistration)
 	for _, cr := range controllerRegistrationList {
 		out[cr.Name] = controllerRegistration{
-			obj:          cr.DeepCopy(),
-			deployAlways: cr.Spec.Deployment != nil && cr.Spec.Deployment.Policy != nil && *cr.Spec.Deployment.Policy == gardencorev1beta1.ControllerDeploymentPolicyAlways,
+			obj:                        cr.DeepCopy(),
+			deployAlways:               cr.Spec.Deployment != nil && cr.Spec.Deployment.Policy != nil && *cr.Spec.Deployment.Policy == gardencorev1beta1.ControllerDeploymentPolicyAlways,
+			deployAlwaysExceptNoShoots: cr.Spec.Deployment != nil && cr.Spec.Deployment.Policy != nil && *cr.Spec.Deployment.Policy == gardencorev1beta1.ControllerDeploymentPolicyAlwaysExceptNoShoots,
 		}
 	}
 	return out
@@ -308,8 +307,8 @@ func computeWantedControllerRegistrationNames(
 	wantedKindTypeCombinations sets.String,
 	controllerInstallationList *gardencorev1beta1.ControllerInstallationList,
 	controllerRegistrations map[string]controllerRegistration,
-	seedLabels map[string]string,
-	seedName string,
+	numberOfShoots int,
+	seedObjectMeta metav1.ObjectMeta,
 ) (sets.String, error) {
 	var (
 		kindTypeToControllerRegistrationNames = make(map[string][]string)
@@ -317,7 +316,11 @@ func computeWantedControllerRegistrationNames(
 	)
 
 	for name, controllerRegistration := range controllerRegistrations {
-		if controllerRegistration.deployAlways {
+		if controllerRegistration.deployAlways && seedObjectMeta.DeletionTimestamp == nil {
+			wantedControllerRegistrationNames.Insert(name)
+		}
+
+		if controllerRegistration.deployAlwaysExceptNoShoots && numberOfShoots > 0 {
 			wantedControllerRegistrationNames.Insert(name)
 		}
 
@@ -337,7 +340,7 @@ func computeWantedControllerRegistrationNames(
 	}
 
 	for _, controllerInstallation := range controllerInstallationList.Items {
-		if controllerInstallation.Spec.SeedRef.Name != seedName {
+		if controllerInstallation.Spec.SeedRef.Name != seedObjectMeta.Name {
 			continue
 		}
 		if !gardencorev1beta1helper.IsControllerInstallationRequired(controllerInstallation) {
@@ -347,7 +350,7 @@ func computeWantedControllerRegistrationNames(
 	}
 
 	// filter controller registrations with non-matching seed selector
-	return controllerRegistrationNamesWithMatchingSeedLabelSelector(wantedControllerRegistrationNames.UnsortedList(), controllerRegistrations, seedLabels)
+	return controllerRegistrationNamesWithMatchingSeedLabelSelector(wantedControllerRegistrationNames.UnsortedList(), controllerRegistrations, seedObjectMeta.Labels)
 }
 
 // computeRegistrationNameToInstallationNameMap computes a map that maps the name of a ControllerRegistration to the name of an

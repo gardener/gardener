@@ -100,6 +100,9 @@ const (
 	// resource. If nothing requires it then the controller shall not be deployed.
 	ControllerDeploymentPolicyOnDemand ControllerDeploymentPolicy = "OnDemand"
 	// ControllerDeploymentPolicyAlways specifies that the controller shall be deployed always, independent of whether
-	// another resource requires it.
+	// another resource requires it or the respective seed has shoots.
 	ControllerDeploymentPolicyAlways ControllerDeploymentPolicy = "Always"
+	// ControllerDeploymentPolicyAlwaysExceptNoShoots specifies that the controller shall be deployed always, independent of
+	// whether another resource requires it, but only when the respective seed has at least one shoot.
+	ControllerDeploymentPolicyAlwaysExceptNoShoots ControllerDeploymentPolicy = "AlwaysExceptNoShoots"
 )

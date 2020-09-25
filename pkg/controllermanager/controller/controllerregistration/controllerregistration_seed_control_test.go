@@ -130,14 +130,17 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 		ctx       = context.TODO()
 		nopLogger = logger.NewFieldLogger(logger.NewNopLogger(), "", "")
 
-		seedName   = "seed"
-		seedLabels = map[string]string{
-			"foo": "bar",
+		seedName       = "seed"
+		seedLabels     = map[string]string{"foo": "bar"}
+		seedObjectMeta = metav1.ObjectMeta{
+			Name:   seedName,
+			Labels: seedLabels,
 		}
 
-		alwaysPolicy   = gardencorev1beta1.ControllerDeploymentPolicyAlways
-		onDemandPolicy = gardencorev1beta1.ControllerDeploymentPolicyOnDemand
-		now            = metav1.Now()
+		alwaysPolicy         = gardencorev1beta1.ControllerDeploymentPolicyAlways
+		alwaysIfShootsPolicy = gardencorev1beta1.ControllerDeploymentPolicyAlwaysExceptNoShoots
+		onDemandPolicy       = gardencorev1beta1.ControllerDeploymentPolicyOnDemand
+		now                  = metav1.Now()
 
 		type1  = "type1"
 		type2  = "type2"
@@ -447,6 +450,16 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				},
 			},
 		}
+		controllerRegistration8 = &gardencorev1beta1.ControllerRegistration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "cr8",
+			},
+			Spec: gardencorev1beta1.ControllerRegistrationSpec{
+				Deployment: &gardencorev1beta1.ControllerDeployment{
+					Policy: &alwaysIfShootsPolicy,
+				},
+			},
+		}
 		controllerRegistrationList = []*gardencorev1beta1.ControllerRegistration{
 			controllerRegistration1,
 			controllerRegistration2,
@@ -455,15 +468,17 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 			controllerRegistration5,
 			controllerRegistration6,
 			controllerRegistration7,
+			controllerRegistration8,
 		}
 		controllerRegistrations = map[string]controllerRegistration{
-			controllerRegistration1.Name: {obj: controllerRegistration1, deployAlways: false},
-			controllerRegistration2.Name: {obj: controllerRegistration2, deployAlways: false},
-			controllerRegistration3.Name: {obj: controllerRegistration3, deployAlways: false},
+			controllerRegistration1.Name: {obj: controllerRegistration1},
+			controllerRegistration2.Name: {obj: controllerRegistration2},
+			controllerRegistration3.Name: {obj: controllerRegistration3},
 			controllerRegistration4.Name: {obj: controllerRegistration4, deployAlways: true},
 			controllerRegistration5.Name: {obj: controllerRegistration5, deployAlways: true},
-			controllerRegistration6.Name: {obj: controllerRegistration6, deployAlways: false},
-			controllerRegistration7.Name: {obj: controllerRegistration7, deployAlways: false},
+			controllerRegistration6.Name: {obj: controllerRegistration6},
+			controllerRegistration7.Name: {obj: controllerRegistration7},
+			controllerRegistration8.Name: {obj: controllerRegistration8, deployAlwaysExceptNoShoots: true},
 		}
 
 		controllerInstallation1 = &gardencorev1beta1.ControllerInstallation{
@@ -715,9 +730,39 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				extensionsv1alpha1.ControlPlaneResource+"/"+type3,
 			)
 
-			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, seedLabels, seedName)
+			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, len(shootList), seedObjectMeta)
 
-			Expect(names).To(Equal(sets.NewString(controllerRegistration1.Name, controllerRegistration2.Name, controllerRegistration3.Name, controllerRegistration4.Name, controllerRegistration7.Name)))
+			Expect(names).To(Equal(sets.NewString(controllerRegistration1.Name, controllerRegistration2.Name, controllerRegistration3.Name, controllerRegistration4.Name, controllerRegistration7.Name, controllerRegistration8.Name)))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should not consider 'always-deploy-if-shoots' registrations when seed has no shoots", func() {
+			wantedKindTypeCombinations := sets.NewString()
+
+			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, 0, seedObjectMeta)
+
+			Expect(names).To(Equal(sets.NewString(controllerRegistration4.Name, controllerRegistration7.Name)))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should consider 'always-deploy' registrations when seed has no shoots but no deletion timestamp", func() {
+			wantedKindTypeCombinations := sets.NewString()
+
+			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, 0, seedObjectMeta)
+
+			Expect(names).To(Equal(sets.NewString(controllerRegistration4.Name, controllerRegistration7.Name)))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should not consider 'always-deploy' registrations when seed has no shoots and deletion timestamp", func() {
+			seedObjectMetaCopy := seedObjectMeta.DeepCopy()
+			time := metav1.Time{}
+			seedObjectMetaCopy.DeletionTimestamp = &time
+			wantedKindTypeCombinations := sets.NewString()
+
+			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, 0, *seedObjectMetaCopy)
+
+			Expect(names).To(Equal(sets.NewString(controllerRegistration7.Name)))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -726,7 +771,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				extensionsv1alpha1.ExtensionResource + "/foo",
 			)
 
-			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, seedLabels, seedName)
+			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, len(shootList), seedObjectMeta)
 
 			Expect(names).To(BeNil())
 			Expect(err).To(HaveOccurred())
