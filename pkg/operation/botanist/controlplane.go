@@ -1359,12 +1359,6 @@ func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
 	}
 
 	switch {
-	case svc == nil && sniEnabled:
-		// initial cluster creation with SNI enabled (enabling only relevant for migration)
-		return component.PhaseEnabled, nil
-	case svc == nil && !sniEnabled:
-		// initial cluster creation without SNI enabled
-		return component.PhaseDisabled, nil
 	case svc.Spec.Type == corev1.ServiceTypeLoadBalancer && sniEnabled:
 		return component.PhaseEnabling, nil
 	case svc.Spec.Type == corev1.ServiceTypeClusterIP && sniEnabled:
@@ -1372,6 +1366,11 @@ func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
 	case svc.Spec.Type == corev1.ServiceTypeClusterIP && !sniEnabled:
 		return component.PhaseDisabling, nil
 	default:
+		if sniEnabled {
+			// initial cluster creation with SNI enabled (enabling only relevant for migration).
+			return component.PhaseEnabled, nil
+		}
+		// initial cluster creation with SNI disabled.
 		return component.PhaseDisabled, nil
 	}
 }

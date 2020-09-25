@@ -21,13 +21,15 @@ import (
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/shoot"
-	. "github.com/gardener/gardener/test/gomega"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	. "github.com/gardener/gardener/test/gomega"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -95,6 +97,7 @@ var _ = Describe("controlplane", func() {
 
 		fakeClientSet := fakeclientset.NewClientSetBuilder().
 			WithChartApplier(chartApplier).
+			WithDirectClient(seedClient).
 			Build()
 
 		b.K8sSeedClient = fakeClientSet
@@ -314,6 +317,113 @@ var _ = Describe("controlplane", func() {
 			externalEntry = &dnsv1alpha1.DNSEntry{}
 			err = seedClient.Get(ctx, types.NamespacedName{Name: "external", Namespace: seedNS}, externalEntry)
 			Expect(err).To(BeNotFoundError())
+		})
+	})
+
+	Describe("SNIPhase", func() {
+		var (
+			svc *corev1.Service
+		)
+		BeforeEach(func() {
+			gardenletfeatures.RegisterFeatureGates()
+
+			svc = &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "kube-apiserver",
+					Namespace: seedNS,
+				},
+			}
+		})
+
+		Context("sni enabled", func() {
+			BeforeEach(func() {
+				Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
+				b.Garden.InternalDomain = &garden.Domain{Provider: "some-provider"}
+				b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.StringPtr("foo")}
+				b.Shoot.ExternalClusterDomain = pointer.StringPtr("baz")
+				b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
+			})
+
+			It("returns Enabled for not existing services", func() {
+				phase, err := b.SNIPhase(ctx)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(phase).To(Equal(component.PhaseEnabled))
+			})
+
+			It("returns Enabling for service of type LoadBalancer", func() {
+				svc.Spec.Type = corev1.ServiceTypeLoadBalancer
+				Expect(seedClient.Create(ctx, svc)).NotTo(HaveOccurred())
+
+				phase, err := b.SNIPhase(ctx)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(phase).To(Equal(component.PhaseEnabling))
+			})
+
+			It("returns Enabled for service of type ClusterIP", func() {
+				svc.Spec.Type = corev1.ServiceTypeClusterIP
+				Expect(seedClient.Create(ctx, svc)).NotTo(HaveOccurred())
+
+				phase, err := b.SNIPhase(ctx)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(phase).To(Equal(component.PhaseEnabled))
+			})
+
+			DescribeTable(
+				"return Enabled for service of type",
+				func(svcType corev1.ServiceType) {
+					svc.Spec.Type = svcType
+					Expect(seedClient.Create(ctx, svc)).NotTo(HaveOccurred())
+
+					phase, err := b.SNIPhase(ctx)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(phase).To(Equal(component.PhaseEnabled))
+				},
+				Entry("ExternalName", corev1.ServiceTypeExternalName),
+				Entry("NodePort", corev1.ServiceTypeNodePort),
+			)
+		})
+
+		Context("sni disabled", func() {
+			BeforeEach(func() {
+				Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=false")).ToNot(HaveOccurred())
+			})
+
+			It("returns Disabled for not existing services", func() {
+				phase, err := b.SNIPhase(ctx)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(phase).To(Equal(component.PhaseDisabled))
+			})
+
+			It("returns Disabling for service of type ClusterIP", func() {
+				svc.Spec.Type = corev1.ServiceTypeClusterIP
+				Expect(seedClient.Create(ctx, svc)).NotTo(HaveOccurred())
+
+				phase, err := b.SNIPhase(ctx)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(phase).To(Equal(component.PhaseDisabling))
+			})
+
+			DescribeTable(
+				"return Disabled for service of type",
+				func(svcType corev1.ServiceType) {
+					svc.Spec.Type = svcType
+					Expect(seedClient.Create(ctx, svc)).NotTo(HaveOccurred())
+
+					phase, err := b.SNIPhase(ctx)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(phase).To(Equal(component.PhaseDisabled))
+				},
+				Entry("ExternalName", corev1.ServiceTypeExternalName),
+				Entry("LoadBalancer", corev1.ServiceTypeLoadBalancer),
+				Entry("NodePort", corev1.ServiceTypeNodePort),
+			)
 		})
 	})
 })
