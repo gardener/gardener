@@ -319,6 +319,10 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	}
 
 	if b.APIServerSNIEnabled() {
+		if err := b.DestroyControlPlaneExposure(ctx); err != nil {
+			return err
+		}
+
 		if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
 			return err
 		}
@@ -329,6 +333,10 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	}
 
 	if err := b.DeployExternalDNS(ctx); err != nil {
+		return err
+	}
+
+	if err := b.DeployKubeAPIServer(ctx); err != nil {
 		return err
 	}
 
@@ -353,13 +361,20 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 
 // WakeUpKubeAPIServer creates a service and ensures API Server is scaled up
 func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
-	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Deploy(ctx); err != nil {
-		return err
-	}
-	if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
+	sniPhase := b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase.Done()
+
+	if err := b.DeployKubeAPIService(ctx, sniPhase); err != nil {
 		return err
 	}
 	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Wait(ctx); err != nil {
+		return err
+	}
+	if b.APIServerSNIEnabled() {
+		if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
+			return err
+		}
+	}
+	if err := b.DeployKubeAPIServer(ctx); err != nil {
 		return err
 	}
 	if err := kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
@@ -426,7 +441,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	if !b.Shoot.DisableDNS {
+	if !b.Shoot.DisableDNS && !b.APIServerSNIEnabled() {
 		if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Destroy(ctx); err != nil {
 			return err
 		}
