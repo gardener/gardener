@@ -347,7 +347,7 @@ var _ = Describe("Actuator", func() {
 
 			// Create mock secrets and charts
 			secrets := mocksecretsutil.NewMockInterface(ctrl)
-			secrets.EXPECT().Delete(gomock.Any(), namespace).Return(nil)
+			secrets.EXPECT().Delete(ctx, gomock.Any(), namespace).Return(nil)
 			var configChart chart.Interface
 			if configName != "" {
 				cc := mockchartutil.NewMockInterface(ctrl)
@@ -415,7 +415,7 @@ var _ = Describe("Actuator", func() {
 
 			// Create mock secrets and charts
 			exposureSecrets := mocksecretsutil.NewMockInterface(ctrl)
-			exposureSecrets.EXPECT().Delete(gomock.Any(), namespace).Return(nil)
+			exposureSecrets.EXPECT().Delete(ctx, gomock.Any(), namespace).Return(nil)
 
 			cpExposureChart := mockchartutil.NewMockInterface(ctrl)
 			cpExposureChart.EXPECT().Delete(ctx, client, namespace).Return(nil)

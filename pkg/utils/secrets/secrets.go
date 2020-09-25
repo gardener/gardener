@@ -30,7 +30,7 @@ type Interface interface {
 	// Deploy generates and deploys the secrets into the given namespace, taking into account existing secrets.
 	Deploy(context.Context, kubernetes.Interface, gardenerkubernetes.Interface, string) (map[string]*corev1.Secret, error)
 	// Delete deletes the secrets from the given namespace.
-	Delete(kubernetes.Interface, string) error
+	Delete(context.Context, kubernetes.Interface, string) error
 }
 
 // Secrets represents a set of secrets that can be deployed and deleted.

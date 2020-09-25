@@ -355,7 +355,7 @@ func (a *actuator) deleteControlPlaneExposure(
 	// Delete secrets
 	if a.exposureSecrets != nil {
 		a.logger.Info("Deleting secrets for control plane with purpose exposure", "controlplane", kutil.ObjectName(cp))
-		if err := a.exposureSecrets.Delete(a.clientset, cp.Namespace); client.IgnoreNotFound(err) != nil {
+		if err := a.exposureSecrets.Delete(ctx, a.clientset, cp.Namespace); client.IgnoreNotFound(err) != nil {
 			return errors.Wrapf(err, "could not delete secrets for controlplane exposure '%s'", kutil.ObjectName(cp))
 		}
 	}
@@ -406,7 +406,7 @@ func (a *actuator) deleteControlPlane(
 
 	// Delete secrets
 	a.logger.Info("Deleting secrets", "controlplane", kutil.ObjectName(cp))
-	if err := a.secrets.Delete(a.clientset, cp.Namespace); client.IgnoreNotFound(err) != nil {
+	if err := a.secrets.Delete(ctx, a.clientset, cp.Namespace); client.IgnoreNotFound(err) != nil {
 		return errors.Wrapf(err, "could not delete secrets for controlplane '%s'", kutil.ObjectName(cp))
 	}
 
