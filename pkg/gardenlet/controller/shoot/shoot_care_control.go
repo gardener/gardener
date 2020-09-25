@@ -199,37 +199,48 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		conditionControlPlaneHealthy     = gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Conditions, gardencorev1beta1.ShootControlPlaneHealthy)
 		conditionEveryNodeReady          = gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Conditions, gardencorev1beta1.ShootEveryNodeReady)
 		conditionSystemComponentsHealthy = gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Conditions, gardencorev1beta1.ShootSystemComponentsHealthy)
+		oldConditions                    = []gardencorev1beta1.Condition{
+			conditionAPIServerAvailable,
+			conditionControlPlaneHealthy,
+			conditionEveryNodeReady,
+			conditionSystemComponentsHealthy,
+		}
 
 		seedConditions []gardencorev1beta1.Condition
 
 		constraintHibernationPossible = gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Constraints, gardencorev1beta1.ShootHibernationPossible)
+		oldConstraints                = []gardencorev1beta1.Condition{
+			constraintHibernationPossible,
+		}
 	)
 
 	botanist, err := botanistpkg.New(operation)
 	if err != nil {
 		message := fmt.Sprintf("Failed to create a botanist object to perform the care operations (%s).", err.Error())
+		operation.Logger.Error(message)
+
 		conditionAPIServerAvailable = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(conditionAPIServerAvailable, message)
 		conditionControlPlaneHealthy = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(conditionControlPlaneHealthy, message)
 		conditionEveryNodeReady = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(conditionEveryNodeReady, message)
 		conditionSystemComponentsHealthy = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(conditionSystemComponentsHealthy, message)
+		conditions := []gardencorev1beta1.Condition{
+			conditionAPIServerAvailable,
+			conditionControlPlaneHealthy,
+			conditionEveryNodeReady,
+			conditionSystemComponentsHealthy,
+		}
 
 		constraintHibernationPossible = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(constraintHibernationPossible, message)
+		constraints := []gardencorev1beta1.Condition{
+			constraintHibernationPossible,
+		}
 
-		operation.Logger.Error(message)
+		if !gardencorev1beta1helper.ConditionsNeedUpdate(oldConditions, conditions) &&
+			!gardencorev1beta1helper.ConditionsNeedUpdate(oldConstraints, constraints) {
+			return nil
+		}
 
-		_, _ = updateShootStatus(ctx, gardenClient.GardenCore(),
-			shoot,
-			[]gardencorev1beta1.Condition{
-				conditionAPIServerAvailable,
-				conditionControlPlaneHealthy,
-				conditionEveryNodeReady,
-				conditionSystemComponentsHealthy,
-			},
-			[]gardencorev1beta1.Condition{
-				constraintHibernationPossible,
-			},
-		)
-
+		_, _ = updateShootStatus(ctx, gardenClient.GardenCore(), shoot, conditions, constraints)
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
@@ -271,61 +282,61 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		},
 	)(ctx)
 
-	// Update Shoot status
-	updatedShoot, err := updateShootStatus(ctx, gardenClient.GardenCore(),
-		shoot,
-		append(
-			[]gardencorev1beta1.Condition{
-				conditionAPIServerAvailable,
-				conditionControlPlaneHealthy,
-				conditionEveryNodeReady,
-				conditionSystemComponentsHealthy,
-			},
-			seedConditions...,
-		),
-		[]gardencorev1beta1.Condition{
+	var (
+		conditions = append([]gardencorev1beta1.Condition{
+			conditionAPIServerAvailable,
+			conditionControlPlaneHealthy,
+			conditionEveryNodeReady,
+			conditionSystemComponentsHealthy,
+		}, seedConditions...)
+		constraints = []gardencorev1beta1.Condition{
 			constraintHibernationPossible,
-		},
+		}
 	)
-	if err != nil {
-		botanist.Logger.Errorf("Could not update Shoot status: %+v", err)
-		return nil // We do not want to run in the exponential backoff for the condition checks.
+
+	// Update Shoot status if necessary
+	if gardencorev1beta1helper.ConditionsNeedUpdate(oldConditions, conditions) ||
+		gardencorev1beta1helper.ConditionsNeedUpdate(oldConstraints, constraints) {
+		updatedShoot, err := updateShootStatus(ctx, gardenClient.GardenCore(), shoot, conditions, constraints)
+		if err != nil {
+			botanist.Logger.Errorf("Could not update Shoot status: %+v", err)
+			return nil // We do not want to run in the exponential backoff for the condition checks.
+		}
+		shoot = updatedShoot
 	}
 
 	// Mark Shoot as healthy/unhealthy
-	_, err = kutil.TryUpdateShootLabels(
+	if _, err := kutil.TryUpdateShootLabels(
 		ctx,
 		gardenClient.GardenCore(),
 		retry.DefaultBackoff,
-		updatedShoot.ObjectMeta,
+		shoot.ObjectMeta,
 		StatusLabelTransform(
 			ComputeStatus(
-				updatedShoot.Status.LastOperation,
-				updatedShoot.Status.LastErrors,
+				shoot.Status.LastOperation,
+				shoot.Status.LastErrors,
 				conditionAPIServerAvailable,
 				conditionControlPlaneHealthy,
 				conditionEveryNodeReady,
 				conditionSystemComponentsHealthy,
 			),
 		),
-	)
-	if err != nil {
+	); err != nil {
 		botanist.Logger.Errorf("Could not update Shoot health label: %+v", err)
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
-	return nil // We do not want to run in the exponential backoff for the condition checks.
+	return nil
 }
 
 func updateShootStatus(ctx context.Context, g gardencore.Interface, shoot *gardencorev1beta1.Shoot, conditions, constraints []gardencorev1beta1.Condition) (*gardencorev1beta1.Shoot, error) {
-	newShoot, err := kutil.TryUpdateShootStatus(ctx, g, retry.DefaultBackoff, shoot.ObjectMeta,
+	return kutil.TryUpdateShootStatus(ctx, g, retry.DefaultBackoff, shoot.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			shoot.Status.Conditions = conditions
 			shoot.Status.Constraints = constraints
 			return shoot, nil
-		})
-
-	return newShoot, err
+		},
+	)
 }
 
 // garbageCollection cleans the Seed and the Shoot cluster from no longer required
