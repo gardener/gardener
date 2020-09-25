@@ -35,16 +35,18 @@ controllers:
     concurrentSyncs: 20
     syncPeriod: 1h
     retryDuration: 12h
-#    `respectSyncPeriodOverwrite` specifies whether Shoot owners can
-#    mark their Shoots ignored (no reconciliation) or change their sync period.
-#    respectSyncPeriodOverwrite: true
-#    `reconcileInMaintenanceOnly` specifies whether Shoot reconciliations
-#    can only happen during their maintenance time window or not.
-#    reconcileInMaintenanceOnly: true
+  # `respectSyncPeriodOverwrite` specifies whether Shoot owners can
+  # mark their Shoots ignored (no reconciliation) or change their sync Period.
+#   respectSyncPeriodOverwrite: true
+  # `reconcileInMaintenanceOnly` specifies whether Shoot reconciliations
+  # can only happen during their maintenance time window or not.
+#   reconcileInMaintenanceOnly: true
+  # `progressReportPeriod` specifies how often the progress of a shoot operation shall be reported in its status.
+#   progressReportPeriod: 5s
   shootCare:
     concurrentSyncs: 5
     syncPeriod: 30s
-#    staleExtensionHealthCheckThreshold: 5m
+#   staleExtensionHealthCheckThreshold: 5m
     conditionThresholds:
     - type: APIServerAvailable
       duration: 1m

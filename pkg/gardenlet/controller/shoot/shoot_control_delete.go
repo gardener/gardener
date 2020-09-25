@@ -469,7 +469,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 
 	if err := f.Run(flow.Opts{
 		Logger:           o.Logger,
-		ProgressReporter: o.ReportShootProgress,
+		ProgressReporter: c.newProgressReporter(o.ReportShootProgress),
 		ErrorCleaner:     o.CleanShootTaskError,
 		ErrorContext:     errorContext,
 	}); err != nil {

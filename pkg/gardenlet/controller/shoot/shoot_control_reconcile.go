@@ -465,7 +465,12 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 
 	f := g.Compile()
 
-	if err := f.Run(flow.Opts{Logger: o.Logger, ProgressReporter: o.ReportShootProgress, ErrorContext: errorContext, ErrorCleaner: o.CleanShootTaskError}); err != nil {
+	if err := f.Run(flow.Opts{
+		Logger:           o.Logger,
+		ProgressReporter: c.newProgressReporter(o.ReportShootProgress),
+		ErrorContext:     errorContext,
+		ErrorCleaner:     o.CleanShootTaskError,
+	}); err != nil {
 		o.Logger.Errorf("Failed to reconcile Shoot %q: %+v", o.Shoot.Info.Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}

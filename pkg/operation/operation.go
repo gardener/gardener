@@ -347,8 +347,11 @@ func (o *Operation) GetSecretKeysOfRole(kind string) []string {
 }
 
 func makeDescription(stats *flow.Stats) string {
+	if stats.ProgressPercent() == 0 {
+		return "Starting " + stats.FlowName
+	}
 	if stats.ProgressPercent() == 100 {
-		return "Execution finished"
+		return stats.FlowName + " finished"
 	}
 	return strings.Join(stats.Running.StringList(), ", ")
 }
@@ -370,7 +373,9 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 			if shoot.Status.LastOperation.LastUpdateTime.After(lastUpdateTime.Time) {
 				return nil, fmt.Errorf("last operation of Shoot %s/%s was updated mid-air", shoot.Namespace, shoot.Name)
 			}
-			shoot.Status.LastOperation.Description = description
+			if description != "" {
+				shoot.Status.LastOperation.Description = description
+			}
 			shoot.Status.LastOperation.Progress = progress
 			shoot.Status.LastOperation.LastUpdateTime = lastUpdateTime
 			return shoot, nil

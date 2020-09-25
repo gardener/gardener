@@ -574,6 +574,11 @@ func (in *ShootControllerConfiguration) DeepCopyInto(out *ShootControllerConfigu
 		*out = new(int)
 		**out = **in
 	}
+	if in.ProgressReportPeriod != nil {
+		in, out := &in.ProgressReportPeriod, &out.ProgressReportPeriod
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	if in.ReconcileInMaintenanceOnly != nil {
 		in, out := &in.ReconcileInMaintenanceOnly, &out.ReconcileInMaintenanceOnly
 		*out = new(bool)
