@@ -22,3 +22,5 @@ spec:
         {{ end }}
         args:
         - while true; do echo "testing"; done;
+        securityContext:
+          runAsUser: 1001
