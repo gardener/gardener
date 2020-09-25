@@ -233,6 +233,12 @@ type ShootControllerConfiguration struct {
 	// events.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// ProgressReportPeriod is the period how often the progress of a shoot operation will be reported in the
+	// Shoot's `.status.lastOperation` field. By default, the progress will be reported immediately after a task of the
+	// respective flow has been completed. If you set this to a value > 0 (e.g., 5s) then it will be only reported every
+	// 5 seconds. Any tasks that were completed in the meantime will not be reported.
+	// +optional
+	ProgressReportPeriod *metav1.Duration `json:"progressReportPeriod,omitempty"`
 	// ReconcileInMaintenanceOnly determines whether Shoot reconciliations happen only
 	// during its maintenance time window.
 	// +optional

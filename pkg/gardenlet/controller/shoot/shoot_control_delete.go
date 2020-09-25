@@ -475,7 +475,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 
 	if err := f.Run(flow.Opts{
 		Logger:           o.Logger,
-		ProgressReporter: o.ReportShootProgress,
+		ProgressReporter: c.newProgressReporter(o.ReportShootProgress),
 		ErrorCleaner:     o.CleanShootTaskError,
 		ErrorContext:     errorContext,
 	}); err != nil {

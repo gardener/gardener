@@ -299,7 +299,12 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		f = g.Compile()
 	)
 
-	if err := f.Run(flow.Opts{Logger: o.Logger, ProgressReporter: o.ReportShootProgress, ErrorContext: errorContext, ErrorCleaner: o.CleanShootTaskError}); err != nil {
+	if err := f.Run(flow.Opts{
+		Logger:           o.Logger,
+		ProgressReporter: c.newProgressReporter(o.ReportShootProgress),
+		ErrorContext:     errorContext,
+		ErrorCleaner:     o.CleanShootTaskError,
+	}); err != nil {
 		o.Logger.Errorf("Failed to prepare Shoot %q for migration: %+v", o.Shoot.Info.Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}

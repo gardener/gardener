@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -264,4 +265,11 @@ func (c *Controller) getShootQueue(obj interface{}) workqueue.RateLimitingInterf
 		return c.shootSeedQueue
 	}
 	return c.shootQueue
+}
+
+func (c *Controller) newProgressReporter(reporterFn flow.ProgressReporterFn) flow.ProgressReporter {
+	if c.config.Controllers.Shoot != nil && c.config.Controllers.Shoot.ProgressReportPeriod != nil {
+		return flow.NewDelayingProgressReporter(reporterFn, c.config.Controllers.Shoot.ProgressReportPeriod.Duration)
+	}
+	return flow.NewImmediateProgressReporter(reporterFn)
 }

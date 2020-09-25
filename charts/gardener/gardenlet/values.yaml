@@ -78,6 +78,7 @@ global:
           retryDuration: 12h
           respectSyncPeriodOverwrite: false
           reconcileInMaintenanceOnly: false
+        # progressReportPeriod: 5s
         shootCare:
           concurrentSyncs: 5
           syncPeriod: 30s
