@@ -16,9 +16,13 @@ package controllerutils
 
 import (
 	"strings"
+	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const separator = ","
@@ -82,4 +86,40 @@ func setTaskAnnotations(annotations map[string]string, tasks []string) {
 	}
 
 	annotations[common.ShootTasks] = strings.Join(tasks, separator)
+}
+
+var (
+	// Now is a function for returning the current time.
+	Now = time.Now
+	// RandomDuration is a function for returning a random duration.
+	RandomDuration = utils.RandomDuration
+)
+
+// ReconcileOncePer24hDuration returns the duration until the next reconciliation should happen while respecting that
+// only one reconciliation should happen per 24h. If the deletion timestamp is set or the generation has changed or the
+// last operation does not indicate success or indicates that the last reconciliation happened more than 24h ago then 0
+// will be returned.
+func ReconcileOncePer24hDuration(objectMeta metav1.ObjectMeta, observedGeneration int64, lastOperation *gardencorev1beta1.LastOperation) time.Duration {
+	if objectMeta.DeletionTimestamp != nil {
+		return 0
+	}
+
+	if objectMeta.Generation != observedGeneration {
+		return 0
+	}
+
+	if lastOperation == nil ||
+		lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded ||
+		(lastOperation.Type != gardencorev1beta1.LastOperationTypeCreate && lastOperation.Type != gardencorev1beta1.LastOperationTypeReconcile) {
+		return 0
+	}
+
+	// If last reconciliation happened more than 24h ago then we want to reconcile immediately, so let's only compute
+	// a delay if the last reconciliation was within the last 24h.
+	if lastReconciliation := lastOperation.LastUpdateTime.Time; Now().UTC().Before(lastReconciliation.UTC().Add(24 * time.Hour)) {
+		durationUntilLastReconciliationWas24hAgo := lastReconciliation.UTC().Add(24 * time.Hour).Sub(Now().UTC())
+		return RandomDuration(durationUntilLastReconciliationWas24hAgo)
+	}
+
+	return 0
 }

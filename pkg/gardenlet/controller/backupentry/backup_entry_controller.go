@@ -19,36 +19,34 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
 
 	"k8s.io/client-go/tools/cache"
 )
 
 func (c *Controller) backupEntryAdd(obj interface{}) {
+	backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
+	if !ok {
+		logger.Logger.Errorf("Couldn't convert object: %T", obj)
+		return
+	}
+
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
 
-	backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
-	if !ok {
-		return
+	addAfter := controllerutils.ReconcileOncePer24hDuration(backupEntry.ObjectMeta, backupEntry.Status.ObservedGeneration, backupEntry.Status.LastOperation)
+	if addAfter > 0 {
+		logger.Logger.Infof("Scheduled next reconciliation for BackupEntry %q in %s (%s)", key, addAfter, time.Now().Add(addAfter))
 	}
 
-	if backupEntry.Generation == backupEntry.Status.ObservedGeneration {
-		// spread BackupEntry reconciliation across one minute to avoid reconciling all BackupEntries roughly at the
-		// same time after startup of the gardenlet
-		c.backupEntryQueue.AddAfter(key, utils.RandomDuration(time.Minute))
-		return
-	}
-
-	// don't add random duration for enqueueing new BackupBuckets, that have never been reconciled
-	c.backupEntryQueue.Add(key)
+	c.backupEntryQueue.AddAfter(key, addAfter)
 }
 
-func (c *Controller) backupEntryUpdate(oldObj, newObj interface{}) {
+func (c *Controller) backupEntryUpdate(_, newObj interface{}) {
 	var (
 		newBackupEntry    = newObj.(*gardencorev1beta1.BackupEntry)
 		backupEntryLogger = logger.NewFieldLogger(logger.Logger, "backupentry", fmt.Sprintf("%s/%s", newBackupEntry.Namespace, newBackupEntry.Name))
