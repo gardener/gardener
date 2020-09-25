@@ -37,6 +37,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -87,7 +88,15 @@ func createAndStartManager(ignoreOperationAnnotation bool) error {
 		framework.RemoveCleanupAction(cleanupHandle)
 	})
 
-	mgr, err := manager.New(restConfig, manager.Options{MetricsBindAddress: "0"})
+	mgrScheme := runtime.NewScheme()
+	if err := scheme.AddToScheme(mgrScheme); err != nil {
+		return err
+	}
+
+	mgr, err := manager.New(restConfig, manager.Options{
+		Scheme:             mgrScheme,
+		MetricsBindAddress: "0",
+	})
 	if err != nil {
 		return err
 	}
