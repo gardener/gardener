@@ -249,11 +249,6 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilControlPlaneReady, initializeShootClients),
 		})
 
-		deleteSeedMonitoring = g.Add(flow.Task{
-			Name:         "Deleting shoot monitoring stack in Seed",
-			Fn:           flow.TaskFn(botanist.DeleteSeedMonitoring).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(initializeShootClients),
-		})
 		deleteClusterAutoscaler = g.Add(flow.Task{
 			Name:         "Deleting cluster autoscaler",
 			Fn:           flow.TaskFn(botanist.DeleteClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -429,9 +424,13 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.DestroyExternalDNS),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deleting shoot monitoring stack in Seed",
+			Fn:           flow.TaskFn(botanist.DeleteSeedMonitoring).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureDeleted),
+		})
 
 		syncPoint = flow.NewTaskIDs(
-			deleteSeedMonitoring,
 			deleteKubeAPIServer,
 			waitUntilControlPlaneDeleted,
 			waitUntilControlPlaneExposureDeleted,
