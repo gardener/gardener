@@ -38,3 +38,5 @@ spec:
           limits:
             cpu: {{ .Requests.CPU }}
             memory: {{ .Requests.Memory }}
+        securityContext:
+          runAsUser: 1001
