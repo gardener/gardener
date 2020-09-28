@@ -21,21 +21,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-// MachineStatusHasChanged is a predicate deciding wether the status of a MCM's Machine has been changed.
+// MachineStatusHasChanged is a predicate deciding whether the status of a Machine has been changed.
 func MachineStatusHasChanged() predicate.Predicate {
 	statusHasChanged := func(oldObj runtime.Object, newObj runtime.Object) bool {
 		oldMachine, ok := oldObj.(*machinev1alpha1.Machine)
 		if !ok {
 			return false
 		}
+
 		newMachine, ok := newObj.(*machinev1alpha1.Machine)
 		if !ok {
 			return false
 		}
-		oldStatus := oldMachine.Status
-		newStatus := newMachine.Status
 
-		return oldStatus.Node != newStatus.Node
+		return oldMachine.Spec.ProviderID != newMachine.Spec.ProviderID ||
+			oldMachine.Status.Node != newMachine.Status.Node
 	}
 
 	return predicate.Funcs{
@@ -43,8 +43,7 @@ func MachineStatusHasChanged() predicate.Predicate {
 			return true
 		},
 		UpdateFunc: func(event event.UpdateEvent) bool {
-			result := statusHasChanged(event.ObjectOld, event.ObjectNew)
-			return result
+			return statusHasChanged(event.ObjectOld, event.ObjectNew)
 		},
 		GenericFunc: func(event event.GenericEvent) bool {
 			return false
