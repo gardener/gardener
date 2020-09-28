@@ -18,5 +18,11 @@ spec:
     name: gardener-apiserver
   updatePolicy:
     updateMode: Auto
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          cpu: 50m
+          memory: 256Mi
 {{- end }}
 {{- end }}
