@@ -231,7 +231,6 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 	seedObj, err := seedpkg.
 		NewBuilder().
 		WithSeedObject(seed).
-		WithSeedSecretFromClient(ctx, gardenClient.Client()).
 		Build()
 	if err != nil {
 		return nil, err

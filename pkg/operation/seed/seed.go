@@ -78,28 +78,6 @@ func (b *Builder) WithSeedObjectFromLister(seedLister gardencorelisters.SeedList
 	return b
 }
 
-// WithSeedSecret sets the seedSecretFunc attribute at the Builder.
-func (b *Builder) WithSeedSecret(seedSecret *corev1.Secret) *Builder {
-	b.seedSecretFunc = func(*corev1.SecretReference) (*corev1.Secret, error) { return seedSecret, nil }
-	return b
-}
-
-// WithSeedSecretFromClient sets the seedSecretFunc attribute at the Builder after reading it with the client.
-func (b *Builder) WithSeedSecretFromClient(ctx context.Context, c client.Client) *Builder {
-	b.seedSecretFunc = func(secretRef *corev1.SecretReference) (*corev1.Secret, error) {
-		if secretRef == nil {
-			return nil, fmt.Errorf("cannot fetch secret because spec.secretRef is nil")
-		}
-
-		secret := &corev1.Secret{}
-		if err := c.Get(ctx, kutil.Key(secretRef.Namespace, secretRef.Name), secret); err != nil {
-			return nil, err
-		}
-		return secret, nil
-	}
-	return b
-}
-
 // Build initializes a new Seed object.
 func (b *Builder) Build() (*Seed, error) {
 	seed := &Seed{}
@@ -109,14 +87,6 @@ func (b *Builder) Build() (*Seed, error) {
 		return nil, err
 	}
 	seed.Info = seedObject
-
-	if b.seedSecretFunc != nil && seedObject.Spec.SecretRef != nil {
-		seedSecret, err := b.seedSecretFunc(seedObject.Spec.SecretRef)
-		if err != nil {
-			return nil, err
-		}
-		seed.Secret = seedSecret
-	}
 
 	if seedObject.Spec.Settings != nil && seedObject.Spec.Settings.LoadBalancerServices != nil {
 		seed.LoadBalancerServiceAnnotations = seedObject.Spec.Settings.LoadBalancerServices.Annotations
