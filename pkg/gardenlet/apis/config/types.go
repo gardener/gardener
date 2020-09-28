@@ -176,6 +176,11 @@ type ShootControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs *int
+	// ProgressReportPeriod is the period how often the progress of a shoot operation will be reported in the
+	// Shoot's `.status.lastOperation` field. By default, the progress will be reported immediately after a task of the
+	// respective flow has been completed. If you set this to a value > 0 (e.g., 5s) then it will be only reported every
+	// 5 seconds. Any tasks that were completed in the meantime will not be reported.
+	ProgressReportPeriod *metav1.Duration
 	// ReconcileInMaintenanceOnly determines whether Shoot reconciliations happen only
 	// during its maintenance time window.
 	ReconcileInMaintenanceOnly *bool
