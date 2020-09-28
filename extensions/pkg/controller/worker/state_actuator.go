@@ -17,6 +17,7 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"sort"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
@@ -127,20 +128,37 @@ func (a *genericStateActuator) getExistingMachineSetsMap(ctx context.Context, na
 		return nil, err
 	}
 
+	// When we read from the cache we get unsorted results, hence, we sort to prevent unnecessary state updates from happening.
+	sort.Slice(existingMachineSets.Items, func(i, j int) bool { return existingMachineSets.Items[i].Name < existingMachineSets.Items[j].Name })
+
 	return workerhelper.BuildOwnerToMachineSetsMap(existingMachineSets.Items), nil
 }
 
 // getExistingMachinesMap returns a map of the existing Machines as values and the name of their owner
-// no matter of being machineSet or MachineDeployment. If a Machine has a ownerRefernce the key(owner)
+// no matter of being machineSet or MachineDeployment. If a Machine has a ownerReference the key(owner)
 // will be the MachineSet if not the key will be the name of the MachineDeployment which is stored as
-// a lable. We assume that there is no MachineDeployment and MachineSet with the same names.
+// a label. We assume that there is no MachineDeployment and MachineSet with the same names.
 func (a *genericStateActuator) getExistingMachinesMap(ctx context.Context, namespace string) (map[string][]machinev1alpha1.Machine, error) {
 	existingMachines := &machinev1alpha1.MachineList{}
 	if err := a.client.List(ctx, existingMachines, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
 
-	return workerhelper.BuildOwnerToMachinesMap(existingMachines.Items), nil
+	// We temporarily filter out machines without provider ID or node status (VMs which got created but not yet joined the cluster)
+	// to prevent unnecessarily persisting them in the Worker state.
+	// TODO: Remove this again once machine-controller-manager supports backing off creation/deletion of failed machines, see
+	// https://github.com/gardener/machine-controller-manager/issues/483.
+	var filteredMachines []machinev1alpha1.Machine
+	for _, machine := range existingMachines.Items {
+		if machine.Spec.ProviderID != "" || machine.Status.Node != "" {
+			filteredMachines = append(filteredMachines, machine)
+		}
+	}
+
+	// When we read from the cache we get unsorted results, hence, we sort to prevent unnecessary state updates from happening.
+	sort.Slice(filteredMachines, func(i, j int) bool { return filteredMachines[i].Name < filteredMachines[j].Name })
+
+	return workerhelper.BuildOwnerToMachinesMap(filteredMachines), nil
 }
 
 func addMachineSetToMachineDeploymentState(machineSets []machinev1alpha1.MachineSet, machineDeploymentState *MachineDeploymentState) {
