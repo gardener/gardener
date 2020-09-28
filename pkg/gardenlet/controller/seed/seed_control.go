@@ -300,7 +300,6 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	seedObj, err := seedpkg.
 		NewBuilder().
 		WithSeedObject(seed).
-		WithSeedSecretFromClient(ctx, gardenClient.Client()).
 		Build()
 	if err != nil {
 		message := fmt.Sprintf("Failed to create a Seed object (%s).", err.Error())

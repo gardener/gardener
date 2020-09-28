@@ -47,7 +47,7 @@ type Builder struct {
 	imageVectorFunc           func() (imagevector.ImageVector, error)
 	loggerFunc                func() (*logrus.Entry, error)
 	secretsFunc               func() (map[string]*corev1.Secret, error)
-	seedFunc                  func(context.Context, client.Client) (*seed.Seed, error)
+	seedFunc                  func(context.Context) (*seed.Seed, error)
 	shootFunc                 func(context.Context, client.Client, *garden.Garden, *seed.Seed) (*shoot.Shoot, error)
 	chartsRootPathFunc        func() string
 }
