@@ -1,0 +1,18 @@
+kind: TestDefinition
+metadata:
+  name: migrate-shoot
+spec:
+  owner: gardener-oq@listserv.sap.com
+  description: Tests the migration of a shoot.
+  activeDeadlineSeconds: 3600
+
+  command: [bash, -c]
+  args:
+  - >-
+    go test -timeout=0 -mod=vendor ./test/system/shoot_cp_migration
+    --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
+    -target-seed-name=$SEED_NAME
+    -shoot-name=$SHOOT_NAME
+    -shoot-namespace=$PROJECT_NAMESPACE
+    -kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
+  image: golang:1.15.3

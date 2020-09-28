@@ -394,6 +394,25 @@ func (f *GardenerFramework) RemoveShootAnnotation(ctx context.Context, shoot *ga
 	return nil
 }
 
+// MigrateShoot changes the spec.Seed.Name of a shoot and waits for it to be migrated
+func (f *GardenerFramework) MigrateShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed) error {
+	if err := f.UpdateShoot(ctx, shoot, func(shoot *gardencorev1beta1.Shoot) error {
+		if err := f.GetShoot(ctx, shoot); err != nil {
+			return err
+		}
+
+		if _, _, err := f.GetSeed(ctx, seed.Name); err != nil {
+			return err
+		}
+
+		shoot.Spec.SeedName = &seed.Name
+		return nil
+	}); err != nil {
+		return err
+	}
+	return f.WaitForShootToBeCreated(ctx, shoot)
+}
+
 // WaitForShootToBeUnschedulable waits for the shoot to be unschedulable. This is indicated by Events created by the scheduler on the shoot
 func (f *GardenerFramework) WaitForShootToBeUnschedulable(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (bool, error) {

@@ -312,10 +312,13 @@ func ShootCreationCompleted(newShoot *gardencorev1beta1.Shoot) (bool, string) {
 
 	if newShoot.Status.LastOperation != nil {
 		if newShoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate ||
-			newShoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeReconcile {
+			newShoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeReconcile ||
+			newShoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore {
 			if newShoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
-				return false, "last operation type was create or reconcile but state was not succeeded"
+				return false, "last operation type was create, reconcile or restore but state was not succeeded"
 			}
+		} else if newShoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate {
+			return false, "last operation type was migrate, the migration process is not finished yet"
 		}
 	}
 
