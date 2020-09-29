@@ -245,7 +245,7 @@ func (r *reconciler) updateStatusError(ctx context.Context, err error, cr *exten
 	r.recorder.Eventf(cr, corev1.EventTypeWarning, eventReason, "%s: %+v", description, err)
 	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, cr, func() error {
 		cr.Status.ObservedGeneration = cr.Generation
-		cr.Status.LastOperation, cr.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err)), 50, gardencorev1beta1helper.ExtractErrorCodes(err)...)
+		cr.Status.LastOperation, cr.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err)), 50, gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, err.Error()))...)
 		return nil
 	})
 }
