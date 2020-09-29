@@ -110,7 +110,7 @@ func createAndStartManager(ignoreOperationAnnotation bool) error {
 	}
 
 	go func() {
-		GinkgoRecover()
+		defer GinkgoRecover()
 		if err := mgr.Start(mgrContext.Done()); err != nil {
 			Expect(err).NotTo(HaveOccurred())
 		}
