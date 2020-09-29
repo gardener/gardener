@@ -18,9 +18,6 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	. "github.com/gardener/gardener/test/gomega"
-
 	"github.com/ghodss/yaml"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -36,6 +33,9 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var (

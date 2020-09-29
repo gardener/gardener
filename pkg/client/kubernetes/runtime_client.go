@@ -157,7 +157,7 @@ func NewDirectClientFromBytes(kubeconfig []byte, fns ...ConfigFunc) (client.Clie
 
 // NewDirectClientWithConfig returns a new controller runtime client from a config.
 func NewDirectClientWithConfig(fns ...ConfigFunc) (client.Client, error) {
-	conf := &config{}
+	conf := &Config{}
 	for _, f := range fns {
 		if err := f(conf); err != nil {
 			return nil, err

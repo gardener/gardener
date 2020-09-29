@@ -17,17 +17,6 @@ package botanist_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	cr "github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation"
-	. "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/garden"
-	"github.com/gardener/gardener/pkg/operation/shoot"
-	. "github.com/gardener/gardener/test/gomega"
-
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -42,6 +31,17 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	cr "github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation"
+	. "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/garden"
+	"github.com/gardener/gardener/pkg/operation/shoot"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("dns", func() {

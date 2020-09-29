@@ -17,11 +17,6 @@ package resources_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
-	. "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
-	. "github.com/gardener/gardener/test/gomega"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +24,11 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	. "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
 )
 
 var _ = Describe("resources", func() {

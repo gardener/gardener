@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	. "github.com/gardener/gardener/pkg/client/kubernetes/test"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 
@@ -241,7 +242,7 @@ var _ = Describe("ShootClientMap", func() {
 					Expect(c).To(BeIdenticalTo(fakeSeedClientSet.Client()))
 					Expect(namespace).To(Equal(shoot.Status.TechnicalID))
 					Expect(secretName).To(Equal("gardener"))
-					Expect(fns).To(kubernetes.ConsistOfConfigFuncs(
+					Expect(fns).To(ConsistOfConfigFuncs(
 						kubernetes.WithClientConnectionOptions(clientConnectionConfig),
 						kubernetes.WithClientOptions(clientOptions),
 						kubernetes.WithDisabledCachedClient(),
@@ -273,7 +274,7 @@ var _ = Describe("ShootClientMap", func() {
 				Expect(c).To(BeIdenticalTo(fakeSeedClientSet.Client()))
 				Expect(namespace).To(Equal(shoot.Status.TechnicalID))
 				Expect(secretName).To(Equal("gardener-internal"))
-				Expect(fns).To(kubernetes.ConsistOfConfigFuncs(
+				Expect(fns).To(ConsistOfConfigFuncs(
 					kubernetes.WithClientConnectionOptions(clientConnectionConfig),
 					kubernetes.WithClientOptions(clientOptions),
 					kubernetes.WithDisabledCachedClient(),

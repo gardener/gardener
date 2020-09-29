@@ -22,9 +22,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 
-	. "github.com/gardener/gardener/test/gomega"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 

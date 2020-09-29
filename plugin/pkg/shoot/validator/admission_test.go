@@ -19,14 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/common"
-	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
-	. "github.com/gardener/gardener/test/gomega"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -38,6 +30,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/operation/common"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 )
 
 var _ = Describe("validator", func() {

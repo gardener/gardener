@@ -18,11 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/test/gomega"
-
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -32,6 +27,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("ClusterAutoscaler", func() {
@@ -129,11 +129,11 @@ rules:
 			gomock.InOrder(
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
-					Expect(obj).To(gomega.DeepEqual(managedResourceSecret))
+					Expect(obj).To(DeepEqual(managedResourceSecret))
 				}),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
-					Expect(obj).To(gomega.DeepEqual(managedResource))
+					Expect(obj).To(DeepEqual(managedResource))
 				}),
 			)
 

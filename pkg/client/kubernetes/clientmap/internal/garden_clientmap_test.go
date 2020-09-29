@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	. "github.com/gardener/gardener/pkg/client/kubernetes/test"
 	"github.com/gardener/gardener/pkg/logger"
 
 	. "github.com/onsi/ginkgo"
@@ -73,7 +74,7 @@ var _ = Describe("GardenClientMap", func() {
 		It("should correctly construct a new ClientSet", func() {
 			fakeCS := fakeclientset.NewClientSetBuilder().WithRESTConfig(restConfig).Build()
 			internal.NewClientSetWithConfig = func(fns ...kubernetes.ConfigFunc) (i kubernetes.Interface, err error) {
-				Expect(fns).To(kubernetes.ConsistOfConfigFuncs(
+				Expect(fns).To(ConsistOfConfigFuncs(
 					kubernetes.WithRESTConfig(restConfig),
 					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
 				))

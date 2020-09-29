@@ -18,13 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	cr "github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	. "github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
-	. "github.com/gardener/gardener/test/gomega"
-
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -38,6 +31,13 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	cr "github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	. "github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("#DNSOwner", func() {

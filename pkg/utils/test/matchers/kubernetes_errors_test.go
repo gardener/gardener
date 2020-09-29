@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gomega_test
+package matchers_test
 
 import (
 	"fmt"
 
-	. "github.com/gardener/gardener/test/gomega"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("BeNotFoundError", func() {

@@ -22,8 +22,8 @@ import (
 	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
 	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	. "github.com/gardener/gardener/test/gomega"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 

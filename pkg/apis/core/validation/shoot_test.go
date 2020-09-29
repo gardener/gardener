@@ -19,10 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	. "github.com/gardener/gardener/pkg/apis/core/validation"
-	. "github.com/gardener/gardener/pkg/utils/validation/gomega"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -39,6 +35,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	. "github.com/gardener/gardener/pkg/apis/core/validation"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("Shoot Validation Tests", func() {

@@ -15,10 +15,10 @@
 package clusterautoscaler_test
 
 import (
-	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
-	"github.com/gardener/gardener/pkg/utils/test"
-
 	. "github.com/onsi/ginkgo"
+
+	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
+	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
 )
 
 var _ = Describe("Monitoring", func() {

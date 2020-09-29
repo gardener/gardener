@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gomega_test
+package matchers_test
 
 import (
 	"testing"
@@ -23,5 +23,5 @@ import (
 
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardener Gomega Matchers")
+	RunSpecs(t, "Gomega Matchers Suite")
 }

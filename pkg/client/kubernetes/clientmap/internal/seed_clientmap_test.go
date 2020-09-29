@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	. "github.com/gardener/gardener/pkg/client/kubernetes/test"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 
@@ -119,7 +120,7 @@ var _ = Describe("SeedClientMap", func() {
 			internal.NewClientFromFile = func(masterURL, kubeconfigPath string, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
 				Expect(masterURL).To(BeEmpty())
 				Expect(kubeconfigPath).To(Equal(clientConnectionConfig.Kubeconfig))
-				Expect(fns).To(kubernetes.ConsistOfConfigFuncs(
+				Expect(fns).To(ConsistOfConfigFuncs(
 					kubernetes.WithClientConnectionOptions(clientConnectionConfig),
 					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
 				))
@@ -195,7 +196,7 @@ var _ = Describe("SeedClientMap", func() {
 				Expect(c).To(BeIdenticalTo(fakeGardenClient.Client()))
 				Expect(namespace).To(Equal(seed.Spec.SecretRef.Namespace))
 				Expect(secretName).To(Equal(seed.Spec.SecretRef.Name))
-				Expect(fns).To(kubernetes.ConsistOfConfigFuncs(
+				Expect(fns).To(ConsistOfConfigFuncs(
 					kubernetes.WithClientConnectionOptions(clientConnectionConfig),
 					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
 				))

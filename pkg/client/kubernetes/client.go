@@ -229,7 +229,7 @@ func checkIfSupportedKubernetesVersion(gitVersion string) error {
 
 // NewWithConfig returns a new Kubernetes base client.
 func NewWithConfig(fns ...ConfigFunc) (Interface, error) {
-	conf := &config{}
+	conf := &Config{}
 
 	for _, f := range fns {
 		if err := f(conf); err != nil {
@@ -240,7 +240,7 @@ func NewWithConfig(fns ...ConfigFunc) (Interface, error) {
 	return newClientSet(conf)
 }
 
-func newClientSet(conf *config) (Interface, error) {
+func newClientSet(conf *Config) (Interface, error) {
 	if err := setConfigDefaults(conf); err != nil {
 		return nil, err
 	}
@@ -313,6 +313,6 @@ func newClientSet(conf *config) (Interface, error) {
 	return cs, nil
 }
 
-func setConfigDefaults(conf *config) error {
+func setConfigDefaults(conf *Config) error {
 	return setClientOptionsDefaults(conf.restConfig, &conf.clientOptions)
 }
