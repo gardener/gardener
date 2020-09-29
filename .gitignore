@@ -5,6 +5,7 @@
 /local
 /dev
 
+*.test
 *.coverprofile
 *.html
 .vscode
