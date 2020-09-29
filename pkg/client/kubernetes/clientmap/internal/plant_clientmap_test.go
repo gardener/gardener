@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	. "github.com/gardener/gardener/pkg/client/kubernetes/test"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 
@@ -155,7 +156,7 @@ var _ = Describe("PlantClientMap", func() {
 				Expect(c).To(BeIdenticalTo(fakeGardenClient.Client()))
 				Expect(namespace).To(Equal(plant.Namespace))
 				Expect(secretName).To(Equal(plant.Spec.SecretRef.Name))
-				Expect(fns).To(kubernetes.ConsistOfConfigFuncs(
+				Expect(fns).To(ConsistOfConfigFuncs(
 					kubernetes.WithClientOptions(client.Options{
 						Scheme: kubernetes.PlantScheme,
 					}),

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubernetes
+package test
 
 import (
 	"fmt"
@@ -21,7 +21,8 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/format"
 	gomegatypes "github.com/onsi/gomega/types"
-	"k8s.io/client-go/rest"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // ConsistOfConfigFuncs returns a composed `ConsistsOf` matcher with `MatchConfigFunc` for each ConfigFn in `fns`.
@@ -53,8 +54,7 @@ func MatchConfigFunc(fn interface{}) gomegatypes.GomegaMatcher {
 type configFuncMatcher struct {
 	expected interface{}
 
-	expectedConfig *config
-	actualConfig   *config
+	expectedConfig, actualConfig *kubernetes.Config
 }
 
 func (m *configFuncMatcher) Match(actual interface{}) (success bool, err error) {
@@ -65,25 +65,25 @@ func (m *configFuncMatcher) Match(actual interface{}) (success bool, err error) 
 		return false, nil
 	}
 
-	actualConfigFunc, ok := actual.(ConfigFunc)
+	actualConfigFunc, ok := actual.(kubernetes.ConfigFunc)
 	if !ok {
 		return false, fmt.Errorf("actual is not a ConfigFunc, but %T", actual)
 	}
-	actualConfig := &config{restConfig: &rest.Config{}}
-	if err := actualConfigFunc(actualConfig); err != nil {
+	m.actualConfig = kubernetes.NewConfig()
+	if err := actualConfigFunc(m.actualConfig); err != nil {
 		return false, fmt.Errorf("actual returned an error when calling: %w", err)
 	}
 
-	expectedConfigFunc, ok := m.expected.(ConfigFunc)
+	expectedConfigFunc, ok := m.expected.(kubernetes.ConfigFunc)
 	if !ok {
 		return false, fmt.Errorf("expected is not a ConfigFunc, but %T", m.expected)
 	}
-	expectedConfig := &config{restConfig: &rest.Config{}}
-	if err := expectedConfigFunc(expectedConfig); err != nil {
+	m.expectedConfig = kubernetes.NewConfig()
+	if err := expectedConfigFunc(m.expectedConfig); err != nil {
 		return false, fmt.Errorf("expected returned an error when calling: %w", err)
 	}
 
-	return reflect.DeepEqual(expectedConfig, actualConfig), nil
+	return reflect.DeepEqual(m.expectedConfig, m.actualConfig), nil
 }
 
 func (m *configFuncMatcher) FailureMessage(actual interface{}) (message string) {
