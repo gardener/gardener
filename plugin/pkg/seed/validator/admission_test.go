@@ -17,16 +17,16 @@ package validator_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	. "github.com/gardener/gardener/plugin/pkg/seed/validator"
-	. "github.com/gardener/gardener/test/gomega"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	. "github.com/gardener/gardener/plugin/pkg/seed/validator"
 )
 
 var _ = Describe("validator", func() {

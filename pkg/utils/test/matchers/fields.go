@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gomega
+package matchers
 
 import (
 	"github.com/onsi/gomega"
@@ -30,7 +30,7 @@ func HaveFields(fields gstruct.Fields) types.GomegaMatcher {
 // Actual must be an array, slice or map.  For maps, ConsistOfFields matches against the map's values.
 // Actual's elements must be pointers.
 func ConsistOfFields(fields ...gstruct.Fields) types.GomegaMatcher {
-	m := []interface{}{}
+	var m []interface{}
 	for _, f := range fields {
 		m = append(m, HaveFields(f))
 	}

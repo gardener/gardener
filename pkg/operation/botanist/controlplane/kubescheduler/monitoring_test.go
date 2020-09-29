@@ -15,13 +15,13 @@
 package kubescheduler_test
 
 import (
-	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
-	"github.com/gardener/gardener/pkg/utils/test"
-
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
+	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
+	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 )
 
 var _ = Describe("Monitoring", func() {

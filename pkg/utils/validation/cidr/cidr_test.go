@@ -17,10 +17,11 @@ package cidr_test
 import (
 	"net"
 
-	. "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	. "github.com/gardener/gardener/pkg/utils/validation/gomega"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	. "github.com/gardener/gardener/pkg/utils/validation/cidr"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"

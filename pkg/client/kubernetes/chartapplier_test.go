@@ -18,11 +18,6 @@ import (
 	"context"
 	"path/filepath"
 
-	"github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	. "github.com/gardener/gardener/test/gomega"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -35,6 +30,11 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("chart applier", func() {
