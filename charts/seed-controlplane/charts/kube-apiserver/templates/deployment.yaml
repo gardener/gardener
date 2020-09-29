@@ -123,7 +123,7 @@ spec:
         - --etcd-certfile=/srv/kubernetes/etcd/client/tls.crt
         - --etcd-keyfile=/srv/kubernetes/etcd/client/tls.key
         - --etcd-servers=https://etcd-main-client:{{ .Values.etcdServicePort }}
-        - --etcd-servers-overrides=/events#https://etcd-events-client:{{ .Values.etcdServicePort }}
+        - --etcd-servers-overrides=/events#https://etcd-events-client:{{ .Values.etcdServicePort }},coordination.k8s.io/leases#https://etcd-events-client:{{ .Values.etcdServicePort }}
         {{- if .Values.enableEtcdEncryption }}
         - --encryption-provider-config=/etc/kubernetes/etcd-encryption-secret/encryption-configuration.yaml
         {{- end }}
