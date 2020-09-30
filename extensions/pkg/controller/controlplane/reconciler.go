@@ -277,7 +277,7 @@ func (r *reconciler) updateStatusProcessing(ctx context.Context, cp *extensionsv
 func (r *reconciler) updateStatusError(ctx context.Context, err error, cp *extensionsv1alpha1.ControlPlane, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
 	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, cp, func() error {
 		cp.Status.ObservedGeneration = cp.Generation
-		cp.Status.LastOperation, cp.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err)), 50, gardencorev1beta1helper.ExtractErrorCodes(err)...)
+		cp.Status.LastOperation, cp.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err)), 50, gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, err.Error()))...)
 		return nil
 	})
 }

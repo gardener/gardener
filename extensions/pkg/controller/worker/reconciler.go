@@ -120,7 +120,7 @@ func (r *reconciler) updateStatusProcessing(logger logr.Logger, worker *extensio
 func (r *reconciler) updateStatusError(err error, worker *extensionsv1alpha1.Worker, lastOperationType gardencorev1beta1.LastOperationType, description string) {
 	updateErr := extensionscontroller.TryUpdateStatus(r.ctx, retry.DefaultBackoff, r.client, worker, func() error {
 		worker.Status.ObservedGeneration = worker.Generation
-		worker.Status.LastOperation, worker.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, extensionscontroller.ReconcileErrCauseOrErr(err))), 50, gardencorev1beta1helper.ExtractErrorCodes(err)...)
+		worker.Status.LastOperation, worker.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, extensionscontroller.ReconcileErrCauseOrErr(err))), 50, gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, err.Error()))...)
 		return nil
 	})
 	utilruntime.HandleError(updateErr)
