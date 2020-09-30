@@ -19,7 +19,7 @@ spec:
         H4sIFAAAAAAA/yk...
       values:
         foo: bar
-  # policy: OnDemand|Always
+  # policy: OnDemand|Always|AlwaysExceptNoShoots
   # seedSelector:
   #   matchLabels:
   #     foo: bar

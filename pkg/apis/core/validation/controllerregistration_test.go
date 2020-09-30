@@ -183,6 +183,15 @@ var _ = Describe("validation", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
+		It("should allow setting the AlwaysExceptNoShoots policy", func() {
+			policy := core.ControllerDeploymentPolicyAlwaysExceptNoShoots
+			controllerRegistration.Spec.Deployment.Policy = &policy
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
 		It("should forbid to set unsupported deployment policies", func() {
 			policy := core.ControllerDeploymentPolicy("foo")
 			controllerRegistration.Spec.Deployment.Policy = &policy
