@@ -20,7 +20,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -37,15 +46,6 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-
-	"github.com/prometheus/client_golang/prometheus"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // Controller controls Seeds.
@@ -242,16 +242,26 @@ func (c *Controller) startHealthManagement(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		default:
-			time.Sleep(LeaseResyncGracePeriodSeconds / 2 * time.Second)
+		case <-time.After(LeaseResyncGracePeriodSeconds / 2 * time.Second):
 
-			health := true
+			isHealthy := true
 
-			if seedName == "" {
+			if len(seedName) > 0 {
+				if _, err := c.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().Get(seedName); err != nil {
+					if apierrors.IsNotFound(err) {
+						// the Seed configured for the Gardenlet does not exist.
+						// Do not expect an existing lease
+						expectedHealthReports = 0
+					} else {
+						logger.Logger.Errorf("error when getting the seed %q for health management: %+v", seedName, err)
+						isHealthy = false
+					}
+				}
+			} else {
 				seedList, err := c.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().List(seedLabelSelector)
 				if err != nil {
 					logger.Logger.Errorf("error while listing seeds for health management: %+v", err)
-					health = false
+					isHealthy = false
 				}
 				expectedHealthReports = len(seedList)
 			}
@@ -259,11 +269,11 @@ func (c *Controller) startHealthManagement(ctx context.Context) {
 			c.lock.Lock()
 
 			if len(c.leaseMap) != expectedHealthReports {
-				health = false
+				isHealthy = false
 			} else {
 				for _, status := range c.leaseMap {
 					if !status {
-						health = false
+						isHealthy = false
 						break
 					}
 				}
@@ -271,7 +281,7 @@ func (c *Controller) startHealthManagement(ctx context.Context) {
 
 			c.leaseMap = make(map[string]bool)
 			c.lock.Unlock()
-			c.healthManager.Set(health)
+			c.healthManager.Set(isHealthy)
 		}
 	}
 }
