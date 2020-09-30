@@ -15,10 +15,7 @@
 package health_test
 
 import (
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -27,7 +24,13 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 func replicas(i int32) *int32 {
@@ -35,7 +38,7 @@ func replicas(i int32) *int32 {
 }
 
 var _ = Describe("health", func() {
-	Context("CheckDeployment", func() {
+	Describe("CheckDeployment", func() {
 		DescribeTable("deployments",
 			func(deployment *appsv1.Deployment, matcher types.GomegaMatcher) {
 				err := health.CheckDeployment(deployment)
@@ -92,7 +95,7 @@ var _ = Describe("health", func() {
 		)
 	})
 
-	Context("CheckStatefulSet", func() {
+	Describe("CheckStatefulSet", func() {
 		DescribeTable("statefulsets",
 			func(statefulSet *appsv1.StatefulSet, matcher types.GomegaMatcher) {
 				err := health.CheckStatefulSet(statefulSet)
@@ -115,7 +118,7 @@ var _ = Describe("health", func() {
 		)
 	})
 
-	Context("CheckDaemonSet", func() {
+	Describe("CheckDaemonSet", func() {
 		oneUnavailable := intstr.FromInt(1)
 		DescribeTable("daemonsets",
 			func(daemonSet *appsv1.DaemonSet, matcher types.GomegaMatcher) {
@@ -144,7 +147,7 @@ var _ = Describe("health", func() {
 		)
 	})
 
-	Context("CheckNode", func() {
+	Describe("CheckNode", func() {
 		DescribeTable("nodes",
 			func(node *corev1.Node, matcher types.GomegaMatcher) {
 				err := health.CheckNode(node)
@@ -160,7 +163,7 @@ var _ = Describe("health", func() {
 		)
 	})
 
-	Context("CheckSeed", func() {
+	Describe("CheckSeed", func() {
 		DescribeTable("seeds",
 			func(seed *gardencorev1beta1.Seed, identity *gardencorev1beta1.Gardener, matcher types.GomegaMatcher) {
 				Expect(health.CheckSeed(seed, identity)).To(matcher)
@@ -223,11 +226,15 @@ var _ = Describe("health", func() {
 		)
 	})
 
-	Context("CheckExtensionObject", func() {
+	Describe("CheckExtensionObject", func() {
 		DescribeTable("extension objects",
-			func(obj extensionsv1alpha1.Object, match types.GomegaMatcher) {
+			func(obj runtime.Object, match types.GomegaMatcher) {
 				Expect(health.CheckExtensionObject(obj)).To(match)
 			},
+			Entry("not an extensionsv1alpha1.Object",
+				&corev1.Pod{},
+				MatchError(ContainSubstring("expected extensionsv1alpha1.Object")),
+			),
 			Entry("healthy",
 				&extensionsv1alpha1.Infrastructure{
 					Status: extensionsv1alpha1.InfrastructureStatus{
@@ -304,5 +311,63 @@ var _ = Describe("health", func() {
 				HaveOccurred(),
 			),
 		)
+	})
+
+	Describe("ExtensionOperationHasBeenUpdatedSince", func() {
+		var (
+			healthFunc health.Func
+			now        metav1.Time
+		)
+
+		BeforeEach(func() {
+			now = metav1.Now()
+			healthFunc = health.ExtensionOperationHasBeenUpdatedSince(now)
+		})
+
+		It("should fail if object is not an extensionsv1alpha1.Object", func() {
+			Expect(healthFunc(&corev1.Pod{})).To(MatchError(ContainSubstring("expected extensionsv1alpha1.Object")))
+		})
+		It("should fail if last operation is unset", func() {
+			Expect(healthFunc(&extensionsv1alpha1.Infrastructure{
+				Status: extensionsv1alpha1.InfrastructureStatus{
+					DefaultStatus: extensionsv1alpha1.DefaultStatus{
+						LastOperation: nil,
+					},
+				},
+			})).NotTo(Succeed())
+		})
+		It("should fail if last operation update time has not changed", func() {
+			Expect(healthFunc(&extensionsv1alpha1.Infrastructure{
+				Status: extensionsv1alpha1.InfrastructureStatus{
+					DefaultStatus: extensionsv1alpha1.DefaultStatus{
+						LastOperation: &gardencorev1beta1.LastOperation{
+							LastUpdateTime: now,
+						},
+					},
+				},
+			})).NotTo(Succeed())
+		})
+		It("should fail if last operation update time was before given time", func() {
+			Expect(healthFunc(&extensionsv1alpha1.Infrastructure{
+				Status: extensionsv1alpha1.InfrastructureStatus{
+					DefaultStatus: extensionsv1alpha1.DefaultStatus{
+						LastOperation: &gardencorev1beta1.LastOperation{
+							LastUpdateTime: metav1.NewTime(now.Add(-time.Second)),
+						},
+					},
+				},
+			})).NotTo(Succeed())
+		})
+		It("should succeed if last operation update time is after given time", func() {
+			Expect(healthFunc(&extensionsv1alpha1.Infrastructure{
+				Status: extensionsv1alpha1.InfrastructureStatus{
+					DefaultStatus: extensionsv1alpha1.DefaultStatus{
+						LastOperation: &gardencorev1beta1.LastOperation{
+							LastUpdateTime: metav1.NewTime(now.Add(time.Second)),
+						},
+					},
+				},
+			})).To(Succeed())
+		})
 	})
 })

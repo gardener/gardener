@@ -1,7 +1,7 @@
 ---
 name: Flaking Test
 about: Report flaky tests or jobs in Gardener CI
-title: "[Flaky Test]: FLAKING TEST/SUITE"
+title: "[Flaky Test] FLAKING TEST/SUITE"
 labels: kind/flake
 
 ---
