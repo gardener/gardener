@@ -73,16 +73,21 @@ func (a *actuator) Reconcile(ctx context.Context) error {
 	var (
 		g = flow.NewGraph("Backup Bucket Reconciliation")
 
-		deployBackupBucketExtension = g.Add(flow.Task{
-			Name: "Deploying backup bucket extension resource",
-			Fn:   flow.TaskFn(a.deployBackupBucketExtension).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		deployBackupBucketSecret = g.Add(flow.Task{
+			Name: "Deploying backup bucket secret to seed",
+			Fn:   flow.TaskFn(a.deployBackupBucketExtensionSecret).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
-
+		deployBackupBucketExtension = g.Add(flow.Task{
+			Name:         "Deploying backup bucket extension resource",
+			Fn:           flow.TaskFn(a.deployBackupBucketExtension).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployBackupBucketSecret),
+		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until backup bucket is reconciled",
-			Fn:           flow.TaskFn(a.waitUntilBackupBucketExtensionReconciled),
+			Fn:           a.waitUntilBackupBucketExtensionReconciled,
 			Dependencies: flow.NewTaskIDs(deployBackupBucketExtension),
 		})
+
 		f = g.Compile()
 	)
 
@@ -95,18 +100,35 @@ func (a *actuator) Reconcile(ctx context.Context) error {
 
 func (a *actuator) Delete(ctx context.Context) error {
 	var (
-		g                  = flow.NewGraph("Backup bucket deletion")
-		deleteBackupBucket = g.Add(flow.Task{
-			Name: "Destroying backup bucket",
-			Fn:   flow.TaskFn(a.deleteBackupBucketExtension),
-		})
+		g = flow.NewGraph("Backup bucket deletion")
+
 		_ = g.Add(flow.Task{
+			Name: "Destroying generated backup bucket secret in garden cluster",
+			Fn:   a.deleteGeneratedBackupBucketSecretInGarden,
+		})
+		deployBackupBucketSecret = g.Add(flow.Task{
+			Name: "Deploying backup bucket secret to seed",
+			Fn:   flow.TaskFn(a.deployBackupBucketExtensionSecret).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
+		deleteBackupBucket = g.Add(flow.Task{
+			Name:         "Destroying backup bucket",
+			Fn:           a.deleteBackupBucketExtension,
+			Dependencies: flow.NewTaskIDs(deployBackupBucketSecret),
+		})
+		waitUntilBackupBucketExtensionDeleted = g.Add(flow.Task{
 			Name:         "Waiting until extension backup bucket is deleted",
-			Fn:           flow.TaskFn(a.waitUntilBackupBucketExtensionDeleted),
+			Fn:           a.waitUntilBackupBucketExtensionDeleted,
 			Dependencies: flow.NewTaskIDs(deleteBackupBucket),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deleting backup bucket secret in seed",
+			Fn:           flow.TaskFn(a.deleteBackupBucketExtensionSecret).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(waitUntilBackupBucketExtensionDeleted),
+		})
+
 		f = g.Compile()
 	)
+
 	return f.Run(flow.Opts{
 		Logger:           a.logger,
 		ProgressReporter: flow.NewImmediateProgressReporter(a.reportBackupBucketProgress),
@@ -137,35 +159,42 @@ func makeDescription(stats *flow.Stats) string {
 	return strings.Join(stats.Running.StringList(), ", ")
 }
 
-// deployBackupBucketExtension deploys the BackupBucket extension resource in Seed with the required secret.
-func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
-	coreSecret, err := common.GetSecretFromSecretRef(ctx, a.gardenClient.Client(), &a.backupBucket.Spec.SecretRef)
-	if err != nil {
-		return err
-	}
-
-	extensionSecret := &corev1.Secret{
+func (a *actuator) emptyExtensionSecret() *corev1.Secret {
+	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      generateBackupBucketSecretName(a.backupBucket.Name),
 			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
+}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, a.seedClient.Client(), extensionSecret, func() error {
-		extensionSecret.Data = coreSecret.DeepCopy().Data
-		return nil
-	}); err != nil {
+func (a *actuator) deployBackupBucketExtensionSecret(ctx context.Context) error {
+	coreSecret, err := common.GetSecretFromSecretRef(ctx, a.gardenClient.Client(), &a.backupBucket.Spec.SecretRef)
+	if err != nil {
 		return err
 	}
 
-	// create extension backup bucket resource in seed
-	extensionBackupBucket := &extensionsv1alpha1.BackupBucket{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: a.backupBucket.Name,
-		},
-	}
+	extensionSecret := a.emptyExtensionSecret()
+	_, err = controllerutil.CreateOrUpdate(ctx, a.seedClient.Client(), extensionSecret, func() error {
+		extensionSecret.Data = coreSecret.DeepCopy().Data
+		return nil
+	})
+	return err
+}
 
-	_, err = controllerutil.CreateOrUpdate(ctx, a.seedClient.Client(), extensionBackupBucket, func() error {
+// deployBackupBucketExtension deploys the BackupBucket extension resource in Seed with the required secret.
+func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
+	var (
+		extensionSecret       = a.emptyExtensionSecret()
+		extensionBackupBucket = &extensionsv1alpha1.BackupBucket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: a.backupBucket.Name,
+			},
+		}
+	)
+
+	// create extension backup bucket resource in seed
+	_, err := controllerutil.CreateOrUpdate(ctx, a.seedClient.Client(), extensionBackupBucket, func() error {
 		metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		metav1.SetMetaDataAnnotation(&extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
 
@@ -176,8 +205,8 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 			},
 			Region: a.backupBucket.Spec.Provider.Region,
 			SecretRef: corev1.SecretReference{
-				Name:      generateBackupBucketSecretName(a.backupBucket.Name),
-				Namespace: v1beta1constants.GardenNamespace,
+				Name:      extensionSecret.Name,
+				Namespace: extensionSecret.Namespace,
 			},
 		}
 		return nil
@@ -193,7 +222,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 		a.seedClient.DirectClient(),
 		a.logger,
 		func() runtime.Object { return &extensionsv1alpha1.BackupBucket{} },
-		"BackupBucket",
+		extensionsv1alpha1.BackupBucketResource,
 		"",
 		a.backupBucket.Name,
 		defaultInterval,
@@ -256,14 +285,6 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 
 // deleteBackupBucketExtension deletes BackupBucket extension resource in seed.
 func (a *actuator) deleteBackupBucketExtension(ctx context.Context) error {
-	if err := a.deleteGeneratedBackupBucketSecretInGarden(ctx); err != nil {
-		return err
-	}
-
-	if err := a.deleteBackupBucketExtensionSecret(ctx); err != nil {
-		return err
-	}
-
 	return common.DeleteExtensionCR(
 		ctx,
 		a.seedClient.DirectClient(),
@@ -280,7 +301,7 @@ func (a *actuator) waitUntilBackupBucketExtensionDeleted(ctx context.Context) er
 		a.seedClient.DirectClient(),
 		a.logger,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupBucket{} },
-		"BackupBucket",
+		extensionsv1alpha1.BackupBucketResource,
 		"",
 		a.backupBucket.Name,
 		defaultInterval,
