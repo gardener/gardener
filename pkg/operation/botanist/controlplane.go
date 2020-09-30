@@ -995,15 +995,19 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		foundDeployment = false
 	}
 
-	if b.ShootedSeed != nil && !hvpaEnabled {
+	if b.ShootedSeed != nil {
 		var (
 			apiServer  = b.ShootedSeed.APIServer
 			autoscaler = apiServer.Autoscaler
 		)
-		defaultValues["replicas"] = *apiServer.Replicas
 		minReplicas = *autoscaler.MinReplicas
 		maxReplicas = autoscaler.MaxReplicas
+	}
 
+	if b.ShootedSeed != nil && !hvpaEnabled {
+		apiServer := b.ShootedSeed.APIServer
+
+		defaultValues["replicas"] = *apiServer.Replicas
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"requests": map[string]interface{}{
 				"cpu":    "1750m",
