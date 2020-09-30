@@ -39,7 +39,7 @@ Check out these repositories for implementations of the Gardener Extension contr
 - [Debian/Ubuntu (MetalStack)](https://github.com/metal-stack/os-metal-extension)
 - [Ubuntu](https://github.com/gardener/gardener-extension-os-ubuntu)
 - [Ubuntu (Alicloud)](https://github.com/gardener/gardener-extension-os-ubuntu-alicloud)
-- [SuSE JeOS](https://github.com/gardener/gardener-extension-os-suse-jeos)
+- [SuSE CHost](https://github.com/gardener/gardener-extension-os-suse-chost)
 
 ### Container Runtime
 

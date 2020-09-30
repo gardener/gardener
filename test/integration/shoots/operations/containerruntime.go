@@ -32,17 +32,19 @@ var _ = ginkgo.Describe("Shoot container runtime testing", func() {
 	f := framework.NewShootFramework(nil)
 
 	f.Beta().Serial().CIt("should add worker pool with containerd", func(ctx context.Context) {
-		shoot := f.Shoot
+		var (
+			shoot       = f.Shoot
+			worker      = shoot.Spec.Provider.Workers[0]
+			workerImage = worker.Machine.Image
+		)
 
 		if len(shoot.Spec.Provider.Workers) == 0 {
 			ginkgo.Skip("at least one worker pool is required in the test shoot")
 		}
 
-		worker := shoot.Spec.Provider.Workers[0]
-		// containerD is supported only with Ubuntu OS for now.
-		// TODO: adapt/remove this when containerD is available on other OS.
-		if worker.Machine.Image.Name != "ubuntu" {
-			ginkgo.Skip("worker with machine image 'ubuntu' is required")
+		if !supportsContainerD(f.CloudProfile.Spec.MachineImages, workerImage) {
+			message := fmt.Sprintf("machine image '%s/%s' does not support containerd", workerImage.Name, *workerImage.Version)
+			ginkgo.Skip(message)
 		}
 
 		containerdWorker := worker.DeepCopy()
@@ -122,4 +124,39 @@ func executeCommand(ctx context.Context, rootPodExecutor framework.RootPodExecut
 	framework.ExpectNoError(err)
 	g.Expect(response).ToNot(g.BeNil())
 	g.Expect(string(response)).To(g.Equal(fmt.Sprintf("%s\n", expected)))
+}
+
+func supportsContainerD(cloudProfileImages []gardencorev1beta1.MachineImage, workerImage *gardencorev1beta1.ShootMachineImage) bool {
+	var (
+		cloudProfileImage *gardencorev1beta1.MachineImage
+		machineVersion    *gardencorev1beta1.MachineImageVersion
+	)
+
+	for _, current := range cloudProfileImages {
+		if current.Name == workerImage.Name {
+			cloudProfileImage = &current
+			break
+		}
+	}
+	if cloudProfileImage == nil {
+		return false
+	}
+
+	for _, version := range cloudProfileImage.Versions {
+		if version.Version == *workerImage.Version {
+			machineVersion = &version
+			break
+		}
+	}
+	if machineVersion == nil {
+		return false
+	}
+
+	for _, cri := range machineVersion.CRI {
+		if cri.Name == gardencorev1beta1.CRINameContainerD {
+			return true
+		}
+	}
+
+	return false
 }
