@@ -151,7 +151,7 @@ func WaitUntilObjectReadyWithHealthFunction(
 	ctx context.Context,
 	c client.Client,
 	logger logrus.FieldLogger,
-	healthFunc func(obj runtime.Object) error,
+	healthFunc health.Func,
 	newObjFunc func() runtime.Object,
 	kind string,
 	namespace string,

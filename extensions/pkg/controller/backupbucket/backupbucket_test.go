@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/test/framework"
 
@@ -41,6 +42,12 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+)
+
+const (
+	pollInterval        = time.Second
+	pollSevereThreshold = 10 * time.Second
+	pollTimeout         = 15 * time.Second
 )
 
 var _ = Describe("BackupBucket", func() {
@@ -59,7 +66,7 @@ var _ = Describe("BackupBucket", func() {
 
 func prepareAndRunTest(ignoreOperationAnnotation bool) {
 	By("setup and start manager")
-	Expect(createAndStartManager(ignoreOperationAnnotation)).NotTo(HaveOccurred())
+	Expect(createAndStartManager(ignoreOperationAnnotation)).To(Succeed())
 
 	By("setup client for test")
 	// We could also get the manager client with mgr.GetClient(), however, this one would use a cache in the background
@@ -89,7 +96,8 @@ func createAndStartManager(ignoreOperationAnnotation bool) error {
 	})
 
 	mgrScheme := runtime.NewScheme()
-	if err := scheme.AddToScheme(mgrScheme); err != nil {
+	schemeBuilder := runtime.NewSchemeBuilder(scheme.AddToScheme, extensionsv1alpha1.AddToScheme)
+	if err := schemeBuilder.AddToScheme(mgrScheme); err != nil {
 		return err
 	}
 
@@ -98,10 +106,6 @@ func createAndStartManager(ignoreOperationAnnotation bool) error {
 		MetricsBindAddress: "0",
 	})
 	if err != nil {
-		return err
-	}
-
-	if err := extensionsv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
 		return err
 	}
 
@@ -322,8 +326,9 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 		Expect(c.Update(ctx, secret)).To(Succeed())
 
 		By("wait until backupbucket is ready")
-		time.Sleep(2 * time.Second) // grace period for extension controller to observe event and start reconciliation
-		Expect(waitForBackupBucketToBeReady(ctx, c, logger, backupBucket)).To(Succeed())
+		// also wait for lastOperation's update time to be updated to give extension controller some time to observe
+		// secret event and start reconciliation
+		Expect(waitForBackupBucketToBeReady(ctx, c, logger, backupBucket, backupBucket.Status.LastOperation.LastUpdateTime)).To(Succeed())
 
 		By("verify backupbucket readiness (reconciliation should have happened due to secret mapping)")
 		backupBucket = &extensionsv1alpha1.BackupBucket{}
@@ -368,18 +373,24 @@ func updateBackupBucketObject(ctx context.Context, c client.Client, backupBucket
 	})
 }
 
-func waitForBackupBucketToBeReady(ctx context.Context, c client.Client, logger *logrus.Entry, backupBucket *extensionsv1alpha1.BackupBucket) error {
-	return common.WaitUntilExtensionCRReady(
+func waitForBackupBucketToBeReady(ctx context.Context, c client.Client, logger *logrus.Entry, backupBucket *extensionsv1alpha1.BackupBucket, minOperationUpdateTime ...metav1.Time) error {
+	healthFuncs := []health.Func{health.CheckExtensionObject}
+	if len(minOperationUpdateTime) > 0 {
+		healthFuncs = append(healthFuncs, health.ExtensionOperationHasBeenUpdatedSince(minOperationUpdateTime[0]))
+	}
+
+	return common.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		c,
 		logger,
+		health.And(healthFuncs...),
 		func() runtime.Object { return &extensionsv1alpha1.BackupBucket{} },
 		extensionsv1alpha1.BackupBucketResource,
 		backupBucket.Namespace,
 		backupBucket.Name,
-		500*time.Millisecond,
-		2*time.Second,
-		3*time.Second,
+		pollInterval,
+		pollSevereThreshold,
+		pollTimeout,
 		nil,
 	)
 }
@@ -393,13 +404,13 @@ func waitForBackupBucketToBeDeleted(ctx context.Context, c client.Client, logger
 		extensionsv1alpha1.BackupBucketResource,
 		backupBucket.Namespace,
 		backupBucket.Name,
-		time.Second,
-		3*time.Second,
+		pollInterval,
+		pollTimeout,
 	)
 }
 
 func waitForBackupBucketToBeErroneous(ctx context.Context, c client.Client, lastOperationType gardencorev1beta1.LastOperationType, backupBucketObjectKey client.ObjectKey) error {
-	return retryutils.UntilTimeout(ctx, 300*time.Millisecond, 2*time.Second, func(ctx context.Context) (bool, error) {
+	return retryutils.UntilTimeout(ctx, pollInterval, pollTimeout, func(ctx context.Context) (bool, error) {
 		backupBucket := &extensionsv1alpha1.BackupBucket{}
 		if err := c.Get(ctx, backupBucketObjectKey, backupBucket); err != nil {
 			return retryutils.SevereError(err)
@@ -415,10 +426,10 @@ func waitForBackupBucketToBeErroneous(ctx context.Context, c client.Client, last
 }
 
 func verifyBackupBucket(backupBucket *extensionsv1alpha1.BackupBucket, generation, observedGeneration int64, expectedTimeOut string, expectedLastOperationType gomegatypes.GomegaMatcher) {
-	Expect(backupBucket.Generation).To(Equal(generation))
-	Expect(backupBucket.Finalizers).To(ConsistOf("extensions.gardener.cloud/backupbucket"))
-	Expect(backupBucket.Status.LastOperation.Type).To(expectedLastOperationType)
-	Expect(backupBucket.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
-	Expect(backupBucket.Status.ObservedGeneration).To(Equal(observedGeneration))
-	Expect(backupBucket.Annotations[test.AnnotationKeyTimeOut]).To(Equal(expectedTimeOut))
+	ExpectWithOffset(1, backupBucket.Generation).To(Equal(generation))
+	ExpectWithOffset(1, backupBucket.Finalizers).To(ConsistOf("extensions.gardener.cloud/backupbucket"))
+	ExpectWithOffset(1, backupBucket.Status.LastOperation.Type).To(expectedLastOperationType)
+	ExpectWithOffset(1, backupBucket.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+	ExpectWithOffset(1, backupBucket.Status.ObservedGeneration).To(Equal(observedGeneration))
+	ExpectWithOffset(1, backupBucket.Annotations[test.AnnotationKeyTimeOut]).To(Equal(expectedTimeOut))
 }
