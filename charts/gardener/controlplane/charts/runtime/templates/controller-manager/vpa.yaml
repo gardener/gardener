@@ -11,4 +11,10 @@ spec:
     name: gardener-controller-manager
   updatePolicy:
     updateMode: Auto
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          cpu: 30m
+          memory: 300Mi
 {{- end }}

@@ -11,4 +11,10 @@ spec:
     name: gardenlet
   updatePolicy:
     updateMode: Auto
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          cpu: 50m
+          memory: 200Mi
 {{- end }}

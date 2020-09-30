@@ -11,4 +11,10 @@ spec:
     name: gardener-scheduler
   updatePolicy:
     updateMode: Auto
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          cpu: 10m
+          memory: 25Mi
 {{- end }}
