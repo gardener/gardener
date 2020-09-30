@@ -19,10 +19,10 @@ spec:
 The offset (`+0100`) is considered with respect to UTC time.
 The minimum time window is `30m` and the maximum is `6h`.
 
-⚠️  Please note that there is no guarantee that a maintenance operation that e.g. starts a node roll-out will finish *within* the time window.
+⚠️ Please note that there is no guarantee that a maintenance operation that e.g. starts a node roll-out will finish *within* the time window.
 Especially for large clusters it may take several hours until a graceful rolling update of the worker nodes succeeds (also depending on the workload and the configured pod disruption budgets/termination grace periods).
 
-Internally, Gardener is subtracting `15m` from the end of the time window to (best-effort) try to finish the maintenance until the end is reached, however, it might not work in all cases.  
+Internally, Gardener is subtracting `15m` from the end of the time window to (best-effort) try to finish the maintenance until the end is reached, however, it might not work in all cases.
 
 If you don't specify a time window then Gardener will randomly compute it.
 You can change it later, of course.
@@ -41,9 +41,10 @@ spec:
 ```
 
 During the daily maintenance, the Gardener Controller Manager updates the Shoot's Kubernetes and machine image version if any of the following criteria applies:
+
  - there is a higher version available and the Shoot opted-in for automatic version updates
  - the currently used version is `expired`
- 
+
 Gardener creates events with type `MaintenanceDone` on the Shoot describing the action performed during maintenance including the reason why an update has been triggered.
 
 ```yaml
@@ -53,6 +54,7 @@ MaintenanceDone  Updated Kubernetes version '0.0.5' to version '0.1.5'. This is 
 ```
 
 Please refer to [this document](./shoot_versions.md) for more information about Kubernetes and machine image versions in Gardener.
+
 ## Cluster Reconciliation
 
 Gardener administrators/operators can configure the Gardenlet in a way that it only reconciles shoot clusters during their maintenance time windows.
@@ -89,6 +91,6 @@ Gardener operators can make Gardener restart/delete certain control plane pods d
 This feature helps to automatically solve service denials of controllers due to stale caches, dead-locks or starving routines.
 
 Please note that these are exceptional cases but they are observed from time to time.
-Gardener, for example, takes this precautionary measure for `kube-controller-manager` pods. 
+Gardener, for example, takes this precautionary measure for `kube-controller-manager` pods.
 
 See [this document](../extensions/shoot-maintenance.md) to see how extension developers can extend this behaviour.
