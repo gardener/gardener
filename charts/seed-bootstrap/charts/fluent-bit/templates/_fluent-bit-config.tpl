@@ -91,8 +91,8 @@
         Match kubernetes.*
         Url http://loki.garden.svc:3100/loki/api/v1/push
         LogLevel info
-        BatchWait 1
-        # (1sec)
+        BatchWait 30
+        # (30sec)
         BatchSize 30720
         # (30KiB)
         Labels {test="fluent-bit-go", lang="Golang"}
@@ -105,7 +105,7 @@
         DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
         DynamicHostPrefix http://loki.
         DynamicHostSulfix .svc:3100/loki/api/v1/push
-        DynamicHostRegex shoot--
+        DynamicHostRegex shoot-
         MaxRetries 3
         Timeout 10
         MinBackoff 30
@@ -115,8 +115,8 @@
         Match journald.*
         Url http://loki.garden.svc:3100/loki/api/v1/push
         LogLevel info
-        BatchWait 1
-        # (1sec)
+        BatchWait 60
+        # (60sec)
         BatchSize 30720
         # (30KiB)
         Labels {test="fluent-bit-go", lang="Golang"}
