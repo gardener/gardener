@@ -27,6 +27,7 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
@@ -222,7 +223,7 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 }
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
-func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubernetes.Interface, seed *Seed, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, componentImageVectors imagevector.ComponentImageVectors) error {
+func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubernetes.Interface, seed *Seed, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, componentImageVectors imagevector.ComponentImageVectors, loggingConfig *config.Logging) error {
 	const chartName = "seed-bootstrap"
 
 	gardenNamespace := &corev1.Namespace{
@@ -321,10 +322,11 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 
 	// Logging feature gate
 	var (
-		loggingEnabled     = gardenletfeatures.FeatureGate.Enabled(features.Logging)
-		existingSecretsMap = map[string]*corev1.Secret{}
-		filters            = strings.Builder{}
-		parsers            = strings.Builder{}
+		loggingEnabled                    = gardenletfeatures.FeatureGate.Enabled(features.Logging)
+		existingSecretsMap                = map[string]*corev1.Secret{}
+		filters                           = strings.Builder{}
+		parsers                           = strings.Builder{}
+		fluentBitConfigurationsOverwrites = map[string]interface{}{}
 	)
 
 	if loggingEnabled {
@@ -355,6 +357,20 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		for _, cm := range existingConfigMaps.Items {
 			filters.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.FluentBitConfigMapKubernetesFilter]))
 			parsers.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.FluentBitConfigMapParser]))
+		}
+
+		if loggingConfig != nil && loggingConfig.FluentBit != nil {
+			fbConfig := loggingConfig.FluentBit
+
+			if fbConfig.ServiceSection != nil {
+				fluentBitConfigurationsOverwrites["service"] = *fbConfig.ServiceSection
+			}
+			if fbConfig.InputSection != nil {
+				fluentBitConfigurationsOverwrites["input"] = *fbConfig.InputSection
+			}
+			if fbConfig.OutputSection != nil {
+				fluentBitConfigurationsOverwrites["output"] = *fbConfig.OutputSection
+			}
 		}
 	} else {
 		if err := common.DeleteLoggingStack(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
@@ -603,9 +619,10 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			"secretName": grafanaTLSOverride,
 		},
 		"fluent-bit": map[string]interface{}{
-			"enabled":           loggingEnabled,
-			"additionalParsers": parsers.String(),
-			"additionalFilters": filters.String(),
+			"enabled":                           loggingEnabled,
+			"additionalParsers":                 parsers.String(),
+			"additionalFilters":                 filters.String(),
+			"fluentBitConfigurationsOverwrites": fluentBitConfigurationsOverwrites,
 		},
 		"loki": map[string]interface{}{
 			"enabled": loggingEnabled,

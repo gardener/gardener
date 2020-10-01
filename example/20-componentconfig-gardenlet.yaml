@@ -94,3 +94,8 @@ seedSelector: {} # selects all seeds, only use for development purposes
 #     name: my-seed
 #   spec:
 #     <Check out the `spec` in the `50-seed.yaml` file to see what's possible to configure here>
+# logging:
+#   fluentBit:
+#     output: |-
+#       [Output]
+#           ...

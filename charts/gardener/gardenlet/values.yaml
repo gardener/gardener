@@ -119,6 +119,11 @@ global:
       featureGates: {}
     # seedSelector: {}
     # seedConfig: {}
+    # logging:
+    #   fluentBit:
+    #     output: |-
+    #       [Output]
+    #           ...
   # Deployment related configuration
   deployment:
     virtualGarden:

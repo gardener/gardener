@@ -59,6 +59,9 @@ type GardenletConfiguration struct {
 	// this gardenlet instance. In this case the `Seed` object is not managed by the Gardenlet and must
 	// be created by an operator/administrator.
 	SeedSelector *metav1.LabelSelector
+	// Logging contains an optional configurations for the logging stack deployed
+	// by the Gardenlet in the seed clusters.
+	Logging *Logging
 }
 
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
@@ -253,6 +256,25 @@ type LeaderElectionConfiguration struct {
 // SeedConfig contains configuration for the seed cluster.
 type SeedConfig struct {
 	gardencorev1beta1.Seed
+}
+
+// FluentBit contains configuration for Fluent Bit.
+type FluentBit struct {
+	// ServiceSection defines [SERVICE] configuration for the fluent-bit.
+	// If it is nil, fluent-bit uses default service configuration.
+	ServiceSection *string
+	// InputSection defines [INPUT] configuration for the fluent-bit.
+	// If it is nil, fluent-bit uses default input configuration.
+	InputSection *string
+	// OutputSection defines [OUTPUT] configuration for the fluent-bit.
+	// If it is nil, fluent-bit uses default output configuration.
+	OutputSection *string
+}
+
+// Logging contains configuration for the logging stack.
+type Logging struct {
+	// FluentBit contains configurations for the fluent-bit
+	FluentBit *FluentBit
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

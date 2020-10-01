@@ -133,4 +133,8 @@ data:
     seedConfig:
 {{ toYaml .Values.global.gardenlet.config.seedConfig | indent 6 }}
     {{- end }}
+    {{- if .Values.global.gardenlet.config.logging }}
+    logging:
+{{ toYaml .Values.global.gardenlet.config.logging | indent 6 }}
+    {{- end }}
 {{- end }}
