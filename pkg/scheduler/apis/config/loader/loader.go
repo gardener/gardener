@@ -24,27 +24,13 @@ import (
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config/install"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"k8s.io/apimachinery/pkg/runtime/serializer/versioning"
 )
 
-var (
-	Codec  runtime.Codec
-	Scheme *runtime.Scheme
-)
+var Scheme *runtime.Scheme
 
 func init() {
 	Scheme = scheme.Scheme
 	install.Install(Scheme)
-	yamlSerializer := json.NewYAMLSerializer(json.DefaultMetaFactory, Scheme, Scheme)
-	Codec = versioning.NewDefaultingCodecForScheme(
-		Scheme,
-		yamlSerializer,
-		yamlSerializer,
-		schema.GroupVersion{Version: "v1alpha1"},
-		runtime.InternalGroupVersioner,
-	)
 }
 
 // LoadFromFile takes a filename and de-serializes the contents into SchedulerConfiguration object.

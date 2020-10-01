@@ -109,22 +109,6 @@ func (o *options) decodeConfig(data []byte) (*config.AdmissionControllerConfigur
 	return config, nil
 }
 
-func (o *options) applyDefaults(in *config.AdmissionControllerConfiguration) (*config.AdmissionControllerConfiguration, error) {
-	external, err := o.scheme.ConvertToVersion(in, admissioncontrollerconfigv1alpha1.SchemeGroupVersion)
-	if err != nil {
-		return nil, err
-	}
-	o.scheme.Default(external)
-
-	internal, err := o.scheme.ConvertToVersion(external, config.SchemeGroupVersion)
-	if err != nil {
-		return nil, err
-	}
-	out := internal.(*config.AdmissionControllerConfiguration)
-
-	return out, nil
-}
-
 // AdmissionController contains all necessary information to run the admission controller.
 type AdmissionController struct {
 	Config    *config.AdmissionControllerConfiguration
@@ -134,10 +118,6 @@ type AdmissionController struct {
 func (o *options) run(ctx context.Context) error {
 	c, err := o.loadConfigFromFile(o.configFile)
 	if err != nil {
-		return err
-	}
-
-	if c, err = o.applyDefaults(c); err != nil {
 		return err
 	}
 

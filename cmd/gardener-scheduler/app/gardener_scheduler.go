@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/scheduler"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	configloader "github.com/gardener/gardener/pkg/scheduler/apis/config/loader"
-	configv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config/validation"
 	shootcontroller "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
 	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
@@ -41,7 +40,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
@@ -72,23 +70,6 @@ func (o *Options) validate(args []string) error {
 	return nil
 }
 
-func (o *Options) applyDefaults(in *config.SchedulerConfiguration) (*config.SchedulerConfiguration, error) {
-	scheme := configloader.Scheme
-	external, err := scheme.ConvertToVersion(in, configv1alpha1.SchemeGroupVersion)
-	if err != nil {
-		return nil, err
-	}
-	scheme.Default(external)
-
-	internal, err := scheme.ConvertToVersion(external, config.SchemeGroupVersion)
-	if err != nil {
-		return nil, err
-	}
-	out := internal.(*config.SchedulerConfiguration)
-
-	return out, nil
-}
-
 func (o *Options) run(ctx context.Context) error {
 	if len(o.ConfigFile) > 0 {
 		c, err := configloader.LoadFromFile(o.ConfigFile)
@@ -117,17 +98,16 @@ func NewCommandStartGardenerScheduler(ctx context.Context) *cobra.Command {
 	opts := &Options{
 		config: new(config.SchedulerConfiguration),
 	}
-	config, err := opts.applyDefaults(opts.config)
-	utilruntime.Must(err)
-	opts.config = config
 
 	cmd := &cobra.Command{
 		Use:   "gardener-scheduler",
 		Short: "Launch the Gardener scheduler",
 		Long:  `The Gardener scheduler is a controller that tries to find the best matching seed cluster for a shoot. The scheduler takes the cloud provider and the distance between the seed (hosting the control plane) and the shoot cluster region into account.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			utilruntime.Must(opts.validate(args))
-			utilruntime.Must(opts.run(ctx))
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := opts.validate(args); err != nil {
+				return err
+			}
+			return opts.run(ctx)
 		},
 	}
 

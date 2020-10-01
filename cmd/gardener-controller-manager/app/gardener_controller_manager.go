@@ -127,22 +127,6 @@ func (o *Options) validate(args []string) error {
 	return nil
 }
 
-func (o *Options) applyDefaults(in *config.ControllerManagerConfiguration) (*config.ControllerManagerConfiguration, error) {
-	external, err := o.scheme.ConvertToVersion(in, controllermanagerconfigv1alpha1.SchemeGroupVersion)
-	if err != nil {
-		return nil, err
-	}
-	o.scheme.Default(external)
-
-	internal, err := o.scheme.ConvertToVersion(external, config.SchemeGroupVersion)
-	if err != nil {
-		return nil, err
-	}
-	out := internal.(*config.ControllerManagerConfiguration)
-
-	return out, nil
-}
-
 func (o *Options) run(ctx context.Context, cancel context.CancelFunc) error {
 	if len(o.ConfigFile) > 0 {
 		c, err := o.loadConfigFromFile(o.ConfigFile)
@@ -184,23 +168,17 @@ To do that reliably and to offer a certain quality of service, it requires to co
 the main components of a Kubernetes cluster (etcd, API server, controller manager, scheduler).
 These so-called control plane components are hosted in Kubernetes clusters themselves
 (which are called Seed clusters).`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.configFileSpecified(); err != nil {
-				panic(err)
+				return err
 			}
 			if err := opts.validate(args); err != nil {
-				panic(err)
+				return err
 			}
-			if err := opts.run(ctx, cancel); err != nil {
-				panic(err)
-			}
+			return opts.run(ctx, cancel)
 		},
 	}
 
-	opts.config, err = opts.applyDefaults(opts.config)
-	if err != nil {
-		panic(err)
-	}
 	opts.AddFlags(cmd.Flags())
 	return cmd
 }
