@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
+	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -210,7 +211,23 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 		}
 	}
 
-	return b.deployCloudConfigExecutionManagedResource(ctx)
+	if err := b.deployCloudConfigExecutionManagedResource(ctx); err != nil {
+		return err
+	}
+
+	// TODO: remove in a future release
+	// Clean up the stale vpa-webhook-config MutatingWebhookConfiguration.
+	// We can delete vpa-webhook-config as the new vpa-webhook-config-shoot will be created by the shoot-core ManagedResource.
+	if b.Shoot.WantsVerticalPodAutoscaler {
+		webhook := &admissionregistrationv1beta1.MutatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config"},
+		}
+		if err := b.K8sShootClient.Client().Delete(ctx, webhook); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // deployCloudConfigExecutionManagedResource creates the cloud config managed resource that contains:
