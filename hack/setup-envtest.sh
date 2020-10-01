@@ -101,7 +101,7 @@ function fetch_envtest_tools {
   tar -C "${dest_dir}" --strip-components=1 -zvxf "$envtest_tools_archive_path"
 }
 
-bin_dir="$(realpath "$(dirname $0)/../bin")"
+bin_dir="$(git rev-parse --show-toplevel)/bin"
 kb_root_dir="$bin_dir/kubebuilder"
 
 mkdir -p            "$kb_root_dir"
