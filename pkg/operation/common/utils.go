@@ -352,12 +352,6 @@ func DeleteVpa(ctx context.Context, c client.Client, namespace string, isShoot b
 			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-vpa-admission-controller", Namespace: namespace}},
 		)
 	} else {
-		// TODO: remove in a future release
-		// Clean up the stale MutatingWebhookConfiguration
-		resources = append(resources,
-			&admissionregistrationv1beta1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config"}},
-		)
-
 		resources = append(resources,
 			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:actor"}},
 			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "gardener.cloud:vpa:seed:admission-controller"}},

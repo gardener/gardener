@@ -657,6 +657,18 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		}
 	}
 
+	// TODO: remove in a future release
+	// Clean up the stale vpa-webhook-config MutatingWebhookConfiguration.
+	// We can delete vpa-webhook-config as the new vpa-webhook-config-seed will be created with the apply of the seed-boostrap chart.
+	if vpaEnabled {
+		webhook := &admissionregistrationv1beta1.MutatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config"},
+		}
+		if err := k8sSeedClient.Client().Delete(ctx, webhook); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
