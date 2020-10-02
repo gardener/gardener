@@ -96,9 +96,6 @@ func NewOptions() (*Options, error) {
 	if err := configv1alpha1.AddToScheme(o.scheme); err != nil {
 		return nil, err
 	}
-	if err := gardencorev1beta1.AddToScheme(o.scheme); err != nil {
-		return nil, err
-	}
 
 	return o, nil
 }

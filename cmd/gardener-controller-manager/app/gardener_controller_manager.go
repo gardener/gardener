@@ -23,7 +23,6 @@ import (
 	"os"
 
 	"github.com/gardener/gardener/cmd/utils"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -47,7 +46,6 @@ import (
 	"k8s.io/client-go/informers"
 	kubeinformers "k8s.io/client-go/informers"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
 )
@@ -79,9 +77,6 @@ func NewOptions() (*Options, error) {
 		return nil, err
 	}
 	if err := controllermanagerconfigv1alpha1.AddToScheme(o.scheme); err != nil {
-		return nil, err
-	}
-	if err := gardencorev1beta1.AddToScheme(scheme.Scheme); err != nil {
 		return nil, err
 	}
 

@@ -18,19 +18,18 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/client-go/kubernetes/scheme"
-
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config/install"
+
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-var Scheme *runtime.Scheme
+var scheme *runtime.Scheme
 
 func init() {
-	Scheme = scheme.Scheme
-	install.Install(Scheme)
+	scheme = runtime.NewScheme()
+	install.Install(scheme)
 }
 
 // LoadFromFile takes a filename and de-serializes the contents into SchedulerConfiguration object.
@@ -52,7 +51,7 @@ func Load(data []byte) (*config.SchedulerConfiguration, error) {
 		return cfg, nil
 	}
 
-	configObj, gvk, err := serializer.NewCodecFactory(Scheme).UniversalDecoder().Decode(data, nil, cfg)
+	configObj, gvk, err := serializer.NewCodecFactory(scheme).UniversalDecoder().Decode(data, nil, cfg)
 	if err != nil {
 		return nil, err
 	}
