@@ -28,6 +28,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 // DeprecatedCreateWorker creates and runs a worker thread that just processes items in the
@@ -50,7 +51,20 @@ func DeprecatedCreateWorker(ctx context.Context, queue workqueue.RateLimitingInt
 // CreateWorker creates and runs a worker thread that just processes items in the
 // specified queue. The worker will run until stopCh is closed. The worker will be
 // added to the wait group when started and marked done when finished.
-func CreateWorker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler reconcile.Reconciler, waitGroup *sync.WaitGroup, workerCh chan int) {
+// The given context is injected into the `reconciler` if it implements `inject.Stoppable`.
+// Optionally passed inject functions are called with the `reconciler` but potentially returned errors are disregarded.
+func CreateWorker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler reconcile.Reconciler, waitGroup *sync.WaitGroup, workerCh chan int, injectFn ...inject.Func) {
+	fns := append(injectFn, func(i interface{}) error {
+		_, err := inject.StopChannelInto(ctx.Done(), i)
+		return err
+	})
+
+	for _, f := range fns {
+		if err := f(reconciler); err != nil {
+			logger.Logger.Errorf("An error occurred while reconciler injection: %v", err)
+		}
+	}
+
 	waitGroup.Add(1)
 	workerCh <- 1
 	go func() {

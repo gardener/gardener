@@ -22,7 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/utils/kubernetes"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/robfig/cron"
 	"github.com/sirupsen/logrus"
@@ -110,7 +110,7 @@ func (h *hibernationJob) Run() {
 		return
 	}
 
-	_, err = kubernetes.TryUpdateShootHibernation(ctx, gardenClient.GardenCore(), retry.DefaultBackoff, h.target.ObjectMeta,
+	_, err = kutil.TryUpdateShootHibernation(ctx, gardenClient.GardenCore(), retry.DefaultBackoff, h.target.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			if shoot.Spec.Hibernation == nil || !equality.Semantic.DeepEqual(h.target.Spec.Hibernation.Schedules, shoot.Spec.Hibernation.Schedules) {
 				return nil, fmt.Errorf("shoot %s/%s hibernation schedule changed mid-air", shoot.Namespace, shoot.Name)

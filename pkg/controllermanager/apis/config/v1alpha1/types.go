@@ -80,6 +80,9 @@ type ControllerManagerControllerConfiguration struct {
 	ShootQuota ShootQuotaControllerConfiguration `json:"shootQuota"`
 	// ShootHibernation defines the configuration of the ShootHibernation controller.
 	ShootHibernation ShootHibernationControllerConfiguration `json:"shootHibernation"`
+	// ShootReference defines the configuration of the ShootReference controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
+	// +optional
+	ShootReference *ShootReferenceControllerConfiguration `json:"shootReference,omitempty"`
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
@@ -202,6 +205,14 @@ type ShootQuotaControllerConfiguration struct {
 type ShootHibernationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// ShootReferenceControllerConfiguration defines the configuration of the
+// ShootReference controller.
+type ShootReferenceControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// shoots.
 	ConcurrentSyncs int `json:"concurrentSyncs"`
 }
 

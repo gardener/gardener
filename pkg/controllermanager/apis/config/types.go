@@ -69,6 +69,8 @@ type ControllerManagerControllerConfiguration struct {
 	ShootQuota ShootQuotaControllerConfiguration
 	// ShootHibernation defines the configuration of the ShootHibernation controller.
 	ShootHibernation ShootHibernationControllerConfiguration
+	// ShootReference defines the configuration of the ShootReference controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
+	ShootReference *ShootReferenceControllerConfiguration
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
@@ -183,6 +185,14 @@ type ShootQuotaControllerConfiguration struct {
 type ShootHibernationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
+	ConcurrentSyncs int
+}
+
+// ShootReferenceControllerConfiguration defines the configuration of the
+// ShootReference controller.
+type ShootReferenceControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// shoots.
 	ConcurrentSyncs int
 }
 

@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -30,8 +32,30 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// PatchFinalizers adds the given finalizers to the object via a patch request.
+func PatchFinalizers(ctx context.Context, c client.Client, obj controllerutil.Object, finalizers ...string) error {
+	beforePatch := obj.DeepCopyObject()
+
+	for _, finalizer := range finalizers {
+		controllerutil.AddFinalizer(obj, finalizer)
+	}
+
+	return c.Patch(ctx, obj, client.MergeFromWithOptions(beforePatch, client.MergeFromWithOptimisticLock{}))
+}
+
+// PatchRemoveFinalizers removes the given finalizers from the object via a patch request.
+func PatchRemoveFinalizers(ctx context.Context, c client.Client, obj controllerutil.Object, finalizers ...string) error {
+	beforePatch := obj.DeepCopyObject()
+
+	for _, finalizer := range finalizers {
+		controllerutil.RemoveFinalizer(obj, finalizer)
+	}
+
+	return c.Patch(ctx, obj, client.MergeFromWithOptions(beforePatch, client.MergeFromWithOptimisticLock{}))
+}
+
 // EnsureFinalizer ensure the <finalizer> is present for the object.
-func EnsureFinalizer(ctx context.Context, c client.Client, obj kutil.Object, finalizer string) error {
+func EnsureFinalizer(ctx context.Context, c client.Client, obj controllerutil.Object, finalizer string) error {
 	if err := kutil.TryUpdate(ctx, retry.DefaultBackoff, c, obj, func() error {
 		finalizers := sets.NewString(obj.GetFinalizers()...)
 		finalizers.Insert(finalizer)
@@ -44,13 +68,16 @@ func EnsureFinalizer(ctx context.Context, c client.Client, obj kutil.Object, fin
 }
 
 // RemoveGardenerFinalizer removes the gardener finalizer from the object.
-func RemoveGardenerFinalizer(ctx context.Context, c client.Client, obj kutil.Object) error {
+func RemoveGardenerFinalizer(ctx context.Context, c client.Client, obj controllerutil.Object) error {
 	return RemoveFinalizer(ctx, c, obj, gardencorev1beta1.GardenerName)
 }
 
 // RemoveFinalizer removes the <finalizer> from the object.
-func RemoveFinalizer(ctx context.Context, c client.Client, obj kutil.Object, finalizer string) error {
+func RemoveFinalizer(ctx context.Context, c client.Client, obj controllerutil.Object, finalizer string) error {
 	if err := kutil.TryUpdate(ctx, retry.DefaultBackoff, c, obj, func() error {
+		if len(obj.GetFinalizers()) == 0 {
+			return nil
+		}
 		finalizers := sets.NewString(obj.GetFinalizers()...)
 		finalizers.Delete(finalizer)
 		obj.SetFinalizers(finalizers.UnsortedList())

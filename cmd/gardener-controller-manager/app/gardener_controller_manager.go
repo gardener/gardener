@@ -184,16 +184,14 @@ To do that reliably and to offer a certain quality of service, it requires to co
 the main components of a Kubernetes cluster (etcd, API server, controller manager, scheduler).
 These so-called control plane components are hosted in Kubernetes clusters themselves
 (which are called Seed clusters).`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := opts.configFileSpecified(); err != nil {
-				panic(err)
+				return err
 			}
 			if err := opts.validate(args); err != nil {
-				panic(err)
+				return err
 			}
-			if err := opts.run(ctx, cancel); err != nil {
-				panic(err)
-			}
+			return opts.run(ctx, cancel)
 		},
 	}
 
@@ -298,9 +296,12 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 	leaderElectionCtx, leaderElectionCancel := context.WithCancel(context.Background())
 
 	// Prepare a reusable run function.
-	run := func(ctx context.Context) {
+	run := func(ctx context.Context) error {
 		// Start controllers
-		g.startControllers(ctx)
+		if err := g.startControllers(ctx); err != nil {
+			return err
+		}
+		return nil
 	}
 
 	// Initialize /healthz manager.
@@ -322,7 +323,9 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 		g.LeaderElection.Callbacks = leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(_ context.Context) {
 				g.Logger.Info("Acquired leadership, starting controllers.")
-				run(ctx)
+				if err := run(ctx); err != nil {
+					g.Logger.Errorf("failed to run controllers: %v", err)
+				}
 				leaderElectionCancel()
 			},
 			OnStoppedLeading: func() {
@@ -340,12 +343,11 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 
 	// Leader election is disabled, thus run directly until done.
 	leaderElectionCancel()
-	run(ctx)
-	return nil
+	return run(ctx)
 }
 
-func (g *Gardener) startControllers(ctx context.Context) {
-	controller.NewGardenControllerFactory(
+func (g *Gardener) startControllers(ctx context.Context) error {
+	return controller.NewGardenControllerFactory(
 		g.ClientMap,
 		g.K8sGardenCoreInformers,
 		g.KubeInformerFactory,

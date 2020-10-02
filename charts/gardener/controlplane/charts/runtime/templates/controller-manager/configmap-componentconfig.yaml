@@ -92,6 +92,8 @@ data:
         syncPeriod: {{ required ".Values.global.controller.config.controllers.shootQuota.syncPeriod is required" .Values.global.controller.config.controllers.shootQuota.syncPeriod }}
       shootHibernation:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.shootHibernation.concurrentSyncs is required" .Values.global.controller.config.controllers.shootHibernation.concurrentSyncs }}
+      shootReference:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.shootReference.concurrentSyncs is required" .Values.global.controller.config.controllers.shootReference.concurrentSyncs }}
     leaderElection:
       leaderElect: {{ required ".Values.global.controller.config.leaderElection.leaderElect is required" .Values.global.controller.config.leaderElection.leaderElect }}
       leaseDuration: {{ required ".Values.global.controller.config.leaderElection.leaseDuration is required" .Values.global.controller.config.leaderElection.leaseDuration }}

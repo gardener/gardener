@@ -16,6 +16,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -66,7 +67,7 @@ func NewGardenControllerFactory(clientMap clientmap.ClientMap, gardenCoreInforme
 }
 
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
-func (f *GardenControllerFactory) Run(ctx context.Context) {
+func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	var (
 		// Garden core informers
 		backupBucketInformer           = f.k8sGardenCoreInformers.Core().V1beta1().BackupBuckets().Informer()
@@ -101,12 +102,12 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 
 	f.k8sGardenCoreInformers.Start(ctx.Done())
 	if !cache.WaitForCacheSync(ctx.Done(), backupBucketInformer.HasSynced, backupEntryInformer.HasSynced, controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, plantInformer.HasSynced, cloudProfileInformer.HasSynced, secretBindingInformer.HasSynced, quotaInformer.HasSynced, projectInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
-		panic("Timed out waiting for Garden core caches to sync")
+		return errors.New("Timed out waiting for Garden core caches to sync")
 	}
 
 	f.k8sInformers.Start(ctx.Done())
 	if !cache.WaitForCacheSync(ctx.Done(), configMapInformer.HasSynced, csrInformer.HasSynced, namespaceInformer.HasSynced, secretInformer.HasSynced, clusterRoleInformer.HasSynced, roleBindingInformer.HasSynced, leaseInformer.HasSynced) {
-		panic("Timed out waiting for Kube caches to sync")
+		return errors.New("Timed out waiting for Kube caches to sync")
 	}
 
 	secrets, err := garden.ReadGardenSecrets(f.k8sInformers, f.k8sGardenCoreInformers)
@@ -127,9 +128,13 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 		projectController                = projectcontroller.NewProjectController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
 		secretBindingController          = secretbindingcontroller.NewSecretBindingController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.recorder)
 		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
-		shootController                  = shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
 		eventController                  = eventcontroller.NewController(f.clientMap, f.cfg.Controllers.Event)
 	)
+
+	shootController, err := shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
+	if err != nil {
+		return fmt.Errorf("failed initializing Shoot controller: %w", err)
+	}
 
 	// Initialize the Controller metrics collection.
 	gardenmetrics.RegisterControllerMetrics(
@@ -155,7 +160,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	go quotaController.Run(ctx, f.cfg.Controllers.Quota.ConcurrentSyncs)
 	go secretBindingController.Run(ctx, f.cfg.Controllers.SecretBinding.ConcurrentSyncs)
 	go seedController.Run(ctx, f.cfg.Controllers.Seed.ConcurrentSyncs)
-	go shootController.Run(ctx, f.cfg.Controllers.ShootMaintenance.ConcurrentSyncs, f.cfg.Controllers.ShootQuota.ConcurrentSyncs, f.cfg.Controllers.ShootHibernation.ConcurrentSyncs)
+	go shootController.Run(ctx, f.cfg.Controllers.ShootMaintenance.ConcurrentSyncs, f.cfg.Controllers.ShootQuota.ConcurrentSyncs, f.cfg.Controllers.ShootHibernation.ConcurrentSyncs, f.cfg.Controllers.ShootReference.ConcurrentSyncs)
 	go eventController.Run(ctx)
 
 	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Get().GitVersion)
@@ -165,4 +170,6 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 
 	logger.Logger.Infof("I have received a stop signal and will no longer watch resources.")
 	logger.Logger.Infof("Bye Bye!")
+
+	return nil
 }
