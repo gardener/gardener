@@ -27,7 +27,7 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
-// CreateRecorder creates a record.EventRecorder that is not limited to a namespace having a specific eventSourceName
+// CreateRecorder creates a record.EventRecorder that is not limited to a namespace having a specific eventSourceName.
 func CreateRecorder(kubeClient k8s.Interface, eventSourceName string) record.EventRecorder {
 	scheme := scheme.Scheme
 

@@ -96,9 +96,6 @@ func NewOptions() (*Options, error) {
 	if err := configv1alpha1.AddToScheme(o.scheme); err != nil {
 		return nil, err
 	}
-	if err := gardencorev1beta1.AddToScheme(o.scheme); err != nil {
-		return nil, err
-	}
 
 	return o, nil
 }
@@ -138,32 +135,11 @@ func (o *Options) validate(args []string) error {
 	return nil
 }
 
-func (o *Options) applyDefaults(in *config.GardenletConfiguration) (*config.GardenletConfiguration, error) {
-	external, err := o.scheme.ConvertToVersion(in, configv1alpha1.SchemeGroupVersion)
-	if err != nil {
-		return nil, err
-	}
-	o.scheme.Default(external)
-
-	internal, err := o.scheme.ConvertToVersion(external, config.SchemeGroupVersion)
-	if err != nil {
-		return nil, err
-	}
-	out := internal.(*config.GardenletConfiguration)
-
-	return out, nil
-}
-
 func run(ctx context.Context, o *Options) error {
 	if len(o.ConfigFile) > 0 {
 		c, err := o.loadConfigFromFile(o.ConfigFile)
 		if err != nil {
 			return fmt.Errorf("unable to read the configuration file: %v", err)
-		}
-
-		c, err = o.applyDefaults(c)
-		if err != nil {
-			return err
 		}
 
 		if errs := configvalidation.ValidateGardenletConfiguration(c); len(errs) > 0 {

@@ -27,7 +27,7 @@ const (
 	// MinimalDistance Strategy determines a seed candidate for a shoot if the cloud profile are identical. Then chooses the seed with the minimal distance to the shoot.
 	MinimalDistance CandidateDeterminationStrategy = "MinimalDistance"
 	// Default Strategy is the default strategy to use when there is no configuration provided
-	Default CandidateDeterminationStrategy = SameRegion
+	Default = SameRegion
 	// SchedulerDefaultLockObjectNamespace is the default lock namespace for leader election.
 	SchedulerDefaultLockObjectNamespace = "garden"
 	// SchedulerDefaultLockObjectName is the default lock name for leader election.
