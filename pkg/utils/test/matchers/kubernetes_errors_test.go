@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -47,6 +48,34 @@ var _ = Describe("BeNotFoundError", func() {
 
 	It("should throw error when actual is not error", func() {
 		success, err := BeNotFoundError().Match("not an error")
+
+		Expect(success).Should(BeFalse())
+		Expect(err).Should(HaveOccurred())
+	})
+})
+
+var _ = Describe("BeAlreadyExistsError", func() {
+	It("should be true when error is AlreadyExists", func() {
+		err := apierrors.NewAlreadyExists(schema.GroupResource{Group: "baz", Resource: "bar"}, "foo")
+		Expect(err).To(BeAlreadyExistsError())
+	})
+
+	It("should be false when error is not k8s AlreadyExists error", func() {
+		err := apierrors.NewGone("opsie")
+		Expect(err).ToNot(BeAlreadyExistsError())
+	})
+
+	It("should be false when error is random error", func() {
+		err := fmt.Errorf("not k8s error")
+		Expect(err).ToNot(BeAlreadyExistsError())
+	})
+
+	It("should be false when error is nil", func() {
+		Expect(nil).ToNot(BeAlreadyExistsError())
+	})
+
+	It("should throw error when actual is not error", func() {
+		success, err := BeAlreadyExistsError().Match("not an error")
 
 		Expect(success).Should(BeFalse())
 		Expect(err).Should(HaveOccurred())
@@ -103,6 +132,36 @@ var _ = Describe("BeBadRequestError", func() {
 
 	It("should throw error when actual is not error", func() {
 		success, err := BeBadRequestError().Match("not an error")
+
+		Expect(success).Should(BeFalse())
+		Expect(err).Should(HaveOccurred())
+	})
+})
+
+var _ = Describe("BeNoMatchError", func() {
+	It("should be true when error is NoKindMatch", func() {
+		var err error = &meta.NoKindMatchError{}
+		Expect(err).To(BeNoMatchError())
+		err = &meta.NoResourceMatchError{}
+		Expect(err).To(BeNoMatchError())
+	})
+
+	It("should be false when error is not a NoKindMatch", func() {
+		err := apierrors.NewGone("opsie")
+		Expect(err).ToNot(BeNoMatchError())
+	})
+
+	It("should be false when error is random error", func() {
+		err := fmt.Errorf("not k8s error")
+		Expect(err).ToNot(BeNoMatchError())
+	})
+
+	It("should be false when error is nil", func() {
+		Expect(nil).ToNot(BeNoMatchError())
+	})
+
+	It("should throw error when actual is not error", func() {
+		success, err := BeNoMatchError().Match("not an error")
 
 		Expect(success).Should(BeFalse())
 		Expect(err).Should(HaveOccurred())
