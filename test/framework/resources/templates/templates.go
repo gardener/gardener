@@ -14,17 +14,19 @@
 
 package templates
 
-// SimpleLoadDeploymentName is the name of the simple load deployment template
-const SimpleLoadDeploymentName = "simple-load-deployment.yaml.tpl"
+const (
+	// SimpleLoadDeploymentName is the name of the simple load deployment template
+	SimpleLoadDeploymentName = "simple-load-deployment.yaml.tpl"
 
-// NginxDaemonSetName is the name of the nginx deamonset template
-const NginxDaemonSetName = "network-nginx-deamonset.yaml.tpl"
+	// NginxDaemonSetName is the name of the nginx deamonset template
+	NginxDaemonSetName = "network-nginx-deamonset.yaml.tpl"
 
-// GuestbookAppName is the name if the guestbook app deployment template
-const GuestbookAppName = "guestbook-app.yaml.tpl"
+	// GuestbookAppName is the name if the guestbook app deployment template
+	GuestbookAppName = "guestbook-app.yaml.tpl"
 
-// LoggerAppName is the name of the logger app deployment template
-const LoggerAppName = "logger-app.yaml.tpl"
+	// LoggerAppName is the name of the logger app deployment template
+	LoggerAppName = "logger-app.yaml.tpl"
 
-// ReserveCapacityName is the name of the reserve capacity template
-const ReserveCapacityName = "reserve-capacity.yaml.tpl"
+	// PodAntiAffinityDeploymentName is the name of the pod anti affinity deployment template
+	PodAntiAffinityDeploymentName = "pod-anti-affinity-deployment.yaml.tpl"
+)

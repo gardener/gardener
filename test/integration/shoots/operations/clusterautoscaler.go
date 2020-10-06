@@ -20,9 +20,9 @@
 		- Cleanup Workload in Shoot
 
 	Test:
-		1. Create a deployment with Pods each requesting half the capacity of a single node
-		2. Scale up the deployment and see one node added
-		3. Scale down the deployment and see one node removed (after spec.kubernetes.clusterAutoscaler.scaleDownUnneededTime|scaleDownDelayAfterAdd
+		1. Create a Deployment with affinity that does not allow Pods to be co-located in the same Node
+		2. Scale up the Deployment and see one Node added (because of the Pod affinity)
+		3. Scale down the Deployment and see one Node removed (after spec.kubernetes.clusterAutoscaler.scaleDownUnneededTime|scaleDownDelayAfterAdd)
 	Expected Output
 		- Scale-up/down should work properly
  **/
@@ -43,14 +43,13 @@ import (
 	"github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	reserveCapacityDeploymentName      = "reserve-capacity"
-	reserveCapacityDeploymentNamespace = metav1.NamespaceDefault
+	podAntiAffinityDeploymentName      = "pod-anti-affinity"
+	podAntiAffinityDeploymentNamespace = metav1.NamespaceDefault
 
 	scaleDownDelayAfterAdd = 1 * time.Minute
 	scaleDownUnneededTime  = 1 * time.Minute
@@ -101,38 +100,20 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		})
 		framework.ExpectNoError(err)
 
-		nodeList, err := framework.GetAllNodesInWorkerPool(ctx, f.ShootClient, &workerPoolName)
-		framework.ExpectNoError(err)
-
-		origNodeCount := len(nodeList.Items)
-		gomega.Expect(origNodeCount).To(gomega.BeEquivalentTo(origMinWorkers), "shoot should have minimum node count before the test")
-
-		ginkgo.By("creating reserve-capacity deployment")
-		// take half the node allocatable capacity as requests for the deployment
-		nodeAllocatable := nodeList.Items[0].Status.Allocatable
-		requestCPUMilli := nodeAllocatable.Cpu().ScaledValue(resource.Milli) / 2
-		requestMemoryMegs := nodeAllocatable.Memory().ScaledValue(resource.Mega) / 2
-
-		values := reserveCapacityValues{
-			Name:      reserveCapacityDeploymentName,
-			Namespace: reserveCapacityDeploymentNamespace,
-			Replicas:  origMinWorkers,
-			Requests: struct {
-				CPU    string
-				Memory string
-			}{
-				CPU:    resource.NewScaledQuantity(requestCPUMilli, resource.Milli).String(),
-				Memory: resource.NewScaledQuantity(requestMemoryMegs, resource.Mega).String(),
-			},
+		ginkgo.By("creating pod-anti-affinity deployment")
+		values := podAntiAffinityValues{
+			Name:       podAntiAffinityDeploymentName,
+			Namespace:  podAntiAffinityDeploymentNamespace,
+			Replicas:   origMinWorkers,
 			WorkerPool: workerPoolName,
 		}
-		err = f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.ReserveCapacityName, values)
+		err = f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.PodAntiAffinityDeploymentName, values)
 		framework.ExpectNoError(err)
 
 		err = f.WaitUntilDeploymentIsReady(ctx, values.Name, values.Namespace, f.ShootClient)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("scaling up reserve-capacity deployment")
+		ginkgo.By("scaling up pod-anti-affinity deployment")
 		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.DirectClient(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, origMinWorkers+1)
 		framework.ExpectNoError(err)
 
@@ -140,11 +121,11 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		err = framework.WaitForNNodesToBeHealthyInWorkerPool(ctx, f.ShootClient, int(origMinWorkers+1), &workerPoolName, scaleUpTimeout)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("reserve-capacity deployment should get healthy again")
+		ginkgo.By("pod-anti-affinity deployment should get healthy again")
 		err = f.WaitUntilDeploymentIsReady(ctx, values.Name, values.Namespace, f.ShootClient)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("scaling down reserve-capacity deployment")
+		ginkgo.By("scaling down pod-anti-affinity deployment")
 		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.DirectClient(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, origMinWorkers)
 		framework.ExpectNoError(err)
 
@@ -162,22 +143,18 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		})
 		framework.ExpectNoError(err)
 
-		ginkgo.By("deleting reserve-capacity deployment")
+		ginkgo.By("deleting pod-anti-affinity deployment")
 		err = kutil.DeleteObject(ctx, f.ShootClient.Client(), &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: reserveCapacityDeploymentNamespace,
-				Name:      reserveCapacityDeploymentName,
+				Name:      podAntiAffinityDeploymentName,
+				Namespace: podAntiAffinityDeploymentNamespace,
 			},
 		})
 		framework.ExpectNoError(err)
 	}, cleanupTimeout))
 
 	f.Beta().Serial().CIt("should autoscale a single worker group to/from zero", func(ctx context.Context) {
-		var (
-			shoot = f.Shoot
-
-			workerPoolName = shoot.Spec.Provider.Workers[0].Name
-		)
+		var shoot = f.Shoot
 
 		origClusterAutoscalerConfig = shoot.Spec.Kubernetes.ClusterAutoscaler.DeepCopy()
 		origWorkers = shoot.Spec.Provider.Workers
@@ -219,39 +196,21 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		nodeCount := len(nodeList.Items)
 		gomega.Expect(nodeCount).To(gomega.BeEquivalentTo(testWorkerPool.Minimum), "shoot should have minimum node count before the test")
 
-		ginkgo.By("creating reserve-capacity deployment")
-
-		// As  testWorkerpool doesn't have the node objects, fetching the nodesList from original worker-pool,
-		// to calculate the requestCPUMilli/requestMemoryMegs of the workload.
-		origNodeList, err := framework.GetAllNodesInWorkerPool(ctx, f.ShootClient, &workerPoolName)
-		framework.ExpectNoError(err)
-
-		// take half the node allocatable capacity as requests for the deployment
-		nodeAllocatable := origNodeList.Items[0].Status.Allocatable
-		requestCPUMilli := nodeAllocatable.Cpu().ScaledValue(resource.Milli) / 2
-		requestMemoryMegs := nodeAllocatable.Memory().ScaledValue(resource.Mega) / 2
-
-		values := reserveCapacityValues{
-			Name:      reserveCapacityDeploymentName,
-			Namespace: reserveCapacityDeploymentNamespace,
-			Replicas:  0, // This is to test the scale-from-zero.
-			Requests: struct {
-				CPU    string
-				Memory string
-			}{
-				CPU:    resource.NewScaledQuantity(requestCPUMilli, resource.Milli).String(),
-				Memory: resource.NewScaledQuantity(requestMemoryMegs, resource.Mega).String(),
-			},
+		ginkgo.By("creating pod-anti-affinity deployment")
+		values := podAntiAffinityValues{
+			Name:          podAntiAffinityDeploymentName,
+			Namespace:     podAntiAffinityDeploymentNamespace,
+			Replicas:      0, // This is to test the scale-from-zero.
 			WorkerPool:    testWorkerPoolName,
 			TolerationKey: testWorkerPoolName,
 		}
-		err = f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.ReserveCapacityName, values)
+		err = f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.PodAntiAffinityDeploymentName, values)
 		framework.ExpectNoError(err)
 
 		err = f.WaitUntilDeploymentIsReady(ctx, values.Name, values.Namespace, f.ShootClient)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("scaling up reserve-capacity deployment")
+		ginkgo.By("scaling up pod-anti-affinity deployment")
 		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.DirectClient(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, 1)
 		framework.ExpectNoError(err)
 
@@ -259,11 +218,11 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		err = framework.WaitForNNodesToBeHealthyInWorkerPool(ctx, f.ShootClient, 1, &testWorkerPoolName, scaleUpTimeout)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("reserve-capacity deployment should get healthy again")
+		ginkgo.By("pod-anti-affinity deployment should get healthy again")
 		err = f.WaitUntilDeploymentIsReady(ctx, values.Name, values.Namespace, f.ShootClient)
 		framework.ExpectNoError(err)
 
-		ginkgo.By("scaling down reserve-capacity deployment")
+		ginkgo.By("scaling down pod-anti-affinity deployment")
 		err = kubernetes.ScaleDeployment(ctx, f.ShootClient.DirectClient(), client.ObjectKey{Namespace: values.Namespace, Name: values.Name}, 0)
 		framework.ExpectNoError(err)
 
@@ -288,11 +247,11 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		})
 		framework.ExpectNoError(err)
 
-		ginkgo.By("deleting reserve-capacity deployment")
+		ginkgo.By("deleting pod-anti-affinity deployment")
 		err = kutil.DeleteObject(ctx, f.ShootClient.Client(), &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: reserveCapacityDeploymentNamespace,
-				Name:      reserveCapacityDeploymentName,
+				Name:      podAntiAffinityDeploymentName,
+				Namespace: podAntiAffinityDeploymentNamespace,
 			},
 		})
 		framework.ExpectNoError(err)
@@ -300,14 +259,10 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 
 })
 
-type reserveCapacityValues struct {
-	Name      string
-	Namespace string
-	Replicas  int32
-	Requests  struct {
-		CPU    string
-		Memory string
-	}
+type podAntiAffinityValues struct {
+	Name          string
+	Namespace     string
+	Replicas      int32
 	WorkerPool    string
 	TolerationKey string
 }
