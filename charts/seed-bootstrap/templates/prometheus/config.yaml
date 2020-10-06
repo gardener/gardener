@@ -63,7 +63,7 @@ data:
       - source_labels: [ pod ]
         regex: ^.+\.tf-pod.+$
         action: drop
-      # Collect addional filesystem metrics for etcd containers. We have to rename
+      # Collect additional filesystem metrics for etcd containers. We have to rename
       # the metrics names for the matching etcd samples to a temporary metric name.
       # After that we drop all the not matching filesystem metrics and rename the
       # etcd samples back to the origin name.
