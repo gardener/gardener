@@ -120,7 +120,7 @@ spec:
     #   machineHealthTimeout: 10m
     #   machineCreationTimeout: 10m
     #   maxEvictRetries: 10
-    #   nodeConditions: 
+    #   nodeConditions:
     #   - ReadonlyFilesystem
     #   - KernelDeadlock
     #   - DiskPressure

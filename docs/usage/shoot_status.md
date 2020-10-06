@@ -2,7 +2,7 @@
 
 This document provides an overview of the [ShootStatus](https://gardener.cloud/documentation/references/core/#core.gardener.cloud/v1beta1.ShootStatus).
 
-### Conditions
+## Conditions
 
 The Shoot status consists of a set of conditions. A [Condition](https://gardener.cloud/documentation/references/core/#core.gardener.cloud/v1beta1.Condition) has the following fields:
 
@@ -24,7 +24,7 @@ Currently the available Shoot condition types are:
 
 - `ControlPlaneHealthy`
 
-  This condition type indicates whether all the control plane components deployed to the Shoot's namespace in the Seed do exist and are running fine. 
+  This condition type indicates whether all the control plane components deployed to the Shoot's namespace in the Seed do exist and are running fine.
 
 - `EveryNodeReady`
 
@@ -36,11 +36,11 @@ Currently the available Shoot condition types are:
 
 The Shoot conditions are maintained by the [shoot care control](https://github.com/gardener/gardener/blob/master/pkg/gardenlet/controller/shoot/shoot_care_control.go) of gardenlet.
 
-##### Sync Period
+### Sync Period
 
 The condition checks are executed periodically at interval which is configurable in the `GardenletConfiguration` (`.controllers.shootCare.syncPeriod`, defaults to `1m`).
 
-##### Condition Thresholds
+### Condition Thresholds
 
 The `GardenletConfiguration` also allows configuring condition thresholds (`controllers.shootCare.conditionThresholds`). Condition threshold is the amount of time to consider condition as `Processing` on condition status changes.
 
@@ -64,9 +64,10 @@ The Shoot status holds information about the last operation that is performed on
 
 The Shoot status also contains information about the last occurred error(s) (if any) during an operation. A [LastError](https://gardener.cloud/documentation/references/core/#core.gardener.cloud/v1beta1.LastError) consists of identifier of the task returned error, human-readable message of the error and error codes (if any) associated with the error.
 
-##### Error Codes
+### Error Codes
 
 Known error codes are:
+
 - `ERR_INFRA_UNAUTHORIZED` - indicates that the last error occurred due to invalid infrastructure credentials
 - `ERR_INFRA_INSUFFICIENT_PRIVILEGES` - indicates that the last error occurred due to insufficient infrastructure privileges
 - `ERR_INFRA_QUOTA_EXCEEDED` - indicates that the last error occurred due to infrastructure quota limits
