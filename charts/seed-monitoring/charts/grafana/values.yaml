@@ -20,3 +20,21 @@ extensions:
 
 konnectivityTunnel:
   enabled: false
+
+exposedComponents:
+- dashboardName: "Kube Apiserver"
+  jobName: "kube-apiserver"
+  podPrefix: "kube-apiserver"
+  fileName: "kube-apiserver.json"
+- dashboardName: "Kube Controller Manager"
+  jobName: "kube-controller-manager"
+  podPrefix: "kube-controller-manager"
+  fileName: "kube-controller-manager.json"
+- dashboardName: "Kube Scheduler"
+  jobName: "kube-scheduler"
+  podPrefix: "kube-scheduler"
+  fileName: "kube-scheduler.json"
+- dashboardName: "Cluster Autoscaler"
+  jobName: "cluster-autoscaler"
+  podPrefix: "cluster-autoscaler"
+  fileName: "cluster-autoscaler.json"

@@ -149,11 +149,14 @@ The three types of Grafana instances found in a seed cluster are configured to e
   - [Pod Logs](../../charts/seed-bootstrap/dashboards/pod-logs.json)
   - [Extensions](../../charts/seed-bootstrap/dashboards/extensions-dashboard.json)
   - [Systemd Logs](../../charts/seed-bootstrap/dashboards/systemd-logs.json)
-- Shoot Operator Grafana dashboards expose logs from the shoot cluster namespace where they belong
-  - [Kubernetes Pods](../../charts/seed-monitoring/charts/grafana/dashboards/operators/kubernetes-pods-dashboard.json)
-  - [Kubernetes Control Plane Status](../../charts/seed-monitoring/charts/grafana/dashboards/owners/kubernetes-control-plane-status-dashboard.json)
 - Shoot User Grafana dashboards expose a subset of the logs shown to operators
-  - [Kubernetes Control Plane Status](../../charts/seed-monitoring/charts/grafana/dashboards/owners/kubernetes-control-plane-status-dashboard.json)
+  - Kube Apiserver
+  - Kube Controller Manager
+  - Kube Scheduler
+  - Cluster Autoscaler
+- Shoot Operator Grafana dashboards expose logs from the shoot cluster namespace where they belong
+  - All user's dashboards
+  - [Kubernetes Pods](../../charts/seed-monitoring/charts/grafana/dashboards/operators/kubernetes-pods-dashboard.json)
 
 If the type of logs exposed in the Grafana instances needs to be changed, it is necessary to update the coresponding instance dashboard configurations.
 
