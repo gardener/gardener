@@ -68,25 +68,7 @@ var _ = Describe("Miscellaneous", func() {
 				SeedName: nil,
 			},
 		}
-
-		backupBucket1 = gardenercore.BackupBucket{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "bucket1",
-			},
-			Spec: gardenercore.BackupBucketSpec{
-				SeedName: pointer.StringPtr("seed1"),
-			},
-		}
-		backupBucket2 = gardenercore.BackupBucket{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "bucket2",
-			},
-		}
 	)
-	backupBuckets := []*gardenercore.BackupBucket{
-		&backupBucket1,
-		&backupBucket2,
-	}
 
 	shoots := []*gardenercore.Shoot{
 		&shoot1,
@@ -115,13 +97,4 @@ var _ = Describe("Miscellaneous", func() {
 		Entry("is used by shoot in migration", "seed2", true),
 		Entry("is unused", "seed3", false),
 	)
-
-	DescribeTable("#UsedByBackupBucket",
-		func(seedName string, expected bool) {
-			Expect(utils.IsSeedUsedByBackupBucket(seedName, backupBuckets)).To(Equal(expected))
-		},
-		Entry("is used by backupbucket", "seed1", true),
-		Entry("is not used by backupbucket", "seed2", false),
-	)
-
 })

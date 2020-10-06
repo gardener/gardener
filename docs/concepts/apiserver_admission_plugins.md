@@ -73,7 +73,7 @@ However, it also has some special behaviours for certain resources:
 _(enabled by default)_
 
 This admission controller reacts on `DELETE` operations for `Seed`s.
-It checks whether the seed cluster is referenced by a `BackupBucket`(s) and/or `Shoot`(s). If any of this is true, the deletion request is rejected.
+Rejects the deletion if `Shoot`(s) reference the seed cluster.
 
 ## `ShootDNS`
 
