@@ -16,25 +16,19 @@ package flow_test
 
 import (
 	"context"
+	"errors"
+	"sync"
 
-	mockflow "github.com/gardener/gardener/pkg/mock/gardener/utils/flow"
-	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"errors"
-	"sync"
-	"testing"
+	mockflow "github.com/gardener/gardener/pkg/mock/gardener/utils/flow"
+	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
-
-func TestUtils(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Flow Suite")
-}
 
 type AtomicStringList struct {
 	lock   sync.RWMutex
