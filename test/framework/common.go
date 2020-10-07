@@ -38,10 +38,8 @@ const (
 // SearchResponse represents the response from a search query to loki
 type SearchResponse struct {
 	Data struct {
-		Stats struct {
-			Summary struct {
-				TotalLinesProcessed int `json:"totalLinesProcessed"`
-			} `json:"summary"`
-		} `json:"stats"`
+		Result []struct {
+			Value []interface{} `json:"value"`
+		} `json:"result"`
 	} `json:"data"`
 }
