@@ -319,10 +319,6 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	}
 
 	if b.APIServerSNIEnabled() {
-		if err := b.DestroyControlPlaneExposure(ctx); err != nil {
-			return err
-		}
-
 		if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
 			return err
 		}

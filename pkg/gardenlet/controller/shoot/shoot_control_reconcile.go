@@ -256,18 +256,24 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
 		deployControlPlaneExposure = g.Add(flow.Task{
-			Name:         "Deploying shoot control plane exposure components",
-			Fn:           flow.TaskFn(botanist.DeployControlPlaneExposure).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(useSNI),
+			Name: "Deploying shoot control plane exposure components",
+			Fn: flow.TaskFn(botanist.DeployControlPlaneExposure).RetryUntilTimeout(defaultInterval, defaultTimeout).
+				SkipIf(useSNI).
+				SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerIsReady),
 		})
 		waitUntilControlPlaneExposureReady = g.Add(flow.Task{
-			Name:         "Waiting until Shoot control plane exposure has been reconciled",
-			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneExposureReady).SkipIf(useSNI),
+			Name: "Waiting until Shoot control plane exposure has been reconciled",
+			Fn: flow.TaskFn(botanist.WaitUntilControlPlaneExposureReady).
+				SkipIf(useSNI).
+				SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployControlPlaneExposure),
 		})
 		destroyControlPlaneExposure = g.Add(flow.Task{
-			Name:         "Destroying shoot control plane exposure",
-			Fn:           flow.TaskFn(botanist.DestroyControlPlaneExposure).DoIf(useSNI),
+			Name: "Destroying shoot control plane exposure",
+			Fn: flow.TaskFn(botanist.DestroyControlPlaneExposure).
+				DoIf(useSNI).
+				DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		waitUntilControlPlaneExposureDeleted = g.Add(flow.Task{
