@@ -303,7 +303,7 @@ groups:
 
   # Recording rules for images running on seed
   - record: seed:images:count
-    expr: count(kube_pod_container_info) by (image)
+    expr: count(kube_pod_container_info) by (image, image_id)
 
   # Recording rules for container count for the entire seed
   - record: seed:kube_pod_container_info:count
