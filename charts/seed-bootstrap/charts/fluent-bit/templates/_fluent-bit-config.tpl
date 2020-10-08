@@ -91,24 +91,32 @@
         Match kubernetes.*
         Url http://loki.garden.svc:3100/loki/api/v1/push
         LogLevel info
-        BatchWait 30
-        # (30sec)
+        BatchWait 40
         BatchSize 30720
-        # (30KiB)
         Labels {test="fluent-bit-go", lang="Golang"}
         LineFormat json
+        ReplaceOutOfOrderTS true
         DropSingleKey false
         AutoKubernetesLabels true
         LabelSelector gardener.cloud/role:shoot
-        RemoveKeys kubernetes,stream,type,time
+        RemoveKeys kubernetes,stream,type,time,tag
         LabelMapPath /fluent-bit/etc/kubernetes_label_map.json
         DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
         DynamicHostPrefix http://loki.
-        DynamicHostSulfix .svc:3100/loki/api/v1/push
+        DynamicHostSuffix .svc:3100/loki/api/v1/push
         DynamicHostRegex shoot-
         MaxRetries 3
         Timeout 10
         MinBackoff 30
+        Buffer true
+        BufferType dque
+        QueueDir  /fluent-bit/buffers
+        QueueSegmentSize 300
+        QueueSync normal
+        QueueName gardener-kubernetes
+        FallbackToTagWhenMetadataIsMissing true
+        TagKey tag
+        DropLogEntryWithoutK8sMetadata true
 
     [Output]
         Name loki
@@ -116,16 +124,21 @@
         Url http://loki.garden.svc:3100/loki/api/v1/push
         LogLevel info
         BatchWait 60
-        # (60sec)
         BatchSize 30720
-        # (30KiB)
         Labels {test="fluent-bit-go", lang="Golang"}
         LineFormat json
+        ReplaceOutOfOrderTS true
         DropSingleKey false
-        RemoveKeys kubernetes,steram,hostname,unit
+        RemoveKeys kubernetes,stream,hostname,unit
         LabelMapPath /fluent-bit/etc/systemd_label_map.json
         MaxRetries 3
         Timeout 10
         MinBackoff 30
+        Buffer true
+        BufferType dque
+        QueueDir  /fluent-bit/buffers
+        QueueSegmentSize 300
+        QueueSync normal
+        QueueName gardener-journald
 {{ end }}
 {{- end }}
