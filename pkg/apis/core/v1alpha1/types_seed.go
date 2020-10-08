@@ -231,20 +231,6 @@ type SeedTaint struct {
 }
 
 const (
-	// DeprecatedSeedTaintDisableCapacityReservation is a constant for a taint key on a seed that marks it for disabling
-	// excess capacity reservation. This can be useful for seed clusters which only host shooted seeds to reduce
-	// costs.
-	// deprecated
-	DeprecatedSeedTaintDisableCapacityReservation = "seed.gardener.cloud/disable-capacity-reservation"
-	// DeprecatedSeedTaintDisableDNS is a constant for a taint key on a seed that marks it for disabling DNS. All shoots
-	// using this seed won't get any DNS providers, DNS records, and no DNS extension controller is required to
-	// be installed here. This is useful for environment where DNS is not required.
-	// deprecated
-	DeprecatedSeedTaintDisableDNS = "seed.gardener.cloud/disable-dns"
-	// DeprecatedSeedTaintInvisible is a constant for a taint key on a seed that marks it as invisible. Invisible seeds
-	// are not considered by the gardener-scheduler.
-	// deprecated
-	DeprecatedSeedTaintInvisible = "seed.gardener.cloud/invisible"
 	// SeedTaintProtected is a constant for a taint key on a seed that marks it as protected. Protected seeds
 	// may only be used by shoots in the `garden` namespace.
 	SeedTaintProtected = "seed.gardener.cloud/protected"

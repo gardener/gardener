@@ -15,7 +15,7 @@ In the meantime, the cluster-autoscaler will trigger the scale-up because the pr
 However, this delay doesn't affect the important shoot control plane pods which will improve the user experience.
 
 It can be enabled/disabled via the `.spec.settings.excessCapacityReservation.enabled` field.
-It defaults to `true`.  
+It defaults to `true`.
 
 ## Scheduling
 
@@ -26,7 +26,7 @@ In this case, the scheduler simply ignores them as if they wouldn't exist.
 Shoots can still use the invisible seed but only by explicitly specifying the name in their `.spec.seedName` field.
 
 Seed clusters can be marked visible/invisible via the `.spec.settings.scheduling.visible` field.
-It defaults to `true`.  
+It defaults to `true`.
 
 ## Shoot DNS
 
@@ -38,7 +38,7 @@ Another use-case is a local development setup where DNS is not needed for simpli
 By setting the `.spec.settings.shootDNS.enabled` field this behavior can be controlled.
 
 ℹ️ In previous Gardener versions (< 1.5) these settings were controlled via taint keys (`seed.gardener.cloud/{disable-capacity-reservation,disable-dns,invisible}`).
-The taint keys are still supported for backwards compatibility but deprecated and will be removed in a future version.
+The taint keys are no longer supported and removed in version 1.12.
 The rationale behind it is the implementation of tolerations similar to Kubernetes tolerations.
 More information about it can be found in [#2193](https://github.com/gardener/gardener/issues/2193).
 

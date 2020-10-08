@@ -98,15 +98,6 @@ var _ = Describe("helper", func() {
 			Expect(TaintsAreTolerated(taints, tolerations)).To(Equal(expectation))
 		},
 
-		Entry("only irrelevant taints",
-			[]core.SeedTaint{
-				{Key: core.DeprecatedSeedTaintDisableCapacityReservation},
-				{Key: core.DeprecatedSeedTaintInvisible},
-				{Key: core.DeprecatedSeedTaintDisableDNS},
-			},
-			[]core.Toleration{{Key: "foo"}},
-			true,
-		),
 		Entry("no taints",
 			nil,
 			[]core.Toleration{{Key: "foo"}},

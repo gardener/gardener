@@ -233,19 +233,38 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
 		})
 
-		It("should default the seed settings (w/ taints)", func() {
+		It("should remove deprecated taints from the seed settings (w/ taints)", func() {
 			obj.Spec.Taints = []SeedTaint{
-				{Key: DeprecatedSeedTaintDisableCapacityReservation},
-				{Key: DeprecatedSeedTaintInvisible},
-				{Key: DeprecatedSeedTaintDisableDNS},
+				{Key: "seed.gardener.cloud/disable-capacity-reservation"},
+				{Key: "seed.gardener.cloud/disable-dns"},
+				{Key: "seed.gardener.cloud/invisible"},
 			}
 
 			SetDefaults_Seed(obj)
 
-			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeFalse())
-			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeFalse())
-			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeFalse())
+			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
+			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
+			Expect(obj.Spec.Taints).To(BeEmpty())
+		})
+
+		It("should keep non-deprecated taints from the seed settings (w/ taints)", func() {
+			obj.Spec.Taints = []SeedTaint{
+				{Key: "seed.gardener.cloud/disable-capacity-reservation"},
+				{Key: "seed.gardener.cloud/disable-dns"},
+				{Key: "seed.gardener.cloud/invisible"},
+				{Key: SeedTaintProtected},
+			}
+
+			SetDefaults_Seed(obj)
+
+			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
+			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
+			Expect(obj.Spec.Taints).To(HaveLen(1))
+			Expect(obj.Spec.Taints[0].Key).To(Equal(SeedTaintProtected))
 		})
 
 		It("should not default the seed settings because they were provided", func() {
