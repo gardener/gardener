@@ -110,13 +110,47 @@
         MinBackoff 30
         Buffer true
         BufferType dque
-        QueueDir  /fluent-bit/buffers
+        QueueDir  /fluent-bit/buffers/operator
         QueueSegmentSize 300
         QueueSync normal
-        QueueName gardener-kubernetes
+        QueueName gardener-kubernetes-operator
         FallbackToTagWhenMetadataIsMissing true
         TagKey tag
         DropLogEntryWithoutK8sMetadata true
+        TenantID operator
+    
+    [Output]
+        Name loki
+        Match {{ .Values.exposedComponentsTagPrefix }}.kubernetes.*
+        Url http://loki.garden.svc:3100/loki/api/v1/push
+        LogLevel info
+        BatchWait 40
+        BatchSize 30720
+        Labels {test="fluent-bit-go", lang="Golang"}
+        LineFormat json
+        ReplaceOutOfOrderTS true
+        DropSingleKey false
+        AutoKubernetesLabels true
+        LabelSelector gardener.cloud/role:shoot
+        RemoveKeys kubernetes,stream,type,time,tag
+        LabelMapPath /fluent-bit/etc/kubernetes_label_map.json
+        DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
+        DynamicHostPrefix http://loki.
+        DynamicHostSuffix .svc:3100/loki/api/v1/push
+        DynamicHostRegex shoot-
+        MaxRetries 3
+        Timeout 10
+        MinBackoff 30
+        Buffer true
+        BufferType dque
+        QueueDir  /fluent-bit/buffers/user
+        QueueSegmentSize 300
+        QueueSync normal
+        QueueName gardener-kubernetes-user
+        FallbackToTagWhenMetadataIsMissing true
+        TagKey tag
+        DropLogEntryWithoutK8sMetadata true
+        TenantID user
 
     [Output]
         Name loki

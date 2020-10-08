@@ -7,6 +7,8 @@ global:
       app: fluent-bit
       role: logging
 
+authEnabled: true
+
 annotations: {}
 
 labels:

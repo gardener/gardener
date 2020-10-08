@@ -7,7 +7,7 @@ metadata:
 {{ toYaml .Values.labels | indent 4 }}
 data:
   loki.yaml: |-
-    auth_enabled: false
+    auth_enabled: {{ .Values.authEnabled }}
     ingester:
       chunk_idle_period: 3m
       chunk_block_size: 262144

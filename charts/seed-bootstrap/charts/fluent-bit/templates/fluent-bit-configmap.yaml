@@ -255,7 +255,6 @@ data:
         script              add_tag_to_record.lua
         call                add_tag_to_record
 
-
   output.conf: |-
     # Output section
 {{- include "output.conf" . }}
@@ -354,6 +353,7 @@ data:
   plugin.conf: |-
     [PLUGINS]
         Path /fluent-bit/plugins/out_loki.so
+
   modify_severity.lua: |-
     function cb_modify(tag, timestamp, record)
       local unified_severity = cb_modify_unify_severity(record)
