@@ -64,8 +64,6 @@ func (s Status) OrWorse(other Status) Status {
 // StatusLabelTransform transforms the shoot labels depending on the given Status.
 func StatusLabelTransform(status Status) func(*gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 	return func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-		// TODO: remove in a future version
-		delete(shoot.Labels, common.ShootStatusDeprecated)
 		kubernetes.SetMetaDataLabel(&shoot.ObjectMeta, common.ShootStatus, string(status))
 		return shoot, nil
 	}

@@ -286,11 +286,6 @@ const (
 	// ShootStatus is a constant for a label on a Shoot resource indicating that the Shoot's health.
 	ShootStatus = "shoot.gardener.cloud/status"
 
-	// ShootStatusDeprecated is a constant for a label on a Shoot resource indicating that the Shoot's health.
-	//
-	// Deprecated: Use `ShootStatus` instead.
-	ShootStatusDeprecated = "shoot.garden.sapcloud.io/status"
-
 	// ShootOperationDeprecated is a constant for an annotation on a Shoot in a failed state indicating that an operation shall be performed.
 	//
 	// Deprecated: Use `v1beta1constants.GardenerOperation` instead.
@@ -309,11 +304,6 @@ const (
 
 	// ShootTasks is a constant for an annotation on a Shoot which states that certain tasks should be done.
 	ShootTasks = "shoot.gardener.cloud/tasks"
-
-	// ShootTasksDeprecated is a constant for an annotation on a Shoot which states that certain tasks should be done.
-	//
-	// Deprecated: Use `ShootTasks` instead.
-	ShootTasksDeprecated = "shoot.garden.sapcloud.io/tasks"
 
 	// ShootTaskDeployInfrastructure is a name for a Shoot's infrastructure deployment task.
 	ShootTaskDeployInfrastructure = "deployInfrastructure"
