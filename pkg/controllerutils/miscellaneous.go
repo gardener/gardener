@@ -75,8 +75,6 @@ func RemoveTasks(annotations map[string]string, tasksToRemove ...string) {
 // RemoveAllTasks removes the ShootTasks annotation from the passed map.
 func RemoveAllTasks(annotations map[string]string) {
 	delete(annotations, common.ShootTasks)
-	// TODO: remove in a future release
-	delete(annotations, common.ShootTasksDeprecated)
 }
 
 func setTaskAnnotations(annotations map[string]string, tasks []string) {

@@ -173,27 +173,6 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 		numberOfAlertingSecrets             = 0
 	)
 
-	selector, err := labels.Parse(v1beta1constants.DeprecatedGardenRole)
-	if err != nil {
-		return nil, err
-	}
-	secrets, err := k8sInformers.Core().V1().Secrets().Lister().Secrets(v1beta1constants.GardenNamespace).List(selector)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, obj := range secrets {
-		secret := obj.DeepCopy()
-
-		// Retrieving basic auth secret for aggregate monitoring with a label
-		// indicating the Garden role global-monitoring.
-		if secret.Labels[v1beta1constants.DeprecatedGardenRole] == common.GardenRoleGlobalMonitoring {
-			monitoringSecret := secret
-			secretsMap[common.GardenRoleGlobalMonitoring] = monitoringSecret
-			logger.Logger.Infof("Found monitoring basic auth secret %s.", secret.Name)
-		}
-	}
-
 	selectorGardenRole, err := labels.Parse(v1beta1constants.GardenRole)
 	if err != nil {
 		return nil, err
@@ -258,6 +237,14 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 			secretsMap[common.GardenRoleAlerting] = alertingSecret
 			logger.Logger.Infof("Found alerting secret %s.", secret.Name)
 			numberOfAlertingSecrets++
+		}
+
+		// Retrieving basic auth secret for aggregate monitoring with a label
+		// indicating the Garden role global-monitoring.
+		if secret.Labels[v1beta1constants.GardenRole] == common.GardenRoleGlobalMonitoring {
+			monitoringSecret := secret
+			secretsMap[common.GardenRoleGlobalMonitoring] = monitoringSecret
+			logger.Logger.Infof("Found monitoring basic auth secret %s.", secret.Name)
 		}
 	}
 
