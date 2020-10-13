@@ -242,7 +242,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		})
 		prepareKubeAPIServerForMigration = g.Add(flow.Task{
 			Name:         "Preparing kube-apiserver in Shoot's namespace for migration, by deleting it and its respective hvpa",
-			Fn:           flow.TaskFn(botanist.PrepareKubeAPIServerForMigration).SkipIf(o.Shoot.HibernationEnabled || !kubeAPIServerDeploymentFound),
+			Fn:           flow.TaskFn(botanist.PrepareKubeAPIServerForMigration).SkipIf(!kubeAPIServerDeploymentFound),
 			Dependencies: flow.NewTaskIDs(waitForManagedResourcesDeletion, waitUntilEtcdReady),
 		})
 		waitUntilAPIServerDeleted = g.Add(flow.Task{
