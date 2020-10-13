@@ -50,11 +50,6 @@ spec:
 # taints:
 # - key: seed.gardener.cloud/protected # only shoots in the `garden` namespace can use this seed
 # - key: <some-key>
-# DEPRECATED: The below keys are deprecated in favor of the `.spec.settings` section. Please don't use them anymore and
-# switch to the new seed settings.
-# - key: seed.gardener.cloud/protected                    # only shoots in the `garden` namespace can use this seed
-# - key: seed.gardener.cloud/invisible                    # the gardener-scheduler won't consider this seed for shoots
-# - key: seed.gardener.cloud/disable-capacity-reservation # this seed will not deploy excess-capacity-reservation pods
 # volume:
 #  minimumSize: 20Gi
 #  providers:

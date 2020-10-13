@@ -149,21 +149,12 @@ func TaintsHave(taints []core.SeedTaint, key string) bool {
 	return false
 }
 
-// TaintsAreTolerated returns true when all the given taints are tolerated by the given tolerations. It ignores the
-// deprecated taints that were migrated into the new `settings` field in the Seed specification.
+// TaintsAreTolerated returns true when all the given taints are tolerated by the given tolerations.
 func TaintsAreTolerated(taints []core.SeedTaint, tolerations []core.Toleration) bool {
-	var relevantTaints []core.SeedTaint
-	for _, taint := range taints {
-		if taint.Key == core.DeprecatedSeedTaintDisableDNS || taint.Key == core.DeprecatedSeedTaintInvisible || taint.Key == core.DeprecatedSeedTaintDisableCapacityReservation {
-			continue
-		}
-		relevantTaints = append(relevantTaints, taint)
-	}
-
-	if len(relevantTaints) == 0 {
+	if len(taints) == 0 {
 		return true
 	}
-	if len(relevantTaints) > len(tolerations) {
+	if len(taints) > len(tolerations) {
 		return false
 	}
 
@@ -176,7 +167,7 @@ func TaintsAreTolerated(taints []core.SeedTaint, tolerations []core.Toleration) 
 		tolerationKeyValues[toleration.Key] = v
 	}
 
-	for _, taint := range relevantTaints {
+	for _, taint := range taints {
 		tolerationValue, ok := tolerationKeyValues[taint.Key]
 		if !ok {
 			return false

@@ -366,15 +366,6 @@ var _ = Describe("helper", func() {
 				Expect(TaintsAreTolerated(taints, tolerations)).To(Equal(expectation))
 			},
 
-			Entry("only irrelevant taints",
-				[]gardencorev1beta1.SeedTaint{
-					{Key: gardencorev1beta1.DeprecatedSeedTaintDisableCapacityReservation},
-					{Key: gardencorev1beta1.DeprecatedSeedTaintInvisible},
-					{Key: gardencorev1beta1.DeprecatedSeedTaintDisableDNS},
-				},
-				[]gardencorev1beta1.Toleration{{Key: "foo"}},
-				true,
-			),
 			Entry("no taints",
 				nil,
 				[]gardencorev1beta1.Toleration{{Key: "foo"}},
