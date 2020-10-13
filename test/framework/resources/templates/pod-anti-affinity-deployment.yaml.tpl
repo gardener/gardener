@@ -5,19 +5,29 @@ metadata:
   namespace: {{ .Namespace }}
   labels:
     app: kubernetes
-    role: reserve-capacity
+    role: pod-anti-affinity
 spec:
   replicas: {{ .Replicas }}
   selector:
     matchLabels:
       app: kubernetes
-      role: reserve-capacity
+      role: pod-anti-affinity
   template:
     metadata:
       labels:
         app: kubernetes
-        role: reserve-capacity
+        role: pod-anti-affinity
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: role
+                operator: In
+                values:
+                - pod-anti-affinity
+            topologyKey: "kubernetes.io/hostname"
       terminationGracePeriodSeconds: 5
       nodeSelector:
         worker.gardener.cloud/pool: {{ .WorkerPool }}
@@ -31,12 +41,5 @@ spec:
       - name: pause-container
         image: gcr.io/google_containers/pause-amd64:3.1
         imagePullPolicy: IfNotPresent
-        resources:
-          requests:
-            cpu: {{ .Requests.CPU }}
-            memory: {{ .Requests.Memory }}
-          limits:
-            cpu: {{ .Requests.CPU }}
-            memory: {{ .Requests.Memory }}
         securityContext:
           runAsUser: 1001
