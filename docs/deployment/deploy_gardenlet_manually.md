@@ -122,7 +122,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   # Name MUST be of form "bootstrap-token-<token id>"
-  name: bootstrap-token-sweetseed
+  name: bootstrap-token-07401b
   namespace: kube-system
 
 # Type MUST be 'bootstrap.kubernetes.io/token'
