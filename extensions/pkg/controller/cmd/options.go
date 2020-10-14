@@ -360,7 +360,11 @@ func NewSwitchOptions(pairs ...NameToAddToManagerFunc) *SwitchOptions {
 
 // AddFlags implements Option.
 func (d *SwitchOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.StringSliceVar(&d.Disabled, DisableFlag, d.Disabled, "List of controllers to disable")
+	controllerNames := make([]string, 0, len(d.nameToAddToManager))
+	for name := range d.nameToAddToManager {
+		controllerNames = append(controllerNames, name)
+	}
+	fs.StringSliceVar(&d.Disabled, DisableFlag, d.Disabled, fmt.Sprintf("List of controllers to disable %v", controllerNames))
 }
 
 // Complete implements Option.
