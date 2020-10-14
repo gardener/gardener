@@ -31,7 +31,7 @@ spec:
         imagePullPolicy: IfNotPresent
         args:
         - "discovery"
-        - --monitoringAddr=
+        - --monitoringAddr=:15014
         - --grpcAddr=
         - --httpAddr=localhost:8080
         - --httpsAddr=:{{ .Values.ports.https }}

@@ -191,5 +191,3 @@ data:
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.hvpa | indent 6 }}
 {{- end }}
-
-

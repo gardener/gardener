@@ -13,5 +13,8 @@ spec:
   - name: https-webhook # validation and injection
     port: 443
     targetPort: {{ .Values.ports.https }}
+  - name: metrics # prometheus metrics
+    port: 15014
+    targetPort: 15014
   selector:
 {{ .Values.labels | toYaml | indent 4 }}
