@@ -109,3 +109,6 @@ data:
       # controlPlaneAuthPolicy is for mounted secrets, will wait for the files.
       controlPlaneAuthPolicy: NONE
       discoveryAddress: istiod.{{ .Release.Namespace }}.svc:15012
+
+    rootNamespace: istio-system
+    enablePrometheusMerge: true
