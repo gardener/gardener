@@ -29,4 +29,8 @@ data:
 {{ end }}
 {{- if .Values.extensions.dashboards }}
 {{- toString .Values.extensions.dashboards | indent 2 }}
+{{ end }}
+{{ range $component := .Values.exposedComponents }}
+  {{ $component.fileName }}: |-
+{{ include "logging-dashboard" $component | indent 4 }}
 {{- end }}

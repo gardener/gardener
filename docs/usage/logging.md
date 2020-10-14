@@ -25,10 +25,22 @@ or with regex:
     * Extensions
     * Systemd Logs
   * User Grafana
-    * Kubernetes Control Plane Status
-  * Operator Grafana 
+    * Kube Apiserver
+    * Kube Controller Manager
+    * Kube Scheduler
+    * Cluster Autoscaler  * Operator Grafana
+  * Operator Grafana
+    * All user's dashboards
     * Kubernetes Pods
-    * Kubernetes Control Plane Status
+
+### Expose logs for component to User Grafana
+Exposing logs for a new component to the User's Grafana happens with adding a new component section into: charts/seed-monitoring/charts/grafana/values.yaml
+
+* dashboardName: The name of the dashboard. Use prefix `Logging` to make it recognizable for the users.
+* jobName: The job name of the component defined in the prometheus.
+* podPrefix: The prefix of the pod e.g. `kube-apiserver`
+* fileName: File which will be created in the container's disk with the dashboard configuration.
+
 
 ### Configuration
 #### Fluent-bit

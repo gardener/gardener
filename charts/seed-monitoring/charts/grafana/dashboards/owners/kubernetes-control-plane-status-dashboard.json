@@ -1249,32 +1249,6 @@
       }
     },
     {
-      "datasource": "loki",
-      "gridPos": {
-        "h": 11,
-        "w": 24,
-        "x": 0,
-        "y": 37
-      },
-      "id": 52,
-      "options": {
-        "showLabels": false,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": false
-      },
-      "targets": [
-        {
-          "expr": "{container_name=\"kube-apiserver\"} |~ \"$search\"",
-          "refId": "A"
-        }
-      ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "API Server Logs",
-      "type": "logs"
-    },
-    {
       "collapsed": true,
       "gridPos": {
         "h": 1,
@@ -1572,32 +1546,6 @@
             "align": false,
             "alignLevel": null
           }
-        },
-        {
-          "datasource": "loki",
-          "gridPos": {
-            "h": 11,
-            "w": 24,
-            "x": 0,
-            "y": 61
-          },
-          "id": 54,
-          "options": {
-            "showLabels": false,
-            "showTime": true,
-            "sortOrder": "Descending",
-            "wrapLogMessage": false
-          },
-          "targets": [
-            {
-              "expr": "{container_name=\"kube-controller-manager\"} |~ \"$search\"",
-              "refId": "A"
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "Kube-controller-manager logs",
-          "type": "logs"
         }
       ],
       "title": "Kube-controller-manager",
@@ -1997,32 +1945,6 @@
             "align": false,
             "alignLevel": null
           }
-        },
-        {
-          "datasource": "loki",
-          "gridPos": {
-            "h": 11,
-            "w": 24,
-            "x": 0,
-            "y": 62
-          },
-          "id": 56,
-          "options": {
-            "showLabels": false,
-            "showTime": true,
-            "sortOrder": "Descending",
-            "wrapLogMessage": false
-          },
-          "targets": [
-            {
-              "expr": "{container_name=\"kube-scheduler\"} |~ \"$search\"",
-              "refId": "A"
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "Kube-scheduler logs",
-          "type": "logs"
         }
       ],
       "title": "Kube-scheduler",
