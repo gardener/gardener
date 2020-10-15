@@ -24,7 +24,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 /*
@@ -115,10 +114,6 @@ func (h *Result) GetDetails() string {
 type HealthCheck interface {
 	// Check is the function that executes the actual health check
 	Check(context.Context, types.NamespacedName) (*SingleCheckResult, error)
-	// InjectSeedClient injects the seed client
-	InjectSeedClient(client.Client)
-	// InjectShootClient injects the shoot client
-	InjectShootClient(client.Client)
 	// SetLoggerSuffix injects the logger
 	SetLoggerSuffix(string, string)
 	// DeepCopy clones the healthCheck
