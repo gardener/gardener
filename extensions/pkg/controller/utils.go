@@ -206,6 +206,51 @@ func GetSecretByReference(ctx context.Context, c client.Client, ref *corev1.Secr
 	return secret, nil
 }
 
+// TryPatch tries to apply the given transformation function onto the given object, and to patch it afterwards with optimistic locking.
+// It retries the patch with an exponential backoff.
+func TryPatch(ctx context.Context, backoff wait.Backoff, c client.Client, obj runtime.Object, transform func() error) error {
+	return tryPatch(ctx, backoff, c, obj, c.Patch, transform)
+}
+
+// TryPatchStatus tries to apply the given transformation function onto the given object, and to patch its
+// status afterwards with optimistic locking. It retries the status patch with an exponential backoff.
+func TryPatchStatus(ctx context.Context, backoff wait.Backoff, c client.Client, obj runtime.Object, transform func() error) error {
+	return tryPatch(ctx, backoff, c, obj, c.Status().Patch, transform)
+}
+
+func tryPatch(ctx context.Context, backoff wait.Backoff, c client.Client, obj runtime.Object, patchFunc func(context.Context, runtime.Object, client.Patch, ...client.PatchOption) error, transform func() error) error {
+	key, err := client.ObjectKeyFromObject(obj)
+	if err != nil {
+		return err
+	}
+
+	resetCopy := obj.DeepCopyObject()
+	return exponentialBackoff(ctx, backoff, func() (bool, error) {
+		if err := c.Get(ctx, key, obj); err != nil {
+			return false, err
+		}
+		beforeTransform := obj.DeepCopyObject()
+		if err := transform(); err != nil {
+			return false, err
+		}
+
+		if reflect.DeepEqual(obj, beforeTransform) {
+			return true, nil
+		}
+
+		patch := client.MergeFromWithOptions(beforeTransform, client.MergeFromWithOptimisticLock{})
+
+		if err := patchFunc(ctx, obj, patch); err != nil {
+			if apierrors.IsConflict(err) {
+				reflect.ValueOf(obj).Elem().Set(reflect.ValueOf(resetCopy).Elem())
+				return false, nil
+			}
+			return false, err
+		}
+		return true, nil
+	})
+}
+
 // TryUpdate tries to apply the given transformation function onto the given object, and to update it afterwards.
 // It retries the update with an exponential backoff.
 func TryUpdate(ctx context.Context, backoff wait.Backoff, c client.Client, obj runtime.Object, transform func() error) error {

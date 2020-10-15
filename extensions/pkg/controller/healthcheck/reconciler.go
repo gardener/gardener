@@ -253,7 +253,7 @@ func (r *reconciler) updateExtensionConditionHibernated(ctx context.Context, con
 }
 
 func (r *reconciler) updateExtensionCondition(ctx context.Context, conditionBuilder gardencorev1beta1helper.ConditionBuilder, healthConditionType string, extension extensionsv1alpha1.Object) error {
-	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, extension, func() error {
+	return extensionscontroller.TryPatchStatus(ctx, retry.DefaultBackoff, r.client, extension, func() error {
 		if c := gardencorev1beta1helper.GetCondition(extension.GetExtensionStatus().GetConditions(), gardencorev1beta1.ConditionType(healthConditionType)); c != nil {
 			conditionBuilder.WithOldCondition(*c)
 		}
