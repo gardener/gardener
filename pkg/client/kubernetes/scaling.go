@@ -69,5 +69,5 @@ func scaleResource(ctx context.Context, c client.Client, obj runtime.Object, rep
 
 	// TODO: replace this with call to scale subresource once controller-runtime supports it
 	// see: https://github.com/kubernetes-sigs/controller-runtime/issues/172
-	return c.Patch(ctx, obj, client.RawPatch(types.StrategicMergePatchType, patch))
+	return c.Patch(ctx, obj, client.RawPatch(types.MergePatchType, patch))
 }
