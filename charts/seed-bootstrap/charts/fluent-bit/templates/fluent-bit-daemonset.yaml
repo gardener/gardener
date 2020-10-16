@@ -19,6 +19,17 @@ spec:
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-seed-apiserver: allowed
     spec:
+      initContainers:
+      - name: install-plugin
+        image: {{ index .Values.global.images "fluent-bit-plugin-installer" }}
+        command:
+        - cp
+        - /source/plugins/.
+        - /plugins
+        - -fr
+        volumeMounts:
+        - name: plugins
+          mountPath: "/plugins"
       containers:
       - name: fluent-bit
         image: {{ index .Values.global.images "fluent-bit" }}
@@ -52,6 +63,8 @@ spec:
         - name: varlibdockercontainers
           mountPath: /var/lib/docker/containers
           readOnly: true
+        - name: plugins
+          mountPath: /fluent-bit/plugins
       serviceAccount: fluent-bit
       serviceAccountName: fluent-bit
       automountServiceAccountToken: true
@@ -69,3 +82,5 @@ spec:
       - name: varlibdockercontainers
         hostPath:
           path: /var/lib/docker/containers
+      - name: plugins
+        emptyDir: {}

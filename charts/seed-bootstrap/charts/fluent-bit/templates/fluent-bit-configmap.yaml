@@ -238,18 +238,6 @@ data:
         Rename              msg    log
         Rename              logger source
 
-    # Kubernetes filter
-    [FILTER]
-        Name                kubernetes
-        Match               kubernetes.*
-        Kube_Tag_Prefix     kubernetes.var.log.containers.
-        Kube_URL            https://kubernetes.default.svc.cluster.local:443
-        Buffer_Size         1M
-        Labels              On
-        Annotations         On
-        tls.verify          Off
-        K8S-Logging.Exclude Off
-
     # Extensions
 {{ if .Values.additionalFilters }}
 {{- toString .Values.additionalFilters | indent 4 }}
@@ -421,16 +409,10 @@ data:
 
   kubernetes_label_map.json: |-
     {
-      "kubernetes": {
-        "container_name": "container_name",
-        "pod_name": "pod_name"
-      },
-      "type": "user",
+      "kubernetes": {{ toJson .Values.lokiLabels.kubernetesLabels }} ,
       "severity": "severity"
     }
 
   systemd_label_map.json: |-
-    {
-      "hostname": "hostname",
-      "unit": "unit"
-    }
+{{ toJson .Values.lokiLabels.systemdLabels | indent 4}}
+

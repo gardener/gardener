@@ -93,13 +93,13 @@
         LogLevel info
         BatchWait 40
         BatchSize 30720
-        Labels {test="fluent-bit-go", lang="Golang"}
+        Labels {test="fluent-bit-go"}
         LineFormat json
         ReplaceOutOfOrderTS true
         DropSingleKey false
-        AutoKubernetesLabels true
+        AutoKubernetesLabels false
         LabelSelector gardener.cloud/role:shoot
-        RemoveKeys kubernetes,stream,type,time,tag
+        RemoveKeys kubernetes,stream,time,tag
         LabelMapPath /fluent-bit/etc/kubernetes_label_map.json
         DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
         DynamicHostPrefix http://loki.
@@ -125,7 +125,7 @@
         LogLevel info
         BatchWait 60
         BatchSize 30720
-        Labels {test="fluent-bit-go", lang="Golang"}
+        Labels {test="fluent-bit-go"}
         LineFormat json
         ReplaceOutOfOrderTS true
         DropSingleKey false

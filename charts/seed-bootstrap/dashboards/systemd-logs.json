@@ -803,7 +803,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(count_over_time({unit=\"$unit\"} |~ \"$search\"[$__interval]))",
+          "expr": "sum(count_over_time({systemd_component=\"$systemd_component\"} |~ \"$search\"[$__interval]))",
           "refId": "A"
         }
       ],
@@ -872,7 +872,7 @@
       },
       "targets": [
         {
-          "expr": "{unit=\"$unit\"} |~ \"$search\"",
+          "expr": "{systemd_component=\"$systemd_component\"} |~ \"$search\"",
           "refId": "A"
         }
       ],
@@ -895,14 +895,14 @@
           "value": "containerd"
         },
         "datasource": "loki",
-        "definition": "label_values(unit)",
+        "definition": "label_values(systemd_component)",
         "hide": 0,
         "includeAll": false,
         "label": "Unit",
         "multi": false,
-        "name": "unit",
+        "name": "systemd_component",
         "options": [],
-        "query": "label_values(unit)",
+        "query": "label_values(systemd_component)",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
