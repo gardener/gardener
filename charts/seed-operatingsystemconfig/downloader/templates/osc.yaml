@@ -35,6 +35,7 @@ spec:
       [Service]
       Restart=always
       RestartSec=30
+      RuntimeMaxSec=1200
       EnvironmentFile=/etc/environment
       ExecStart=/var/lib/cloud-config-downloader/download-cloud-config.sh
       [Install]
