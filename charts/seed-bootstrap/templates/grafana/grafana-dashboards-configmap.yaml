@@ -10,3 +10,9 @@ data:
   {{ base $name }}: |-
 {{ toString $bytes | indent 4}}
   {{ end }}
+{{ if .Values.istio.enabled }}
+  {{ range $name, $bytes := .Files.Glob "dashboards/istio/**.json" }}
+  {{ base $name }}: |-
+{{ toString $bytes | indent 4}}
+  {{ end }}
+{{- end }}
