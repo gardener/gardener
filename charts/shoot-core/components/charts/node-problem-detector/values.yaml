@@ -92,3 +92,5 @@ env:
 #    valueFrom:
 #      fieldRef:
 #        fieldPath: metadata.name
+#  - name: KUBERNETES_SERVICE_HOST
+#    value: foo.bar
