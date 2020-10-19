@@ -315,6 +315,7 @@ spec:
         - --agent-port={{ .Values.konnectivityTunnel.agentPort }}
         - --admin-port={{ .Values.konnectivityTunnel.adminPort }}
         - --health-port={{ .Values.konnectivityTunnel.healthPort }}
+        - --delete-existing-uds-file=true
         resources:
 {{ toYaml .Values.konnectivityTunnelResources | indent 10 }}
         livenessProbe:
