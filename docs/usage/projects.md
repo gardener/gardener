@@ -44,6 +44,9 @@ The `.spec.namespace` field is optional and will be initialized if it's unset.
 The name of the resulting namespace will be generated and look like `garden-dev-5anj3`, i.e., it has a random suffix.
 It's also possible to adopt existing namespaces by labeling them `gardener.cloud/role=project` and `project.gardener.cloud/name=dev` beforehand (otherwise, they cannot be adopted). 
 
+When deleting a Project resource, the corresponding namespace is also deleted. 
+To keep a namespace after project deletion, an administrator/operator (not Project members!) can label the project-namespace with `namespace.gardener.cloud/keep-after-project-deletion`.
+
 The `spec.description` and `.spec.purpose` fields can be used to describe to fellow team members and Gardener operators what this project is used for.
 
 Each project has one dedicated owner, configured in `.spec.owner` using the `rbac.authorization.k8s.io/v1.Subject` type.
