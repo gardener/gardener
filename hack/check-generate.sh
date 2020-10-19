@@ -16,21 +16,22 @@
 
 set -e
 
-echo "> Generate Check"
+echo "> Generate / Vendor Check"
 
 makefile="$1/Makefile"
-check_branch="__generate_check"
+check_branch="__check"
 initialized_git=false
 stashed=false
 checked_out=false
 generated=false
+vendored=false
 
 function delete-check-branch {
   git rev-parse --verify "$check_branch" &>/dev/null && git branch -q -D "$check_branch" || :
 }
 
 function cleanup {
-  if [[ "$generated" == true ]]; then
+  if [[ "$generated" == true ]] || [[ "$vendored" == true ]]; then
     if ! clean_err="$(make -f "$makefile" clean && git reset --hard -q && git clean -qdf)"; then
       echo "Could not clean: $clean_err"
     fi
@@ -70,7 +71,7 @@ if which git &>/dev/null; then
   fi
 
   if [[ "$(git rev-parse --abbrev-ref HEAD)" == "$check_branch" ]]; then
-    echo "Already on go generate check branch, aborting"
+    echo "Already on check branch, aborting"
     exit 1
   fi
   delete-check-branch
@@ -84,15 +85,16 @@ if which git &>/dev/null; then
   checked_out=true
   git checkout -q -b "$check_branch"
   git add --all
-  git commit -q --allow-empty -m 'check-generate checkpoint'
+  git commit -q --allow-empty -m 'checkpoint'
 
   old_status="$(git status -s)"
   if ! out=$(make -f "$makefile" clean 2>&1); then
     echo "Error during calling make clean: $out"
     exit 1
   fi
-  generated=true
 
+  echo ">> make generate"
+  generated=true
   if ! out=$(make -f "$makefile" generate 2>&1); then
     echo "Error during calling make generate: $out"
     exit 1
@@ -100,11 +102,25 @@ if which git &>/dev/null; then
   new_status="$(git status -s)"
 
   if [[ "$old_status" != "$new_status" ]]; then
-    echo "go generate needs to be run:"
+    echo "make generate needs to be run:"
+    echo "$new_status"
+    exit 1
+  fi
+
+  echo ">> make revendor"
+  vendored=true
+  if ! out=$(make -f "$makefile" revendor 2>&1); then
+    echo "Error during calling make revendor: $out"
+    exit 1
+  fi
+  new_status="$(git status -s)"
+
+  if [[ "$old_status" != "$new_status" ]]; then
+    echo "make revendor needs to be run:"
     echo "$new_status"
     exit 1
   fi
 else
-  echo "No git detected, cannot run generate check"
+  echo "No git detected, cannot run vendor check"
 fi
 exit 0
