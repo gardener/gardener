@@ -50,6 +50,9 @@ spec:
         networking.gardener.cloud/to-shoot-networks: allowed
         networking.gardener.cloud/from-prometheus: allowed
     spec:
+      {{- if .Values.konnectivityTunnel.enabled }}
+      serviceAccountName: kube-apiserver
+      {{- end }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -321,8 +324,15 @@ spec:
       - name: konnectivity-server
         image: {{ index .Values.images "konnectivity-server" }}
         command:
-          - /proxy-server
+        - /replica-reloader
         args:
+        - --namespace={{ .Release.Namespace }}
+        - --deployment-name=kube-apiserver
+        - --jitter=10s
+        - --jitter-factor=5
+        - --v=2
+        - --
+        - /proxy-server
         - --uds-name=/etc/srv/kubernetes/konnectivity-server/konnectivity-server.socket
         - --logtostderr=true
         - --cluster-cert=/certs/konnectivity-server/konnectivity-server.crt
@@ -331,39 +341,45 @@ spec:
         - --agent-service-account=konnectivity-agent
         - --kubeconfig=/etc/srv/kubernetes/konnectivity-server-kubeconfig/kubeconfig
         - --authentication-audience=system:konnectivity-server
+        - --keepalive-time=1h
+        - --log-file-max-size=0
+        - --delete-existing-uds-file=true
         - --mode=http-connect
-        - --server-count={{ .Values.konnectivityTunnel.serverCount }}
         - --server-port={{ .Values.konnectivityTunnel.serverPort }}
         - --agent-port={{ .Values.konnectivityTunnel.agentPort }}
         - --admin-port={{ .Values.konnectivityTunnel.adminPort }}
         - --health-port={{ .Values.konnectivityTunnel.healthPort }}
-        - --delete-existing-uds-file=true
+        - --v=2
+        # the last argument should be server-count - the reloader injects the actual count after it
+        - --server-count
         resources:
 {{ toYaml .Values.konnectivityTunnelResources | indent 10 }}
         livenessProbe:
           httpGet:
             scheme: HTTP
+            host: 127.0.0.1
             port: {{ .Values.konnectivityTunnel.healthPort }}
             path: /healthz
-          initialDelaySeconds: 10
-          periodSeconds: 10
+          initialDelaySeconds: 30
           timeoutSeconds: 60
         ports:
-          - name: agentport
-            containerPort: {{ .Values.konnectivityTunnel.agentPort }}
-          - name: adminport
-            containerPort: {{ .Values.konnectivityTunnel.adminPort }}
-          - name: healthport
-            containerPort: {{ .Values.konnectivityTunnel.healthPort }}
+        - name: agentport
+          containerPort: {{ .Values.konnectivityTunnel.agentPort }}
+        - name: adminport
+          containerPort: {{ .Values.konnectivityTunnel.adminPort }}
+          hostPort: {{ .Values.konnectivityTunnel.adminPort }}
+        - name: healthport
+          containerPort: {{ .Values.konnectivityTunnel.healthPort }}
+          hostPort: {{ .Values.konnectivityTunnel.healthPort }}
         volumeMounts:
-          - name: konnectivity-server-certs
-            mountPath: /certs/konnectivity-server
-            readOnly: true
-          - name: konnectivity-server-kubeconfig
-            mountPath: /etc/srv/kubernetes/konnectivity-server-kubeconfig
-          - name: konnectivity-uds
-            mountPath: /etc/srv/kubernetes/konnectivity-server
-            readOnly: false
+        - name: konnectivity-server-certs
+          mountPath: /certs/konnectivity-server
+          readOnly: true
+        - name: konnectivity-server-kubeconfig
+          mountPath: /etc/srv/kubernetes/konnectivity-server-kubeconfig
+        - name: konnectivity-uds
+          mountPath: /etc/srv/kubernetes/konnectivity-server
+          readOnly: false
       {{- else }}
       - name: vpn-seed
         image: {{ index .Values.images "vpn-seed" }}
