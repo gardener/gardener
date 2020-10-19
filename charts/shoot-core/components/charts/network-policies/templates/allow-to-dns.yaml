@@ -19,7 +19,11 @@ spec:
   - to:
     - podSelector:
         matchExpressions:
-        - {key: k8s-app, operator: In, values: [kube-dns,coredns]}
+        - {key: k8s-app, operator: In, values: [kube-dns]}
+    {{- if .Values.nodeLocalDNS.enabled }}
+    - ipBlock:
+        cidr: {{ .Values.nodeLocalDNS.kubeDNSClusterIP }}/32
+    {{- end }}
     ports:
     - protocol: UDP
       port: 53

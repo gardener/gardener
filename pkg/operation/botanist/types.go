@@ -28,3 +28,6 @@ type Botanist struct {
 	DefaultDomainSecret *corev1.Secret
 	mutex               sync.RWMutex
 }
+
+// NodeLocalIPVSAddress is the IPv4 address used by node local dns when IPVS is used.
+const NodeLocalIPVSAddress = "169.254.20.10"
