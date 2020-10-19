@@ -314,13 +314,24 @@ spec:
         - --server-port={{ .Values.konnectivityTunnel.serverPort }}
         - --agent-port={{ .Values.konnectivityTunnel.agentPort }}
         - --admin-port={{ .Values.konnectivityTunnel.adminPort }}
+        - --health-port={{ .Values.konnectivityTunnel.healthPort }}
         resources:
 {{ toYaml .Values.konnectivityTunnelResources | indent 10 }}
+        livenessProbe:
+          httpGet:
+            scheme: HTTP
+            port: {{ .Values.konnectivityTunnel.healthPort }}
+            path: /healthz
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 60
         ports:
           - name: agentport
             containerPort: {{ .Values.konnectivityTunnel.agentPort }}
           - name: adminport
             containerPort: {{ .Values.konnectivityTunnel.adminPort }}
+          - name: healthport
+            containerPort: {{ .Values.konnectivityTunnel.healthPort }}
         volumeMounts:
           - name: konnectivity-server-certs
             mountPath: /certs/konnectivity-server
