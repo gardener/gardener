@@ -7,6 +7,7 @@ konnectivityTunnel:
   serverCount: 2
   agentPort: 8132
   adminPort: 8133
+  healthPort: 8134
   agentNamespace: kube-system
 probeCredentials: base64(user:pass)
 shootNetworks:
