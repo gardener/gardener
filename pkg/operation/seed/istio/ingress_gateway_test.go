@@ -27,7 +27,10 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -53,6 +56,7 @@ var _ = Describe("ingress", func() {
 		s := runtime.NewScheme()
 		Expect(corev1.AddToScheme(s)).ToNot(HaveOccurred())
 		Expect(appsv1.AddToScheme(s)).ToNot(HaveOccurred())
+		Expect(policyv1beta1.AddToScheme(s)).ToNot(HaveOccurred())
 
 		c = fake.NewFakeClientWithScheme(s)
 		renderer := cr.NewWithServerVersion(&version.Info{})
@@ -127,5 +131,40 @@ var _ = Describe("ingress", func() {
 
 		Expect(c.Get(ctx, client.ObjectKey{Name: "istio-ingressgateway", Namespace: deployNS}, svc)).To(Succeed())
 		Expect(svc.Annotations).To(HaveKeyWithValue("foo", "bar"))
+	})
+
+	Describe("poddisruption budget", func() {
+		var (
+			pdb *policyv1beta1.PodDisruptionBudget
+		)
+
+		JustBeforeEach(func() {
+			pdb = &policyv1beta1.PodDisruptionBudget{}
+
+			Expect(c.Get(
+				ctx,
+				client.ObjectKey{Name: "istio-ingressgateway", Namespace: deployNS},
+				pdb),
+			).ToNot(HaveOccurred(), "pdp get succeeds")
+		})
+
+		It("matches deployment labels", func() {
+			actualDeploy := &appsv1.Deployment{}
+
+			Expect(c.Get(
+				ctx,
+				client.ObjectKey{Name: "istio-ingressgateway", Namespace: deployNS},
+				actualDeploy),
+			).ToNot(HaveOccurred(), "igw deployment get succeeds")
+
+			s, err := metav1.LabelSelectorAsSelector(pdb.Spec.Selector)
+			Expect(err).ToNot(HaveOccurred(), "selector can be parsed")
+
+			Expect(s.Matches(labels.Set(actualDeploy.Labels))).To(BeTrue())
+		})
+
+		It("requires minimum one replica", func() {
+			Expect(pdb.Spec.MinAvailable.IntValue()).To(Equal(1))
+		})
 	})
 })

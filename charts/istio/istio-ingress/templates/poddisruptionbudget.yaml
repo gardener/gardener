@@ -1,0 +1,12 @@
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: istio-ingressgateway
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ .Values.labels | toYaml | trim | indent 4 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+{{ .Values.labels | toYaml | trim | indent 6 }}
