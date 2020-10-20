@@ -46,7 +46,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[5m])) by (node) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node) - 1) by (label_worker_garden_sapcloud_io_group)",
+          "expr": "avg(sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[$__rate_interval])) by (node) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node) - 1) by (label_worker_garden_sapcloud_io_group)",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{label_worker_garden_sapcloud_io_group}}",
@@ -553,7 +553,7 @@
       ],
       "targets": [
         {
-          "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[2m])) by (node) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node) - 1",
+          "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[$__rate_interval])) by (node) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node) - 1",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -568,7 +568,7 @@
           "refId": "C"
         },
         {
-          "expr": "(sum(kube_node_status_allocatable_cpu_cores) by (node) - sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[5m])) by (node)) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node) - 1",
+          "expr": "(sum(kube_node_status_allocatable_cpu_cores) by (node) - sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[$__rate_interval])) by (node)) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node) - 1",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,

@@ -897,7 +897,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "count(increase(kube_pod_container_status_restarts[1h]) > 5)",
+          "expr": "count(increase(kube_pod_container_status_restarts[$__rate_interval]) > 5)",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "",
@@ -981,7 +981,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(rate (apiserver_audit_error_total{plugin=\"webhook\"} [5m])) by (app ,role) / ignoring(plugin) sum(rate(apiserver_audit_event_total [5m])) by (app, role)",
+          "expr": "sum(rate (apiserver_audit_error_total{plugin=\"webhook\"} [$__rate_interval])) by (app ,role) / ignoring(plugin) sum(rate(apiserver_audit_event_total [$__rate_interval])) by (app, role)",
           "format": "time_series",
           "instant": false,
           "interval": "",

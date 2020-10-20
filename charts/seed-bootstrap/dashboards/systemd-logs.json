@@ -263,7 +263,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "1 - avg(rate(seed:node_cpu_seconds_total:sum[5m]))",
+          "expr": "1 - avg(rate(seed:node_cpu_seconds_total:sum[$__rate_interval]))",
           "instant": false,
           "interval": "",
           "legendFormat": "",

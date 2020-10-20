@@ -149,7 +149,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(grpc_server_started_total{role=~\"$cluster\",grpc_type=\"unary\"}[5m]))",
+          "expr": "sum(rate(grpc_server_started_total{role=~\"$cluster\",grpc_type=\"unary\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "RPC Rate",
@@ -158,7 +158,7 @@
           "step": 2
         },
         {
-          "expr": "sum(rate(grpc_server_handled_total{role=~\"$cluster\",grpc_type=\"unary\",grpc_code!=\"OK\"}[5m]))",
+          "expr": "sum(rate(grpc_server_handled_total{role=~\"$cluster\",grpc_type=\"unary\",grpc_code!=\"OK\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "RPC Failed Rate",
@@ -530,7 +530,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{role=~\"$cluster\"}[5m])) by (instance, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{role=~\"$cluster\"}[$__rate_interval])) by (instance, le))",
           "hide": false,
           "intervalFactor": 2,
           "legendFormat": "{{instance}} WAL fsync",
@@ -539,7 +539,7 @@
           "step": 4
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{role=~\"$cluster\"}[5m])) by (instance, le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{role=~\"$cluster\"}[$__rate_interval])) by (instance, le))",
           "intervalFactor": 2,
           "legendFormat": "{{instance}} DB fsync",
           "metric": "etcd_disk_backend_commit_duration_seconds_bucket",
@@ -627,7 +627,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(etcd_network_client_grpc_received_bytes_total{role=~\"$cluster\"}[5m])",
+          "expr": "rate(etcd_network_client_grpc_received_bytes_total{role=~\"$cluster\"}[$__rate_interval])",
           "intervalFactor": 2,
           "legendFormat": "{{instance}} Client Traffic In",
           "metric": "etcd_network_client_grpc_received_bytes_total",
@@ -717,7 +717,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(etcd_network_client_grpc_sent_bytes_total{role=~\"$cluster\"}[5m])",
+          "expr": "rate(etcd_network_client_grpc_sent_bytes_total{role=~\"$cluster\"}[$__rate_interval])",
           "intervalFactor": 2,
           "legendFormat": "{{instance}} Client Traffic Out",
           "metric": "etcd_network_client_grpc_sent_bytes_total",
@@ -816,7 +816,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_fs_reads_bytes_total{namespace=\"kube-system\", pod=~\"etcd-(${cluster:pipe}).*\"}[2m])) by(pod, container)",
+          "expr": "sum(rate(container_fs_reads_bytes_total{namespace=\"kube-system\", pod=~\"etcd-(${cluster:pipe}).*\"}[$__rate_interval])) by(pod, container)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} / {{container}}",
@@ -900,7 +900,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_fs_writes_bytes_total{namespace=\"kube-system\", pod=~\"etcd-(${cluster:pipe}).*\"}[2m])) by(pod, container)",
+          "expr": "sum(rate(container_fs_writes_bytes_total{namespace=\"kube-system\", pod=~\"etcd-(${cluster:pipe}).*\"}[$__rate_interval])) by(pod, container)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}} / {{container}}",
@@ -1092,7 +1092,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(etcd_network_peer_received_bytes_total{role=~\"$cluster\"}[5m])) by (instance)",
+              "expr": "sum(rate(etcd_network_peer_received_bytes_total{role=~\"$cluster\"}[$__rate_interval])) by (instance)",
               "intervalFactor": 2,
               "legendFormat": "{{instance}} Peer Traffic In",
               "metric": "etcd_network_peer_received_bytes_total",
@@ -1183,7 +1183,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(etcd_network_peer_sent_bytes_total{role=~\"$cluster\"}[5m])) by (instance)",
+              "expr": "sum(rate(etcd_network_peer_sent_bytes_total{role=~\"$cluster\"}[$__rate_interval])) by (instance)",
               "hide": false,
               "interval": "",
               "intervalFactor": 2,
@@ -1273,7 +1273,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(etcd_server_proposals_failed_total{role=~\"$cluster\"}[5m]))",
+              "expr": "sum(rate(etcd_server_proposals_failed_total{role=~\"$cluster\"}[$__rate_interval]))",
               "intervalFactor": 2,
               "legendFormat": "Proposal Failure Rate",
               "metric": "etcd_server_proposals_failed_total",
@@ -1289,7 +1289,7 @@
               "step": 2
             },
             {
-              "expr": "sum(rate(etcd_server_proposals_committed_total{role=~\"$cluster\"}[5m]))",
+              "expr": "sum(rate(etcd_server_proposals_committed_total{role=~\"$cluster\"}[$__rate_interval]))",
               "intervalFactor": 2,
               "legendFormat": "Proposal Commit Rate",
               "metric": "etcd_server_proposals_committed_total",
@@ -1297,7 +1297,7 @@
               "step": 2
             },
             {
-              "expr": "sum(rate(etcd_server_proposals_applied_total{role=~\"$cluster\"}[5m]))",
+              "expr": "sum(rate(etcd_server_proposals_applied_total{role=~\"$cluster\"}[$__rate_interval]))",
               "intervalFactor": 2,
               "legendFormat": "Proposal Apply Rate",
               "refId": "D",

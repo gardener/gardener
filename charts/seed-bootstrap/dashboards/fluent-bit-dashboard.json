@@ -63,7 +63,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_input_bytes_total[5m])) by (pod, name)",
+          "expr": "sum(rate(fluentbit_input_bytes_total[$__rate_interval])) by (pod, name)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -166,7 +166,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_output_proc_bytes_total[5m])) by (pod, name)",
+          "expr": "sum(rate(fluentbit_output_proc_bytes_total[$__rate_interval])) by (pod, name)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -269,7 +269,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_input_records_total[5m])) by (pod, name)",
+          "expr": "sum(rate(fluentbit_input_records_total[$__rate_interval])) by (pod, name)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -374,7 +374,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_output_proc_records_total[5m])) by (pod, name)",
+          "expr": "sum(rate(fluentbit_output_proc_records_total[$__rate_interval])) by (pod, name)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -479,7 +479,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_output_retries_total[5m])) by (pod, name)",
+          "expr": "sum(rate(fluentbit_output_retries_total[$__rate_interval])) by (pod, name)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -488,7 +488,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(rate(fluentbit_output_retries_failed_total[5m])) by (pod, name)",
+          "expr": "sum(rate(fluentbit_output_retries_failed_total[$__rate_interval])) by (pod, name)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -593,7 +593,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_output_errors_total[5m])) by (pod, name)",
+          "expr": "sum(rate(fluentbit_output_errors_total[$__rate_interval])) by (pod, name)",
           "format": "time_series",
           "hide": false,
           "interval": "",

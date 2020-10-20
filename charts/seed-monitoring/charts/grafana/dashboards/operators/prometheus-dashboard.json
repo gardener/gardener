@@ -57,7 +57,7 @@
           "stack": false,
           "steppedLine": false,
           "targets": [{
-            "expr": "sum(irate(prometheus_tsdb_head_samples_appended_total{job=\"prometheus\"}[5m]))",
+            "expr": "sum(irate(prometheus_tsdb_head_samples_appended_total{job=\"prometheus\"}[$__rate_interval]))",
             "format": "time_series",
             "hide": false,
             "interval": "",
@@ -624,7 +624,7 @@
               "step": 20
             },
             {
-              "expr": "irate(prometheus_tsdb_head_gc_duration_seconds_count{job=\"prometheus\"}[5m])",
+              "expr": "irate(prometheus_tsdb_head_gc_duration_seconds_count{job=\"prometheus\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "collections",
@@ -714,7 +714,7 @@
           "stack": false,
           "steppedLine": false,
           "targets": [{
-              "expr": "histogram_quantile(0.99, sum(rate(prometheus_tsdb_compaction_duration_bucket{job=\"prometheus\"}[5m])) by (le))",
+              "expr": "histogram_quantile(0.99, sum(rate(prometheus_tsdb_compaction_duration_bucket{job=\"prometheus\"}[$__rate_interval])) by (le))",
               "format": "time_series",
               "hide": false,
               "interval": "",
@@ -724,7 +724,7 @@
               "step": 20
             },
             {
-              "expr": "irate(prometheus_tsdb_compactions_total{job=\"prometheus\"}[5m])",
+              "expr": "irate(prometheus_tsdb_compactions_total{job=\"prometheus\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "compactions",
@@ -732,7 +732,7 @@
               "step": 20
             },
             {
-              "expr": "irate(prometheus_tsdb_compactions_failed_total{job=\"prometheus\"}[5m])",
+              "expr": "irate(prometheus_tsdb_compactions_failed_total{job=\"prometheus\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "failed",
@@ -740,7 +740,7 @@
               "step": 20
             },
             {
-              "expr": "irate(prometheus_tsdb_compactions_triggered_total{job=\"prometheus\"}[5m])",
+              "expr": "irate(prometheus_tsdb_compactions_triggered_total{job=\"prometheus\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "triggered",
@@ -814,7 +814,7 @@
           "stack": false,
           "steppedLine": false,
           "targets": [{
-              "expr": "rate(prometheus_tsdb_reloads_total{job=\"prometheus\"}[5m])",
+              "expr": "rate(prometheus_tsdb_reloads_total{job=\"prometheus\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "reloads",
@@ -822,7 +822,7 @@
               "step": 20
             },
             {
-              "expr": "rate(prometheus_tsdb_reloads_failures_total{job=\"prometheus\"}[5m])",
+              "expr": "rate(prometheus_tsdb_reloads_failures_total{job=\"prometheus\"}[$__rate_interval])",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 2,
@@ -1060,7 +1060,7 @@
           "stack": true,
           "steppedLine": false,
           "targets": [{
-              "expr": "rate(prometheus_rule_group_iterations_missed_total{job=\"prometheus\"}[5m])",
+              "expr": "rate(prometheus_rule_group_iterations_missed_total{job=\"prometheus\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "missed",
@@ -1068,7 +1068,7 @@
               "step": 10
             },
             {
-              "expr": "rate(prometheus_rule_group_iterations_total{job=\"prometheus\"}[5m])",
+              "expr": "rate(prometheus_rule_group_iterations_total{job=\"prometheus\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "iterations",

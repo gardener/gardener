@@ -404,7 +404,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "max(sum by(instance) (rate(apiserver_request_total{code=~\"5..\"}[5m])) / sum by(instance) (rate(apiserver_request_total[5m]))) * 100",
+          "expr": "max(sum by(instance) (rate(apiserver_request_total{code=~\"5..\"}[$__rate_interval])) / sum by(instance) (rate(apiserver_request_total[$__rate_interval]))) * 100",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "",
@@ -583,7 +583,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"kube-apiserver-(.+)\"}[5m])) by (pod)",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"kube-apiserver-(.+)\"}[$__rate_interval])) by (pod)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}-current",
@@ -798,7 +798,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_request_total{code!~\"2..\"}[5m]))",
+          "expr": "sum(rate(apiserver_request_total{code!~\"2..\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Error Rate",
@@ -806,7 +806,7 @@
           "step": 60
         },
         {
-          "expr": "sum(rate(apiserver_request_total[5m]))",
+          "expr": "sum(rate(apiserver_request_total[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Request Rate",
@@ -903,7 +903,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by(verb) (rate(apiserver_latency_seconds:quantile[5m]) >= 0)",
+          "expr": "sum by(verb) (rate(apiserver_latency_seconds:quantile[$__rate_interval]) >= 0)",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{verb}}",
@@ -1297,7 +1297,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(container_cpu_usage_seconds_total{pod=~\"kube-controller-manager-(.+)\"}[5m])",
+              "expr": "rate(container_cpu_usage_seconds_total{pod=~\"kube-controller-manager-(.+)\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "current",
@@ -1499,7 +1499,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(rest_client_requests_total{host=~\".*kube-apiserver.*\", job=\"kube-controller-manager\"}[5m])) by(code)",
+              "expr": "sum(rate(rest_client_requests_total{host=~\".*kube-apiserver.*\", job=\"kube-controller-manager\"}[$__rate_interval])) by(code)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{code}}",
@@ -1600,7 +1600,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(container_cpu_usage_seconds_total{pod=~\"kube-scheduler-(.+)\"}[5m])",
+              "expr": "rate(container_cpu_usage_seconds_total{pod=~\"kube-scheduler-(.+)\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "current",
@@ -1898,7 +1898,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(rest_client_requests_total{host=~\".*kube-apiserver.*\", job=\"kube-scheduler\"}[5m])) by(code)",
+              "expr": "sum(rate(rest_client_requests_total{host=~\".*kube-apiserver.*\", job=\"kube-scheduler\"}[$__rate_interval])) by(code)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{code}}",

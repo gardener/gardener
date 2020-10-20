@@ -775,7 +775,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_snapshot_duration_seconds_bucket{role=\"main\",kind=\"Full\"}[2h])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_snapshot_duration_seconds_bucket{role=\"main\",kind=\"Full\"}[$__rate_interval])) by (le))",
           "hide": false,
           "instant": false,
           "intervalFactor": 1,
@@ -785,7 +785,7 @@
           "step": 4
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_snapshot_duration_seconds_bucket{role=\"main\",kind=\"Incr\"}[10m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(etcdbr_snapshot_duration_seconds_bucket{role=\"main\",kind=\"Incr\"}[$__rate_interval])) by (le))",
           "hide": false,
           "instant": false,
           "legendFormat": "Delta",
@@ -1219,7 +1219,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total{role=\"main\",job=\"kube-etcd3-backup-restore\"}[5m]) * 100",
+          "expr": "rate(process_cpu_seconds_total{role=\"main\",job=\"kube-etcd3-backup-restore\"}[$__rate_interval]) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "CPU",
