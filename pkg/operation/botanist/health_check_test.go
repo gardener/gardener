@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	. "github.com/onsi/ginkgo"
@@ -132,11 +133,16 @@ func newEtcd(namespace, name, role string, healthy bool, lastError *string) *dru
 	return etcd
 }
 
-func newNode(name string, healthy bool, set labels.Set) *corev1.Node {
+func newNode(name string, healthy bool, labels labels.Set, kubeletVersion string) *corev1.Node {
 	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
-			Labels: set,
+			Labels: labels,
+		},
+		Status: corev1.NodeStatus{
+			NodeInfo: corev1.NodeSystemInfo{
+				KubeletVersion: kubeletVersion,
+			},
 		},
 	}
 
@@ -214,7 +220,8 @@ var _ = Describe("health check", func() {
 			},
 		}
 
-		seedNamespace = "shoot--foo--bar"
+		seedNamespace     = "shoot--foo--bar"
+		kubernetesVersion = semver.MustParse("1.19.3")
 
 		// control plane deployments
 		gardenerResourceManagerDeployment = newDeployment(seedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager, v1beta1constants.GardenRoleControlPlane, true)
@@ -289,7 +296,7 @@ var _ = Describe("health check", func() {
 				deploymentLister = constDeploymentLister(deployments)
 				etcdLister       = constEtcdLister(etcds)
 				workerLister     = constWorkerLister(workers)
-				checker          = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil)
+				checker          = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion)
 			)
 
 			exitCondition, err := checker.CheckControlPlane(shoot, seedNamespace, condition, deploymentLister, etcdLister, workerLister)
@@ -438,7 +445,7 @@ var _ = Describe("health check", func() {
 		func(conditions []resourcesv1alpha1.ManagedResourceCondition, upToDate bool, conditionMatcher types.GomegaMatcher) {
 			var (
 				mr      = new(resourcesv1alpha1.ManagedResource)
-				checker = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil)
+				checker = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion)
 			)
 
 			if !upToDate {
@@ -551,7 +558,7 @@ var _ = Describe("health check", func() {
 		func(nodes []*corev1.Node, workerPools []gardencorev1beta1.Worker, conditionMatcher types.GomegaMatcher) {
 			var (
 				nodeLister = constNodeLister(nodes)
-				checker    = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil)
+				checker    = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion)
 			)
 
 			exitCondition, err := checker.CheckClusterNodes(workerPools, condition, nodeLister)
@@ -560,7 +567,7 @@ var _ = Describe("health check", func() {
 		},
 		Entry("all healthy",
 			[]*corev1.Node{
-				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}),
+				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, kubernetesVersion.Original()),
 			},
 			[]gardencorev1beta1.Worker{
 				{
@@ -572,7 +579,7 @@ var _ = Describe("health check", func() {
 			BeNil()),
 		Entry("node not healthy",
 			[]*corev1.Node{
-				newNode(nodeName, false, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}),
+				newNode(nodeName, false, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, kubernetesVersion.Original()),
 			},
 			[]gardencorev1beta1.Worker{
 				{
@@ -614,7 +621,7 @@ var _ = Describe("health check", func() {
 			beConditionWithStatusAndCodes(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ErrorConfigurationProblem)),
 		Entry("not enough nodes in worker pool",
 			[]*corev1.Node{
-				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}),
+				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, kubernetesVersion.Original()),
 			},
 			[]gardencorev1beta1.Worker{
 				{
@@ -631,7 +638,7 @@ var _ = Describe("health check", func() {
 			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool '%s' to meet minimum desired machine count. (%d/%d).", workerPoolName2, 0, 1))),
 		Entry("not enough nodes in worker pool",
 			[]*corev1.Node{
-				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}),
+				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, kubernetesVersion.Original()),
 			},
 			[]gardencorev1beta1.Worker{
 				{
@@ -646,6 +653,42 @@ var _ = Describe("health check", func() {
 				},
 			},
 			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool '%s' to meet minimum desired machine count. (%d/%d).", workerPoolName2, 0, 1))),
+		Entry("too old Kubernetes patch version",
+			[]*corev1.Node{
+				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, "v1.19.2"),
+			},
+			[]gardencorev1beta1.Worker{
+				{
+					Name:    workerPoolName1,
+					Maximum: 10,
+					Minimum: 1,
+				},
+			},
+			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (v1.19.2) does not match the desired Kubernetes version (v%s)", nodeName, kubernetesVersion.Original()))),
+		Entry("same Kubernetes patch version",
+			[]*corev1.Node{
+				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, "v1.19.3"),
+			},
+			[]gardencorev1beta1.Worker{
+				{
+					Name:    workerPoolName1,
+					Maximum: 10,
+					Minimum: 1,
+				},
+			},
+			BeNil()),
+		Entry("different Kubernetes minor version (all healthy)",
+			[]*corev1.Node{
+				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, "v1.18.2"),
+			},
+			[]gardencorev1beta1.Worker{
+				{
+					Name:    workerPoolName1,
+					Maximum: 10,
+					Minimum: 1,
+				},
+			},
+			BeNil()),
 	)
 
 	DescribeTable("#CheckMonitoringControlPlane",
@@ -653,7 +696,7 @@ var _ = Describe("health check", func() {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
-				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil)
+				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion)
 			)
 
 			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, isHealthCheckObsolete, wantsAlertmanager, condition, deploymentLister, statefulSetLister)
@@ -713,7 +756,7 @@ var _ = Describe("health check", func() {
 		func(statefulSets []*appsv1.StatefulSet, isHealthCheckObsolete bool, conditionMatcher types.GomegaMatcher) {
 			var (
 				statefulSetLister = constStatefulSetLister(statefulSets)
-				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil)
+				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion)
 			)
 
 			exitCondition, err := checker.CheckLoggingControlPlane(seedNamespace, isHealthCheckObsolete, condition, statefulSetLister)
@@ -742,7 +785,7 @@ var _ = Describe("health check", func() {
 
 	DescribeTable("#FailedCondition",
 		func(thresholds map[gardencorev1beta1.ConditionType]time.Duration, lastOperation *gardencorev1beta1.LastOperation, transitionTime metav1.Time, now time.Time, condition gardencorev1beta1.Condition, expected types.GomegaMatcher) {
-			checker := botanist.NewHealthChecker(thresholds, nil, lastOperation)
+			checker := botanist.NewHealthChecker(thresholds, nil, lastOperation, kubernetesVersion)
 			tmp1, tmp2 := botanist.Now, gardencorev1beta1helper.Now
 			defer func() {
 				botanist.Now, gardencorev1beta1helper.Now = tmp1, tmp2
@@ -884,7 +927,7 @@ var _ = Describe("health check", func() {
 	// CheckExtensionCondition
 	DescribeTable("#CheckExtensionCondition - HealthCheckReport",
 		func(healthCheckOutdatedThreshold *metav1.Duration, condition gardencorev1beta1.Condition, extensionsConditions []botanist.ExtensionCondition, expected types.GomegaMatcher) {
-			checker := botanist.NewHealthChecker(nil, healthCheckOutdatedThreshold, nil)
+			checker := botanist.NewHealthChecker(nil, healthCheckOutdatedThreshold, nil, kubernetesVersion)
 			updatedCondition := checker.CheckExtensionCondition(condition, extensionsConditions)
 			if expected == nil {
 				Expect(updatedCondition).To(BeNil())
