@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -195,6 +196,9 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	}
 
 	shoot.KonnectivityTunnelEnabled = gardenletfeatures.FeatureGate.Enabled(features.KonnectivityTunnel) && kubernetesVersionGeq118
+	if konnectivityTunnelEnabled, err := strconv.ParseBool(shoot.Info.Annotations[v1beta1constants.AnnotationShootKonnectivityTunnel]); err == nil && kubernetesVersionGeq118 {
+		shoot.KonnectivityTunnelEnabled = konnectivityTunnelEnabled
+	}
 
 	needsClusterAutoscaler, err := gardencorev1beta1helper.ShootWantsClusterAutoscaler(shootObject)
 	if err != nil {

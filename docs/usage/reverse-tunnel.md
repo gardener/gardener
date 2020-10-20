@@ -32,12 +32,15 @@ How it should look like at the end:
 
 ### How to Configure
 
-To enable the usage of the reverse tunnel feature, the Gardenlet `KonnectivityTunnel` feature-gate must be set to `true`.
+To enable the usage of the reverse tunnel feature, either the Gardenlet `KonnectivityTunnel` feature-gate must be set to `true` as shown below or the shoot must be annotated with `"alpha.featuregates.shoot.gardener.cloud/konnectivity-tunnel: true"`.
+
 ```yaml
 featureGates:
   KonnectivityTunnel: true
 ``` 
-Please refer to the examples [here](https://github.com/gardener/gardener/blob/master/example/20-componentconfig-gardenlet.yaml) for more information. 
+Please refer to the examples [here](https://github.com/gardener/gardener/blob/master/example/20-componentconfig-gardenlet.yaml) for more information.
+
+To disable the feature-gate the shoot must be annotated with `"alpha.featuregates.shoot.gardener.cloud/konnectivity-tunnel: false"`
 
 Once the feature-gate is enabled, a `proxy-server` sidecar will be deployed alongside the `kube-apiserver` which will receive and redirect connections 
 to the corresponding `proxy-agent` on the shoot cluster responsible for dataplane traffic routing. 
