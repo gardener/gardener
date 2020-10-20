@@ -31,7 +31,10 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
@@ -65,6 +68,7 @@ var _ = Describe("istiod", func() {
 		s := runtime.NewScheme()
 		Expect(corev1.AddToScheme(s)).ToNot(HaveOccurred())
 		Expect(appsv1.AddToScheme(s)).ToNot(HaveOccurred())
+		Expect(policyv1beta1.AddToScheme(s)).ToNot(HaveOccurred())
 		// Expect(networkingv1beta1.AddToScheme(s)).NotTo(HaveOccurred())
 		// Expect(networkingv1alpha3.AddToScheme(s)).NotTo(HaveOccurred())
 
@@ -120,6 +124,36 @@ var _ = Describe("istiod", func() {
 		Entry("External Galley is disabled", simplEnv("PILOT_EXTERNAL_GALLEY", "false")),
 		Entry("CLUSTER_ID is Kubernetes", simplEnv("CLUSTER_ID", "Kubernetes")),
 	)
+
+	Describe("poddisruption budget", func() {
+		var (
+			pdb *policyv1beta1.PodDisruptionBudget
+		)
+
+		JustBeforeEach(func() {
+			pdb = &policyv1beta1.PodDisruptionBudget{}
+
+			Expect(c.Get(
+				ctx,
+				client.ObjectKey{Name: "istiod", Namespace: deployNS},
+				pdb),
+			).ToNot(HaveOccurred(), "pdp get succeeds")
+		})
+
+		It("matches deployment labels", func() {
+			actualDeploy := &appsv1.Deployment{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: "istiod", Namespace: deployNS}, actualDeploy)).ToNot(HaveOccurred())
+
+			s, err := metav1.LabelSelectorAsSelector(pdb.Spec.Selector)
+			Expect(err).ToNot(HaveOccurred(), "selector can be parsed")
+
+			Expect(s.Matches(labels.Set(actualDeploy.Labels))).To(BeTrue())
+		})
+
+		It("requires minimum one replica", func() {
+			Expect(pdb.Spec.MinAvailable.IntValue()).To(Equal(1))
+		})
+	})
 
 	// 	It("has correct mesh configuration", func() {
 	// 		meshConfig := &corev1.ConfigMap{}
