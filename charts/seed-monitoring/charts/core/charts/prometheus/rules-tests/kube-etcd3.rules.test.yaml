@@ -32,9 +32,9 @@ tests:
     values: '1+0x62'
   # KubeEtcdFullBackupFailed
   - series: 'etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore",role="main",kind="Full"}'
-    values: '0+0x2912'
+    values: '0+0x5790'
   - series: 'etcdbr_snapshot_required{job="kube-etcd3-backup-restore",role="main",kind="Full"}'
-    values: '1+0x2912'
+    values: '1+0x5790'
   # KubeEtcdRestorationFailed
   - series: 'etcdbr_restoration_duration_seconds_count{job="kube-etcd3-backup-restore",role="main",succeeded="false"}'
     values: '0+0x7 1 2 2'
@@ -136,7 +136,7 @@ tests:
       exp_annotations:
         description: No delta snapshot for the past at least 30 minutes.
         summary: Etcd delta snapshot failure.
-  - eval_time: 1456m
+  - eval_time: 2896m # 2 days + 16 minutes
     alertname: KubeEtcdFullBackupFailed
     exp_alerts:
     - exp_labels:
@@ -148,7 +148,7 @@ tests:
         type: seed
         visibility: operator
       exp_annotations:
-        description: No full snapshot taken in the past day.
+        description: No full snapshot taken in the past 2 days.
         summary: Etcd full snapshot failure.
   - eval_time: 5m
     alertname: KubeEtcdRestorationFailed
