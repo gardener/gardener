@@ -17,4 +17,4 @@ spec:
     -shoot-name=$SHOOT_NAME
     -project-namespace=$PROJECT_NAMESPACE
     -version=$K8S_VERSION
-  image: golang:1.13.4
+  image: golang:1.15.3
