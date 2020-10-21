@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -124,9 +123,4 @@ func ComputeStatus(lastOperation *gardencorev1beta1.LastOperation, lastErrors []
 
 	// If the last operation has succeeded then the shoot is healthy.
 	return status.OrWorse(BoolToStatus(lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded))
-}
-
-func shootIsSeed(shoot *gardencorev1beta1.Shoot) bool {
-	shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(shoot)
-	return err == nil && shootedSeed != nil
 }

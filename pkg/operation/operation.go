@@ -387,20 +387,42 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 	o.Shoot.Info = newShoot
 }
 
-// CleanShootTaskError removes the error with taskID from the Shoot's status.LastErrors array.
-// If the status.LastErrors array is empty then status.LastError is also removed.
-func (o *Operation) CleanShootTaskError(ctx context.Context, taskID string) {
-	newShoot, err := kutil.TryUpdateShootStatus(ctx, o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+// CleanShootTaskErrorAndUpdateStatusLabel removes the error with taskID from the Shoot's status.LastErrors array.
+// If the status.LastErrors array is empty then status.LastErrors is also removed. It also re-evaluates the shoot status
+// in case the last error list is empty now, and if necessary, updates the status label on the shoot.
+func (o *Operation) CleanShootTaskErrorAndUpdateStatusLabel(ctx context.Context, taskID string) {
+	updatedShoot, err := kutil.TryUpdateShootStatus(ctx, o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(o.Shoot.Info.Status.LastErrors, taskID)
 			return shoot, nil
 		},
 	)
 	if err != nil {
-		o.Logger.Errorf("Could not report shoot progress: %v", err)
+		o.Logger.Errorf("Could not update shoot's %s/%s last errors: %v", o.Shoot.Info.Namespace, o.Shoot.Info.Name, err)
 		return
 	}
-	o.Shoot.Info = newShoot
+	o.Shoot.Info = updatedShoot
+
+	if len(o.Shoot.Info.Status.LastErrors) == 0 {
+		updatedShoot, err = kutil.TryUpdateShootLabels(
+			ctx,
+			o.K8sGardenClient.GardenCore(),
+			retry.DefaultBackoff,
+			o.Shoot.Info.ObjectMeta,
+			shoot.StatusLabelTransform(
+				shoot.ComputeStatus(
+					o.Shoot.Info.Status.LastOperation,
+					o.Shoot.Info.Status.LastErrors,
+					o.Shoot.Info.Status.Conditions...,
+				),
+			),
+		)
+		if err != nil {
+			o.Logger.Errorf("Could not update shoot's %s/%s status label after removing an erroneous task: %v", o.Shoot.Info.Namespace, o.Shoot.Info.Name, err)
+			return
+		}
+		o.Shoot.Info = updatedShoot
+	}
 }
 
 // SeedVersion is a shorthand for the kubernetes version of the K8sSeedClient.

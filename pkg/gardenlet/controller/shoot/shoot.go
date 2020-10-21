@@ -21,6 +21,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -273,4 +274,9 @@ func (c *Controller) newProgressReporter(reporterFn flow.ProgressReporterFn) flo
 		return flow.NewDelayingProgressReporter(reporterFn, c.config.Controllers.Shoot.ProgressReportPeriod.Duration)
 	}
 	return flow.NewImmediateProgressReporter(reporterFn)
+}
+
+func shootIsSeed(shoot *gardencorev1beta1.Shoot) bool {
+	shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(shoot)
+	return err == nil && shootedSeed != nil
 }

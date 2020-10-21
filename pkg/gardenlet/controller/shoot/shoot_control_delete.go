@@ -66,7 +66,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 
 	err = errors.HandleErrors(errorContext,
 		func(errorID string) error {
-			o.CleanShootTaskError(ctx, errorID)
+			o.CleanShootTaskErrorAndUpdateStatusLabel(ctx, errorID)
 			return nil
 		},
 		nil,
@@ -482,7 +482,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 	if err := f.Run(flow.Opts{
 		Logger:           o.Logger,
 		ProgressReporter: c.newProgressReporter(o.ReportShootProgress),
-		ErrorCleaner:     o.CleanShootTaskError,
+		ErrorCleaner:     o.CleanShootTaskErrorAndUpdateStatusLabel,
 		ErrorContext:     errorContext,
 	}); err != nil {
 		o.Logger.Errorf("Error deleting Shoot %q: %+v", o.Shoot.Info.Name, err)

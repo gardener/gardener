@@ -86,6 +86,7 @@ func (c *Controller) prepareShootForMigration(logger *logrus.Entry, shoot *garde
 
 func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	var (
+		ctx                          = context.TODO()
 		namespace                    = &corev1.Namespace{}
 		botanist                     *botanistpkg.Botanist
 		err                          error
@@ -103,12 +104,12 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 
 	err = utilerrors.HandleErrors(errorContext,
 		func(errorID string) error {
-			o.CleanShootTaskError(context.TODO(), errorID)
+			o.CleanShootTaskErrorAndUpdateStatusLabel(ctx, errorID)
 			return nil
 		},
 		nil,
 		utilerrors.ToExecute("Create botanist", func() error {
-			return retryutils.UntilTimeout(context.TODO(), 10*time.Second, 10*time.Minute, func(context.Context) (done bool, err error) {
+			return retryutils.UntilTimeout(ctx, 10*time.Second, 10*time.Minute, func(context.Context) (done bool, err error) {
 				botanist, err = botanistpkg.New(o)
 				if err != nil {
 					return retryutils.MinorError(err)
@@ -118,7 +119,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		}),
 		utilerrors.ToExecute("Retrieve kube-apiserver deployment in the shoot namespace in the seed cluster", func() error {
 			deploymentKubeAPIServer := &appsv1.Deployment{}
-			if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploymentKubeAPIServer); err != nil {
+			if err := botanist.K8sSeedClient.Client().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploymentKubeAPIServer); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return err
 				}
@@ -130,7 +131,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 			return nil
 		}),
 		utilerrors.ToExecute("Retrieve the Shoot namespace in the Seed cluster", func() error {
-			if err := botanist.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: o.Shoot.SeedNamespace}, namespace); err != nil {
+			if err := botanist.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: o.Shoot.SeedNamespace}, namespace); err != nil {
 				if apierrors.IsNotFound(err) {
 					o.Logger.Infof("Did not find '%s' namespace in the Seed cluster - nothing to be done", o.Shoot.SeedNamespace)
 					return utilerrors.Cancel()
@@ -298,7 +299,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		Logger:           o.Logger,
 		ProgressReporter: c.newProgressReporter(o.ReportShootProgress),
 		ErrorContext:     errorContext,
-		ErrorCleaner:     o.CleanShootTaskError,
+		ErrorCleaner:     o.CleanShootTaskErrorAndUpdateStatusLabel,
 	}); err != nil {
 		o.Logger.Errorf("Failed to prepare Shoot %q for migration: %+v", o.Shoot.Info.Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
@@ -310,7 +311,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 
 func (c *Controller) finalizeShootPrepareForMigration(ctx context.Context, g gardencore.Interface, shoot *gardencorev1beta1.Shoot, o *operation.Operation) (reconcile.Result, error) {
 	if len(o.Shoot.Info.Status.UID) > 0 {
-		if err := o.DeleteClusterResourceFromSeed(context.TODO()); err != nil {
+		if err := o.DeleteClusterResourceFromSeed(ctx); err != nil {
 			lastErr := gardencorev1beta1helper.LastError(fmt.Sprintf("Could not delete Cluster resource in seed: %s", err))
 			c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastErr.Description)
 			_, updateErr := c.updateShootStatusOperationError(ctx, g, shoot, lastErr.Description, gardencorev1beta1.LastOperationTypeMigrate, *lastErr)
@@ -318,7 +319,7 @@ func (c *Controller) finalizeShootPrepareForMigration(ctx context.Context, g gar
 		}
 	}
 
-	if err := o.SwitchBackupEntryToTargetSeed(context.TODO()); err != nil {
+	if err := o.SwitchBackupEntryToTargetSeed(ctx); err != nil {
 		lastErr := gardencorev1beta1helper.LastError(fmt.Sprintf("Could not switch BackupEntry resource in Garden to new Seed: %s", err))
 		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastErr.Description)
 		_, updateErr := c.updateShootStatusOperationError(ctx, g, shoot, lastErr.Description, gardencorev1beta1.LastOperationTypeMigrate, *lastErr)
