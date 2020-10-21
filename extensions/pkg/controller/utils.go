@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"time"
 
 	controllererror "github.com/gardener/gardener/extensions/pkg/controller/error"
 	"github.com/gardener/gardener/pkg/api/extensions"
@@ -31,14 +30,12 @@ import (
 	resourcemanagerv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/wait"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/util/retry"
@@ -206,75 +203,21 @@ func GetSecretByReference(ctx context.Context, c client.Client, ref *corev1.Secr
 	return secret, nil
 }
 
+// TryPatch tries to apply the given transformation function onto the given object, and to patch it afterwards with optimistic locking.
+// It retries the patch with an exponential backoff.
+var TryPatch = kutil.TryPatch
+
+// TryPatchStatus tries to apply the given transformation function onto the given object, and to patch its
+// status afterwards with optimistic locking. It retries the status patch with an exponential backoff.
+var TryPatchStatus = kutil.TryPatchStatus
+
 // TryUpdate tries to apply the given transformation function onto the given object, and to update it afterwards.
 // It retries the update with an exponential backoff.
-func TryUpdate(ctx context.Context, backoff wait.Backoff, c client.Client, obj runtime.Object, transform func() error) error {
-	return tryUpdate(ctx, backoff, c, obj, c.Update, transform)
-}
+var TryUpdate = kutil.TryUpdate
 
 // TryUpdateStatus tries to apply the given transformation function onto the given object, and to update its
 // status afterwards. It retries the status update with an exponential backoff.
-func TryUpdateStatus(ctx context.Context, backoff wait.Backoff, c client.Client, obj runtime.Object, transform func() error) error {
-	return tryUpdate(ctx, backoff, c, obj, c.Status().Update, transform)
-}
-
-func tryUpdate(ctx context.Context, backoff wait.Backoff, c client.Client, obj runtime.Object, updateFunc func(context.Context, runtime.Object, ...client.UpdateOption) error, transform func() error) error {
-	key, err := client.ObjectKeyFromObject(obj)
-	if err != nil {
-		return err
-	}
-
-	resetCopy := obj.DeepCopyObject()
-	return exponentialBackoff(ctx, backoff, func() (bool, error) {
-		if err := c.Get(ctx, key, obj); err != nil {
-			return false, err
-		}
-
-		beforeTransform := obj.DeepCopyObject()
-		if err := transform(); err != nil {
-			return false, err
-		}
-
-		if reflect.DeepEqual(obj, beforeTransform) {
-			return true, nil
-		}
-
-		if err := updateFunc(ctx, obj); err != nil {
-			if apierrors.IsConflict(err) {
-				reflect.ValueOf(obj).Elem().Set(reflect.ValueOf(resetCopy).Elem())
-				return false, nil
-			}
-			return false, err
-		}
-		return true, nil
-	})
-}
-
-func exponentialBackoff(ctx context.Context, backoff wait.Backoff, condition wait.ConditionFunc) error {
-	duration := backoff.Duration
-
-	for i := 0; i < backoff.Steps; i++ {
-		if ok, err := condition(); err != nil || ok {
-			return err
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			adjusted := duration
-			if backoff.Jitter > 0.0 {
-				adjusted = wait.Jitter(duration, backoff.Jitter)
-			}
-			time.Sleep(adjusted)
-			duration = time.Duration(float64(duration) * backoff.Factor)
-		}
-
-		i++
-	}
-
-	return wait.ErrWaitTimeout
-}
+var TryUpdateStatus = kutil.TryUpdateStatus
 
 // WatchBuilder holds various functions which add watch controls to the passed Controller.
 type WatchBuilder []func(controller.Controller) error

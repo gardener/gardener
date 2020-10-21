@@ -105,24 +105,30 @@ type checkResultForConditionType struct {
 // ExecuteHealthCheckFunctions executes all the health check functions, injects clients and logger & aggregates the results.
 // returns an Result for each HealthConditionType (e.g  ControlPlaneHealthy)
 func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request types.NamespacedName) (*[]Result, error) {
-	_, shootClient, err := util.NewClientForShoot(ctx, a.seedClient, request.Namespace, client.Options{})
-	if err != nil {
-		msg := fmt.Errorf("failed to create shoot client in namespace '%s': %v", request.Namespace, err)
-		a.logger.Error(err, msg.Error())
-		return nil, msg
-	}
-
 	var (
-		channel = make(chan channelResult)
-		wg      sync.WaitGroup
+		shootClient client.Client
+		channel     = make(chan channelResult)
+		wg          sync.WaitGroup
 	)
 
 	wg.Add(len(a.healthChecks))
 	for _, hc := range a.healthChecks {
 		// clone to avoid problems during parallel execution
 		check := hc.HealthCheck.DeepCopy()
-		check.InjectSeedClient(a.seedClient)
-		check.InjectShootClient(shootClient)
+		SeedClientInto(a.seedClient, check)
+		if _, ok := check.(ShootClient); ok {
+			if shootClient == nil {
+				var err error
+				_, shootClient, err = util.NewClientForShoot(ctx, a.seedClient, request.Namespace, client.Options{})
+				if err != nil {
+					msg := fmt.Errorf("failed to create shoot client in namespace '%s': %v", request.Namespace, err)
+					a.logger.Error(err, msg.Error())
+					return nil, msg
+				}
+			}
+			ShootClientInto(shootClient, check)
+		}
+
 		check.SetLoggerSuffix(a.provider, a.extensionKind)
 
 		go func(ctx context.Context, request types.NamespacedName, check HealthCheck, preCheckFunc PreCheckFunc, healthConditionType string) {
