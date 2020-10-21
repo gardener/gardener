@@ -439,6 +439,9 @@ const (
 	// FluentBitImageName is the image of Fluent-bit image
 	FluentBitImageName = "fluent-bit"
 
+	// FluentBitPluginInstaller is the image of Fluent-bit plugin installer image
+	FluentBitPluginInstaller = "fluent-bit-plugin-installer"
+
 	// AlpineImageName is the name of alpine image
 	AlpineImageName = "alpine"
 

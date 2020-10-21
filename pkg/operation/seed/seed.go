@@ -275,6 +275,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			common.ConfigMapReloaderImageName,
 			common.LokiImageName,
 			common.FluentBitImageName,
+			common.FluentBitPluginInstaller,
 			common.GardenerResourceManagerImageName,
 			common.GrafanaImageName,
 			common.PauseContainerImageName,
