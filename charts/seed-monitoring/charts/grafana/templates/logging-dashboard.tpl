@@ -147,8 +147,8 @@
         "stack": false,
         "steppedLine": false,
         "targets": [
-          {                                                     
-            "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"{{ $.podPrefix }}-(.+)\"}[5m])) by (pod)",
+          {
+            "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"{{ $.podPrefix }}-(.+)\"}[$__rate_interval])) by (pod)",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "{{ "{{" }}pod}}-current",

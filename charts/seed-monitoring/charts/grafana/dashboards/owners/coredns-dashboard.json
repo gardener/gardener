@@ -65,7 +65,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(coredns_dns_request_duration_seconds_count{pod=~\"$pod\"}[5m])) by (type)",
+          "expr": "sum(rate(coredns_dns_request_duration_seconds_count{pod=~\"$pod\"}[$__rate_interval])) by (type)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -74,7 +74,7 @@
           "step": 60
         },
         {
-          "expr": "sum(rate(coredns_dns_request_duration_seconds_count{pod=~\"$pod\"}[5m])) by (proto)",
+          "expr": "sum(rate(coredns_dns_request_duration_seconds_count{pod=~\"$pod\"}[$__rate_interval])) by (proto)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -82,7 +82,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum(rate(coredns_dns_request_duration_seconds_count{pod=~\"$pod\"}[5m])) by (zone)",
+          "expr": "sum(rate(coredns_dns_request_duration_seconds_count{pod=~\"$pod\"}[$__rate_interval])) by (zone)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -301,7 +301,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "rate(coredns_dns_responses_total{pod=\"$pod\"}[5m])",
+          "expr": "rate(coredns_dns_responses_total{pod=\"$pod\"}[$__rate_interval])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -513,7 +513,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(coredns_cache_hits_total{pod=~\"$pod\"}[5m])",
+              "expr": "rate(coredns_cache_hits_total{pod=~\"$pod\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "cache hits",
@@ -521,7 +521,7 @@
               "step": 40
             },
             {
-              "expr": "rate(coredns_cache_misses_total{pod=~\"$pod\"}[5m])",
+              "expr": "rate(coredns_cache_misses_total{pod=~\"$pod\"}[$__rate_interval])",
               "format": "time_series",
               "intervalFactor": 2,
               "legendFormat": "cache misses",
@@ -845,7 +845,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(rate(coredns_forward_requests_total{pod=\"$pod\"}[5m])) by (to)",
+              "expr": "sum(rate(coredns_forward_requests_total{pod=\"$pod\"}[$__rate_interval])) by (to)",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -943,7 +943,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(coredns_forward_responses_total{pod=\"$pod\"}[5m])",
+              "expr": "rate(coredns_forward_responses_total{pod=\"$pod\"}[$__rate_interval])",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
