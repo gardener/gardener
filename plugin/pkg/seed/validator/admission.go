@@ -46,10 +46,9 @@ func Register(plugins *admission.Plugins) {
 // ValidateSeed contains listers and and admission handler.
 type ValidateSeed struct {
 	*admission.Handler
-	seedLister         corelisters.SeedLister
-	shootLister        corelisters.ShootLister
-	backupBucketLister corelisters.BackupBucketLister
-	readyFunc          admission.ReadyFunc
+	seedLister  corelisters.SeedLister
+	shootLister corelisters.ShootLister
+	readyFunc   admission.ReadyFunc
 }
 
 var (
@@ -80,7 +79,6 @@ func (v *ValidateSeed) SetInternalCoreInformerFactory(f coreinformers.SharedInfo
 	v.shootLister = shootInformer.Lister()
 
 	backupBucketInformer := f.Core().InternalVersion().BackupBuckets()
-	v.backupBucketLister = backupBucketInformer.Lister()
 
 	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced, backupBucketInformer.Informer().HasSynced)
 }
@@ -92,9 +90,6 @@ func (v *ValidateSeed) ValidateInitialization() error {
 	}
 	if v.shootLister == nil {
 		return errors.New("missing shoot lister")
-	}
-	if v.backupBucketLister == nil {
-		return errors.New("missing backupbucket lister")
 	}
 	return nil
 }
@@ -135,17 +130,8 @@ func (v *ValidateSeed) Validate(ctx context.Context, a admission.Attributes, o a
 		return apierrors.NewInternalError(err)
 	}
 
-	backupbuckets, err := v.backupBucketLister.List(labels.Everything())
-	if err != nil {
-		return apierrors.NewInternalError(err)
-	}
-
 	if admissionutils.IsSeedUsedByShoot(seedName, shoots) {
 		return admission.NewForbidden(a, fmt.Errorf("cannot delete seed '%s' which is still used by shoot(s)", seedName))
-	}
-
-	if admissionutils.IsSeedUsedByBackupBucket(seedName, backupbuckets) {
-		return admission.NewForbidden(a, fmt.Errorf("cannot delete seed '%s' which is still used by backupbucket(s)", seedName))
 	}
 
 	return nil

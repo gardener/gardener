@@ -58,13 +58,3 @@ func IsSeedUsedByShoot(seedName string, shoots []*core.Shoot) bool {
 	}
 	return false
 }
-
-// IsSeedUsedByBackupBucket checks whether there is a backupbucket refering the provided seed name
-func IsSeedUsedByBackupBucket(seedName string, backupbuckets []*core.BackupBucket) bool {
-	for _, backupbucket := range backupbuckets {
-		if backupbucket.Spec.SeedName != nil && *backupbucket.Spec.SeedName == seedName {
-			return true
-		}
-	}
-	return false
-}

@@ -543,7 +543,7 @@ var _ = Describe("validator", func() {
 				Expect(err).To(BeForbiddenError())
 			})
 
-			It("should reject removal of the annotation when the respective seed is used by backupbucket", func() {
+			It("should allow removal of the annotation event though the respective seed is used by a backupbucket (Bucket will be deleted during Seed reconciliation)", func() {
 				bucket := core.BackupBucket{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "backupbucket",
@@ -563,32 +563,7 @@ var _ = Describe("validator", func() {
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(BeForbiddenError())
-			})
-
-			It("should reject removal of the annotation when the respective seed is used by backupbucket", func() {
-				bucket := core.BackupBucket{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "backupbucket",
-					},
-					Spec: core.BackupBucketSpec{
-						SeedName: &shoot.Name,
-					},
-				}
-				delete(shoot.Annotations, useAsSeedKey)
-
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&gardenProject)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&shootedSeed)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().BackupBuckets().Informer().GetStore().Add(&bucket)).To(Succeed())
-
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(BeForbiddenError())
+				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 

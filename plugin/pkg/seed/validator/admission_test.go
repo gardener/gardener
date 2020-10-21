@@ -98,15 +98,14 @@ var _ = Describe("validator", func() {
 				Expect(err).To(BeForbiddenError())
 			})
 
-			It("should disallow seed deletion because it is still referenced by a backupbucket", func() {
+			It("should allow seed deletion even though it is still referenced by a backupbucket (will be cleaned up during Seed reconciliation)", func() {
 				backupBucket.Spec.SeedName = &seedName
 				Expect(coreInformerFactory.Core().InternalVersion().BackupBuckets().Informer().GetStore().Add(&backupBucket)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 				err := admissionHandler.Validate(context.TODO(), attrs, nil)
 
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(BeForbiddenError())
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should disallow seed deletion because shoot migration is yet not finished", func() {

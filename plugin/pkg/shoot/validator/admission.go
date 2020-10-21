@@ -64,7 +64,6 @@ type ValidateShoot struct {
 	seedLister         corelisters.SeedLister
 	shootLister        corelisters.ShootLister
 	projectLister      corelisters.ProjectLister
-	backupBucketLister corelisters.BackupBucketLister
 	readyFunc          admission.ReadyFunc
 }
 
@@ -101,16 +100,12 @@ func (v *ValidateShoot) SetInternalCoreInformerFactory(f coreinformers.SharedInf
 	projectInformer := f.Core().InternalVersion().Projects()
 	v.projectLister = projectInformer.Lister()
 
-	backupBucketInformer := f.Core().InternalVersion().BackupBuckets()
-	v.backupBucketLister = backupBucketInformer.Lister()
-
 	readyFuncs = append(
 		readyFuncs,
 		seedInformer.Informer().HasSynced,
 		shootInformer.Informer().HasSynced,
 		cloudProfileInformer.Informer().HasSynced,
 		projectInformer.Informer().HasSynced,
-		backupBucketInformer.Informer().HasSynced,
 	)
 }
 
@@ -127,9 +122,6 @@ func (v *ValidateShoot) ValidateInitialization() error {
 	}
 	if v.projectLister == nil {
 		return errors.New("missing project lister")
-	}
-	if v.backupBucketLister == nil {
-		return errors.New("missing backupbucket lister")
 	}
 	return nil
 }
@@ -932,17 +924,8 @@ func (v ValidateShoot) validateShootedSeed(a admission.Attributes, shoot, oldSho
 		return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that annotation '%s' can be removed: %v", constants.AnnotationShootUseAsSeed, err))
 	}
 
-	backupbuckets, err := v.backupBucketLister.List(labels.Everything())
-	if err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("could not list backupbuckets to verify that annotation '%s' can be removed: %v", constants.AnnotationShootUseAsSeed, err))
-	}
-
 	if admissionutils.IsSeedUsedByShoot(shoot.Name, shoots) {
 		return admission.NewForbidden(a, fmt.Errorf("cannot delete seed '%s' which is still used by shoot(s)", shoot.Name))
-	}
-
-	if admissionutils.IsSeedUsedByBackupBucket(shoot.Name, backupbuckets) {
-		return admission.NewForbidden(a, fmt.Errorf("cannot delete seed '%s' which is still used by backupbucket(s)", shoot.Name))
 	}
 
 	return nil
