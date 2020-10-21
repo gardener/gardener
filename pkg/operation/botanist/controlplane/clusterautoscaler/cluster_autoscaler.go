@@ -266,7 +266,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return common.DeployManagedResource(ctx, c.client, managedResourceTargetName, c.namespace, false, c.computeShootResourcesData())
+	return common.DeployManagedResourceForShoot(ctx, c.client, managedResourceTargetName, c.namespace, false, c.computeShootResourcesData())
 }
 
 func (c *clusterAutoscaler) Destroy(ctx context.Context) error {

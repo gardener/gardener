@@ -67,6 +67,11 @@ var (
 		client.GracePeriodSeconds(0),
 	}
 
+	// SeedSerializer is a YAML serializer using the Seed scheme.
+	SeedSerializer = json.NewSerializerWithOptions(json.DefaultMetaFactory, SeedScheme, SeedScheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
+	// SeedCodec is a codec factory using the Seed scheme.
+	SeedCodec = serializer.NewCodecFactory(SeedScheme)
+
 	// ShootSerializer is a YAML serializer using the Shoot scheme.
 	ShootSerializer = json.NewSerializerWithOptions(json.DefaultMetaFactory, ShootScheme, ShootScheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
 	// ShootCodec is a codec factory using the Shoot scheme.

@@ -53,14 +53,14 @@ var _ = Describe("ManagedResources", func() {
 		ctrl.Finish()
 	})
 
-	Describe("#DeployManagedResource", func() {
+	Describe("#DeployManagedResourceForShoot", func() {
 		It("should return the error of the secret reconciliation", func() {
 			gomock.InOrder(
 				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
 			)
 
-			Expect(DeployManagedResource(ctx, c, name, namespace, keepObjects, data)).To(MatchError(fakeErr))
+			Expect(DeployManagedResourceForShoot(ctx, c, name, namespace, keepObjects, data)).To(MatchError(fakeErr))
 		})
 
 		It("should return the error of the managed resource reconciliation", func() {
@@ -71,7 +71,7 @@ var _ = Describe("ManagedResources", func() {
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
 			)
 
-			Expect(DeployManagedResource(ctx, c, name, namespace, keepObjects, data)).To(MatchError(fakeErr))
+			Expect(DeployManagedResourceForShoot(ctx, c, name, namespace, keepObjects, data)).To(MatchError(fakeErr))
 		})
 
 		It("should successfully create secret and managed resource", func() {
@@ -100,7 +100,57 @@ var _ = Describe("ManagedResources", func() {
 				}),
 			)
 
-			Expect(DeployManagedResource(ctx, c, name, namespace, keepObjects, data)).To(Succeed())
+			Expect(DeployManagedResourceForShoot(ctx, c, name, namespace, keepObjects, data)).To(Succeed())
+		})
+	})
+
+	Describe("#DeployManagedResourceForSeed", func() {
+		It("should return the error of the secret reconciliation", func() {
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
+			)
+
+			Expect(DeployManagedResourceForSeed(ctx, c, name, namespace, keepObjects, data)).To(MatchError(fakeErr))
+		})
+
+		It("should return the error of the managed resource reconciliation", func() {
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
+			)
+
+			Expect(DeployManagedResourceForSeed(ctx, c, name, namespace, keepObjects, data)).To(MatchError(fakeErr))
+		})
+
+		It("should successfully create secret and managed resource", func() {
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "managedresource-" + name,
+						Namespace: namespace,
+					},
+					Type: corev1.SecretTypeOpaque,
+					Data: data,
+				}),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Update(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name,
+						Namespace: namespace,
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						SecretRefs:  []corev1.LocalObjectReference{{Name: "managedresource-" + name}},
+						KeepObjects: pointer.BoolPtr(keepObjects),
+						Class:       pointer.StringPtr("seed"),
+					},
+				}),
+			)
+
+			Expect(DeployManagedResourceForSeed(ctx, c, name, namespace, keepObjects, data)).To(Succeed())
 		})
 	})
 })

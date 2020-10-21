@@ -31,16 +31,23 @@ const (
 	ManagedResourceSecretPrefix = "managedresource-"
 )
 
-// DeployManagedResource deploys a ManagedResource CR for the gardener-resource-manager.
-func DeployManagedResource(ctx context.Context, c client.Client, name, namespace string, keepObjects bool, data map[string][]byte) error {
-	var (
-		secretName, secret = NewManagedResourceSecret(c, name, namespace, data)
-		managedResource    = NewManagedResource(c, name, namespace, keepObjects)
-	)
+// DeployManagedResourceForShoot deploys a ManagedResource CR for the shoot's gardener-resource-manager.
+func DeployManagedResourceForShoot(ctx context.Context, c client.Client, name, namespace string, keepObjects bool, data map[string][]byte) error {
+	return deployManagedResource(ctx, c, name, namespace, data, NewManagedResourceForShoot(c, name, namespace, keepObjects))
+}
+
+// DeployManagedResourceForSeed deploys a ManagedResource CR for the seed's gardener-resource-manager.
+func DeployManagedResourceForSeed(ctx context.Context, c client.Client, name, namespace string, keepObjects bool, data map[string][]byte) error {
+	return deployManagedResource(ctx, c, name, namespace, data, NewManagedResourceForSeed(c, name, namespace, keepObjects))
+}
+
+func deployManagedResource(ctx context.Context, c client.Client, name, namespace string, data map[string][]byte, managedResource *manager.ManagedResource) error {
+	secretName, secret := NewManagedResourceSecret(c, name, namespace, data)
 
 	if err := secret.Reconcile(ctx); err != nil {
 		return err
 	}
+
 	return managedResource.WithSecretRef(secretName).Reconcile(ctx)
 }
 
@@ -53,8 +60,8 @@ func NewManagedResourceSecret(c client.Client, name, namespace string, data map[
 		WithKeyValues(data)
 }
 
-// NewManagedResource constructs a new ManagedResource object for the Gardener-Resource-Manager.
-func NewManagedResource(c client.Client, name, namespace string, keepObjects bool) *manager.ManagedResource {
+// NewManagedResourceForShoot constructs a new ManagedResource object for the shoot's Gardener-Resource-Manager.
+func NewManagedResourceForShoot(c client.Client, name, namespace string, keepObjects bool) *manager.ManagedResource {
 	var (
 		injectedLabels = map[string]string{ShootNoCleanup: "true"}
 		labels         = map[string]string{ManagedResourceLabelKeyOrigin: ManagedResourceLabelValueGardener}
@@ -64,6 +71,14 @@ func NewManagedResource(c client.Client, name, namespace string, keepObjects boo
 		WithNamespacedName(namespace, name).
 		WithLabels(labels).
 		WithInjectedLabels(injectedLabels).
+		KeepObjects(keepObjects)
+}
+
+// NewManagedResourceForSeed constructs a new ManagedResource object for the seed's Gardener-Resource-Manager.
+func NewManagedResourceForSeed(c client.Client, name, namespace string, keepObjects bool) *manager.ManagedResource {
+	return manager.NewManagedResource(c).
+		WithNamespacedName(namespace, name).
+		WithClass("seed").
 		KeepObjects(keepObjects)
 }
 
