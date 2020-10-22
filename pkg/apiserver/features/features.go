@@ -16,17 +16,19 @@ package features
 
 import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/component-base/featuregate"
+
+	"github.com/gardener/gardener/pkg/features"
 )
 
 var (
-	// FeatureGate is a shared global FeatureGate for Gardener APIServer flags.
-	// right now the Generic API server uses this feature gate as default
-	FeatureGate  = featuregate.NewFeatureGate()
-	featureGates = map[featuregate.Feature]featuregate.FeatureSpec{}
+	featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
+		features.SeedChange: {Default: false, PreRelease: featuregate.Alpha},
+	}
 )
 
 // RegisterFeatureGates registers the feature gates of the Gardener API Server.
 func RegisterFeatureGates() {
-	utilruntime.Must(FeatureGate.Add(featureGates))
+	utilruntime.Must(utilfeature.DefaultMutableFeatureGate.Add(featureGates))
 }

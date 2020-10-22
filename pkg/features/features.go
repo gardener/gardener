@@ -77,4 +77,10 @@ const (
 	// owner @danielfoehrKn
 	// alpha: v1.11.0
 	MountHostCADirectories featuregate.Feature = "MountHostCADirectories"
+
+	// SeedChange enables updating the `spec.seedName` field during shoot validation from a non-empty value
+	// in order to trigger shoot control plane migration.
+	// owner: @stoyanr
+	// alpha: v1.12.0
+	SeedChange featuregate.Feature = "SeedChange"
 )
