@@ -37,7 +37,7 @@ const (
 func BootstrapSeed(ctx context.Context, c client.Client, namespace, _ string) error {
 	var (
 		versions = schema.GroupVersions([]schema.GroupVersion{rbacv1.SchemeGroupVersion})
-		codec    = kubernetes.ShootCodec.CodecForVersions(kubernetes.ShootSerializer, kubernetes.ShootSerializer, versions, versions)
+		codec    = kubernetes.ShootCodec.CodecForVersions(kubernetes.SeedSerializer, kubernetes.SeedSerializer, versions, versions)
 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -54,7 +54,7 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, _ string) er
 		clusterRoleYAML, _ = runtime.Encode(codec, clusterRole)
 	)
 
-	return common.DeployManagedResource(ctx, c, managedResourceControlName, namespace, false, map[string][]byte{
+	return common.DeployManagedResourceForSeed(ctx, c, managedResourceControlName, namespace, false, map[string][]byte{
 		"clusterrole.yaml": clusterRoleYAML,
 	})
 }

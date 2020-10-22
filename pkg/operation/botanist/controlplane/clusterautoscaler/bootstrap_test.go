@@ -93,14 +93,13 @@ rules:
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      managedResourceName,
 					Namespace: namespace,
-					Labels:    map[string]string{"origin": "gardener"},
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
 					SecretRefs: []corev1.LocalObjectReference{
 						{Name: managedResourceSecretName},
 					},
-					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					KeepObjects:  pointer.BoolPtr(false),
+					Class:       pointer.StringPtr("seed"),
+					KeepObjects: pointer.BoolPtr(false),
 				},
 			}
 		)

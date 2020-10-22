@@ -206,7 +206,7 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 			return fmt.Errorf("error rendering %q chart: %+v", name, err)
 		}
 
-		if err := common.DeployManagedResource(ctx, b.K8sSeedClient.Client(), name, b.Shoot.SeedNamespace, options.keepObjects, renderedChart.AsSecretData()); err != nil {
+		if err := common.DeployManagedResourceForShoot(ctx, b.K8sSeedClient.Client(), name, b.Shoot.SeedNamespace, options.keepObjects, renderedChart.AsSecretData()); err != nil {
 			return err
 		}
 	}
@@ -257,7 +257,7 @@ func (b *Botanist) deployCloudConfigExecutionManagedResource(ctx context.Context
 		cloudConfigCharts[name] = b.getGenerateCloudConfigExecutionChartFunc(name, worker, bootstrapTokenSecret)
 	}
 
-	cloudConfigManagedResource := common.NewManagedResource(b.K8sSeedClient.Client(), managedResourceName, b.Shoot.SeedNamespace, false)
+	cloudConfigManagedResource := common.NewManagedResourceForShoot(b.K8sSeedClient.Client(), managedResourceName, b.Shoot.SeedNamespace, false)
 
 	// reconcile secrets and reference them to the ManagedResource
 	fns := make([]flow.TaskFn, 0, len(cloudConfigCharts))

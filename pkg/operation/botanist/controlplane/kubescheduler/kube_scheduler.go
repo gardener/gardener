@@ -326,7 +326,7 @@ func (k *kubeScheduler) emptyManagedResourceSecret() *corev1.Secret {
 
 func (k *kubeScheduler) reconcileShootResources(ctx context.Context) error {
 	if versionConstraintK8sEqual113.Check(k.version) {
-		return common.DeployManagedResource(ctx, k.client, managedResourceName, k.namespace, false, k.computeShootResourcesData())
+		return common.DeployManagedResourceForShoot(ctx, k.client, managedResourceName, k.namespace, false, k.computeShootResourcesData())
 	}
 
 	return kutil.DeleteObjects(ctx, k.client, k.emptyManagedResource(), k.emptyManagedResourceSecret())
