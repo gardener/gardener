@@ -1,4 +1,3 @@
-{{- if and .Values.exporter.enabled .Values.exporter.enableService }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -6,7 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: vpa-exporter
-{{ toYaml .Values.labels | indent 4 }}
+{{ toYaml .Values.vpa.exporter.labels | indent 4 }}
 spec:
   type: ClusterIP
   sessionAffinity: None
@@ -15,6 +14,5 @@ spec:
   ports:
   - name: metrics
     protocol: TCP
-    port: {{ .Values.exporter.servicePort }}
-    targetPort: {{ .Values.exporter.port }}
-{{- end }}
+    port: {{ .Values.vpa.exporter.servicePort }}
+    targetPort: {{ .Values.vpa.exporter.port }}

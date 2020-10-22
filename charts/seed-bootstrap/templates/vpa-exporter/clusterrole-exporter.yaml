@@ -1,11 +1,10 @@
-{{- if .Values.exporter.enabled }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: gardener.cloud:vpa:{{ .Values.clusterType }}:exporter
+  name: gardener.cloud:vpa:seed:exporter
   labels:
-{{ toYaml .Values.labels | indent 4 }}
+{{ toYaml .Values.vpa.exporter.labels | indent 4 }}
 rules:
 - apiGroups:
   - "autoscaling.k8s.io"
@@ -15,4 +14,3 @@ rules:
   - get
   - watch
   - list
-{{- end }}

@@ -21,16 +21,6 @@ admissionController:
   port: 10250
   servicePort: 443
 
-exporter:
-  replicas: 1
-  enabled: true
-  podAnnotations: {}
-  podLabels: {}
-  enableServiceAccount: true
-  enableService: true
-  port: 9570
-  servicePort: 9570
-
 recommender:
   replicas: 1
   enabled: true
