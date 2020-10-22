@@ -16,6 +16,7 @@ REGISTRY                            := eu.gcr.io/gardener-project/gardener
 APISERVER_IMAGE_REPOSITORY          := $(REGISTRY)/apiserver
 CONTROLLER_MANAGER_IMAGE_REPOSITORY := $(REGISTRY)/controller-manager
 SCHEDULER_IMAGE_REPOSITORY          := $(REGISTRY)/scheduler
+ADMISSION_IMAGE_REPOSITORY          := $(REGISTRY)/admission-controller
 SEED_ADMISSION_IMAGE_REPOSITORY     := $(REGISTRY)/seed-admission-controller
 GARDENLET_IMAGE_REPOSITORY          := $(REGISTRY)/gardenlet
 PUSH_LATEST_TAG                     := false
