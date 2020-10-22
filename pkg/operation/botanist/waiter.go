@@ -63,7 +63,7 @@ func (b *Botanist) WaitUntilEtcdReady(ctx context.Context) error {
 	var (
 		retryCountUntilSevere int
 		interval              = 5 * time.Second
-		severeThreshold       = 30 * time.Second
+		severeThreshold       = 3 * time.Minute
 		timeout               = 5 * time.Minute
 	)
 
