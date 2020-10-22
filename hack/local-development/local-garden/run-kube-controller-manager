@@ -12,7 +12,7 @@ docker run -d --name kube-controller-manager -l $LABEL --network gardener-dev --
   --authorization-kubeconfig="/kubeconfig" \
   --cluster-signing-cert-file="/certs/ca.crt" \
   --cluster-signing-key-file="/keys/ca.key" \
-  --controllers="namespace,serviceaccount,serviceaccount-token,clusterrole-aggregation,garbagecollector,csrapproving,csrcleaner,csrsigning,bootstrapsigner,tokencleaner" \
+  --controllers="namespace,serviceaccount,serviceaccount-token,clusterrole-aggregation,garbagecollector,csrapproving,csrcleaner,csrsigning,bootstrapsigner,tokencleaner,resourcequota" \
   --kubeconfig="/kubeconfig" \
   --root-ca-file="/certs/ca.crt" \
   --service-account-private-key-file="/keys/sa.key" \

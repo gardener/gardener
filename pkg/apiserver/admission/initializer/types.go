@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/kubernetes/pkg/quota/v1"
 )
 
 // WantsInternalCoreInformerFactory defines a function which sets InformerFactory for admission plugins that need it.
@@ -75,6 +76,12 @@ type WantsAuthorizer interface {
 	admission.InitializationValidator
 }
 
+// WantsQuotaConfiguration defines a function which sets quota configuration for admission plugins that need it.
+type WantsQuotaConfiguration interface {
+	SetQuotaConfiguration(quota.Configuration)
+	admission.InitializationValidator
+}
+
 type pluginInitializer struct {
 	coreInformers coreinformers.SharedInformerFactory
 	coreClient    coreclientset.Interface
@@ -89,6 +96,8 @@ type pluginInitializer struct {
 	dynamicClient dynamic.Interface
 
 	authorizer authorizer.Authorizer
+
+	quotaConfiguration quota.Configuration
 }
 
 var _ admission.PluginInitializer = pluginInitializer{}
