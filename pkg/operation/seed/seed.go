@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -116,6 +117,8 @@ const (
 
 	prometheusPrefix = "p-seed"
 	prometheusTLS    = "aggregate-prometheus-tls"
+
+	userExposedComponentTagPrefix = "user-exposed"
 )
 
 // generateWantedSecrets returns a list of Secret configuration objects satisfying the secret config intface,
@@ -331,19 +334,34 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	)
 
 	if loggingEnabled {
-		// Fetch component specific logging configurations
-		for _, componentFn := range []component.LoggingConfiguration{
+		componentsFunctions := []component.LoggingConfiguration{
 			clusterautoscaler.LoggingConfiguration,
 			kubescheduler.LoggingConfiguration,
-		} {
-			parser, filter, err := componentFn()
+		}
+		userAllowedComponents := []string{constants.DeploymentNameKubeAPIServer, constants.DeploymentNameKubeControllerManager}
+
+		// Fetch component specific logging configurations
+		for _, componentFn := range componentsFunctions {
+			loggingConfig, err := componentFn()
 			if err != nil {
 				return err
 			}
 
-			filters.WriteString(fmt.Sprintln(filter))
-			parsers.WriteString(fmt.Sprintln(parser))
+			filters.WriteString(fmt.Sprintln(loggingConfig.Filters))
+			parsers.WriteString(fmt.Sprintln(loggingConfig.Parsers))
+
+			if loggingConfig.UserExposed {
+				userAllowedComponents = append(userAllowedComponents, loggingConfig.PodPrefix)
+			}
 		}
+
+		loggingRewriteTagFilter := `[FILTER]
+    Name          rewrite_tag
+    Match         kubernetes.*
+    Rule          $kubernetes['pod_name'] ^(` + strings.Join(userAllowedComponents, "-?.+|") + `-?.+)$ ` + userExposedComponentTagPrefix + `.$TAG true
+    Emitter_Name  re_emitted
+`
+		filters.WriteString(fmt.Sprintln(loggingRewriteTagFilter))
 
 		// Read extension provider specific logging configuration
 		existingConfigMaps := &corev1.ConfigMapList{}
@@ -624,9 +642,11 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			"additionalParsers":                 parsers.String(),
 			"additionalFilters":                 filters.String(),
 			"fluentBitConfigurationsOverwrites": fluentBitConfigurationsOverwrites,
+			"exposedComponentsTagPrefix":        userExposedComponentTagPrefix,
 		},
 		"loki": map[string]interface{}{
-			"enabled": loggingEnabled,
+			"enabled":     loggingEnabled,
+			"authEnabled": false,
 		},
 		"alertmanager": alertManagerConfig,
 		"vpa": map[string]interface{}{

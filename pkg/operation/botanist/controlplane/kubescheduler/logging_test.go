@@ -24,10 +24,10 @@ import (
 var _ = Describe("Logging", func() {
 	Describe("#LoggingConfiguration", func() {
 		It("should return the expected logging parser and filter", func() {
-			parser, filter, err := LoggingConfiguration()
+			loggingConfig, err := LoggingConfiguration()
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(parser).To(Equal(`[PARSER]
+			Expect(loggingConfig.Parsers).To(Equal(`[PARSER]
     Name        kubeSchedulerParser
     Format      regex
     Regex       ^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<log>.*)$
@@ -35,13 +35,16 @@ var _ = Describe("Logging", func() {
     Time_Format %m%d %H:%M:%S.%L
 `))
 
-			Expect(filter).To(Equal(`[FILTER]
+			Expect(loggingConfig.Filters).To(Equal(`[FILTER]
     Name                parser
     Match               kubernetes.*kube-scheduler*kube-scheduler*
     Key_Name            log
     Parser              kubeSchedulerParser
     Reserve_Data        True
 `))
+			Expect(loggingConfig.PodPrefix).To(Equal("kube-scheduler"))
+			Expect(loggingConfig.UserExposed).To(Equal(true))
+
 		})
 	})
 })

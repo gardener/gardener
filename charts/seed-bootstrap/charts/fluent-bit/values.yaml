@@ -27,3 +27,4 @@ lokiLabels:
   systemdLabels:
     hostname: "host_name"
     unit: "systemd_component"
+exposedComponentsTagPrefix: "user-exposed"

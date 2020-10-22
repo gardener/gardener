@@ -21,3 +21,15 @@ type Secret struct {
 	// Checksum is the checksum of the secret's data.
 	Checksum string
 }
+
+// LoggingConfig is a structure that contains additional Fluentbit filters and parsers
+type LoggingConfig struct {
+	// Filters contains the filters for specific component
+	Filters string
+	// Parser contains the parsers for specific component
+	Parsers string
+	// PodPrefix is the prefix of the pod name
+	PodPrefix string
+	// UserExposed defines if the component is exposed to the end-user
+	UserExposed bool
+}

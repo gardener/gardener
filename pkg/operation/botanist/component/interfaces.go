@@ -58,7 +58,7 @@ type MonitoringComponent interface {
 }
 
 // LoggingConfiguration is a function alias for returning logging parsers and filters.
-type LoggingConfiguration func() (string, string, error)
+type LoggingConfiguration func() (LoggingConfig, error)
 
 // BootstrapSeed is a function alias for components that require to bootstrap the seed cluster.
 type BootstrapSeed func(ctx context.Context, c client.Client, namespace, version string) error
