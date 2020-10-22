@@ -188,7 +188,7 @@ var _ = Describe("ValidateResourceSizeHandler", func() {
 			response := httptest.NewRecorder()
 			validator := NewValidateResourceSizeHandler(config)
 
-			request := createHTTPRequest(objFn(), scheme, userFn())
+			request := createHTTPRequest(objFn(), scheme, userFn(), admissionv1beta1.Update)
 			if subresource != "" {
 				request = createHTTPRequestForSubresource(subresource)
 			}

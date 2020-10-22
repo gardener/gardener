@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -77,46 +76,18 @@ func NewValidateNamespaceDeletionHandler(ctx context.Context, k8sGardenClient ku
 // ValidateNamespaceDeletion is a HTTP handler for validating whether a namespace deletion is allowed or not.
 func (h *namespaceDeletionHandler) ValidateNamespaceDeletion(w http.ResponseWriter, r *http.Request) {
 	var (
-		body []byte
-
 		deserializer   = h.codecs.UniversalDeserializer()
-		receivedReview = admissionv1beta1.AdmissionReview{}
-
-		wantedContentType = runtime.ContentTypeJSON
-		wantedOperation   = admissionv1beta1.Delete
+		receivedReview = &admissionv1beta1.AdmissionReview{}
 	)
 
-	// Read HTTP request body into variable.
-	if r.Body != nil {
-		if data, err := ioutil.ReadAll(r.Body); err == nil {
-			body = data
-		}
-	}
-
-	// Verify that the correct content-type header has been sent.
-	if contentType := r.Header.Get("Content-Type"); contentType != wantedContentType {
-		err := fmt.Errorf("contentType=%s, expect %s", contentType, wantedContentType)
+	if err := DecodeAdmissionRequest(r, deserializer, receivedReview, maxRequestBody); err != nil {
 		logger.Logger.Errorf(err.Error())
 		respond(w, errToAdmissionResponse(err))
 		return
 	}
 
-	// Deserialize HTTP request body into admissionv1beta1.AdmissionReview object.
-	if _, _, err := deserializer.Decode(body, nil, &receivedReview); err != nil {
-		logger.Logger.Errorf(err.Error())
-		respond(w, errToAdmissionResponse(err))
-		return
-	}
-
-	// If the request field is empty then do not admit (invalid body).
-	if receivedReview.Request == nil {
-		err := fmt.Errorf("invalid request body (missing admission request)")
-		logger.Logger.Errorf(err.Error())
-		respond(w, errToAdmissionResponse(err))
-		return
-	}
 	// If the request does not indicate the correct operation (DELETE) we allow the review without further doing.
-	if receivedReview.Request.Operation != wantedOperation {
+	if receivedReview.Request.Operation != admissionv1beta1.Delete {
 		respond(w, admissionResponse(true, ""))
 		return
 	}

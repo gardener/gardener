@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/server/handlers/webhooks"
 	core "github.com/gardener/gardener/pkg/apis/core/install"
@@ -53,7 +54,7 @@ var _ = Describe("Utils tests", func() {
 			scheme  = runtime.NewScheme()
 			decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
 
-			sizeRequest = int64(336)
+			sizeRequest = int64(342)
 
 			request = func() *http.Request {
 				return createHTTPRequest(&corev1.Secret{
@@ -61,7 +62,7 @@ var _ = Describe("Utils tests", func() {
 						Kind:       "Secret",
 						APIVersion: corev1.SchemeGroupVersion.String(),
 					},
-				}, scheme, authenticationv1.UserInfo{})
+				}, scheme, authenticationv1.UserInfo{}, admissionv1beta1.Create)
 			}
 		)
 
@@ -100,10 +101,10 @@ var _ = Describe("Utils tests", func() {
 	})
 })
 
-func createHTTPRequest(obj runtime.Object, scheme *runtime.Scheme, user authenticationv1.UserInfo) *http.Request {
+func createHTTPRequest(obj runtime.Object, scheme *runtime.Scheme, user authenticationv1.UserInfo, op admissionv1beta1.Operation) *http.Request {
 	admissionReview := &admissionv1beta1.AdmissionReview{}
 
-	if obj != nil {
+	if obj != nil && !reflect.ValueOf(obj).IsNil() {
 		writer := bytes.NewBuffer(nil)
 		jsonSerializer := runtimeserializer.NewSerializerWithOptions(
 			runtimeserializer.DefaultMetaFactory,
@@ -128,7 +129,15 @@ func createHTTPRequest(obj runtime.Object, scheme *runtime.Scheme, user authenti
 			Version:  gvr.Version,
 			Resource: gvr.Resource,
 		}
+
+		var name string
+		if meta, ok := obj.(metav1.Object); ok {
+			name = meta.GetName()
+		}
+
 		admissionReview.Request = &admissionv1beta1.AdmissionRequest{
+			Name:            name,
+			Operation:       op,
 			Resource:        v1Gvr,
 			RequestResource: &v1Gvr,
 			UserInfo:        user,

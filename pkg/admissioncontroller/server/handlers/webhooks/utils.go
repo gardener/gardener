@@ -29,6 +29,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+const (
+	// maxRequestBody is the maximum size of the `AdmissionReview` body.
+	// Same, fixed value from API server for general safety to reduce the odds of OOM issues while reading the body.
+	// https://github.com/kubernetes/kubernetes/blob/d8eac8df28e6b50cd0f5380e23fc57daaf92972e/staging/src/k8s.io/apiserver/pkg/server/config.go#L322
+	maxRequestBody = 3 * 1024 * 1024
+)
+
 func admissionResponse(allowed bool, msg string) *admissionv1beta1.AdmissionResponse {
 	response := &admissionv1beta1.AdmissionResponse{
 		Allowed: allowed,
