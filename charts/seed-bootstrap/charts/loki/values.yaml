@@ -59,3 +59,40 @@ securityContext:
 service:
   type: ClusterIP
   port: 3100
+
+
+hvpa:
+  enabled: false
+  maxAllowed:
+    cpu: 800m
+    memory: 2G
+  minAllowed:
+    cpu: 20m
+    memory: 200M
+  targetAverageUtilizationCpu: 80
+  targetAverageUtilizationMemory: 80
+  scaleUpStabilization:
+    stabilizationDuration: "5m"
+    minChange:
+      cpu:
+        value: "100m"
+        percentage: 80
+      memory:
+        value: 200M
+        percentage: 80
+  scaleDownStabilization:
+    stabilizationDuration: "15m"
+    minChange:
+      cpu:
+        value: "100m"
+        percentage: 80
+      memory:
+        value: 200M
+        percentage: 80
+  limitsRequestsGapScaleParams:
+    cpu:
+      value: "200m"
+      percentage: 40
+    memory:
+      value: "300M"
+      percentage: 40
