@@ -1,0 +1,3 @@
+nodeLocalDNS:
+  enabled: false
+  kubeDNSClusterIP: 1.1.1.1

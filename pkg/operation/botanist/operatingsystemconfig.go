@@ -137,7 +137,7 @@ func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 	// if IPVS is enabled, instruct the kubelet to create pods resolving DNS to the `nodelocaldns` network interface link-local ip address
 	// for more information checkout the [usage documentation](https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/)
 	if b.Shoot.NodeLocalDNSEnabled && b.Shoot.IPVSEnabled() {
-		kubernetesConfig["clusterDNS"] = "169.254.20.10"
+		kubernetesConfig["clusterDNS"] = NodeLocalIPVSAddress
 	}
 
 	var (

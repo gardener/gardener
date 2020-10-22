@@ -25,6 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	netpol "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -382,10 +383,20 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		nodeExporterConfig        = map[string]interface{}{}
 		blackboxExporterConfig    = map[string]interface{}{}
 		nodeProblemDetectorConfig = map[string]interface{}{}
-		networkPolicyConfig       = map[string]interface{}{}
+		networkPolicyConfig       = netpol.ShootNetworkPolicyValues{
+			Enabled: true,
+			NodeLocalDNS: netpol.NodeLocalDNSValues{
+				Enabled:          b.Shoot.NodeLocalDNSEnabled,
+				KubeDNSClusterIP: b.Shoot.Networks.CoreDNS.String(),
+			},
+		}
 
 		nodeNetwork = b.Shoot.GetNodeNetwork()
 	)
+
+	if b.Shoot.IPVSEnabled() {
+		networkPolicyConfig.NodeLocalDNS.KubeDNSClusterIP = NodeLocalIPVSAddress
+	}
 
 	if _, ok := b.Secrets[common.VPASecretName]; ok {
 		verticalPodAutoscaler["admissionController"].(map[string]interface{})["caCert"] = b.Secrets[common.VPASecretName].Data[secrets.DataKeyCertificateCA]
@@ -474,7 +485,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
 		}, b.Shoot.GetPurpose() != gardencorev1beta1.ShootPurposeTesting),
-		"network-policies":        common.GenerateAddonConfig(networkPolicyConfig, true),
+		"network-policies":        networkPolicyConfig,
 		"node-problem-detector":   common.GenerateAddonConfig(nodeProblemDetector, true),
 		"podsecuritypolicies":     common.GenerateAddonConfig(podSecurityPolicies, true),
 		"shoot-info":              common.GenerateAddonConfig(shootInfo, true),
