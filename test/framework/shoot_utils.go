@@ -52,9 +52,9 @@ func (f *ShootFramework) GetLokiLogs(ctx context.Context, lokiNamespace, podName
 		"role": "logging",
 	}))
 
-	query := fmt.Sprintf("{app=\"%s\"}", podName)
+	query := fmt.Sprintf("{pod_name=~\"%s-.*\"}", podName)
 
-	command := fmt.Sprintf("wget 'http://localhost:%d/loki/api/v1/query_range' -O- --post-data='query=%s'", lokiPort, query)
+	command := fmt.Sprintf("wget --header='X-Scope-OrgID: operator' 'http://localhost:%d/loki/api/v1/query_range' -O- --post-data='query=%s'", lokiPort, query)
 
 	var reader io.Reader
 	err := retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (bool, error) {
