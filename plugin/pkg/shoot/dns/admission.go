@@ -196,9 +196,8 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 		if shoot.Spec.SeedName == nil {
 			return nil
 		}
-		if oldShoot.Spec.SeedName != nil {
-			removeFunctionlessDNSProviders(shoot.Name, shoot.Namespace, shoot.Spec.DNS)
-			return nil
+		if oldShoot.Spec.SeedName != nil && shoot.Spec.DNS != nil {
+			return checkFunctionlessDNSProviders(shoot.Spec.DNS)
 		}
 	}
 
@@ -225,35 +224,29 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 		}
 	}
 
-	if err := managePrimaryDNSProvider(shoot.Spec.DNS, defaultDomains); err != nil {
-		return err
+	if shoot.Spec.DNS != nil {
+		if err := setPrimaryDNSProvider(shoot.Spec.DNS, defaultDomains); err != nil {
+			return err
+		}
+		if err := checkFunctionlessDNSProviders(shoot.Spec.DNS); err != nil {
+			return err
+		}
 	}
-
-	removeFunctionlessDNSProviders(shoot.Name, shoot.Namespace, shoot.Spec.DNS)
-
 	return nil
 }
 
-func removeFunctionlessDNSProviders(shootName, namespace string, dns *core.DNS) {
-	if dns == nil {
-		return
-	}
-
-	// TODO: timuthy - Deny shoots with functionless DNS providers in the future instead of removing them here.
-	var providers []core.DNSProvider
+// checkFunctionlessDNSProviders returns an error if a non-primary provider isn't configured correctly.
+func checkFunctionlessDNSProviders(dns *core.DNS) error {
 	for _, provider := range dns.Providers {
 		if !utils.IsTrue(provider.Primary) && (provider.Type == nil || provider.SecretName == nil) {
-			log.Warnf("Detected functionless DNS provider for shoot %s/%s. This will be forbidden in a future version of Gardener.", namespace, shootName)
-			continue
+			return apierrors.NewBadRequest("non-primary DNS providers in .spec.dns.providers must specify a `type` and `secretName`")
 		}
-
-		providers = append(providers, provider)
-		continue
 	}
-
-	dns.Providers = providers
+	return nil
 }
 
+// checkPrimaryDNSProvider checks if the shoot uses a default domain and returns an error
+// if a primary provider is used at the same time.
 func checkPrimaryDNSProvider(dns *core.DNS, defaultDomains []string) error {
 	if dns == nil || dns.Domain == nil || len(dns.Providers) == 0 {
 		return nil
@@ -278,7 +271,7 @@ func isDefaultDomain(domain string, defaultDomains []string) bool {
 	return false
 }
 
-func managePrimaryDNSProvider(dns *core.DNS, defaultDomains []string) error {
+func setPrimaryDNSProvider(dns *core.DNS, defaultDomains []string) error {
 	if dns == nil {
 		return nil
 	}

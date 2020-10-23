@@ -317,7 +317,7 @@ var _ = Describe("dns", func() {
 				))
 			})
 
-			It("should remove functionless DNS providers on create w/ seed assignment", func() {
+			It("should not allow functionless DNS providers on create w/ seed assignment", func() {
 				var (
 					shootDomain = "my-shoot.my-private-domain.com"
 				)
@@ -341,19 +341,12 @@ var _ = Describe("dns", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
-				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(pointer.StringPtr(providerType)),
-						"Primary": Equal(pointer.BoolPtr(true)),
-					}),
-					MatchFields(IgnoreExtras, Fields{
-						"Type":       Equal(pointer.StringPtr(providerType)),
-						"Primary":    BeNil(),
-						"SecretName": Equal(pointer.StringPtr(secretName)),
-					}),
-				))
+				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
+					"ErrStatus": MatchFields(IgnoreExtras, Fields{
+						"Code":    Equal(int32(http.StatusBadRequest)),
+						"Message": Equal("non-primary DNS providers in .spec.dns.providers must specify a `type` and `secretName`"),
+					})},
+				)))
 			})
 
 			It("should not remove functionless DNS providers on create w/o seed assignment", func() {
@@ -400,7 +393,7 @@ var _ = Describe("dns", func() {
 				))
 			})
 
-			It("should remove functionless DNS providers on updates w/ seed assignment", func() {
+			It("should forbid functionless DNS providers on updates w/ seed assignment", func() {
 				var (
 					shootDomain = "my-shoot.my-private-domain.com"
 				)
@@ -429,14 +422,12 @@ var _ = Describe("dns", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
-				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
-					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(pointer.StringPtr(providerType)),
-						"Primary": Equal(pointer.BoolPtr(true)),
-					}),
-				))
+				Expect(err).To(PointTo(MatchFields(IgnoreExtras, Fields{
+					"ErrStatus": MatchFields(IgnoreExtras, Fields{
+						"Code":    Equal(int32(http.StatusBadRequest)),
+						"Message": Equal("non-primary DNS providers in .spec.dns.providers must specify a `type` and `secretName`"),
+					})},
+				)))
 			})
 
 			It("should not remove functionless DNS providers on updates w/o seed assignment", func() {
