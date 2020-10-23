@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -347,7 +346,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			clusterautoscaler.LoggingConfiguration,
 			kubescheduler.LoggingConfiguration,
 		}
-		userAllowedComponents := []string{constants.DeploymentNameKubeAPIServer, constants.DeploymentNameKubeControllerManager}
+		userAllowedComponents := []string{v1beta1constants.DeploymentNameKubeAPIServer, v1beta1constants.DeploymentNameKubeControllerManager}
 
 		// Fetch component specific logging configurations
 		for _, componentFn := range componentsFunctions {

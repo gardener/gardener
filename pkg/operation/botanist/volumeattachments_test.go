@@ -49,7 +49,7 @@ var _ = Describe("VolumeAttachments", func() {
 		ctrl.Finish()
 	})
 
-	Describe("#WaitUntilVolumeAttachmentsDeleted", func() {
+	Context("#WaitUntilVolumeAttachmentsDeleted", func() {
 		It("should return nil when there are no VolumeAttachments", func() {
 			c.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&storagev1beta1.VolumeAttachmentList{})).Return(nil)
 

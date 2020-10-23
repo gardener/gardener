@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
-	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -259,7 +258,7 @@ var _ = Describe("extensions", func() {
 
 		It("should delete extension CR", func() {
 			defer test.WithVars(
-				&common.TimeNow, mockNow.Do,
+				&TimeNow, mockNow.Do,
 			)()
 
 			expected.Annotations = map[string]string{
@@ -389,7 +388,7 @@ var _ = Describe("extensions", func() {
 		Describe("#RestoreExtensionWithDeployFunction", func() {
 			It("should restore the extension CR state with the provided deploy fuction and annotate it for restoration", func() {
 				defer test.WithVars(
-					&common.TimeNow, mockNow.Do,
+					&TimeNow, mockNow.Do,
 				)()
 				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
@@ -415,7 +414,7 @@ var _ = Describe("extensions", func() {
 
 			It("should only annotate the resource with restore operation annotation if a corresponding state does not exist in the ShootState", func() {
 				defer test.WithVars(
-					&common.TimeNow, mockNow.Do,
+					&TimeNow, mockNow.Do,
 				)()
 				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
@@ -456,7 +455,7 @@ var _ = Describe("extensions", func() {
 
 			It("should update the state if the extension CR exists", func() {
 				defer test.WithVars(
-					&common.TimeNow, mockNow.Do,
+					&TimeNow, mockNow.Do,
 				)()
 				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
@@ -482,7 +481,7 @@ var _ = Describe("extensions", func() {
 
 		It("should properly annotate extension CR for migration", func() {
 			defer test.WithVars(
-				&common.TimeNow, mockNow.Do,
+				&TimeNow, mockNow.Do,
 			)()
 
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
@@ -658,7 +657,7 @@ var _ = Describe("extensions", func() {
 
 		It("should annotate extension object with operation", func() {
 			defer test.WithVars(
-				&common.TimeNow, mockNow.Do,
+				&TimeNow, mockNow.Do,
 			)()
 
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
