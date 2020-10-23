@@ -47,6 +47,11 @@ spec:
         {{- if semverCompare ">= 1.16" .Capabilities.KubeVersion.GitVersion }}
         - --namespace={{ include "kubernetes-dashboard.namespace" . }}
         {{- end }}
+        {{- if .Values.kubeAPIServerHost }}
+        env:
+        - name: KUBERNETES_SERVICE_HOST
+          value: {{ .Values.kubeAPIServerHost}}
+        {{- end }}
         ports:
         - containerPort: 8443
           protocol: TCP

@@ -8,3 +8,4 @@ images:
   kubernetes-dashboard-metrics-scraper: image-repository:image-tag
 
 authenticationMode: basic
+# kubeAPIServerHost: foo.bar

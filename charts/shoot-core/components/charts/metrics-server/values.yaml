@@ -7,3 +7,4 @@ secret:
   data:
     tls.crt: server-cert-of-metrics-server
     tls.key: server-key-of-metrics-server
+# kubeAPIServerHost: foo.bar

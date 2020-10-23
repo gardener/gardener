@@ -59,6 +59,11 @@ spec:
         - --tls-cert-file=/srv/metrics-server/tls/tls.crt
         - --tls-private-key-file=/srv/metrics-server/tls/tls.key
         - --v=2
+        {{- if .Values.kubeAPIServerHost }}
+        env:
+        - name: KUBERNETES_SERVICE_HOST
+          value: {{ .Values.kubeAPIServerHost}}
+        {{- end }}
         readinessProbe:
           tcpSocket:
             port: 8443

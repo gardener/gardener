@@ -74,3 +74,4 @@ horizontalPodAutoScaler:
     minReplicas: 2
     metrics:
       targetAverageUtilization: 70
+# kubeAPIServerHost: foo.bar

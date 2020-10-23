@@ -81,6 +81,10 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
+        {{- if .Values.kubeAPIServerHost }}
+          - name: KUBERNETES_SERVICE_HOST
+            value: {{ .Values.kubeAPIServerHost}}
+        {{- end }}
           livenessProbe:
             failureThreshold: 3
             httpGet:

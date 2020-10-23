@@ -55,6 +55,11 @@ spec:
         args:
         - -conf
         - /etc/coredns/Corefile
+        {{- if .Values.kubeAPIServerHost }}
+        env:
+        - name: KUBERNETES_SERVICE_HOST
+          value: {{ .Values.kubeAPIServerHost}}
+        {{- end }}
         {{- if .Values.deployment.spec.containers.resources }}
         resources:
 {{ .Values.deployment.spec.containers.resources | toYaml | trimSuffix "\n"| indent 10 }}
