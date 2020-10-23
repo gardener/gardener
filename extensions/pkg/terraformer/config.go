@@ -65,6 +65,18 @@ func (t *terraformer) SetDeadlinePod(d time.Duration) Terraformer {
 	return t
 }
 
+// UseV2 configures if it should use flags compatible with terraformer@v2.
+func (t *terraformer) UseV2(v2 bool) Terraformer {
+	t.useV2 = v2
+	return t
+}
+
+// SetLogLevel sets the log level of the Terraformer pod. It only takes effect when UseV2 is set to true.
+func (t *terraformer) SetLogLevel(level string) Terraformer {
+	t.logLevel = level
+	return t
+}
+
 // InitializerConfig is the configuration about the location and naming of the resources the
 // Terraformer expects.
 type InitializerConfig struct {

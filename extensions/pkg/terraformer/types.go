@@ -25,6 +25,7 @@ import (
 )
 
 // terraformer is a struct containing configuration parameters for the Terraform script it acts on.
+// * useV2 indicates if it should use flags compatible with terraformer@v2 (defaults to false)
 // * purpose is a one-word description depicting what the Terraformer does (e.g. 'infrastructure').
 // * namespace is the namespace in which the Terraformer will act.
 // * image is the Docker image name of the Terraformer image.
@@ -36,10 +37,14 @@ import (
 //   with TF_VAR_).
 // * configurationDefined indicates whether the required configuration ConfigMaps/Secrets have been
 //   successfully defined.
+// * logLevel configures the log level for the Terraformer Pod (only compatible with terraformer@v2,
+//   defaults to "info")
 // * terminationGracePeriodSeconds is the respective Pod spec field passed to Terraformer Pods.
 // * deadlineCleaning is the timeout to wait Terraformer Pods to be cleaned up.
 // * deadlinePod is the time to wait apply/destroy Pod to be completed.
 type terraformer struct {
+	useV2 bool
+
 	logger       logrus.FieldLogger
 	client       client.Client
 	coreV1Client corev1client.CoreV1Interface
@@ -55,6 +60,7 @@ type terraformer struct {
 	variablesEnvironment map[string]string
 	configurationDefined bool
 
+	logLevel                      string
 	terminationGracePeriodSeconds int64
 
 	deadlineCleaning time.Duration
@@ -88,6 +94,8 @@ const (
 
 // Terraformer is the Terraformer interface.
 type Terraformer interface {
+	UseV2(bool) Terraformer
+	SetLogLevel(string) Terraformer
 	SetVariablesEnvironment(tfVarsEnvironment map[string]string) Terraformer
 	SetTerminationGracePeriodSeconds(int64) Terraformer
 	SetDeadlineCleaning(time.Duration) Terraformer

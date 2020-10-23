@@ -116,6 +116,7 @@ func New(
 		variablesName: prefix + TerraformerVariablesSuffix,
 		stateName:     prefix + TerraformerStateSuffix,
 
+		logLevel:                      "info",
 		terminationGracePeriodSeconds: int64(3600),
 
 		deadlineCleaning: 10 * time.Minute,
@@ -311,10 +312,7 @@ func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, co
 				Name:            "terraform",
 				Image:           t.image,
 				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command: []string{
-					"/terraformer.sh",
-					command,
-				},
+				Command:         t.computeTerraformerCommand(command),
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("100m"),
@@ -337,14 +335,37 @@ func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, co
 	return pod, err
 }
 
-func (t *terraformer) env() []corev1.EnvVar {
-	envVars := []corev1.EnvVar{
-		{Name: "MAX_BACKOFF_SEC", Value: "60"},
-		{Name: "MAX_TIME_SEC", Value: "1800"},
-		{Name: "TF_CONFIGURATION_CONFIG_MAP_NAME", Value: t.configName},
-		{Name: "TF_STATE_CONFIG_MAP_NAME", Value: t.stateName},
-		{Name: "TF_VARIABLES_SECRET_NAME", Value: t.variablesName},
+func (t *terraformer) computeTerraformerCommand(command string) []string {
+	if t.useV2 {
+		return []string{
+			"/terraformer",
+			command,
+			"--zap-log-level=" + t.logLevel,
+			"--configuration-configmap-name=" + t.configName,
+			"--state-configmap-name=" + t.stateName,
+			"--variables-secret-name=" + t.variablesName,
+		}
 	}
+
+	return []string{
+		"/terraformer.sh",
+		command,
+	}
+}
+
+func (t *terraformer) env() []corev1.EnvVar {
+	var envVars []corev1.EnvVar
+
+	if !t.useV2 {
+		envVars = []corev1.EnvVar{
+			{Name: "MAX_BACKOFF_SEC", Value: "60"},
+			{Name: "MAX_TIME_SEC", Value: "1800"},
+			{Name: "TF_CONFIGURATION_CONFIG_MAP_NAME", Value: t.configName},
+			{Name: "TF_STATE_CONFIG_MAP_NAME", Value: t.stateName},
+			{Name: "TF_VARIABLES_SECRET_NAME", Value: t.variablesName},
+		}
+	}
+
 	for k, v := range t.variablesEnvironment {
 		envVars = append(envVars, corev1.EnvVar{Name: k, Value: v})
 	}
