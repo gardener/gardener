@@ -26,6 +26,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | ManagedIstio | `false` | `Alpha` | `1.5` | |
 | APIServerSNI | `false` | `Alpha` | `1.7` | |
 | MountHostCADirectories | `false` | `Alpha` | `1.11.0` | |
+| SeedChange | `false` | `Alpha` | `1.12.0` | |
 
 ## Using a feature
 
@@ -69,3 +70,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 * `ManagedIstio` enables a Gardener-tailored [Istio](https://istio.io) in each Seed cluster. Disable this feature if Istio is already installed in the cluster. Istio is not automatically removed if this feature is disabled. See the [detailed documentation](../usage/istio.md) for more information.
 * `APIServerSNI` enables only one LoadBalancer to be used for every Shoot cluster API server in a Seed. Enable this feature when `ManagedIstio` is enabled or Istio is manually deployed in Seed cluster. See [GEP-8](../proposals/08-shoot-apiserver-via-sni.md) for more details.
 * `MountHostCADirectories` enables mounting common CA certificate directories in the Shoot API server pod that might be required for webhooks or OIDC. 
+* `SeedChange` enables updating the `spec.seedName` field during shoot validation from a non-empty value in order to trigger shoot control plane migration.

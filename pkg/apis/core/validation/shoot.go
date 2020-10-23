@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
@@ -43,6 +44,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
 var (
@@ -148,7 +150,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, deletionTimestamp
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Region, oldSpec.Region, fldPath.Child("region"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.CloudProfileName, oldSpec.CloudProfileName, fldPath.Child("cloudProfileName"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.SecretBindingName, oldSpec.SecretBindingName, fldPath.Child("secretBindingName"))...)
-	if oldSpec.SeedName != nil {
+	if oldSpec.SeedName != nil && !utilfeature.DefaultFeatureGate.Enabled(features.SeedChange) {
 		// allow initial seed assignment
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.SeedName, oldSpec.SeedName, fldPath.Child("seedName"))...)
 	}

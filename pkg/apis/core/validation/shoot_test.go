@@ -34,10 +34,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -523,7 +526,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 			))
 		})
 
-		It("should forbid updating the seed, if it has been set previously", func() {
+		It("should forbid updating the seed if it has been set previously and the SeedChange feature gate is not enabled", func() {
+			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, false)()
+
 			newShoot := prepareShootForUpdate(shoot)
 			newShoot.Spec.SeedName = pointer.StringPtr("another-seed")
 			shoot.Spec.SeedName = pointer.StringPtr("first-seed")
@@ -536,6 +541,18 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("spec.seedName"),
 				}))),
 			)
+		})
+
+		It("should allow updating the seed if it has been set previously and the SeedChange feature gate is enabled", func() {
+			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
+
+			newShoot := prepareShootForUpdate(shoot)
+			newShoot.Spec.SeedName = pointer.StringPtr("another-seed")
+			shoot.Spec.SeedName = pointer.StringPtr("first-seed")
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid passing an extension w/o type information", func() {

@@ -27,7 +27,6 @@ import (
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	"github.com/gardener/gardener/pkg/apiserver/features"
 	"github.com/gardener/gardener/pkg/apiserver/storage"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
@@ -365,7 +364,7 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	}
 	if initializers, err := o.Recommended.ExtraAdmissionInitializers(gardenerAPIServerConfig); err != nil {
 		return err
-	} else if err := o.Recommended.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerAPIServerConfig.ClientConfig, features.FeatureGate, initializers...); err != nil {
+	} else if err := o.Recommended.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerAPIServerConfig.ClientConfig, utilfeature.DefaultFeatureGate, initializers...); err != nil {
 		return err
 	}
 

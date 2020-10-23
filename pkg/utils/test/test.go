@@ -20,6 +20,7 @@ import (
 	"reflect"
 
 	"github.com/onsi/ginkgo"
+	"k8s.io/component-base/featuregate"
 )
 
 // WithVar sets the given var to the src value and returns a function to revert to the original state.
@@ -118,6 +119,24 @@ func WithWd(path string) func() {
 	return func() {
 		if err := os.Chdir(oldPath); err != nil {
 			ginkgo.Fail(fmt.Sprintf("Could not revert working diretory: %v", err))
+		}
+	}
+}
+
+// WithFeatureGate sets the specified gate to the specified value, and returns a function that restores the original value.
+// Failures to set or restore cause the test to fail.
+// Example use:
+//   defer WithFeatureGate(utilfeature.DefaultFeatureGate, features.<FeatureName>, true)()
+func WithFeatureGate(gate featuregate.FeatureGate, f featuregate.Feature, value bool) func() {
+	originalValue := gate.Enabled(f)
+
+	if err := gate.(featuregate.MutableFeatureGate).Set(fmt.Sprintf("%s=%v", f, value)); err != nil {
+		ginkgo.Fail(fmt.Sprintf("could not set feature gate %s=%v: %v", f, value, err))
+	}
+
+	return func() {
+		if err := gate.(featuregate.MutableFeatureGate).Set(fmt.Sprintf("%s=%v", f, originalValue)); err != nil {
+			ginkgo.Fail(fmt.Sprintf("cound not restore feature gate %s=%v: %v", f, originalValue, err))
 		}
 	}
 }
