@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -450,7 +451,7 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 	}
 
 	c.recorder.Event(o.Shoot.Info, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, "Reconciled Shoot cluster state")
-	o.Shoot.Info, err = c.updateShootStatusOperationSuccess(ctx, gardenClient.GardenCore(), o.Shoot.Info, o.Seed.Info.Name, operationType)
+	o.Shoot.Info, err = c.updateShootStatusOperationSuccess(ctx, gardenClient.GardenCore(), o.Shoot.Info, o.Shoot.SeedNamespace, o.Seed.Info.Name, operationType)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -546,10 +547,12 @@ func (c *Controller) updateShootStatusOperationStart(ctx context.Context, g gard
 		})
 }
 
-func (c *Controller) updateShootStatusOperationSuccess(ctx context.Context, g gardencore.Interface, shoot *gardencorev1beta1.Shoot, seedName string, operationType gardencorev1beta1.LastOperationType) (*gardencorev1beta1.Shoot, error) {
+func (c *Controller) updateShootStatusOperationSuccess(ctx context.Context, g gardencore.Interface, shoot *gardencorev1beta1.Shoot, shootSeedNamespace string, seedName string, operationType gardencorev1beta1.LastOperationType) (*gardencorev1beta1.Shoot, error) {
 	var (
-		now         = metav1.NewTime(time.Now().UTC())
-		description string
+		now          = metav1.NewTime(time.Now().UTC())
+		description  string
+		err          error
+		isHibernated = gardencorev1beta1helper.HibernationIsEnabled(shoot)
 	)
 
 	switch operationType {
@@ -560,10 +563,17 @@ func (c *Controller) updateShootStatusOperationSuccess(ctx context.Context, g ga
 		description = "Shoot cluster has been successfully deleted."
 	}
 
+	if len(shootSeedNamespace) > 0 {
+		isHibernated, err = c.isHibernationActive(ctx, shootSeedNamespace, seedName)
+		if err != nil {
+			return nil, fmt.Errorf("error updating Shoot (%s/%s) after successful reconciliation when checking for active hibernation: %v", shoot.Namespace, shoot.Name, err)
+		}
+	}
+
 	return kutil.TryUpdateShootStatus(ctx, g, retry.DefaultRetry, shoot.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 			shoot.Status.SeedName = &seedName
-			shoot.Status.IsHibernated = gardencorev1beta1helper.HibernationIsEnabled(shoot)
+			shoot.Status.IsHibernated = isHibernated
 			shoot.Status.RetryCycleStartTime = nil
 			shoot.Status.LastErrors = nil
 			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
@@ -625,4 +635,26 @@ func lastErrorsOperationInitializationFailure(lastErrors []gardencorev1beta1.Las
 	}
 
 	return lastErrors
+}
+
+// isHibernationActive uses the Cluster resource in the Seed to determine whether the Shoot is hibernated
+// The Cluster contains the actual or "active" spec of the Shoot resource for this reconciliation
+// as the Shoot resources field `spec.hibernation.enabled` might have changed during the reconciliation
+func (c *Controller) isHibernationActive(ctx context.Context, shootSeedNamespace, seedName string) (bool, error) {
+	seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeedWithName(seedName))
+	if err != nil {
+		return false, err
+	}
+
+	cluster, err := gardenerextensions.GetCluster(ctx, seedClient.Client(), shootSeedNamespace)
+	if err != nil {
+		return false, err
+	}
+
+	shoot := cluster.Shoot
+	if shoot == nil {
+		return false, fmt.Errorf("shoot is missing in cluster resource: %v", err)
+	}
+
+	return gardencorev1beta1helper.HibernationIsEnabled(shoot), nil
 }
