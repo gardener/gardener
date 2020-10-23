@@ -345,10 +345,15 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord),
 			Dependencies: flow.NewTaskIDs(nginxLBReady),
 		})
+		vpnLBReady = g.Add(flow.Task{
+			Name:         "Waiting until vpn-shoot LoadBalancer is ready",
+			Fn:           flow.TaskFn(botanist.WaitUntilVpnShootServiceIsReady).SkipIf(o.Shoot.HibernationEnabled || o.Shoot.KonnectivityTunnelEnabled),
+			Dependencies: flow.NewTaskIDs(deployManagedResources, waitUntilNetworkIsReady, waitUntilWorkerReady),
+		})
 		waitUntilTunnelConnectionExists = g.Add(flow.Task{
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
 			Fn:           flow.TaskFn(botanist.WaitUntilTunnelConnectionExists).SkipIf(o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployManagedResources, waitUntilNetworkIsReady, waitUntilWorkerReady),
+			Dependencies: flow.NewTaskIDs(deployManagedResources, waitUntilNetworkIsReady, waitUntilWorkerReady, vpnLBReady),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Finishing Kubernetes API server service SNI transition",
