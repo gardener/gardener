@@ -610,7 +610,7 @@ func (c *Controller) updateShootStatusOperationError(ctx context.Context, g gard
 		return nil, err
 	}
 
-	return kutil.TryUpdateShootLabels(ctx, g, retry.DefaultRetry, newShoot.ObjectMeta, StatusLabelTransform(StatusUnhealthy))
+	return kutil.TryUpdateShootLabels(ctx, g, retry.DefaultRetry, newShoot.ObjectMeta, shootpkg.StatusLabelTransform(shootpkg.StatusUnhealthy))
 }
 
 func lastErrorsOperationInitializationFailure(lastErrors []gardencorev1beta1.LastError, err error) []gardencorev1beta1.LastError {

@@ -41,6 +41,7 @@ import (
 func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	// We create the botanists (which will do the actual work).
 	var (
+		ctx                  = context.TODO()
 		botanist             *botanistpkg.Botanist
 		enableEtcdEncryption bool
 		tasksWithErrors      []string
@@ -57,12 +58,12 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 
 	err = errors.HandleErrors(errorContext,
 		func(errorID string) error {
-			o.CleanShootTaskError(context.TODO(), errorID)
+			o.CleanShootTaskErrorAndUpdateStatusLabel(ctx, errorID)
 			return nil
 		},
 		nil,
 		errors.ToExecute("Create botanist", func() error {
-			return retryutils.UntilTimeout(context.TODO(), 10*time.Second, 10*time.Minute, func(context.Context) (done bool, err error) {
+			return retryutils.UntilTimeout(ctx, 10*time.Second, 10*time.Minute, func(context.Context) (done bool, err error) {
 				botanist, err = botanistpkg.New(o)
 				if err != nil {
 					return retryutils.MinorError(err)
@@ -71,7 +72,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			})
 		}),
 		errors.ToExecute("Check required extensions", func() error {
-			return botanist.WaitUntilRequiredExtensionsReady(context.TODO())
+			return botanist.WaitUntilRequiredExtensionsReady(ctx)
 		}),
 		errors.ToExecute("Check version constraint", func() error {
 			enableEtcdEncryption, err = versionutils.CheckVersionMeetsConstraint(botanist.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
@@ -469,7 +470,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		Logger:           o.Logger,
 		ProgressReporter: c.newProgressReporter(o.ReportShootProgress),
 		ErrorContext:     errorContext,
-		ErrorCleaner:     o.CleanShootTaskError,
+		ErrorCleaner:     o.CleanShootTaskErrorAndUpdateStatusLabel,
 	}); err != nil {
 		o.Logger.Errorf("Failed to reconcile Shoot %q: %+v", o.Shoot.Info.Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))

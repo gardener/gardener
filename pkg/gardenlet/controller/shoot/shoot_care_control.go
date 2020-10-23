@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -311,8 +312,8 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		gardenClient.GardenCore(),
 		retry.DefaultBackoff,
 		shoot.ObjectMeta,
-		StatusLabelTransform(
-			ComputeStatus(
+		shootpkg.StatusLabelTransform(
+			shootpkg.ComputeStatus(
 				shoot.Status.LastOperation,
 				shoot.Status.LastErrors,
 				conditionAPIServerAvailable,
