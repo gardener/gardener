@@ -668,6 +668,9 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		"hvpa": map[string]interface{}{
 			"enabled": hvpaEnabled,
 		},
+		"istio": map[string]interface{}{
+			"enabled": gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio),
+		},
 		"global-network-policies": map[string]interface{}{
 			"denyAll":         false,
 			"privateNetworks": privateNetworks,

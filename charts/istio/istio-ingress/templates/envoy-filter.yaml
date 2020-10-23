@@ -13,7 +13,7 @@ spec:
     match:
       context: GATEWAY
       listener:
-        portNumber: {{ .port }}
+        portNumber: {{ .targetPort }}
     patch:
       operation: MERGE
       value:
@@ -22,10 +22,78 @@ spec:
     match:
       context: GATEWAY
       cluster:
-        portNumber: {{ .port }}
+        portNumber: {{ .targetPort }}
     patch:
       operation: MERGE
       value:
         per_connection_buffer_limit_bytes: 32768 # 32 KiB
 {{- end }}
 {{- end }}
+
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: tcp-stats-filter-1.7
+  namespace: {{ .Release.Namespace }}
+spec:
+  configPatches:
+  - applyTo: NETWORK_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        filterChain:
+          filter:
+            name: envoy.tcp_proxy
+      proxy:
+        proxyVersion: ^1\.7.*
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: istio.stats
+        typed_config:
+          '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+          type_url: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+          value:
+            config:
+              configuration:
+                '@type': type.googleapis.com/google.protobuf.StringValue
+                value: |
+                  {
+                    "debug": "false",
+                    "stat_prefix": "istio"
+                  }
+              root_id: stats_outbound
+              vm_config:
+                code:
+                  local:
+                    inline_string: envoy.wasm.stats
+                runtime: envoy.wasm.runtime.null
+                vm_id: tcp_stats_outbound
+
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: tcp-metadata-exchange-1.7
+  namespace: {{ .Release.Namespace }}
+spec:
+  configPatches:
+  - applyTo: CLUSTER
+    match:
+      context: GATEWAY
+      proxy:
+        proxyVersion: '^1\.7.*'
+      cluster: {}
+    patch:
+      operation: MERGE
+      value:
+        filters:
+        - name: istio.metadata_exchange
+          typed_config:
+            "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+            type_url: type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+            value:
+              protocol: istio-peer-exchange
