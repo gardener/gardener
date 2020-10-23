@@ -17,6 +17,8 @@ package helper_test
 import (
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -606,6 +608,24 @@ var _ = Describe("helper", func() {
 							MinReplicas: &two,
 							MaxReplicas: three,
 						},
+					},
+					Backup: &gardencorev1beta1.SeedBackup{},
+				}))
+			})
+
+			It("should return a filled seedprovider providerconfig", func() {
+				shoot.Annotations = map[string]string{
+					v1beta1constants.AnnotationShootUseAsSeed: "true,providerConfig.storagePolicyName=vSAN Default Storage Policy,providerConfig.param1=abc" +
+						",providerConfig.sub.param2=def,providerConfig.sub.param3=3,providerConfig.sub.param4=true,providerConfig.sub.param5=\"true\"",
+				}
+
+				shootedSeed, err := ReadShootedSeed(shoot)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shootedSeed).To(Equal(&ShootedSeed{
+					APIServer: &defaultAPIServer,
+					SeedProviderConfig: &runtime.RawExtension{
+						Raw: []byte(`{"param1":"abc","storagePolicyName":"vSAN Default Storage Policy","sub":{"param2":"def","param3":3,"param4":true,"param5":"true"}}`),
 					},
 					Backup: &gardencorev1beta1.SeedBackup{},
 				}))

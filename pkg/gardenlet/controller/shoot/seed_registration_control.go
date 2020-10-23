@@ -331,8 +331,9 @@ func prepareSeedConfig(ctx context.Context, gardenClient client.Client, seedClie
 
 	return &gardencorev1beta1.SeedSpec{
 		Provider: gardencorev1beta1.SeedProvider{
-			Type:   shoot.Spec.Provider.Type,
-			Region: shoot.Spec.Region,
+			Type:           shoot.Spec.Provider.Type,
+			Region:         shoot.Spec.Region,
+			ProviderConfig: shootedSeedConfig.SeedProviderConfig,
 		},
 		DNS: gardencorev1beta1.SeedDNS{
 			IngressDomain: fmt.Sprintf("%s.%s", common.IngressPrefix, *(shoot.Spec.DNS.Domain)),
