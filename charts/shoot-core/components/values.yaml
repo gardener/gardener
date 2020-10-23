@@ -8,7 +8,9 @@ apiserver-proxy:
     apiserver-proxy: image-repository
     apiserver-proxy-sidecar: image-repository
   advertiseIPAddress: 1.1.1.1
-  proxySeedServer: dummy.127.0.0.1.nip.io
+  proxySeedServer:
+    host: dummy.127.0.0.1.nip.io
+    port: 8443
 coredns:
   enabled: true
 konnectivity-agent:

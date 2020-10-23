@@ -81,9 +81,9 @@ spec:
         image: {{ index .Values.images "apiserver-proxy" }}
         imagePullPolicy: IfNotPresent
         command:
-        - nginx
+        - envoy
         - -c
-        - /etc/apiserver-proxy/proxy.conf
+        - /etc/apiserver-proxy/envoy.yaml
         securityContext:
           capabilities:
             add:

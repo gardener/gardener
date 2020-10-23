@@ -246,9 +246,9 @@ images:
 
 # API Server SNI
 - name: apiserver-proxy
-  sourceRepository: github.com/nginxinc/docker-nginx
-  repository: nginx
-  tag: "1.17.8"
+  sourceRepository: github.com/envoyproxy/envoy
+  repository: envoyproxy/envoy
+  tag: "v1.16.0"
 - name: apiserver-proxy-sidecar
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy
