@@ -1,0 +1,18 @@
+kind: TestDefinition
+metadata:
+  name: delete-shooted-seed
+spec:
+  owner: gardener-oq@listserv.sap.com
+  description: Tests the deletion of a shooted seed cluster.
+  activeDeadlineSeconds: 3600
+
+  command: [bash, -c]
+  args:
+  - >-
+    go test -timeout=0 -mod=vendor ./test/system/seed_deletion
+    --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
+    -seed-name=$SEED_NAME
+    -shoot-name=$SHOOT_NAME
+    -project-namespace=$PROJECT_NAMESPACE
+    -kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
+  image: golang:1.15.3

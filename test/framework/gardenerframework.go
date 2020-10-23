@@ -158,3 +158,15 @@ func (f *GardenerFramework) NewShootFramework(shoot *gardencorev1beta1.Shoot) (*
 	}
 	return shootFramework, nil
 }
+
+// NewSeedRegistrationFramework creates a new SeedRegistrationFramework with the current gardener framework
+func (f *GardenerFramework) NewSeedRegistrationFramework(seed *gardencorev1beta1.Seed) (*SeedRegistrationFramework, error) {
+	seedFramework := &SeedRegistrationFramework{
+		GardenerFramework: f,
+		Config: &SeedRegistrationConfig{
+			GardenerConfig: f.GardenerFrameworkConfig,
+		},
+	}
+
+	return seedFramework, seedFramework.AddSeed(context.TODO(), seed)
+}
