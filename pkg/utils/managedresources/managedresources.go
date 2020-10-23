@@ -25,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	k8sretry "k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -98,4 +99,22 @@ func WaitUntilManagedResourceDeleted(ctx context.Context, client client.Client, 
 		},
 	}
 	return kutil.WaitUntilResourceDeleted(ctx, client, mr, 2*time.Second)
+}
+
+// KeepManagedResourceObjects updates the keepObjects field of the managed resource with the given name in the given namespace.
+func KeepManagedResourceObjects(ctx context.Context, c client.Client, namespace, name string, keepObjects bool) error {
+	resource := &resourcesv1alpha1.ManagedResource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+	}
+	if err := kutil.TryUpdate(ctx, k8sretry.DefaultBackoff, c, resource, func() error {
+		resource.Spec.KeepObjects = &keepObjects
+		return nil
+	}); client.IgnoreNotFound(err) != nil {
+		return errors.Wrapf(err, "could not update managed resource '%s/%s'", namespace, name)
+	}
+
+	return nil
 }

@@ -504,6 +504,14 @@ func (a *actuator) Migrate(
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
 ) error {
+	// Keep objects for shoot managed resources so that they are not deleted from the shoot during the migration
+	if err := managedresources.KeepManagedResourceObjects(ctx, a.client, cp.Namespace, ControlPlaneShootChartResourceName, true); err != nil {
+		return errors.Wrapf(err, "could not keep objects of managed resource containing shoot chart for controlplane '%s'", kutil.ObjectName(cp))
+	}
+	if err := managedresources.KeepManagedResourceObjects(ctx, a.client, cp.Namespace, StorageClassesChartResourceName, true); err != nil {
+		return errors.Wrapf(err, "could not keep objects of managed resource containing storage classes chart for controlplane '%s'", kutil.ObjectName(cp))
+	}
+
 	return a.Delete(ctx, cp, cluster)
 }
 

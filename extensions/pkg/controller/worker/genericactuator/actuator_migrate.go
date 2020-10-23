@@ -22,6 +22,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/pkg/errors"
@@ -35,6 +36,11 @@ func (a *genericActuator) Migrate(ctx context.Context, worker *extensionsv1alpha
 	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
 	if err != nil {
 		return errors.Wrap(err, "could not instantiate actuator context")
+	}
+
+	// Keep objects for shoot managed resources so that they are not deleted from the shoot during the migration
+	if err := managedresources.KeepManagedResourceObjects(ctx, a.client, worker.Namespace, McmShootResourceName, true); err != nil {
+		return errors.Wrapf(err, "could not keep objects of managed resource containing mcm chart for worker '%s'", kutil.ObjectName(worker))
 	}
 
 	// Make sure machine-controller-manager is deleted before deleting the machines.
