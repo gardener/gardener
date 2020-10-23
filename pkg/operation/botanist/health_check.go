@@ -383,7 +383,9 @@ func (b *HealthChecker) FailedCondition(condition gardencorev1beta1.Condition, r
 
 	case gardencorev1beta1.ConditionFalse:
 		threshold, ok := b.conditionThresholds[condition.Type]
-		if ok && b.lastOperation != nil && b.lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded && Now().UTC().Sub(b.lastOperation.LastUpdateTime.UTC()) <= threshold {
+		if ok &&
+			((b.lastOperation != nil && b.lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded && Now().UTC().Sub(b.lastOperation.LastUpdateTime.UTC()) <= threshold) ||
+				(reason != condition.Reason)) {
 			return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, reason, message, codes...)
 		}
 	}
