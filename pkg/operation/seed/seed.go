@@ -41,6 +41,8 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
+	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+
 	"github.com/gardener/gardener/pkg/version"
 
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
@@ -334,6 +336,13 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	)
 
 	if loggingEnabled {
+		// TODO: remove in a future release
+		// Clean up the stale loki-vpa.
+		lokiVpa := &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "loki-vpa", Namespace: v1beta1constants.GardenNamespace}}
+		if err := k8sSeedClient.Client().Delete(ctx, lokiVpa); client.IgnoreNotFound(err) != nil {
+			return err
+
+		}
 		componentsFunctions := []component.LoggingConfiguration{
 			clusterautoscaler.LoggingConfiguration,
 			kubescheduler.LoggingConfiguration,
@@ -647,6 +656,9 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		"loki": map[string]interface{}{
 			"enabled":     loggingEnabled,
 			"authEnabled": false,
+			"hvpa": map[string]interface{}{
+				"enabled": hvpaEnabled,
+			},
 		},
 		"alertmanager": alertManagerConfig,
 		"vpa": map[string]interface{}{

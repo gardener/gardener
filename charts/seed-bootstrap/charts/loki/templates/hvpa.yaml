@@ -1,0 +1,78 @@
+{{ if .Values.hvpa.enabled }}
+{{- /* .Values.replicas is of type 'float64', so let's cast it to string to have proper types for comparison */}}
+{{- if ne (.Values.replicas | toString) "0" }}
+apiVersion: autoscaling.k8s.io/v1alpha1
+kind: Hvpa
+metadata:
+  name: loki
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ toYaml .Values.labels | indent 4 }}
+spec:
+  replicas: 1
+  hpa:
+    selector:
+      matchLabels:
+        role: loki-hpa
+    deploy: false
+    template:
+      metadata:
+        labels:
+          role: loki-hpa
+      spec:
+        maxReplicas: {{ .Values.replicas }}
+        minReplicas: {{ .Values.replicas }}
+        metrics:
+        - resource:
+            name: memory
+            targetAverageUtilization: {{ .Values.hvpa.targetAverageUtilizationMemory }}
+          type: Resource
+        - resource:
+            name: cpu
+            targetAverageUtilization: {{ .Values.hvpa.targetAverageUtilizationCpu }}
+          type: Resource
+  vpa:
+    selector:
+      matchLabels:
+        role: loki-vpa
+    deploy: true
+    scaleUp:
+      updatePolicy:
+        updateMode: "Auto"
+{{- if .Values.hvpa.scaleUpStabilization }}
+{{ toYaml .Values.hvpa.scaleUpStabilization | indent 6 }}
+{{- end }}
+    scaleDown:
+      updatePolicy:
+        updateMode: "Auto"
+{{- if .Values.hvpa.scaleDownStabilization }}
+{{ toYaml .Values.hvpa.scaleDownStabilization | indent 6 }}
+{{- end }}
+{{- if .Values.hvpa.limitsRequestsGapScaleParams }}
+    limitsRequestsGapScaleParams:
+{{ toYaml .Values.hvpa.limitsRequestsGapScaleParams | indent 6 }}
+{{- end }}
+    template:
+      metadata:
+        labels:
+          role: loki-vpa
+      spec:
+        resourcePolicy:
+          containerPolicies:
+            - containerName: loki
+              maxAllowed:
+                memory: {{ .Values.hvpa.maxAllowed.memory }}
+                cpu:  "{{ .Values.hvpa.maxAllowed.cpu }}"
+              minAllowed:
+                memory: {{ .Values.hvpa.minAllowed.memory }}
+                cpu: "{{ .Values.hvpa.minAllowed.cpu }}"
+  weightBasedScalingIntervals:
+    - vpaWeight: 100
+      startReplicaCount: {{ .Values.replicas }}
+      lastReplicaCount: {{ .Values.replicas }}
+  targetRef:
+    apiVersion:  {{ include "statefulsetversion" . }}
+    kind: StatefulSet
+    name: loki
+{{ end }}
+{{ end }}
