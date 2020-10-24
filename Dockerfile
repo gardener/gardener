@@ -1,5 +1,5 @@
 #############      builder       #############
-FROM golang:1.14.7 AS builder
+FROM golang:1.15.3 AS builder
 
 WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
@@ -9,7 +9,7 @@ ARG EFFECTIVE_VERSION
 RUN make install EFFECTIVE_VERSION=$EFFECTIVE_VERSION
 
 ############# base
-FROM alpine:3.12.0 AS base
+FROM alpine:3.12.1 AS base
 
 #############      apiserver     #############
 FROM base AS apiserver
