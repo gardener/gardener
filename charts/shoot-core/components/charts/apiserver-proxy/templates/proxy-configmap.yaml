@@ -74,6 +74,6 @@ data:
           typed_config:
             "@type": type.googleapis.com/envoy.extensions.transport_sockets.proxy_protocol.v3.ProxyProtocolUpstreamTransport
             config:
-              version: V1
+              version: V2
             transport_socket:
               name: envoy.transport_sockets.raw_buffer
