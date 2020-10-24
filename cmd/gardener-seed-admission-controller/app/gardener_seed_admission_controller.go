@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerlogger "github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/seedadmission"
+	"github.com/gardener/gardener/pkg/version/verflag"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -102,6 +103,8 @@ func NewCommandStartGardenerSeedAdmissionController(ctx context.Context) *cobra.
 		Short: "Launch the Gardener seed admission controller",
 		Long:  `The Gardener seed admission controller serves a validation webhook endpoint for resources in the seed clusters.`,
 		Run: func(cmd *cobra.Command, args []string) {
+			verflag.PrintAndExitIfRequested()
+
 			utilruntime.Must(opts.validate(args))
 
 			logger.Infof("Starting Gardener seed admission controller...")
@@ -113,7 +116,9 @@ func NewCommandStartGardenerSeedAdmissionController(ctx context.Context) *cobra.
 		},
 	}
 
-	opts.AddFlags(cmd.Flags())
+	flags := cmd.Flags()
+	verflag.AddFlags(flags)
+	opts.AddFlags(flags)
 	return cmd
 }
 

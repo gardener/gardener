@@ -51,6 +51,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/version"
+	"github.com/gardener/gardener/pkg/version/verflag"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
@@ -182,6 +183,8 @@ the main components of a Kubernetes cluster (etcd, API server, controller manage
 These so-called control plane components are hosted in Kubernetes clusters themselves
 (which are called Seed clusters).`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			verflag.PrintAndExitIfRequested()
+
 			if err := opts.configFileSpecified(); err != nil {
 				return err
 			}
@@ -192,8 +195,9 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 		},
 	}
 
-	opts.AddFlags(cmd.Flags())
-
+	flags := cmd.Flags()
+	verflag.AddFlags(flags)
+	opts.AddFlags(flags)
 	return cmd
 }
 

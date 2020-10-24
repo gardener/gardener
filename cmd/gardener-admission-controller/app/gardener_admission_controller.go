@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
+	"github.com/gardener/gardener/pkg/version/verflag"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -221,6 +222,8 @@ func NewCommandStartGardenerAdmissionController() *cobra.Command {
 		Short: "Launch the Gardener admission controller",
 		Long:  `The Gardener admission controller serves a validation webhook endpoint for resources in the garden cluster.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			verflag.PrintAndExitIfRequested()
+
 			if err := opts.configFileSpecified(); err != nil {
 				return err
 			}
@@ -231,6 +234,8 @@ func NewCommandStartGardenerAdmissionController() *cobra.Command {
 		},
 	}
 
-	opts.addFlags(cmd.Flags())
+	flags := cmd.Flags()
+	verflag.AddFlags(flags)
+	opts.addFlags(flags)
 	return cmd
 }

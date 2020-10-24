@@ -37,6 +37,7 @@ import (
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	"github.com/gardener/gardener/pkg/openapi"
 	"github.com/gardener/gardener/pkg/version"
+	"github.com/gardener/gardener/pkg/version/verflag"
 	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
 	"github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
 	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
@@ -90,6 +91,8 @@ the main components of a Kubernetes cluster (etcd, API server, controller manage
 These so-called control plane components are hosted in Kubernetes clusters themselves
 (which are called Seed clusters).`,
 		RunE: func(c *cobra.Command, args []string) error {
+			verflag.PrintAndExitIfRequested()
+
 			if err := opts.complete(); err != nil {
 				return err
 			}
@@ -101,6 +104,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 	}
 
 	flags := cmd.Flags()
+	verflag.AddFlags(flags)
 	utilfeature.DefaultMutableFeatureGate.AddFlag(flags)
 	opts.Recommended.AddFlags(flags)
 	opts.ExtraOptions.AddFlags(flags)
