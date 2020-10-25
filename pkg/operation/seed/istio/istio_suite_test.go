@@ -15,10 +15,15 @@
 package istio_test
 
 import (
+	"bytes"
 	"testing"
 
+	"github.com/gogo/protobuf/jsonpb"
+	"github.com/gogo/protobuf/proto"
+	types "github.com/gogo/protobuf/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"sigs.k8s.io/yaml"
 )
 
 func TestIstio(t *testing.T) {
@@ -30,49 +35,46 @@ const (
 	chartsRootPath = "../../../../charts"
 )
 
-// This entire test is commented out because istio requires K8S API 1.18
-// TODO (mvladev): once we update to 1.18 enable this.
+// can't use https://pkg.go.dev/github.com/envoyproxy/go-control-plane/pkg/conversion
+// directly as types differ.
+func messageToStruct(msg proto.Message) *types.Struct {
+	Expect(msg).NotTo(BeNil(), "valid message should be passed")
 
-// // can't use https://pkg.go.dev/github.com/envoyproxy/go-control-plane/pkg/conversion
-// // directly as types differ.
-// func messageToStruct(msg proto.Message) *types.Struct {
+	buf := &bytes.Buffer{}
+	err := (&jsonpb.Marshaler{OrigName: true}).Marshal(buf, msg)
+	Expect(err).NotTo(HaveOccurred(), "marshaling of message succeeds")
 
-// 	Expect(msg).NotTo(BeNil(), "valid message should be passed")
+	val := &types.Struct{}
+	err = jsonpb.Unmarshal(buf, val)
+	Expect(err).NotTo(HaveOccurred(), "unmarshaling of struct succeeds")
 
-// 	buf := &bytes.Buffer{}
-// 	err := (&jsonpb.Marshaler{OrigName: true}).Marshal(buf, msg)
-// 	Expect(err).NotTo(HaveOccurred(), "marshaling of message succeeds")
+	return val
+}
 
-// 	val := &types.Struct{}
-// 	err = jsonpb.Unmarshal(buf, val)
-// 	Expect(err).NotTo(HaveOccurred(), "unmarshaling of struct succeeds")
+// applyJSON unmarshals a JSON string into a proto message.
+func applyJSON(js []byte, pb proto.Message) error {
 
-// 	return val
-// }
+	reader := bytes.NewReader(js)
+	m := jsonpb.Unmarshaler{}
 
-// // applyJSON unmarshals a JSON string into a proto message.
-// func applyJSON(js []byte, pb proto.Message) error {
-// 	reader := bytes.NewReader(js)
-// 	m := jsonpb.Unmarshaler{}
+	if err := m.Unmarshal(reader, pb); err != nil {
+		m.AllowUnknownFields = true
 
-// 	if err := m.Unmarshal(reader, pb); err != nil {
-// 		m.AllowUnknownFields = true
+		reader.Reset(js)
 
-// 		reader.Reset(js)
+		return m.Unmarshal(reader, pb)
+	}
 
-// 		return m.Unmarshal(reader, pb)
-// 	}
+	return nil
+}
 
-// 	return nil
-// }
+// applyYAML unmarshals a YAML string into a proto message.
+// Unknown fields are allowed.
+func applyYAML(yml []byte, pb proto.Message) error {
+	js, err := yaml.YAMLToJSON(yml)
+	if err != nil {
+		return err
+	}
 
-// // applyYAML unmarshals a YAML string into a proto message.
-// // Unknown fields are allowed.
-// func applyYAML(yml []byte, pb proto.Message) error {
-// 	js, err := yaml.YAMLToJSON(yml)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return applyJSON(js, pb)
-// }
+	return applyJSON(js, pb)
+}

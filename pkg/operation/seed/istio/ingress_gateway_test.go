@@ -15,13 +15,17 @@
 package istio_test
 
 import (
+	"bytes"
 	"context"
 
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/seed/istio"
+	"github.com/gogo/protobuf/jsonpb"
 
+	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
+	"github.com/ghodss/yaml"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -166,6 +170,42 @@ var _ = Describe("ingress", func() {
 
 		It("requires minimum one replica", func() {
 			Expect(pdb.Spec.MinAvailable.IntValue()).To(Equal(1))
+		})
+	})
+
+	Context("custom override", func() {
+		var (
+			b *bootstrapv3.Bootstrap
+		)
+		JustBeforeEach(func() {
+			var (
+				cm = &corev1.ConfigMap{}
+				u  = jsonpb.Unmarshaler{AllowUnknownFields: true}
+			)
+
+			Expect(c.Get(
+				ctx,
+				client.ObjectKey{Name: "istio-custom-bootstrap-config", Namespace: deployNS},
+				cm),
+			).ToNot(HaveOccurred(), "istio-custom-bootstrap-config configmap get succeeds")
+
+			Expect(cm.Data).To(HaveKey("custom_bootstrap.yaml"))
+
+			jsonData, err := yaml.YAMLToJSON([]byte(cm.Data["custom_bootstrap.yaml"]))
+			Expect(err).NotTo(HaveOccurred(), "converting envoy bootstrap YAML to JSON succeeds")
+
+			b = &bootstrapv3.Bootstrap{}
+
+			Expect(u.Unmarshal(bytes.NewReader(jsonData), b)).NotTo(HaveOccurred(), "bootstrap unmarshal succeeds")
+		})
+
+		It("has layered runtime", func() {
+			Expect(b.LayeredRuntime).NotTo(BeNil())
+
+			layers := b.LayeredRuntime.Layers
+			Expect(layers).To(HaveLen(1), "layers")
+
+			Expect(layers[0].Name).To(Equal("static_layer_0"), "static layer name")
 		})
 	})
 })

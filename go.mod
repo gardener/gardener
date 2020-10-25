@@ -7,6 +7,7 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.2.0
 	github.com/coreos/go-systemd/v22 v22.1.0
 	github.com/emicklei/go-restful v2.9.6+incompatible
+	github.com/envoyproxy/go-control-plane v0.9.7-0.20200730005029-803dd64f0468
 	github.com/gardener/etcd-druid v0.3.0
 	github.com/gardener/external-dns-management v0.7.18
 	github.com/gardener/gardener-resource-manager v0.18.0
@@ -40,6 +41,8 @@ require (
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 	gomodules.xyz/jsonpatch/v2 v2.0.1
 	gopkg.in/yaml.v2 v2.3.0
+	istio.io/api v0.0.0-20201123152548-197f11e4ea09
+	istio.io/client-go v1.8.1
 	k8s.io/api v0.18.10
 	k8s.io/apiextensions-apiserver v0.18.10
 	k8s.io/apimachinery v0.18.10
@@ -65,7 +68,9 @@ require (
 
 replace (
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v2.9.5+incompatible // keep this value in sync with k8s.io/apiserver
+	github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
+	google.golang.org/grpc => google.golang.org/grpc v1.26.0 // keep this value in sync with k8s.io/apiserver
 	k8s.io/api => k8s.io/api v0.18.10
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.10
 	k8s.io/apimachinery => k8s.io/apimachinery v0.18.10
