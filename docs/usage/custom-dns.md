@@ -37,7 +37,9 @@ data:
 It is important to have the `ConfigMap` keys ending with `*.server` (if you would like to add a new server) or `*.override`
 if you want to customize the current server configuration (it is optional setting both).
 
-Once this `ConfigMap` is applied, you can roll-out your CoreDNS deployment using:
+## [Optional] Reload CoreDNS
+
+As Gardener is configuring the `reload` [plugin](https://coredns.io/plugins/reload/) of CoreDNS a restart of the CoreDNS components is typically not necessary to propagate `ConfigMap` changes. However, if you don't want to wait for the default (30s) to kick in, you can roll-out your CoreDNS deployment using:
 
 ```bash
 kubectl -n kube-system rollout restart deploy coredns
