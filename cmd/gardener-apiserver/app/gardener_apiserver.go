@@ -71,6 +71,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/kubernetes/pkg/quota/v1/generic"
+	"k8s.io/kubernetes/plugin/pkg/admission/resourcequota"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -173,6 +175,7 @@ func (o *Options) complete() error {
 	clusteropenidconnectpreset.Register(o.Recommended.Admission.Plugins)
 	shootstatedeletionvalidator.Register(o.Recommended.Admission.Plugins)
 	customverbauthorizer.Register(o.Recommended.Admission.Plugins)
+	resourcequota.Register(o.Recommended.Admission.Plugins)
 
 	allOrderedPlugins := []string{
 		resourcereferencemanager.PluginName,
@@ -189,6 +192,9 @@ func (o *Options) complete() error {
 		clusteropenidconnectpreset.PluginName,
 		shootstatedeletionvalidator.PluginName,
 		customverbauthorizer.PluginName,
+		// This plugin must remain the last one in the list since it updates the quota usage
+		// which can only happen reliably if previous plugins permitted the request.
+		resourcequota.PluginName,
 	}
 	o.Recommended.Admission.RecommendedPluginOrder = append(o.Recommended.Admission.RecommendedPluginOrder, allOrderedPlugins...)
 
@@ -240,6 +246,10 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 				kubeClient,
 				dynamicClient,
 				gardenerAPIServerConfig.Authorization.Authorizer,
+				// ResourceQuota admission plugin configuration is injected via `ExtraAdmissionInitializers`.
+				// Ref implementation of Kube-Apiserver:
+				// https://github.com/kubernetes/kubernetes/blob/53b2973440a29e1682df6ba687cebc6764bba44c/pkg/kubeapiserver/admission/config.go#L70
+				generic.NewConfiguration(nil, nil),
 			),
 		}, nil
 	}

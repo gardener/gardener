@@ -19,6 +19,7 @@ import (
 	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
+	"k8s.io/kubernetes/pkg/quota/v1"
 
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
@@ -37,6 +38,7 @@ func New(
 	kubeClient kubernetes.Interface,
 	dynamicClient dynamic.Interface,
 	authz authorizer.Authorizer,
+	quotaConfiguration quota.Configuration,
 ) admission.PluginInitializer {
 	return pluginInitializer{
 		coreInformers: coreInformers,
@@ -52,6 +54,8 @@ func New(
 		dynamicClient: dynamicClient,
 
 		authorizer: authz,
+
+		quotaConfiguration: quotaConfiguration,
 	}
 }
 
@@ -86,5 +90,9 @@ func (i pluginInitializer) Initialize(plugin admission.Interface) {
 
 	if wants, ok := plugin.(WantsAuthorizer); ok {
 		wants.SetAuthorizer(i.authorizer)
+	}
+
+	if wants, ok := plugin.(WantsQuotaConfiguration); ok {
+		wants.SetQuotaConfiguration(i.quotaConfiguration)
 	}
 }

@@ -1189,6 +1189,18 @@ k8s.io/kube-openapi/pkg/util/sets
 # k8s.io/kubelet v0.18.8
 ## explicit
 k8s.io/kubelet/config/v1beta1
+# k8s.io/kubernetes v0.18.8 => ./third_party/forked/kubernetes
+## explicit
+k8s.io/kubernetes/pkg/kubeapiserver/admission
+k8s.io/kubernetes/pkg/quota/v1
+k8s.io/kubernetes/pkg/quota/v1/generic
+k8s.io/kubernetes/plugin/pkg/admission/resourcequota
+k8s.io/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota
+k8s.io/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota/install
+k8s.io/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota/v1
+k8s.io/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota/v1alpha1
+k8s.io/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota/v1beta1
+k8s.io/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota/validation
 # k8s.io/metrics v0.18.8
 ## explicit
 k8s.io/metrics/pkg/apis/metrics
@@ -1271,5 +1283,6 @@ sigs.k8s.io/yaml
 # k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 # k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.18.8
 # k8s.io/kube-openapi => github.com/gardener/kube-openapi v0.0.0-20200831104310-b5db060350c7
+# k8s.io/kubernetes => ./third_party/forked/kubernetes
 # sigs.k8s.io/controller-runtime => github.com/gardener/controller-runtime v0.6.3-gardener.1
 # sigs.k8s.io/structured-merge-diff/v3 => github.com/gardener/structured-merge-diff/v3 v3.0.0-gardener.1
