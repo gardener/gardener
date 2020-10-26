@@ -734,7 +734,7 @@ type KubeletConfig struct {
 	// KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
 	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
 	// +optional
-	// Default: cpu=80m,memory=1Gi
+	// Default: cpu=80m,memory=1Gi,pid=20k
 	KubeReserved *KubeletConfigReserved `json:"kubeReserved,omitempty" protobuf:"bytes,14,opt,name=kubeReserved"`
 	// SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
 	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.

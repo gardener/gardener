@@ -330,8 +330,10 @@ var _ = Describe("Defaults", func() {
 			var (
 				defaultKubeReservedMemory = resource.MustParse("1Gi")
 				defaultKubeReservedCPU    = resource.MustParse("80m")
+				defaultKubeReservedPID    = resource.MustParse("20k")
 				kubeReservedMemory        = resource.MustParse("2Gi")
 				kubeReservedCPU           = resource.MustParse("20m")
+				kubeReservedPID           = resource.MustParse("10k")
 			)
 
 			It("should default all fields", func() {
@@ -340,42 +342,16 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
 					CPU:    &defaultKubeReservedCPU,
 					Memory: &defaultKubeReservedMemory,
+					PID:    &defaultKubeReservedPID,
 				})))
 			})
 
-			It("should default memory", func() {
-				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
-					KubeReserved: &KubeletConfigReserved{
-						CPU: &kubeReservedCPU,
-					},
-				}
-				SetDefaults_Shoot(obj)
-
-				Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
-					CPU:    &kubeReservedCPU,
-					Memory: &defaultKubeReservedMemory,
-				})))
-			})
-
-			It("should default CPU", func() {
-				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
-					KubeReserved: &KubeletConfigReserved{
-						Memory: &kubeReservedMemory,
-					},
-				}
-				SetDefaults_Shoot(obj)
-
-				Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
-					CPU:    &defaultKubeReservedCPU,
-					Memory: &kubeReservedMemory,
-				})))
-			})
-
-			It("should not default kubeReserved", func() {
+			It("should not overwrite manually set kubeReserved", func() {
 				obj.Spec.Kubernetes.Kubelet = &KubeletConfig{
 					KubeReserved: &KubeletConfigReserved{
 						CPU:    &kubeReservedCPU,
 						Memory: &kubeReservedMemory,
+						PID:    &kubeReservedPID,
 					},
 				}
 				SetDefaults_Shoot(obj)
@@ -383,6 +359,7 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
 					CPU:    &kubeReservedCPU,
 					Memory: &kubeReservedMemory,
+					PID:    &kubeReservedPID,
 				})))
 			})
 		})

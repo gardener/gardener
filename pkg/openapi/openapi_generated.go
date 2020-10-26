@@ -2850,7 +2850,7 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 					},
 					"kubeReserved": {
 						SchemaProps: spec.SchemaProps{
-							Description: "KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime). When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied. Default: cpu=80m,memory=1Gi",
+							Description: "KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime). When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied. Default: cpu=80m,memory=1Gi,pid=20k",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigReserved"),
 						},
 					},
@@ -8806,7 +8806,7 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 					},
 					"kubeReserved": {
 						SchemaProps: spec.SchemaProps{
-							Description: "KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime). When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied. Default: cpu=80m,memory=1Gi",
+							Description: "KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime). When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied. Default: cpu=80m,memory=1Gi,pid=20k",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved"),
 						},
 					},

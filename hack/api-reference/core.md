@@ -4263,7 +4263,7 @@ KubeletConfigReserved
 <em>(Optional)</em>
 <p>KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
 When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
-Default: cpu=80m,memory=1Gi</p>
+Default: cpu=80m,memory=1Gi,pid=20k</p>
 </td>
 </tr>
 <tr>
