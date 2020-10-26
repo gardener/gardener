@@ -478,7 +478,10 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 
 	apiserverProxyConfig := map[string]interface{}{
 		"advertiseIPAddress": b.APIServerClusterIP,
-		"proxySeedServer":    fmt.Sprintf("%s:8443", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)),
+		"proxySeedServer": map[string]interface{}{
+			"host": kasFQDN,
+			"port": "8443",
+		},
 	}
 
 	apiserverProxy, err := b.InjectShootShootImages(apiserverProxyConfig, common.APIServerPorxySidecarImageName, common.APIServerProxyImageName)
