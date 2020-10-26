@@ -1,5 +1,5 @@
 rule_files:
-- ../rules/kube-controller-manager.rules.yaml
+- kube-controller-manager.rules.yaml
 
 evaluation_interval: 30s
 

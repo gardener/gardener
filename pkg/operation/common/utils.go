@@ -228,7 +228,7 @@ func MergeOwnerReferences(references []metav1.OwnerReference, newReferences ...m
 }
 
 // ReadLeaderElectionRecord returns the leader election record for a given lock type and a namespace/name combination.
-func ReadLeaderElectionRecord(ctx context.Context, k8sClient kubernetes.Interface, lock, namespace, name string) (*resourcelock.LeaderElectionRecord, error) {
+func ReadLeaderElectionRecord(ctx context.Context, client client.Client, lock, namespace, name string) (*resourcelock.LeaderElectionRecord, error) {
 	var (
 		leaderElectionRecord resourcelock.LeaderElectionRecord
 		annotations          map[string]string
@@ -236,14 +236,14 @@ func ReadLeaderElectionRecord(ctx context.Context, k8sClient kubernetes.Interfac
 
 	switch lock {
 	case resourcelock.EndpointsResourceLock:
-		endpoint, err := k8sClient.Kubernetes().CoreV1().Endpoints(namespace).Get(ctx, name, kubernetes.DefaultGetOptions())
-		if err != nil {
+		endpoint := &corev1.Endpoints{}
+		if err := client.Get(ctx, kutil.Key(namespace, name), endpoint); err != nil {
 			return nil, err
 		}
 		annotations = endpoint.Annotations
 	case resourcelock.ConfigMapsResourceLock:
-		configmap, err := k8sClient.Kubernetes().CoreV1().ConfigMaps(namespace).Get(ctx, name, kubernetes.DefaultGetOptions())
-		if err != nil {
+		configmap := &corev1.ConfigMap{}
+		if err := client.Get(ctx, kutil.Key(namespace, name), configmap); err != nil {
 			return nil, err
 		}
 		annotations = configmap.Annotations

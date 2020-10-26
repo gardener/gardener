@@ -126,13 +126,6 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		service    = k.emptyService()
 		deployment = k.emptyDeployment()
 
-		labels = map[string]string{
-			v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
-			v1beta1constants.LabelRole: labelRole,
-		}
-		labelsWithControlPlaneRole = utils.MergeStringMaps(labels, map[string]string{
-			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
-		})
 		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 
 		port           = k.computeServerPort()
@@ -154,8 +147,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 	}
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, k.client, service, func() error {
-		service.Labels = labels
-		service.Spec.Selector = labels
+		service.Labels = getLabels()
+		service.Spec.Selector = getLabels()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.Ports = kutil.ReconcileServicePorts(service.Spec.Ports, []corev1.ServicePort{
 			{
@@ -170,10 +163,12 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 	}
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, k.client, deployment, func() error {
-		deployment.Labels = labelsWithControlPlaneRole
+		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
+			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+		})
 		deployment.Spec.Replicas = &k.replicas
 		deployment.Spec.RevisionHistoryLimit = pointer.Int32Ptr(0)
-		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
+		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
@@ -181,7 +176,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 					"checksum/secret-" + k.secrets.Kubeconfig.Name: k.secrets.Kubeconfig.Checksum,
 					"checksum/secret-" + k.secrets.Server.Name:     k.secrets.Server.Checksum,
 				},
-				Labels: utils.MergeStringMaps(labelsWithControlPlaneRole, map[string]string{
+				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+					v1beta1constants.DeprecatedGardenRole:               v1beta1constants.GardenRoleControlPlane,
 					v1beta1constants.LabelPodMaintenanceRestart:         "true",
 					v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
 					v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
@@ -293,6 +289,13 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 	}
 
 	return k.reconcileShootResources(ctx)
+}
+
+func getLabels() map[string]string {
+	return map[string]string{
+		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
+		v1beta1constants.LabelRole: labelRole,
+	}
 }
 
 func (k *kubeScheduler) Destroy(_ context.Context) error     { return nil }

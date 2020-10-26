@@ -31,6 +31,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed/istio"
@@ -345,8 +346,9 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		componentsFunctions := []component.LoggingConfiguration{
 			clusterautoscaler.LoggingConfiguration,
 			kubescheduler.LoggingConfiguration,
+			kubecontrollermanager.LoggingConfiguration,
 		}
-		userAllowedComponents := []string{v1beta1constants.DeploymentNameKubeAPIServer, v1beta1constants.DeploymentNameKubeControllerManager}
+		userAllowedComponents := []string{v1beta1constants.DeploymentNameKubeAPIServer}
 
 		// Fetch component specific logging configurations
 		for _, componentFn := range componentsFunctions {

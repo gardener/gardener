@@ -116,14 +116,6 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		service            = c.emptyService()
 		deployment         = c.emptyDeployment()
 
-		labels = map[string]string{
-			v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
-			v1beta1constants.LabelRole: v1beta1constants.DeploymentNameClusterAutoscaler,
-		}
-		labelsWithControlPlaneRole = utils.MergeStringMaps(labels, map[string]string{
-			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
-		})
-
 		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 		command       = c.computeCommand()
 	)
@@ -157,8 +149,8 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 	}
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, c.client, service, func() error {
-		service.Labels = labels
-		service.Spec.Selector = labels
+		service.Labels = getLabels()
+		service.Spec.Selector = getLabels()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.ClusterIP = corev1.ClusterIPNone
 		service.Spec.Ports = kutil.ReconcileServicePorts(service.Spec.Ports, []corev1.ServicePort{
@@ -174,16 +166,19 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 	}
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, c.client, deployment, func() error {
-		deployment.Labels = labelsWithControlPlaneRole
+		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
+			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+		})
 		deployment.Spec.Replicas = &c.replicas
 		deployment.Spec.RevisionHistoryLimit = pointer.Int32Ptr(0)
-		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
+		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
 					"checksum/secret-" + c.secrets.Kubeconfig.Name: c.secrets.Kubeconfig.Checksum,
 				},
-				Labels: utils.MergeStringMaps(labelsWithControlPlaneRole, map[string]string{
+				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+					v1beta1constants.DeprecatedGardenRole:               v1beta1constants.GardenRoleControlPlane,
 					v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
 					v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 					v1beta1constants.LabelNetworkPolicyToSeedAPIServer:  v1beta1constants.LabelNetworkPolicyAllowed,
@@ -267,6 +262,13 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 	}
 
 	return common.DeployManagedResourceForShoot(ctx, c.client, managedResourceTargetName, c.namespace, false, c.computeShootResourcesData())
+}
+
+func getLabels() map[string]string {
+	return map[string]string{
+		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
+		v1beta1constants.LabelRole: v1beta1constants.DeploymentNameClusterAutoscaler,
+	}
 }
 
 func (c *clusterAutoscaler) Destroy(ctx context.Context) error {

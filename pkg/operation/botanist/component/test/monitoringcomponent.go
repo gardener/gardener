@@ -25,8 +25,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// ScapeConfigs is a utility test function for MonitoringComponents in order to test the scape configurations.
-func ScapeConfigs(c component.MonitoringComponent, expectedScrapeConfig string) {
+// ScrapeConfigs is a utility test function for MonitoringComponents in order to test the scape configurations.
+func ScrapeConfigs(c component.MonitoringComponent, expectedScrapeConfig string) {
 	scrapeConfigs, err := c.ScrapeConfigs()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(scrapeConfigs).To(ConsistOf(Equal(expectedScrapeConfig)))

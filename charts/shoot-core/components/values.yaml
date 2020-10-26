@@ -20,8 +20,6 @@ konnectivity-agent:
     konnectivity-agent: image-repository:image-tag
 kube-apiserver-kubelet:
   enabled: true
-kube-controller-manager:
-  enabled: true
 kube-proxy:
   enabled: true
   kubeconfig: dummy-add-the-data-of-a-kubernetes-secret

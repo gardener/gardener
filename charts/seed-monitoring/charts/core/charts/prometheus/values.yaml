@@ -76,10 +76,6 @@ allowedMetrics:
   - process_open_fds
   - apiserver_audit_event_total
   - apiserver_audit_error_total
-  kubeControllerManager:
-  - rest_client_requests_total
-  - process_max_fds
-  - process_open_fds
   kubeETCD3:
   - etcd_disk_backend_commit_duration_seconds_bucket
   - etcd_disk_wal_fsync_duration_seconds_bucket
