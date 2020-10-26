@@ -51,7 +51,7 @@ Create shooted seed cluster with the `shoot.gardener.cloud/use-as-seed` annotati
 
 Option | Description
 --- | ---
-`true` | Deploys the gardenlet into the shoot cluster which automatically registers the cluster as seed cluster.
+`true` | Registers the cluster as a seed cluster. Automatically deploys the gardenlet into the shoot cluster, unless specified otherwise (e.g. setting the `no-gardenlet` flag).
 `no-gardenlet` | Prevents the automatic deployment of the gardenlet into the shoot cluster. Instead, the `Seed` object will be created with the assumption that another gardenlet will be responsible for managing it (according to its `seedSelector` configuration).
 `disable-capacity-reservation` | Set `spec.settings.excessCapacity.enabled` in the seed cluster to false (see [/example/50-seed.yaml](../../example/50-seed.yaml)).
 `invisible` | Set `spec.settings.scheduling.visible` in the seed cluster to false  (see [/example/50-seed.yaml](../../example/50-seed.yaml))
