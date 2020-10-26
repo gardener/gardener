@@ -207,16 +207,20 @@ func SetDefaults_Shoot(obj *Shoot) {
 	var (
 		kubeReservedMemory = resource.MustParse("1Gi")
 		kubeReservedCPU    = resource.MustParse("80m")
+		kubeReservedPID    = resource.MustParse("20k")
 	)
 
 	if obj.Spec.Kubernetes.Kubelet.KubeReserved == nil {
-		obj.Spec.Kubernetes.Kubelet.KubeReserved = &KubeletConfigReserved{Memory: &kubeReservedMemory, CPU: &kubeReservedCPU}
+		obj.Spec.Kubernetes.Kubelet.KubeReserved = &KubeletConfigReserved{Memory: &kubeReservedMemory, CPU: &kubeReservedCPU, PID: &kubeReservedPID}
 	} else {
 		if obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory == nil {
 			obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory = &kubeReservedMemory
 		}
 		if obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU == nil {
 			obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU = &kubeReservedCPU
+		}
+		if obj.Spec.Kubernetes.Kubelet.KubeReserved.PID == nil {
+			obj.Spec.Kubernetes.Kubelet.KubeReserved.PID = &kubeReservedPID
 		}
 	}
 
