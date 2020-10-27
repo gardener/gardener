@@ -96,14 +96,22 @@ spec:
           limits:
             cpu: 100m
             memory: 100Mi
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: {{ .Values.adminPort }}
+          initialDelaySeconds: 1
+          periodSeconds: 2
+          successThreshold: 1
+          timeoutSeconds: 1
         ports:
         - name: proxy
           containerPort: 443
           hostPort: 443
           hostIP: {{ .Values.advertiseIPAddress }}
         - name: metrics
-          containerPort: {{ .Values.metricsPort }}
-          hostPort: {{ .Values.metricsPort }}
+          containerPort: {{ .Values.adminPort }}
+          hostPort: {{ .Values.adminPort }}
         volumeMounts:
         - name: proxy-config
           mountPath: /etc/apiserver-proxy

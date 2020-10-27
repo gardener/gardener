@@ -15,8 +15,8 @@ spec:
   hostPorts:
   - min: 443
     max: 443
-  - min: {{ .Values.metricsPort }}
-    max: {{ .Values.metricsPort }}
+  - min: {{ .Values.adminPort }}
+    max: {{ .Values.adminPort }}
   allowedHostPaths: []
   allowedCapabilities:
   - NET_ADMIN
