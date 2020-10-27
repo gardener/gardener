@@ -231,6 +231,20 @@ func (mr *MockTerraformerMockRecorder) SetDeadlinePod(arg0 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDeadlinePod", reflect.TypeOf((*MockTerraformer)(nil).SetDeadlinePod), arg0)
 }
 
+// SetLogLevel mocks base method.
+func (m *MockTerraformer) SetLogLevel(arg0 string) terraformer.Terraformer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetLogLevel", arg0)
+	ret0, _ := ret[0].(terraformer.Terraformer)
+	return ret0
+}
+
+// SetLogLevel indicates an expected call of SetLogLevel.
+func (mr *MockTerraformerMockRecorder) SetLogLevel(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLogLevel", reflect.TypeOf((*MockTerraformer)(nil).SetLogLevel), arg0)
+}
+
 // SetTerminationGracePeriodSeconds mocks base method.
 func (m *MockTerraformer) SetTerminationGracePeriodSeconds(arg0 int64) terraformer.Terraformer {
 	m.ctrl.T.Helper()
@@ -257,6 +271,20 @@ func (m *MockTerraformer) SetVariablesEnvironment(arg0 map[string]string) terraf
 func (mr *MockTerraformerMockRecorder) SetVariablesEnvironment(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetVariablesEnvironment", reflect.TypeOf((*MockTerraformer)(nil).SetVariablesEnvironment), arg0)
+}
+
+// UseV2 mocks base method.
+func (m *MockTerraformer) UseV2(arg0 bool) terraformer.Terraformer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UseV2", arg0)
+	ret0, _ := ret[0].(terraformer.Terraformer)
+	return ret0
+}
+
+// UseV2 indicates an expected call of UseV2.
+func (mr *MockTerraformerMockRecorder) UseV2(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UseV2", reflect.TypeOf((*MockTerraformer)(nil).UseV2), arg0)
 }
 
 // WaitForCleanEnvironment mocks base method.

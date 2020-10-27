@@ -21,10 +21,6 @@ import (
 	"strings"
 	"time"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -32,8 +28,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 const (
@@ -114,6 +116,7 @@ func New(
 		variablesName: prefix + TerraformerVariablesSuffix,
 		stateName:     prefix + TerraformerStateSuffix,
 
+		logLevel:                      "info",
 		terminationGracePeriodSeconds: int64(3600),
 
 		deadlineCleaning: 10 * time.Minute,
@@ -139,7 +142,7 @@ func (t *terraformer) Destroy() error {
 
 // execute creates a Terraform Pod which runs the provided scriptName (apply or destroy), waits for the Pod to be completed
 // (either successful or not), prints its logs, deletes it and returns whether it was successful or not.
-func (t *terraformer) execute(ctx context.Context, scriptName string) error {
+func (t *terraformer) execute(ctx context.Context, command string) error {
 	var (
 		succeeded             = true  // Success status of the Terraform apply/destroy pod
 		execute               = false // Should we skip the rest of the function depending on whether all ConfigMaps/Secrets exist/do not exist?
@@ -153,14 +156,14 @@ func (t *terraformer) execute(ctx context.Context, scriptName string) error {
 			return retry.SevereError(err)
 		}
 		if numberOfExistingResources == 0 {
-			t.logger.Debugf("All ConfigMaps/Secrets do not exist, can not execute the Terraform %s Pod.", scriptName)
+			t.logger.Debugf("All ConfigMaps/Secrets do not exist, can not execute the Terraform %s Pod.", command)
 			return retry.Ok()
 		} else if numberOfExistingResources == numberOfConfigResources {
-			t.logger.Debugf("All ConfigMaps/Secrets exist, will execute the Terraform %s Pod.", scriptName)
+			t.logger.Debugf("All ConfigMaps/Secrets exist, will execute the Terraform %s Pod.", command)
 			execute = true
 			return retry.Ok()
 		} else {
-			t.logger.Errorf("Can not execute Terraform %s Pod as ConfigMaps/Secrets are missing!", scriptName)
+			t.logger.Errorf("Can not execute Terraform %s Pod as ConfigMaps/Secrets are missing!", command)
 			return retry.MinorError(fmt.Errorf("%d/%d terraform resources are missing", numberOfConfigResources-numberOfExistingResources, numberOfConfigResources))
 		}
 	}); err != nil {
@@ -170,18 +173,18 @@ func (t *terraformer) execute(ctx context.Context, scriptName string) error {
 		return nil
 	}
 
-	// In case of scriptName == 'destroy', we need to first check whether the Terraform state contains
+	// In case of command == 'destroy', we need to first check whether the Terraform state contains
 	// something at all. If it does not contain anything, then the 'apply' could never be executed, probably
 	// because of syntax errors. In this case, we want to skip the Terraform destroy pod (as it wouldn't do anything
 	// anyway) and just delete the related ConfigMaps/Secrets.
-	if scriptName == "destroy" {
+	if command == "destroy" {
 		skipApplyOrDestroyPod = t.IsStateEmpty()
 	}
 
 	if !skipApplyOrDestroyPod {
-		// Create Terraform Pod which executes the provided scriptName
-		generateName := t.computePodGenerateName(scriptName)
-		pod, err := t.deployTerraformerPod(ctx, generateName, scriptName)
+		// Create Terraform Pod which executes the provided command
+		generateName := t.computePodGenerateName(command)
+		pod, err := t.deployTerraformerPod(ctx, generateName, command)
 		if err != nil {
 			return fmt.Errorf("failed to deploy the Terraformer Pod with .meta.generateName '%s': %s", generateName, err.Error())
 		}
@@ -218,9 +221,9 @@ func (t *terraformer) execute(ctx context.Context, scriptName string) error {
 	}
 
 	// Evaluate whether the execution was successful or not
-	t.logger.Infof("Terraformer '%s' execution for command '%s' has been completed.", t.name, scriptName)
+	t.logger.Infof("Terraformer '%s' execution for command '%s' has been completed.", t.name, command)
 	if !succeeded {
-		errorMessage := fmt.Sprintf("Terraform execution for command '%s' could not be completed.", scriptName)
+		errorMessage := fmt.Sprintf("Terraform execution for command '%s' could not be completed.", command)
 		if terraformErrors := retrieveTerraformErrors(logList); terraformErrors != nil {
 			errorMessage += fmt.Sprintf(" The following issues have been found in the logs:\n\n%s", strings.Join(terraformErrors, "\n\n"))
 		}
@@ -245,18 +248,11 @@ func (t *terraformer) createOrUpdateServiceAccount(ctx context.Context) error {
 func (t *terraformer) createOrUpdateRole(ctx context.Context) error {
 	role := &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: rbacName}}
 	_, err := controllerutil.CreateOrUpdate(ctx, t.client, role, func() error {
-		role.Rules = []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"configmaps"},
-				Verbs:     []string{"*"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"secrets"},
-				Verbs:     []string{"*"},
-			},
-		}
+		role.Rules = []rbacv1.PolicyRule{{
+			APIGroups: []string{""},
+			Resources: []string{"configmaps", "secrets"},
+			Verbs:     []string{"*"},
+		}}
 		return nil
 	})
 	return err
@@ -270,13 +266,11 @@ func (t *terraformer) createOrUpdateRoleBinding(ctx context.Context) error {
 			Kind:     "Role",
 			Name:     rbacName,
 		}
-		roleBinding.Subjects = []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      terraformerName,
-				Namespace: t.namespace,
-			},
-		}
+		roleBinding.Subjects = []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      terraformerName,
+			Namespace: t.namespace,
+		}}
 		return nil
 	})
 	return err
@@ -298,7 +292,6 @@ func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, co
 	}
 
 	t.logger.Infof("Deploying Terraformer Pod with .meta.generateName '%s'.", generateName)
-	podSpec := *t.podSpec(command)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: generateName,
@@ -314,41 +307,12 @@ func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, co
 				v1beta1constants.LabelNetworkPolicyToSeedAPIServer:   v1beta1constants.LabelNetworkPolicyAllowed,
 			},
 		},
-		Spec: podSpec,
-	}
-
-	err := t.client.Create(ctx, pod)
-	return pod, err
-}
-
-func (t *terraformer) env() []corev1.EnvVar {
-	envVars := []corev1.EnvVar{
-		{Name: "MAX_BACKOFF_SEC", Value: "60"},
-		{Name: "MAX_TIME_SEC", Value: "1800"},
-		{Name: "TF_CONFIGURATION_CONFIG_MAP_NAME", Value: t.configName},
-		{Name: "TF_STATE_CONFIG_MAP_NAME", Value: t.stateName},
-		{Name: "TF_VARIABLES_SECRET_NAME", Value: t.variablesName},
-	}
-	for k, v := range t.variablesEnvironment {
-		envVars = append(envVars, corev1.EnvVar{Name: k, Value: v})
-	}
-	return envVars
-}
-
-func (t *terraformer) podSpec(command string) *corev1.PodSpec {
-	terminationGracePeriodSeconds := t.terminationGracePeriodSeconds
-
-	return &corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Containers: []corev1.Container{
-			{
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
 				Name:            "terraform",
 				Image:           t.image,
 				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command: []string{
-					"/terraformer.sh",
-					command,
-				},
+				Command:         t.computeTerraformerCommand(command),
 				Resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("100m"),
@@ -360,11 +324,52 @@ func (t *terraformer) podSpec(command string) *corev1.PodSpec {
 					},
 				},
 				Env: t.env(),
-			},
+			}},
+			RestartPolicy:                 corev1.RestartPolicyNever,
+			ServiceAccountName:            terraformerName,
+			TerminationGracePeriodSeconds: pointer.Int64Ptr(t.terminationGracePeriodSeconds),
 		},
-		ServiceAccountName:            terraformerName,
-		TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
 	}
+
+	err := t.client.Create(ctx, pod)
+	return pod, err
+}
+
+func (t *terraformer) computeTerraformerCommand(command string) []string {
+	if t.useV2 {
+		return []string{
+			"/terraformer",
+			command,
+			"--zap-log-level=" + t.logLevel,
+			"--configuration-configmap-name=" + t.configName,
+			"--state-configmap-name=" + t.stateName,
+			"--variables-secret-name=" + t.variablesName,
+		}
+	}
+
+	return []string{
+		"/terraformer.sh",
+		command,
+	}
+}
+
+func (t *terraformer) env() []corev1.EnvVar {
+	var envVars []corev1.EnvVar
+
+	if !t.useV2 {
+		envVars = []corev1.EnvVar{
+			{Name: "MAX_BACKOFF_SEC", Value: "60"},
+			{Name: "MAX_TIME_SEC", Value: "1800"},
+			{Name: "TF_CONFIGURATION_CONFIG_MAP_NAME", Value: t.configName},
+			{Name: "TF_STATE_CONFIG_MAP_NAME", Value: t.stateName},
+			{Name: "TF_VARIABLES_SECRET_NAME", Value: t.variablesName},
+		}
+	}
+
+	for k, v := range t.variablesEnvironment {
+		envVars = append(envVars, corev1.EnvVar{Name: k, Value: v})
+	}
+	return envVars
 }
 
 // listTerraformerPods lists all pods in the Terraformer namespace which have labels 'terraformer.gardener.cloud/name'
