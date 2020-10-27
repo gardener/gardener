@@ -16,4 +16,4 @@ limitations under the License.
 
 // +k8s:deepcopy-gen=package
 
-package resourcequota // import "k8s.io/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota"
+package resourcequota // import "github.com/gardener/gardener/third_party/forked/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota"

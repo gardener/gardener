@@ -17,8 +17,8 @@ limitations under the License.
 package admission
 
 import (
+	quota "github.com/gardener/gardener/third_party/forked/kubernetes/pkg/quota/v1"
 	"k8s.io/apiserver/pkg/admission"
-	quota "k8s.io/kubernetes/pkg/quota/v1"
 )
 
 // TODO add a `WantsToRun` which takes a stopCh.  Might make it generic.

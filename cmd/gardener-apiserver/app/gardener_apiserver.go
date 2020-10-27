@@ -51,6 +51,8 @@ import (
 	shoottolerationrestriction "github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction"
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	shootstatedeletionvalidator "github.com/gardener/gardener/plugin/pkg/shootstate/validator"
+	"github.com/gardener/gardener/third_party/forked/kubernetes/pkg/quota/v1/generic"
+	"github.com/gardener/gardener/third_party/forked/kubernetes/plugin/pkg/admission/resourcequota"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -71,8 +73,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/kubernetes/pkg/quota/v1/generic"
-	"k8s.io/kubernetes/plugin/pkg/admission/resourcequota"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

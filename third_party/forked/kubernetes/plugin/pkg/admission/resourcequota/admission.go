@@ -27,11 +27,11 @@ import (
 	genericadmissioninitializer "k8s.io/apiserver/pkg/admission/initializer"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	kubeapiserveradmission "k8s.io/kubernetes/pkg/kubeapiserver/admission"
-	quota "k8s.io/kubernetes/pkg/quota/v1"
-	"k8s.io/kubernetes/pkg/quota/v1/generic"
-	resourcequotaapi "k8s.io/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota"
-	"k8s.io/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota/validation"
+	kubeapiserveradmission "github.com/gardener/gardener/third_party/forked/kubernetes/pkg/kubeapiserver/admission"
+	quota "github.com/gardener/gardener/third_party/forked/kubernetes/pkg/quota/v1"
+	"github.com/gardener/gardener/third_party/forked/kubernetes/pkg/quota/v1/generic"
+	resourcequotaapi "github.com/gardener/gardener/third_party/forked/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota"
+	"github.com/gardener/gardener/third_party/forked/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota/validation"
 )
 
 // PluginName is a string with the name of the plugin

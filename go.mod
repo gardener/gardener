@@ -19,6 +19,7 @@ require (
 	github.com/golang/mock v1.4.4-0.20200731163441-8734ec565a4d
 	github.com/googleapis/gnostic v0.3.1
 	github.com/hashicorp/go-multierror v1.0.0
+	github.com/hashicorp/golang-lru v0.5.4
 	github.com/huandu/xstrings v1.3.1
 	github.com/json-iterator/go v1.1.10
 	github.com/mholt/archiver v3.1.1+incompatible
@@ -53,7 +54,6 @@ require (
 	k8s.io/kube-aggregator v0.18.8
 	k8s.io/kube-openapi v0.0.0-20200410145947-bcb3869e6f29 // release-1.18
 	k8s.io/kubelet v0.18.8
-	k8s.io/kubernetes v0.18.8
 	k8s.io/metrics v0.18.8
 	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
 	sigs.k8s.io/controller-runtime v0.6.3
@@ -73,7 +73,6 @@ replace (
 	k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.18.8
 	k8s.io/kube-openapi => github.com/gardener/kube-openapi v0.0.0-20200831104310-b5db060350c7
-	k8s.io/kubernetes => ./third_party/forked/kubernetes
 	sigs.k8s.io/controller-runtime => github.com/gardener/controller-runtime v0.6.3-gardener.1
 	sigs.k8s.io/structured-merge-diff/v3 => github.com/gardener/structured-merge-diff/v3 v3.0.0-gardener.1
 )

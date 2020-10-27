@@ -18,8 +18,8 @@ package install
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	quota "k8s.io/kubernetes/pkg/quota/v1"
-	generic "k8s.io/kubernetes/pkg/quota/v1/generic"
+	quota "github.com/gardener/gardener/third_party/forked/kubernetes/pkg/quota/v1"
+	generic "github.com/gardener/gardener/third_party/forked/kubernetes/pkg/quota/v1/generic"
 )
 
 // NewQuotaConfigurationForAdmission returns a quota configuration for admission control.
