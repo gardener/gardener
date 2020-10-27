@@ -1,4 +1,3 @@
-{{- if .Values.exporter.enabled  }}
 apiVersion: "autoscaling.k8s.io/v1beta2"
 kind: VerticalPodAutoscaler
 metadata:
@@ -11,4 +10,3 @@ spec:
     name: vpa-exporter
   updatePolicy:
     updateMode: "Auto"
-{{- end }}
