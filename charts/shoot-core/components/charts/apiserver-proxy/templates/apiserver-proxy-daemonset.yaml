@@ -26,6 +26,7 @@ spec:
         role: apiserver-proxy
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-apiserver: allowed
+        networking.gardener.cloud/from-seed: allowed
     spec:
       serviceAccountName: apiserver-proxy
       priorityClassName: system-cluster-critical
@@ -93,12 +94,24 @@ spec:
             cpu: 20m
             memory: 20Mi
           limits:
-            cpu: 60m
-            memory: 40Mi
+            cpu: 100m
+            memory: 100Mi
+        ports:
+        - name: proxy
+          containerPort: 443
+          hostPort: 443
+          hostIP: {{ .Values.advertiseIPAddress }}
+        - name: metrics
+          containerPort: {{ .Values.metricsPort }}
+          hostPort: {{ .Values.metricsPort }}
         volumeMounts:
         - name: proxy-config
           mountPath: /etc/apiserver-proxy
+        - name: admin-uds
+          mountPath: /etc/admin-uds
       volumes:
       - name: proxy-config
         configMap:
           name: apiserver-proxy-config
+      - name: admin-uds
+        emptyDir: {}

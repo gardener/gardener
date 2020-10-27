@@ -10,10 +10,13 @@ spec:
   volumes:
   - secret
   - configMap
+  - emptyDir
   hostNetwork: true
   hostPorts:
   - min: 443
     max: 443
+  - min: {{ .Values.metricsPort }}
+    max: {{ .Values.metricsPort }}
   allowedHostPaths: []
   allowedCapabilities:
   - NET_ADMIN
