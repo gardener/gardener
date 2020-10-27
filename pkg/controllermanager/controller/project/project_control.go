@@ -22,6 +22,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -108,12 +109,13 @@ type ControlInterface interface {
 // implements the documented semantics for Projects. updater is the UpdaterInterface used
 // to update the status of Projects. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, namespaceLister kubecorev1listers.NamespaceLister) ControlInterface {
-	return &defaultControl{clientMap, k8sGardenCoreInformers, recorder, namespaceLister}
+func NewDefaultControl(clientMap clientmap.ClientMap, config *config.ControllerManagerConfiguration, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, namespaceLister kubecorev1listers.NamespaceLister) ControlInterface {
+	return &defaultControl{clientMap, config, k8sGardenCoreInformers, recorder, namespaceLister}
 }
 
 type defaultControl struct {
 	clientMap              clientmap.ClientMap
+	config                 *config.ControllerManagerConfiguration
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	recorder               record.EventRecorder
 	namespaceLister        kubecorev1listers.NamespaceLister

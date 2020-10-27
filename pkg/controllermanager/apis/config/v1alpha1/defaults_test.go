@@ -57,6 +57,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.Project.StaleGracePeriodDays).To(PointTo(Equal(14)))
 			Expect(obj.Controllers.Project.StaleExpirationTimeDays).To(PointTo(Equal(90)))
 			Expect(obj.Controllers.Project.StaleSyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: 12 * time.Hour})))
+			Expect(obj.Controllers.Project.Quotas).To(BeNil())
 
 			Expect(obj.Controllers.Quota).NotTo(BeNil())
 			Expect(obj.Controllers.Quota.ConcurrentSyncs).To(Equal(5))
@@ -72,6 +73,25 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Controllers.ShootReference).NotTo(BeNil())
 			Expect(obj.Controllers.ShootReference.ConcurrentSyncs).To(Equal(5))
+		})
+
+		It("should correctly default the project quota configuration", func() {
+			fooSelector, _ := metav1.ParseToLabelSelector("role = foo")
+
+			obj.Controllers = ControllerManagerControllerConfiguration{
+				Project: &ProjectControllerConfiguration{
+					Quotas: []QuotaConfiguration{
+						{
+							ProjectSelector: fooSelector,
+						},
+						{},
+					},
+				},
+			}
+			SetDefaults_ControllerManagerConfiguration(obj)
+
+			Expect(obj.Controllers.Project.Quotas[0].ProjectSelector).To(Equal(fooSelector))
+			Expect(obj.Controllers.Project.Quotas[1].ProjectSelector).To(Equal(&metav1.LabelSelector{}))
 		})
 	})
 	Describe("#SetDefaults_EventControllerConfiguration", func() {

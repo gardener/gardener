@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
+	configvalidation "github.com/gardener/gardener/pkg/controllermanager/apis/config/validation"
 	"github.com/gardener/gardener/pkg/controllermanager/controller"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
@@ -130,6 +131,10 @@ func (o *Options) run(ctx context.Context, cancel context.CancelFunc) error {
 			return err
 		}
 		o.config = c
+	}
+
+	if errs := configvalidation.ValidateControllerManagerConfiguration(o.config); len(errs) > 0 {
+		return errs.ToAggregate()
 	}
 
 	// Add feature flags

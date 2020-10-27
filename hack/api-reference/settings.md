@@ -101,10 +101,10 @@ Kubernetes meta/v1.LabelSelector
 <td>
 <em>(Optional)</em>
 <p>Project decides whether to apply the configuration if the
-Shoot is in a specific Project mathching the label selector.
+Shoot is in a specific Project matching the label selector.
 Use the selector only if the OIDC Preset is opt-in, because end
 users may skip the admission by setting the labels.
-Default to the empty LabelSelector, which matches everything.</p>
+Defaults to the empty LabelSelector, which matches everything.</p>
 </td>
 </tr>
 </table>
@@ -285,10 +285,10 @@ Kubernetes meta/v1.LabelSelector
 <td>
 <em>(Optional)</em>
 <p>Project decides whether to apply the configuration if the
-Shoot is in a specific Project mathching the label selector.
+Shoot is in a specific Project matching the label selector.
 Use the selector only if the OIDC Preset is opt-in, because end
 users may skip the admission by setting the labels.
-Default to the empty LabelSelector, which matches everything.</p>
+Defaults to the empty LabelSelector, which matches everything.</p>
 </td>
 </tr>
 </tbody>

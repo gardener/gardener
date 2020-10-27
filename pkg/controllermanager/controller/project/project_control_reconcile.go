@@ -25,6 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -36,11 +37,14 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1beta1.Project) error {
@@ -75,9 +79,11 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 		}
 	}
 
+	ownerReference := metav1.NewControllerRef(project, gardencorev1beta1.SchemeGroupVersion.WithKind("Project"))
+
 	// We reconcile the namespace for the project: If the .spec.namespace is set then we try to claim it, if it is not
 	// set then we create a new namespace with a random hash value.
-	namespace, err := c.reconcileNamespaceForProject(ctx, gardenClient, project)
+	namespace, err := c.reconcileNamespaceForProject(ctx, gardenClient, project, ownerReference)
 	if err != nil {
 		c.recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
 		_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
@@ -179,6 +185,22 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 		return err
 	}
 
+	// Create ResourceQuota for project if configured.
+	quotaConfig, err := quotaConfiguration(c.config.Controllers, project)
+	if err != nil {
+		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while setting up ResourceQuota: %+v", err)
+		_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
+		return err
+	}
+
+	if quotaConfig != nil {
+		if err := createOrUpdateResourceQuota(ctx, gardenClient.Client(), namespace.Name, ownerReference, *quotaConfig); err != nil {
+			c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while setting up ResourceQuota: %+v", err)
+			_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
+			return err
+		}
+	}
+
 	// Update the project status to mark it as 'ready'.
 	if _, err := updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, func(project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error) {
 		project.Status.Phase = gardencorev1beta1.ProjectReady
@@ -192,13 +214,12 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 	return nil
 }
 
-func (c *defaultControl) reconcileNamespaceForProject(ctx context.Context, gardenClient kubernetes.Interface, project *gardencorev1beta1.Project) (*corev1.Namespace, error) {
+func (c *defaultControl) reconcileNamespaceForProject(ctx context.Context, gardenClient kubernetes.Interface, project *gardencorev1beta1.Project, ownerReference *metav1.OwnerReference) (*corev1.Namespace, error) {
 	var (
 		namespaceName = project.Spec.Namespace
 
 		projectLabels      = utils.MergeStringMaps(namespaceLabelsFromProject(project), namespaceLabelsFromProjectDeprecated(project))
 		projectAnnotations = namespaceAnnotationsFromProject(project)
-		ownerReference     = metav1.NewControllerRef(project, gardencorev1beta1.SchemeGroupVersion.WithKind("Project"))
 	)
 
 	if namespaceName == nil {
@@ -250,6 +271,63 @@ func (c *defaultControl) reconcileNamespaceForProject(ctx context.Context, garde
 	}
 
 	return namespace, nil
+}
+
+// quotaConfiguration returns the first matching quota configuration if one is configured for the given project.
+func quotaConfiguration(config config.ControllerManagerControllerConfiguration, project *gardencorev1beta1.Project) (*config.QuotaConfiguration, error) {
+	if config.Project == nil {
+		return nil, nil
+	}
+
+	for _, c := range config.Project.Quotas {
+		quotaConfig := c
+		selector, err := metav1.LabelSelectorAsSelector(quotaConfig.ProjectSelector)
+		if err != nil {
+			return nil, err
+		}
+
+		if selector.Matches(labels.Set(project.GetLabels())) {
+			return &quotaConfig, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// ResourceQuotaName is the name of the default ResourceQuota resource that is created by Gardener in the project namespace.
+const ResourceQuotaName = "gardener"
+
+func createOrUpdateResourceQuota(ctx context.Context, c client.Client, projectNamespace string, ownerReference *metav1.OwnerReference, config config.QuotaConfiguration) error {
+	resourceQuota, ok := config.Config.(*corev1.ResourceQuota)
+	if !ok {
+		return fmt.Errorf("failure while reading ResourceQuota from configuration: %v", resourceQuota)
+	}
+
+	projectResourceQuota := &corev1.ResourceQuota{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ResourceQuotaName,
+			Namespace: projectNamespace,
+		},
+	}
+
+	if _, err := controllerutil.CreateOrUpdate(ctx, c, projectResourceQuota, func() error {
+		projectResourceQuota.SetOwnerReferences(common.MergeOwnerReferences(projectResourceQuota.GetOwnerReferences(), *ownerReference))
+		quotas := make(map[corev1.ResourceName]resource.Quantity)
+		for resourceName, quantity := range resourceQuota.Spec.Hard {
+			if val, ok := projectResourceQuota.Spec.Hard[resourceName]; ok {
+				// Do not overwrite already existing quotas.
+				quotas[resourceName] = val
+				continue
+			}
+			quotas[resourceName] = quantity
+		}
+		projectResourceQuota.Spec.Hard = quotas
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func deleteStaleExtensionRoles(ctx context.Context, c client.Client, nonStaleExtensionRoles sets.String, projectName, namespace string) error {

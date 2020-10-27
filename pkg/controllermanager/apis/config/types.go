@@ -16,6 +16,7 @@ package config
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfig "k8s.io/component-base/config"
 	"k8s.io/klog"
 )
@@ -117,6 +118,8 @@ type ProjectControllerConfiguration struct {
 	// MinimumLifetimeDays is the number of days a `Project` may exist before it is being
 	// checked whether it is actively used or got stale.
 	MinimumLifetimeDays *int
+	// Quotas is the default configuration matching projects are set up with if a quota is not already specified.
+	Quotas []QuotaConfiguration
 	// StaleGracePeriodDays is the number of days a `Project` may be unused/stale before a
 	// timestamp for an auto deletion is computed.
 	StaleGracePeriodDays *int
@@ -125,6 +128,16 @@ type ProjectControllerConfiguration struct {
 	StaleExpirationTimeDays *int
 	// StaleSyncPeriod is the duration how often the reconciliation loop for stale Projects is executed.
 	StaleSyncPeriod *metav1.Duration
+}
+
+// QuotaConfiguration defines quota configurations.
+type QuotaConfiguration struct {
+	// Config is the quota specification used for the project set-up.
+	// Only v1.ResourceQuota resources are supported.
+	Config runtime.Object
+	// ProjectSelector is an optional setting to select the projects considered for quotas.
+	// Defaults to empty LabelSelector, which matches all projects.
+	ProjectSelector *metav1.LabelSelector
 }
 
 // QuotaControllerConfiguration defines the configuration of the Quota controller.

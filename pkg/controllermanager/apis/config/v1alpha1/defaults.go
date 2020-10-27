@@ -76,6 +76,11 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 			Duration: 12 * time.Hour,
 		}
 	}
+	for i, quota := range obj.Controllers.Project.Quotas {
+		if quota.ProjectSelector == nil {
+			obj.Controllers.Project.Quotas[i].ProjectSelector = &metav1.LabelSelector{}
+		}
+	}
 
 	if obj.Controllers.Quota == nil {
 		obj.Controllers.Quota = &QuotaControllerConfiguration{

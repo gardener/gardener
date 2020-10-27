@@ -38,10 +38,10 @@ type ClusterOpenIDConnectPresetSpec struct {
 	OpenIDConnectPresetSpec `json:",inline" protobuf:"bytes,1,opt,name=openIDConnectPresetSpec"`
 
 	// Project decides whether to apply the configuration if the
-	// Shoot is in a specific Project mathching the label selector.
+	// Shoot is in a specific Project matching the label selector.
 	// Use the selector only if the OIDC Preset is opt-in, because end
 	// users may skip the admission by setting the labels.
-	// Default to the empty LabelSelector, which matches everything.
+	// Defaults to the empty LabelSelector, which matches everything.
 	// +optional
 	ProjectSelector *metav1.LabelSelector `json:"projectSelector,omitempty" protobuf:"bytes,2,opt,name=projectSelector"`
 }

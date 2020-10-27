@@ -330,6 +330,16 @@ global:
   #       staleGracePeriodDays: 14
   #       staleExpirationTimeDays: 90
   #       staleSyncPeriod: 12h
+  #       quotas: # Please make sure ResourceQuota controller (https://github.com/kubernetes/kubernetes/blob/release-1.2/docs/design/admission_control_resource_quota.md#resource-quota-controller) is enabled for Kube-Controller-Manager when using `ResourceQuotas`.
+  #       - config:
+  #           apiVersion: v1
+  #           kind: ResourceQuota
+  #           spec:
+  #             hard:
+  #               count/shoots.core.gardener.cloud: "100"
+  #               count/secretbindings.core.gardener.cloud: "10"
+  #               count/secrets: "400"
+  #         projectSelector: {}
         seed:
           concurrentSyncs: 5
           syncPeriod: 1m
