@@ -72,3 +72,4 @@ Option | Description
 `apiServer.autoscaler.maxReplicas` | Controls the maximum number of `kube-apiserver` replicas for the shooted seed cluster.
 `apiServer.replicas` | Controls how many `kube-apiserver` replicas the shooted seed cluster gets by default.
 `use-serviceaccount-bootstrapping` | States that the gardenlet registers with the garden cluster using a temporary `ServiceAccount` instead of a `CertificateSigningRequest` (**default**)
+`providerConfig.*` | Sets `providerConfig` configuration parameters of the Seed resource. Each parameter is specified via its path, e.g. `providerConfig.param1=foo` or `providerConfig.sublevel1.sublevel2.param3=bar`
