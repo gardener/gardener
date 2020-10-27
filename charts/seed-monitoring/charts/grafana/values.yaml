@@ -21,6 +21,9 @@ extensions:
 konnectivityTunnel:
   enabled: false
 
+sni:
+  enabled: false
+
 exposedComponents:
 - dashboardName: "Kube Apiserver"
   jobName: "kube-apiserver"

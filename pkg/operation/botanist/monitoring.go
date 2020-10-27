@@ -410,6 +410,9 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 		"konnectivityTunnel": map[string]interface{}{
 			"enabled": b.Shoot.KonnectivityTunnelEnabled,
 		},
+		"sni": map[string]interface{}{
+			"enabled": b.APIServerSNIEnabled(),
+		},
 	}, common.GrafanaImageName, common.BusyboxImageName)
 	if err != nil {
 		return err
