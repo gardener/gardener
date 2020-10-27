@@ -64,7 +64,7 @@ data:
         address:
           socket_address:
             address: 0.0.0.0
-            port_value: {{ .Values.metricsPort }}
+            port_value: {{ .Values.adminPort }}
         filter_chains:
         - filters:
           - name: envoy.filters.network.http_connection_manager
@@ -93,6 +93,10 @@ data:
                   routes:
                   - match:
                       path: /stats/prometheus
+                    route:
+                      cluster: uds_admin
+                  - match:
+                      path: /ready
                     route:
                       cluster: uds_admin
               http_filters:

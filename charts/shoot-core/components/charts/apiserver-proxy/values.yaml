@@ -8,4 +8,4 @@ proxySeedServer:
   host: dummy.127.0.0.1.nip.io
   port: 8443
 # this is the nodeExporter port + 1
-metricsPort: 16910
+adminPort: 16910
