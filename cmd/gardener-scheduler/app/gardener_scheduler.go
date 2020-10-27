@@ -35,6 +35,7 @@ import (
 	shootcontroller "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
 	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
 	"github.com/gardener/gardener/pkg/server"
+	"github.com/gardener/gardener/pkg/version/verflag"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
@@ -104,6 +105,8 @@ func NewCommandStartGardenerScheduler(ctx context.Context) *cobra.Command {
 		Short: "Launch the Gardener scheduler",
 		Long:  `The Gardener scheduler is a controller that tries to find the best matching seed cluster for a shoot. The scheduler takes the cloud provider and the distance between the seed (hosting the control plane) and the shoot cluster region into account.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			verflag.PrintAndExitIfRequested()
+
 			if err := opts.validate(args); err != nil {
 				return err
 			}
@@ -111,7 +114,9 @@ func NewCommandStartGardenerScheduler(ctx context.Context) *cobra.Command {
 		},
 	}
 
-	opts.AddFlags(cmd.Flags())
+	flags := cmd.Flags()
+	verflag.AddFlags(flags)
+	opts.AddFlags(flags)
 	return cmd
 }
 
