@@ -6,7 +6,6 @@
 |ApiServerNotReachable|blocker|seed|`API server not reachable via external endpoint: {{ $labels.instance }}.`|
 |KubeApiserverDown|blocker|seed|`All API server replicas are down/unreachable, or all API server could not be found.`|
 |KubeApiServerTooManyAuditlogFailures|warning|seed|`The API servers cumulative failure rate in logging audit events is greater than 2%.`|
-|KubeControllerManagerDown|critical|seed|`Deployments and replication controllers are not making progress.`|
 |KubeEtcdMainDown|blocker|seed|`Etcd3 cluster main is unavailable or cannot be scraped. As long as etcd3 main is down the cluster is unreachable.`|
 |KubeEtcdEventsDown|critical|seed|`Etcd3 cluster events is unavailable or cannot be scraped. Cluster events cannot be collected.`|
 |KubeEtcd3MainNoLeader|critical|seed|`Etcd3 main has no leader. No communication with etcd main possible. Apiserver is read only.`|
