@@ -28,7 +28,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
-	quota "k8s.io/kubernetes/pkg/quota/v1"
+	quota "github.com/gardener/gardener/third_party/forked/kubernetes/pkg/quota/v1"
 )
 
 // InformerForResourceFunc knows how to provision an informer

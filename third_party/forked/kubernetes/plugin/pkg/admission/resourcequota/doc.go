@@ -16,4 +16,4 @@ limitations under the License.
 
 // Package resourcequota enforces all incoming requests against any applied quota
 // in the namespace context of the request
-package resourcequota // import "k8s.io/kubernetes/plugin/pkg/admission/resourcequota"
+package resourcequota // import "github.com/gardener/gardener/third_party/forked/kubernetes/plugin/pkg/admission/resourcequota"

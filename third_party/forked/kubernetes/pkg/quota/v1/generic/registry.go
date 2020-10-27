@@ -20,7 +20,7 @@ import (
 	"sync"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	quota "k8s.io/kubernetes/pkg/quota/v1"
+	quota "github.com/gardener/gardener/third_party/forked/kubernetes/pkg/quota/v1"
 )
 
 // implements a basic registry

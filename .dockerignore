@@ -11,6 +11,7 @@
 !pkg/
 !plugin/
 !test/
+!third_party/
 !vendor/
 !.golangci.yaml
 !go.mod

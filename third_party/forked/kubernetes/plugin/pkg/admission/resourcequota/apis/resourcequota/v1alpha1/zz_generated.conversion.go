@@ -26,7 +26,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
-	resourcequota "k8s.io/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota"
+	resourcequota "github.com/gardener/gardener/third_party/forked/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota"
 )
 
 func init() {

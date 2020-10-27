@@ -19,7 +19,7 @@ import (
 	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
-	"k8s.io/kubernetes/pkg/quota/v1"
+	"github.com/gardener/gardener/third_party/forked/kubernetes/pkg/quota/v1"
 
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"

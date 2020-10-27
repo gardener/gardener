@@ -23,9 +23,9 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	resourcequotaapi "k8s.io/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota"
-	"k8s.io/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota/install"
-	resourcequotav1 "k8s.io/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota/v1"
+	resourcequotaapi "github.com/gardener/gardener/third_party/forked/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota"
+	"github.com/gardener/gardener/third_party/forked/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota/install"
+	resourcequotav1 "github.com/gardener/gardener/third_party/forked/kubernetes/plugin/pkg/admission/resourcequota/apis/resourcequota/v1"
 )
 
 var (
