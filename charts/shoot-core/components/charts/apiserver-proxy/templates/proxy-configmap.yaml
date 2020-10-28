@@ -92,9 +92,10 @@ data:
                   domains: ["*"]
                   routes:
                   - match:
-                      path: /stats/prometheus
+                      path: /metrics
                     route:
                       cluster: uds_admin
+                      prefix_rewrite: /stats/prometheus
                   - match:
                       path: /ready
                     route:
