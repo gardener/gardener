@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/infodata"
@@ -176,6 +177,39 @@ var _ = Describe("SecretsManager", func() {
 			Expect(len(staticTokenInfoData.(*secrets.StaticTokenInfoData).Tokens)).To(Equal(2))
 			Expect(staticTokenInfoData.(*secrets.StaticTokenInfoData).Tokens["barID"]).NotTo(Equal(""))
 			Expect(staticTokenInfoData.(*secrets.StaticTokenInfoData).Tokens["fooID"]).To(Equal("foo"))
+		})
+
+		It("should not use the same slice for the resourceDataList", func() {
+			preExistingSecretsCount := 38
+			resourceData := []gardencorev1alpha1.GardenerResourceData{
+				{
+					Name: staticTokenConfig.Name,
+					Type: string(secrets.StaticTokenDataType),
+					Data: runtime.RawExtension{Raw: []byte(`{"tokens":{"fooID":"foo","barID":"bar"}}`)},
+				},
+			}
+			for i := 0; i < preExistingSecretsCount; i++ {
+				resourceData = append(
+					resourceData,
+					gardencorev1alpha1.GardenerResourceData{
+						Name: fmt.Sprintf("%s-%d", caName, i),
+						Type: string(secrets.CertificateDataType),
+						Data: runtime.RawExtension{Raw: []byte(fmt.Sprintf(`{"privateKey":"%s","certificate":"%s"}`, cakey, cacert))},
+					})
+			}
+
+			resourceList := gardencorev1alpha1helper.GardenerResourceDataList(resourceData)
+			Expect(resourceList.Get(staticTokenConfig.Name)).ToNot(BeNil())
+			resourceList.Delete(staticTokenConfig.Name)
+			Expect(resourceList.Get(staticTokenConfig.Name)).To(BeNil())
+
+			secretsManager := NewSecretsManager(resourceList, staticTokenConfig, nil, secretsConfigGenerator)
+			err := secretsManager.Generate()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resourceList.Get(staticTokenConfig.Name)).To(BeNil())
+			Expect(secretsManager.GardenerResourceDataList.Get(staticTokenConfig.Name)).ToNot(BeNil())
+			resourceList2 := gardencorev1alpha1helper.GardenerResourceDataList(resourceData)
+			Expect(resourceList2.Get(staticTokenConfig.Name)).To(BeNil())
 		})
 
 		It("should remove outdated token entries from generated static token info data", func() {
