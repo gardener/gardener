@@ -374,7 +374,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		deleteClusterAutoscaler = g.Add(flow.Task{
 			Name:         "Deleting cluster autoscaler",
-			Fn:           flow.TaskFn(botanist.DeleteClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.ClusterAutoscaler.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 
