@@ -44,7 +44,7 @@ import (
 // credentials are computed which will be used to secure the Ingress resources and the kube-apiserver itself.
 // Server certificates for the exposed monitoring endpoints (via Ingress) are generated as well.
 func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
-	gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(b.ShootState.Spec.Gardener)
+	gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(b.ShootState.Spec.Gardener).DeepCopy()
 
 	if val, ok := common.GetShootOperationAnnotation(b.Shoot.Info.Annotations); ok && val == common.ShootOperationRotateKubeconfigCredentials {
 		if err := b.rotateKubeconfigSecrets(ctx, &gardenerResourceDataList); err != nil {
