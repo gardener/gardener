@@ -306,6 +306,15 @@ var _ = Describe("KubeControllerManager", func() {
 						UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
 							UpdateMode: &vpaUpdateMode,
 						},
+						ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
+							ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{{
+								ContainerName: "kube-controller-manager",
+								MinAllowed: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("25m"),
+									corev1.ResourceMemory: resource.MustParse("100Mi"),
+								},
+							}},
+						},
 					},
 				}
 
