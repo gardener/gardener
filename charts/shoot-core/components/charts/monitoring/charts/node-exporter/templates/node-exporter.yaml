@@ -73,9 +73,9 @@ spec:
         - /bin/node_exporter
         - --path.procfs=/host/proc
         - --path.sysfs=/host/sys
-        - --collector.filesystem.ignored-fs-types=^(tmpfs|cgroup|nsfs|fuse\.lxcfs|rpc_pipefs)$
-        - --collector.filesystem.ignored-mount-points=^/(rootfs/|host/)?(sys|proc|dev|host|etc|var/lib/docker)($|/)
+        - --collector.filesystem.ignored-mount-points=^/.+$
         - --web.listen-address=:{{ .Values.ports.metrics }}
+        - --path.rootfs=/host
         - --log.level=error
         - --no-collector.netclass
         ports:
@@ -108,24 +108,10 @@ spec:
             memory: 100Mi
           {{- end }}
         volumeMounts:
-        - name: proc
-          readOnly:  true
-          mountPath: /host/proc
-        - name: sys
+        - name: host
           readOnly: true
-          mountPath: /host/sys
-        # TODO(mvladev): Remove this once 0.17.X version of node exporter is released
-        - name: rootfs
-          readOnly: true
-          mountPath: /rootfs
+          mountPath: /host
       volumes:
-      - name: proc
-        hostPath:
-          path: /proc
-      - name: sys
-        hostPath:
-          path: /sys
-      # TODO(mvladev): Remove this once 0.17.X version of node exporter is released
-      - name: rootfs
+      - name: host
         hostPath:
           path: /
