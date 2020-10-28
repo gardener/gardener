@@ -11,7 +11,7 @@ spec:
   clusterIP: None
   ports:
   - name: metrics
-    port: {{ .Values.metricsPort }}
+    port: {{ .Values.adminPort }}
     protocol: TCP
   selector:
     app: kubernetes

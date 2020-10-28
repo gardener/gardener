@@ -1216,7 +1216,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Upstream Connection Openning Time",
+      "title": "Upstream Connection Opening Time",
       "tooltip": {
         "shared": true,
         "sort": 0,
