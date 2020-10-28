@@ -117,20 +117,6 @@ func SetDefaults_Seed(obj *Seed) {
 	if obj.Spec.Settings.VerticalPodAutoscaler == nil {
 		obj.Spec.Settings.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
 	}
-
-	// TODO: remove taints removal in version >=1.13
-	taintsToRemove := []string{
-		"seed.gardener.cloud/disable-capacity-reservation",
-		"seed.gardener.cloud/disable-dns",
-		"seed.gardener.cloud/invisible",
-	}
-	for _, taint := range taintsToRemove {
-		for i := len(obj.Spec.Taints) - 1; i >= 0; i-- {
-			if obj.Spec.Taints[i].Key == taint {
-				obj.Spec.Taints = append(obj.Spec.Taints[:i], obj.Spec.Taints[i+1:]...)
-			}
-		}
-	}
 }
 
 // SetDefaults_Shoot sets default values for Shoot objects.
