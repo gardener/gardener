@@ -84,13 +84,11 @@ var _ = Describe("controller", func() {
 
 			Entry("task from absent annotation", map[string]string{},
 				[]string{common.ShootTaskDeployInfrastructure}, nil),
-			Entry("tasks from empty list", map[string]string{},
-				[]string{common.ShootTaskDeployInfrastructure}, nil),
 			Entry("task from empty list", map[string]string{"foo": "bar"},
 				[]string{common.ShootTaskDeployInfrastructure}, nil),
 			Entry("no task from empty list", map[string]string{},
 				[]string{}, nil),
-			Entry("no task from empty list", map[string]string{"foo": "bar"},
+			Entry("task from empty list", map[string]string{"foo": "bar"},
 				[]string{}, nil),
 			Entry("task from empty list twice", map[string]string{},
 				[]string{common.ShootTaskDeployInfrastructure, common.ShootTaskDeployInfrastructure}, nil),
@@ -100,6 +98,8 @@ var _ = Describe("controller", func() {
 				[]string{common.ShootTaskDeployInfrastructure}, []string{"foo"}),
 			Entry("all existing tasks from filled list", map[string]string{common.ShootTasks: common.ShootTaskDeployInfrastructure + ",foo"},
 				[]string{"foo", common.ShootTaskDeployInfrastructure}, nil),
+			Entry("all occurances of a task", map[string]string{common.ShootTasks: common.ShootTaskDeployInfrastructure + "," + common.ShootTaskDeployInfrastructure},
+				[]string{common.ShootTaskDeployInfrastructure}, nil),
 		)
 
 		DescribeTable("#HasTask",
