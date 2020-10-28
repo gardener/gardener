@@ -345,7 +345,20 @@ var _ = Describe("Defaults", func() {
 				kubeReservedPID           = resource.MustParse("10k")
 			)
 
-			It("should default all fields", func() {
+			It("should default all fields except PID for k8s < 1.15", func() {
+				obj.Spec.Kubernetes.Version = "1.13.1"
+
+				SetDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
+					CPU:    &defaultKubeReservedCPU,
+					Memory: &defaultKubeReservedMemory,
+				})))
+			})
+
+			It("should default all fields for k8s >= 1.15", func() {
+				obj.Spec.Kubernetes.Version = "1.15.1"
+
 				SetDefaults_Shoot(obj)
 
 				Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{

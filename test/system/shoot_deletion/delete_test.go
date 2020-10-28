@@ -32,7 +32,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -73,7 +72,7 @@ var _ = Describe("Shoot deletion testing", func() {
 			}
 		}
 
-		if err := f.DeleteShootAndWaitForDeletion(ctx, shoot); err != nil && !errors.IsNotFound(err) {
+		if err := f.DeleteShootAndWaitForDeletion(ctx, shoot); err != nil && !apierrors.IsNotFound(err) {
 			if shootFramework, err := f.NewShootFramework(shoot); err == nil {
 				shootFramework.DumpState(ctx)
 			}

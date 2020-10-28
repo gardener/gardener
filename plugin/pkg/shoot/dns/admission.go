@@ -30,7 +30,6 @@ import (
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -238,7 +237,7 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 // checkFunctionlessDNSProviders returns an error if a non-primary provider isn't configured correctly.
 func checkFunctionlessDNSProviders(dns *core.DNS) error {
 	for _, provider := range dns.Providers {
-		if !utils.IsTrue(provider.Primary) && (provider.Type == nil || provider.SecretName == nil) {
+		if !gardenerutils.IsTrue(provider.Primary) && (provider.Type == nil || provider.SecretName == nil) {
 			return apierrors.NewBadRequest("non-primary DNS providers in .spec.dns.providers must specify a `type` and `secretName`")
 		}
 	}
