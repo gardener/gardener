@@ -71,7 +71,7 @@ Once this list has been computed the scheduler tries to find the best one out of
 It filters out `Seed`s
 
 * whose networks have intersections with the `Shoot`'s networks (due to the VPN connectivity between seeds and shoots their networks must be disjoint)
-* that are tainted with the `seed.gardener.cloud/disable-dns` taint (only if the shoot specifies a DNS domain or does not use the `unmanaged` DNS provider)
+* that have `.spec.settings.shootDNS.enabled=false` (only if the shoot specifies a DNS domain or does not use the `unmanaged` DNS provider)
 * whose labels don't match the `.spec.seedSelector` field of the `CloudProfile` that is used in the `Shoot` (there might be multiple environments for the same provider type, e.g., you might have multiple OpenStack systems connected to Gardener)
 
 After this filtering process the least utilized seed, i.e., the one with the least number of shoot control planes, will be the winner and written to the `.spec.seedName` field of the `Shoot`.

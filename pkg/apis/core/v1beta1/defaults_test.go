@@ -234,12 +234,13 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
 		})
 
-		It("should remove deprecated taints from the seed settings (w/ taints)", func() {
-			obj.Spec.Taints = []SeedTaint{
+		It("should allow taints that were not allowed in version v1.12", func() {
+			taints := []SeedTaint{
 				{Key: "seed.gardener.cloud/disable-capacity-reservation"},
 				{Key: "seed.gardener.cloud/disable-dns"},
 				{Key: "seed.gardener.cloud/invisible"},
 			}
+			obj.Spec.Taints = taints
 
 			SetDefaults_Seed(obj)
 
@@ -247,25 +248,8 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
-			Expect(obj.Spec.Taints).To(BeEmpty())
-		})
-
-		It("should keep non-deprecated taints from the seed settings (w/ taints)", func() {
-			obj.Spec.Taints = []SeedTaint{
-				{Key: "seed.gardener.cloud/disable-capacity-reservation"},
-				{Key: "seed.gardener.cloud/disable-dns"},
-				{Key: "seed.gardener.cloud/invisible"},
-				{Key: SeedTaintProtected},
-			}
-
-			SetDefaults_Seed(obj)
-
-			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeTrue())
-			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
-			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeTrue())
-			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
-			Expect(obj.Spec.Taints).To(HaveLen(1))
-			Expect(obj.Spec.Taints[0].Key).To(Equal(SeedTaintProtected))
+			Expect(obj.Spec.Taints).To(HaveLen(3))
+			Expect(obj.Spec.Taints).To(Equal(taints))
 		})
 
 		It("should not default the seed settings because they were provided", func() {
@@ -336,7 +320,20 @@ var _ = Describe("Defaults", func() {
 				kubeReservedPID           = resource.MustParse("10k")
 			)
 
-			It("should default all fields", func() {
+			It("should default all fields except PID for k8s < 1.15", func() {
+				obj.Spec.Kubernetes.Version = "1.13.1"
+
+				SetDefaults_Shoot(obj)
+
+				Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
+					CPU:    &defaultKubeReservedCPU,
+					Memory: &defaultKubeReservedMemory,
+				})))
+			})
+
+			It("should default all fields for k8s >= 1.15", func() {
+				obj.Spec.Kubernetes.Version = "1.15.1"
+
 				SetDefaults_Shoot(obj)
 
 				Expect(obj.Spec.Kubernetes.Kubelet.KubeReserved).To(PointTo(Equal(KubeletConfigReserved{
