@@ -6,11 +6,13 @@
   "editable": true,
   "gnetId": 2115,
   "graphTooltip": 0,
-  "iteration": 1560430729381,
+  "id": 1,
+  "iteration": 1603989086481,
   "links": [],
   "panels": [
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -23,103 +25,40 @@
       "type": "row"
     },
     {
-      "cacheTimeout": null,
-      "description": "How many pods are currently running on node $Node.",
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 0,
-        "y": 1
-      },
-      "id": 63,
-      "links": [],
-      "options": {
-        "fieldOptions": {
-          "calcs": [
-            "last"
-          ],
-          "defaults": {
-            "decimals": null,
-            "mappings": [],
-            "max": "110",
-            "min": 0,
-            "thresholds": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "#EAB839",
-                "value": 100
-              },
-              {
-                "color": "red",
-                "value": 110
-              }
-            ],
-            "unit": "none"
-          },
-          "override": {},
-          "values": false
-        },
-        "orientation": "auto",
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true
-      },
-      "pluginVersion": "6.3.2",
-      "targets": [
-        {
-          "expr": "sum(kube_pod_info{type=\"shoot\", node=~\"$Node\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "timeFrom": null,
-      "timeShift": null,
-      "title": "Pods",
-      "type": "gauge"
-    },
-    {
+      "datasource": null,
       "description": "Shows how much percent of the CPU is being used on the node $Node.",
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 1
-      },
-      "id": 65,
-      "links": [],
-      "options": {
-        "fieldOptions": {
-          "calcs": [
-            "mean"
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {},
+          "decimals": null,
+          "mappings": [
+            {
+              "from": "",
+              "id": 1,
+              "operator": "",
+              "text": "",
+              "to": "",
+              "type": 1,
+              "value": ""
+            },
+            {
+              "from": "",
+              "id": 2,
+              "operator": "",
+              "text": "",
+              "to": "",
+              "type": 1,
+              "value": ""
+            }
           ],
-          "defaults": {
-            "decimals": null,
-            "mappings": [
-              {
-                "from": "",
-                "id": 1,
-                "operator": "",
-                "text": "",
-                "to": "",
-                "type": 1,
-                "value": ""
-              },
-              {
-                "from": "",
-                "id": 2,
-                "operator": "",
-                "text": "",
-                "to": "",
-                "type": 1,
-                "value": ""
-              }
-            ],
-            "max": 100,
-            "min": 0,
-            "thresholds": [
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
               {
                 "color": "green",
                 "value": null
@@ -132,17 +71,33 @@
                 "color": "red",
                 "value": 99
               }
-            ],
-            "unit": "none"
+            ]
           },
-          "override": {},
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "id": 65,
+      "links": [],
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
           "values": false
         },
-        "orientation": "auto",
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "6.3.2",
+      "pluginVersion": "7.2.1",
       "targets": [
         {
           "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\", node=~\"$Node\"}[$rate])) / sum(kube_node_status_allocatable_cpu_cores{node=~\"$Node\"}) * 100",
@@ -158,45 +113,40 @@
       "type": "gauge"
     },
     {
+      "datasource": null,
       "description": "Shows how much percent of the memory is being used on the node $Node.",
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 16,
-        "y": 1
-      },
-      "id": 66,
-      "links": [],
-      "options": {
-        "fieldOptions": {
-          "calcs": [
-            "mean"
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {},
+          "decimals": null,
+          "mappings": [
+            {
+              "from": "",
+              "id": 1,
+              "operator": "",
+              "text": "",
+              "to": "",
+              "type": 1,
+              "value": ""
+            },
+            {
+              "from": "",
+              "id": 2,
+              "operator": "",
+              "text": "",
+              "to": "",
+              "type": 1,
+              "value": ""
+            }
           ],
-          "defaults": {
-            "decimals": null,
-            "mappings": [
-              {
-                "from": "",
-                "id": 1,
-                "operator": "",
-                "text": "",
-                "to": "",
-                "type": 1,
-                "value": ""
-              },
-              {
-                "from": "",
-                "id": 2,
-                "operator": "",
-                "text": "",
-                "to": "",
-                "type": 1,
-                "value": ""
-              }
-            ],
-            "max": 100,
-            "min": 0,
-            "thresholds": [
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
               {
                 "color": "green",
                 "value": null
@@ -209,17 +159,33 @@
                 "color": "red",
                 "value": 99
               }
-            ],
-            "unit": "none"
+            ]
           },
-          "override": {},
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "id": 66,
+      "links": [],
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "mean"
+          ],
+          "fields": "",
           "values": false
         },
-        "orientation": "auto",
         "showThresholdLabels": false,
         "showThresholdMarkers": true
       },
-      "pluginVersion": "6.3.2",
+      "pluginVersion": "7.2.1",
       "targets": [
         {
           "expr": "sum(node_memory_Active_bytes{node=~\"$Node\"}) / sum(kube_node_status_allocatable_memory_bytes{node=~\"$Node\"}) * 100",
@@ -240,113 +206,25 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "prometheus",
-      "description": "Shows how many pods can be allocated onto this node and how many are currently on this node.",
-      "fill": 0,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 6,
-        "w": 24,
-        "x": 0,
-        "y": 7
-      },
-      "id": 50,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "sum(kube_node_status_allocatable_pods{node=~\"$Node\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Allocatable",
-          "refId": "A"
-        },
-        {
-          "expr": "sum(kube_pod_info{type=\"shoot\", node=~\"$Node\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Pods",
-          "refId": "C"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Pods ($Node)",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": "Pods",
-          "logBase": 1,
-          "max": "110",
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
+      "datasource": null,
       "decimals": 2,
       "description": "Shows a node's CPU usage over time.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 13
+        "y": 7
       },
+      "hiddenSeries": false,
       "id": 57,
       "legend": {
         "alignAsTable": true,
@@ -363,9 +241,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.2.1",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -442,16 +321,25 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 2,
       "description": "Shows a node's memory usage over time.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 13
+        "y": 7
       },
+      "hiddenSeries": false,
       "id": 55,
       "legend": {
         "alignAsTable": true,
@@ -468,9 +356,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.2.1",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -552,6 +441,13 @@
       "description": "Shows the node's network I/O pressure.",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "grid": {},
@@ -559,9 +455,10 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 21
+        "y": 15
       },
       "height": "200px",
+      "hiddenSeries": false,
       "id": 32,
       "legend": {
         "alignAsTable": false,
@@ -582,9 +479,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.2.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -661,15 +559,24 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Shows the size of the node's filesystem, how much space is free and how much space is available to non-root users.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 21
+        "y": 15
       },
+      "hiddenSeries": false,
       "id": 73,
       "legend": {
         "avg": false,
@@ -685,9 +592,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.2.1",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -761,11 +669,12 @@
     },
     {
       "collapsed": true,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 23
       },
       "id": 69,
       "panels": [
@@ -997,7 +906,7 @@
     }
   ],
   "refresh": "1m",
-  "schemaVersion": 19,
+  "schemaVersion": 26,
   "style": "dark",
   "tags": [
     "workload",
@@ -1007,7 +916,11 @@
     "list": [
       {
         "allValue": ".*",
-        "current": {},
+        "current": {
+          "selected": false,
+          "text": "ip-10-32-0-43.eu-west-1.compute.internal",
+          "value": "ip-10-32-0-43.eu-west-1.compute.internal"
+        },
         "datasource": "prometheus",
         "definition": "",
         "hide": 0,
