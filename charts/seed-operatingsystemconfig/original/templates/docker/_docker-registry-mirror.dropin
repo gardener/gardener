@@ -1,0 +1,8 @@
+{{- define "docker-registry-mirror" -}}
+- name: docker.service
+  dropIns:
+  - name: 10-registry-mirror.conf
+      content: |
+      [Service]
+      Environment="DOCKER_OPTS=--registry-mirror {{  }}"
+{{- end -}}

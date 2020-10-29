@@ -185,6 +185,10 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, ma
 		osc["providerConfig"] = string(machineImage.ProviderConfig.Raw)
 	}
 
+	if b.Shoot.CloudProfile.Spec.RegistryMirror != nil {
+		osc["registryMirror"] = *b.Shoot.CloudProfile.Spec.RegistryMirror
+	}
+
 	downloaderConfig["secretName"] = secretName
 	originalConfig["osc"] = osc
 

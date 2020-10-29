@@ -92,6 +92,9 @@ type OperatingSystemConfigSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	Files []File `json:"files,omitempty" patchStrategy:"merge" patchMergeKey:"path"`
+	// RegistryMirror is an URL for a pull through cache for the docker hub
+	// +optional
+	RegistryMirror *string `json:"registryMirror,omitempty"`
 }
 
 // Unit is a unit for the operating system configuration (usually, a systemd unit).

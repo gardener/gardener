@@ -84,6 +84,8 @@ type CloudProfileSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	VolumeTypes []VolumeType `json:"volumeTypes,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,9,rep,name=volumeTypes"`
+	// RegistryMirror is an URL for a pull through cache for the docker hub
+	RegistryMirror *string `json:"registryMirror,omitempty" protobuf:"bytes,10,opt,name=registryMirror"`
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile

@@ -29,6 +29,9 @@ spec:
 {{ include "containerd-logrotate-timer" . | indent 2 }}
 {{- end }}
 {{- else }}
+{{- if .Values.osc.registryMirror }}
+{{ include "docker-registry-mirror" . | indent 2 }}
+{{- end }}
 {{ include "docker-monitor" . | indent 2 }}
 {{ include "docker-logrotate" . | indent 2 }}
 {{ include "docker-logrotate-timer" . | indent 2 }}
