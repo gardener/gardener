@@ -194,10 +194,16 @@ func SetDefaults_Shoot(obj *Shoot) {
 		kubeReservedMemory = resource.MustParse("1Gi")
 		kubeReservedCPU    = resource.MustParse("80m")
 		kubeReservedPID    = resource.MustParse("20k")
+
+		k8sVersionGreaterEqual115, _ = versionutils.CompareVersions(obj.Spec.Kubernetes.Version, ">=", "1.15")
 	)
 
 	if obj.Spec.Kubernetes.Kubelet.KubeReserved == nil {
-		obj.Spec.Kubernetes.Kubelet.KubeReserved = &KubeletConfigReserved{Memory: &kubeReservedMemory, CPU: &kubeReservedCPU, PID: &kubeReservedPID}
+		obj.Spec.Kubernetes.Kubelet.KubeReserved = &KubeletConfigReserved{Memory: &kubeReservedMemory, CPU: &kubeReservedCPU}
+
+		if k8sVersionGreaterEqual115 {
+			obj.Spec.Kubernetes.Kubelet.KubeReserved.PID = &kubeReservedPID
+		}
 	} else {
 		if obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory == nil {
 			obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory = &kubeReservedMemory
@@ -205,7 +211,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU == nil {
 			obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU = &kubeReservedCPU
 		}
-		if obj.Spec.Kubernetes.Kubelet.KubeReserved.PID == nil {
+		if obj.Spec.Kubernetes.Kubelet.KubeReserved.PID == nil && k8sVersionGreaterEqual115 {
 			obj.Spec.Kubernetes.Kubelet.KubeReserved.PID = &kubeReservedPID
 		}
 	}

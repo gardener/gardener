@@ -210,7 +210,7 @@ func (c *defaultControl) reconcileNamespaceForProject(ctx context.Context, garde
 				Annotations:     projectAnnotations,
 			},
 		}
-		err := gardenClient.Client().Create(context.TODO(), obj)
+		err := gardenClient.Client().Create(ctx, obj)
 		return obj, err
 	}
 
@@ -245,7 +245,7 @@ func (c *defaultControl) reconcileNamespaceForProject(ctx context.Context, garde
 				Annotations:     projectAnnotations,
 			},
 		}
-		err := gardenClient.Client().Create(context.TODO(), obj)
+		err := gardenClient.Client().Create(ctx, obj)
 		return obj, err
 	}
 
