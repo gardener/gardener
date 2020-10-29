@@ -8,24 +8,6 @@ metadata:
     origin: gardener
 data:
   envoy.yaml: |-
-    overload_manager:
-      refresh_interval: 0.25s
-      resource_monitors:
-      - name: "envoy.resource_monitors.fixed_heap"
-        typed_config:
-          "@type": type.googleapis.com/envoy.config.resource_monitor.fixed_heap.v2alpha.FixedHeapConfig
-          max_heap_size_bytes: 20971520 # 20 MiB
-      actions:
-      - name: "envoy.overload_actions.shrink_heap"
-        triggers:
-        - name: "envoy.resource_monitors.fixed_heap"
-          threshold:
-            value: 0.95
-      - name: "envoy.overload_actions.stop_accepting_requests"
-        triggers:
-        - name: "envoy.resource_monitors.fixed_heap"
-          threshold:
-            value: 0.98
     layered_runtime:
       layers:
         - name: static_layer_0
@@ -34,7 +16,7 @@ data:
               resource_limits:
                 listener:
                   kube_apiserver:
-                    connection_limit: 2000
+                    connection_limit: 10000
             overload:
               global_downstream_max_connections: 10000
     admin:
