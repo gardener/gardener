@@ -4,5 +4,5 @@
   - name: 10-registry-mirror.conf
       content: |
       [Service]
-      Environment="DOCKER_OPTS=--registry-mirror {{  }}"
+      Environment="DOCKER_OPTS=--registry-mirror {{ .Values.osc.registryMirror }}"
 {{- end -}}
