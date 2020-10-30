@@ -40,6 +40,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
@@ -176,6 +177,21 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 		return fmt.Errorf("failed to get garden client: %w", err)
 	}
 
+	// Initialize capacity and allocatable
+	var capacity, allocatable corev1.ResourceList
+	if c.config.Resources != nil && len(c.config.Resources.Capacity) > 0 {
+		capacity = make(corev1.ResourceList, len(c.config.Resources.Capacity))
+		allocatable = make(corev1.ResourceList, len(c.config.Resources.Capacity))
+		for resourceName, quantity := range c.config.Resources.Capacity {
+			capacity[resourceName] = quantity
+			if reservedQuantity, ok := c.config.Resources.Reserved[resourceName]; ok {
+				allocatable[resourceName] = *resource.NewQuantity(quantity.Value()-reservedQuantity.Value(), quantity.Format)
+			} else {
+				allocatable[resourceName] = quantity
+			}
+		}
+	}
+
 	// Initialize conditions based on the current status.
 	conditionSeedBootstrapped := gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
 
@@ -187,7 +203,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 		message := fmt.Sprintf("Failed to create a Seed object (%s).", err.Error())
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, message)
 		seedLogger.Error(message)
-		_ = c.updateSeedStatus(ctx, gardenClient.GardenCore(), seed, "<unknown>", conditionSeedBootstrapped)
+		_ = c.updateSeedStatus(ctx, gardenClient.GardenCore(), seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped)
 		return err
 	}
 
@@ -241,7 +257,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 				message := fmt.Sprintf("Failed to unbootstrap Seed Cluster (%s).", err.Error())
 				conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "DebootstrapFailed", message)
 				seedLogger.Error(message)
-				_ = c.updateSeedStatus(ctx, gardenClient.GardenCore(), seed, "<unknown>", conditionSeedBootstrapped)
+				_ = c.updateSeedStatus(ctx, gardenClient.GardenCore(), seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped)
 				return err
 			}
 
@@ -327,7 +343,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	seedKubernetesVersion, err := seedObj.CheckMinimumK8SVersion(seedClient)
 	if err != nil {
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "K8SVersionTooOld", err.Error())
-		_ = c.updateSeedStatus(ctx, gardenClient.GardenCore(), seed, seedKubernetesVersion, conditionSeedBootstrapped)
+		_ = c.updateSeedStatus(ctx, gardenClient.GardenCore(), seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped)
 		seedLogger.Error(err.Error())
 		return err
 	}
@@ -335,13 +351,13 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	// Bootstrap the Seed cluster.
 	if err := seedpkg.BootstrapCluster(ctx, gardenClient, seedClient, seedObj, c.secrets, c.imageVector, c.componentImageVectors, c.config.DeepCopy()); err != nil {
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "BootstrappingFailed", err.Error())
-		_ = c.updateSeedStatus(ctx, gardenClient.GardenCore(), seed, seedKubernetesVersion, conditionSeedBootstrapped)
+		_ = c.updateSeedStatus(ctx, gardenClient.GardenCore(), seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped)
 		seedLogger.Errorf("Seed bootstrapping failed: %+v", err)
 		return err
 	}
 
 	conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionTrue, "BootstrappingSucceeded", "Seed cluster has been bootstrapped successfully.")
-	_ = c.updateSeedStatus(ctx, gardenClient.GardenCore(), seed, seedKubernetesVersion, conditionSeedBootstrapped)
+	_ = c.updateSeedStatus(ctx, gardenClient.GardenCore(), seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped)
 
 	if seed.Spec.Backup != nil {
 		// This should be post updating the seed is available. Since, scheduler will then mostly use
@@ -355,7 +371,14 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	return nil
 }
 
-func (c *defaultControl) updateSeedStatus(ctx context.Context, g gardencore.Interface, seed *gardencorev1beta1.Seed, k8sVersion string, updateConditions ...gardencorev1beta1.Condition) error {
+func (c *defaultControl) updateSeedStatus(
+	ctx context.Context,
+	g gardencore.Interface,
+	seed *gardencorev1beta1.Seed,
+	k8sVersion string,
+	capacity, allocatable corev1.ResourceList,
+	updateConditions ...gardencorev1beta1.Condition,
+) error {
 	if _, err := kutil.TryUpdateSeedStatus(ctx, g, retry.DefaultBackoff, seed.ObjectMeta,
 		func(seed *gardencorev1beta1.Seed) (*gardencorev1beta1.Seed, error) {
 			// remove "available condition"
@@ -370,6 +393,8 @@ func (c *defaultControl) updateSeedStatus(ctx context.Context, g gardencore.Inte
 			seed.Status.ObservedGeneration = seed.Generation
 			seed.Status.Gardener = c.identity
 			seed.Status.KubernetesVersion = &k8sVersion
+			seed.Status.Capacity = capacity
+			seed.Status.Allocatable = allocatable
 			return seed, nil
 		},
 	); err != nil {

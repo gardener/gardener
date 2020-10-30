@@ -20,6 +20,8 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -254,6 +256,7 @@ type ShootedSeed struct {
 	UseServiceAccountBootstrapping bool
 	WithSecretRef                  bool
 	FeatureGates                   map[string]bool
+	Resources                      *ShootedSeedResources
 }
 
 type ShootedSeedAPIServer struct {
@@ -264,6 +267,11 @@ type ShootedSeedAPIServer struct {
 type ShootedSeedAPIServerAutoscaler struct {
 	MinReplicas *int32
 	MaxReplicas int32
+}
+
+type ShootedSeedResources struct {
+	Capacity corev1.ResourceList
+	Reserved corev1.ResourceList
 }
 
 func parseInt32(s string) (int32, error) {
@@ -327,6 +335,12 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 		return nil, err
 	}
 	shootedSeed.SeedProviderConfig = seedProviderConfig
+
+	resources, err := parseShootedSeedResources(settings)
+	if err != nil {
+		return nil, err
+	}
+	shootedSeed.Resources = resources
 
 	if size, ok := settings["minimumVolumeSize"]; ok {
 		shootedSeed.MinimumVolumeSize = &size
@@ -537,11 +551,50 @@ func parseShootedSeedAPIServerAutoscaler(settings map[string]string) (*ShootedSe
 	return &apiServerAutoscaler, nil
 }
 
+func parseShootedSeedResources(settings map[string]string) (*ShootedSeedResources, error) {
+	var capacity, reserved corev1.ResourceList
+
+	for k, v := range settings {
+		var resourceName corev1.ResourceName
+		var quantity resource.Quantity
+		var err error
+		if strings.HasPrefix(k, "resources.capacity.") || strings.HasPrefix(k, "resources.reserved.") {
+			resourceName = corev1.ResourceName(strings.Split(k, ".")[2])
+			quantity, err = resource.ParseQuantity(v)
+			if err != nil {
+				return nil, err
+			}
+			if strings.HasPrefix(k, "resources.capacity.") {
+				if capacity == nil {
+					capacity = make(corev1.ResourceList)
+				}
+				capacity[resourceName] = quantity
+			} else {
+				if reserved == nil {
+					reserved = make(corev1.ResourceList)
+				}
+				reserved[resourceName] = quantity
+			}
+		}
+	}
+
+	if len(capacity) == 0 && len(reserved) == 0 {
+		return nil, nil
+	}
+	return &ShootedSeedResources{
+		Capacity: capacity,
+		Reserved: reserved,
+	}, nil
+}
+
 func validateShootedSeed(shootedSeed *ShootedSeed, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if shootedSeed.APIServer != nil {
-		allErrs = validateShootedSeedAPIServer(shootedSeed.APIServer, fldPath.Child("apiServer"))
+		allErrs = append(allErrs, validateShootedSeedAPIServer(shootedSeed.APIServer, fldPath.Child("apiServer"))...)
+	}
+	if shootedSeed.Resources != nil {
+		allErrs = append(allErrs, validateShootedSeedResources(shootedSeed.Resources, fldPath.Child("resources"))...)
 	}
 
 	return allErrs
@@ -576,11 +629,32 @@ func validateShootedSeedAPIServerAutoscaler(autoscaler *ShootedSeedAPIServerAuto
 	return allErrs
 }
 
+func validateShootedSeedResources(resources *ShootedSeedResources, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for resourceName, quantity := range resources.Capacity {
+		if reservedQuantity, ok := resources.Reserved[resourceName]; ok && reservedQuantity.Value() > quantity.Value() {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("reserved", string(resourceName)), resources.Reserved[resourceName], "must be lower or equal to capacity"))
+		}
+	}
+	for resourceName := range resources.Reserved {
+		if _, ok := resources.Capacity[resourceName]; !ok {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("reserved", string(resourceName)), resources.Reserved[resourceName], "reserved without capacity"))
+		}
+	}
+
+	return allErrs
+}
+
 func setDefaults_ShootedSeed(shootedSeed *ShootedSeed) {
 	if shootedSeed.APIServer == nil {
 		shootedSeed.APIServer = &ShootedSeedAPIServer{}
 	}
 	setDefaults_ShootedSeedAPIServer(shootedSeed.APIServer)
+	if shootedSeed.Resources == nil {
+		shootedSeed.Resources = &ShootedSeedResources{}
+	}
+	setDefaults_ShootedSeedResources(shootedSeed.Resources)
 }
 
 func setDefaults_ShootedSeedAPIServer(apiServer *ShootedSeedAPIServer) {
@@ -607,6 +681,15 @@ func setDefaults_ShootedSeedAPIServerAutoscaler(autoscaler *ShootedSeedAPIServer
 	if autoscaler.MinReplicas == nil {
 		minReplicas := minInt32(3, autoscaler.MaxReplicas)
 		autoscaler.MinReplicas = &minReplicas
+	}
+}
+
+func setDefaults_ShootedSeedResources(resources *ShootedSeedResources) {
+	if _, ok := resources.Capacity[gardencorev1beta1.ResourceShoots]; !ok {
+		if resources.Capacity == nil {
+			resources.Capacity = make(corev1.ResourceList)
+		}
+		resources.Capacity[gardencorev1beta1.ResourceShoots] = resource.MustParse("250")
 	}
 }
 

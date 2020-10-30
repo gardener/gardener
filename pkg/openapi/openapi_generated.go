@@ -11403,11 +11403,39 @@ func schema_pkg_apis_core_v1beta1_SeedStatus(ref common.ReferenceCallback) commo
 							Format:      "",
 						},
 					},
+					"capacity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Capacity represents the total resources of a seed.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+									},
+								},
+							},
+						},
+					},
+					"allocatable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Allocatable represents the resources of a seed that are available for scheduling. Defaults to Capacity.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
 	}
 }
 

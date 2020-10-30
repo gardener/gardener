@@ -88,6 +88,11 @@ type SeedStatus struct {
 	ObservedGeneration int64
 	// ClusterIdentity is the identity of Seed cluster
 	ClusterIdentity *string
+	// Capacity represents the total resources of a seed.
+	Capacity corev1.ResourceList
+	// Allocatable represents the resources of a seed that are available for scheduling.
+	// Defaults to Capacity.
+	Allocatable corev1.ResourceList
 }
 
 // SeedBackup contains the object store configuration for backups for shoot (currently only etcd).
@@ -236,4 +241,10 @@ const (
 	SeedExtensionsReady ConditionType = "ExtensionsReady"
 	// SeedGardenletReady is a constant for a condition type indicating that the Gardenlet is ready.
 	SeedGardenletReady ConditionType = "GardenletReady"
+)
+
+// Resource constants for Gardener object types
+const (
+	// ResourceShoots is a resource constant for the number of shoots.
+	ResourceShoots corev1.ResourceName = "shoots"
 )

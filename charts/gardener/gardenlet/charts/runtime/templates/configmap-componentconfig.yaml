@@ -110,6 +110,9 @@ data:
         syncJitterPeriod: {{ .Values.global.gardenlet.config.controllers.shootedSeedRegistration.syncJitterPeriod }}
         {{- end }}
       {{- end }}
+    resources:
+      capacity:
+        shoots: {{ required ".Values.global.gardenlet.config.resources.capacity.shoots is required" .Values.global.gardenlet.config.resources.capacity.shoots }}
     leaderElection:
       leaderElect: {{ required ".Values.global.gardenlet.config.leaderElection.leaderElect is required" .Values.global.gardenlet.config.leaderElection.leaderElect }}
       leaseDuration: {{ required ".Values.global.gardenlet.config.leaderElection.leaseDuration is required" .Values.global.gardenlet.config.leaderElection.leaseDuration }}

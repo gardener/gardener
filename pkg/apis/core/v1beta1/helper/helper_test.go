@@ -17,20 +17,21 @@ package helper_test
 import (
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 var _ = Describe("helper", func() {
@@ -484,9 +485,16 @@ var _ = Describe("helper", func() {
 					Autoscaler: &defaultAPIServerAutoscaler,
 				}
 
+				defaultResources = ShootedSeedResources{
+					Capacity: corev1.ResourceList{
+						gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
+					},
+				}
+
 				defaultShootedSeed = ShootedSeed{
 					APIServer: &defaultAPIServer,
 					Backup:    &gardencorev1beta1.SeedBackup{},
+					Resources: &defaultResources,
 				}
 			)
 
@@ -550,6 +558,7 @@ var _ = Describe("helper", func() {
 					Visible:   &trueVar,
 					APIServer: &defaultAPIServer,
 					Backup:    &gardencorev1beta1.SeedBackup{},
+					Resources: &defaultResources,
 				}))
 			})
 
@@ -567,6 +576,7 @@ var _ = Describe("helper", func() {
 					APIServer:         &defaultAPIServer,
 					Backup:            &gardencorev1beta1.SeedBackup{},
 					MinimumVolumeSize: nil,
+					Resources:         &defaultResources,
 				}))
 			})
 
@@ -584,6 +594,7 @@ var _ = Describe("helper", func() {
 					APIServer:         &defaultAPIServer,
 					Backup:            &gardencorev1beta1.SeedBackup{},
 					MinimumVolumeSize: &defaultMinimumVolumeSize,
+					Resources:         &defaultResources,
 				}))
 			})
 
@@ -609,7 +620,8 @@ var _ = Describe("helper", func() {
 							MaxReplicas: three,
 						},
 					},
-					Backup: &gardencorev1beta1.SeedBackup{},
+					Backup:    &gardencorev1beta1.SeedBackup{},
+					Resources: &defaultResources,
 				}))
 			})
 
@@ -627,7 +639,8 @@ var _ = Describe("helper", func() {
 					SeedProviderConfig: &runtime.RawExtension{
 						Raw: []byte(`{"param1":"abc","storagePolicyName":"vSAN Default Storage Policy","sub":{"param2":"def","param3":3,"param4":true,"param5":"true"}}`),
 					},
-					Backup: &gardencorev1beta1.SeedBackup{},
+					Backup:    &gardencorev1beta1.SeedBackup{},
+					Resources: &defaultResources,
 				}))
 			})
 
@@ -646,7 +659,30 @@ var _ = Describe("helper", func() {
 						"Bar": true,
 						"Baz": false,
 					},
-					Backup: &gardencorev1beta1.SeedBackup{},
+					Backup:    &gardencorev1beta1.SeedBackup{},
+					Resources: &defaultResources,
+				}))
+			})
+
+			It("should return a filled resources", func() {
+				shoot.Annotations = map[string]string{
+					v1beta1constants.AnnotationShootUseAsSeed: "true,resources.capacity.shoots=150,resources.reserved.shoots=2",
+				}
+
+				shootedSeed, err := ReadShootedSeed(shoot)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shootedSeed).To(Equal(&ShootedSeed{
+					APIServer: &defaultAPIServer,
+					Backup:    &gardencorev1beta1.SeedBackup{},
+					Resources: &ShootedSeedResources{
+						Capacity: corev1.ResourceList{
+							gardencorev1beta1.ResourceShoots: resource.MustParse("150"),
+						},
+						Reserved: corev1.ResourceList{
+							gardencorev1beta1.ResourceShoots: resource.MustParse("2"),
+						},
+					},
 				}))
 			})
 
@@ -689,6 +725,24 @@ var _ = Describe("helper", func() {
 			It("should fail due to API server autoscaler minReplicas being greater than maxReplicas", func() {
 				shoot.Annotations = map[string]string{
 					v1beta1constants.AnnotationShootUseAsSeed: "true,apiServer.autoscaler.maxReplicas=1,apiServer.autoscaler.minReplicas=2",
+				}
+
+				_, err := ReadShootedSeed(shoot)
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should fail due to the reserved value for a resource being greater than its capacity", func() {
+				shoot.Annotations = map[string]string{
+					v1beta1constants.AnnotationShootUseAsSeed: "true,resources.capacity.foo=42,resources.reserved.foo=43",
+				}
+
+				_, err := ReadShootedSeed(shoot)
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should fail due to the reserved value for a resource not having capacity", func() {
+				shoot.Annotations = map[string]string{
+					v1beta1constants.AnnotationShootUseAsSeed: "true,resources.reserved.foo=42",
 				}
 
 				_, err := ReadShootedSeed(shoot)

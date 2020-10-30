@@ -97,6 +97,13 @@ type SeedStatus struct {
 	// ClusterIdentity is the identity of the Seed cluster
 	// +optional
 	ClusterIdentity *string `json:"clusterIdentity,omitempty" protobuf:"bytes,5,opt,name=clusterIdentity"`
+	// Capacity represents the total resources of a seed.
+	// +optional
+	Capacity corev1.ResourceList `json:"capacity,omitempty" protobuf:"bytes,6,rep,name=capacity"`
+	// Allocatable represents the resources of a seed that are available for scheduling.
+	// Defaults to Capacity.
+	// +optional
+	Allocatable corev1.ResourceList `json:"allocatable,omitempty" protobuf:"bytes,7,rep,name=allocatable"`
 }
 
 // SeedBackup contains the object store configuration for backups for shoot (currently only etcd).
@@ -264,4 +271,10 @@ const (
 	SeedExtensionsReady ConditionType = "ExtensionsReady"
 	// SeedGardenletReady is a constant for a condition type indicating that the Gardenlet is ready.
 	SeedGardenletReady ConditionType = "GardenletReady"
+)
+
+// Resource constants for Gardener object types
+const (
+	// ResourceShoots is a resource constant for the number of shoots.
+	ResourceShoots corev1.ResourceName = "shoots"
 )

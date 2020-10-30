@@ -4153,6 +4153,8 @@ func autoConvert_v1beta1_SeedStatus_To_core_SeedStatus(in *SeedStatus, out *core
 	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
 	out.ObservedGeneration = in.ObservedGeneration
 	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
+	out.Capacity = *(*v1.ResourceList)(unsafe.Pointer(&in.Capacity))
+	out.Allocatable = *(*v1.ResourceList)(unsafe.Pointer(&in.Allocatable))
 	return nil
 }
 
@@ -4167,6 +4169,8 @@ func autoConvert_core_SeedStatus_To_v1beta1_SeedStatus(in *core.SeedStatus, out 
 	out.Conditions = *(*[]Condition)(unsafe.Pointer(&in.Conditions))
 	out.ObservedGeneration = in.ObservedGeneration
 	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
+	out.Capacity = *(*v1.ResourceList)(unsafe.Pointer(&in.Capacity))
+	out.Allocatable = *(*v1.ResourceList)(unsafe.Pointer(&in.Allocatable))
 	return nil
 }
 

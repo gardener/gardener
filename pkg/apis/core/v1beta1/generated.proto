@@ -1780,6 +1780,15 @@ message SeedStatus {
   // ClusterIdentity is the identity of the Seed cluster
   // +optional
   optional string clusterIdentity = 5;
+
+  // Capacity represents the total resources of a seed.
+  // +optional
+  map<string, k8s.io.apimachinery.pkg.api.resource.Quantity> capacity = 6;
+
+  // Allocatable represents the resources of a seed that are available for scheduling.
+  // Defaults to Capacity.
+  // +optional
+  map<string, k8s.io.apimachinery.pkg.api.resource.Quantity> allocatable = 7;
 }
 
 // SeedTaint describes a taint on a seed.

@@ -17,6 +17,9 @@ package shoot
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -534,6 +537,40 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bestSeed.Name).To(Equal(newSeedEnvironment3.Name))
 		})
+
+		It("should find seed cluster with enough available capacity for shoots", func() {
+			Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+
+			seed.Status.Allocatable = corev1.ResourceList{
+				gardencorev1beta1.ResourceShoots: resource.MustParse("1"),
+			}
+
+			secondSeed := seedBase
+			secondSeed.Name = "seed-2"
+			secondSeed.Status.Allocatable = corev1.ResourceList{
+				gardencorev1beta1.ResourceShoots: resource.MustParse("2"),
+			}
+
+			Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+			Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&secondSeed)).To(Succeed())
+
+			secondShoot := shootBase
+			secondShoot.Name = "shoot-2"
+			secondShoot.Spec.SeedName = &seed.Name
+
+			thirdShoot := shootBase
+			thirdShoot.Name = "shoot-3"
+			thirdShoot.Spec.SeedName = &secondSeed.Name
+
+			Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&secondShoot)).To(Succeed())
+			Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&thirdShoot)).To(Succeed())
+
+			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bestSeed.Name).To(Equal(secondSeed.Name))
+		})
+
 	})
 
 	Context("SEED DETERMINATION - Shoot does not reference a Seed - find an adequate one using default seed determination strategy", func() {
@@ -621,6 +658,25 @@ var _ = Describe("Scheduler_Control", func() {
 
 			Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 			Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
+
+			Expect(err).To(HaveOccurred())
+			Expect(bestSeed).To(BeNil())
+		})
+
+		It("should fail because it cannot find a seed cluster due to no available capacity for shoots", func() {
+			seed.Status.Allocatable = corev1.ResourceList{
+				gardencorev1beta1.ResourceShoots: resource.MustParse("1"),
+			}
+
+			secondShoot := shootBase
+			secondShoot.Name = "shoot-2"
+			secondShoot.Spec.SeedName = &seed.Name
+
+			Expect(gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+			Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+			Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(&secondShoot)).To(Succeed())
 
 			bestSeed, err := determineSeed(&shoot, gardenCoreInformerFactory.Core().V1beta1().Seeds().Lister(), gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(), gardenCoreInformerFactory.Core().V1beta1().CloudProfiles().Lister(), schedulerConfiguration.Schedulers.Shoot.Strategy)
 

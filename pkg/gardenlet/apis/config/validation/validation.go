@@ -48,6 +48,20 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration) field.Er
 		allErrs = append(allErrs, validateSNI(sniPath, cfg.SNI)...)
 	}
 
+	resourcesPath := field.NewPath("resources")
+	if cfg.Resources != nil {
+		for resourceName, quantity := range cfg.Resources.Capacity {
+			if reservedQuantity, ok := cfg.Resources.Reserved[resourceName]; ok && reservedQuantity.Value() > quantity.Value() {
+				allErrs = append(allErrs, field.Invalid(resourcesPath.Child("reserved", string(resourceName)), cfg.Resources.Reserved[resourceName], "must be lower or equal to capacity"))
+			}
+		}
+		for resourceName := range cfg.Resources.Reserved {
+			if _, ok := cfg.Resources.Capacity[resourceName]; !ok {
+				allErrs = append(allErrs, field.Invalid(resourcesPath.Child("reserved", string(resourceName)), cfg.Resources.Reserved[resourceName], "reserved without capacity"))
+			}
+		}
+	}
+
 	return allErrs
 }
 
