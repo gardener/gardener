@@ -145,8 +145,11 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 		return nil, err
 	}
 
-	secretLister := func(ctx context.Context, secretList *corev1.SecretList, opts ...client.ListOption) error {
+	runtimeSecretLister := func(ctx context.Context, secretList *corev1.SecretList, opts ...client.ListOption) error {
 		return gardenClient.Cache().List(ctx, secretList, opts...)
+	}
+	runtimeConfigMapLister := func(ctx context.Context, configMapList *corev1.ConfigMapList, opts ...client.ListOption) error {
+		return gardenClient.Cache().List(ctx, configMapList, opts...)
 	}
 
 	// If cache is not enabled, set up a dedicated informer which only considers objects which are not gardener managed.
@@ -158,7 +161,7 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 			}))
 		secretInformer := factory.Core().V1().Secrets()
 
-		secretLister = func(ctx context.Context, secretList *corev1.SecretList, opts ...client.ListOption) error {
+		runtimeSecretLister = func(ctx context.Context, secretList *corev1.SecretList, opts ...client.ListOption) error {
 			listOpts := &client.ListOptions{}
 			for _, opt := range opts {
 				opt.ApplyToList(listOpts)
@@ -179,7 +182,7 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 		shootController.startFuncs = append(shootController.startFuncs, factory.Start)
 	}
 
-	shootController.shootRefReconciler = NewShootReferenceReconciler(logger.Logger, clientMap, secretLister)
+	shootController.shootRefReconciler = NewShootReferenceReconciler(logger.Logger, clientMap, runtimeSecretLister, runtimeConfigMapLister)
 
 	return shootController, nil
 }
