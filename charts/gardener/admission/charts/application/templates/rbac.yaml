@@ -1,0 +1,45 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: gardener.cloud:system:admission-controller
+  labels:
+    app: gardener
+    role: admission-controller
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+    - core.gardener.cloud
+  resources:
+    - shoots
+    - projects
+  verbs:
+    - get
+    - list
+    - watch
+- apiGroups:
+    - ""
+  resources:
+    - namespaces
+  verbs:
+    - get
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: gardener.cloud:admission-controller
+  labels:
+    app: gardener
+    role: admission-controller
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gardener.cloud:system:admission-controller
+subjects:
+  - kind: ServiceAccount
+    name: "{{ required ".Values.global.admission.serviceAccountName is required" .Values.global.admission.serviceAccountName }}"
+    namespace: garden

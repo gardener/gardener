@@ -1,0 +1,6 @@
+{{- if .Values.global.deployment.virtualGarden.createNamespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: garden
+{{- end }}

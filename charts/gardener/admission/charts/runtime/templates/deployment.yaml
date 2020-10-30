@@ -1,4 +1,3 @@
-{{- if .Values.global.admission.enabled }}
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
@@ -19,9 +18,9 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmap-gardener-admission-controller-config: {{ include (print $.Template.BasePath "/admission-controller/configmap-componentconfig.yaml") . | sha256sum }}
-        checksum/secret-admission-controller-cert: {{ include (print $.Template.BasePath "/admission-controller/secret-cert.yaml") . | sha256sum }}
-        checksum/secret-gardener-admission-controller-kubeconfig: {{ include (print $.Template.BasePath "/admission-controller/secret-kubeconfig.yaml") . | sha256sum }}
+        checksum/configmap-gardener-admission-controller-config: {{ include (print $.Template.BasePath "/configmap-componentconfig.yaml") . | sha256sum }}
+        checksum/secret-admission-controller-cert: {{ include (print $.Template.BasePath "/secret-cert.yaml") . | sha256sum }}
+        checksum/secret-gardener-admission-controller-kubeconfig: {{ include (print $.Template.BasePath "/secret-kubeconfig.yaml") . | sha256sum }}
         {{- if .Values.global.admission.podAnnotations }}
 {{ toYaml .Values.global.admission.podAnnotations | indent 8 }}
         {{- end }}
@@ -37,6 +36,9 @@ spec:
     spec:
       {{- if not .Values.global.admission.kubeconfig }}
       serviceAccountName: {{ required ".Values.global.admission.serviceAccountName is required" .Values.global.admission.serviceAccountName }}
+      {{- end }}
+      {{- if .Values.global.admission.kubeconfig }}
+      automountServiceAccountToken: false
       {{- end }}
       {{- if gt (int .Values.global.admission.replicaCount) 1 }}
       affinity:
@@ -104,4 +106,3 @@ spec:
       - name: gardener-admission-controller-config
         configMap:
           name: gardener-admission-controller-configmap
-{{- end}}

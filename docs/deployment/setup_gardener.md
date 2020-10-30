@@ -23,6 +23,11 @@ helm install charts/gardener/controlplane \
   --wait
 ```
 
+## Deploying the Gardener Admission Controller
+
+Gardener comes with a dedicated [admission controller](../concepts/admission-controller.md) which can be deployed via a separate [admission chart](../../charts/gardener/admission).
+Please deploy this component always after the Gardener control plane since the contained [ValidatingWebhookConfiguration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#validatingwebhookconfiguration-v1-admissionregistration-k8s-io) might block further operations otherwise.
+
 ## Deploying Gardener extensions
 
 Gardener is an extensible system that does not contain the logic for provider-specific things like DNS management, cloud infrastructures, network plugins, operating system configs, and many more.

@@ -1,4 +1,3 @@
-{{- if .Values.global.admission.enabled }}
 apiVersion: {{ include "webhookadmissionregistration" . }}
 kind: ValidatingWebhookConfiguration
 metadata:
@@ -84,4 +83,3 @@ webhooks:
     caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
 {{- end }}
   sideEffects: None
-{{- end }}

@@ -1,0 +1,4 @@
+apiVersion: v1
+description: A Helm chart to deploy the Gardener-Admission-Controller related resources
+name: admission
+version: 0.1.0

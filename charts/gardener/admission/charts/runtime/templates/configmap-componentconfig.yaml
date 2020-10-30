@@ -1,4 +1,3 @@
-{{- if .Values.global.admission.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -41,4 +40,3 @@ data:
 {{ toYaml .Values.global.admission.config.server.resourceAdmissionConfiguration.unrestrictedSubjects | indent 8 }}
         operationMode: {{ required ".Values.global.admission.config.server.resourceAdmissionConfiguration.operationMode is required" .Values.global.admission.config.server.resourceAdmissionConfiguration.operationMode }}
       {{- end }}
-{{- end }}
