@@ -359,7 +359,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Scale up Kubernetes controller manager",
-			Fn:           flow.TaskFn(botanist.ScaleKubeControllerManagerToOne).DoIf(cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.ScaleKubeControllerManagerToOne).DoIf(cleanupShootResources && kubeControllerManagerDeploymentFound),
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager),
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
