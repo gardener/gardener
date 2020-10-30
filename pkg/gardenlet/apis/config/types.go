@@ -39,6 +39,8 @@ type GardenletConfiguration struct {
 	ShootClientConnection *ShootClientConnection
 	// Controllers defines the configuration of the controllers.
 	Controllers *GardenletControllerConfiguration
+	// Resources defines the total capacity for seed resources and the amount reserved for use by Gardener.
+	Resources *ResourcesConfiguration
 	// LeaderElection defines the configuration of leader election client.
 	LeaderElection *LeaderElectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
@@ -241,6 +243,15 @@ type ShootStateSyncControllerConfiguration struct {
 type SeedAPIServerNetworkPolicyControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	ConcurrentSyncs *int
+}
+
+// ResourcesConfiguration defines the total capacity for seed resources and the amount reserved for use by Gardener.
+type ResourcesConfiguration struct {
+	// Capacity defines the total resources of a seed.
+	Capacity corev1.ResourceList
+	// Reserved defines the resources of a seed that are reserved for use by Gardener.
+	// Defaults to 0.
+	Reserved corev1.ResourceList
 }
 
 // LeaderElectionConfiguration defines the configuration of leader election

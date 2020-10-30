@@ -104,6 +104,9 @@ data:
       shootStateSync:
         concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.shootStateSync.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.shootStateSync.concurrentSyncs }}
         syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.shootStateSync.syncPeriod is required" .Values.global.gardenlet.config.controllers.shootStateSync.syncPeriod }}
+    resources:
+      capacity:
+        shoots: {{ required ".Values.global.gardenlet.config.resources.capacity.shoots is required" .Values.global.gardenlet.config.resources.capacity.shoots }}
     leaderElection:
       leaderElect: {{ required ".Values.global.gardenlet.config.leaderElection.leaderElect is required" .Values.global.gardenlet.config.leaderElection.leaderElect }}
       leaseDuration: {{ required ".Values.global.gardenlet.config.leaderElection.leaseDuration is required" .Values.global.gardenlet.config.leaderElection.leaseDuration }}

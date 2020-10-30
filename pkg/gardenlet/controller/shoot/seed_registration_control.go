@@ -664,6 +664,7 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 					"seedClientConnection":  externalConfig.SeedClientConnection.ClientConnectionConfiguration,
 					"shootClientConnection": externalConfig.ShootClientConnection,
 					"controllers":           externalConfig.Controllers,
+					"resources":             externalConfig.Resources,
 					"leaderElection":        externalConfig.LeaderElection,
 					"logLevel":              externalConfig.LogLevel,
 					"kubernetesLogLevel":    externalConfig.KubernetesLogLevel,

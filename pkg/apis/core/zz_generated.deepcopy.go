@@ -3250,6 +3250,20 @@ func (in *SeedStatus) DeepCopyInto(out *SeedStatus) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Capacity != nil {
+		in, out := &in.Capacity, &out.Capacity
+		*out = make(v1.ResourceList, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val.DeepCopy()
+		}
+	}
+	if in.Allocatable != nil {
+		in, out := &in.Allocatable, &out.Allocatable
+		*out = make(v1.ResourceList, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val.DeepCopy()
+		}
+	}
 	return
 }
 

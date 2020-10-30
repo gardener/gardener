@@ -94,6 +94,9 @@ global:
         shootStateSync:
           concurrentSyncs: 5
           syncPeriod: 30s
+      resources:
+        capacity:
+          shoots: 200 # TODO: What is a good default value here?
       leaderElection:
         leaderElect: true
         leaseDuration: 15s

@@ -7431,6 +7431,35 @@ string
 <p>ClusterIdentity is the identity of the Seed cluster</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>capacity</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcelist-v1-core">
+Kubernetes core/v1.ResourceList
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Capacity represents the total resources of a seed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>allocatable</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcelist-v1-core">
+Kubernetes core/v1.ResourceList
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Allocatable represents the resources of a seed that are available for scheduling.
+Defaults to Capacity.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.SeedTaint">SeedTaint
