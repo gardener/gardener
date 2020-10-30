@@ -7,6 +7,8 @@ metadata:
     chart: {{ .Chart.Name }}-{{ .Chart.Version }}
     heritage: {{ .Release.Service }}
     release: {{ .Release.Name }}
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
   name: {{ template "nginx-ingress.fullname" . }}
   namespace: kube-system
 roleRef:

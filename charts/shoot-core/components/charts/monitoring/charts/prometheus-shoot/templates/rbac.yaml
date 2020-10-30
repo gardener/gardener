@@ -31,6 +31,8 @@ apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: gardener.cloud:monitoring:prometheus
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

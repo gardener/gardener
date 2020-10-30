@@ -5,6 +5,8 @@ metadata:
   namespace: kube-system
   labels:
     app: konnectivity-agent
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
