@@ -50,13 +50,14 @@ var _ = Describe("Shoot References", func() {
 	)
 
 	var (
-		ctx            context.Context
-		cl             *mockclient.MockClient
-		namespacedName types.NamespacedName
-		reconciler     reconcile.Reconciler
-		shoot          gardencorev1beta1.Shoot
-		clientMap      clientmap.ClientMap
-		secretLister   SecretLister
+		ctx             context.Context
+		cl              *mockclient.MockClient
+		namespacedName  types.NamespacedName
+		reconciler      reconcile.Reconciler
+		shoot           gardencorev1beta1.Shoot
+		clientMap       clientmap.ClientMap
+		secretLister    SecretLister
+		configMapLister ConfigMapLister
 	)
 
 	BeforeEach(func() {
@@ -78,7 +79,7 @@ var _ = Describe("Shoot References", func() {
 	})
 
 	JustBeforeEach(func() {
-		reconciler = NewShootReferenceReconciler(logger.NewNopLogger(), clientMap, secretLister)
+		reconciler = NewShootReferenceReconciler(logger.NewNopLogger(), clientMap, secretLister, configMapLister)
 		injected, err := inject.StopChannelInto(ctx.Done(), reconciler)
 		Expect(injected).To(BeTrue())
 		Expect(err).NotTo(HaveOccurred())
@@ -87,6 +88,9 @@ var _ = Describe("Shoot References", func() {
 	Context("Common controller tests", func() {
 		BeforeEach(func() {
 			secretLister = func(_ context.Context, _ *corev1.SecretList, _ ...client.ListOption) error {
+				return nil
+			}
+			configMapLister = func(_ context.Context, _ *corev1.ConfigMapList, _ ...client.ListOption) error {
 				return nil
 			}
 		})
@@ -121,6 +125,9 @@ var _ = Describe("Shoot References", func() {
 			secretLister = func(ctx context.Context, secrets *corev1.SecretList, opts ...client.ListOption) error {
 				return cl.List(ctx, secrets, opts...)
 			}
+			configMapLister = func(ctx context.Context, configMaps *corev1.ConfigMapList, opts ...client.ListOption) error {
+				return cl.List(ctx, configMaps, opts...)
+			}
 
 			secrets = []corev1.Secret{
 				{ObjectMeta: metav1.ObjectMeta{
@@ -136,6 +143,12 @@ var _ = Describe("Shoot References", func() {
 					Namespace: shootNamespace},
 				},
 			}
+
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+				func(_ context.Context, list *corev1.ConfigMapList, _ ...client.ListOption) error {
+					list.Items = []corev1.ConfigMap{}
+					return nil
+				})
 		})
 
 		It("should not add finalizers because shoot does not define a DNS section", func() {
@@ -463,6 +476,325 @@ var _ = Describe("Shoot References", func() {
 			Expect(result).To(Equal(emptyResult()))
 			Expect(updatedSecret.Finalizers).To(BeEmpty())
 			Expect(updatedSecret.ObjectMeta.Name).To(Equal(secrets[0].Name))
+		})
+	})
+
+	Context("Audit policy ConfigMap reference test", func() {
+		var (
+			configMaps []corev1.ConfigMap
+		)
+
+		BeforeEach(func() {
+			secretLister = func(ctx context.Context, secrets *corev1.SecretList, opts ...client.ListOption) error {
+				return cl.List(ctx, secrets, opts...)
+			}
+			configMapLister = func(ctx context.Context, configMaps *corev1.ConfigMapList, opts ...client.ListOption) error {
+				return cl.List(ctx, configMaps, opts...)
+			}
+
+			configMaps = []corev1.ConfigMap{
+				{ObjectMeta: metav1.ObjectMeta{
+					Name:      "configmap-1",
+					Namespace: shootNamespace},
+				},
+				{ObjectMeta: metav1.ObjectMeta{
+					Name:      "configmap-2",
+					Namespace: shootNamespace},
+				},
+				{ObjectMeta: metav1.ObjectMeta{
+					Name:      "configmap-3",
+					Namespace: shootNamespace},
+				},
+			}
+
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
+				func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+					list.Items = []corev1.Secret{}
+					return nil
+				})
+		})
+
+		It("should not add finalizers because shoot does not define an audit config section", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer = nil
+
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+				func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, shoot)
+					return nil
+				}).Times(2)
+
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+				func(_ context.Context, list *corev1.ConfigMapList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, configMaps...)
+					return nil
+				})
+
+			cl.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
+					*s = shoot
+					return nil
+				})
+
+			request := reconcile.Request{NamespacedName: namespacedName}
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(result).To(Equal(emptyResult()))
+			Expect(shoot.ObjectMeta.Finalizers).To(BeEmpty())
+		})
+
+		It("should add finalizer to shoot and configmap", func() {
+			configMapName := configMaps[1].Name
+			shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+				AuditConfig: &gardencorev1beta1.AuditConfig{
+					AuditPolicy: &gardencorev1beta1.AuditPolicy{
+						ConfigMapRef: &corev1.ObjectReference{
+							Name: configMapName,
+						},
+					},
+				},
+			}
+
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+				func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, shoot)
+					return nil
+				}).Times(2)
+
+			cl.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
+					*s = shoot
+					return nil
+				}).Times(2)
+
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+				func(_ context.Context, list *corev1.ConfigMapList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, configMaps...)
+					return nil
+				})
+
+			cl.EXPECT().Get(gomock.Any(), kutil.Key(configMaps[1].Namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, cm *corev1.ConfigMap) error {
+					*cm = configMaps[1]
+					return nil
+				})
+
+			var updatedConfigMap *corev1.ConfigMap
+			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, configMap *corev1.ConfigMap, _ client.Patch) error {
+					updatedConfigMap = configMap
+					return nil
+				})
+
+			var updatedShoot *gardencorev1beta1.Shoot
+			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+					updatedShoot = shoot
+					return nil
+				})
+
+			request := reconcile.Request{NamespacedName: namespacedName}
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(result).To(Equal(emptyResult()))
+			Expect(updatedShoot.ObjectMeta.Finalizers).To(ConsistOf(Equal(FinalizerName)))
+			Expect(updatedConfigMap).To(PointTo(
+				MatchFields(IgnoreExtras, Fields{
+					"ObjectMeta": MatchFields(IgnoreExtras, Fields{
+						"Finalizers": ConsistOf(FinalizerName),
+						"Name":       Equal(configMapName),
+					}),
+				})),
+			)
+		})
+
+		It("should remove finalizer from shoot and configmap because shoot is in deletion", func() {
+			configMapName := configMaps[0].Name
+			configMaps[0].Finalizers = []string{FinalizerName}
+
+			now := metav1.Now()
+			shoot.ObjectMeta.DeletionTimestamp = &now
+			shoot.Finalizers = []string{FinalizerName}
+
+			shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+				AuditConfig: &gardencorev1beta1.AuditConfig{
+					AuditPolicy: &gardencorev1beta1.AuditPolicy{
+						ConfigMapRef: &corev1.ObjectReference{
+							Name: configMapName,
+						},
+					},
+				},
+			}
+
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+				func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, shoot)
+					return nil
+				}).Times(2)
+
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+				func(_ context.Context, list *corev1.ConfigMapList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, configMaps...)
+					return nil
+				})
+
+			cl.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
+					*s = shoot
+					return nil
+				}).Times(2)
+
+			var updatedConfigMap *corev1.ConfigMap
+			cl.EXPECT().Get(gomock.Any(), kutil.Key(configMaps[0].Namespace, configMapName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, cm *corev1.ConfigMap) error {
+					*cm = configMaps[0]
+					return nil
+				})
+			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, cm *corev1.ConfigMap, _ client.Patch) error {
+					updatedConfigMap = cm
+					return nil
+				})
+
+			var updatedShoot *gardencorev1beta1.Shoot
+			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+					updatedShoot = shoot
+					return nil
+				})
+
+			request := reconcile.Request{NamespacedName: namespacedName}
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(result).To(Equal(emptyResult()))
+			Expect(updatedShoot.ObjectMeta.Finalizers).To(BeEmpty())
+			Expect(updatedConfigMap.Finalizers).To(BeEmpty())
+			Expect(updatedConfigMap.ObjectMeta.Name).To(Equal(configMaps[0].Name))
+		})
+
+		It("should remove finalizer only from shoot because configmap is still referenced by another shoot", func() {
+			configMapName := configMaps[0].Name
+			configMaps[0].Finalizers = []string{FinalizerName}
+
+			now := metav1.Now()
+			shoot.ObjectMeta.DeletionTimestamp = &now
+			shoot.Finalizers = []string{FinalizerName}
+
+			apiServerConfig := &gardencorev1beta1.KubeAPIServerConfig{
+				AuditConfig: &gardencorev1beta1.AuditConfig{
+					AuditPolicy: &gardencorev1beta1.AuditPolicy{
+						ConfigMapRef: &corev1.ObjectReference{
+							Name: configMapName,
+						},
+					},
+				},
+			}
+
+			shoot.Spec.Kubernetes.KubeAPIServer = apiServerConfig
+
+			shoot2 := gardencorev1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar2",
+					Namespace: shootNamespace,
+				},
+				Spec: gardencorev1beta1.ShootSpec{
+					Kubernetes: gardencorev1beta1.Kubernetes{
+						KubeAPIServer: apiServerConfig,
+					},
+				},
+			}
+
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+				func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, shoot, shoot2)
+					return nil
+				}).Times(2)
+
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+				func(_ context.Context, list *corev1.ConfigMapList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, configMaps...)
+					return nil
+				})
+
+			cl.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
+					*s = shoot
+					return nil
+				}).Times(2)
+
+			var updatedShoot *gardencorev1beta1.Shoot
+			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+					updatedShoot = shoot
+					return nil
+				})
+
+			request := reconcile.Request{NamespacedName: namespacedName}
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(result).To(Equal(emptyResult()))
+			Expect(updatedShoot.ObjectMeta.Finalizers).To(BeEmpty())
+			Expect(updatedShoot.Name).To(Equal(shoot.Name))
+		})
+
+		It("should remove finalizer from configmap because it is not referenced any more", func() {
+			configMapName := configMaps[1].Name
+			configMaps[0].Finalizers = []string{FinalizerName}
+			configMaps[1].Finalizers = []string{FinalizerName}
+
+			shoot.Finalizers = []string{FinalizerName}
+
+			shoot.Spec.Kubernetes.KubeAPIServer = &gardencorev1beta1.KubeAPIServerConfig{
+				AuditConfig: &gardencorev1beta1.AuditConfig{
+					AuditPolicy: &gardencorev1beta1.AuditPolicy{
+						ConfigMapRef: &corev1.ObjectReference{
+							Name: configMapName,
+						},
+					},
+				},
+			}
+
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+				func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, shoot)
+					return nil
+				}).Times(2)
+
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+				func(_ context.Context, list *corev1.ConfigMapList, _ ...client.ListOption) error {
+					list.Items = append(list.Items, configMaps...)
+					return nil
+				})
+
+			cl.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
+					*s = shoot
+					return nil
+				}).Times(2)
+
+			cl.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).DoAndReturn(
+				func(_ context.Context, _ types.NamespacedName, cm *corev1.ConfigMap) error {
+					*cm = configMaps[1]
+					return nil
+				})
+
+			var updatedConfigMap *corev1.ConfigMap
+			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, configMap *corev1.ConfigMap, _ client.Patch) error {
+					updatedConfigMap = configMap
+					return nil
+				})
+
+			request := reconcile.Request{NamespacedName: namespacedName}
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(result).To(Equal(emptyResult()))
+			Expect(updatedConfigMap.Finalizers).To(BeEmpty())
+			Expect(updatedConfigMap.ObjectMeta.Name).To(Equal(configMaps[0].Name))
 		})
 	})
 })

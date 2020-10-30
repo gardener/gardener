@@ -82,5 +82,6 @@ When an object is not actively referenced any more because the shoot specificati
 
 The Shoot Reference Controller inspects the following references:
 - DNS provider secrets (`.spec.dns.provider`)
+- Audit policy configmaps (`.spec.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef`)
 
 Further checks might be added in the future.
