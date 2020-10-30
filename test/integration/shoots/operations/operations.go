@@ -30,21 +30,31 @@
 		the shoot is triggered.
 	Expected Output
 		- Shoot is successfully reconciling.
+
+	Test:
+		Rotate kubeconfig for a shoot cluster.
+	Expected Output
+		- The old kubeconfig to be updated and the old file to be no longer autorized.
+
  **/
 
 package operations
 
 import (
+	"bytes"
 	"context"
+	"io/ioutil"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/applications"
 
 	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
 )
 
 const (
@@ -95,5 +105,45 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 			return nil
 		})
 		framework.ExpectNoError(err)
+	}, reconcileTimeout)
+
+	f.Beta().Serial().CIt("should rotate kubeconfig for a shoot cluster", func(ctx context.Context) {
+		ginkgo.By("rotate kubeconfig")
+		var (
+			oldKubeconfigPath = "old.kubeconfig"
+			newKubeconfigPath = "new.kubeconfig"
+			secretName        = f.Shoot.Name + ".kubeconfig"
+		)
+
+		err := framework.DownloadKubeconfig(ctx, f.GardenClient, f.ProjectNamespace, secretName, oldKubeconfigPath)
+		framework.ExpectNoError(err)
+
+		oldClient, err := kubernetes.NewClientFromFile("", oldKubeconfigPath)
+		framework.ExpectNoError(err)
+		_, err = oldClient.Kubernetes().Discovery().ServerVersion()
+		framework.ExpectNoError(err)
+
+		err = f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
+			shoot.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationRotateKubeconfigCredentials
+			return nil
+		})
+		framework.ExpectNoError(err)
+
+		err = framework.DownloadKubeconfig(ctx, f.GardenClient, f.ProjectNamespace, secretName, newKubeconfigPath)
+		framework.ExpectNoError(err)
+
+		newClient, err := kubernetes.NewClientFromFile("", newKubeconfigPath)
+		framework.ExpectNoError(err)
+		_, err = newClient.Kubernetes().Discovery().ServerVersion()
+		framework.ExpectNoError(err)
+
+		_, err = oldClient.Kubernetes().Discovery().ServerVersion()
+		gomega.Expect(err).To(gomega.HaveOccurred())
+
+		oldKubeconfig, err := ioutil.ReadFile(oldKubeconfigPath)
+		framework.ExpectNoError(err)
+		newKubeconfig, err := ioutil.ReadFile(newKubeconfigPath)
+		framework.ExpectNoError(err)
+		gomega.Expect(bytes.Compare(oldKubeconfig, newKubeconfig)).ToNot(gomega.BeZero())
 	}, reconcileTimeout)
 })

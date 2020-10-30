@@ -213,6 +213,50 @@ var _ = Describe("ShootStateList", func() {
 				Expect(list[0].Data).To(Equal(newData))
 			})
 		})
+
+		Context("#DeepCopy", func() {
+			It("should reuse the slice of shootState", func() {
+				list := GardenerResourceDataList(shootState.Spec.Gardener)
+				shootStateResourceName := shootState.Spec.Gardener[0].Name
+
+				newResource := &gardencorev1alpha1.GardenerResourceData{
+					Name: shootStateResourceName + "bar",
+					Type: "bar",
+					Data: runtime.RawExtension{Raw: []byte("data")},
+				}
+
+				list.Delete(shootStateResourceName)
+				Expect(list).To(HaveLen(0))
+				Expect(shootState.Spec.Gardener[0].Name).To(Equal(shootStateResourceName))
+
+				list.Upsert(newResource)
+				Expect(list).To(HaveLen(1))
+				Expect(shootState.Spec.Gardener[0].Name).ToNot(Equal(shootStateResourceName))
+				Expect(shootState.Spec.Gardener[0].Name).To(Equal(shootStateResourceName + "bar"))
+
+			})
+
+			It("should not reuse the slice of shootState", func() {
+				list := GardenerResourceDataList(shootState.Spec.Gardener).DeepCopy()
+				shootStateResourceName := shootState.Spec.Gardener[0].Name
+
+				newResource := &gardencorev1alpha1.GardenerResourceData{
+					Name: shootStateResourceName + "bar",
+					Type: "bar",
+					Data: runtime.RawExtension{Raw: []byte("data")},
+				}
+
+				list.Delete(shootStateResourceName)
+				Expect(list).To(HaveLen(0))
+				Expect(shootState.Spec.Gardener[0].Name).To(Equal(shootStateResourceName))
+
+				list.Upsert(newResource)
+				Expect(list).To(HaveLen(1))
+				Expect(shootState.Spec.Gardener[0].Name).To(Equal(shootStateResourceName))
+				Expect(shootState.Spec.Gardener[0].Name).ToNot(Equal(shootStateResourceName + "bar"))
+
+			})
+		})
 	})
 
 	Describe("ResourceDataList", func() {
