@@ -17,6 +17,8 @@ apiVersion: {{ template "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: system:gardener.cloud:vpn-seed
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

@@ -68,6 +68,8 @@ metadata:
   namespace: {{ include "kubernetes-dashboard.namespace" . }}
   labels:
     k8s-app: kubernetes-dashboard
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -96,6 +98,8 @@ apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: kubernetes-dashboard
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
