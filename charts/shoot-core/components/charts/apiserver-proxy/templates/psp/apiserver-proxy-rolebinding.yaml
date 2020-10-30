@@ -6,6 +6,8 @@ metadata:
   labels:
     gardener.cloud/role: system-component
     origin: gardener
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

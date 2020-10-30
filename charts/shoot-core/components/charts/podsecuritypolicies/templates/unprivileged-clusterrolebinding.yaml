@@ -5,6 +5,7 @@ metadata:
   annotations:
     gardener.cloud/description: |
       Allow all authenticated users to use the unprivileged PSP.
+    resources.gardener.cloud/delete-on-invalid-update: "true"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

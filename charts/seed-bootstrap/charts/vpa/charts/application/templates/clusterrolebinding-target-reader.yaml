@@ -5,6 +5,8 @@ metadata:
   name: gardener.cloud:vpa:{{ .Values.clusterType }}:target-reader
   labels:
   {{ toYaml .Values.labels | indent 4 }}
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

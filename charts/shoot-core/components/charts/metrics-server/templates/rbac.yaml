@@ -19,6 +19,8 @@ apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: system:metrics-server
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -33,6 +35,8 @@ kind: RoleBinding
 metadata:
   name: metrics-server-auth-reader
   namespace: kube-system
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -46,6 +50,8 @@ apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: metrics-server:system:auth-delegator
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

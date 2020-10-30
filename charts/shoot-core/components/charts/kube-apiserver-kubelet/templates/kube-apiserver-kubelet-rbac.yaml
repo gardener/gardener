@@ -22,6 +22,8 @@ apiVersion: {{ template "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: system:apiserver:kubelet
+  annotations:
+    resources.gardener.cloud/delete-on-invalid-update: "true"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
