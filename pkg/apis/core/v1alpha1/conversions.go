@@ -247,6 +247,10 @@ func Convert_core_SeedStatus_To_v1alpha1_SeedStatus(in *core.SeedStatus, out *Se
 	return autoConvert_core_SeedStatus_To_v1alpha1_SeedStatus(in, out, s)
 }
 
+func Convert_core_ShootSpec_To_v1alpha1_ShootSpec(in *core.ShootSpec, out *ShootSpec, s conversion.Scope) error {
+	return autoConvert_core_ShootSpec_To_v1alpha1_ShootSpec(in, out, s)
+}
+
 func Convert_core_ShootStatus_To_v1alpha1_ShootStatus(in *core.ShootStatus, out *ShootStatus, s conversion.Scope) error {
 	if err := autoConvert_core_ShootStatus_To_v1alpha1_ShootStatus(in, out, s); err != nil {
 		return err

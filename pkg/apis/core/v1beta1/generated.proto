@@ -1524,6 +1524,14 @@ message Region {
   map<string, string> labels = 3;
 }
 
+// ResourceRequirements describes the seed resource requirements.
+message ResourceRequirements {
+  // Requests describes the minimum amount of seed resources required.
+  // If Requests is omitted for a shoot, it defaults to an implementation-defined value, usually 0.
+  // +optional
+  map<string, k8s.io.apimachinery.pkg.api.resource.Quantity> requests = 1;
+}
+
 // ResourceWatchCacheSize contains configuration of the API server's watch cache size for one specific resource.
 message ResourceWatchCacheSize {
   // APIGroup is the API group of the resource for which the watch cache size should be configured.
@@ -1956,6 +1964,11 @@ message ShootSpec {
   // +patchStrategy=merge
   // +optional
   repeated Toleration tolerations = 17;
+
+  // ResourceRequirements contains the seed resources required by this shoot.
+  // Cannot be updated.
+  // +optional
+  optional ResourceRequirements resourceRequirements = 18;
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.

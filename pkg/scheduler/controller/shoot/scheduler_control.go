@@ -32,6 +32,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -279,9 +280,10 @@ func applyStrategy(shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1beta1
 
 func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []*gardencorev1beta1.Shoot, seedList []*gardencorev1beta1.Seed) ([]*gardencorev1beta1.Seed, error) {
 	var (
-		candidates      []*gardencorev1beta1.Seed
-		candidateErrors = make(map[string]error)
-		seedUsage       = generateSeedUsageMap(shootList)
+		candidates        []*gardencorev1beta1.Seed
+		candidateErrors   = make(map[string]error)
+		seedUsage         = generateSeedUsageMap(shootList)
+		seedResourceUsage = generateSeedResourceUsageMap(shootList)
 	)
 
 	for _, seed := range seedList {
@@ -302,6 +304,11 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []*gardencorev1b
 
 		if allocatableShoots, ok := seed.Status.Allocatable[gardencorev1beta1.ResourceShoots]; ok && int64(seedUsage[seed.Name]) >= allocatableShoots.Value() {
 			candidateErrors[seed.Name] = fmt.Errorf("seed does not have available capacity for shoots")
+			continue
+		}
+
+		if hasCapacity, err := seedHasCapacityForRequestedResources(seed, shoot, seedResourceUsage); !hasCapacity {
+			candidateErrors[seed.Name] = err
 			continue
 		}
 
@@ -399,8 +406,28 @@ func generateSeedUsageMap(shootList []*gardencorev1beta1.Shoot) map[string]int {
 	m := map[string]int{}
 
 	for _, shoot := range shootList {
-		if seed := shoot.Spec.SeedName; seed != nil {
-			m[*seed]++
+		if seedName := shoot.Spec.SeedName; seedName != nil {
+			m[*seedName]++
+		}
+	}
+
+	return m
+}
+
+func generateSeedResourceUsageMap(shootList []*gardencorev1beta1.Shoot) map[string]map[corev1.ResourceName]*resource.Quantity {
+	m := map[string]map[corev1.ResourceName]*resource.Quantity{}
+
+	for _, shoot := range shootList {
+		if seedName := shoot.Spec.SeedName; seedName != nil {
+			if m[*seedName] == nil {
+				m[*seedName] = map[corev1.ResourceName]*resource.Quantity{}
+			}
+			for resourceName, quantity := range shoot.Spec.ResourceRequirements.Requests {
+				if m[*seedName][resourceName] == nil {
+					m[*seedName][resourceName] = &resource.Quantity{}
+				}
+				m[*seedName][resourceName].Add(quantity)
+			}
 		}
 	}
 
@@ -448,6 +475,27 @@ func ignoreSeedDueToDNSConfiguration(seed *gardencorev1beta1.Seed, shoot *garden
 		return false
 	}
 	return !gardencorev1beta1helper.ShootUsesUnmanagedDNS(shoot)
+}
+
+func seedHasCapacityForRequestedResources(
+	seed *gardencorev1beta1.Seed,
+	shoot *gardencorev1beta1.Shoot,
+	seedResourceUsage map[string]map[corev1.ResourceName]*resource.Quantity,
+) (bool, error) {
+	for resourceName, quantity := range shoot.Spec.ResourceRequirements.Requests {
+		allocatableResource, ok := seed.Status.Allocatable[resourceName]
+		if !ok || allocatableResource.IsZero() {
+			return false, fmt.Errorf("resource '%s' is not allocatable in seed", resourceName)
+		}
+		if usage, ok := seedResourceUsage[seed.Name][resourceName]; ok {
+			newUsage := usage.DeepCopy()
+			newUsage.Add(quantity)
+			if newUsage.Value() >= allocatableResource.Value() {
+				return false, fmt.Errorf("seed does not have available capacity for resource '%s'", resourceName)
+			}
+		}
+	}
+	return true, nil
 }
 
 // UpdateShootToBeScheduledOntoSeed sets the seed name where the shoot should be scheduled on. Then it executes the actual update call to the API server. The call is capsuled to allow for easier testing.

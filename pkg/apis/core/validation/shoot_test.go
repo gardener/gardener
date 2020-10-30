@@ -242,6 +242,11 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Tolerations: []core.Toleration{
 						{Key: "foo"},
 					},
+					ResourceRequirements: core.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							"foo": resource.MustParse("42"),
+						},
+					},
 				},
 			}
 		})
@@ -1988,6 +1993,22 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(HaveLen(0))
+			})
+		})
+
+		Context("resourceRequirements section", func() {
+			It("should forbid changing the requests", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.ResourceRequirements.Requests = corev1.ResourceList{
+					"bar": resource.MustParse("43"),
+				}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.resourceRequirements.requests"),
+				}))))
 			})
 		})
 

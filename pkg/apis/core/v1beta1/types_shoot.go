@@ -105,6 +105,10 @@ type ShootSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	Tolerations []Toleration `json:"tolerations,omitempty" patchStrategy:"merge" patchMergeKey:"key" protobuf:"bytes,17,rep,name=tolerations"`
+	// ResourceRequirements contains the seed resources required by this shoot.
+	// Cannot be updated.
+	// +optional
+	ResourceRequirements ResourceRequirements `json:"resourceRequirements,omitempty" protobuf:"bytes,18,opt,name=resourceRequirements"`
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
@@ -1105,6 +1109,14 @@ var (
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Other/miscellaneous constants and types                                                      //
 //////////////////////////////////////////////////////////////////////////////////////////////////
+
+// ResourceRequirements describes the seed resource requirements.
+type ResourceRequirements struct {
+	// Requests describes the minimum amount of seed resources required.
+	// If Requests is omitted for a shoot, it defaults to an implementation-defined value, usually 0.
+	// +optional
+	Requests corev1.ResourceList `json:"requests,omitempty" protobuf:"bytes,1,rep,name=requests"`
+}
 
 const (
 	// ShootEventImageVersionMaintenance indicates that a maintenance operation regarding the image version has been performed.

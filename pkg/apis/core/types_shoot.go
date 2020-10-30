@@ -88,6 +88,9 @@ type ShootSpec struct {
 	Resources []NamedResourceReference
 	// Tolerations contains the tolerations for taints on seed clusters.
 	Tolerations []Toleration
+	// ResourceRequirements contains the seed resources required by this shoot.
+	// Cannot be updated.
+	ResourceRequirements ResourceRequirements
 }
 
 func (s *Shoot) GetProviderType() string {
@@ -894,6 +897,13 @@ var (
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Other/miscellaneous constants and types                                                      //
 //////////////////////////////////////////////////////////////////////////////////////////////////
+
+// ResourceRequirements describes the seed resource requirements.
+type ResourceRequirements struct {
+	// Requests describes the minimum amount of seed resources required.
+	// If Requests is omitted for a shoot, it defaults to an implementation-defined value, usually 0.
+	Requests corev1.ResourceList
+}
 
 const (
 	// ShootEventImageVersionMaintenance indicates that a maintenance operation regarding the image version has been performed.

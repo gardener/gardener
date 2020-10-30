@@ -1584,6 +1584,21 @@ SeedSelector
 <p>Tolerations contains the tolerations for taints on seed clusters.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>resourceRequirements</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ResourceRequirements">
+ResourceRequirements
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ResourceRequirements contains the seed resources required by this shoot.
+Cannot be updated.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -6626,6 +6641,40 @@ quality, reliability, access restrictions, etc.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ResourceRequirements">ResourceRequirements
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
+</p>
+<p>
+<p>ResourceRequirements describes the seed resource requirements.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>requests</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcelist-v1-core">
+Kubernetes core/v1.ResourceList
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Requests describes the minimum amount of seed resources required.
+If Requests is omitted for a shoot, it defaults to an implementation-defined value, usually 0.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ResourceWatchCacheSize">ResourceWatchCacheSize
 </h3>
 <p>
@@ -7992,6 +8041,21 @@ SeedSelector
 <td>
 <em>(Optional)</em>
 <p>Tolerations contains the tolerations for taints on seed clusters.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resourceRequirements</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ResourceRequirements">
+ResourceRequirements
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ResourceRequirements contains the seed resources required by this shoot.
+Cannot be updated.</p>
 </td>
 </tr>
 </tbody>

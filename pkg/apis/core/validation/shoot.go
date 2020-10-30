@@ -174,6 +174,10 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, deletionTimestamp
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Nodes, oldSpec.Networking.Nodes, fldPath.Child("networking", "nodes"))...)
 	}
 
+	if oldSpec.ResourceRequirements.Requests != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.ResourceRequirements.Requests, oldSpec.ResourceRequirements.Requests, fldPath.Child("resourceRequirements", "requests"))...)
+	}
+
 	return allErrs
 }
 

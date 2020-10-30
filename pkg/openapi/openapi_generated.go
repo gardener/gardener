@@ -256,6 +256,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaList":                              schema_pkg_apis_core_v1beta1_QuotaList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaSpec":                              schema_pkg_apis_core_v1beta1_QuotaSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Region":                                 schema_pkg_apis_core_v1beta1_Region(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceRequirements":                   schema_pkg_apis_core_v1beta1_ResourceRequirements(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceWatchCacheSize":                 schema_pkg_apis_core_v1beta1_ResourceWatchCacheSize(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBinding":                          schema_pkg_apis_core_v1beta1_SecretBinding(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBindingList":                      schema_pkg_apis_core_v1beta1_SecretBindingList(ref),
@@ -10675,6 +10676,35 @@ func schema_pkg_apis_core_v1beta1_Region(ref common.ReferenceCallback) common.Op
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ResourceRequirements(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ResourceRequirements describes the seed resource requirements.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"requests": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Requests describes the minimum amount of seed resources required. If Requests is omitted for a shoot, it defaults to an implementation-defined value, usually 0.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/api/resource.Quantity"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_ResourceWatchCacheSize(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -11862,12 +11892,18 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 							},
 						},
 					},
+					"resourceRequirements": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ResourceRequirements contains the seed resources required by this shoot. Cannot be updated.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceRequirements"),
+						},
+					},
 				},
 				Required: []string{"cloudProfileName", "kubernetes", "networking", "provider", "region", "secretBindingName"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceRequirements", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
 	}
 }
 
