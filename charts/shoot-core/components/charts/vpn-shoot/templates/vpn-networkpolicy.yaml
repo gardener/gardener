@@ -9,15 +9,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   egress:
-  - to:
-    - ipBlock:
-        cidr: {{ .Values.serviceNetwork }}
-    - ipBlock:
-        cidr: {{ .Values.podNetwork }}
-{{- if .Values.nodeNetwork }}
-    - ipBlock:
-        cidr: {{ .Values.nodeNetwork }}
-{{- end }}
+  - {}
   ingress:
   - {}
   podSelector:
