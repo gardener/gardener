@@ -471,6 +471,9 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			"host": kasFQDN,
 			"port": "8443",
 		},
+		"webhook": map[string]interface{}{
+			"caBundle": b.Secrets[v1beta1constants.SecretNameCACluster].Data[secrets.DataKeyCertificateCA],
+		},
 	}
 
 	apiserverProxy, err := b.InjectShootShootImages(apiserverProxyConfig, common.APIServerProxySidecarImageName, common.APIServerProxyImageName)
@@ -501,7 +504,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		"cluster-identity":        map[string]interface{}{"clusterIdentity": b.Shoot.Info.Status.ClusterIdentity},
 	}
 
-	var shootClient = b.K8sShootClient.Client()
+	shootClient := b.K8sShootClient.Client()
 
 	if b.Shoot.KonnectivityTunnelEnabled {
 		konnectivityAgentConfig := map[string]interface{}{

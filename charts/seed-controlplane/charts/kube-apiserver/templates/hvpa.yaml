@@ -76,6 +76,10 @@ spec:
               minAllowed:
                 memory: 400M
                 cpu: 300m
+            {{- if .Values.sni.podMutatorEnabled }}
+            - containerName: apiserver-proxy-pod-mutator
+              mode: "Off"
+            {{- end }}
             - containerName: vpn-seed
               mode: "Off"
   weightBasedScalingIntervals:
