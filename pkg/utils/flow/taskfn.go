@@ -61,19 +61,6 @@ func (t TaskFn) DoIf(condition bool) TaskFn {
 	return t.SkipIf(!condition)
 }
 
-// Retry returns a TaskFn that is retried until the timeout is reached.
-// Deprecated: Retry handling should be done in the function itself, if necessary.
-func (t TaskFn) Retry(interval time.Duration) TaskFn {
-	return func(ctx context.Context) error {
-		return retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
-			if err := t(ctx); err != nil {
-				return retry.MinorError(err)
-			}
-			return retry.Ok()
-		})
-	}
-}
-
 // Timeout returns a TaskFn that is bound to a context which times out.
 func (t TaskFn) Timeout(timeout time.Duration) TaskFn {
 	return func(ctx context.Context) error {
