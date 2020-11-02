@@ -12,16 +12,22 @@ This document describes the
 ## Configuration and Usage of Gardener as Operator/Administrator
 
 When we use the terms "operator/administrator" we refer to both the people deploying and operating Gardener.
-Gardener consists out of four components:
+Gardener consists of the following components:
 
 1. `gardener-apiserver`, a Kubernetes-native API extension that serves custom resources in the Kubernetes-style (like `Seed`s and `Shoot`s), and a component that contains multiple admission plugins.
+1. `gardener-admission-controller`, an HTTP(S) server with several handlers to be used in a [ValidatingWebhookConfiguration](../../charts/gardener/controlplane/charts/application/templates/validatingwebhook-admission-controller.yaml).
 1. `gardener-controller-manager`, a component consisting out of multiple controllers that implement reconciliation and deletion flows for some of the custom resources (e.g., it contains the logic for maintaining `Shoot`s, reconciling `Plant`s, etc.).
 1. `gardener-scheduler`, a component that assigns newly created `Shoot` clusters to appropriate `Seed` clusters.
 1. `gardenlet`, a component running in seed clusters and consisting out of multiple controllers that implement reconciliation and deletion flows for some of the custom resources (e.g., it contains the logic for reconciliation and deletion of `Shoot`s).
 
 Each of these components have various configuration options.
 The `gardener-apiserver` uses the standard API server library maintained by the Kubernetes community, and as such it mainly supports command line flags.
-The two other components are using so-called componentconfig files that describe their configuration in a Kubernetes-style versioned object.
+Other components use so-called componentconfig files that describe their configuration in a Kubernetes-style versioned object.
+
+### Configuration file for Gardener admission controller
+
+The Gardener admission controller does only support one command line flag which should be a path to a valid admission-controller configuration file.
+Please take a look at [this](../../example/20-componentconfig-gardener-admission-controller.yaml) example configuration.
 
 ### Configuration file for Gardener controller manager
 

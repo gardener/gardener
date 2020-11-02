@@ -7,11 +7,15 @@ Please note that it is possible to use the garden cluster as seed cluster by sim
 We are providing [Helm charts](../../charts/gardener) in order to manage the various resources of the components.
 Please always make sure that you use the Helm chart version that matches the Gardener version you want to deploy.
 
-## Deploying the Gardener control plane (API server, controller manager, scheduler)
+## Deploying the Gardener control plane (API server, admission controller, controller manager, scheduler)
 
 The [configuration values](../../charts/gardener/controlplane/values.yaml) depict the various options to configure the different components.
 Please consult [this document](../usage/configuration.md) to get a detailed explanation of what can be configured for which component.
+
 Also note that all resources and deployments need to be created in the `garden` namespace (not overrideable).
+If you enable the Gardener admission controller as part of you setup, please make sure the `garden` namespace is labelled with `app: gardener`.
+Otherwise, the backing service account for the admission controller Pod might not be created successfully.
+No action is necessary, if you deploy the `garden` namespace with the Gardener control plane Helm chart.
 
 After preparing your values in a separate `controlplane-values.yaml` file, you can run the following command against your garden cluster:
 
