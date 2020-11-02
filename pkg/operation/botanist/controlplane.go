@@ -32,13 +32,9 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -159,37 +155,6 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptions...))
 }
 
-// DefaultClusterAutoscaler returns a deployer for the cluster-autoscaler.
-func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.ClusterAutoscaler, error) {
-	image, err := b.ImageVector.FindImage(common.ClusterAutoscalerImageName, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return nil, err
-	}
-
-	return clusterautoscaler.New(
-		b.K8sSeedClient.Client(),
-		b.Shoot.SeedNamespace,
-		image.String(),
-		b.Shoot.GetReplicas(1),
-		b.Shoot.Info.Spec.Kubernetes.ClusterAutoscaler,
-	), nil
-}
-
-// DeployClusterAutoscaler deploys the Kubernetes cluster-autoscaler.
-func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
-	if b.Shoot.WantsClusterAutoscaler {
-		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetSecrets(clusterautoscaler.Secrets{
-			Kubeconfig: component.Secret{Name: clusterautoscaler.SecretName, Checksum: b.CheckSums[clusterautoscaler.SecretName]},
-		})
-		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetNamespaceUID(b.SeedNamespaceObject.UID)
-		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetMachineDeployments(b.Shoot.MachineDeployments)
-
-		return b.Shoot.Components.ControlPlane.ClusterAutoscaler.Deploy(ctx)
-	}
-
-	return b.Shoot.Components.ControlPlane.ClusterAutoscaler.Destroy(ctx)
-}
-
 // DeployVerticalPodAutoscaler deploys the VPA into the shoot namespace in the seed.
 func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 	if !b.Shoot.WantsVerticalPodAutoscaler {
@@ -283,17 +248,6 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 	values["global"] = map[string]interface{}{"images": values["images"]}
 
 	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-bootstrap", "charts", "vpa", "charts", "runtime"), b.Shoot.SeedNamespace, "vpa", kubernetes.Values(values))
-}
-
-// DeleteClusterAutoscaler deletes the cluster-autoscaler deployment in the Seed cluster which holds the Shoot's control plane.
-func (b *Botanist) DeleteClusterAutoscaler(ctx context.Context) error {
-	deploy := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1beta1constants.DeploymentNameClusterAutoscaler,
-			Namespace: b.Shoot.SeedNamespace,
-		},
-	}
-	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptions...))
 }
 
 // WakeUpKubeAPIServer creates a service and ensures API Server is scaled up
@@ -427,11 +381,6 @@ func (b *Botanist) ScaleETCDToOne(ctx context.Context) error {
 // ScaleKubeAPIServerToOne scales kube-apiserver replicas to one
 func (b *Botanist) ScaleKubeAPIServerToOne(ctx context.Context) error {
 	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.DirectClient(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1)
-}
-
-// ScaleKubeControllerManagerToOne scales kube-controller-manager replicas to one
-func (b *Botanist) ScaleKubeControllerManagerToOne(ctx context.Context) error {
-	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.DirectClient(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager), 1)
 }
 
 // ScaleGardenerResourceManagerToOne scales the gardener-resource-manager deployment
@@ -1195,98 +1144,6 @@ func IsValidAuditPolicyVersion(shootVersion string, schemaVersion *schema.GroupV
 		return version.CheckVersionMeetsConstraint(shootVersion, ">= v1.12")
 	}
 	return true, nil
-}
-
-// DefaultKubeControllerManager returns a deployer for the kube-controller-manager.
-func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.KubeControllerManager, error) {
-	image, err := b.ImageVector.FindImage(common.KubeControllerManagerImageName, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return nil, err
-	}
-
-	return kubecontrollermanager.New(
-		b.Logger.WithField("component", "kube-controller-manager"),
-		b.K8sSeedClient.Client(),
-		b.Shoot.SeedNamespace,
-		b.Shoot.KubernetesVersion,
-		image.String(),
-		b.Shoot.Info.Spec.Kubernetes.KubeControllerManager,
-		b.Shoot.Networks.Pods,
-		b.Shoot.Networks.Services,
-	), nil
-}
-
-// DeployKubeControllerManager deploys the Kubernetes Controller Manager.
-func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
-	replicaCount, err := b.getWantedReplicaCountKubeControllerManager(ctx)
-	if err != nil {
-		return err
-	}
-
-	b.Shoot.Components.ControlPlane.KubeControllerManager.SetReplicaCount(replicaCount)
-
-	b.Shoot.Components.ControlPlane.KubeControllerManager.SetSecrets(kubecontrollermanager.Secrets{
-		CA:                component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.CheckSums[v1beta1constants.SecretNameCACluster]},
-		ServiceAccountKey: component.Secret{Name: v1beta1constants.SecretNameServiceAccountKey, Checksum: b.CheckSums[v1beta1constants.SecretNameServiceAccountKey]},
-		Kubeconfig:        component.Secret{Name: kubecontrollermanager.SecretName, Checksum: b.CheckSums[kubecontrollermanager.SecretName]},
-		Server:            component.Secret{Name: kubecontrollermanager.SecretNameServer, Checksum: b.CheckSums[kubecontrollermanager.SecretNameServer]},
-	})
-	return b.Shoot.Components.ControlPlane.KubeControllerManager.Deploy(ctx)
-}
-
-func (b *Botanist) getWantedReplicaCountKubeControllerManager(ctx context.Context) (int32, error) {
-	var replicaCount int32
-	if b.Shoot.Info.Status.LastOperation != nil && b.Shoot.Info.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate {
-		if b.Shoot.HibernationEnabled {
-			// shoot is being created with .spec.hibernation.enabled=true, don't deploy KCM at all
-			replicaCount = 0
-		} else {
-			// shoot is being created with .spec.hibernation.enabled=false, deploy KCM
-			replicaCount = 1
-		}
-	} else {
-		if b.Shoot.HibernationEnabled == b.Shoot.Info.Status.IsHibernated {
-			// shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated, so keep the replicas which
-			// are controlled by the dependency-watchdog
-			replicas, err := common.CurrentReplicaCount(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager)
-			if err != nil {
-				return 0, err
-			}
-			replicaCount = replicas
-		} else {
-			// shoot is being reconciled with .spec.hibernation.enabled!=.status.isHibernated, so deploy KCM. in case the
-			// shoot is being hibernated then it will be scaled down to zero later after all machines are gone
-			replicaCount = 1
-		}
-	}
-	return replicaCount, nil
-}
-
-// DefaultKubeScheduler returns a deployer for the kube-scheduler.
-func (b *Botanist) DefaultKubeScheduler() (kubescheduler.KubeScheduler, error) {
-	image, err := b.ImageVector.FindImage(common.KubeSchedulerImageName, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return nil, err
-	}
-
-	return kubescheduler.New(
-		b.K8sSeedClient.Client(),
-		b.Shoot.SeedNamespace,
-		b.Shoot.KubernetesVersion,
-		image.String(),
-		b.Shoot.GetReplicas(1),
-		b.Shoot.Info.Spec.Kubernetes.KubeScheduler,
-	), nil
-}
-
-// DeployKubeScheduler deploys the Kubernetes scheduler.
-func (b *Botanist) DeployKubeScheduler(ctx context.Context) error {
-	b.Shoot.Components.ControlPlane.KubeScheduler.SetSecrets(kubescheduler.Secrets{
-		Kubeconfig: component.Secret{Name: kubescheduler.SecretName, Checksum: b.CheckSums[kubescheduler.SecretName]},
-		Server:     component.Secret{Name: kubescheduler.SecretNameServer, Checksum: b.CheckSums[kubescheduler.SecretNameServer]},
-	})
-
-	return b.Shoot.Components.ControlPlane.KubeScheduler.Deploy(ctx)
 }
 
 // DefaultKubeAPIServerService returns a deployer for kube-apiserver service.
