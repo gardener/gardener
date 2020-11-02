@@ -55,10 +55,31 @@ spec:
         - --always-update={{ .Values.controllers.managedResource.alwaysUpdate }}
         - --namespace={{ .Release.Namespace }}
         - --target-kubeconfig=/etc/gardener-resource-manager/kubeconfig
+        {{- if .Values.metricsPort }}
+        - --metrics-bind-address=:{{ .Values.metricsPort }}
+        {{- end }}
+        {{- if .Values.healthPort }}
+        - --health-bind-address=:{{ .Values.healthPort }}
+        {{- end }}
         {{- if .Values.resources }}
         resources:
 {{ toYaml .Values.resources | indent 10 }}
         {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ .Values.healthPort }}
+            scheme: HTTP
+          initialDelaySeconds: 30
+          failureThreshold: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        ports:
+        - name: metrics
+          containerPort: {{ .Values.metricsPort }}
+        - name: health
+          containerPort: {{ .Values.healthPort }}
         volumeMounts:
         - name: gardener-resource-manager
           mountPath: /etc/gardener-resource-manager
