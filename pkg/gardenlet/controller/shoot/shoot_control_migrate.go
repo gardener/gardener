@@ -283,7 +283,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		})
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace in Seed",
-			Fn:           flow.TaskFn(botanist.DeleteNamespace).Retry(defaultInterval),
+			Fn:           flow.TaskFn(botanist.DeleteNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deleteAllExtensionCRs, destroyDNSProviders, deleteBackupEntryFromSeed, waitForManagedResourcesDeletion, scaleETCDToZero),
 		})
 		_ = g.Add(flow.Task{

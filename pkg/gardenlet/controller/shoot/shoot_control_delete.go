@@ -48,7 +48,6 @@ import (
 func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	var (
 		botanist                             *botanistpkg.Botanist
-		shootNamespaceInDeletion             bool
 		kubeAPIServerDeploymentFound         = true
 		kubeControllerManagerDeploymentFound = true
 		kubeAPIServerDeploymentReplicas      int32
@@ -128,11 +127,6 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 				}
 			}
 			return nil
-		}),
-		errors.ToExecute("Check deletion timestamp for the Shoot namespace", func() error {
-			var deletionError error
-			shootNamespaceInDeletion, deletionError = kutil.HasDeletionTimestamp(botanist.SeedNamespaceObject)
-			return deletionError
 		}),
 		// We check whether the kube-apiserver deployment exists in the shoot namespace. If it does not, then we assume
 		// that it has never been deployed successfully, or that we have deleted it in a previous run because we already
@@ -223,7 +217,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		// existing machine class secrets.
 		deployCloudProviderSecret = g.Add(flow.Task{
 			Name: "Deploying cloud provider account secret",
-			Fn:   flow.TaskFn(botanist.DeployCloudProviderSecret).SkipIf(shootNamespaceInDeletion),
+			Fn:   flow.TaskFn(botanist.DeployCloudProviderSecret).DoIf(nonTerminatingNamespace),
 		})
 		deployKubeAPIServerService = g.Add(flow.Task{
 			Name: "Deploying Kubernetes API server service in the Seed cluster",
@@ -244,17 +238,17 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		generateSecrets = g.Add(flow.Task{
 			Name:         "Generating secrets and saving them into ShootState",
-			Fn:           flow.TaskFn(botanist.GenerateAndSaveSecrets).SkipIf(shootNamespaceInDeletion),
+			Fn:           flow.TaskFn(botanist.GenerateAndSaveSecrets).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
 		})
 		deploySecrets = g.Add(flow.Task{
 			Name:         "Deploying Shoot certificates / keys",
-			Fn:           flow.TaskFn(botanist.DeploySecrets).SkipIf(shootNamespaceInDeletion),
+			Fn:           flow.TaskFn(botanist.DeploySecrets).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(ensureShootStateExists, generateSecrets),
 		})
 		deployReferencedResources = g.Add(flow.Task{
 			Name:         "Deploying referenced resources",
-			Fn:           flow.TaskFn(botanist.DeployReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeployReferencedResources).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
 		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
@@ -269,7 +263,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying network policies",
-			Fn:           flow.TaskFn(botanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(ensureShootStateExists).InsertIf(!staticNodesCIDR),
 		})
 		deployETCD = g.Add(flow.Task{
@@ -292,12 +286,12 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		// controller-manager to be updateable due to provider config injection.
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying Shoot control plane",
-			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded && !shootNamespaceInDeletion),
+			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, ensureShootClusterIdentity),
 		})
 		waitUntilControlPlaneReady = g.Add(flow.Task{
 			Name:         "Waiting until Shoot control plane has been reconciled",
-			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneReady).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded && !shootNamespaceInDeletion),
+			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneReady).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded),
 			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
 		generateEncryptionConfigurationMetaData = g.Add(flow.Task{
@@ -354,7 +348,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		// cloud provider secret are restarted in case it has changed.
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
-			Fn:           flow.TaskFn(botanist.DeployKubeControllerManager).DoIf(cleanupShootResources && kubeControllerManagerDeploymentFound && !shootNamespaceInDeletion).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeployKubeControllerManager).DoIf(cleanupShootResources && kubeControllerManagerDeploymentFound).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilControlPlaneReady, initializeShootClients),
 		})
 		_ = g.Add(flow.Task{
@@ -432,7 +426,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           botanist.WaitUntilWorkerDeleted,
 			Dependencies: flow.NewTaskIDs(destroyWorker),
 		})
-		_ = g.Add(flow.Task{
+		deleteAllOperatingSystemConfigs = g.Add(flow.Task{
 			Name:         "Deleting operating system config resources",
 			Fn:           flow.TaskFn(botanist.DeleteAllOperatingSystemConfigs).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerDeleted),
@@ -491,6 +485,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			cleanExtendedAPIs,
 			cleanKubernetesResources,
 			cleanShootNamespaces,
+			deleteAllOperatingSystemConfigs,
 			waitUntilWorkerDeleted,
 			waitUntilManagedResourcesDeleted,
 			timeForInfrastructureResourceCleanup,
@@ -512,7 +507,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 
 		deleteKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting Kubernetes API server",
-			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).Retry(defaultInterval),
+			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted),
 		})
 
@@ -579,7 +574,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace in Seed",
-			Fn:           flow.TaskFn(botanist.DeleteNamespace).Retry(defaultInterval),
+			Fn:           flow.TaskFn(botanist.DeleteNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncPoint, deleteDNSProviders, destroyReferencedResources),
 		})
 		_ = g.Add(flow.Task{
