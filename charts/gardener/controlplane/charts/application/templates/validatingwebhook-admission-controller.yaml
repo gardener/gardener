@@ -41,8 +41,9 @@ webhooks:
     - secrets
   failurePolicy: Fail
   namespaceSelector:
-    matchLabels:
-      gardener.cloud/role: project
+    matchExpressions:
+    - {key: gardener.cloud/role, operator: In, values: [project]}
+    - {key: app, operator: NotIn, values: [gardener]}
   clientConfig:
     {{- if .Values.global.deployment.virtualGarden.enabled }}
     url: https://gardener-admission-controller.garden/webhooks/validate-kubeconfig-secrets
@@ -70,8 +71,9 @@ webhooks:
     {{- end }}
   failurePolicy: Fail
   namespaceSelector:
-    matchLabels:
-      gardener.cloud/role: project
+    matchExpressions:
+      - {key: gardener.cloud/role, operator: In, values: [project]}
+      - {key: app, operator: NotIn, values: [gardener]}
   clientConfig:
     {{- if .Values.global.deployment.virtualGarden.enabled }}
     url: https://gardener-admission-controller.garden/webhooks/validate-resource-size
