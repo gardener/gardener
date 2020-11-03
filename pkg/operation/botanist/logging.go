@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/common"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,7 +32,6 @@ import (
 
 // DeploySeedLogging will install the Helm release "seed-bootstrap/charts/loki" in the Seed clusters.
 func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
-
 	// TODO: remove in a future release
 	// Clean up the stale loki-vpa.
 	lokiVpa := &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "loki-vpa", Namespace: b.Shoot.SeedNamespace}}
@@ -50,6 +50,11 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		return err
 	}
 
+	lokiValues := map[string]interface{}{
+		"global":   images,
+		"replicas": b.Shoot.GetReplicas(1),
+	}
+
 	hvpaValues := make(map[string]interface{})
 	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 	if b.ShootedSeed != nil {
@@ -57,11 +62,16 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	}
 
 	hvpaValues["enabled"] = hvpaEnabled
+	lokiValues["hvpa"] = hvpaValues
 
-	lokiValues := map[string]interface{}{
-		"global":   images,
-		"replicas": b.Shoot.GetReplicas(1),
-		"hvpa":     hvpaValues,
+	if hvpaEnabled {
+		currentResources, err := common.GetContainerResourcesInStatefulSet(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, "loki"))
+		if err != nil {
+			return err
+		}
+		if len(currentResources) != 0 && currentResources[0] != nil {
+			lokiValues["resources"] = currentResources[0]
+		}
 	}
 
 	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-bootstrap", "charts", "loki"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), kubernetes.Values(lokiValues))

@@ -428,6 +428,23 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 	return nil
 }
 
+// GetContainerResourcesInStatefulSet  returns the containers resources in StatefulSet
+func GetContainerResourcesInStatefulSet(ctx context.Context, k8sClient client.Client, key client.ObjectKey) ([]*corev1.ResourceRequirements, error) {
+	statefulSet := &appsv1.StatefulSet{}
+	resourcesPerContainer := make([]*corev1.ResourceRequirements, 0)
+	if err := k8sClient.Get(ctx, key, statefulSet); client.IgnoreNotFound(err) != nil {
+		return nil, err
+	} else if !apierrors.IsNotFound(err) {
+		for _, container := range statefulSet.Spec.Template.Spec.Containers {
+			resourcesPerContainer = append(resourcesPerContainer, container.Resources.DeepCopy())
+		}
+		return resourcesPerContainer, nil
+	}
+
+	// Use the default resources defined in values file
+	return nil, nil
+}
+
 // DeleteReserveExcessCapacity deletes the deployment and priority class for excess capacity
 func DeleteReserveExcessCapacity(ctx context.Context, k8sClient client.Client) error {
 	if k8sClient == nil {
