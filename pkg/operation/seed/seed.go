@@ -625,7 +625,8 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	}
 
 	values := kubernetes.Values(map[string]interface{}{
-		"cloudProvider": seed.Info.Spec.Provider.Type,
+		"cloudProvider":     seed.Info.Spec.Provider.Type,
+		"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane,
 		"global": map[string]interface{}{
 			"images":                chart.ImageMapToValues(images),
 			"imageVectorOverwrites": imageVectorOverwrites,

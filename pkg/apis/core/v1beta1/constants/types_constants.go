@@ -282,21 +282,21 @@ const (
 
 	// LabelControllerRegistrationName is the key of a label on extension namespaces that indicates the controller registration name.
 	LabelControllerRegistrationName = "controllerregistration.core.gardener.cloud/name"
+	// LabelPodMaintenanceRestart is a constant for a label that describes that a pod should be restarted during maintenance.
+	LabelPodMaintenanceRestart = "maintenance.gardener.cloud/restart"
+	// LabelWorkerPool is a constant for a label that indicates the worker pool the node belongs to
+	LabelWorkerPool = "worker.gardener.cloud/pool"
+	// LabelWorkerPoolDeprecated is a deprecated constant for a label that indicates the worker pool the node belongs to
+	LabelWorkerPoolDeprecated = "worker.garden.sapcloud.io/group"
+	// LabelWorkerPoolSystemComponents is a constant that indicates whether the worker pool should host system components
+	LabelWorkerPoolSystemComponents = "worker.gardener.cloud/system-components"
 
 	// EventResourceReferenced indicates that the resource deletion is in waiting mode because the resource is still
 	// being referenced by at least one other resource (e.g. a SecretBinding is still referenced by a Shoot)
 	EventResourceReferenced = "ResourceReferenced"
 
-	// LabelPodMaintenanceRestart is a constant for a label that describes that a pod should be restarted during maintenance.
-	LabelPodMaintenanceRestart = "maintenance.gardener.cloud/restart"
-
-	// LabelWorkerPool is a constant for a label that indicates the worker pool the node belongs to
-	LabelWorkerPool = "worker.gardener.cloud/pool"
-	// LabelWorkerPoolDeprecated is a deprecated constant for a label that indicates the worker pool the node belongs to
-	LabelWorkerPoolDeprecated = "worker.garden.sapcloud.io/group"
-
-	// LabelWorkerPoolSystemComponents is a constant that indicates whether the worker pool should host system components
-	LabelWorkerPoolSystemComponents = "worker.gardener.cloud/system-components"
+	// PriorityClassNameShootControlPlane is the name of a priority class for critical pods of a shoot control plane.
+	PriorityClassNameShootControlPlane = "gardener-shoot-controlplane"
 
 	// ReferencedResourcesPrefix is the prefix used when copying referenced resources to the Shoot namespace in the Seed,
 	// to avoid naming collisions with resources managed by Gardener.
