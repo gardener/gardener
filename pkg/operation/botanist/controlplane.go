@@ -841,6 +841,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		defaultValues = map[string]interface{}{
 			"etcdServicePort":           2379,
 			"kubernetesVersion":         b.Shoot.Info.Spec.Kubernetes.Version,
+			"priorityClassName":         v1beta1constants.PriorityClassNameShootControlPlane,
 			"enableBasicAuthentication": gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info),
 			"probeCredentials":          b.APIServerHealthCheckToken,
 			"securePort":                443,

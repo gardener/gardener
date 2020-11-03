@@ -2,7 +2,7 @@
 apiVersion: {{ include "priorityclassversion" . }}
 kind: PriorityClass
 metadata:
-  name: gardener-shoot-controlplane
+  name: {{ .Values.priorityClassName }}
 value: 100
 globalDefault: false
-description: "This class is used to ensure priority scheduling for the etcd's and kube-apiserver pods of Shoot control planes."
+description: "This class is used to ensure priority scheduling for some of shoot's control plane pods."

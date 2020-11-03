@@ -1,4 +1,5 @@
 cloudProvider: aws
+priorityClassName: foo
 
 prometheus:
   port: 9090
