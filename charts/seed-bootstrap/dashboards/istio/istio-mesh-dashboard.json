@@ -15,8 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 3,
-  "iteration": 1603367036277,
+  "id": 7,
+  "iteration": 1604159037736,
   "links": [],
   "panels": [
     {
@@ -32,6 +32,107 @@
       "panels": [],
       "title": "TCP",
       "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "hiddenSeries": false,
+      "id": 130,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.2.1",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(istio_tcp_received_bytes_total{destination_service_name=~\"$tcp_service\"})",
+          "interval": "",
+          "legendFormat": "Received",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(istio_tcp_sent_bytes_total{destination_service_name=~\"$tcp_service\"})",
+          "interval": "",
+          "legendFormat": "Send",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Data Transfer",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "decbytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 2,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -63,9 +164,9 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 7,
-        "w": 24,
-        "x": 0,
+        "h": 6,
+        "w": 12,
+        "x": 12,
         "y": 1
       },
       "hiddenSeries": false,
@@ -163,7 +264,7 @@
         "h": 18,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 7
       },
       "hideTimeOverride": false,
       "id": 109,
@@ -250,25 +351,6 @@
           "unit": "short"
         },
         {
-          "alias": "Workload",
-          "align": "auto",
-          "colorMode": null,
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 2,
-          "link": true,
-          "linkTooltip": "$__cell dashboard",
-          "linkUrl": "/dashboard/db/istio-workload-dashboard?var-namespace=$__cell_3&var-workload=$__cell_2",
-          "pattern": "destination_workload_var",
-          "thresholds": [],
-          "type": "string",
-          "unit": "short"
-        },
-        {
           "alias": "",
           "align": "auto",
           "colorMode": null,
@@ -282,25 +364,6 @@
           "pattern": "destination_workload_namespace",
           "thresholds": [],
           "type": "hidden",
-          "unit": "short"
-        },
-        {
-          "alias": "Service",
-          "align": "auto",
-          "colorMode": null,
-          "colors": [
-            "rgba(245, 54, 54, 0.9)",
-            "rgba(237, 129, 40, 0.89)",
-            "rgba(50, 172, 45, 0.97)"
-          ],
-          "dateFormat": "YYYY-MM-DD HH:mm:ss",
-          "decimals": 2,
-          "link": true,
-          "linkTooltip": "$__cell dashboard",
-          "linkUrl": "/dashboard/db/istio-service-dashboard?var-service=$__cell",
-          "pattern": "destination_service",
-          "thresholds": [],
-          "type": "number",
           "unit": "short"
         }
       ],
@@ -337,7 +400,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 25
       },
       "id": 120,
       "panels": [
@@ -705,7 +768,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 26
       },
       "id": 126,
       "panels": [
@@ -1325,7 +1388,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 27
       },
       "id": 122,
       "panels": [],
@@ -1351,7 +1414,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 28
       },
       "hiddenSeries": false,
       "id": 111,
