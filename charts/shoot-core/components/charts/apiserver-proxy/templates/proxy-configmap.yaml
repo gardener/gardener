@@ -109,6 +109,10 @@ data:
               version: V2
             transport_socket:
               name: envoy.transport_sockets.raw_buffer
+        upstream_connection_options:
+          tcp_keepalive:
+            keepalive_time: 7200
+            keepalive_interval: 55
       - name: uds_admin
         connect_timeout: 0.25s
         type: STATIC
