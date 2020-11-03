@@ -84,20 +84,6 @@ func SyncClusterResourceToSeed(ctx context.Context, client client.Client, cluste
 			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 			Kind:       "Shoot",
 		}
-
-		// TODO: Workaround for the issue that was fixed with https://github.com/gardener/gardener/pull/2265. It adds a
-		//       fake "observed generation" and a fake "last operation" and in case it is not set yet. This prevents the
-		//       ShootNotFailed predicate in the extensions library from reacting false negatively. This fake status is only
-		//       internally and will not be reported in the Shoot object in the garden cluster.
-		//       This code can be removed in a future version after giving extension controllers enough time to revendor
-		//       Gardener's extensions library.
-		shootObj.Status.ObservedGeneration = shootObj.Generation
-		if shootObj.Status.LastOperation == nil {
-			shootObj.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				Type:  gardencorev1beta1.LastOperationTypeCreate,
-				State: gardencorev1beta1.LastOperationStateSucceeded,
-			}
-		}
 	}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, client, cluster, func() error {
