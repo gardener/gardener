@@ -47,6 +47,7 @@ import (
 
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -326,6 +327,14 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		return err
 	}
 
+	// HVPA feature gate
+	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
+	if !hvpaEnabled {
+		if err := common.DeleteHvpa(ctx, k8sSeedClient, v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
 	// Logging feature gate
 	var (
 		loggingEnabled                    = gardenletfeatures.FeatureGate.Enabled(features.Logging)
@@ -333,16 +342,33 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		filters                           = strings.Builder{}
 		parsers                           = strings.Builder{}
 		fluentBitConfigurationsOverwrites = map[string]interface{}{}
+		lokiValues                        = map[string]interface{}{}
 	)
 
+	lokiValues["enabled"] = loggingEnabled
+
 	if loggingEnabled {
-		// TODO: remove in a future release
-		// Clean up the stale loki-vpa.
+		lokiValues["authEnabled"] = false
+		lokiValues["hvpa"] = map[string]interface{}{
+			"enabled": hvpaEnabled,
+		}
+
 		lokiVpa := &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "loki-vpa", Namespace: v1beta1constants.GardenNamespace}}
 		if err := k8sSeedClient.Client().Delete(ctx, lokiVpa); client.IgnoreNotFound(err) != nil {
 			return err
 
 		}
+
+		if hvpaEnabled {
+			currentResources, err := common.GetContainerResourcesInStatefulSet(ctx, k8sSeedClient.Client(), kutil.Key(v1beta1constants.GardenNamespace, "loki"))
+			if err != nil {
+				return err
+			}
+			if len(currentResources) != 0 && currentResources[0] != nil {
+				lokiValues["resources"] = currentResources[0]
+			}
+		}
+
 		componentsFunctions := []component.LoggingConfiguration{
 			clusterautoscaler.LoggingConfiguration,
 			kubescheduler.LoggingConfiguration,
@@ -403,14 +429,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		}
 	} else {
 		if err := common.DeleteLoggingStack(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
-	// HVPA feature gate
-	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
-	if !hvpaEnabled {
-		if err := common.DeleteHvpa(ctx, k8sSeedClient, v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -654,13 +672,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			"fluentBitConfigurationsOverwrites": fluentBitConfigurationsOverwrites,
 			"exposedComponentsTagPrefix":        userExposedComponentTagPrefix,
 		},
-		"loki": map[string]interface{}{
-			"enabled":     loggingEnabled,
-			"authEnabled": false,
-			"hvpa": map[string]interface{}{
-				"enabled": hvpaEnabled,
-			},
-		},
+		"loki":         lokiValues,
 		"alertmanager": alertManagerConfig,
 		"vpa": map[string]interface{}{
 			"enabled": vpaEnabled,
