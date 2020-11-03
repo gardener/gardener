@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
@@ -902,12 +903,12 @@ func (v ValidateShoot) validateShootedSeed(a admission.Attributes, shoot, oldSho
 		return nil
 	}
 
-	oldVal, oldOk := constants.GetShootUseAsSeedAnnotation(oldShoot.Annotations)
+	oldVal, oldOk := oldShoot.Annotations[v1beta1constants.AnnotationShootUseAsSeed]
 	if !oldOk || len(oldVal) == 0 {
 		return nil
 	}
 
-	val, ok := constants.GetShootUseAsSeedAnnotation(shoot.Annotations)
+	val, ok := shoot.Annotations[v1beta1constants.AnnotationShootUseAsSeed]
 	if ok && len(val) != 0 {
 		return nil
 	}

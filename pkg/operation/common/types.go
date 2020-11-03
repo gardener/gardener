@@ -134,9 +134,6 @@ const (
 	// GardenRoleInternalDomain is the value of the GardenRole key indicating type 'internal-domain'.
 	GardenRoleInternalDomain = "internal-domain"
 
-	// GardenRoleAlertingSMTP is the value of the GardenRole key indicating type 'alerting-smtp'.
-	GardenRoleAlertingSMTP = "alerting-smtp"
-
 	// GardenRoleOpenVPNDiffieHellman is the value of the GardenRole key indicating type 'openvpn-diffie-hellman'.
 	GardenRoleOpenVPNDiffieHellman = "openvpn-diffie-hellman"
 
@@ -152,12 +149,6 @@ const (
 	// GardenCreatedBy is the key for an annotation of a Shoot cluster whose value indicates contains the username
 	// of the user that created the resource.
 	GardenCreatedBy = "gardener.cloud/created-by"
-
-	// GardenCreatedByDeprecated is the key for an annotation of a Shoot cluster whose value indicates contains the username
-	// of the user that created the resource.
-	//
-	// Deprecated: Use `GardenCreatedBy` instead.
-	GardenCreatedByDeprecated = "garden.sapcloud.io/createdBy"
 
 	// GrafanaOperatorsPrefix is a constant for a prefix used for the operators Grafana instance.
 	GrafanaOperatorsPrefix = "go"

@@ -196,7 +196,7 @@ func (c *defaultControl) reconcileNamespaceForProject(ctx context.Context, garde
 	var (
 		namespaceName = project.Spec.Namespace
 
-		projectLabels      = utils.MergeStringMaps(namespaceLabelsFromProject(project), namespaceLabelsFromProjectDeprecated(project))
+		projectLabels      = namespaceLabelsFromProject(project)
 		projectAnnotations = namespaceAnnotationsFromProject(project)
 		ownerReference     = metav1.NewControllerRef(project, gardencorev1beta1.SchemeGroupVersion.WithKind("Project"))
 	)
@@ -215,20 +215,26 @@ func (c *defaultControl) reconcileNamespaceForProject(ctx context.Context, garde
 	}
 
 	namespace, err := kutils.TryUpdateNamespace(ctx, gardenClient.Kubernetes(), retry.DefaultBackoff, metav1.ObjectMeta{Name: *namespaceName}, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
-		labels := namespaceLabelsFromProject(project)
-		labelsDeprecated := namespaceLabelsFromProjectDeprecated(project)
-		if !apiequality.Semantic.DeepDerivative(labels, ns.Labels) && !apiequality.Semantic.DeepDerivative(labelsDeprecated, ns.Labels) {
-			return nil, fmt.Errorf("namespace cannot be used as it needs the project labels %#v", labels)
+		if !apiequality.Semantic.DeepDerivative(projectLabels, ns.Labels) {
+			return nil, fmt.Errorf("namespace cannot be used as it needs the project labels %#v", projectLabels)
 		}
 
-		projectAnnotationsDeprecated := namespaceAnnotationsFromProjectDeprecated(project)
-		if metav1.HasAnnotation(ns.ObjectMeta, common.NamespaceProjectDeprecated) && !apiequality.Semantic.DeepDerivative(projectAnnotationsDeprecated, ns.Annotations) {
+		if metav1.HasAnnotation(ns.ObjectMeta, common.NamespaceProject) && !apiequality.Semantic.DeepDerivative(projectAnnotations, ns.Annotations) {
 			return nil, fmt.Errorf("namespace is already in-use by another project")
 		}
 
 		ns.OwnerReferences = common.MergeOwnerReferences(ns.OwnerReferences, *ownerReference)
 		ns.Labels = utils.MergeStringMaps(ns.Labels, projectLabels)
 		ns.Annotations = utils.MergeStringMaps(ns.Annotations, projectAnnotations)
+
+		// TODO (ialidzhikov): remove the cleanup of deprecated annotation and labels in a future version
+		if metav1.HasAnnotation(ns.ObjectMeta, common.NamespaceProjectDeprecated) {
+			delete(ns.Annotations, common.NamespaceProjectDeprecated)
+		}
+		deprecatedLabels := []string{v1beta1constants.DeprecatedGardenRole, common.ProjectNameDeprecated}
+		for _, deprecatedLabel := range deprecatedLabels {
+			delete(ns.Labels, deprecatedLabel)
+		}
 
 		return ns, nil
 	})

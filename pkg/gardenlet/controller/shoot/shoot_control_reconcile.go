@@ -449,15 +449,10 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			}).DoIf(requestControlPlanePodsRestart),
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployControlPlane, deployControlPlaneExposure),
 		})
-		deployVPA = g.Add(flow.Task{
+		_ = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes vertical pod autoscaler",
 			Fn:           flow.TaskFn(botanist.DeployVerticalPodAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilKubeAPIServerIsReady, deployManagedResources, hibernateControlPlane),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Maintain shoot annotations",
-			Fn:           flow.TaskFn(botanist.MaintainShootAnnotations),
-			Dependencies: flow.NewTaskIDs(deployVPA),
 		})
 	)
 

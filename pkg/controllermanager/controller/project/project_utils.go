@@ -34,22 +34,8 @@ func namespaceLabelsFromProject(project *gardencorev1beta1.Project) map[string]s
 	}
 }
 
-func namespaceLabelsFromProjectDeprecated(project *gardencorev1beta1.Project) map[string]string {
-	return map[string]string{
-		v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleProject,
-		common.ProjectNameDeprecated:          project.Name,
-	}
-}
-
 func namespaceAnnotationsFromProject(project *gardencorev1beta1.Project) map[string]string {
 	return map[string]string{
-		common.NamespaceProject:           string(project.UID),
-		common.NamespaceProjectDeprecated: string(project.UID),
-	}
-}
-
-func namespaceAnnotationsFromProjectDeprecated(project *gardencorev1beta1.Project) map[string]string {
-	return map[string]string{
-		common.NamespaceProjectDeprecated: string(project.UID),
+		common.NamespaceProject: string(project.UID),
 	}
 }

@@ -600,7 +600,7 @@ func ReadShootedSeed(shoot *gardencorev1beta1.Shoot) (*ShootedSeed, error) {
 		return nil, nil
 	}
 
-	val, ok := v1beta1constants.GetShootUseAsSeedAnnotation(shoot.Annotations)
+	val, ok := shoot.Annotations[v1beta1constants.AnnotationShootUseAsSeed]
 	if !ok {
 		return nil, nil
 	}
@@ -648,7 +648,7 @@ func ShootWantsVerticalPodAutoscaler(shoot *gardencorev1beta1.Shoot) bool {
 // ShootIgnoresAlerts checks if the alerts for the annotated shoot cluster should be ignored.
 func ShootIgnoresAlerts(shoot *gardencorev1beta1.Shoot) bool {
 	ignore := false
-	if value, ok := v1beta1constants.GetShootIgnoreAlertsAnnotation(shoot.Annotations); ok {
+	if value, ok := shoot.Annotations[v1beta1constants.AnnotationShootIgnoreAlerts]; ok {
 		ignore, _ = strconv.ParseBool(value)
 	}
 	return ignore
