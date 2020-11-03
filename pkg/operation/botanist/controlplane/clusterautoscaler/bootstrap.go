@@ -43,7 +43,7 @@ var TimeoutWaitForManagedResource = 2 * time.Minute
 func BootstrapSeed(ctx context.Context, c client.Client, namespace, _ string) error {
 	var (
 		versions = schema.GroupVersions([]schema.GroupVersion{rbacv1.SchemeGroupVersion})
-		codec    = kubernetes.ShootCodec.CodecForVersions(kubernetes.SeedSerializer, kubernetes.SeedSerializer, versions, versions)
+		codec    = kubernetes.SeedCodec.CodecForVersions(kubernetes.SeedSerializer, kubernetes.SeedSerializer, versions, versions)
 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{

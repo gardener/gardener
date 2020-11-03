@@ -299,7 +299,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			common.HvpaControllerImageName,
 			common.DependencyWatchdogImageName,
 			common.KubeStateMetricsImageName,
-			common.EtcdDruidImageName,
 		},
 		imagevector.RuntimeVersion(k8sSeedClient.Version()),
 		imagevector.TargetVersion(k8sSeedClient.Version()),
@@ -546,7 +545,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		}
 		vpaGK                 = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
 		hvpaGK                = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "Hvpa"}
-		druidGK               = schema.GroupKind{Group: "druid.gardener.cloud", Kind: "Etcd"}
 		issuerGK              = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
 		grafanaHost           = seed.GetIngressFQDN(grafanaPrefix)
 		prometheusHost        = seed.GetIngressFQDN(prometheusPrefix)
@@ -560,7 +558,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	applierOptions[vpaGK] = retainStatusInformation
 	applierOptions[hvpaGK] = retainStatusInformation
 	applierOptions[issuerGK] = retainStatusInformation
-	applierOptions[druidGK] = retainStatusInformation
 
 	networks := []string{
 		seed.Info.Spec.Networks.Pods,
@@ -590,7 +587,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		prometheusTLSOverride = wildcardCert.GetName()
 	}
 
-	imageVectorOverwrites := map[string]interface{}{}
+	imageVectorOverwrites := make(map[string]string, len(componentImageVectors))
 	for name, data := range componentImageVectors {
 		imageVectorOverwrites[name] = data
 	}
@@ -690,8 +687,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		"cloudProvider":     seed.Info.Spec.Provider.Type,
 		"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane,
 		"global": map[string]interface{}{
-			"images":                chart.ImageMapToValues(images),
-			"imageVectorOverwrites": imageVectorOverwrites,
+			"images": chart.ImageMapToValues(images),
 		},
 		"reserveExcessCapacity": seed.Info.Spec.Settings.ExcessCapacityReservation.Enabled,
 		"replicas": map[string]interface{}{
@@ -767,6 +763,23 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	var bootstrapFunctions []flow.TaskFn
 	for _, componentFn := range []component.BootstrapSeed{
 		clusterautoscaler.BootstrapSeed,
+		func(ctx context.Context, c client.Client, namespace, version string) error {
+			image, err := imageVector.FindImage(
+				common.EtcdDruidImageName,
+				imagevector.RuntimeVersion(k8sSeedClient.Version()),
+				imagevector.TargetVersion(k8sSeedClient.Version()),
+			)
+			if err != nil {
+				return err
+			}
+
+			var imageVectorOverwrite *string
+			if val, ok := imageVectorOverwrites[etcd.Druid]; ok {
+				imageVectorOverwrite = &val
+			}
+
+			return etcd.BootstrapSeed(ctx, c, namespace, version, image.String(), imageVectorOverwrite)
+		},
 	} {
 		bootstrapFunctions = append(bootstrapFunctions, func(ctx context.Context) error {
 			return componentFn(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace, k8sSeedClient.Version())
@@ -774,18 +787,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	}
 	if err := flow.Parallel(bootstrapFunctions...)(ctx); err != nil {
 		return err
-	}
-
-	// TODO: remove in a future release
-	// Clean up the stale vpa-webhook-config MutatingWebhookConfiguration.
-	// We can delete vpa-webhook-config as the new vpa-webhook-config-seed will be created with the apply of the seed-boostrap chart.
-	if vpaEnabled {
-		webhook := &admissionregistrationv1beta1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config"},
-		}
-		if err := k8sSeedClient.Client().Delete(ctx, webhook); client.IgnoreNotFound(err) != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -797,6 +798,7 @@ func DebootstrapCluster(ctx context.Context, k8sSeedClient kubernetes.Interface)
 	var debootstrapFunctions []flow.TaskFn
 	for _, componentFn := range []component.DebootstrapSeed{
 		clusterautoscaler.DebootstrapSeed,
+		etcd.DebootstrapSeed,
 	} {
 		debootstrapFunctions = append(debootstrapFunctions, func(ctx context.Context) error {
 			return componentFn(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace)
