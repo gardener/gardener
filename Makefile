@@ -56,7 +56,7 @@ local-garden-up:
 	@./hack/local-development/local-garden/run-gardener-etcd $(LOCAL_GARDEN_LABEL)
 
 	# Applying proxy RBAC for the extension controller
-	# After this step, you can start using the cluster at hack/local-garden/kubeconfigs/admin.conf
+	# After this step, you can start using the cluster at KUBECONFIG=hack/local-development/local-garden/kubeconfigs/default-admin.conf
 	@./hack/local-development/local-garden/apply-rbac-garden-ns
 
 	# Now you can start using the cluster at with `export KUBECONFIG=hack/local-development/local-garden/kubeconfigs/default-admin.conf`
