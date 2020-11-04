@@ -302,7 +302,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{{
 				ContainerName: kubeControllerManagerContainerName,
 				MinAllowed: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("25m"),
+					corev1.ResourceCPU:    resource.MustParse("100m"),
 					corev1.ResourceMemory: resource.MustParse("100Mi"),
 				},
 			}},
