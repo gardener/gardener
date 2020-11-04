@@ -310,7 +310,7 @@ var _ = Describe("KubeControllerManager", func() {
 							ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{{
 								ContainerName: "kube-controller-manager",
 								MinAllowed: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("25m"),
+									corev1.ResourceCPU:    resource.MustParse("100m"),
 									corev1.ResourceMemory: resource.MustParse("100Mi"),
 								},
 							}},
