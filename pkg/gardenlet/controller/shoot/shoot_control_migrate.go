@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/common"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -63,16 +64,17 @@ func (c *Controller) prepareShootForMigration(logger *logrus.Entry, shoot *garde
 		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
+	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventPrepareMigration, "Prepare Shoot cluster for migration")
+	shootNamespace := shootpkg.ComputeTechnicalID(project.Name, shoot)
+	shoot, err = c.updateShootStatusOperationStart(ctx, gardenClient.GardenCore(), shoot, shootNamespace, gardencorev1beta1.LastOperationTypeMigrate)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	o, operationErr := c.initializeOperation(ctx, logger, shoot, project, cloudProfile, seed)
 	if operationErr != nil {
 		_, updateErr := c.updateShootStatusOperationError(ctx, gardenClient.GardenCore(), shoot, fmt.Sprintf("Could not initialize a new operation for preparation of Shoot Control Plane migration: %s", operationErr.Error()), gardencorev1beta1.LastOperationTypeMigrate, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
-	}
-
-	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventPrepareMigration, "Prepare Shoot cluster for migration")
-	o.Shoot.Info, err = c.updateShootStatusOperationStart(ctx, gardenClient.GardenCore(), o.Shoot.Info, o.Shoot.SeedNamespace, gardencorev1beta1.LastOperationTypeMigrate)
-	if err != nil {
-		return reconcile.Result{}, err
 	}
 
 	if flowErr := c.runPrepareShootControlPlaneMigration(o); flowErr != nil {
