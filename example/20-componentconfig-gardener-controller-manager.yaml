@@ -31,6 +31,16 @@ controllers:
     staleGracePeriodDays: 14
     staleExpirationTimeDays: 90
     staleSyncPeriod: 12h
+  # quotas:
+  # - config:
+  #     apiVersion: v1
+  #     kind: ResourceQuota
+  #     spec:
+  #       hard:
+  #         count/shoots.core.gardener.cloud: "100"
+  #         count/secretbindings.core.gardener.cloud: "10"
+  #         count/secrets: "400"
+  #   projectSelector: {}
   event:
     concurrentSyncs: 5
     ttlNonShootEvents: 1h

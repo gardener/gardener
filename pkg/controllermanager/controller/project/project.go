@@ -111,7 +111,7 @@ func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFacto
 	projectController := &Controller{
 		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenCoreInformerFactory,
-		control:                NewDefaultControl(clientMap, gardenCoreInformerFactory, recorder, namespaceLister),
+		control:                NewDefaultControl(clientMap, config, gardenCoreInformerFactory, recorder, namespaceLister),
 		staleControl:           NewDefaultStaleControl(clientMap, config, shootLister, plantLister, backupEntryLister, secretBindingLister, quotaLister, secretLister),
 		config:                 config,
 		recorder:               recorder,

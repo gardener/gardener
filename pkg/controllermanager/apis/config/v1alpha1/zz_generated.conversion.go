@@ -128,6 +128,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*config.QuotaConfiguration)(nil), (*QuotaConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_QuotaConfiguration_To_v1alpha1_QuotaConfiguration(a.(*config.QuotaConfiguration), b.(*QuotaConfiguration), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*QuotaControllerConfiguration)(nil), (*config.QuotaControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_QuotaControllerConfiguration_To_config_QuotaControllerConfiguration(a.(*QuotaControllerConfiguration), b.(*config.QuotaControllerConfiguration), scope)
 	}); err != nil {
@@ -228,6 +233,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*QuotaConfiguration)(nil), (*config.QuotaConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_QuotaConfiguration_To_config_QuotaConfiguration(a.(*QuotaConfiguration), b.(*config.QuotaConfiguration), scope)
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -304,7 +314,15 @@ func autoConvert_v1alpha1_ControllerManagerControllerConfiguration_To_config_Con
 	out.ControllerRegistration = (*config.ControllerRegistrationControllerConfiguration)(unsafe.Pointer(in.ControllerRegistration))
 	out.Event = (*config.EventControllerConfiguration)(unsafe.Pointer(in.Event))
 	out.Plant = (*config.PlantControllerConfiguration)(unsafe.Pointer(in.Plant))
-	out.Project = (*config.ProjectControllerConfiguration)(unsafe.Pointer(in.Project))
+	if in.Project != nil {
+		in, out := &in.Project, &out.Project
+		*out = new(config.ProjectControllerConfiguration)
+		if err := Convert_v1alpha1_ProjectControllerConfiguration_To_config_ProjectControllerConfiguration(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Project = nil
+	}
 	out.Quota = (*config.QuotaControllerConfiguration)(unsafe.Pointer(in.Quota))
 	out.SecretBinding = (*config.SecretBindingControllerConfiguration)(unsafe.Pointer(in.SecretBinding))
 	out.Seed = (*config.SeedControllerConfiguration)(unsafe.Pointer(in.Seed))
@@ -331,7 +349,15 @@ func autoConvert_config_ControllerManagerControllerConfiguration_To_v1alpha1_Con
 	out.ControllerRegistration = (*ControllerRegistrationControllerConfiguration)(unsafe.Pointer(in.ControllerRegistration))
 	out.Event = (*EventControllerConfiguration)(unsafe.Pointer(in.Event))
 	out.Plant = (*PlantControllerConfiguration)(unsafe.Pointer(in.Plant))
-	out.Project = (*ProjectControllerConfiguration)(unsafe.Pointer(in.Project))
+	if in.Project != nil {
+		in, out := &in.Project, &out.Project
+		*out = new(ProjectControllerConfiguration)
+		if err := Convert_config_ProjectControllerConfiguration_To_v1alpha1_ProjectControllerConfiguration(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Project = nil
+	}
 	out.Quota = (*QuotaControllerConfiguration)(unsafe.Pointer(in.Quota))
 	out.SecretBinding = (*SecretBindingControllerConfiguration)(unsafe.Pointer(in.SecretBinding))
 	out.Seed = (*SeedControllerConfiguration)(unsafe.Pointer(in.Seed))
@@ -478,6 +504,17 @@ func Convert_config_PlantControllerConfiguration_To_v1alpha1_PlantControllerConf
 func autoConvert_v1alpha1_ProjectControllerConfiguration_To_config_ProjectControllerConfiguration(in *ProjectControllerConfiguration, out *config.ProjectControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
 	out.MinimumLifetimeDays = (*int)(unsafe.Pointer(in.MinimumLifetimeDays))
+	if in.Quotas != nil {
+		in, out := &in.Quotas, &out.Quotas
+		*out = make([]config.QuotaConfiguration, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha1_QuotaConfiguration_To_config_QuotaConfiguration(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Quotas = nil
+	}
 	out.StaleGracePeriodDays = (*int)(unsafe.Pointer(in.StaleGracePeriodDays))
 	out.StaleExpirationTimeDays = (*int)(unsafe.Pointer(in.StaleExpirationTimeDays))
 	out.StaleSyncPeriod = (*v1.Duration)(unsafe.Pointer(in.StaleSyncPeriod))
@@ -492,6 +529,17 @@ func Convert_v1alpha1_ProjectControllerConfiguration_To_config_ProjectController
 func autoConvert_config_ProjectControllerConfiguration_To_v1alpha1_ProjectControllerConfiguration(in *config.ProjectControllerConfiguration, out *ProjectControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
 	out.MinimumLifetimeDays = (*int)(unsafe.Pointer(in.MinimumLifetimeDays))
+	if in.Quotas != nil {
+		in, out := &in.Quotas, &out.Quotas
+		*out = make([]QuotaConfiguration, len(*in))
+		for i := range *in {
+			if err := Convert_config_QuotaConfiguration_To_v1alpha1_QuotaConfiguration(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Quotas = nil
+	}
 	out.StaleGracePeriodDays = (*int)(unsafe.Pointer(in.StaleGracePeriodDays))
 	out.StaleExpirationTimeDays = (*int)(unsafe.Pointer(in.StaleExpirationTimeDays))
 	out.StaleSyncPeriod = (*v1.Duration)(unsafe.Pointer(in.StaleSyncPeriod))
@@ -501,6 +549,27 @@ func autoConvert_config_ProjectControllerConfiguration_To_v1alpha1_ProjectContro
 // Convert_config_ProjectControllerConfiguration_To_v1alpha1_ProjectControllerConfiguration is an autogenerated conversion function.
 func Convert_config_ProjectControllerConfiguration_To_v1alpha1_ProjectControllerConfiguration(in *config.ProjectControllerConfiguration, out *ProjectControllerConfiguration, s conversion.Scope) error {
 	return autoConvert_config_ProjectControllerConfiguration_To_v1alpha1_ProjectControllerConfiguration(in, out, s)
+}
+
+func autoConvert_v1alpha1_QuotaConfiguration_To_config_QuotaConfiguration(in *QuotaConfiguration, out *config.QuotaConfiguration, s conversion.Scope) error {
+	if err := runtime.Convert_runtime_RawExtension_To_runtime_Object(&in.Config, &out.Config, s); err != nil {
+		return err
+	}
+	out.ProjectSelector = (*v1.LabelSelector)(unsafe.Pointer(in.ProjectSelector))
+	return nil
+}
+
+func autoConvert_config_QuotaConfiguration_To_v1alpha1_QuotaConfiguration(in *config.QuotaConfiguration, out *QuotaConfiguration, s conversion.Scope) error {
+	if err := runtime.Convert_runtime_Object_To_runtime_RawExtension(&in.Config, &out.Config, s); err != nil {
+		return err
+	}
+	out.ProjectSelector = (*v1.LabelSelector)(unsafe.Pointer(in.ProjectSelector))
+	return nil
+}
+
+// Convert_config_QuotaConfiguration_To_v1alpha1_QuotaConfiguration is an autogenerated conversion function.
+func Convert_config_QuotaConfiguration_To_v1alpha1_QuotaConfiguration(in *config.QuotaConfiguration, out *QuotaConfiguration, s conversion.Scope) error {
+	return autoConvert_config_QuotaConfiguration_To_v1alpha1_QuotaConfiguration(in, out, s)
 }
 
 func autoConvert_v1alpha1_QuotaControllerConfiguration_To_config_QuotaControllerConfiguration(in *QuotaControllerConfiguration, out *config.QuotaControllerConfiguration, s conversion.Scope) error {

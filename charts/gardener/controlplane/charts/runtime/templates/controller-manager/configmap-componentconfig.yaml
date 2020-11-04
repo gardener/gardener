@@ -53,6 +53,10 @@ data:
         {{- if .Values.global.controller.config.controllers.project.staleSyncPeriod }}
         staleSyncPeriod: {{ .Values.global.controller.config.controllers.project.staleSyncPeriod }}
         {{- end }}
+        {{- if .Values.global.controller.config.controllers.project.quotas }}
+        quotas:
+{{ toYaml .Values.global.controller.config.controllers.project.quotas | indent 10 }}
+        {{- end }}
       {{- end }}
       {{- if .Values.global.controller.config.controllers.quota }}
       quota:

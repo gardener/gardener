@@ -55,6 +55,13 @@ This admission controller reacts on `CREATE` and `UPDATE` operations for `Plant`
 It sets the `gardener.cloud/created-by` annotation for newly created `Plant` resources.
 Also, it prevents creating new `Plant` resources in `Project`s that are already have a deletion timestamp.
 
+## `ResourceQuota`
+
+_(enabled by default)_
+
+This admission controller enables [object count ResourceQuotas](https://kubernetes.io/docs/concepts/policy/resource-quotas/#object-count-quota) for Gardener resources, e.g. `Shoots`, `SecretBindings`, `Projects`, etc..
+> :warning: In addition to this admission plugin, the [ResourceQuota controller](https://github.com/kubernetes/kubernetes/blob/release-1.2/docs/design/admission_control_resource_quota.md#resource-quota-controller) must be enabled for the Kube-Controller-Manager of your Garden cluster. 
+
 ## `ResourceReferenceManager`
 
 _(enabled by default)_

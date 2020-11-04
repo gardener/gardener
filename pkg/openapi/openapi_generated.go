@@ -12521,7 +12521,7 @@ func schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetSpec(ref common
 					},
 					"projectSelector": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Project decides whether to apply the configuration if the Shoot is in a specific Project mathching the label selector. Use the selector only if the OIDC Preset is opt-in, because end users may skip the admission by setting the labels. Default to the empty LabelSelector, which matches everything.",
+							Description: "Project decides whether to apply the configuration if the Shoot is in a specific Project matching the label selector. Use the selector only if the OIDC Preset is opt-in, because end users may skip the admission by setting the labels. Defaults to the empty LabelSelector, which matches everything.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
 						},
 					},
