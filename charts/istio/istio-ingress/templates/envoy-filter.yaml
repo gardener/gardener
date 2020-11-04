@@ -27,6 +27,39 @@ spec:
       operation: MERGE
       value:
         per_connection_buffer_limit_bytes: 32768 # 32 KiB
+  # Some LoadBalancers do not set KEEPALIVE when they open a TCP connection
+  # to the Istio Ingress Gateway. For long living connections it can cause
+  # silent timeouts.
+  # Therefore envoy must be configured to send KEEPALIVE to downstream (LB).
+  # See https://github.com/envoyproxy/envoy/issues/3634
+  - applyTo: LISTENER
+    match:
+      context: GATEWAY
+      listener:
+        name: 0.0.0.0_{{ .targetPort }}
+        portNumber: {{ .targetPort }}
+    patch:
+      operation: MERGE
+      value:
+        socket_options:
+        # SOL_SOCKET = 1
+        # SO_KEEPALIVE = 9
+        - level: 1
+          name: 9
+          int_value: 1
+          state: STATE_LISTENING
+        # IPPROTO_TCP = 6
+        # TCP_KEEPIDLE = 4
+        - level: 6
+          name: 4
+          int_value: 55
+          state: STATE_LISTENING
+        # IPPROTO_TCP = 6
+        # TCP_KEEPINTVL = 5
+        - level: 6
+          name: 5
+          int_value: 55
+          state: STATE_LISTENING
 {{- end }}
 {{- end }}
 
