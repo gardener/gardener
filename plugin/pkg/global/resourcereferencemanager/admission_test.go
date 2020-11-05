@@ -518,6 +518,22 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion).To(Equal(resourceVersion))
 			})
 
+			It("should accept because spec was not changed", func() {
+				oldShoot := shoot.DeepCopy()
+				shoot.Annotations = map[string]string{
+					"delete": "me",
+				}
+				shoot.Labels = map[string]string{
+					"nice": "label",
+				}
+				shoot.Status.TechnicalID = "should-never-change"
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
 			It("should reject because the referenced cloud profile does not exist", func() {
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)).To(Succeed())
