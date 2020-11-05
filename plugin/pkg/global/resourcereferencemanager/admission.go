@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"sync"
 	"time"
 
@@ -257,14 +258,26 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 		if utils.SkipVerification(operation, shoot.ObjectMeta) {
 			return nil
 		}
-		// Add createdBy annotation to Shoot
-		if a.GetOperation() == admission.Create {
+
+		switch a.GetOperation() {
+		case admission.Create:
+			// Add createdBy annotation to Shoot
 			annotations := shoot.Annotations
 			if annotations == nil {
 				annotations = map[string]string{}
 			}
 			annotations[common.GardenCreatedBy] = a.GetUserInfo().GetName()
 			shoot.Annotations = annotations
+		case admission.Update:
+			// skip verification if spec wasn't changed
+			// this way we make sure, that users can always annotate/label the shoot if the spec doesn't change
+			oldShoot, ok := a.GetOldObject().(*core.Shoot)
+			if !ok {
+				return apierrors.NewBadRequest("could not convert old resource into Shoot object")
+			}
+			if reflect.DeepEqual(oldShoot.Spec, shoot.Spec) {
+				return nil
+			}
 		}
 		err = r.ensureShootReferences(ctx, a, shoot)
 
