@@ -88,12 +88,6 @@ func ShootNotFailed() predicate.Predicate {
 		CreateTrigger, UpdateNewTrigger, DeleteTrigger, GenericTrigger)
 }
 
-// Or builds a logical OR gate of passed predicates.
-// Deprecated: Use sigs.k8s.io/controller-runtime/pkg/predicate.Or directly. Will be removed in gardener version v1.12.
-func Or(predicates ...predicate.Predicate) predicate.Predicate {
-	return predicate.Or(predicates...)
-}
-
 // HasType filters the incoming OperatingSystemConfigs for ones that have the same type
 // as the given type.
 func HasType(typeName string) predicate.Predicate {
