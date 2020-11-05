@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -39,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/version"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -619,11 +621,7 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 		tag = *gardenletImage.Tag
 	}
 
-	serverTLSCertificate, err := ioutil.ReadFile(externalConfig.Server.HTTPS.TLS.ServerCertPath)
-	if err != nil {
-		return err
-	}
-	serverTLSKey, err := ioutil.ReadFile(externalConfig.Server.HTTPS.TLS.ServerKeyPath)
+	serverConfig, err := computeServerConfig(externalConfig.Server)
 	if err != nil {
 		return err
 	}
@@ -668,16 +666,7 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 					"logLevel":              externalConfig.LogLevel,
 					"kubernetesLogLevel":    externalConfig.KubernetesLogLevel,
 					"featureGates":          externalConfig.FeatureGates,
-					"server": map[string]interface{}{
-						"https": map[string]interface{}{
-							"bindAddress": externalConfig.Server.HTTPS.BindAddress,
-							"port":        externalConfig.Server.HTTPS.Port,
-							"tls": map[string]interface{}{
-								"crt": string(serverTLSCertificate),
-								"key": string(serverTLSKey),
-							},
-						},
-					},
+					"server":                serverConfig,
 					"seedConfig": &configv1alpha1.SeedConfig{
 						Seed: gardencorev1beta1.Seed{
 							ObjectMeta: metav1.ObjectMeta{
@@ -759,4 +748,37 @@ func mustEnableVPA(ctx context.Context, c client.Client, shoot *gardencorev1beta
 
 	// VPA deployment in shoot namespace was found, so we don't need to enable the VPA for this seed.
 	return false, nil
+}
+
+func computeServerConfig(serverConfig *configv1alpha1.ServerConfiguration) (map[string]interface{}, error) {
+	tlsConfig := make(map[string]interface{}, 2)
+	if serverConfig != nil && serverConfig.HTTPS.TLS != nil {
+		if !strings.Contains(serverConfig.HTTPS.TLS.ServerCertPath, secrets.TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern) {
+			serverTLSCertificate, err := ioutil.ReadFile(serverConfig.HTTPS.TLS.ServerCertPath)
+			if err != nil {
+				return nil, err
+			}
+			tlsConfig["crt"] = string(serverTLSCertificate)
+		}
+
+		if !strings.Contains(serverConfig.HTTPS.TLS.ServerKeyPath, secrets.TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern) {
+			serverTLSKey, err := ioutil.ReadFile(serverConfig.HTTPS.TLS.ServerKeyPath)
+			if err != nil {
+				return nil, err
+			}
+			tlsConfig["key"] = string(serverTLSKey)
+		}
+	}
+
+	httpsConfig := map[string]interface{}{
+		"bindAddress": serverConfig.HTTPS.BindAddress,
+		"port":        serverConfig.HTTPS.Port,
+	}
+	if len(tlsConfig) > 0 {
+		httpsConfig["tls"] = tlsConfig
+	}
+
+	return map[string]interface{}{
+		"https": httpsConfig,
+	}, nil
 }

@@ -422,12 +422,16 @@ func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Interface, exist
 	return generatedSecrets, certificateAuthorities, nil
 }
 
+// TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern is a constant for the pattern used when creating a temporary
+// directory for self-generated certificates.
+const TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern = "self-generated-server-certificates-"
+
 // SelfGenerateTLSServerCertificate generates a new CA certificate and signs a server certificate with it. It'll store
 // the generated CA + server certificate bytes into a temporary directory with the default filenames, e.g. `DataKeyCertificateCA`.
 // The function will return the *Certificate object as well as the path of the temporary directory where the
 // certificates are stored.
 func SelfGenerateTLSServerCertificate(name string, dnsNames []string) (*Certificate, string, error) {
-	tempDir, err := ioutil.TempDir("", "self-generated-server-certificates-")
+	tempDir, err := ioutil.TempDir("", TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern)
 	if err != nil {
 		return nil, "", err
 	}
