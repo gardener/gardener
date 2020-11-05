@@ -78,10 +78,15 @@ Such objects need a special protection against deletion requests as long as they
 
 Therefore, the Shoot Reference Controller scans shoot clusters for referenced objects and adds the finalizer `gardener.cloud/reference-protection` to their `.metadata.finalizers` list.
 The scanned shoot also gets this finalizer to enable a proper garbage collection in case the Gardener-Controller-Manager is offline at the moment of an incoming deletion request.
-When an object is not actively referenced any more because the shoot specification has changed or all related shoots were deleted (are in deletion), the controller will remove the added finalizer again, so that the object can safely be deleted or garbage collected.
+When an object is not actively referenced anymore because the shoot specification has changed or all related shoots were deleted (are in deletion), the controller will remove the added finalizer again, so that the object can safely be deleted or garbage collected.
 
-The Shoot Reference Controller inspects the following references:
-- DNS provider secrets (`.spec.dns.provider`)
-- Audit policy configmaps (`.spec.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef`)
+The Shoot Reference Controller can inspect the following references:
+
+- Enabled by default:
+  - DNS provider secrets (`.spec.dns.provider`)
+- Disabled by default:
+  - Audit policy configmaps (`.spec.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef`)
+
+> If you want to enable the audit policy configmap protection then you can set the `.controllers.shootReference.protectAuditPolicyConfigMaps` to `true` in the component configuration.
 
 Further checks might be added in the future.

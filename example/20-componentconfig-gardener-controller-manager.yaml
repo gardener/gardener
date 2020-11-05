@@ -25,6 +25,7 @@ controllers:
     syncPeriod: 60m
   shootReference:
     concurrentSyncs: 5
+    protectAuditPolicyConfigMaps: true
   project:
     concurrentSyncs: 5
     minimumLifetimeDays: 30
