@@ -24,6 +24,7 @@ import (
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	config "github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -58,6 +59,7 @@ var _ = Describe("Shoot References", func() {
 		clientMap       clientmap.ClientMap
 		secretLister    SecretLister
 		configMapLister ConfigMapLister
+		cfg             = &config.ShootReferenceControllerConfiguration{}
 	)
 
 	BeforeEach(func() {
@@ -79,7 +81,7 @@ var _ = Describe("Shoot References", func() {
 	})
 
 	JustBeforeEach(func() {
-		reconciler = NewShootReferenceReconciler(logger.NewNopLogger(), clientMap, secretLister, configMapLister)
+		reconciler = NewShootReferenceReconciler(logger.NewNopLogger(), clientMap, secretLister, configMapLister, cfg)
 		injected, err := inject.StopChannelInto(ctx.Done(), reconciler)
 		Expect(injected).To(BeTrue())
 		Expect(err).NotTo(HaveOccurred())
@@ -480,11 +482,12 @@ var _ = Describe("Shoot References", func() {
 	})
 
 	Context("Audit policy ConfigMap reference test", func() {
-		var (
-			configMaps []corev1.ConfigMap
-		)
+		var configMaps []corev1.ConfigMap
 
 		BeforeEach(func() {
+			cfg.ProtectAuditPolicyConfigMaps = pointer.BoolPtr(true)
+			reconciler = NewShootReferenceReconciler(logger.NewNopLogger(), clientMap, secretLister, configMapLister, cfg)
+
 			secretLister = func(ctx context.Context, secrets *corev1.SecretList, opts ...client.ListOption) error {
 				return cl.List(ctx, secrets, opts...)
 			}
