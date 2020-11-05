@@ -1077,12 +1077,19 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		if apiServerConfig.AuditConfig != nil &&
 			apiServerConfig.AuditConfig.AuditPolicy != nil &&
 			apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil {
+
 			auditPolicy, err := b.getAuditPolicy(apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, b.Shoot.Info.Namespace)
 			if err != nil {
-				return fmt.Errorf("retrieving audit policy from the ConfigMap '%v' failed with reason '%v'", apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, err)
-			}
-			defaultValues["auditConfig"] = map[string]interface{}{
-				"auditPolicy": auditPolicy,
+				// Ignore missing audit configuration on shoot deletion to prevent failing redeployments of the
+				// kube-apiserver in case the end-user deleted the configmap before/simultaneously to the shoot
+				// deletion.
+				if !apierrors.IsNotFound(err) || b.Shoot.Info.DeletionTimestamp == nil {
+					return fmt.Errorf("retrieving audit policy from the ConfigMap '%v' failed with reason '%v'", apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, err)
+				}
+			} else {
+				defaultValues["auditConfig"] = map[string]interface{}{
+					"auditPolicy": auditPolicy,
+				}
 			}
 		}
 
