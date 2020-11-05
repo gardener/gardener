@@ -32,22 +32,22 @@ livenessProbe:
   httpGet:
     path: /ready
     port: metrics
-  initialDelaySeconds: 45
+  initialDelaySeconds: 120
 
 readinessProbe:
   httpGet:
     path: /ready
     port: metrics
-  initialDelaySeconds: 45
+  initialDelaySeconds: 120
 
 replicas: 1
 
 resources:
   limits:
-    cpu: 100m
-    memory: 256Mi
+    cpu: 450m
+    memory: 512Mi
   requests:
-    cpu: 20m
+    cpu: 200m
     memory: 64Mi
 
 securityContext:
@@ -67,8 +67,8 @@ hvpa:
     cpu: 800m
     memory: 2G
   minAllowed:
-    cpu: 20m
-    memory: 200M
+    cpu: 200m
+    memory: 64M
   targetAverageUtilizationCpu: 80
   targetAverageUtilizationMemory: 80
   scaleUpStabilization:
@@ -91,8 +91,8 @@ hvpa:
         percentage: 80
   limitsRequestsGapScaleParams:
     cpu:
-      value: "200m"
+      value: "300m"
       percentage: 40
     memory:
-      value: "300M"
+      value: "400M"
       percentage: 40
