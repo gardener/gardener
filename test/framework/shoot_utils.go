@@ -37,7 +37,7 @@ import (
 
 // ShootSeedNamespace gets the shoot namespace in the seed
 func (f *ShootFramework) ShootSeedNamespace() string {
-	return computeTechnicalID(f.Project.Name, f.Shoot)
+	return ComputeTechnicalID(f.Project.Name, f.Shoot)
 }
 
 // ShootKubeconfigSecretName gets the name of the secret with the kubeconfig of the shoot

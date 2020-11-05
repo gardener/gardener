@@ -218,7 +218,7 @@ func (f *ShootFramework) AddShoot(ctx context.Context, shootName, shootNamespace
 		return errors.Wrap(err, "could not add schemes to shoot scheme")
 	}
 	if err := retry.UntilTimeout(ctx, k8sClientInitPollInterval, k8sClientInitTimeout, func(ctx context.Context) (bool, error) {
-		shootClient, err = kubernetes.NewClientFromSecret(ctx, f.SeedClient.DirectClient(), computeTechnicalID(f.Project.Name, shoot), gardencorev1beta1.GardenerName, kubernetes.WithClientOptions(client.Options{
+		shootClient, err = kubernetes.NewClientFromSecret(ctx, f.SeedClient.DirectClient(), ComputeTechnicalID(f.Project.Name, shoot), gardencorev1beta1.GardenerName, kubernetes.WithClientOptions(client.Options{
 			Scheme: shootScheme,
 		}))
 		if err != nil {
