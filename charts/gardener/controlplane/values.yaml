@@ -356,6 +356,7 @@ global:
           syncPeriod: 24h
         shootReference:
           concurrentSyncs: 5
+          protectAuditPolicyConfigMaps: false
       leaderElection:
         leaderElect: true
         leaseDuration: 15s
