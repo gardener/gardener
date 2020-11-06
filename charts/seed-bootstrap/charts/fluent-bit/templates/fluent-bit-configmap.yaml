@@ -15,6 +15,12 @@ data:
 {{- include "input.conf" . }}
 
   filter-kubernetes.conf: |-
+    [FILTER]
+        Name                lua
+        Match               kubernetes.*
+        script              add_tag_to_record.lua
+        call                add_tag_to_record
+
     # Systemd Filters
     [FILTER]
         Name record_modifier
@@ -241,12 +247,6 @@ data:
         Match               kubernetes.*
         script              modify_severity.lua
         call                cb_modify
-
-    [FILTER]
-        Name                lua
-        Match               kubernetes.*
-        script              add_tag_to_record.lua
-        call                add_tag_to_record
 
   output.conf: |-
     # Output section
