@@ -81,6 +81,8 @@ The component configuration of the Gardener Controller Manager offers to configu
 * `staleGracePeriodDays`: Don't compute auto-delete timestamps for stale `Project`s that are unused for only less than `staleGracePeriodDays`. This is to not unnecessarily make people/end-users nervous "just because" they haven't actively used their `Project` for a given amount of time. When you change this value then already assigned auto-delete timestamps may be removed again if the new grace period is not yet exceeded.
 * `staleExpirationTimeDays`: Expiration time after which stale `Project`s are finally auto-deleted (after `.status.staleSinceTimestamp`). If this value is changed and an auto-delete timestamp got already assigned to the projects then the new value will only take effect if it's increased. Hence, decreasing the `staleExpirationTimeDays` will not decrease already assigned auto-delete timestamps.
 
+> Gardener administrators/operators can exclude specific `Project`s from the stale check by annotating the related `Namespace` resource with `project.gardener.cloud/skip-stale-check=true`.
+
 ### Event Controller
 
 With the Gardener Event Controller you can prolong the lifespan of events related to Shoot clusters.

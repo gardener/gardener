@@ -254,6 +254,11 @@ const (
 	// Deprecated: Use `ProjectName` instead.
 	ProjectNameDeprecated = "project.garden.sapcloud.io/name"
 
+	// ProjectSkipStaleCheck is the key of an annotation on a project namespace that marks the associated Project to be
+	// skipped by the stale project controller. If the project has already configured stale timestamps in its status
+	// then they will be reset.
+	ProjectSkipStaleCheck = "project.gardener.cloud/skip-stale-check"
+
 	// NamespaceProject is they key of an annotation on namespace whose value holds the project uid.
 	NamespaceProject = "namespace.gardener.cloud/project"
 

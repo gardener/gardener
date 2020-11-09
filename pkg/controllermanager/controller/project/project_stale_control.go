@@ -17,6 +17,7 @@ package project
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -86,6 +87,7 @@ func NewDefaultStaleControl(
 	backupEntryLister gardencorelisters.BackupEntryLister,
 	secretBindingLister gardencorelisters.SecretBindingLister,
 	quotaLister gardencorelisters.QuotaLister,
+	namespaceLister kubecorev1listers.NamespaceLister,
 	secretLister kubecorev1listers.SecretLister,
 ) StaleControlInterface {
 	return &defaultStaleControl{
@@ -96,6 +98,7 @@ func NewDefaultStaleControl(
 		backupEntryLister,
 		secretBindingLister,
 		quotaLister,
+		namespaceLister,
 		secretLister,
 	}
 }
@@ -108,6 +111,7 @@ type defaultStaleControl struct {
 	backupEntryLister   gardencorelisters.BackupEntryLister
 	secretBindingLister gardencorelisters.SecretBindingLister
 	quotaLister         gardencorelisters.QuotaLister
+	namespaceLister     kubecorev1listers.NamespaceLister
 	secretLister        kubecorev1listers.SecretLister
 }
 
@@ -132,6 +136,22 @@ func (c *defaultStaleControl) ReconcileStaleProject(obj *gardencorev1beta1.Proje
 	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return fmt.Errorf("failed to get garden client: %w", err)
+	}
+
+	// Skip projects whose namespace is annotated with the skip-stale-check annotation.
+	namespace, err := c.namespaceLister.Get(*project.Spec.Namespace)
+	if err != nil {
+		return err
+	}
+
+	var skipStaleCheck bool
+	if value, ok := namespace.Annotations[common.ProjectSkipStaleCheck]; ok {
+		skipStaleCheck, _ = strconv.ParseBool(value)
+	}
+
+	if skipStaleCheck {
+		projectLogger.Infof("[STALE PROJECT RECONCILE] Namespace %q is annotated with %s, skipping the check and considering the project as 'not stale'", *project.Spec.Namespace, common.ProjectSkipStaleCheck)
+		return c.markProjectAsNotStale(ctx, gardenClient.Client(), project)
 	}
 
 	// Skip projects that are not older than the configured minimum lifetime in days. This allows having Projects for a
