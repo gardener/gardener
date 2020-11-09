@@ -27,6 +27,7 @@ import (
 	"github.com/golang/mock/gomock"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -86,7 +87,6 @@ var _ = Describe("#KubeAPIServerSNI", func() {
 	})
 
 	Context("destroy", func() {
-
 		Context("applier returns an error", func() {
 			var (
 				ctrl *gomock.Controller
@@ -130,5 +130,48 @@ var _ = Describe("#KubeAPIServerSNI", func() {
 			Expect(defaultDepWaiter.Destroy(ctx)).ToNot(HaveOccurred())
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).ToNot(HaveOccurred())
 		})
+	})
+})
+
+var _ = Describe("#AnyDeployedSNI", func() {
+	var (
+		ctx      context.Context
+		c        client.Client
+		createVS = func(name string, namespace string) *unstructured.Unstructured {
+			return &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "networking.istio.io/v1beta1",
+					"kind":       "VirtualService",
+					"metadata": map[string]interface{}{
+						"name":      name,
+						"namespace": namespace,
+					},
+				},
+			}
+		}
+	)
+
+	BeforeEach(func() {
+		ctx = context.TODO()
+		s := runtime.NewScheme()
+		// TODO(mvladev): can't directly import the istio apis due to dependency issues.
+		s.AddKnownTypeWithName(schema.FromAPIVersionAndKind("networking.istio.io/v1beta1", "VirtualServiceList"), &unstructured.UnstructuredList{})
+		s.AddKnownTypeWithName(schema.FromAPIVersionAndKind("networking.istio.io/v1beta1", "VirtualService"), &unstructured.Unstructured{})
+		c = fake.NewFakeClientWithScheme(s)
+	})
+
+	It("returns true when exists", func() {
+		Expect(c.Create(ctx, createVS("kube-apiserver", "test"))).NotTo(HaveOccurred())
+		any, err := AnyDeployedSNI(ctx, c)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(any).To(BeTrue())
+	})
+
+	It("returns false when does not exists", func() {
+		any, err := AnyDeployedSNI(ctx, c)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(any).To(BeFalse())
 	})
 })
