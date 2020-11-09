@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
@@ -44,13 +45,10 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
-
 	"github.com/gardener/gardener/pkg/version"
 
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,6 +56,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
+	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -342,6 +341,33 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		}
 	}
 
+	// Fetch component-specific dependency-watchdog configuration
+	var dependencyWatchdogConfigurations []string
+	for _, componentFn := range []component.DependencyWatchdogConfiguration{
+		func() (string, error) { return etcd.DependencyWatchdogConfiguration(v1beta1constants.ETCDRoleMain) },
+	} {
+		dwdConfig, err := componentFn()
+		if err != nil {
+			return err
+		}
+		dependencyWatchdogConfigurations = append(dependencyWatchdogConfigurations, dwdConfig)
+	}
+
+	// Fetch component-specific central monitoring configuration
+	var centralScrapeConfigs = strings.Builder{}
+
+	for _, componentFn := range []component.CentralMonitoringConfiguration{
+		etcd.CentralMonitoringConfiguration,
+	} {
+		centralMonitoringConfig, err := componentFn()
+		if err != nil {
+			return err
+		}
+		for _, config := range centralMonitoringConfig.ScrapeConfigs {
+			centralScrapeConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
+		}
+	}
+
 	// Logging feature gate
 	var (
 		loggingEnabled                    = gardenletfeatures.FeatureGate.Enabled(features.Logging)
@@ -375,11 +401,12 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			}
 		}
 
-		componentsFunctions := []component.LoggingConfiguration{
-			clusterautoscaler.LoggingConfiguration,
-			kubescheduler.LoggingConfiguration,
-			kubecontrollermanager.LoggingConfiguration,
-			metricsserver.LoggingConfiguration,
+		componentsFunctions := []component.CentralLoggingConfiguration{
+			etcd.CentralLoggingConfiguration,
+			clusterautoscaler.CentralLoggingConfiguration,
+			kubescheduler.CentralLoggingConfiguration,
+			kubecontrollermanager.CentralLoggingConfiguration,
+			metricsserver.CentralLoggingConfiguration,
 		}
 		userAllowedComponents := []string{v1beta1constants.DeploymentNameKubeAPIServer}
 
@@ -671,7 +698,8 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			"reserve-excess-capacity": DesiredExcessCapacity(),
 		},
 		"prometheus": map[string]interface{}{
-			"storage": seed.GetValidVolumeSize("10Gi"),
+			"storage":                 seed.GetValidVolumeSize("10Gi"),
+			"additionalScrapeConfigs": centralScrapeConfigs.String(),
 		},
 		"aggregatePrometheus": map[string]interface{}{
 			"storage":    seed.GetValidVolumeSize("20Gi"),
@@ -707,6 +735,9 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 					"caCert":           deployedSecretsMap[common.VPASecretName].Data[secretsutils.DataKeyCertificateCA],
 				},
 			},
+		},
+		"dependency-watchdog": map[string]interface{}{
+			"config": strings.Join(dependencyWatchdogConfigurations, "\n"),
 		},
 		"hvpa": map[string]interface{}{
 			"enabled": hvpaEnabled,

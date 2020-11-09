@@ -21,10 +21,10 @@ import (
 )
 
 const (
-	// EtcdBackupSecretName is the name of secret having credentials for etcd backups.
-	EtcdBackupSecretName string = "etcd-backup"
-
-	backupBucketName string = "bucketName"
+	// BackupSecretName is the name of secret having credentials for etcd backups.
+	BackupSecretName string = "etcd-backup"
+	// DataKeyBackupBucketName is the name of a data key whose value contains the backup bucket name.
+	DataKeyBackupBucketName string = "bucketName"
 )
 
 // BackupEntryDelegate preforms provider specific operation with BackupBucket resources.

@@ -1,5 +1,5 @@
 {{- define "systemd-sysctl" -}}
-{{/* it needs to be reloaded, because the /etcd/sysctl.d/ files are not present, when this is started for a first time */ -}}
+{{/* it needs to be reloaded, because the /etc/sysctl.d/ files are not present, when this is started for a first time */ -}}
 - name: systemd-sysctl.service
   command: restart
   enable: true

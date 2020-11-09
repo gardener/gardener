@@ -73,59 +73,6 @@ data:
         regex: true
         action: drop
     scrape_configs:
-    - job_name: kube-etcd3
-      scheme: https
-      tls_config:
-        # This is needed because the etcd's certificates are not are generated
-        # for a specific pod IP
-        insecure_skip_verify: true
-        cert_file: /srv/kubernetes/etcd/client/tls.crt
-        key_file: /srv/kubernetes/etcd/client/tls.key
-      kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          names: [{{ .Release.Namespace }}]
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_service_label_app
-        - __meta_kubernetes_endpoint_port_name
-        action: keep
-        regex: etcd-statefulset;client
-      - source_labels: [ __meta_kubernetes_service_label_role ]
-        target_label: role
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        target_label: pod
-      metric_relabel_configs:
-      - regex: ^instance$
-        action: labeldrop
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubeETCD3 | indent 6 }}
-
-    - job_name: kube-etcd3-backup-restore
-      scheme: https
-      tls_config:
-        # Etcd backup sidecar TLS reuses etcd's TLS cert bundle
-        insecure_skip_verify: true
-        cert_file: /srv/kubernetes/etcd/client/tls.crt
-        key_file: /srv/kubernetes/etcd/client/tls.key
-      kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          names: [{{ .Release.Namespace }}]
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_service_label_app
-        - __meta_kubernetes_endpoint_port_name
-        action: keep
-        regex: etcd-statefulset;backuprestore
-      - source_labels: [ __meta_kubernetes_service_label_role ]
-        target_label: role
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        target_label: pod
-      metric_relabel_configs:
-      - regex: ^instance$
-        action: labeldrop
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubeETCD3BR | indent 6 }}
-
     - job_name: kube-apiserver
       scheme: https
       kubernetes_sd_configs:

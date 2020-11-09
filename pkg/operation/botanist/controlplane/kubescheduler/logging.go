@@ -37,7 +37,7 @@ const (
 `
 )
 
-// LoggingConfiguration returns a fluent-bit parser and filter for the kube-scheduler logs.
-func LoggingConfiguration() (component.LoggingConfig, error) {
-	return component.LoggingConfig{Filters: loggingFilter, Parsers: loggingParser, PodPrefix: v1beta1constants.DeploymentNameKubeScheduler, UserExposed: true}, nil
+// CentralLoggingConfiguration returns a fluent-bit parser and filter for the kube-scheduler logs.
+func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
+	return component.CentralLoggingConfig{Filters: loggingFilter, Parsers: loggingParser, PodPrefix: v1beta1constants.DeploymentNameKubeScheduler, UserExposed: true}, nil
 }

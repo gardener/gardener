@@ -362,13 +362,3 @@ func (b *Botanist) cleanupTunnelSecrets(ctx context.Context, gardenerResourceDat
 	}
 	return nil
 }
-
-func dnsNamesForEtcd(namespace string) []string {
-	names := []string{
-		fmt.Sprintf("%s-local", v1beta1constants.ETCDMain),
-		fmt.Sprintf("%s-local", v1beta1constants.ETCDEvents),
-	}
-	names = append(names, kutil.DNSNamesForService(fmt.Sprintf("%s-client", v1beta1constants.ETCDMain), namespace)...)
-	names = append(names, kutil.DNSNamesForService(fmt.Sprintf("%s-client", v1beta1constants.ETCDEvents), namespace)...)
-	return names
-}

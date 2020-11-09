@@ -21,6 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
@@ -45,7 +46,7 @@ var wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
 		CertType:   secrets.CACert,
 	},
 	v1beta1constants.SecretNameCAETCD: {
-		Name:       v1beta1constants.SecretNameCAETCD,
+		Name:       etcd.SecretNameCA,
 		CommonName: "etcd",
 		CertType:   secrets.CACert,
 	},
@@ -130,7 +131,10 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 		}, kubernetes.DNSNamesForService(common.KonnectivityServerCertName, b.Shoot.SeedNamespace)...)
 
-		etcdCertDNSNames = dnsNamesForEtcd(b.Shoot.SeedNamespace)
+		etcdCertDNSNames = append(
+			b.Shoot.Components.ControlPlane.EtcdMain.ServiceDNSNames(),
+			b.Shoot.Components.ControlPlane.EtcdEvents.ServiceDNSNames()...,
+		)
 
 		endUserCrtValidity = common.EndUserCrtValidity
 	)
@@ -468,7 +472,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 		// Secret definition for etcd server
 		&secrets.CertificateSecretConfig{
-			Name: common.EtcdServerTLS,
+			Name: etcd.SecretNameServer,
 
 			CommonName:   "etcd-server",
 			Organization: nil,
@@ -481,7 +485,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 		// Secret definition for etcd server
 		&secrets.CertificateSecretConfig{
-			Name: common.EtcdClientTLS,
+			Name: etcd.SecretNameClient,
 
 			CommonName:   "etcd-client",
 			Organization: nil,

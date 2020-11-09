@@ -22,9 +22,9 @@ import (
 )
 
 var _ = Describe("Logging", func() {
-	Describe("#LoggingConfiguration", func() {
+	Describe("#CentralLoggingConfiguration", func() {
 		It("should return the expected logging parser and filter", func() {
-			loggingConfig, err := LoggingConfiguration()
+			loggingConfig, err := CentralLoggingConfiguration()
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(loggingConfig.Parsers).To(Equal(`[PARSER]

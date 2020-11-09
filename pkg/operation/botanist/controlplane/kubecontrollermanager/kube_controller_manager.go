@@ -46,17 +46,16 @@ import (
 
 const (
 	// ServiceName is the name of the service of the kube-controller-manager.
-	ServiceName = "kube-controller-manager"
-	// kubeControllerManagerContainerName is the name of the kube-controller-manager container
-	kubeControllerManagerContainerName = v1beta1constants.DeploymentNameKubeControllerManager
+	ServiceName   = "kube-controller-manager"
+	containerName = v1beta1constants.DeploymentNameKubeControllerManager
 
 	// SecretName is a constant for the secret name for the kube-controller-manager's kubeconfig secret.
 	SecretName = "kube-controller-manager"
 	// SecretNameServer is the name of the kube-controller-manager server certificate secret.
 	SecretNameServer = "kube-controller-manager-server"
 
-	// labelRole is a constant for the value of a label with key 'role'.
-	labelRole = "controller-manager"
+	// LabelRole is a constant for the value of a label with key 'role'.
+	LabelRole = "controller-manager"
 	// portNameMetrics is a constant for the name of the metrics port of the kube-controller-manager.
 	portNameMetrics = "metrics"
 
@@ -193,7 +192,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
 					{
-						Name:            kubeControllerManagerContainerName,
+						Name:            containerName,
 						Image:           k.image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						Command:         command,
@@ -300,7 +299,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		}
 		vpa.Spec.ResourcePolicy = &autoscalingv1beta2.PodResourcePolicy{
 			ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{{
-				ContainerName: kubeControllerManagerContainerName,
+				ContainerName: containerName,
 				MinAllowed: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("100m"),
 					corev1.ResourceMemory: resource.MustParse("100Mi"),
@@ -360,7 +359,7 @@ func (k *kubeControllerManager) computeServerURIScheme() corev1.URIScheme {
 func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
-		v1beta1constants.LabelRole: labelRole,
+		v1beta1constants.LabelRole: LabelRole,
 	}
 }
 

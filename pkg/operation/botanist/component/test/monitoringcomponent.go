@@ -26,10 +26,16 @@ import (
 )
 
 // ScrapeConfigs is a utility test function for MonitoringComponents in order to test the scape configurations.
-func ScrapeConfigs(c component.MonitoringComponent, expectedScrapeConfig string) {
+func ScrapeConfigs(c component.MonitoringComponent, expectedScrapeConfigs ...string) {
 	scrapeConfigs, err := c.ScrapeConfigs()
 	Expect(err).NotTo(HaveOccurred())
-	Expect(scrapeConfigs).To(ConsistOf(Equal(expectedScrapeConfig)))
+
+	matchers := make([]interface{}, 0, len(expectedScrapeConfigs))
+	for _, sc := range expectedScrapeConfigs {
+		matchers = append(matchers, Equal(sc))
+	}
+
+	Expect(scrapeConfigs).To(ConsistOf(matchers...))
 }
 
 // AlertingRules is a utility test function for MonitoringComponents in order to test the alerting rules.

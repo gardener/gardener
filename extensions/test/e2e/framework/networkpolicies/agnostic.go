@@ -15,6 +15,11 @@
 package networkpolicies
 
 import (
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
+
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -27,8 +32,8 @@ func (a *Agnostic) KubeAPIServer() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(443),
 		Pod: NewPod("kube-apiserver", labels.Set{
-			"app":  "kubernetes",
-			"role": "apiserver",
+			v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
+			v1beta1constants.LabelRole: "apiserver",
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
@@ -47,9 +52,9 @@ func (a *Agnostic) KubeControllerManagerSecured() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(10257),
 		Pod: NewPod("kube-controller-manager-https", labels.Set{
-			"app":                     "kubernetes",
-			"garden.sapcloud.io/role": "controlplane",
-			"role":                    "controller-manager",
+			v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
+			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.LabelRole:            kubecontrollermanager.LabelRole,
 		}, ">= 1.13"),
 		ExpectedPolicies: sets.NewString(
 			"allow-to-public-networks",
@@ -68,9 +73,9 @@ func (a *Agnostic) KubeControllerManagerNotSecured() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(10252),
 		Pod: NewPod("kube-controller-manager-http", labels.Set{
-			"app":                     "kubernetes",
-			"garden.sapcloud.io/role": "controlplane",
-			"role":                    "controller-manager",
+			v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
+			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.LabelRole:            kubecontrollermanager.LabelRole,
 		}, "< 1.13"),
 		ExpectedPolicies: sets.NewString(
 			"allow-to-public-networks",
@@ -89,9 +94,9 @@ func (a *Agnostic) KubeSchedulerSecured() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(10259),
 		Pod: NewPod("kube-scheduler-https", labels.Set{
-			"app":                     "kubernetes",
-			"garden.sapcloud.io/role": "controlplane",
-			"role":                    "scheduler",
+			v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
+			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.LabelRole:            kubescheduler.LabelRole,
 		}, ">= 1.13"),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
@@ -107,9 +112,9 @@ func (a *Agnostic) KubeSchedulerNotSecured() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(10251),
 		Pod: NewPod("kube-scheduler-http", labels.Set{
-			"app":                     "kubernetes",
-			"garden.sapcloud.io/role": "controlplane",
-			"role":                    "scheduler",
+			v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
+			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.LabelRole:            kubescheduler.LabelRole,
 		}, "< 1.13"),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
@@ -125,12 +130,12 @@ func (a *Agnostic) EtcdMain() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(2379),
 		Pod: NewPod("etcd-main", labels.Set{
-			"app":                     "etcd-statefulset",
-			"garden.sapcloud.io/role": "controlplane",
-			"role":                    "main",
+			v1beta1constants.LabelApp:             etcd.LabelAppValue,
+			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.LabelRole:            v1beta1constants.ETCDRoleMain,
 		}),
 		ExpectedPolicies: sets.NewString(
-			"allow-etcd",
+			etcd.NetworkPolicyName,
 			"allow-to-dns",
 			"allow-to-public-networks",
 			"allow-to-private-networks",
@@ -144,12 +149,12 @@ func (a *Agnostic) EtcdEvents() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(2379),
 		Pod: NewPod("etcd-events", labels.Set{
-			"app":                     "etcd-statefulset",
-			"garden.sapcloud.io/role": "controlplane",
-			"role":                    "events",
+			v1beta1constants.LabelApp:             etcd.LabelAppValue,
+			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.LabelRole:            v1beta1constants.ETCDRoleEvents,
 		}),
 		ExpectedPolicies: sets.NewString(
-			"allow-etcd",
+			etcd.NetworkPolicyName,
 			"allow-to-dns",
 			"allow-to-public-networks",
 			"allow-to-private-networks",
@@ -163,9 +168,9 @@ func (a *Agnostic) CloudControllerManagerNotSecured() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(10253),
 		Pod: NewPod("cloud-controller-manager-http", labels.Set{
-			"app":                     "kubernetes",
-			"garden.sapcloud.io/role": "controlplane",
-			"role":                    "cloud-controller-manager",
+			v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
+			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.LabelRole:            "cloud-controller-manager",
 		}, "< 1.13"),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
@@ -182,9 +187,9 @@ func (a *Agnostic) CloudControllerManagerSecured() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(10258),
 		Pod: NewPod("cloud-controller-manager-https", labels.Set{
-			"app":                     "kubernetes",
-			"garden.sapcloud.io/role": "controlplane",
-			"role":                    "cloud-controller-manager",
+			v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
+			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.LabelRole:            "cloud-controller-manager",
 		}, ">= 1.13"),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
@@ -203,9 +208,9 @@ func (a *Agnostic) Loki() *SourcePod {
 			{Name: "metrics", Port: 3100},
 		},
 		Pod: NewPod("loki", labels.Set{
-			"app":                 "loki",
-			"gardener.cloud/role": "logging",
-			"role":                "logging",
+			v1beta1constants.LabelApp:   "loki",
+			v1beta1constants.GardenRole: "logging",
+			v1beta1constants.LabelRole:  "logging",
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
@@ -220,8 +225,8 @@ func (a *Agnostic) Grafana() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(3000),
 		Pod: NewPod("grafana", labels.Set{
-			"component":               "grafana",
-			"garden.sapcloud.io/role": "monitoring",
+			"component":                           "grafana",
+			v1beta1constants.DeprecatedGardenRole: "monitoring",
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-grafana",
@@ -236,9 +241,9 @@ func (a *Agnostic) KubeStateMetricsShoot() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(8080),
 		Pod: NewPod("kube-state-metrics-shoot", labels.Set{
-			"component":               "kube-state-metrics",
-			"garden.sapcloud.io/role": "monitoring",
-			"type":                    "shoot",
+			"component":                           "kube-state-metrics",
+			v1beta1constants.DeprecatedGardenRole: "monitoring",
+			"type":                                "shoot",
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
@@ -254,9 +259,9 @@ func (a *Agnostic) MachineControllerManager() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(10258),
 		Pod: NewPod("machine-controller-manager", labels.Set{
-			"app":                     "kubernetes",
-			"garden.sapcloud.io/role": "controlplane",
-			"role":                    "machine-controller-manager",
+			v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
+			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.LabelRole:            "machine-controller-manager",
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
@@ -275,9 +280,9 @@ func (a *Agnostic) Prometheus() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(9090),
 		Pod: NewPod("prometheus", labels.Set{
-			"app":                     "prometheus",
-			"garden.sapcloud.io/role": "monitoring",
-			"role":                    "monitoring",
+			v1beta1constants.LabelApp:             "prometheus",
+			v1beta1constants.DeprecatedGardenRole: "monitoring",
+			v1beta1constants.LabelRole:            "monitoring",
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-prometheus",
@@ -295,8 +300,8 @@ func (a *Agnostic) Prometheus() *SourcePod {
 func (a *Agnostic) AddonManager() *SourcePod {
 	return &SourcePod{
 		Pod: NewPod("gardener-resource-manager", labels.Set{
-			"app":                     "gardener-resource-manager",
-			"garden.sapcloud.io/role": "controlplane",
+			v1beta1constants.LabelApp:             "gardener-resource-manager",
+			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-to-dns",
@@ -311,8 +316,8 @@ func (a *Agnostic) AddonManager() *SourcePod {
 func (a *Agnostic) Busybox() *SourcePod {
 	return &SourcePod{
 		Pod: NewPod("busybox", labels.Set{
-			"app":  "busybox",
-			"role": "testing",
+			v1beta1constants.LabelApp:  "busybox",
+			v1beta1constants.LabelRole: "testing",
 		}),
 	}
 }

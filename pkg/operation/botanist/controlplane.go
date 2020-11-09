@@ -17,7 +17,6 @@ package botanist
 import (
 	"context"
 	"fmt"
-	"hash/crc32"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -32,6 +31,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -39,7 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/version"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -51,7 +50,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	audit_internal "k8s.io/apiserver/pkg/apis/audit"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
@@ -356,26 +354,6 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	}
 
 	return client.IgnoreNotFound(b.ScaleETCDToZero(ctx))
-}
-
-// ScaleETCDToZero scales ETCD main and events to zero
-func (b *Botanist) ScaleETCDToZero(ctx context.Context) error {
-	for _, etcd := range []string{v1beta1constants.ETCDEvents, v1beta1constants.ETCDMain} {
-		if err := kubernetes.ScaleEtcd(ctx, b.K8sSeedClient.DirectClient(), kutil.Key(b.Shoot.SeedNamespace, etcd), 0); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// ScaleETCDToOne scales ETCD main and events replicas to one
-func (b *Botanist) ScaleETCDToOne(ctx context.Context) error {
-	for _, etcd := range []string{v1beta1constants.ETCDEvents, v1beta1constants.ETCDMain} {
-		if err := kubernetes.ScaleEtcd(ctx, b.K8sSeedClient.DirectClient(), kutil.Key(b.Shoot.SeedNamespace, etcd), 1); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // ScaleKubeAPIServerToOne scales kube-apiserver replicas to one
@@ -834,12 +812,12 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"checksum/secret-kube-apiserver-kubelet": b.CheckSums["kube-apiserver-kubelet"],
 			"checksum/secret-static-token":           b.CheckSums[common.StaticTokenSecretName],
 			"checksum/secret-service-account-key":    b.CheckSums["service-account-key"],
-			"checksum/secret-etcd-ca":                b.CheckSums[v1beta1constants.SecretNameCAETCD],
-			"checksum/secret-etcd-client-tls":        b.CheckSums["etcd-client-tls"],
+			"checksum/secret-etcd-ca":                b.CheckSums[etcd.SecretNameCA],
+			"checksum/secret-etcd-client-tls":        b.CheckSums[etcd.SecretNameClient],
 			"networkpolicy/konnectivity-enabled":     strconv.FormatBool(b.Shoot.KonnectivityTunnelEnabled),
 		}
 		defaultValues = map[string]interface{}{
-			"etcdServicePort":           2379,
+			"etcdServicePort":           etcd.PortEtcdClient,
 			"kubernetesVersion":         b.Shoot.Info.Spec.Kubernetes.Version,
 			"priorityClassName":         v1beta1constants.PriorityClassNameShootControlPlane,
 			"enableBasicAuthentication": gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info),
@@ -1327,161 +1305,6 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 	}
 }
 
-// DeployETCD deploys two etcd clusters via StatefulSets. The first etcd cluster (called 'main') is used for all the
-// data the Shoot Kubernetes cluster needs to store, whereas the second etcd luster (called 'events') is only used to
-// store the events data. The objectstore is also set up to store the backups.
-func (b *Botanist) DeployETCD(ctx context.Context) error {
-	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
-	if b.ShootedSeed != nil {
-		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
-	}
-
-	values := map[string]interface{}{
-		"annotations": map[string]string{
-			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-			v1beta1constants.GardenerTimestamp: time.Now().UTC().String(),
-		},
-		"storageCapacity": b.Seed.GetValidVolumeSize("10Gi"),
-	}
-
-	for _, role := range []string{common.EtcdRoleMain, common.EtcdRoleEvents} {
-		var (
-			etcdValues    = make(map[string]interface{})
-			sidecarValues = make(map[string]interface{})
-			hvpaValues    = make(map[string]interface{})
-
-			name = fmt.Sprintf("etcd-%s", role)
-		)
-
-		foundEtcd := true
-		etcd := &druidv1alpha1.Etcd{}
-		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, name), etcd); client.IgnoreNotFound(err) != nil {
-			return err
-		} else if apierrors.IsNotFound(err) {
-			foundEtcd = false
-		}
-
-		statefulSetName := name
-		if foundEtcd && etcd.Status.Etcd.Name != "" {
-			statefulSetName = etcd.Status.Etcd.Name
-		}
-
-		foundStatefulset := true
-		statefulSet := &appsv1.StatefulSet{}
-		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, statefulSetName), statefulSet); client.IgnoreNotFound(err) != nil {
-			return err
-		} else if apierrors.IsNotFound(err) {
-			foundStatefulset = false
-		}
-
-		defragmentSchedule, err := DetermineDefragmentSchedule(b.Shoot.Info, etcd, b.ShootedSeed, role)
-		if err != nil {
-			return err
-		}
-		etcdValues["defragmentSchedule"] = defragmentSchedule
-
-		hvpaValues["enabled"] = hvpaEnabled
-		hvpaValues["maintenanceWindow"] = b.Shoot.Info.Spec.Maintenance.TimeWindow
-
-		podAnnotations := map[string]interface{}{
-			"checksum/secret-etcd-ca":          b.CheckSums[v1beta1constants.SecretNameCAETCD],
-			"checksum/secret-etcd-server-cert": b.CheckSums[common.EtcdServerTLS],
-			"checksum/secret-etcd-client-tls":  b.CheckSums[common.EtcdClientTLS],
-		}
-
-		switch role {
-		case common.EtcdRoleMain:
-			podAnnotations["cluster-autoscaler.kubernetes.io/safe-to-evict"] = "false"
-			etcdValues["metrics"] = "extensive" // etcd-main emits extensive (histogram) metrics
-			hvpaValues["minAllowed"] = map[string]interface{}{
-				"cpu":    "200m",
-				"memory": "700M",
-			}
-
-			if b.Seed.Info.Spec.Backup != nil {
-				secret := &corev1.Secret{}
-				if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.BackupSecretName), secret); err != nil {
-					return err
-				}
-
-				snapshotSchedule, err := DetermineBackupSchedule(b.Shoot.Info, etcd)
-				if err != nil {
-					return err
-				}
-
-				sidecarValues["backup"] = map[string]interface{}{
-					"provider":                 b.Seed.Info.Spec.Backup.Provider,
-					"secretRefName":            common.BackupSecretName,
-					"prefix":                   common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID),
-					"container":                string(secret.Data[common.BackupBucketName]),
-					"fullSnapshotSchedule":     snapshotSchedule,
-					"deltaSnapshotMemoryLimit": "100Mi",
-					"deltaSnapshotPeriod":      "5m",
-				}
-			}
-
-		case common.EtcdRoleEvents:
-			hvpaValues["minAllowed"] = map[string]interface{}{
-				"cpu":    "50m",
-				"memory": "200M",
-			}
-		}
-
-		// TODO(georgekuruvillak): Remove this, once HVPA support updating resources in CRD spec
-		if foundStatefulset && hvpaEnabled {
-			// etcd is already created AND is controlled by HVPA
-			// Keep the "resources" as it is.
-			for k := range statefulSet.Spec.Template.Spec.Containers {
-				v := &statefulSet.Spec.Template.Spec.Containers[k]
-				if v.Name == "etcd" {
-					etcdValues["resources"] = v.Resources.DeepCopy()
-					break
-				} else if v.Name == "backup-restore" {
-					sidecarValues["resources"] = v.Resources.DeepCopy()
-					break
-				}
-			}
-		}
-
-		if b.Shoot.HibernationEnabled {
-			// Restore the replica count from capture statefulSet state.
-			values["replicas"] = 0
-			if foundEtcd {
-				values["replicas"] = etcd.Spec.Replicas
-			} else if foundStatefulset && statefulSet.Spec.Replicas != nil {
-				values["replicas"] = *statefulSet.Spec.Replicas
-			}
-		}
-
-		if !hvpaEnabled {
-			// If HVPA is disabled, delete any HVPA that was already deployed
-			hvpa := &hvpav1alpha1.Hvpa{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: b.Shoot.SeedNamespace,
-					Name:      name,
-				},
-			}
-			if err := b.K8sSeedClient.Client().Delete(ctx, hvpa); err != nil {
-				if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
-					return err
-				}
-			}
-		}
-
-		values["role"] = role
-		values["etcd"] = etcdValues
-		values["sidecar"] = sidecarValues
-		values["hvpa"] = hvpaValues
-		values["podAnnotations"] = podAnnotations
-
-		if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, name, kubernetes.Values(values)); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // CheckTunnelConnection checks if the tunnel connection between the control plane and the shoot networks
 // is established.
 func (b *Botanist) CheckTunnelConnection(ctx context.Context, logger *logrus.Entry, tunnelName string) (bool, error) {
@@ -1509,74 +1332,6 @@ func (b *Botanist) CheckTunnelConnection(ctx context.Context, logger *logrus.Ent
 
 	logger.Info("Tunnel connection has been established.")
 	return retry.Ok()
-}
-
-// DetermineBackupSchedule determines the backup schedule based on the shoot creation and maintenance time window.
-func DetermineBackupSchedule(shoot *gardencorev1beta1.Shoot, etcd *druidv1alpha1.Etcd) (string, error) {
-	if etcd.Spec.Backup.FullSnapshotSchedule != nil {
-		return *etcd.Spec.Backup.FullSnapshotSchedule, nil
-	}
-
-	schedule := "%d %d * * *"
-
-	return determineSchedule(shoot, schedule, func(maintenanceTimeWindow *utils.MaintenanceTimeWindow, shootUID types.UID) string {
-		// Randomize the snapshot timing daily but within last hour.
-		// The 15 minutes buffer is set to snapshot upload time before actual maintenance window start.
-		snapshotWindowBegin := maintenanceTimeWindow.Begin().Add(-1, -15, 0)
-		randomMinutes := int(crc32.ChecksumIEEE([]byte(shootUID)) % 60)
-		snapshotTime := snapshotWindowBegin.Add(0, randomMinutes, 0)
-		return fmt.Sprintf(schedule, snapshotTime.Minute(), snapshotTime.Hour())
-	})
-}
-
-// DetermineDefragmentSchedule determines the defragment schedule based on the shoot creation and maintenance time window.
-func DetermineDefragmentSchedule(shoot *gardencorev1beta1.Shoot, etcd *druidv1alpha1.Etcd, shootedSeed *gardencorev1beta1helper.ShootedSeed, role string) (string, error) {
-	if etcd.Spec.Etcd.DefragmentationSchedule != nil {
-		return *etcd.Spec.Etcd.DefragmentationSchedule, nil
-	}
-
-	schedule := "%d %d */3 * *"
-	if shootedSeed != nil && role == common.EtcdRoleMain {
-		// defrag etcd-main of shooted seeds daily in the maintenance window
-		schedule = "%d %d * * *"
-	}
-
-	return determineSchedule(shoot, schedule, func(maintenanceTimeWindow *utils.MaintenanceTimeWindow, shootUID types.UID) string {
-		// Randomize the defragment timing but within the maintainence window.
-		maintainenceWindowBegin := maintenanceTimeWindow.Begin()
-		windowInMinutes := uint32(maintenanceTimeWindow.Duration().Minutes())
-		randomMinutes := int(crc32.ChecksumIEEE([]byte(shootUID)) % windowInMinutes)
-		maintenanceTime := maintainenceWindowBegin.Add(0, randomMinutes, 0)
-		return fmt.Sprintf(schedule, maintenanceTime.Minute(), maintenanceTime.Hour())
-	})
-}
-
-func determineSchedule(shoot *gardencorev1beta1.Shoot, schedule string, f func(*utils.MaintenanceTimeWindow, types.UID) string) (string, error) {
-	var (
-		begin, end string
-		shootUID   types.UID
-	)
-
-	if shoot.Spec.Maintenance != nil && shoot.Spec.Maintenance.TimeWindow != nil {
-		begin = shoot.Spec.Maintenance.TimeWindow.Begin
-		end = shoot.Spec.Maintenance.TimeWindow.End
-		shootUID = shoot.Status.UID
-	}
-
-	if len(begin) != 0 && len(end) != 0 {
-		maintenanceTimeWindow, err := utils.ParseMaintenanceTimeWindow(begin, end)
-		if err != nil {
-			return "", err
-		}
-
-		if !maintenanceTimeWindow.Equal(utils.AlwaysTimeWindow) {
-			return f(maintenanceTimeWindow, shootUID), nil
-		}
-	}
-
-	creationMinute := shoot.CreationTimestamp.Minute()
-	creationHour := shoot.CreationTimestamp.Hour()
-	return fmt.Sprintf(schedule, creationMinute, creationHour), nil
 }
 
 // RestartControlPlanePods restarts (deletes) pods of the shoot control plane.

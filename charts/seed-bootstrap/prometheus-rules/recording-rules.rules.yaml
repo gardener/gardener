@@ -368,10 +368,12 @@ groups:
   - record: seed:kube_node_status_allocatable_pods:sum
     expr: sum(kube_node_status_allocatable_pods)
 
+  # TODO(wyb1): Replace the following two recording rules with shoot namespaces (gardener.cloud/role=shoot label) to
+  # identify the number of all shoots in the entire seed, and <no. of pods> in such a shoot namespace for the number of
+  # active shoots in the entire seed.
   # Recording rules for the active shoots in the entire seed
   - record: seed:active_shoots_total:sum
     expr: count(kube_pod_info{pod="etcd-main-0"})
-
   # Recording rules for all the shoots in the entire seed
   - record: seed:all_shoots_total:sum
     expr: count(kube_statefulset_replicas{statefulset="etcd-main"})
