@@ -635,6 +635,15 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 		}
 	}
 
+	featureGates := externalConfig.FeatureGates
+	if featureGates == nil {
+		featureGates = shootedSeedConfig.FeatureGates
+	} else {
+		for feature, enabled := range shootedSeedConfig.FeatureGates {
+			featureGates[feature] = enabled
+		}
+	}
+
 	values := map[string]interface{}{
 		"global": map[string]interface{}{
 			"gardenlet": map[string]interface{}{
@@ -665,7 +674,7 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 					"leaderElection":        externalConfig.LeaderElection,
 					"logLevel":              externalConfig.LogLevel,
 					"kubernetesLogLevel":    externalConfig.KubernetesLogLevel,
-					"featureGates":          externalConfig.FeatureGates,
+					"featureGates":          featureGates,
 					"server":                serverConfig,
 					"seedConfig": &configv1alpha1.SeedConfig{
 						Seed: gardencorev1beta1.Seed{

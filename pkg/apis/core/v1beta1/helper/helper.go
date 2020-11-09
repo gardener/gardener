@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
+	"k8s.io/utils/pointer"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -252,6 +253,7 @@ type ShootedSeed struct {
 	NoGardenlet                    bool
 	UseServiceAccountBootstrapping bool
 	WithSecretRef                  bool
+	FeatureGates                   map[string]bool
 }
 
 type ShootedSeedAPIServer struct {
@@ -276,11 +278,6 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	var (
 		flags    = make(map[string]struct{})
 		settings = make(map[string]string)
-
-		trueVar  = true
-		falseVar = false
-
-		shootedSeed ShootedSeed
 	)
 
 	for _, fragment := range strings.Split(annotation, ",") {
@@ -295,6 +292,10 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 
 	if _, ok := flags["true"]; !ok {
 		return nil, nil
+	}
+
+	shootedSeed := ShootedSeed{
+		FeatureGates: parseShootedSeedFeatureGates(settings),
 	}
 
 	apiServer, err := parseShootedSeedAPIServer(settings)
@@ -330,12 +331,11 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	if size, ok := settings["minimumVolumeSize"]; ok {
 		shootedSeed.MinimumVolumeSize = &size
 	}
-
 	if _, ok := flags["disable-dns"]; ok {
-		shootedSeed.DisableDNS = &trueVar
+		shootedSeed.DisableDNS = pointer.BoolPtr(true)
 	}
 	if _, ok := flags["disable-capacity-reservation"]; ok {
-		shootedSeed.DisableCapacityReservation = &trueVar
+		shootedSeed.DisableCapacityReservation = pointer.BoolPtr(true)
 	}
 	if _, ok := flags["no-gardenlet"]; ok {
 		shootedSeed.NoGardenlet = true
@@ -346,18 +346,17 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	if _, ok := flags["with-secret-ref"]; ok {
 		shootedSeed.WithSecretRef = true
 	}
-
 	if _, ok := flags["protected"]; ok {
-		shootedSeed.Protected = &trueVar
+		shootedSeed.Protected = pointer.BoolPtr(true)
 	}
 	if _, ok := flags["unprotected"]; ok {
-		shootedSeed.Protected = &falseVar
+		shootedSeed.Protected = pointer.BoolPtr(false)
 	}
 	if _, ok := flags["visible"]; ok {
-		shootedSeed.Visible = &trueVar
+		shootedSeed.Visible = pointer.BoolPtr(true)
 	}
 	if _, ok := flags["invisible"]; ok {
-		shootedSeed.Visible = &falseVar
+		shootedSeed.Visible = pointer.BoolPtr(false)
 	}
 
 	return &shootedSeed, nil
@@ -423,6 +422,23 @@ func parseShootedSeedBackup(settings map[string]string) (*gardencorev1beta1.Seed
 	}
 
 	return backup, nil
+}
+
+func parseShootedSeedFeatureGates(settings map[string]string) map[string]bool {
+	featureGates := make(map[string]bool)
+
+	for k, v := range settings {
+		if strings.HasPrefix(k, "featureGates.") {
+			val, _ := strconv.ParseBool(v)
+			featureGates[strings.Split(k, ".")[1]] = val
+		}
+	}
+
+	if len(featureGates) == 0 {
+		return nil
+	}
+
+	return featureGates
 }
 
 func parseShootedSeedProviderConfig(settings map[string]string) (*runtime.RawExtension, error) {
