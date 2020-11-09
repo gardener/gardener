@@ -145,6 +145,71 @@ var _ = Describe("Project Validation Tests", func() {
 			}))))
 		})
 
+		It("should forbid invalid service account usernames", func() {
+			project.Spec.Members = append(project.Spec.Members,
+				core.ProjectMember{
+					Subject: rbacv1.Subject{
+						APIGroup: rbacv1.GroupName,
+						Kind:     rbacv1.UserKind,
+						Name:     "system:serviceaccount:abcd",
+					},
+				},
+			)
+
+			errorList := ValidateProject(project)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.members[2].name"),
+			}))))
+		})
+
+		It("should forbid duplicate members", func() {
+			project.Spec.Members = append(project.Spec.Members,
+				core.ProjectMember{
+					Subject: rbacv1.Subject{
+						APIGroup: rbacv1.GroupName,
+						Kind:     rbacv1.UserKind,
+						Name:     "system:serviceaccount:foo:bar",
+					},
+				},
+				core.ProjectMember{
+					Subject: rbacv1.Subject{
+						Kind:      rbacv1.ServiceAccountKind,
+						Name:      "bar",
+						Namespace: "foo",
+					},
+				},
+				core.ProjectMember{
+					Subject: rbacv1.Subject{
+						APIGroup: rbacv1.GroupName,
+						Kind:     rbacv1.GroupKind,
+						Name:     "baz",
+					},
+				},
+				core.ProjectMember{
+					Subject: rbacv1.Subject{
+						APIGroup: rbacv1.GroupName,
+						Kind:     rbacv1.GroupKind,
+						Name:     "baz",
+					},
+				},
+			)
+
+			errorList := ValidateProject(project)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.members[3]"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.members[5]"),
+				})),
+			))
+		})
+
 		It("should not allow duplicate in roles", func() {
 			project.Spec.Members[0].Roles = []string{"admin", "admin"}
 
