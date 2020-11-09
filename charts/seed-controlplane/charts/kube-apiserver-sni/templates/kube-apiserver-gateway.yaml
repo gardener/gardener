@@ -8,7 +8,7 @@ metadata:
     role: apiserver
 spec:
   selector:
-    istio: ingressgateway
+{{ .Values.istioIngressGateway.labels | toYaml | trim | indent 4 }}
   servers:
   - hosts:
 {{ toYaml .Values.hosts | indent 4 }}

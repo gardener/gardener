@@ -2,7 +2,7 @@ apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
   name: {{ .Release.Namespace }}
-  namespace: {{ .Values.istioIngressNamespace }}
+  namespace: {{ .Values.istioIngressGateway.namespace }}
   ownerReferences:
   - apiVersion: v1
     kind: Namespace
@@ -13,7 +13,7 @@ metadata:
 spec:
   workloadSelector:
     labels:
-      istio: ingressgateway
+{{ .Values.istioIngressGateway.labels | toYaml | trim | indent 6 }}
   configPatches:
   - applyTo: FILTER_CHAIN
     match:

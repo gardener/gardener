@@ -230,14 +230,18 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 }
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
-func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubernetes.Interface, seed *Seed, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, componentImageVectors imagevector.ComponentImageVectors, loggingConfig *config.Logging) error {
+func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubernetes.Interface, seed *Seed, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, componentImageVectors imagevector.ComponentImageVectors, conf *config.GardenletConfiguration) error {
 	const chartName = "seed-bootstrap"
 
-	gardenNamespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: v1beta1constants.GardenNamespace,
-		},
-	}
+	var (
+		loggingConfig   = conf.Logging
+		gardenNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: v1beta1constants.GardenNamespace,
+			},
+		}
+	)
+
 	if err := k8sSeedClient.Client().Create(ctx, gardenNamespace); err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
 	}
@@ -617,7 +621,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 
 		igw := istio.NewIngressGateway(
 			igwConfig,
-			common.IstioIngressGatewayNamespace,
+			*conf.SNI.Ingress.Namespace,
 			chartApplier,
 			common.ChartPath,
 			k8sSeedClient.Client(),
@@ -628,7 +632,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		}
 	}
 
-	proxy := istio.NewProxyProtocolGateway(common.IstioIngressGatewayNamespace, chartApplier, common.ChartPath)
+	proxy := istio.NewProxyProtocolGateway(*conf.SNI.Ingress.Namespace, chartApplier, common.ChartPath)
 
 	if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
 		if err := proxy.Deploy(ctx); err != nil {

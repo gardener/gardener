@@ -486,12 +486,6 @@ const (
 	// IstioNamespace is the istio-system namespace
 	IstioNamespace = "istio-system"
 
-	// IstioIngressGatewayNamespace is the istio-ingress namespace
-	IstioIngressGatewayNamespace = "istio-ingress"
-
-	// IstioIngressGatewayServiceName is the name of the Service used for SNI to the Shoot API Servers.
-	IstioIngressGatewayServiceName = "istio-ingressgateway"
-
 	// APIServerProxyImageName is the image of apiserver-proxy
 	APIServerProxyImageName = "apiserver-proxy"
 

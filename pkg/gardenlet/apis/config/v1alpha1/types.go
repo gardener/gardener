@@ -76,6 +76,10 @@ type GardenletConfiguration struct {
 	// by the Gardenlet in the seed clusters.
 	// +optional
 	Logging *Logging `json:"logging,omitempty"`
+	// SNI contains an optional configuration for the APIServerSNI feature used
+	// by the Gardenlet in the seed clusters.
+	// +optional
+	SNI *SNI `json:"sni,omitempty"`
 }
 
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
@@ -364,6 +368,30 @@ type TLSServer struct {
 	ServerKeyPath string `json:"serverKeyPath"`
 }
 
+// SNI contains an optional configuration for the APIServerSNI feature used
+// by the Gardenlet in the seed clusters.
+type SNI struct {
+	// Ingress is the ingressgateway configuration.
+	// +optional
+	Ingress *SNIIngress `json:"ingress,omitempty"`
+}
+
+// SNIIngress contains configuration of the ingressgateway.
+type SNIIngress struct {
+	// ServiceName is the name of the ingressgateway Service.
+	// Defaults to "istio-ingressgateway".
+	// +optional
+	ServiceName *string `json:"serviceName,omitempty"`
+	// Namespace is the namespace in which the ingressgateway is deployed in.
+	// Defaults to "istio-ingress".
+	// +optional
+	Namespace *string `json:"namespace,omitempty"`
+	// Labels of the ingressgateway
+	// Defaults to "istio: ingressgateway".
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+}
+
 const (
 	// GardenletDefaultLockObjectNamespace is the default lock namespace for leader election.
 	GardenletDefaultLockObjectNamespace = "garden"
@@ -395,9 +423,13 @@ const (
 
 	// DefaultControllerConcurrentSyncs is a default value for concurrent syncs for controllers.
 	DefaultControllerConcurrentSyncs = 20
+
+	// DefaultSNIIngresNamespace is the default sni ingress namespace.
+	DefaultSNIIngresNamespace = "istio-ingress"
+
+	// DefaultSNIIngresServiceName is the default sni ingress service name.
+	DefaultSNIIngresServiceName = "istio-ingressgateway"
 )
 
-var (
-	// DefaultControllerSyncPeriod is a default value for sync period for controllers.
-	DefaultControllerSyncPeriod = metav1.Duration{Duration: time.Minute}
-)
+// DefaultControllerSyncPeriod is a default value for sync period for controllers.
+var DefaultControllerSyncPeriod = metav1.Duration{Duration: time.Minute}

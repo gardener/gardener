@@ -99,6 +99,10 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 	if obj.Server.HTTPS.Port == 0 {
 		obj.Server.HTTPS.Port = 2720
 	}
+
+	if obj.SNI == nil {
+		obj.SNI = &SNI{}
+	}
 }
 
 // SetDefaults_GardenClientConnection sets defaults for the client connection objects.
@@ -118,7 +122,7 @@ func SetDefaults_ShootClientConnection(obj *ShootClientConnection) {
 
 // SetDefaults_ClientConnectionConfiguration sets defaults for the client connection objects.
 func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
-	//componentbaseconfigv1alpha1.RecommendedDefaultClientConnectionConfiguration(obj)
+	// componentbaseconfigv1alpha1.RecommendedDefaultClientConnectionConfiguration(obj)
 	// https://github.com/kubernetes/client-go/issues/76#issuecomment-396170694
 	if len(obj.AcceptContentTypes) == 0 {
 		obj.AcceptContentTypes = "application/json"
@@ -277,5 +281,32 @@ func SetDefaults_SeedAPIServerNetworkPolicyControllerConfiguration(obj *SeedAPIS
 		// only use few workers for each seed, as the API server endpoints should stay the same most of the time.
 		v := 3
 		obj.ConcurrentSyncs = &v
+	}
+}
+
+// SetDefaults_SNI sets defaults for SNI.
+func SetDefaults_SNI(obj *SNI) {
+	if obj.Ingress == nil {
+		obj.Ingress = &SNIIngress{}
+	}
+}
+
+// SetDefaults_SNIIngress sets defaults for SNI ingressgateway.
+func SetDefaults_SNIIngress(obj *SNIIngress) {
+	var (
+		defaultNS      = DefaultSNIIngresNamespace
+		defaultSVCName = DefaultSNIIngresServiceName
+	)
+
+	if obj.Namespace == nil {
+		obj.Namespace = &defaultNS
+	}
+
+	if obj.ServiceName == nil {
+		obj.ServiceName = &defaultSVCName
+	}
+
+	if obj.Labels == nil {
+		obj.Labels = map[string]string{"istio": "ingressgateway"}
 	}
 }

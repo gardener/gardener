@@ -594,7 +594,7 @@ func (b *Botanist) waitUntilControlPlaneDeleted(ctx context.Context, name string
 // DeployGardenerResourceManager deploys the gardener-resource-manager which will use CRD resources in order
 // to ensure that they exist in a cluster/reconcile them in case somebody changed something.
 func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
-	var name = "gardener-resource-manager"
+	name := "gardener-resource-manager"
 
 	defaultValues := map[string]interface{}{
 		"podAnnotations": map[string]interface{}{
@@ -1167,7 +1167,7 @@ func (b *Botanist) kubeAPIServiceService(sniPhase component.Phase) component.Dep
 			SNIPhase:                  sniPhase,
 		},
 		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
-		client.ObjectKey{Name: common.IstioIngressGatewayServiceName, Namespace: common.IstioIngressGatewayNamespace},
+		client.ObjectKey{Name: *b.Config.SNI.Ingress.ServiceName, Namespace: *b.Config.SNI.Ingress.Namespace},
 		b.K8sSeedClient.ChartApplier(),
 		b.ChartsRootPath,
 		b.Logger,
@@ -1224,8 +1224,11 @@ func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 	return component.OpDestroy(controlplane.NewKubeAPIServerSNI(
 		&controlplane.KubeAPIServerSNIValues{
-			Name:                  v1beta1constants.DeploymentNameKubeAPIServer,
-			IstioIngressNamespace: common.IstioIngressGatewayNamespace,
+			Name: v1beta1constants.DeploymentNameKubeAPIServer,
+			IstioIngressGateway: controlplane.IstioIngressGateway{
+				Namespace: *b.Config.SNI.Ingress.Namespace,
+				Labels:    b.Config.SNI.Ingress.Labels,
+			},
 		},
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),
@@ -1248,15 +1251,17 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 				common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 				common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 			},
-			Name:                     v1beta1constants.DeploymentNameKubeAPIServer,
-			IstioIngressNamespace:    common.IstioIngressGatewayNamespace,
+			Name: v1beta1constants.DeploymentNameKubeAPIServer,
+			IstioIngressGateway: controlplane.IstioIngressGateway{
+				Namespace: *b.Config.SNI.Ingress.Namespace,
+				Labels:    b.Config.SNI.Ingress.Labels,
+			},
 			EnableKonnectivityTunnel: b.Shoot.KonnectivityTunnelEnabled,
 		},
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),
 		b.ChartsRootPath,
 	)
-
 }
 
 // setAPIServerAddress sets the IP address of the API server's LoadBalancer.

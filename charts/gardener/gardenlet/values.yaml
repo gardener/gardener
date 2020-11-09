@@ -117,6 +117,13 @@ global:
         #     ...
         #     -----END RSA PRIVATE KEY-----
       featureGates: {}
+      # sni: # SNI configuration used for APIServerSNI and ManagedIstio feature gates.
+      #   ingress:
+      #     serviceName: istio-ingress
+      #     namespace: istio-ingress
+      #     labels:
+      #       istio: ingressgateway
+
     # seedSelector: {}
     # seedConfig: {}
     # logging:

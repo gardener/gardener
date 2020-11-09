@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("GardenletConfiguration", func() {
@@ -37,6 +38,13 @@ var _ = Describe("GardenletConfiguration", func() {
 						BindAddress: "0.0.0.0",
 						Port:        2720,
 					},
+				},
+			},
+			SNI: &config.SNI{
+				Ingress: &config.SNIIngress{
+					Namespace:   pointer.StringPtr("foo"),
+					Labels:      map[string]string{"baz": "bar"},
+					ServiceName: pointer.StringPtr("waldo"),
 				},
 			},
 		}
@@ -99,6 +107,61 @@ var _ = Describe("GardenletConfiguration", func() {
 					"Field": Equal("server.https.port"),
 				})),
 			))
+		})
+
+		It("should forbid not specifying a sni configuration", func() {
+			cfg.SNI = nil
+
+			errorList := ValidateGardenletConfiguration(cfg)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("sni"),
+			}))))
+		})
+
+		It("should forbid not specifying a sni ingress configuration", func() {
+			cfg.SNI.Ingress = nil
+
+			errorList := ValidateGardenletConfiguration(cfg)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("sni.ingress"),
+			}))))
+		})
+
+		It("should forbid not specifying a sni ingress namespace configuration", func() {
+			cfg.SNI.Ingress.Namespace = pointer.StringPtr("")
+
+			errorList := ValidateGardenletConfiguration(cfg)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("sni.ingress.namespace"),
+			}))))
+		})
+
+		It("should forbid not specifying a sni ingress service name configuration", func() {
+			cfg.SNI.Ingress.ServiceName = pointer.StringPtr("")
+
+			errorList := ValidateGardenletConfiguration(cfg)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("sni.ingress.serviceName"),
+			}))))
+		})
+
+		It("should forbid not specifying a sni ingress labels configuration", func() {
+			cfg.SNI.Ingress.Labels = nil
+
+			errorList := ValidateGardenletConfiguration(cfg)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("sni.ingress.labels"),
+			}))))
 		})
 	})
 })
