@@ -14,7 +14,7 @@
     ConditionPathExists=!/var/lib/kubelet/kubeconfig-real
     [Service]
     Type=oneshot
-    ExecStart=/usr/sbin/update-ca-certificates
+    ExecStart=/usr/sbin/update-ca-certificates --fresh
     ExecStartPost=/bin/systemctl restart docker
     [Install]
     WantedBy=multi-user.target
