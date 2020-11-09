@@ -76,7 +76,12 @@ func (c *Controller) seedRegistrationAdd(obj interface{}) {
 		return
 	}
 
-	c.seedRegistrationQueue.Add(key)
+	// spread registration of shooted seeds (including gardenlet updates/rollouts) across the configured sync jitter
+	// period to avoid overloading the gardener-apiserver if all gardenlets in all shooted seeds are (re)starting
+	// roughly at the same time
+	duration := utils.RandomDurationWithMetaDuration(c.config.Controllers.ShootedSeedRegistration.SyncJitterPeriod)
+	logger.Logger.Infof("Added shooted seed %q with delay %s to the registration queue", key, duration)
+	c.seedRegistrationQueue.AddAfter(key, duration)
 }
 
 func (c *Controller) seedRegistrationUpdate(oldObj, newObj interface{}) {

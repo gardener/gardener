@@ -71,6 +71,9 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 	if obj.Controllers.ShootStateSync == nil {
 		obj.Controllers.ShootStateSync = &ShootStateSyncControllerConfiguration{}
 	}
+	if obj.Controllers.ShootedSeedRegistration == nil {
+		obj.Controllers.ShootedSeedRegistration = &ShootedSeedRegistrationControllerConfiguration{}
+	}
 
 	if obj.Controllers.SeedAPIServerNetworkPolicy == nil {
 		obj.Controllers.SeedAPIServerNetworkPolicy = &SeedAPIServerNetworkPolicyControllerConfiguration{}
@@ -268,6 +271,14 @@ func SetDefaults_ShootStateSyncControllerConfiguration(obj *ShootStateSyncContro
 	if obj.SyncPeriod == nil {
 		v := metav1.Duration{Duration: time.Minute}
 		obj.SyncPeriod = &v
+	}
+}
+
+// SetDefaults_ShootedSeedRegistrationControllerConfiguration sets defaults for the shooted seed registration controller.
+func SetDefaults_ShootedSeedRegistrationControllerConfiguration(obj *ShootedSeedRegistrationControllerConfiguration) {
+	if obj.SyncJitterPeriod == nil {
+		v := metav1.Duration{Duration: 5 * time.Minute}
+		obj.SyncJitterPeriod = &v
 	}
 }
 

@@ -116,6 +116,8 @@ type GardenletControllerConfiguration struct {
 	ShootCare *ShootCareControllerConfiguration
 	// ShootStateSync defines the configuration of the ShootState controller.
 	ShootStateSync *ShootStateSyncControllerConfiguration
+	// ShootedSeedRegistration the configuration of the shooted seed registration controller.
+	ShootedSeedRegistration *ShootedSeedRegistrationControllerConfiguration
 	// SeedAPIServerNetworkPolicy defines the configuration of the SeedAPIServerNetworkPolicy controller.
 	SeedAPIServerNetworkPolicy *SeedAPIServerNetworkPolicyControllerConfiguration
 }
@@ -215,6 +217,14 @@ type ShootCareControllerConfiguration struct {
 	StaleExtensionHealthCheckThreshold *metav1.Duration
 	// ConditionThresholds defines the condition threshold per condition type.
 	ConditionThresholds []ConditionThreshold
+}
+
+// ShootedSeedRegistrationControllerConfiguration defines the configuration of the shooted seed registration controller.
+type ShootedSeedRegistrationControllerConfiguration struct {
+	// SyncJitterPeriod is a jitter duration for the reconciler sync that can be used to distribute the syncs randomly.
+	// If its value is greater than 0 then the shooted seeds will not be enqueued immediately but only after a random
+	// duration between 0 and the configured value. It is defaulted to 5m.
+	SyncJitterPeriod *metav1.Duration
 }
 
 // ConditionThreshold defines the duration how long a flappy condition stays in progressing state.
