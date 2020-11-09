@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
@@ -356,7 +357,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		lokiVpa := &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "loki-vpa", Namespace: v1beta1constants.GardenNamespace}}
 		if err := k8sSeedClient.Client().Delete(ctx, lokiVpa); client.IgnoreNotFound(err) != nil {
 			return err
-
 		}
 
 		if hvpaEnabled {
@@ -561,6 +561,11 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		imageVectorOverwrites[name] = data
 	}
 
+	anySNI, err := controlplane.AnyDeployedSNI(ctx, k8sSeedClient.Client())
+	if err != nil {
+		return err
+	}
+
 	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
 		istiodImage, err := imageVector.FindImage(common.IstioIstiodImageName)
 		if err != nil {
@@ -590,19 +595,24 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			Image:           igwImage.String(),
 			IstiodNamespace: common.IstioNamespace,
 			Annotations:     seed.LoadBalancerServiceAnnotations,
+			Ports:           []corev1.ServicePort{},
 		}
 
-		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
-			ports := []corev1.ServicePort{
-				{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
-				{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(9443)},
-			}
+		// even if SNI is being disabled, the existing ports must stay the same
+		// until all APIServer SNI resources are removed.
+		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) || anySNI {
+			igwConfig.Ports = append(
+				igwConfig.Ports,
+				corev1.ServicePort{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
+				corev1.ServicePort{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(9443)},
+			)
 
 			if gardenletfeatures.FeatureGate.Enabled(features.KonnectivityTunnel) {
-				ports = append(ports, corev1.ServicePort{Name: "tls-tunnel", Port: 8132, TargetPort: intstr.FromInt(8132)})
+				igwConfig.Ports = append(
+					igwConfig.Ports,
+					corev1.ServicePort{Name: "tls-tunnel", Port: 8132, TargetPort: intstr.FromInt(8132)},
+				)
 			}
-
-			igwConfig.Ports = ports
 		}
 
 		igw := istio.NewIngressGateway(
@@ -699,7 +709,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		"global-network-policies": map[string]interface{}{
 			"denyAll":         false,
 			"privateNetworks": privateNetworks,
-			"sniEnabled":      gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI),
+			"sniEnabled":      gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) || anySNI,
 		},
 		"gardenerResourceManager": map[string]interface{}{
 			"resourceClass": v1beta1constants.SeedResourceManagerClass,

@@ -22,7 +22,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // kubeAPIServiceValues configure the kube-apiserver service SNI.
@@ -86,3 +88,19 @@ func (k *kubeAPIServerSNI) Destroy(ctx context.Context) error {
 
 func (k *kubeAPIServerSNI) Wait(ctx context.Context) error        { return nil }
 func (k *kubeAPIServerSNI) WaitCleanup(ctx context.Context) error { return nil }
+
+// AnyDeployedSNI returns true if any SNI is deployed in the cluster.
+func AnyDeployedSNI(ctx context.Context, c client.Client) (bool, error) {
+	l := &unstructured.UnstructuredList{
+		Object: map[string]interface{}{
+			"apiVersion": "networking.istio.io/v1beta1",
+			"kind":       "VirtualServiceList",
+		},
+	}
+
+	if err := c.List(ctx, l, client.MatchingField("metadata.name", "kube-apiserver"), client.Limit(1)); err != nil {
+		return false, err
+	}
+
+	return len(l.Items) > 0, nil
+}
