@@ -394,7 +394,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		loggingRewriteTagFilter := `[FILTER]
     Name          rewrite_tag
     Match         kubernetes.*
-    Rule          $kubernetes['pod_name'] ^(` + strings.Join(userAllowedComponents, "-?.+|") + `-?.+)$ ` + userExposedComponentTagPrefix + `.$TAG true
+    Rule          $tag ^kubernetes\.var\.log\.containers\.(` + strings.Join(userAllowedComponents, "-.+?|") + `-.+?)_ ` + userExposedComponentTagPrefix + `.$TAG true
     Emitter_Name  re_emitted
 `
 		filters.WriteString(fmt.Sprintln(loggingRewriteTagFilter))
