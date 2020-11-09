@@ -168,6 +168,9 @@ spec:
   #     - apiGroup: apps
   #       resource: deployments
   #       size: 500
+  #   requests:
+  #     maxNonMutatingInflight: 400
+  #     maxMutatingInflight: 200
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
   #   podEvictionTimeout: 2m0s

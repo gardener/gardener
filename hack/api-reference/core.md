@@ -3878,6 +3878,65 @@ Starting from kubernetes v1.19, the API server&rsquo;s watch cache size is adapt
 cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>requests</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerRequests">
+KubeAPIServerRequests
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Requests contains configuration for request-specific settings for the kube-apiserver.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.KubeAPIServerRequests">KubeAPIServerRequests
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>maxNonMutatingInflight</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
+exceeds this, it rejects requests.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxMutatingInflight</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
+exceeds this, it rejects requests.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeControllerManagerConfig">KubeControllerManagerConfig

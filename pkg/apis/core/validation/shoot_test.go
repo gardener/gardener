@@ -1511,6 +1511,40 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)
 		})
 
+		It("should not allow too high values for max inflight requests fields", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.KubeAPIServerRequests{
+				MaxNonMutatingInflight: pointer.Int32Ptr(123123123),
+				MaxMutatingInflight:    pointer.Int32Ptr(412412412),
+			}
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxNonMutatingInflight"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxMutatingInflight"),
+			}))))
+		})
+
+		It("should not allow negative values for max inflight requests fields", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.KubeAPIServerRequests{
+				MaxNonMutatingInflight: pointer.Int32Ptr(-1),
+				MaxMutatingInflight:    pointer.Int32Ptr(-1),
+			}
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxNonMutatingInflight"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxMutatingInflight"),
+			}))))
+		})
+
 		Context("KubeControllerManager validation < 1.12", func() {
 			It("should forbid unsupported HPA configuration", func() {
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.SyncPeriod = makeDurationPointer(100 * time.Millisecond)

@@ -136,6 +136,12 @@ spec:
         {{- if semverCompare ">= 1.16" .Values.kubernetesVersion }}
         - --livez-grace-period=1m
         {{- end }}
+        {{- if .Values.maxNonMutatingRequestsInflight }}
+        - --max-requests-inflight={{ .Values.maxNonMutatingRequestsInflight }}
+        {{- end }}
+        {{- if .Values.maxMutatingRequestsInflight }}
+        - --max-mutating-requests-inflight={{ .Values.maxMutatingRequestsInflight }}
+        {{- end }}
         - --profiling=false
         - --proxy-client-cert-file=/srv/kubernetes/aggregator/kube-aggregator.crt
         - --proxy-client-key-file=/srv/kubernetes/aggregator/kube-aggregator.key

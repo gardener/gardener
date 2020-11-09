@@ -141,6 +141,15 @@ func SetDefaults_Shoot(obj *Shoot) {
 			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(false)
 		}
 	}
+	if obj.Spec.Kubernetes.KubeAPIServer.Requests == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.Requests = &KubeAPIServerRequests{}
+	}
+	if obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight = pointer.Int32Ptr(400)
+	}
+	if obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight = pointer.Int32Ptr(200)
+	}
 
 	if obj.Spec.Kubernetes.KubeControllerManager == nil {
 		obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}

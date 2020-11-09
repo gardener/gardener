@@ -407,6 +407,27 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_Shoot(obj)
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication).To(PointTo(BeFalse()))
 		})
+
+		It("should default the max inflight requests fields", func() {
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight).To(Equal(pointer.Int32Ptr(400)))
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight).To(Equal(pointer.Int32Ptr(200)))
+		})
+
+		It("should not default the max inflight requests fields", func() {
+			var (
+				maxNonMutatingRequestsInflight int32 = 123
+				maxMutatingRequestsInflight    int32 = 456
+			)
+
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{Requests: &KubeAPIServerRequests{}}
+			obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight = &maxNonMutatingRequestsInflight
+			obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight = &maxMutatingRequestsInflight
+
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight).To(Equal(&maxNonMutatingRequestsInflight))
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight).To(Equal(&maxMutatingRequestsInflight))
+		})
 	})
 
 	Describe("#SetDefaults_Maintenance", func() {

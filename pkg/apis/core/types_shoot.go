@@ -366,6 +366,18 @@ type KubeAPIServerConfig struct {
 	// Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch
 	// cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
 	WatchCacheSizes *WatchCacheSizes
+	// Requests contains configuration for request-specific settings for the kube-apiserver.
+	Requests *KubeAPIServerRequests
+}
+
+// KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
+type KubeAPIServerRequests struct {
+	// MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
+	// exceeds this, it rejects requests.
+	MaxNonMutatingInflight *int32
+	// MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
+	// exceeds this, it rejects requests.
+	MaxMutatingInflight *int32
 }
 
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
