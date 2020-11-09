@@ -17,7 +17,9 @@ package managedresources_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
+	"time"
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/utils/managedresources"
@@ -46,8 +48,10 @@ func TestManagedResources(t *testing.T) {
 var _ = Describe("managedresources", func() {
 	var (
 		ctrl *gomock.Controller
+		c    *mockclient.MockClient
 
-		c *mockclient.MockClient
+		ctx     = context.TODO()
+		fakeErr = fmt.Errorf("fake")
 
 		managedResource = func(keepObjects bool) *resourcesv1alpha1.ManagedResource {
 			return &resourcesv1alpha1.ManagedResource{
@@ -75,37 +79,137 @@ var _ = Describe("managedresources", func() {
 
 	Describe("#KeepManagedResourceObjects", func() {
 		It("should update the managed resource if the value of keepObjects is different", func() {
-			c.EXPECT().Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
 				DoAndReturn(clientGet(managedResource(false)))
-			c.EXPECT().Update(context.TODO(), managedResource(true)).Return(nil)
+			c.EXPECT().Update(ctx, managedResource(true)).Return(nil)
 
-			err := KeepManagedResourceObjects(context.TODO(), c, namespace, name, true)
+			err := KeepManagedResourceObjects(ctx, c, namespace, name, true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should not update the managed resource if the value of keepObjects is the same", func() {
-			c.EXPECT().Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
 				DoAndReturn(clientGet(managedResource(true)))
 
-			err := KeepManagedResourceObjects(context.TODO(), c, namespace, name, true)
+			err := KeepManagedResourceObjects(ctx, c, namespace, name, true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should not fail if the managed resource is not found", func() {
-			c.EXPECT().Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
 				Return(apierrors.NewNotFound(schema.GroupResource{}, name))
 
-			err := KeepManagedResourceObjects(context.TODO(), c, namespace, name, true)
+			err := KeepManagedResourceObjects(ctx, c, namespace, name, true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should fail if the managed resource could not be updated", func() {
-			c.EXPECT().Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
 				DoAndReturn(clientGet(managedResource(false)))
-			c.EXPECT().Update(context.TODO(), managedResource(true)).Return(errors.New("error"))
+			c.EXPECT().Update(ctx, managedResource(true)).Return(errors.New("error"))
 
-			err := KeepManagedResourceObjects(context.TODO(), c, namespace, name, true)
+			err := KeepManagedResourceObjects(ctx, c, namespace, name, true)
 			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("#WaitUntilManagedResourceHealthy", func() {
+		It("should fail when the managed resource cannot be read", func() {
+			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr)
+
+			Expect(WaitUntilManagedResourceHealthy(ctx, c, namespace, name)).To(MatchError(fakeErr))
+		})
+
+		It("should retry when the managed resource is not healthy yet", func() {
+			oldInterval := IntervalWait
+			defer func() { IntervalWait = oldInterval }()
+			IntervalWait = time.Millisecond
+
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 2,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+					},
+				})),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 2,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 2,
+					},
+				})),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 2,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 2,
+						Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: resourcesv1alpha1.ConditionTrue,
+							},
+						},
+					},
+				})),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 2,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 2,
+						Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: resourcesv1alpha1.ConditionTrue,
+							},
+						},
+					},
+				})),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 1,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: resourcesv1alpha1.ConditionFalse,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: resourcesv1alpha1.ConditionFalse,
+							},
+						},
+					},
+				})),
+				c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(clientGet(&resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 1,
+					},
+					Status: resourcesv1alpha1.ManagedResourceStatus{
+						ObservedGeneration: 1,
+						Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+							{
+								Type:   resourcesv1alpha1.ResourcesApplied,
+								Status: resourcesv1alpha1.ConditionTrue,
+							},
+							{
+								Type:   resourcesv1alpha1.ResourcesHealthy,
+								Status: resourcesv1alpha1.ConditionTrue,
+							},
+						},
+					},
+				})),
+			)
+
+			Expect(WaitUntilManagedResourceHealthy(ctx, c, namespace, name)).To(Succeed())
 		})
 	})
 })

@@ -176,6 +176,26 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 		return fmt.Errorf("failed to get garden client: %w", err)
 	}
 
+	// Initialize conditions based on the current status.
+	conditionSeedBootstrapped := gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
+
+	seedObj, err := seedpkg.
+		NewBuilder().
+		WithSeedObject(seed).
+		Build()
+	if err != nil {
+		message := fmt.Sprintf("Failed to create a Seed object (%s).", err.Error())
+		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, message)
+		seedLogger.Error(message)
+		_ = c.updateSeedStatus(ctx, gardenClient.GardenCore(), seed, "<unknown>", conditionSeedBootstrapped)
+		return err
+	}
+
+	seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeed(seed))
+	if err != nil {
+		return fmt.Errorf("failed to get seed client: %w", err)
+	}
+
 	// The deletionTimestamp labels a Seed as intended to get deleted. Before deletion,
 	// it has to be ensured that no Shoots are depending on the Seed anymore.
 	// When this happens the controller will remove the finalizers from the Seed so that it can be garbage collected.
@@ -215,6 +235,15 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 		//}
 		if len(associatedShoots) == 0 && len(associatedBackupBuckets) == 0 {
 			seedLogger.Info("No Shoots or BackupBuckets are referencing the Seed. Deletion accepted.")
+
+			// Debootstrap the Seed cluster.
+			if err := seedpkg.DebootstrapCluster(ctx, seedClient); err != nil {
+				message := fmt.Sprintf("Failed to unbootstrap Seed Cluster (%s).", err.Error())
+				conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "DebootstrapFailed", message)
+				seedLogger.Error(message)
+				_ = c.updateSeedStatus(ctx, gardenClient.GardenCore(), seed, "<unknown>", conditionSeedBootstrapped)
+				return err
+			}
 
 			if seed.Spec.SecretRef != nil {
 				// Remove finalizer from referenced secret
@@ -292,26 +321,6 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 			seedLogger.Error(err.Error())
 			return err
 		}
-	}
-
-	// Initialize conditions based on the current status.
-	conditionSeedBootstrapped := gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-
-	seedObj, err := seedpkg.
-		NewBuilder().
-		WithSeedObject(seed).
-		Build()
-	if err != nil {
-		message := fmt.Sprintf("Failed to create a Seed object (%s).", err.Error())
-		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, message)
-		seedLogger.Error(message)
-		_ = c.updateSeedStatus(ctx, gardenClient.GardenCore(), seed, "<unknown>", conditionSeedBootstrapped)
-		return err
-	}
-
-	seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeed(seed))
-	if err != nil {
-		return fmt.Errorf("failed to get seed client: %w", err)
 	}
 
 	// Check whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.

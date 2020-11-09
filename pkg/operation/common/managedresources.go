@@ -36,28 +36,45 @@ func DeployManagedResourceForShoot(ctx context.Context, c client.Client, name, n
 	return deployManagedResource(ctx, c, name, namespace, data, NewManagedResourceForShoot(c, name, namespace, keepObjects))
 }
 
+// DeleteManagedResourceForShoot deploys a ManagedResource CR for the shoot's gardener-resource-manager.
+func DeleteManagedResourceForShoot(ctx context.Context, c client.Client, name, namespace string) error {
+	return deleteManagedResource(ctx, c, name, namespace, NewManagedResourceForShoot(c, name, namespace, false))
+}
+
 // DeployManagedResourceForSeed deploys a ManagedResource CR for the seed's gardener-resource-manager.
 func DeployManagedResourceForSeed(ctx context.Context, c client.Client, name, namespace string, keepObjects bool, data map[string][]byte) error {
 	return deployManagedResource(ctx, c, name, namespace, data, NewManagedResourceForSeed(c, name, namespace, keepObjects))
 }
 
-func deployManagedResource(ctx context.Context, c client.Client, name, namespace string, data map[string][]byte, managedResource *manager.ManagedResource) error {
-	secretName, secret := NewManagedResourceSecret(c, name, namespace, data)
+// DeleteManagedResourceForSeed deploys a ManagedResource CR for the seed's gardener-resource-manager.
+func DeleteManagedResourceForSeed(ctx context.Context, c client.Client, name, namespace string) error {
+	return deleteManagedResource(ctx, c, name, namespace, NewManagedResourceForSeed(c, name, namespace, false))
+}
 
-	if err := secret.Reconcile(ctx); err != nil {
+func deployManagedResource(ctx context.Context, c client.Client, name, namespace string, data map[string][]byte, managedResource *manager.ManagedResource) error {
+	secretName, secret := NewManagedResourceSecret(c, name, namespace)
+
+	if err := secret.WithKeyValues(data).Reconcile(ctx); err != nil {
 		return err
 	}
 
 	return managedResource.WithSecretRef(secretName).Reconcile(ctx)
 }
 
+func deleteManagedResource(ctx context.Context, c client.Client, name, namespace string, managedResource *manager.ManagedResource) error {
+	_, secret := NewManagedResourceSecret(c, name, namespace)
+
+	if err := managedResource.Delete(ctx); err != nil {
+		return err
+	}
+	return secret.Delete(ctx)
+}
+
 // NewManagedResourceSecret constructs a new Secret object containing manifests managed by the Gardener-Resource-Manager
 // which can be reconciled.
-func NewManagedResourceSecret(c client.Client, name, namespace string, data map[string][]byte) (string, *manager.Secret) {
+func NewManagedResourceSecret(c client.Client, name, namespace string) (string, *manager.Secret) {
 	secretName := ManagedResourceSecretName(name)
-	return secretName, manager.NewSecret(c).
-		WithNamespacedName(namespace, secretName).
-		WithKeyValues(data)
+	return secretName, manager.NewSecret(c).WithNamespacedName(namespace, secretName)
 }
 
 // NewManagedResourceForShoot constructs a new ManagedResource object for the shoot's Gardener-Resource-Manager.

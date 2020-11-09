@@ -20,10 +20,10 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -82,29 +82,11 @@ func (healthChecker *ManagedResourceHealthChecker) Check(ctx context.Context, re
 	}, nil
 }
 
-func managedResourceIsHealthy(resource *resourcesv1alpha1.ManagedResource) (bool, *string, error) {
-	if err := checkManagedResourceIsHealthy(resource); err != nil {
+func managedResourceIsHealthy(managedResource *resourcesv1alpha1.ManagedResource) (bool, *string, error) {
+	if err := health.CheckManagedResource(managedResource); err != nil {
 		reason := "ManagedResourceUnhealthy"
-		err := fmt.Errorf("managed resource %s in namespace %s is unhealthy: %v", resource.Name, resource.Namespace, err)
+		err := fmt.Errorf("managed resource %s in namespace %s is unhealthy: %v", managedResource.Name, managedResource.Namespace, err)
 		return false, &reason, err
 	}
 	return true, nil, nil
-}
-
-func checkManagedResourceIsHealthy(deployment *resourcesv1alpha1.ManagedResource) error {
-	if deployment.Status.ObservedGeneration < deployment.Generation {
-		return fmt.Errorf("observed generation outdated (%d/%d)", deployment.Status.ObservedGeneration, deployment.Generation)
-	}
-
-	for _, trueConditionType := range trueManagedResourceConditionTypes {
-		conditionType := string(trueConditionType)
-		condition := getManagedResourceCondition(deployment.Status.Conditions, trueConditionType)
-		if condition == nil {
-			return requiredConditionMissing(conditionType)
-		}
-		if err := checkConditionState(conditionType, string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
-			return err
-		}
-	}
-	return nil
 }

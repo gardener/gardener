@@ -104,6 +104,49 @@ var _ = Describe("ManagedResources", func() {
 		})
 	})
 
+	Describe("#DeleteManagedResourceForShoot", func() {
+		var (
+			secret          = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "managedresource-" + name}}
+			managedResource = &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					Labels:    map[string]string{"origin": "gardener"},
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+					KeepObjects:  pointer.BoolPtr(false),
+				},
+			}
+		)
+
+		It("should fail when the managed resource cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, managedResource).Return(fakeErr),
+			)
+
+			Expect(DeleteManagedResourceForShoot(ctx, c, name, namespace)).To(MatchError(fakeErr))
+		})
+
+		It("should fail when the secret cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, managedResource),
+				c.EXPECT().Delete(ctx, secret).Return(fakeErr),
+			)
+
+			Expect(DeleteManagedResourceForShoot(ctx, c, name, namespace)).To(MatchError(fakeErr))
+		})
+
+		It("should successfully delete all related resources", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, managedResource),
+				c.EXPECT().Delete(ctx, secret),
+			)
+
+			Expect(DeleteManagedResourceForShoot(ctx, c, name, namespace)).To(Succeed())
+		})
+	})
+
 	Describe("#DeployManagedResourceForSeed", func() {
 		It("should return the error of the secret reconciliation", func() {
 			gomock.InOrder(
@@ -151,6 +194,48 @@ var _ = Describe("ManagedResources", func() {
 			)
 
 			Expect(DeployManagedResourceForSeed(ctx, c, name, namespace, keepObjects, data)).To(Succeed())
+		})
+	})
+
+	Describe("#DeleteManagedResourceForSeed", func() {
+		var (
+			secret          = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "managedresource-" + name}}
+			managedResource = &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: resourcesv1alpha1.ManagedResourceSpec{
+					Class:       pointer.StringPtr("seed"),
+					KeepObjects: pointer.BoolPtr(false),
+				},
+			}
+		)
+
+		It("should fail when the managed resource cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, managedResource).Return(fakeErr),
+			)
+
+			Expect(DeleteManagedResourceForSeed(ctx, c, name, namespace)).To(MatchError(fakeErr))
+		})
+
+		It("should fail when the secret cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, managedResource),
+				c.EXPECT().Delete(ctx, secret).Return(fakeErr),
+			)
+
+			Expect(DeleteManagedResourceForSeed(ctx, c, name, namespace)).To(MatchError(fakeErr))
+		})
+
+		It("should successfully delete all related resources", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, managedResource),
+				c.EXPECT().Delete(ctx, secret),
+			)
+
+			Expect(DeleteManagedResourceForSeed(ctx, c, name, namespace)).To(Succeed())
 		})
 	})
 })

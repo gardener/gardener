@@ -63,6 +63,10 @@ type LoggingConfiguration func() (LoggingConfig, error)
 // BootstrapSeed is a function alias for components that require to bootstrap the seed cluster.
 type BootstrapSeed func(ctx context.Context, c client.Client, namespace, version string) error
 
+// DebootstrapSeed is a function alias for components that need to delete resources from the seed cluster that were
+// created during seed bootstrapping.
+type DebootstrapSeed func(ctx context.Context, c client.Client, namespace string) error
+
 // DeployWaiter controls and waits for life-cycle operations of a component.
 type DeployWaiter interface {
 	Deployer

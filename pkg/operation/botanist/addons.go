@@ -274,12 +274,13 @@ func (b *Botanist) deployCloudConfigExecutionManagedResource(ctx context.Context
 			return fmt.Errorf("error rendering %q chart: %+v", name, err)
 		}
 
-		secretName, secret := common.NewManagedResourceSecret(b.K8sSeedClient.Client(), name, b.Shoot.SeedNamespace, renderedChart.AsSecretData())
+		secretName, secret := common.NewManagedResourceSecret(b.K8sSeedClient.Client(), name, b.Shoot.SeedNamespace)
 		cloudConfigManagedResource.WithSecretRef(secretName)
 		wantedSecretNames.Insert(secretName)
 
 		fns = append(fns, func(ctx context.Context) error {
 			return secret.
+				WithKeyValues(renderedChart.AsSecretData()).
 				WithLabels(map[string]string{SecretLabelKeyManagedResource: managedResourceName}).
 				Reconcile(ctx)
 		})
