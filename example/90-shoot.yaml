@@ -170,6 +170,7 @@ spec:
   #       size: 500
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
+  #   podEvictionTimeout: 2m0s
   #   featureGates:
   #     SomeKubernetesFeature: true
   #   horizontalPodAutoscaler:

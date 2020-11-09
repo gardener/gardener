@@ -2670,11 +2670,17 @@ func schema_pkg_apis_core_v1alpha1_KubeControllerManagerConfig(ref common.Refere
 							Format:      "int32",
 						},
 					},
+					"podEvictionTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.HorizontalPodAutoscalerConfig"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.HorizontalPodAutoscalerConfig", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -8626,11 +8632,17 @@ func schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref common.Referen
 							Format:      "int32",
 						},
 					},
+					"podEvictionTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.HorizontalPodAutoscalerConfig"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.HorizontalPodAutoscalerConfig", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 

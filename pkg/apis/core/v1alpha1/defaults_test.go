@@ -19,6 +19,7 @@ import (
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -317,6 +318,23 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_Shoot(obj)
 
 			Expect(obj.Spec.Kubernetes.Kubelet.FailSwapOn).To(PointTo(BeFalse()))
+		})
+
+		It("should not default the kube-controller-manager's pod eviction timeout field", func() {
+			podEvictionTimeout := &metav1.Duration{Duration: time.Minute}
+			obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{PodEvictionTimeout: podEvictionTimeout}
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout).To(Equal(podEvictionTimeout))
+		})
+
+		It("should default the kube-controller-manager's pod eviction timeout field", func() {
+			obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout).To(Equal(&metav1.Duration{Duration: 2 * time.Minute}))
 		})
 
 		Context("default kubeReserved", func() {

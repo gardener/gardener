@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -421,13 +422,18 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		)
 	}
 
+	podEvictionTimeout := metav1.Duration{Duration: 2 * time.Minute}
+	if v := k.config.PodEvictionTimeout; v != nil {
+		podEvictionTimeout = *v
+	}
+
 	command = append(command,
 		fmt.Sprintf("--horizontal-pod-autoscaler-sync-period=%s", defaultHorizontalPodAutoscalerConfig.SyncPeriod.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-tolerance=%v", *defaultHorizontalPodAutoscalerConfig.Tolerance),
 		fmt.Sprintf("--kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig),
 		"--leader-elect=true",
 		"--node-monitor-grace-period=120s",
-		"--pod-eviction-timeout=2m0s",
+		fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeout.Duration),
 		fmt.Sprintf("--root-ca-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateCA),
 		fmt.Sprintf("--service-account-private-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey),
 		fmt.Sprintf("--service-cluster-ip-range=%s", k.serviceNetwork.String()),

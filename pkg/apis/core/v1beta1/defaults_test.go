@@ -371,6 +371,23 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.Kubelet.FailSwapOn).To(PointTo(BeFalse()))
 		})
 
+		It("should not default the kube-controller-manager's pod eviction timeout field", func() {
+			podEvictionTimeout := &metav1.Duration{Duration: time.Minute}
+			obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{PodEvictionTimeout: podEvictionTimeout}
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout).To(Equal(podEvictionTimeout))
+		})
+
+		It("should default the kube-controller-manager's pod eviction timeout field", func() {
+			obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout).To(Equal(&metav1.Duration{Duration: 2 * time.Minute}))
+		})
+
 		It("should set the maintenance field", func() {
 			obj.Spec.Maintenance = nil
 

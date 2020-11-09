@@ -467,6 +467,8 @@ type KubeControllerManagerConfig struct {
 	HorizontalPodAutoscalerConfig *HorizontalPodAutoscalerConfig
 	// NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24)
 	NodeCIDRMaskSize *int32
+	// PodEvictionTimeout defines the grace period for deleting pods on failed nodes.
+	PodEvictionTimeout *metav1.Duration
 }
 
 // HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
