@@ -176,6 +176,7 @@ rules:
   - ""
   resources:
   - events
+  - resourcequotas
   verbs:
   - get
   - list
@@ -260,6 +261,7 @@ rules:
   resources:
   - events
   - configmaps
+  - resourcequotas
   - serviceaccounts
   verbs:
   - get
