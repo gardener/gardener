@@ -195,8 +195,20 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 		if shoot.Spec.SeedName == nil {
 			return nil
 		}
-		if oldShoot.Spec.SeedName != nil && shoot.Spec.DNS != nil {
-			return checkFunctionlessDNSProviders(shoot.Spec.DNS)
+
+		if oldShoot.Spec.SeedName != nil {
+			if *oldShoot.Spec.SeedName != *shoot.Spec.SeedName {
+				if err := checkIfShootMigrationIsPossible(d.seedLister, oldShoot, shoot); err != nil {
+					return err
+				}
+				if shoot.Spec.DNS != nil {
+					return checkFunctionlessDNSProviders(shoot.Spec.DNS)
+				}
+				return nil
+			}
+			if shoot.Spec.DNS != nil {
+				return checkFunctionlessDNSProviders(shoot.Spec.DNS)
+			}
 		}
 	}
 
@@ -239,6 +251,19 @@ func checkFunctionlessDNSProviders(dns *core.DNS) error {
 	for _, provider := range dns.Providers {
 		if !gardenerutils.IsTrue(provider.Primary) && (provider.Type == nil || provider.SecretName == nil) {
 			return apierrors.NewBadRequest("non-primary DNS providers in .spec.dns.providers must specify a `type` and `secretName`")
+		}
+	}
+	return nil
+}
+
+func checkIfShootMigrationIsPossible(seedLister corelisters.SeedLister, oldShoot, newShoot *core.Shoot) error {
+	for _, seedName := range []string{*oldShoot.Spec.SeedName, *newShoot.Spec.SeedName} {
+		seedDNSDisabled, err := seedDisablesDNS(seedLister, seedName)
+		if err != nil {
+			return apierrors.NewBadRequest(fmt.Sprintf("could not get referenced seed: %+v", err.Error()))
+		}
+		if seedDNSDisabled {
+			return apierrors.NewBadRequest("source and destination seeds must enable DNS so that the shoot can be migrated")
 		}
 	}
 	return nil
