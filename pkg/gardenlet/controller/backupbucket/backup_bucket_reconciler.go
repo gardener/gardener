@@ -107,7 +107,9 @@ func (r *reconciler) reconcileBackupBucket(gardenClient kubernetes.Interface, ba
 
 	secret, err := common.GetSecretFromSecretRef(r.ctx, gardenClient.Client(), &backupBucket.Spec.SecretRef)
 	if err != nil {
-		backupBucketLogger.Errorf("Failed to get referred secret: %+v", err)
+		msg := fmt.Sprintf("Failed to get backup secret (%s/%s): %+v", backupBucket.Spec.SecretRef.Namespace, backupBucket.Spec.SecretRef.Name, err)
+		backupBucketLogger.Error(msg)
+		r.recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", msg)
 		return reconcile.Result{}, err
 	}
 
