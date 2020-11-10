@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -563,6 +564,14 @@ func (b *Botanist) checkControlPlane(
 	return &c, nil
 }
 
+var managedResourcesShoot = sets.NewString(
+	common.ManagedResourceCoreNamespaceName,
+	common.ManagedResourceShootCoreName,
+	common.ManagedResourceAddonsName,
+
+	metricsserver.ManagedResourceName,
+)
+
 // checkSystemComponents checks whether the system components of a Shoot are running.
 func (b *Botanist) checkSystemComponents(
 	ctx context.Context,
@@ -570,7 +579,7 @@ func (b *Botanist) checkSystemComponents(
 	condition gardencorev1beta1.Condition,
 	extensionConditions []ExtensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
-	for name := range common.ManagedResourcesShoot {
+	for name := range managedResourcesShoot {
 		mr := &resourcesv1alpha1.ManagedResource{}
 		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, name), mr); err != nil {
 			return nil, err

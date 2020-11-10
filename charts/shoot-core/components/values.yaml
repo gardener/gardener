@@ -27,10 +27,6 @@ kube-proxy:
   podAnnotations: {}
   images:
     kube-proxy: image-repository
-metrics-server:
-  enabled: true
-  images:
-    metrics-server: image-repository:image-tag
 monitoring:
   enabled: true
   node-exporter:

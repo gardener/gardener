@@ -17,4 +17,8 @@
 // +k8s:openapi-gen=true
 // +k8s:defaulter-gen=TypeMeta
 
+//go:generate ../../../../hack/update-codegen.sh
+
+// Package v1alpha1 contains the configuration of the Gardener Resource Manager.
+// +groupName=resources.gardener.cloud
 package v1alpha1 // import "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"

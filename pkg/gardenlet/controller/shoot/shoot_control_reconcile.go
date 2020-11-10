@@ -321,6 +321,11 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Fn:           botanist.Shoot.Components.Extensions.Network.Wait,
 			Dependencies: flow.NewTaskIDs(deployNetwork),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying metrics-server system component",
+			Fn:           flow.TaskFn(botanist.DeployMetricsServer).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity, computeShootOSConfig),
+		})
 		deployManagedResources = g.Add(flow.Task{
 			Name:         "Deploying managed resources",
 			Fn:           flow.TaskFn(botanist.DeployManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),

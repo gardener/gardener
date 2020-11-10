@@ -201,6 +201,13 @@ const (
 	// LabelNetworkPolicyFromPrometheus allows Ingress from Prometheus to pods labeled with 'networking.gardener.cloud/from-prometheus=allowed' and ports
 	// named 'metrics' in the PodSpecification.
 	LabelNetworkPolicyFromPrometheus = "networking.gardener.cloud/from-prometheus"
+	// LabelNetworkPolicyShootFromSeed allows Ingress traffic from the seed cluster (where the shoot's kube-apiserver
+	// runs).
+	LabelNetworkPolicyShootFromSeed = "networking.gardener.cloud/from-seed"
+	// LabelNetworkPolicyShootToAPIServer allows Egress traffic to the shoot's API server.
+	LabelNetworkPolicyShootToAPIServer = "networking.gardener.cloud/to-apiserver"
+	// LabelNetworkPolicyShootToKubelet allows Egress traffic to the kubelets.
+	LabelNetworkPolicyShootToKubelet = "networking.gardener.cloud/to-kubelet"
 	// LabelNetworkPolicyAllowed is a constant for allowing a network policy.
 	LabelNetworkPolicyAllowed = "allowed"
 	// LabelNetworkPolicyDisallowed is a constant for disallowing a network policy.
