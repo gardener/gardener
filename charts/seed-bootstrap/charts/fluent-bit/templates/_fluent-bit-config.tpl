@@ -104,7 +104,7 @@
         DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
         DynamicHostPrefix http://loki.
         DynamicHostSuffix .svc:3100/loki/api/v1/push
-        DynamicHostRegex shoot-
+        DynamicHostRegex ^shoot-
         MaxRetries 3
         Timeout 10
         MinBackoff 30
@@ -137,7 +137,7 @@
         DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
         DynamicHostPrefix http://loki.
         DynamicHostSuffix .svc:3100/loki/api/v1/push
-        DynamicHostRegex shoot-
+        DynamicHostRegex ^shoot-
         MaxRetries 3
         Timeout 10
         MinBackoff 30
