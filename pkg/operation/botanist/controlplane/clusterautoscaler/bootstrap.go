@@ -16,9 +16,11 @@ package clusterautoscaler
 
 import (
 	"context"
+	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -32,6 +34,10 @@ const (
 	clusterRoleControlName     = "system:cluster-autoscaler-seed"
 	managedResourceControlName = "cluster-autoscaler"
 )
+
+// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
+// or deleted.
+var TimeoutWaitForManagedResource = 2 * time.Minute
 
 // BootstrapSeed deploys the RBAC configuration for the control cluster.
 func BootstrapSeed(ctx context.Context, c client.Client, namespace, _ string) error {
@@ -54,7 +60,24 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, _ string) er
 		clusterRoleYAML, _ = runtime.Encode(codec, clusterRole)
 	)
 
-	return common.DeployManagedResourceForSeed(ctx, c, managedResourceControlName, namespace, false, map[string][]byte{
-		"clusterrole.yaml": clusterRoleYAML,
-	})
+	if err := common.DeployManagedResourceForSeed(ctx, c, managedResourceControlName, namespace, false, map[string][]byte{"clusterrole.yaml": clusterRoleYAML}); err != nil {
+		return err
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilManagedResourceHealthy(timeoutCtx, c, namespace, managedResourceControlName)
+}
+
+// DebootstrapSeed deletes all the resources deployed during the seed bootstrapping.
+func DebootstrapSeed(ctx context.Context, c client.Client, namespace string) error {
+	if err := common.DeleteManagedResourceForSeed(ctx, c, managedResourceControlName, namespace); err != nil {
+		return err
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilManagedResourceDeleted(timeoutCtx, c, namespace, managedResourceControlName)
 }

@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/seed/istio"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/chart"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -726,12 +727,16 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	}
 
 	// Deploy component specific resources
+	var bootstrapFunctions []flow.TaskFn
 	for _, componentFn := range []component.BootstrapSeed{
 		clusterautoscaler.BootstrapSeed,
 	} {
-		if err := componentFn(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace, k8sSeedClient.Version()); err != nil {
-			return err
-		}
+		bootstrapFunctions = append(bootstrapFunctions, func(ctx context.Context) error {
+			return componentFn(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace, k8sSeedClient.Version())
+		})
+	}
+	if err := flow.Parallel(bootstrapFunctions...)(ctx); err != nil {
+		return err
 	}
 
 	// TODO: remove in a future release
@@ -747,6 +752,21 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	}
 
 	return nil
+}
+
+// DebootstrapCluster deletes certain resources from the seed cluster.
+func DebootstrapCluster(ctx context.Context, k8sSeedClient kubernetes.Interface) error {
+	// Delete component specific resources
+	var debootstrapFunctions []flow.TaskFn
+	for _, componentFn := range []component.DebootstrapSeed{
+		clusterautoscaler.DebootstrapSeed,
+	} {
+		debootstrapFunctions = append(debootstrapFunctions, func(ctx context.Context) error {
+			return componentFn(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace)
+		})
+	}
+
+	return flow.Parallel(debootstrapFunctions...)(ctx)
 }
 
 // DesiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes
