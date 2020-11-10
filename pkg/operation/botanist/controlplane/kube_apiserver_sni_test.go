@@ -64,11 +64,14 @@ var _ = Describe("#KubeAPIServerSNI", func() {
 		)
 
 		defaultDepWaiter = NewKubeAPIServerSNI(&KubeAPIServerSNIValues{
-			Hosts:                 []string{"foo.bar"},
-			ApiserverClusterIP:    "1.1.1.1",
-			IstioIngressNamespace: "istio-foo",
-			Name:                  deployName,
-			NamespaceUID:          types.UID("123456"),
+			Hosts:              []string{"foo.bar"},
+			ApiserverClusterIP: "1.1.1.1",
+			IstioIngressGateway: IstioIngressGateway{
+				Namespace: "istio-foo",
+				Labels:    map[string]string{"foo": "bar"},
+			},
+			Name:         deployName,
+			NamespaceUID: types.UID("123456"),
 		}, deployNS, ca, chartsRoot())
 	})
 

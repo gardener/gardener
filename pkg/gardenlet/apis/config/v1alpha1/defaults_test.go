@@ -36,7 +36,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should default the gardenlet configuration", func() {
-			SetDefaults_GardenletConfiguration(obj)
+			SetObjectDefaults_GardenletConfiguration(obj)
 
 			Expect(obj.GardenClientConnection).NotTo(BeNil())
 			Expect(obj.SeedClientConnection).NotTo(BeNil())
@@ -56,6 +56,11 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.KubernetesLogLevel).To(PointTo(Equal(klog.Level(0))))
 			Expect(obj.Server.HTTPS.BindAddress).To(Equal("0.0.0.0"))
 			Expect(obj.Server.HTTPS.Port).To(Equal(2720))
+			Expect(obj.SNI).ToNot(BeNil())
+			Expect(obj.SNI.Ingress).ToNot(BeNil())
+			Expect(obj.SNI.Ingress.Labels).To(Equal(map[string]string{"istio": "ingressgateway"}))
+			Expect(obj.SNI.Ingress.Namespace).To(PointTo(Equal("istio-ingress")))
+			Expect(obj.SNI.Ingress.ServiceName).To(PointTo(Equal("istio-ingressgateway")))
 		})
 	})
 

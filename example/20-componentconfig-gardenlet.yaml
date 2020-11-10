@@ -101,3 +101,9 @@ seedSelector: {} # selects all seeds, only use for development purposes
 #     output: |-
 #       [Output]
 #           ...
+# sni: # SNI configuration used for APIServerSNI and ManagedIstio feature gates with default values.
+#   ingress:
+#     serviceName: istio-ingress
+#     namespace: istio-ingress
+#     labels:
+#       istio: ingressgateway

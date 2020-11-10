@@ -62,6 +62,9 @@ type GardenletConfiguration struct {
 	// Logging contains an optional configurations for the logging stack deployed
 	// by the Gardenlet in the seed clusters.
 	Logging *Logging
+	// SNI contains an optional configuration for the APIServerSNI feature used
+	// by the Gardenlet in the seed clusters.
+	SNI *SNI
 }
 
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
@@ -316,4 +319,24 @@ type TLSServer struct {
 	ServerCertPath string
 	// ServerKeyPath is the path to the private key file.
 	ServerKeyPath string
+}
+
+// SNI contains an optional configuration for the APIServerSNI feature used
+// by the Gardenlet in the seed clusters.
+type SNI struct {
+	// Ingress is the ingressgateway configuration.
+	Ingress *SNIIngress
+}
+
+// SNIIngress contains configuration of the ingressgateway.
+type SNIIngress struct {
+	// ServiceName is the name of the ingressgateway Service.
+	// Defaults to "istio-ingressgateway".
+	ServiceName *string
+	// Namespace is the namespace in which the ingressgateway is deployed in.
+	// Defaults to "istio-ingress".
+	Namespace *string
+	// Labels of the ingressgateway
+	// Defaults to "istio: ingressgateway".
+	Labels map[string]string
 }

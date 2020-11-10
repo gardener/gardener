@@ -40,5 +40,35 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration) field.Er
 		}
 	}
 
+	sniPath := field.NewPath("sni")
+
+	if cfg.SNI == nil {
+		allErrs = append(allErrs, field.Required(sniPath, "required configuration for SNI"))
+	} else {
+		allErrs = append(allErrs, validateSNI(sniPath, cfg.SNI)...)
+	}
+
+	return allErrs
+}
+
+func validateSNI(sniPath *field.Path, sni *config.SNI) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	ingressPath := sniPath.Child("ingress")
+
+	if sni.Ingress == nil {
+		allErrs = append(allErrs, field.Required(ingressPath, "required configuration for SNI ingress"))
+	} else {
+		if len(sni.Ingress.Labels) == 0 {
+			allErrs = append(allErrs, field.Required(ingressPath.Child("labels"), "must specify ingress gateway labels"))
+		}
+		if sni.Ingress.Namespace == nil || *sni.Ingress.Namespace == "" {
+			allErrs = append(allErrs, field.Required(ingressPath.Child("namespace"), "must specify ingress gateway namespace"))
+		}
+		if sni.Ingress.ServiceName == nil || *sni.Ingress.ServiceName == "" {
+			allErrs = append(allErrs, field.Required(ingressPath.Child("serviceName"), "must specify ingress gateway service name"))
+		}
+	}
+
 	return allErrs
 }
