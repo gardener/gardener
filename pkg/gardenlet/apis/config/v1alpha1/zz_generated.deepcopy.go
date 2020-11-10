@@ -714,6 +714,11 @@ func (in *ShootControllerConfiguration) DeepCopyInto(out *ShootControllerConfigu
 		*out = new(v1.Duration)
 		**out = **in
 	}
+	if in.DNSEntryTTLSeconds != nil {
+		in, out := &in.DNSEntryTTLSeconds, &out.DNSEntryTTLSeconds
+		*out = new(int64)
+		**out = **in
+	}
 	return
 }
 

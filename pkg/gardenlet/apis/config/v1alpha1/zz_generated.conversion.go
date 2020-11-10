@@ -1005,6 +1005,7 @@ func autoConvert_v1alpha1_ShootControllerConfiguration_To_config_ShootController
 	out.RespectSyncPeriodOverwrite = (*bool)(unsafe.Pointer(in.RespectSyncPeriodOverwrite))
 	out.RetryDuration = (*v1.Duration)(unsafe.Pointer(in.RetryDuration))
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
+	out.DNSEntryTTLSeconds = (*int64)(unsafe.Pointer(in.DNSEntryTTLSeconds))
 	return nil
 }
 
@@ -1020,6 +1021,7 @@ func autoConvert_config_ShootControllerConfiguration_To_v1alpha1_ShootController
 	out.RespectSyncPeriodOverwrite = (*bool)(unsafe.Pointer(in.RespectSyncPeriodOverwrite))
 	out.RetryDuration = (*v1.Duration)(unsafe.Pointer(in.RetryDuration))
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
+	out.DNSEntryTTLSeconds = (*int64)(unsafe.Pointer(in.DNSEntryTTLSeconds))
 	return nil
 }
 

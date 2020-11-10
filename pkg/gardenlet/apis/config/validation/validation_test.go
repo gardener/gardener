@@ -15,6 +15,8 @@
 package validation_test
 
 import (
+	"time"
+
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
 
@@ -27,10 +29,23 @@ import (
 )
 
 var _ = Describe("GardenletConfiguration", func() {
-	var cfg *config.GardenletConfiguration
+	var (
+		cfg *config.GardenletConfiguration
+
+		concurrentSyncs = 20
+	)
 
 	BeforeEach(func() {
 		cfg = &config.GardenletConfiguration{
+			Controllers: &config.GardenletControllerConfiguration{
+				Shoot: &config.ShootControllerConfiguration{
+					ConcurrentSyncs:      &concurrentSyncs,
+					ProgressReportPeriod: &metav1.Duration{Duration: time.Hour},
+					SyncPeriod:           &metav1.Duration{Duration: time.Hour},
+					RetryDuration:        &metav1.Duration{Duration: time.Hour},
+					DNSEntryTTLSeconds:   pointer.Int64Ptr(120),
+				},
+			},
 			SeedConfig: &config.SeedConfig{},
 			Server: &config.ServerConfiguration{
 				HTTPS: config.HTTPSServer{
@@ -57,56 +72,114 @@ var _ = Describe("GardenletConfiguration", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should forbid specifying neither a seed selector nor a seed config", func() {
-			cfg.SeedSelector = nil
-			cfg.SeedConfig = nil
+		Context("shoot controller", func() {
+			It("should forbid invalid configuration", func() {
+				invalidConcurrentSyncs := -1
 
-			errorList := ValidateGardenletConfiguration(cfg)
+				cfg.Controllers.Shoot.ConcurrentSyncs = &invalidConcurrentSyncs
+				cfg.Controllers.Shoot.ProgressReportPeriod = &metav1.Duration{Duration: -1}
+				cfg.Controllers.Shoot.SyncPeriod = &metav1.Duration{Duration: -1}
+				cfg.Controllers.Shoot.RetryDuration = &metav1.Duration{Duration: -1}
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("seedSelector/seedConfig"),
-			}))))
+				errorList := ValidateGardenletConfiguration(cfg)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.shoot.concurrentSyncs"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.shoot.progressReporterPeriod"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.shoot.syncPeriod"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.shoot.retryDuration"),
+					})),
+				))
+			})
+
+			It("should forbid too low values for the DNS TTL", func() {
+				cfg.Controllers.Shoot.DNSEntryTTLSeconds = pointer.Int64Ptr(-1)
+
+				errorList := ValidateGardenletConfiguration(cfg)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("controllers.shoot.dnsEntryTTLSeconds"),
+				}))))
+			})
+
+			It("should forbid too high values for the DNS TTL", func() {
+				cfg.Controllers.Shoot.DNSEntryTTLSeconds = pointer.Int64Ptr(601)
+
+				errorList := ValidateGardenletConfiguration(cfg)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("controllers.shoot.dnsEntryTTLSeconds"),
+				}))))
+			})
 		})
 
-		It("should forbid specifying both a seed selector and a seed config", func() {
-			cfg.SeedSelector = &metav1.LabelSelector{}
-			cfg.SeedConfig = &config.SeedConfig{}
+		Context("seed selector/config", func() {
+			It("should forbid specifying neither a seed selector nor a seed config", func() {
+				cfg.SeedSelector = nil
+				cfg.SeedConfig = nil
 
-			errorList := ValidateGardenletConfiguration(cfg)
+				errorList := ValidateGardenletConfiguration(cfg)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("seedSelector/seedConfig"),
-			}))))
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("seedSelector/seedConfig"),
+				}))))
+			})
+
+			It("should forbid specifying both a seed selector and a seed config", func() {
+				cfg.SeedSelector = &metav1.LabelSelector{}
+				cfg.SeedConfig = &config.SeedConfig{}
+
+				errorList := ValidateGardenletConfiguration(cfg)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("seedSelector/seedConfig"),
+				}))))
+			})
 		})
 
-		It("should forbid not specifying a server configuration", func() {
-			cfg.Server = nil
+		Context("server", func() {
+			It("should forbid not specifying a server configuration", func() {
+				cfg.Server = nil
 
-			errorList := ValidateGardenletConfiguration(cfg)
+				errorList := ValidateGardenletConfiguration(cfg)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("server"),
-			}))))
-		})
-
-		It("should forbid invalid server configuration", func() {
-			cfg.Server = &config.ServerConfiguration{}
-
-			errorList := ValidateGardenletConfiguration(cfg)
-
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("server.https.bindAddress"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("server.https.port"),
-				})),
-			))
+					"Field": Equal("server"),
+				}))))
+			})
+
+			It("should forbid invalid server configuration", func() {
+				cfg.Server = &config.ServerConfiguration{}
+
+				errorList := ValidateGardenletConfiguration(cfg)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("server.https.bindAddress"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("server.https.port"),
+					})),
+				))
+			})
 		})
 
 		It("should forbid not specifying a sni configuration", func() {

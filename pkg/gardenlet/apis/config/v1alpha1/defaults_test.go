@@ -74,7 +74,26 @@ var _ = Describe("Defaults", func() {
 		It("should default the configuration", func() {
 			SetDefaults_ShootedSeedRegistrationControllerConfiguration(obj)
 
-			Expect(obj.SyncJitterPeriod).To(Equal(&metav1.Duration{Duration: 5 * time.Minute}))
+			Expect(obj.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
+		})
+	})
+
+	Describe("#SetDefaults_ShootControllerConfiguration", func() {
+		var obj *ShootControllerConfiguration
+
+		BeforeEach(func() {
+			obj = &ShootControllerConfiguration{}
+		})
+
+		It("should default the configuration", func() {
+			SetDefaults_ShootControllerConfiguration(obj)
+
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(20)))
+			Expect(obj.SyncPeriod).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
+			Expect(obj.RespectSyncPeriodOverwrite).To(PointTo(Equal(false)))
+			Expect(obj.ReconcileInMaintenanceOnly).To(PointTo(Equal(false)))
+			Expect(obj.RetryDuration).To(PointTo(Equal(metav1.Duration{Duration: 12 * time.Hour})))
+			Expect(obj.DNSEntryTTLSeconds).To(PointTo(Equal(int64(120))))
 		})
 	})
 })

@@ -91,6 +91,9 @@ data:
         {{- end }}
         syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.shoot.syncPeriod is required" .Values.global.gardenlet.config.controllers.shoot.syncPeriod }}
         retryDuration: {{ required ".Values.global.gardenlet.config.controllers.shoot.retryDuration is required" .Values.global.gardenlet.config.controllers.shoot.retryDuration }}
+        {{- if .Values.global.gardenlet.config.controllers.shoot.dnsEntryTTLSeconds }}
+        dnsEntryTTLSeconds: {{ .Values.global.gardenlet.config.controllers.shoot.dnsEntryTTLSeconds }}
+        {{- end }}
       shootCare:
         concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.shootCare.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.shootCare.concurrentSyncs }}
         syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.shootCare.syncPeriod is required" .Values.global.gardenlet.config.controllers.shootCare.syncPeriod }}
