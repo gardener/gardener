@@ -182,17 +182,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	// TODO: Separate function?!
-	var replicas = 1
-	if e.retainReplicas {
-		if foundEtcd {
-			replicas = existingEtcd.Spec.Replicas
-		} else {
-			replicas = 0
-		}
-	}
-
 	var (
+		replicas = e.computeReplicas(foundEtcd, existingEtcd)
+
 		protocolTCP             = corev1.ProtocolTCP
 		intStrPortEtcdClient    = intstr.FromInt(PortEtcdClient)
 		intStrPortBackupRestore = intstr.FromInt(PortBackupRestore)
@@ -342,7 +334,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				SecretRef: &corev1.SecretReference{Name: e.backupConfig.SecretRefName},
 				Container: &e.backupConfig.Container,
 				Provider:  &provider,
-				Prefix:    e.backupConfig.Prefix,
+				Prefix:    fmt.Sprintf("%s/etcd-%s", e.backupConfig.Prefix, e.role),
 			}
 			etcd.Spec.Backup.FullSnapshotSchedule = e.computeFullSnapshotSchedule(foundEtcd, existingEtcd)
 			etcd.Spec.Backup.DeltaSnapshotPeriod = &deltaSnapshotPeriod
@@ -515,7 +507,7 @@ func (e *etcd) getLabels() map[string]string {
 }
 
 func (e *etcd) getExistingEtcd(ctx context.Context, name string) (*druidv1alpha1.Etcd, bool, error) {
-	obj, found, err := e.getExisting(ctx, name, &druidv1alpha1.Etcd{})
+	obj, found, err := e.getExistingResource(ctx, name, &druidv1alpha1.Etcd{})
 	if obj != nil {
 		return obj.(*druidv1alpha1.Etcd), found, err
 	}
@@ -523,14 +515,14 @@ func (e *etcd) getExistingEtcd(ctx context.Context, name string) (*druidv1alpha1
 }
 
 func (e *etcd) getExistingStatefulSet(ctx context.Context, name string) (*appsv1.StatefulSet, bool, error) {
-	obj, found, err := e.getExisting(ctx, name, &appsv1.StatefulSet{})
+	obj, found, err := e.getExistingResource(ctx, name, &appsv1.StatefulSet{})
 	if obj != nil {
 		return obj.(*appsv1.StatefulSet), found, err
 	}
 	return nil, found, err
 }
 
-func (e *etcd) getExisting(ctx context.Context, name string, obj runtime.Object) (runtime.Object, bool, error) {
+func (e *etcd) getExistingResource(ctx context.Context, name string, obj runtime.Object) (runtime.Object, bool, error) {
 	if err := e.client.Get(ctx, kutil.Key(e.namespace, name), obj); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return nil, false, err
@@ -634,6 +626,18 @@ func (e *etcd) computeContainerResources(foundSts bool, existingSts *appsv1.Stat
 	}
 
 	return resourcesEtcd, resourcesBackupRestore
+}
+
+func (e *etcd) computeReplicas(foundEtcd bool, existingEtcd *druidv1alpha1.Etcd) int {
+	if !e.retainReplicas {
+		return 1
+	}
+
+	if foundEtcd {
+		return existingEtcd.Spec.Replicas
+	}
+
+	return 0
 }
 
 func (e *etcd) computeDefragmentationSchedule(foundEtcd bool, existingEtcd *druidv1alpha1.Etcd) *string {

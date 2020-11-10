@@ -295,7 +295,7 @@ var _ = Describe("Etcd", func() {
 					SecretRef: &corev1.SecretReference{Name: backupConfig.SecretRefName},
 					Container: &backupConfig.Container,
 					Provider:  &provider,
-					Prefix:    backupConfig.Prefix,
+					Prefix:    backupConfig.Prefix + "/etcd-" + testRole,
 				}
 				obj.Spec.Backup.FullSnapshotSchedule = &fullSnapshotSchedule
 				obj.Spec.Backup.DeltaSnapshotPeriod = &deltaSnapshotPeriod

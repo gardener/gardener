@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
@@ -101,10 +102,10 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 		})
 	}
 
-	if err := b.Shoot.Components.ControlPlane.EtcdMain.Deploy(ctx); err != nil {
-		return err
-	}
-	return b.Shoot.Components.ControlPlane.EtcdEvents.Deploy(ctx)
+	return flow.Parallel(
+		b.Shoot.Components.ControlPlane.EtcdMain.Deploy,
+		b.Shoot.Components.ControlPlane.EtcdEvents.Deploy,
+	)(ctx)
 }
 
 // WaitUntilEtcdsReady waits until both etcd-main and etcd-events are ready.

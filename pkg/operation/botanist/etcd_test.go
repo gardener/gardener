@@ -18,9 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/features"
@@ -37,11 +34,14 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/golang/mock/gomock"
+	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
@@ -296,13 +296,22 @@ var _ = Describe("Etcd", func() {
 
 		It("should fail when the deploy function fails for etcd-main", func() {
 			etcdMain.EXPECT().Deploy(ctx).Return(fakeErr)
-			Expect(botanist.DeployEtcd(ctx)).To(Equal(fakeErr))
+			etcdEvents.EXPECT().Deploy(ctx)
+
+			err := botanist.DeployEtcd(ctx)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
+			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(fakeErr)))
 		})
 
 		It("should fail when the deploy function fails for etcd-events", func() {
 			etcdMain.EXPECT().Deploy(ctx)
 			etcdEvents.EXPECT().Deploy(ctx).Return(fakeErr)
-			Expect(botanist.DeployEtcd(ctx)).To(Equal(fakeErr))
+
+			err := botanist.DeployEtcd(ctx)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
+			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(fakeErr)))
 		})
 
 		Context("w/o backup", func() {

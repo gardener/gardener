@@ -85,7 +85,7 @@ func WaitUntilEtcdsReady(
 			return retry.Ok()
 		}
 
-		logger.Info("Waiting until the both etcds are ready...")
+		logger.Info("Waiting until both the etcds are ready...")
 		return retry.MinorError(lastErrors)
 	})
 }
