@@ -248,7 +248,7 @@ images:
 - name: apiserver-proxy
   sourceRepository: github.com/envoyproxy/envoy
   repository: envoyproxy/envoy
-  tag: "v1.16.0"
+  tag: "v0.2.0"
 - name: apiserver-proxy-sidecar
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy
