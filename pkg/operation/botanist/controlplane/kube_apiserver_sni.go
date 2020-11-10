@@ -98,7 +98,7 @@ func AnyDeployedSNI(ctx context.Context, c client.Client) (bool, error) {
 		},
 	}
 
-	if err := c.List(ctx, l, client.MatchingField("metadata.name", "kube-apiserver"), client.Limit(1)); err != nil {
+	if err := c.List(ctx, l, client.MatchingFields{"metadata.name": "kube-apiserver"}, client.Limit(1)); err != nil && !meta.IsNoMatchError(err) {
 		return false, err
 	}
 

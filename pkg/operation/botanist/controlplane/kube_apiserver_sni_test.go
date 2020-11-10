@@ -151,27 +151,53 @@ var _ = Describe("#AnyDeployedSNI", func() {
 		}
 	)
 
-	BeforeEach(func() {
-		ctx = context.TODO()
-		s := runtime.NewScheme()
-		// TODO(mvladev): can't directly import the istio apis due to dependency issues.
-		s.AddKnownTypeWithName(schema.FromAPIVersionAndKind("networking.istio.io/v1beta1", "VirtualServiceList"), &unstructured.UnstructuredList{})
-		s.AddKnownTypeWithName(schema.FromAPIVersionAndKind("networking.istio.io/v1beta1", "VirtualService"), &unstructured.Unstructured{})
-		c = fake.NewFakeClientWithScheme(s)
+	Context("CRD available", func() {
+		BeforeEach(func() {
+			ctx = context.TODO()
+			s := runtime.NewScheme()
+			// TODO(mvladev): can't directly import the istio apis due to dependency issues.
+			s.AddKnownTypeWithName(schema.FromAPIVersionAndKind("networking.istio.io/v1beta1", "VirtualServiceList"), &unstructured.UnstructuredList{})
+			s.AddKnownTypeWithName(schema.FromAPIVersionAndKind("networking.istio.io/v1beta1", "VirtualService"), &unstructured.Unstructured{})
+			c = fake.NewFakeClientWithScheme(s)
+		})
+
+		It("returns true when exists", func() {
+			Expect(c.Create(ctx, createVS("kube-apiserver", "test"))).NotTo(HaveOccurred())
+			any, err := AnyDeployedSNI(ctx, c)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(any).To(BeTrue())
+		})
+
+		It("returns false when does not exists", func() {
+			any, err := AnyDeployedSNI(ctx, c)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(any).To(BeFalse())
+		})
 	})
 
-	It("returns true when exists", func() {
-		Expect(c.Create(ctx, createVS("kube-apiserver", "test"))).NotTo(HaveOccurred())
-		any, err := AnyDeployedSNI(ctx, c)
+	Context("CRD not available", func() {
+		var (
+			ctrl   *gomock.Controller
+			client *mockclient.MockClient
+		)
 
-		Expect(err).NotTo(HaveOccurred())
-		Expect(any).To(BeTrue())
-	})
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+			client = mockclient.NewMockClient(ctrl)
+		})
 
-	It("returns false when does not exists", func() {
-		any, err := AnyDeployedSNI(ctx, c)
+		AfterEach(func() {
+			ctrl.Finish()
+		})
 
-		Expect(err).NotTo(HaveOccurred())
-		Expect(any).To(BeFalse())
+		It("returns false", func() {
+			client.EXPECT().List(ctx, gomock.AssignableToTypeOf(&unstructured.UnstructuredList{}), gomock.Any()).Return(&meta.NoKindMatchError{})
+			any, err := AnyDeployedSNI(ctx, client)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(any).To(BeFalse())
+		})
 	})
 })
