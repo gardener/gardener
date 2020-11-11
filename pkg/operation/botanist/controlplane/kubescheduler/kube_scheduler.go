@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	"github.com/Masterminds/semver"
@@ -37,8 +38,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -329,7 +328,11 @@ func (k *kubeScheduler) emptyManagedResourceSecret() *corev1.Secret {
 
 func (k *kubeScheduler) reconcileShootResources(ctx context.Context) error {
 	if versionConstraintK8sEqual113.Check(k.version) {
-		return common.DeployManagedResourceForShoot(ctx, k.client, managedResourceName, k.namespace, false, k.computeShootResourcesData())
+		data, err := k.computeShootResourcesData()
+		if err != nil {
+			return err
+		}
+		return common.DeployManagedResourceForShoot(ctx, k.client, managedResourceName, k.namespace, false, data)
 	}
 
 	return kutil.DeleteObjects(ctx, k.client, k.emptyManagedResource(), k.emptyManagedResourceSecret())
@@ -415,10 +418,9 @@ func (k *kubeScheduler) computeCommand(port int32) []string {
 	return command
 }
 
-func (k *kubeScheduler) computeShootResourcesData() map[string][]byte {
+func (k *kubeScheduler) computeShootResourcesData() (map[string][]byte, error) {
 	var (
-		versions = schema.GroupVersions([]schema.GroupVersion{rbacv1.SchemeGroupVersion})
-		codec    = kubernetes.ShootCodec.CodecForVersions(kubernetes.ShootSerializer, kubernetes.ShootSerializer, versions, versions)
+		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
 		subjects = []rbacv1.Subject{{
 			Kind: rbacv1.UserKind,
@@ -436,7 +438,6 @@ func (k *kubeScheduler) computeShootResourcesData() map[string][]byte {
 			},
 			Subjects: subjects,
 		}
-		clusterRoleBindingYAML, _ = runtime.Encode(codec, clusterRoleBinding)
 
 		roleBinding = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
@@ -450,13 +451,12 @@ func (k *kubeScheduler) computeShootResourcesData() map[string][]byte {
 			},
 			Subjects: subjects,
 		}
-		roleBindingYAML, _ = runtime.Encode(codec, roleBinding)
 	)
 
-	return map[string][]byte{
-		"clusterrolebinding.yaml": clusterRoleBindingYAML,
-		"rolebinding.yaml":        roleBindingYAML,
-	}
+	return registry.AddAllAndSerialize(
+		clusterRoleBinding,
+		roleBinding,
+	)
 }
 
 var (

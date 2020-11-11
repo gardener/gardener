@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
@@ -37,8 +38,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
@@ -261,7 +260,12 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return common.DeployManagedResourceForShoot(ctx, c.client, managedResourceTargetName, c.namespace, false, c.computeShootResourcesData())
+	data, err := c.computeShootResourcesData()
+	if err != nil {
+		return err
+	}
+
+	return common.DeployManagedResourceForShoot(ctx, c.client, managedResourceTargetName, c.namespace, false, data)
 }
 
 func getLabels() map[string]string {
@@ -374,10 +378,9 @@ func (c *clusterAutoscaler) computeCommand() []string {
 	return command
 }
 
-func (c *clusterAutoscaler) computeShootResourcesData() map[string][]byte {
+func (c *clusterAutoscaler) computeShootResourcesData() (map[string][]byte, error) {
 	var (
-		versions = schema.GroupVersions([]schema.GroupVersion{rbacv1.SchemeGroupVersion})
-		codec    = kubernetes.ShootCodec.CodecForVersions(kubernetes.ShootSerializer, kubernetes.ShootSerializer, versions, versions)
+		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -459,7 +462,6 @@ func (c *clusterAutoscaler) computeShootResourcesData() map[string][]byte {
 				},
 			},
 		}
-		clusterRoleYAML, _ = runtime.Encode(codec, clusterRole)
 
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
@@ -475,13 +477,12 @@ func (c *clusterAutoscaler) computeShootResourcesData() map[string][]byte {
 				Name: UserName,
 			}},
 		}
-		clusterRoleBindingYAML, _ = runtime.Encode(codec, clusterRoleBinding)
 	)
 
-	return map[string][]byte{
-		"clusterrole.yaml":        clusterRoleYAML,
-		"clusterrolebinding.yaml": clusterRoleBindingYAML,
-	}
+	return registry.AddAllAndSerialize(
+		clusterRole,
+		clusterRoleBinding,
+	)
 }
 
 // Secrets is collection of secrets for the cluster-autoscaler.
