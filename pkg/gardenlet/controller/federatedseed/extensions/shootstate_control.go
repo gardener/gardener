@@ -32,7 +32,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -121,13 +120,11 @@ func (s *shootStateControl) createShootStateSyncReconcileFunc(ctx context.Contex
 		}); err != nil {
 			message := fmt.Sprintf("Shoot's %s %s extension state with name %s and purpose %s was NOT successfully synced: %v", shoot.Name, kind, name, purposeToString(purpose), err)
 			s.log.Error(message)
-			s.recorder.Event(shootState, corev1.EventTypeNormal, "ScheduledNextSync", message)
 			return reconcile.Result{}, err
 		}
 
 		message := fmt.Sprintf("Shoot's %s %s extension state with name %s and purpose %s was successfully synced", shoot.Name, kind, name, purposeToString(purpose))
 		s.log.Info(message)
-		s.recorder.Event(shootState, corev1.EventTypeNormal, "ScheduledNextSync", message)
 		return reconcile.Result{}, nil
 	}
 }
