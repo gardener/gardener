@@ -79,3 +79,9 @@ spec:
     name: hvpa-controller
   updatePolicy:
     updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          cpu: 100m
+          memory: 128Mi
