@@ -63,6 +63,7 @@ var _ = Describe("ProjectStaleControl", func() {
 			staleExpirationTimeDays = 15
 
 			project       *gardencorev1beta1.Project
+			namespace     *corev1.Namespace
 			shoot         *gardencorev1beta1.Shoot
 			plant         *gardencorev1beta1.Plant
 			backupEntry   *gardencorev1beta1.BackupEntry
@@ -102,6 +103,9 @@ var _ = Describe("ProjectStaleControl", func() {
 			project = &gardencorev1beta1.Project{
 				ObjectMeta: metav1.ObjectMeta{Name: projectName},
 				Spec:       gardencorev1beta1.ProjectSpec{Namespace: &namespaceName},
+			}
+			namespace = &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: namespaceName},
 			}
 			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{Namespace: namespaceName},
@@ -143,14 +147,30 @@ var _ = Describe("ProjectStaleControl", func() {
 				gardenCoreInformerFactory.Core().V1beta1().BackupEntries().Lister(),
 				gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Lister(),
 				gardenCoreInformerFactory.Core().V1beta1().Quotas().Lister(),
+				kubeCoreInformerFactory.Core().V1().Namespaces().Lister(),
 				kubeCoreInformerFactory.Core().V1().Secrets().Lister(),
 			)
+
+			Expect(kubeCoreInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(namespace)).To(Succeed())
 		})
 
 		Describe("#ReconcileStaleProject", func() {
 			It("should do nothing because the project has no namespace", func() {
 				project.Spec.Namespace = nil
 				Expect(control.ReconcileStaleProject(project, metav1.Now)).To(Succeed())
+			})
+
+			It("should mark the project as 'not stale' because the namespace has the skip-stale-check annotation", func() {
+				nowFunc := func() metav1.Time {
+					return metav1.Time{Time: time.Date(100, 1, 1, 0, 0, 0, 0, time.UTC)}
+				}
+
+				namespace.Annotations = map[string]string{common.ProjectSkipStaleCheck: "true"}
+				Expect(kubeCoreInformerFactory.Core().V1().Namespaces().Informer().GetStore().Update(namespace)).To(Succeed())
+
+				expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
+
+				Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
 			})
 
 			It("should mark the project as 'not stale' because it is younger than the configured MinimumLifetimeDays", func() {

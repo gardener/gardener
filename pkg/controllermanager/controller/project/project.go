@@ -112,7 +112,7 @@ func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFacto
 		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenCoreInformerFactory,
 		control:                NewDefaultControl(clientMap, config, gardenCoreInformerFactory, recorder, namespaceLister),
-		staleControl:           NewDefaultStaleControl(clientMap, config, shootLister, plantLister, backupEntryLister, secretBindingLister, quotaLister, secretLister),
+		staleControl:           NewDefaultStaleControl(clientMap, config, shootLister, plantLister, backupEntryLister, secretBindingLister, quotaLister, namespaceLister, secretLister),
 		config:                 config,
 		recorder:               recorder,
 		projectLister:          projectLister,
