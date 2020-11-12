@@ -349,7 +349,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "process_resident_memory_bytes{role=~\"$cluster\",job=\"kube-etcd3\"}",
+          "expr": "process_resident_memory_bytes{job=\"kube-etcd3-$cluster\"}",
           "intervalFactor": 2,
           "legendFormat": "{{instance}} Resident Memory",
           "metric": "process_resident_memory_bytes",

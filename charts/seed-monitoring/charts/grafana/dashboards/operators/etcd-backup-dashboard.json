@@ -1120,7 +1120,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "process_resident_memory_bytes{role=\"main\",job=\"kube-etcd3-backup-restore\"}",
+          "expr": "process_resident_memory_bytes{job=\"kube-etcd3-backup-restore-main\"}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Memory",
@@ -1219,7 +1219,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total{role=\"main\",job=\"kube-etcd3-backup-restore\"}[$__rate_interval]) * 100",
+          "expr": "rate(process_cpu_seconds_total{job=\"kube-etcd3-backup-restore-main\"}[$__rate_interval]) * 100",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "CPU",

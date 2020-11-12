@@ -391,7 +391,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "absent(up{job=\"kube-etcd3\", role=\"main\"} == 1)",
+          "expr": "absent(up{job=\"kube-etcd3-main\"} == 1)",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 10,
@@ -492,7 +492,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "absent(up{job=\"kube-etcd3\", role=\"events\"} == 1)",
+          "expr": "absent(up{job=\"kube-etcd3-events\"} == 1)",
           "format": "time_series",
           "instant": true,
           "intervalFactor": 10,
