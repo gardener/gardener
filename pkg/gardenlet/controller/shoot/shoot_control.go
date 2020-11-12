@@ -52,11 +52,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (c *Controller) shootAdd(obj interface{}) {
+func (c *Controller) shootAdd(obj interface{}, resetRateLimiting bool) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
+	}
+
+	if resetRateLimiting {
+		c.getShootQueue(obj).Forget(key)
 	}
 	c.getShootQueue(obj).Add(key)
 }
@@ -80,7 +84,11 @@ func (c *Controller) shootUpdate(oldObj, newObj interface{}) {
 		return
 	}
 
-	c.shootAdd(newObj)
+	// If the shoot's deletion timestamp is set then we want to forget about the potentially established exponential
+	// backoff and enqueue it faster.
+	resetRateLimiting := oldShoot.DeletionTimestamp == nil && newShoot.DeletionTimestamp != nil
+
+	c.shootAdd(newObj, resetRateLimiting)
 }
 
 func (c *Controller) shootDelete(obj interface{}) {
