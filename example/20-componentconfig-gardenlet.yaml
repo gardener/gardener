@@ -64,6 +64,9 @@ controllers:
   seed:
     concurrentSyncs: 5
     syncPeriod: 1m
+resources:
+  capacity:
+    shoots: 200
 leaderElection:
   leaderElect: true
   leaseDuration: 15s

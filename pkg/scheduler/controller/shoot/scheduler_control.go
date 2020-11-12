@@ -190,7 +190,7 @@ func determineSeed(shoot *gardencorev1beta1.Shoot, seedLister gardencorelisters.
 	if err != nil {
 		return nil, err
 	}
-	filteredSeeds, err = filterCandidates(shoot, filteredSeeds)
+	filteredSeeds, err = filterCandidates(shoot, shootList, filteredSeeds)
 	if err != nil {
 		return nil, err
 	}
@@ -277,10 +277,11 @@ func applyStrategy(shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1beta1
 	return candidates, nil
 }
 
-func filterCandidates(shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1beta1.Seed) ([]*gardencorev1beta1.Seed, error) {
+func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []*gardencorev1beta1.Shoot, seedList []*gardencorev1beta1.Seed) ([]*gardencorev1beta1.Seed, error) {
 	var (
 		candidates      []*gardencorev1beta1.Seed
 		candidateErrors = make(map[string]error)
+		seedUsage       = generateSeedUsageMap(shootList)
 	)
 
 	for _, seed := range seedList {
@@ -296,6 +297,11 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1be
 
 		if !gardencorev1beta1helper.TaintsAreTolerated(seed.Spec.Taints, shoot.Spec.Tolerations) {
 			candidateErrors[seed.Name] = fmt.Errorf("shoot does not tolerate the seed's taints")
+			continue
+		}
+
+		if allocatableShoots, ok := seed.Status.Allocatable[gardencorev1beta1.ResourceShoots]; ok && int64(seedUsage[seed.Name]) >= allocatableShoots.Value() {
+			candidateErrors[seed.Name] = fmt.Errorf("seed does not have available capacity for shoots")
 			continue
 		}
 

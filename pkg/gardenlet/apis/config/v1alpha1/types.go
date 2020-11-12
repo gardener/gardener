@@ -45,6 +45,9 @@ type GardenletConfiguration struct {
 	// Controllers defines the configuration of the controllers.
 	// +optional
 	Controllers *GardenletControllerConfiguration `json:"controllers,omitempty"`
+	// Resources defines the total capacity for seed resources and the amount reserved for use by Gardener.
+	// +optional
+	Resources *ResourcesConfiguration `json:"resources,omitempty"`
 	// LeaderElection defines the configuration of leader election client.
 	// +optional
 	LeaderElection *LeaderElectionConfiguration `json:"leaderElection,omitempty"`
@@ -306,6 +309,17 @@ type ConditionThreshold struct {
 	Type string `json:"type"`
 	// Duration is the duration how long the condition can stay in the progressing state.
 	Duration metav1.Duration `json:"duration"`
+}
+
+// ResourcesConfiguration defines the total capacity for seed resources and the amount reserved for use by Gardener.
+type ResourcesConfiguration struct {
+	// Capacity defines the total resources of a seed.
+	// +optional
+	Capacity corev1.ResourceList `json:"capacity,omitempty"`
+	// Reserved defines the resources of a seed that are reserved for use by Gardener.
+	// Defaults to 0.
+	// +optional
+	Reserved corev1.ResourceList `json:"reserved,omitempty"`
 }
 
 // LeaderElectionConfiguration defines the configuration of leader election

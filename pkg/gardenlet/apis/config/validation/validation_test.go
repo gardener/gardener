@@ -21,6 +21,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
@@ -45,6 +47,15 @@ var _ = Describe("GardenletConfiguration", func() {
 					Namespace:   pointer.StringPtr("foo"),
 					Labels:      map[string]string{"baz": "bar"},
 					ServiceName: pointer.StringPtr("waldo"),
+				},
+			},
+			Resources: &config.ResourcesConfiguration{
+				Capacity: corev1.ResourceList{
+					"foo": resource.MustParse("42"),
+					"bar": resource.MustParse("13"),
+				},
+				Reserved: corev1.ResourceList{
+					"foo": resource.MustParse("7"),
 				},
 			},
 		}
@@ -161,6 +172,39 @@ var _ = Describe("GardenletConfiguration", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("sni.ingress.labels"),
+			}))))
+		})
+
+		It("should forbid reserved greater than capacity", func() {
+			cfg.Resources = &config.ResourcesConfiguration{
+				Capacity: corev1.ResourceList{
+					"foo": resource.MustParse("42"),
+				},
+				Reserved: corev1.ResourceList{
+					"foo": resource.MustParse("43"),
+				},
+			}
+
+			errorList := ValidateGardenletConfiguration(cfg)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("resources.reserved.foo"),
+			}))))
+		})
+
+		It("should forbid reserved without capacity", func() {
+			cfg.Resources = &config.ResourcesConfiguration{
+				Reserved: corev1.ResourceList{
+					"foo": resource.MustParse("42"),
+				},
+			}
+
+			errorList := ValidateGardenletConfiguration(cfg)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("resources.reserved.foo"),
 			}))))
 		})
 	})

@@ -96,6 +96,9 @@ global:
           syncPeriod: 30s
         shootedSeedRegistration:
           syncJitterPeriod: 5m
+      resources:
+        capacity:
+          shoots: 250
       leaderElection:
         leaderElect: true
         leaseDuration: 15s

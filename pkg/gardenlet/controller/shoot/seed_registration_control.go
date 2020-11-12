@@ -649,6 +649,14 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 		}
 	}
 
+	resources := externalConfig.Resources
+	if shootedSeedConfig.Resources != nil {
+		resources = &configv1alpha1.ResourcesConfiguration{
+			Capacity: shootedSeedConfig.Resources.Capacity,
+			Reserved: shootedSeedConfig.Resources.Reserved,
+		}
+	}
+
 	values := map[string]interface{}{
 		"global": map[string]interface{}{
 			"gardenlet": map[string]interface{}{
@@ -676,6 +684,7 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 					"seedClientConnection":  externalConfig.SeedClientConnection.ClientConnectionConfiguration,
 					"shootClientConnection": externalConfig.ShootClientConnection,
 					"controllers":           externalConfig.Controllers,
+					"resources":             resources,
 					"leaderElection":        externalConfig.LeaderElection,
 					"logLevel":              externalConfig.LogLevel,
 					"kubernetesLogLevel":    externalConfig.KubernetesLogLevel,
