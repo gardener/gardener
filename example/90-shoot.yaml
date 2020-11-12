@@ -269,20 +269,15 @@ spec:
   #   secretRef: foobar-secret # See the resources section below for the actual reference
   # disabled: true # only relevant for extensions that were marked as 'globally enabled' by Gardener administrators
   networking:
-    type: calico
+    type: <some-network-extension-name> # {calico,cilium}
     pods: 100.96.0.0/11
     nodes: 10.250.0.0/16
     services: 100.64.0.0/13
-  # providerConfig:
-  #   apiVersion: calico.networking.extensions.gardener.cloud/v1alpha1
-  #   kind: NetworkConfig
-  #   ipam:
-  #     type: host-local
-  #     cidr: usePodCIDR
-  #   backend: bird
-  #   typha:
-  #     enabled: true
-  # See also: https://github.com/gardener/gardener/blob/master/docs/proposals/03-networking.md
+    # providerConfig:
+    #   <some-networking-provider-specific-config>
+    #   https://github.com/gardener/gardener-extension-networking-calico/blob/master/example/20-network.yaml#L46-L56
+    #   https://github.com/gardener/gardener-extension-networking-cilium/blob/master/example/20-network.yaml#L42-L57
+    #   For networking extensibility see also: https://github.com/gardener/gardener/blob/master/docs/proposals/03-networking-extensibility.md
   maintenance:
     timeWindow:
       begin: 220000+0100
