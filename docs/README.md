@@ -107,6 +107,7 @@
     * [`Extension` resource](extensions/extension.md)
 * [Extending project roles](extensions/project-roles.md)
 * [Referenced resources](extensions/referenced-resources.md)
+* [Control plane migration](extensions/migration.md)
 
 ## Testing
 
