@@ -55,6 +55,14 @@ spec:
         - name: metrics
           containerPort: 2020
           protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /api/v1/metrics/prometheus
+            port: 2020
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 2020
         volumeMounts:
         - name: config
           mountPath: /fluent-bit/etc
