@@ -73,6 +73,7 @@ It filters out `Seed`s
 * whose networks have intersections with the `Shoot`'s networks (due to the VPN connectivity between seeds and shoots their networks must be disjoint)
 * that have `.spec.settings.shootDNS.enabled=false` (only if the shoot specifies a DNS domain or does not use the `unmanaged` DNS provider)
 * whose labels don't match the `.spec.seedSelector` field of the `CloudProfile` that is used in the `Shoot` (there might be multiple environments for the same provider type, e.g., you might have multiple OpenStack systems connected to Gardener)
+* whose capacity for shoots would be exceeded if the shoot is scheduled onto the seed, see [Ensuring seeds capacity for shoots is not exceeded](#ensuring-seeds-capacity-for-shoots-is-not-exceeded)
 
 After this filtering process the least utilized seed, i.e., the one with the least number of shoot control planes, will be the winner and written to the `.spec.seedName` field of the `Shoot`.
 
@@ -85,6 +86,16 @@ If provided, the Gardener Scheduler will only consider those seeds as "suitable"
 
 By default only seeds with the same provider than the shoot are selected. By adding a `providerTypes` field to the `seedSelector`
 a dedicated set of possible providers (`*` means all provider types) can be selected.
+
+## Ensuring seeds capacity for shoots is not exceeded
+
+Seeds have a practical limit of how many shoots they can accommodate. Exceeding this limit is undesirable as the system performance will be noticeably impacted. Therefore, the scheduler ensures that a seed's capacity for shoots is not exceeded by taking into account a maximum number of shoots that can be scheduled onto a seed.
+
+This mechanism works as follows:
+
+* The `gardenlet` is configured with certain *resources* and their total *capacity* (and, for certain resources, the amount *reserved* for Gardener), see [/example/20-componentconfig-gardenlet.yaml](../../example/20-componentconfig-gardenlet.yaml). Currently, the only such resource is the maximum number of shoots that can be scheduled onto a seed. 
+* The `gardenlet` seed controller updates the `capacity` and `allocatable` fields in Seed status with the capacity of each resource and how much of it is actually available to be consumed by shoots. The `allocatable` value of a resource is equal to `capacity` minus `reserved`.
+* When scheduling shoots, the scheduler filters out all candidate seeds whose allocatable capacity for shoots would be exceeded if the shoot is scheduled onto the seed.
 
 ## Failure to determine a suitable seed
 

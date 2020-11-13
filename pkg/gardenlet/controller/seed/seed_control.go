@@ -40,7 +40,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
@@ -185,7 +184,9 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 		for resourceName, quantity := range c.config.Resources.Capacity {
 			capacity[resourceName] = quantity
 			if reservedQuantity, ok := c.config.Resources.Reserved[resourceName]; ok {
-				allocatable[resourceName] = *resource.NewQuantity(quantity.Value()-reservedQuantity.Value(), quantity.Format)
+				allocatableQuantity := quantity.DeepCopy()
+				allocatableQuantity.Sub(reservedQuantity)
+				allocatable[resourceName] = allocatableQuantity
 			} else {
 				allocatable[resourceName] = quantity
 			}
@@ -248,7 +249,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 			seedLogger.Error(err.Error())
 			return err
 		}
-		//}
+		// }
 		if len(associatedShoots) == 0 && len(associatedBackupBuckets) == 0 {
 			seedLogger.Info("No Shoots or BackupBuckets are referencing the Seed. Deletion accepted.")
 
