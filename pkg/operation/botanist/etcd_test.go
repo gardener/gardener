@@ -159,7 +159,7 @@ var _ = Describe("Etcd", func() {
 			})
 		})
 
-		Context("no shooted seed", func() {
+		Context("no HVPAShootedSeed feature gate", func() {
 			hvpaForShootedSeedEnabled := false
 
 			BeforeEach(func() {

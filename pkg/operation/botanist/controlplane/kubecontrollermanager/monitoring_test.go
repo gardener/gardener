@@ -15,6 +15,8 @@
 package kubecontrollermanager_test
 
 import (
+	"path/filepath"
+
 	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
 	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 
@@ -53,7 +55,7 @@ var _ = Describe("Monitoring", func() {
 		test.AlertingRulesWithPromtool(
 			kubeControllerManager,
 			map[string]string{"kube-controller-manager.rules.yaml": expectedAlertingRule},
-			"monitoring_alertingrules.test.yaml",
+			filepath.Join("testdata", "monitoring_alertingrules.yaml"),
 		)
 	})
 })

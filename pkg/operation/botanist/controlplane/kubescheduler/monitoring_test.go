@@ -15,6 +15,8 @@
 package kubescheduler_test
 
 import (
+	"path/filepath"
+
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -54,7 +56,7 @@ var _ = Describe("Monitoring", func() {
 		test.AlertingRulesWithPromtool(
 			kubeScheduler,
 			map[string]string{"kube-scheduler.rules.yaml": expectedAlertingRule},
-			"monitoring_alertingrules.test.yaml",
+			filepath.Join("testdata", "monitoring_alertingrules.yaml"),
 		)
 	})
 })

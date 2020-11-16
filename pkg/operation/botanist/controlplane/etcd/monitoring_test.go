@@ -16,6 +16,7 @@ package etcd_test
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
@@ -40,7 +41,7 @@ var _ = Describe("Monitoring", func() {
 				test.AlertingRulesWithPromtool(
 					etcd,
 					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalWithoutBackup},
-					"monitoring_alertingrules_normal_without_backup.test.yaml",
+					filepath.Join("testdata", "monitoring_alertingrules_normal_without_backup.yaml"),
 				)
 			})
 
@@ -49,7 +50,7 @@ var _ = Describe("Monitoring", func() {
 				test.AlertingRulesWithPromtool(
 					etcd,
 					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesImportantWithoutBackup},
-					"monitoring_alertingrules_important_without_backup.test.yaml",
+					filepath.Join("testdata", "monitoring_alertingrules_important_without_backup.yaml"),
 				)
 			})
 		})
@@ -61,7 +62,7 @@ var _ = Describe("Monitoring", func() {
 				test.AlertingRulesWithPromtool(
 					etcd,
 					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesNormalWithBackup},
-					"monitoring_alertingrules_normal_with_backup.test.yaml",
+					filepath.Join("testdata", "monitoring_alertingrules_normal_with_backup.yaml"),
 				)
 			})
 
@@ -71,7 +72,7 @@ var _ = Describe("Monitoring", func() {
 				test.AlertingRulesWithPromtool(
 					etcd,
 					map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", testRole): expectedAlertingRulesImportantWithBackup},
-					"monitoring_alertingrules_important_with_backup.test.yaml",
+					filepath.Join("testdata", "monitoring_alertingrules_important_with_backup.yaml"),
 				)
 			})
 		})
