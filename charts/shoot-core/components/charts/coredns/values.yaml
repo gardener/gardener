@@ -1,6 +1,8 @@
 # The values here match the ones on the upstream deployment repo (https://github.com/coredns/deployment/blob/master/kubernetes/coredns.yaml.sed).
 # They may need to be updated in the future
 
+global:
+  podNetwork: 1.2.3.4/24
 service:
   type: "ClusterIP"
   clusterDNS: 100.64.0.10
