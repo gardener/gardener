@@ -1,0 +1,7 @@
+apiVersion: {{ include "priorityclassversion" . }}
+kind: PriorityClass
+metadata:
+  name: fluent-bit
+value: 50
+globalDefault: false
+description: "This class is used to ensure that the fuent-bit has a higher priority than pods without PriorityClass set."
