@@ -209,9 +209,11 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 
 		seedConditions []gardencorev1beta1.Condition
 
-		constraintHibernationPossible = gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Constraints, gardencorev1beta1.ShootHibernationPossible)
-		oldConstraints                = []gardencorev1beta1.Condition{
+		constraintHibernationPossible               = gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Constraints, gardencorev1beta1.ShootHibernationPossible)
+		constraintMaintenancePreconditionsSatisfied = gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Constraints, gardencorev1beta1.ShootMaintenancePreconditionsSatisfied)
+		oldConstraints                              = []gardencorev1beta1.Condition{
 			constraintHibernationPossible,
+			constraintMaintenancePreconditionsSatisfied,
 		}
 	)
 
@@ -232,8 +234,10 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		}
 
 		constraintHibernationPossible = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(constraintHibernationPossible, message)
+		constraintMaintenancePreconditionsSatisfied = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(constraintMaintenancePreconditionsSatisfied, message)
 		constraints := []gardencorev1beta1.Condition{
 			constraintHibernationPossible,
+			constraintMaintenancePreconditionsSatisfied,
 		}
 
 		if !gardencorev1beta1helper.ConditionsNeedUpdate(oldConditions, conditions) &&
@@ -272,7 +276,12 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		},
 		// Trigger constraint checks
 		func(ctx context.Context) error {
-			constraintHibernationPossible = botanist.ConstraintsChecks(ctx, initializeShootClients, constraintHibernationPossible)
+			constraintHibernationPossible, constraintMaintenancePreconditionsSatisfied = botanist.ConstraintsChecks(
+				ctx,
+				initializeShootClients,
+				constraintHibernationPossible,
+				constraintMaintenancePreconditionsSatisfied,
+			)
 			return nil
 		},
 		// Trigger garbage collection
@@ -292,6 +301,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		}, seedConditions...)
 		constraints = []gardencorev1beta1.Condition{
 			constraintHibernationPossible,
+			constraintMaintenancePreconditionsSatisfied,
 		}
 	)
 

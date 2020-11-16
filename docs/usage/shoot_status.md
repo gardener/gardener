@@ -50,11 +50,15 @@ Let's check the following example to get better understanding. Let's say that th
 
 Constraints represent conditions of a Shoot’s current state that constraint some operations on it.
 
-Currently there is only one Shoot constraint:
+Currently there are two constraints:
 
 - `HibernationPossible`
 
   This constraint indicates whether a Shoot is allowed to be hibernated. The rationale behind this constraint is that a Shoot can have `ValidatingWebhookConfiguration`s or `MutatingWebhookConfiguration`s with rules for CREATE Pods or Nodes and `failurePolicy=Fail`. Such webhooks are preventing wake up for a Shoot cluster as new Nodes cannot be created or new system component Pods cannot be created because the webhook is not running. To prevent such deadlock situation, the gardener-apiserver does not allow Shoot to be hibernated when the `HibernationPossible` has status `False`.
+
+- `MaintenancePreconditionsSatisfied`
+
+  This constraint indicates whether all preconditions for a safe maintenance operation are satisfied (see also [this document](shoot_maintenance.md) for more information about what happens during a shoot maintenance). As of today, the same checks as in the `HibernationPossible` constraint are being performed (user-deployed webhooks that might interfere with potential rolling updates of shoot worker nodes). There is no further action being performed on this constraint's status (maintenance is still being performed). It is meant to make the user aware of potential problems that might occur due to his configurations. 
 
 ### Last Operation
 

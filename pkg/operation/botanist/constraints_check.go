@@ -35,42 +35,74 @@ func shootControlPlaneNotRunningConstraint(condition gardencorev1beta1.Condition
 }
 
 // ConstraintsChecks conducts the constraints checks on all the given constraints.
-func (b *Botanist) ConstraintsChecks(ctx context.Context, initializeShootClients func() (bool, error), hibernation gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	hibernationPossible := b.constraintsChecks(ctx, initializeShootClients, hibernation)
+func (b *Botanist) ConstraintsChecks(
+	ctx context.Context,
+	initializeShootClients func() (bool, error),
+	hibernationPossibleConstraint gardencorev1beta1.Condition,
+	maintenancePreconditionsSatisfiedConstraint gardencorev1beta1.Condition,
+) (
+	gardencorev1beta1.Condition,
+	gardencorev1beta1.Condition,
+) {
+	hibernationPossible, maintenancePreconditionsSatisfied := b.constraintsChecks(ctx, initializeShootClients, hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint)
 	lastOp := b.Shoot.Info.Status.LastOperation
 	lastErrors := b.Shoot.Info.Status.LastErrors
-	return PardonCondition(hibernationPossible, lastOp, lastErrors)
+	return PardonCondition(hibernationPossible, lastOp, lastErrors),
+		PardonCondition(maintenancePreconditionsSatisfied, lastOp, lastErrors)
 }
 
-func (b *Botanist) constraintsChecks(ctx context.Context, initializeShootClients func() (bool, error), hibernationConstraint gardencorev1beta1.Condition) gardencorev1beta1.Condition {
+func (b *Botanist) constraintsChecks(
+	ctx context.Context,
+	initializeShootClients func() (bool, error),
+	hibernationPossibleConstraint gardencorev1beta1.Condition,
+	maintenancePreconditionsSatisfiedConstraint gardencorev1beta1.Condition,
+) (
+	gardencorev1beta1.Condition,
+	gardencorev1beta1.Condition,
+) {
 	if b.Shoot.HibernationEnabled || b.Shoot.Info.Status.IsHibernated {
-		return shootHibernatedConstraint(hibernationConstraint)
+		return shootHibernatedConstraint(hibernationPossibleConstraint), shootHibernatedConstraint(maintenancePreconditionsSatisfiedConstraint)
 	}
 
 	apiServerRunning, err := initializeShootClients()
 	if err != nil {
 		message := fmt.Sprintf("Could not initialize Shoot client for constraints check: %+v", err)
 		b.Logger.Error(message)
-		hibernationConstraint = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(hibernationConstraint, message)
+		hibernationPossibleConstraint = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(hibernationPossibleConstraint, message)
+		maintenancePreconditionsSatisfiedConstraint = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(maintenancePreconditionsSatisfiedConstraint, message)
 
-		return hibernationConstraint
+		return hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint
 	}
+
 	if !apiServerRunning {
 		// don't check constraints if API server has already been deleted or has not been created yet
-		return shootControlPlaneNotRunningConstraint(hibernationConstraint)
+		return shootControlPlaneNotRunningConstraint(hibernationPossibleConstraint),
+			shootControlPlaneNotRunningConstraint(maintenancePreconditionsSatisfiedConstraint)
 	}
 
-	newHibernationConstraint, err := b.CheckHibernationPossible(ctx, hibernationConstraint)
-	hibernationConstraint = newConditionOrError(hibernationConstraint, newHibernationConstraint, err)
+	var newHibernationConstraint, newMaintenancePreconditionsSatisfiedConstraint *gardencorev1beta1.Condition
 
-	return hibernationConstraint
+	status, reason, message, err := b.CheckForProblematicWebhooks(ctx, hibernationPossibleConstraint)
+	if err == nil {
+		c := gardencorev1beta1helper.UpdatedCondition(hibernationPossibleConstraint, status, reason, message)
+		newHibernationConstraint = &c
+
+		c = gardencorev1beta1helper.UpdatedCondition(maintenancePreconditionsSatisfiedConstraint, status, reason, message)
+		newMaintenancePreconditionsSatisfiedConstraint = &c
+	}
+
+	hibernationPossibleConstraint = newConditionOrError(hibernationPossibleConstraint, newHibernationConstraint, err)
+	maintenancePreconditionsSatisfiedConstraint = newConditionOrError(maintenancePreconditionsSatisfiedConstraint, newMaintenancePreconditionsSatisfiedConstraint, err)
+
+	return hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint
 }
 
-// CheckHibernationPossible checks the Shoot for problematic webhooks which could prevent wakeup after hibernation
-func (b *Botanist) CheckHibernationPossible(ctx context.Context, constraint gardencorev1beta1.Condition) (*gardencorev1beta1.Condition, error) {
+// CheckForProblematicWebhooks checks the Shoot for problematic webhooks which could prevent shoot worker nodes from
+// joining the cluster.
+func (b *Botanist) CheckForProblematicWebhooks(ctx context.Context, constraint gardencorev1beta1.Condition) (gardencorev1beta1.ConditionStatus, string, string, error) {
 	validatingWebhookConfigs := &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}
 	if err := b.K8sShootClient.Client().List(ctx, validatingWebhookConfigs); err != nil {
-		return nil, fmt.Errorf("could not get ValidatingWebhookConfigurations of Shoot cluster to check if Shoot can be hibernated")
+		return "", "", "", fmt.Errorf("could not get ValidatingWebhookConfigurations of Shoot cluster to check for problematic webhooks")
 	}
 
 	for _, webhookConfig := range validatingWebhookConfigs.Items {
@@ -81,17 +113,18 @@ func (b *Botanist) CheckHibernationPossible(ctx context.Context, constraint gard
 					failurePolicy = string(*w.FailurePolicy)
 				}
 
-				c := gardencorev1beta1helper.UpdatedCondition(constraint, gardencorev1beta1.ConditionFalse, "ProblematicWebhooks",
-					fmt.Sprintf("Shoot cannot be hibernated because of ValidatingWebhookConfiguration %q: webhook %q with failurePolicy %q will probably prevent the Shoot from being woken up again",
-						webhookConfig.Name, w.Name, failurePolicy))
-				return &c, nil
+				return gardencorev1beta1.ConditionFalse,
+					"ProblematicWebhooks",
+					fmt.Sprintf("ValidatingWebhookConfiguration %q is problematic: webhook %q with failurePolicy %q might prevent worker nodes from properly joining the shoot cluster",
+						webhookConfig.Name, w.Name, failurePolicy),
+					nil
 			}
 		}
 	}
 
 	mutatingWebhookConfigs := &admissionregistrationv1beta1.MutatingWebhookConfigurationList{}
 	if err := b.K8sShootClient.Client().List(ctx, mutatingWebhookConfigs); err != nil {
-		return nil, fmt.Errorf("could not get MutatingWebhookConfigurations of Shoot cluster to check if Shoot can be hibernated")
+		return "", "", "", fmt.Errorf("could not get MutatingWebhookConfigurations of Shoot cluster to check for problematic webhooks")
 	}
 
 	for _, webhookConfig := range mutatingWebhookConfigs.Items {
@@ -102,23 +135,25 @@ func (b *Botanist) CheckHibernationPossible(ctx context.Context, constraint gard
 					failurePolicy = string(*w.FailurePolicy)
 				}
 
-				c := gardencorev1beta1helper.UpdatedCondition(constraint, gardencorev1beta1.ConditionFalse, "ProblematicWebhooks",
-					fmt.Sprintf("Shoot cannot be hibernated because of MutatingWebhookConfiguration %q: webhook %q with failurePolicy %q will probably prevent the Shoot from being woken up again",
-						webhookConfig.Name, w.Name, failurePolicy))
-				return &c, nil
+				return gardencorev1beta1.ConditionFalse,
+					"ProblematicWebhooks",
+					fmt.Sprintf("MutatingWebhookConfiguration %q is problematic: webhook %q with failurePolicy %q might prevent worker nodes from properly joining the shoot cluster",
+						webhookConfig.Name, w.Name, failurePolicy),
+					nil
 			}
 		}
 	}
 
-	c := gardencorev1beta1helper.UpdatedCondition(constraint, gardencorev1beta1.ConditionTrue, "NoProblematicWebhooks", "Shoot can be hibernated.")
-	return &c, nil
+	return gardencorev1beta1.ConditionTrue,
+		"NoProblematicWebhooks",
+		"All webhooks are properly configured.",
+		nil
 }
 
-// IsProblematicWebhook checks if a single webhook of the Shoot Cluster is problematic and the Shoot should therefore
-// not be hibernated. Problematic webhooks are webhooks with rules for CREATE/UPDATE/* pods or nodes and
-// failurePolicy=Fail/nil. If the Shoot contains such a webhook, we can never wake up this shoot cluster again
-// as new nodes cannot get created/ready, or our system component pods cannot get created/ready
-// (because the webhook's backing pod is not yet running).
+// IsProblematicWebhook checks if a single webhook of the Shoot Cluster is problematic. Problematic webhooks are
+// webhooks with rules for CREATE/UPDATE/* pods or nodes and failurePolicy=Fail/nil. If the Shoot contains such a
+// webhook, we can never wake up this shoot cluster again  as new nodes cannot get created/ready, or our system
+// component pods cannot get created/ready (because the webhook's backing pod is not yet running).
 func IsProblematicWebhook(
 	failurePolicy *admissionregistrationv1beta1.FailurePolicyType,
 	objSelector *metav1.LabelSelector,

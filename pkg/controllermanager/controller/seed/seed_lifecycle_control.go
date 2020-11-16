@@ -206,7 +206,8 @@ func setShootStatusToUnknown(ctx context.Context, g gardencore.Interface, shoot 
 		}
 
 		constraints = map[gardencorev1beta1.ConditionType]gardencorev1beta1.Condition{
-			gardencorev1beta1.ShootHibernationPossible: {},
+			gardencorev1beta1.ShootHibernationPossible:               {},
+			gardencorev1beta1.ShootMaintenancePreconditionsSatisfied: {},
 		}
 	)
 
