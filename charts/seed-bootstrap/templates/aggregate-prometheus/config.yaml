@@ -132,6 +132,26 @@ data:
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.fluentbit| indent 6 }}
 
+    - job_name: fluent-bit-output-plugin
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [ garden ]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        action: keep
+        regex: fluent-bit;metrics-plugin
+      # common metrics
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.fluentbitOutputPlugin | indent 6 }}
+
     - job_name: 'vpa-exporter'
       kubernetes_sd_configs:
       - role: endpoints

@@ -111,6 +111,14 @@ allowedMetrics:
   - fluentbit_filter_add_records_total
   - fluentbit_filter_drop_records_total
 
+  fluentbitOutputPlugin:
+  - promtail_dropped_entries_total
+  - fluentbit_loki_gardener_errors_total
+  - fluentbit_loki_gardener_logs_without_metadata_total
+  - fluentbit_loki_gardener_incoming_logs_total
+  - fluentbit_loki_gardener_forwarded_logs_total
+  - fluentbit_loki_gardener_dropped_logs_total
+
   vpa:
   - vpa_status_recommendation
   - vpa_spec_container_resource_policy_allowed
@@ -153,6 +161,7 @@ allowedMetrics:
   - loki_panic_total
   - loki_logql_querystats_duplicates_total
   - loki_logql_querystats_ingester_sent_lines_total
+  - prometheus_target_scrapes_sample_out_of_order_total
 
   istiod:
   - galley_istio_authentication_meshpolicies
