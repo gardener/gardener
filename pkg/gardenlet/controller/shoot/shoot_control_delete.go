@@ -606,7 +606,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 }
 
 func (c *Controller) removeFinalizerFrom(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {
-	newShoot, err := c.updateShootStatusOperationSuccess(ctx, gardenClient.GardenCore(), shoot, "", "", gardencorev1beta1.LastOperationTypeDelete)
+	newShoot, err := c.updateShootStatusOperationSuccess(ctx, gardenClient.GardenCore(), shoot, "", nil, gardencorev1beta1.LastOperationTypeDelete)
 	if err != nil {
 		return err
 	}

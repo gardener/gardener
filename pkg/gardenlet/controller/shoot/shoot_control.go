@@ -172,7 +172,7 @@ func (c *Controller) deleteClusterResourceFromSeed(ctx context.Context, shoot *g
 }
 
 func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Result, error) {
-	log := logger.NewShootLogger(logger.Logger, req.Name, req.Namespace).WithField("operation", "reconcile")
+	log := logger.NewShootLogger(logger.Logger, req.Name, req.Namespace)
 
 	shoot, err := c.shootLister.Shoots(req.Namespace).Get(req.Name)
 	if apierrors.IsNotFound(err) {
@@ -198,8 +198,11 @@ func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Res
 	}
 
 	if shoot.DeletionTimestamp != nil {
+		log = log.WithField("operation", "delete")
 		return c.deleteShoot(log, shoot, project, cloudProfile, seed)
 	}
+
+	log = log.WithField("operation", "reconcile")
 
 	if shouldPrepareShootForMigration(shoot) {
 		if err := c.isSeedAvailable(seed); err != nil {
@@ -299,6 +302,12 @@ func (c *Controller) deleteShoot(logger *logrus.Entry, shoot *gardencorev1beta1.
 	// We accept the deletion.
 	if len(shoot.Status.UID) == 0 {
 		logger.Info("`.status.uid` is empty, assuming Shoot cluster did never exist. Deletion accepted.")
+		return c.finalizeShootDeletion(ctx, gardenClient, shoot, project.Name)
+	}
+
+	// If the .status.lastOperation already indicates that the deletion is successful then we finalize it immediately.
+	if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeDelete && shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+		logger.Info("`.status.lastOperation` indicates a successful deletion. Deletion accepted.")
 		return c.finalizeShootDeletion(ctx, gardenClient, shoot, project.Name)
 	}
 
@@ -459,7 +468,7 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 	}
 
 	c.recorder.Event(o.Shoot.Info, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, "Reconciled Shoot cluster state")
-	o.Shoot.Info, err = c.updateShootStatusOperationSuccess(ctx, gardenClient.GardenCore(), o.Shoot.Info, o.Shoot.SeedNamespace, o.Seed.Info.Name, operationType)
+	o.Shoot.Info, err = c.updateShootStatusOperationSuccess(ctx, gardenClient.GardenCore(), o.Shoot.Info, o.Shoot.SeedNamespace, &o.Seed.Info.Name, operationType)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -555,7 +564,7 @@ func (c *Controller) updateShootStatusOperationStart(ctx context.Context, g gard
 		})
 }
 
-func (c *Controller) updateShootStatusOperationSuccess(ctx context.Context, g gardencore.Interface, shoot *gardencorev1beta1.Shoot, shootSeedNamespace string, seedName string, operationType gardencorev1beta1.LastOperationType) (*gardencorev1beta1.Shoot, error) {
+func (c *Controller) updateShootStatusOperationSuccess(ctx context.Context, g gardencore.Interface, shoot *gardencorev1beta1.Shoot, shootSeedNamespace string, seedName *string, operationType gardencorev1beta1.LastOperationType) (*gardencorev1beta1.Shoot, error) {
 	var (
 		now          = metav1.NewTime(time.Now().UTC())
 		description  string
@@ -580,7 +589,7 @@ func (c *Controller) updateShootStatusOperationSuccess(ctx context.Context, g ga
 
 	return kutil.TryUpdateShootStatus(ctx, g, retry.DefaultRetry, shoot.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			shoot.Status.SeedName = &seedName
+			shoot.Status.SeedName = seedName
 			shoot.Status.IsHibernated = isHibernated
 			shoot.Status.RetryCycleStartTime = nil
 			shoot.Status.LastErrors = nil
@@ -648,8 +657,12 @@ func lastErrorsOperationInitializationFailure(lastErrors []gardencorev1beta1.Las
 // isHibernationActive uses the Cluster resource in the Seed to determine whether the Shoot is hibernated
 // The Cluster contains the actual or "active" spec of the Shoot resource for this reconciliation
 // as the Shoot resources field `spec.hibernation.enabled` might have changed during the reconciliation
-func (c *Controller) isHibernationActive(ctx context.Context, shootSeedNamespace, seedName string) (bool, error) {
-	seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeedWithName(seedName))
+func (c *Controller) isHibernationActive(ctx context.Context, shootSeedNamespace string, seedName *string) (bool, error) {
+	if seedName == nil {
+		return false, nil
+	}
+
+	seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeedWithName(*seedName))
 	if err != nil {
 		return false, err
 	}
