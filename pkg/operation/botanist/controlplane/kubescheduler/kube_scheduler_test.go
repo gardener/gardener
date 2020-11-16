@@ -294,8 +294,8 @@ subjects:
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{
-				"clusterrolebinding.yaml": []byte(clusterRoleBindingYAML),
-				"rolebinding.yaml":        []byte(roleBindingYAML),
+				"clusterrolebinding____system_controller_kube-scheduler.yaml":                 []byte(clusterRoleBindingYAML),
+				"rolebinding__kube-system__system_controller_kube-scheduler_auth-reader.yaml": []byte(roleBindingYAML),
 			},
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{

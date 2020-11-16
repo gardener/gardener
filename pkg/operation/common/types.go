@@ -204,9 +204,6 @@ const (
 	// VPNShootDeploymentName is the name of the vpn-shoot deployment.
 	VPNShootDeploymentName = "vpn-shoot"
 
-	// MetricsServerDeploymentName is the name of the metrics-server deployment.
-	MetricsServerDeploymentName = "metrics-server"
-
 	// KubeProxyDaemonSetName is the name of the kube-proxy daemon set.
 	KubeProxyDaemonSetName = "kube-proxy"
 
@@ -546,12 +543,5 @@ var (
 	// RequiredLoggingStatefulSets is a set of the required logging stateful sets.
 	RequiredLoggingStatefulSets = sets.NewString(
 		v1beta1constants.StatefulSetNameLoki,
-	)
-
-	// ManagedResourcesShoot is a set of managed resource names which contain resources deployed to the shoot.
-	ManagedResourcesShoot = sets.NewString(
-		ManagedResourceCoreNamespaceName,
-		ManagedResourceShootCoreName,
-		ManagedResourceAddonsName,
 	)
 )

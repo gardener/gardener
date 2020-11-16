@@ -23,10 +23,6 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: kube-proxy.enabled
-- name: metrics-server
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: metrics-server.enabled
 - name: monitoring
   repository: http://localhost:10191
   version: 0.1.0

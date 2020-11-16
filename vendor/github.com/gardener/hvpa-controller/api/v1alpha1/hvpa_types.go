@@ -279,7 +279,7 @@ type HvpaStatus struct {
 	LastBlockedScaling []*BlockedScaling `json:"lastBlockedScaling,omitempty"`
 	LastScaling        ScalingStatus     `json:"lastScaling,omitempty"`
 
-	// LastError has details of any errors that occured
+	// LastError has details of any errors that occurred
 	LastError *LastError `json:"lastError,omitempty"`
 }
 

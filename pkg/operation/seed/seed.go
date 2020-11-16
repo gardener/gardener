@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed/istio"
 	"github.com/gardener/gardener/pkg/utils"
@@ -378,6 +379,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			clusterautoscaler.LoggingConfiguration,
 			kubescheduler.LoggingConfiguration,
 			kubecontrollermanager.LoggingConfiguration,
+			metricsserver.LoggingConfiguration,
 		}
 		userAllowedComponents := []string{v1beta1constants.DeploymentNameKubeAPIServer}
 

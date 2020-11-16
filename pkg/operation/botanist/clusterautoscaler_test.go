@@ -132,7 +132,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 			It("should fail when the deploy function fails", func() {
 				clusterAutoscaler.EXPECT().Deploy(ctx).Return(fakeErr)
-				Expect(botanist.DeployClusterAutoscaler(context.TODO())).To(Equal(fakeErr))
+				Expect(botanist.DeployClusterAutoscaler(ctx)).To(Equal(fakeErr))
 			})
 		})
 

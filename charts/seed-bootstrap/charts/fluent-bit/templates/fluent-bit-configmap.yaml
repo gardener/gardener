@@ -124,13 +124,6 @@ data:
 
     [FILTER]
         Name                parser
-        Match               kubernetes.*metrics-server*metrics-server*
-        Key_Name            log
-        Parser              kubeapiserverParser
-        Reserve_Data        True
-
-    [FILTER]
-        Name                parser
         Match               kubernetes.*vpn-shoot*vpn-shoot*
         Key_Name            log
         Parser              vpnshootParser

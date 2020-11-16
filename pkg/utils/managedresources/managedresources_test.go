@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"testing"
 	"time"
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -39,11 +38,6 @@ const (
 	namespace = "test"
 	name      = "managed-resource"
 )
-
-func TestManagedResources(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "ManagedResources Suite")
-}
 
 var _ = Describe("managedresources", func() {
 	var (

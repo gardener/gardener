@@ -20,17 +20,20 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/authentication/user"
 )
 
 func (k *kubeControllerManager) deployShootManagedResource(ctx context.Context) error {
 	if versionConstraintK8sGreaterEqual112.Check(k.version) && versionConstraintK8sSmaller114.Check(k.version) {
-		return common.DeployManagedResourceForShoot(ctx, k.seedClient, managedResourceName, k.namespace, false, k.computeShootResourcesData())
+		data, err := k.computeShootResourcesData()
+		if err != nil {
+			return err
+		}
+		return common.DeployManagedResourceForShoot(ctx, k.seedClient, managedResourceName, k.namespace, false, data)
 	}
 
 	return kutil.DeleteObjects(
@@ -41,10 +44,9 @@ func (k *kubeControllerManager) deployShootManagedResource(ctx context.Context) 
 	)
 }
 
-func (k *kubeControllerManager) computeShootResourcesData() map[string][]byte {
+func (k *kubeControllerManager) computeShootResourcesData() (map[string][]byte, error) {
 	var (
-		versions = schema.GroupVersions([]schema.GroupVersion{rbacv1.SchemeGroupVersion})
-		codec    = kubernetes.ShootCodec.CodecForVersions(kubernetes.ShootSerializer, kubernetes.ShootSerializer, versions, versions)
+		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
 		subjects = []rbacv1.Subject{{
 			Kind: "User",
@@ -62,7 +64,6 @@ func (k *kubeControllerManager) computeShootResourcesData() map[string][]byte {
 			},
 			Subjects: subjects,
 		}
-		clusterRoleBindingYAML, _ = runtime.Encode(codec, clusterRoleBinding)
 
 		roleBinding = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
@@ -76,11 +77,10 @@ func (k *kubeControllerManager) computeShootResourcesData() map[string][]byte {
 			},
 			Subjects: subjects,
 		}
-		roleBindingYAML, _ = runtime.Encode(codec, roleBinding)
 	)
 
-	return map[string][]byte{
-		"clusterrolebinding.yaml": clusterRoleBindingYAML,
-		"rolebinding.yaml":        roleBindingYAML,
-	}
+	return registry.AddAllAndSerialize(
+		clusterRoleBinding,
+		roleBinding,
+	)
 }

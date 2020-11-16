@@ -166,7 +166,8 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 		Extensions: &Extensions{
 			DNS: &DNS{},
 		},
-		ControlPlane: &ControlPlane{},
+		ControlPlane:     &ControlPlane{},
+		SystemComponents: &SystemComponents{},
 	}
 
 	extensions, err := calculateExtensions(c, shootObject, shoot.SeedNamespace)

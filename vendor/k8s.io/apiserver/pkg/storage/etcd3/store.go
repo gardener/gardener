@@ -440,6 +440,14 @@ func getNewItemFunc(listObj runtime.Object, v reflect.Value) func() runtime.Obje
 
 func (s *store) Count(key string) (int64, error) {
 	key = path.Join(s.pathPrefix, key)
+
+	// We need to make sure the key ended with "/" so that we only get children "directories".
+	// e.g. if we have key "/a", "/a/b", "/ab", getting keys with prefix "/a" will return all three,
+	// while with prefix "/a/" will return only "/a/b" which is the correct answer.
+	if !strings.HasSuffix(key, "/") {
+		key += "/"
+	}
+
 	startTime := time.Now()
 	getResp, err := s.client.KV.Get(context.Background(), key, clientv3.WithRange(clientv3.GetPrefixRangeEnd(key)), clientv3.WithCountOnly())
 	metrics.RecordEtcdRequestLatency("listWithCount", key, startTime)
@@ -547,7 +555,7 @@ func (s *store) List(ctx context.Context, key, resourceVersion string, pred stor
 
 	newItemFunc := getNewItemFunc(listObj, v)
 
-	var returnedRV, continueRV int64
+	var returnedRV, continueRV, withRev int64
 	var continueKey string
 	switch {
 	case s.pagingEnabled && len(pred.Continue) > 0:
@@ -568,7 +576,7 @@ func (s *store) List(ctx context.Context, key, resourceVersion string, pred stor
 		// continueRV==0 is invalid.
 		// If continueRV < 0, the request is for the latest resource version.
 		if continueRV > 0 {
-			options = append(options, clientv3.WithRev(continueRV))
+			withRev = continueRV
 			returnedRV = continueRV
 		}
 	case s.pagingEnabled && pred.Limit > 0:
@@ -578,7 +586,7 @@ func (s *store) List(ctx context.Context, key, resourceVersion string, pred stor
 				return apierrors.NewBadRequest(fmt.Sprintf("invalid resource version: %v", err))
 			}
 			if fromRV > 0 {
-				options = append(options, clientv3.WithRev(int64(fromRV)))
+				withRev = int64(fromRV)
 			}
 			returnedRV = int64(fromRV)
 		}
@@ -588,6 +596,9 @@ func (s *store) List(ctx context.Context, key, resourceVersion string, pred stor
 
 	default:
 		options = append(options, clientv3.WithPrefix())
+	}
+	if withRev != 0 {
+		options = append(options, clientv3.WithRev(withRev))
 	}
 
 	// loop until we have filled the requested limit from etcd or there are no more results
@@ -650,6 +661,10 @@ func (s *store) List(ctx context.Context, key, resourceVersion string, pred stor
 			break
 		}
 		key = string(lastKey) + "\x00"
+		if withRev == 0 {
+			withRev = returnedRV
+			options = append(options, clientv3.WithRev(withRev))
+		}
 	}
 
 	// instruct the client to begin querying from immediately after the last key we returned

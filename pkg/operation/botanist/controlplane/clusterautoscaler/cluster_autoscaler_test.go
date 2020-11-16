@@ -443,8 +443,8 @@ subjects:
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{
-				"clusterrole.yaml":        []byte(clusterRoleYAML),
-				"clusterrolebinding.yaml": []byte(clusterRoleBindingYAML),
+				"clusterrole____system_cluster-autoscaler-shoot.yaml":        []byte(clusterRoleYAML),
+				"clusterrolebinding____system_cluster-autoscaler-shoot.yaml": []byte(clusterRoleBindingYAML),
 			},
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{

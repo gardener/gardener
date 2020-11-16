@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/operation/garden"
 
@@ -85,9 +86,10 @@ type Shoot struct {
 
 // Components contains different components deployed in the Shoot cluster.
 type Components struct {
-	Extensions      *Extensions
-	ControlPlane    *ControlPlane
-	ClusterIdentity component.Deployer
+	ClusterIdentity  component.Deployer
+	Extensions       *Extensions
+	ControlPlane     *ControlPlane
+	SystemComponents *SystemComponents
 }
 
 // ControlPlane contains references to K8S control plane components.
@@ -106,6 +108,11 @@ type Extensions struct {
 	Infrastructure   Infrastructure
 	Network          component.DeployMigrateWaiter
 	ContainerRuntime ContainerRuntime
+}
+
+// SystemComponents contains references to system components.
+type SystemComponents struct {
+	MetricsServer metricsserver.MetricsServer
 }
 
 // DNS contains references to internal and external DNSProvider and DNSEntry deployers.

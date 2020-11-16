@@ -358,14 +358,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			},
 			"enableIPVS": b.Shoot.IPVSEnabled(),
 		}
-		metricsServerConfig = map[string]interface{}{
-			"tls": map[string]interface{}{
-				"caBundle": b.Secrets[v1beta1constants.SecretNameCAMetricsServer].Data[secrets.DataKeyCertificateCA],
-			},
-			"secret": map[string]interface{}{
-				"data": b.Secrets["metrics-server"].Data,
-			},
-		}
 		verticalPodAutoscaler = map[string]interface{}{
 			"clusterType": "shoot",
 			"admissionController": map[string]interface{}{
@@ -408,7 +400,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 
 	if b.APIServerSNIEnabled() {
 		coreDNSConfig["kubeAPIServerHost"] = kasFQDN
-		metricsServerConfig["kubeAPIServerHost"] = kasFQDN
 		nodeProblemDetectorConfig["env"] = []interface{}{
 			map[string]interface{}{
 				"name":  "KUBERNETES_SERVICE_HOST",
@@ -463,11 +454,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		return nil, err
 	}
 
-	metricsServer, err := b.InjectShootShootImages(metricsServerConfig, common.MetricsServerImageName)
-	if err != nil {
-		return nil, err
-	}
-
 	nodeExporter, err := b.InjectShootShootImages(nodeExporterConfig, common.NodeExporterImageName)
 	if err != nil {
 		return nil, err
@@ -501,7 +487,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		"kube-apiserver-kubelet": common.GenerateAddonConfig(nil, true),
 		"apiserver-proxy":        common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
 		"kube-proxy":             common.GenerateAddonConfig(kubeProxy, true),
-		"metrics-server":         common.GenerateAddonConfig(metricsServer, true),
 		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,

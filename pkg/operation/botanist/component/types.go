@@ -20,6 +20,8 @@ type Secret struct {
 	Name string
 	// Checksum is the checksum of the secret's data.
 	Checksum string
+	// Data is the data of the secret.
+	Data map[string][]byte
 }
 
 // LoggingConfig is a structure that contains additional Fluentbit filters and parsers
