@@ -232,22 +232,25 @@ spec:
         - --kubelet-preferred-address-types=[Hostname,InternalDNS,InternalIP,ExternalDNS,ExternalIP]
         - --tls-cert-file=/srv/metrics-server/tls/tls.crt
         - --tls-private-key-file=/srv/metrics-server/tls/tls.key
-        - --v=2
         image: ` + image + `
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 1
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
           initialDelaySeconds: 30
           periodSeconds: 30
-          tcpSocket:
-            port: 8443
         name: metrics-server
         readinessProbe:
           failureThreshold: 1
+          httpGet:
+            path: /readyz
+            port: 8443
+            scheme: HTTPS
           initialDelaySeconds: 5
           periodSeconds: 10
-          tcpSocket:
-            port: 8443
         resources:
           limits:
             cpu: 100m
@@ -315,7 +318,6 @@ spec:
         - --kubelet-preferred-address-types=[Hostname,InternalDNS,InternalIP,ExternalDNS,ExternalIP]
         - --tls-cert-file=/srv/metrics-server/tls/tls.crt
         - --tls-private-key-file=/srv/metrics-server/tls/tls.key
-        - --v=2
         env:
         - name: KUBERNETES_SERVICE_HOST
           value: ` + kubeAPIServerHost + `
@@ -323,17 +325,21 @@ spec:
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 1
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
           initialDelaySeconds: 30
           periodSeconds: 30
-          tcpSocket:
-            port: 8443
         name: metrics-server
         readinessProbe:
           failureThreshold: 1
+          httpGet:
+            path: /readyz
+            port: 8443
+            scheme: HTTPS
           initialDelaySeconds: 5
           periodSeconds: 10
-          tcpSocket:
-            port: 8443
         resources:
           limits:
             cpu: 80m
