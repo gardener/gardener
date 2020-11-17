@@ -87,7 +87,11 @@ roleRef:
 		})
 
 		It("should return an error when the object name cannot be computed", func() {
-			Expect(registry.Add(&metav1.APIGroup{})).To(MatchError(ContainSubstring("does not implement the Object interfaces")))
+			Expect(registry.Add(&metav1.APIGroup{})).To(MatchError(ContainSubstring("cannot create group-version-kind for unversioned type")))
+		})
+
+		It("should return an error when the object name cannot be computed", func() {
+			Expect(registry.Add(&corev1.SecretList{})).To(MatchError(ContainSubstring("does not implement the Object interfaces")))
 		})
 
 		It("should return an error due to duplicates in registry", func() {
