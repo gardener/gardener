@@ -23,6 +23,7 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -64,29 +65,27 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 	}
 
 	// Mark all existing machines to become forcefully deleted.
+	logger.Info("Marking all machines to become forcefully deleted")
 	if err := a.markAllMachinesForcefulDeletion(ctx, logger, worker.Namespace); err != nil {
 		return errors.Wrapf(err, "marking all machines for forceful deletion failed")
 	}
 
-	// Get the list of all existing machine deployments.
-	existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
-	if err := a.client.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
-		return err
-	}
-
 	// Delete all machine deployments.
-	if err := a.cleanupMachineDeployments(ctx, logger, existingMachineDeployments, nil); err != nil {
-		return errors.Wrapf(err, "cleaning up machine deployments failed")
+	logger.Info("Deleting all machine deployments")
+	if err := a.client.DeleteAllOf(ctx, &machinev1alpha1.MachineDeployment{}, client.InNamespace(worker.Namespace)); err != nil {
+		return errors.Wrapf(err, "cleaning up all machine deployments failed")
 	}
 
 	// Delete all machine classes.
-	if err := a.cleanupMachineClasses(ctx, logger, worker.Namespace, workerDelegate.MachineClassList(), nil); err != nil {
-		return errors.Wrapf(err, "cleaning up machine classes failed")
+	logger.Info("Deleting all machine classes")
+	if err := a.client.DeleteAllOf(ctx, workerDelegate.MachineClass(), client.InNamespace(worker.Namespace)); err != nil {
+		return errors.Wrapf(err, "cleaning up all machine classes failed")
 	}
 
 	// Delete all machine class secrets.
-	if err := a.cleanupMachineClassSecrets(ctx, logger, worker.Namespace, nil); err != nil {
-		return errors.Wrapf(err, "cleaning up machine class secrets failed")
+	logger.Info("Deleting all machine class secrets")
+	if err := a.client.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(worker.Namespace), client.MatchingLabels(getMachineClassSecretLabels())); err != nil {
+		return errors.Wrapf(err, "cleaning up all machine class secrets failed")
 	}
 
 	// Wait until all machine resources have been properly deleted.
@@ -164,7 +163,7 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 		// Check whether all machines have been deleted.
 		if countMachines != 0 {
 			existingMachines := &machinev1alpha1.MachineList{}
-			if err := a.client.List(ctx, existingMachines, client.InNamespace(worker.Namespace)); err != nil {
+			if err := a.reader.List(ctx, existingMachines, client.InNamespace(worker.Namespace)); err != nil {
 				return retryutils.SevereError(err)
 			}
 			countMachines = len(existingMachines.Items)
@@ -174,7 +173,7 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 		// Check whether all machine sets have been deleted.
 		if countMachineSets != 0 {
 			existingMachineSets := &machinev1alpha1.MachineSetList{}
-			if err := a.client.List(ctx, existingMachineSets, client.InNamespace(worker.Namespace)); err != nil {
+			if err := a.reader.List(ctx, existingMachineSets, client.InNamespace(worker.Namespace)); err != nil {
 				return retryutils.SevereError(err)
 			}
 			countMachineSets = len(existingMachineSets.Items)
@@ -184,7 +183,7 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 		// Check whether all machine deployments have been deleted.
 		if countMachineDeployments != 0 {
 			existingMachineDeployments := &machinev1alpha1.MachineDeploymentList{}
-			if err := a.client.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
+			if err := a.reader.List(ctx, existingMachineDeployments, client.InNamespace(worker.Namespace)); err != nil {
 				return retryutils.SevereError(err)
 			}
 			countMachineDeployments = len(existingMachineDeployments.Items)
@@ -201,7 +200,7 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 		// Check whether all machine classes have been deleted.
 		if countMachineClasses != 0 {
 			machineClassList := workerDelegate.MachineClassList()
-			if err := a.client.List(ctx, machineClassList, client.InNamespace(worker.Namespace)); err != nil {
+			if err := a.reader.List(ctx, machineClassList, client.InNamespace(worker.Namespace)); err != nil {
 				return retryutils.SevereError(err)
 			}
 			machineClasses, err := meta.ExtractList(machineClassList)

@@ -24,10 +24,8 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -45,7 +43,6 @@ import (
 	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/chart"
-	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -63,6 +60,7 @@ type genericActuator struct {
 
 	client               client.Client
 	clientset            kubernetes.Interface
+	reader               client.Reader
 	scheme               *runtime.Scheme
 	decoder              runtime.Decoder
 	gardenerClientset    gardenerkubernetes.Interface
@@ -92,6 +90,11 @@ func (a *genericActuator) InjectFunc(f inject.Func) error {
 
 func (a *genericActuator) InjectClient(client client.Client) error {
 	a.client = client
+	return nil
+}
+
+func (a *genericActuator) InjectAPIReader(reader client.Reader) error {
+	a.reader = reader
 	return nil
 }
 
@@ -176,15 +179,13 @@ func (a *genericActuator) cleanupMachineClasses(ctx context.Context, logger logr
 	})
 }
 
-func (a *genericActuator) listMachineClassSecrets(ctx context.Context, namespace string) (*corev1.SecretList, error) {
-	var (
-		secretList = &corev1.SecretList{}
-		labels     = map[string]string{
-			v1beta1constants.GardenerPurpose: GardenPurposeMachineClass,
-		}
-	)
+func getMachineClassSecretLabels() map[string]string {
+	return map[string]string{v1beta1constants.GardenerPurpose: GardenPurposeMachineClass}
+}
 
-	if err := a.client.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels(labels)); err != nil {
+func (a *genericActuator) listMachineClassSecrets(ctx context.Context, namespace string) (*corev1.SecretList, error) {
+	secretList := &corev1.SecretList{}
+	if err := a.client.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabels(getMachineClassSecretLabels())); err != nil {
 		return nil, err
 	}
 
@@ -330,49 +331,4 @@ func isMachineControllerStuck(machineSets []machinev1alpha1.MachineSet, machineD
 		}
 	}
 	return false, nil
-}
-
-// CleanupLeakedClusterRoles cleans up leaked ClusterRoles from the system that were created earlier without
-// owner references. See https://github.com/gardener-attic/gardener-extensions/pull/378/files and
-// https://github.com/gardener/gardener/issues/2144.
-// TODO: This code can be removed in a future version again.
-func CleanupLeakedClusterRoles(ctx context.Context, c client.Client, providerName string) error {
-	clusterRoleList := &rbacv1.ClusterRoleList{}
-	if err := c.List(ctx, clusterRoleList); err != nil {
-		return err
-	}
-
-	var (
-		namespaces    = sets.NewString()
-		namespaceList = &corev1.NamespaceList{}
-		fns           []flow.TaskFn
-	)
-
-	if err := c.List(ctx, namespaceList); err != nil {
-		return err
-	}
-	for _, namespace := range namespaceList.Items {
-		namespaces.Insert(namespace.Name)
-	}
-
-	for _, clusterRole := range clusterRoleList.Items {
-		clusterRoleName := clusterRole.Name
-		if !strings.HasPrefix(clusterRoleName, "extensions.gardener.cloud:"+providerName) || !strings.HasSuffix(clusterRoleName, ":machine-controller-manager") {
-			continue
-		}
-
-		split := strings.Split(clusterRoleName, ":")
-		if len(split) != 4 {
-			continue
-		}
-		if namespace := split[2]; namespaces.Has(namespace) {
-			continue
-		}
-
-		fns = append(fns, func(ctx context.Context) error {
-			return client.IgnoreNotFound(c.Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}))
-		})
-	}
-
-	return flow.Parallel(fns...)(ctx)
 }
