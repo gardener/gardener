@@ -152,7 +152,7 @@ func (k *kubeScheduler) ScrapeConfigs() ([]string, error) {
 	return []string{scrapeConfig.String()}, nil
 }
 
-// AlertConfig returns the alerting configuration for AlertManager.
+// AlertingRules returns the alerting rules for AlertManager.
 func (k *kubeScheduler) AlertingRules() (map[string]string, error) {
 	return map[string]string{"kube-scheduler.rules.yaml": monitoringAlertingRules}, nil
 }

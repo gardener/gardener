@@ -26,7 +26,7 @@ type Secret struct {
 
 // CentralMonitoringConfig is a structure that contains configuration for the central monitoring stack.
 type CentralMonitoringConfig struct {
-	// ScrapeConfigs are the scrape configurations for centtral Prometheus.
+	// ScrapeConfigs are the scrape configurations for central Prometheus.
 	ScrapeConfigs []string
 }
 

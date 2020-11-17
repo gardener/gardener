@@ -37,7 +37,7 @@ func (e *etcd) WaitCleanup(_ context.Context) error { return nil }
 func WaitUntilEtcdsReady(
 	ctx context.Context,
 	c client.Client,
-	logger *logrus.Entry,
+	logger logrus.FieldLogger,
 	namespace string,
 	count int,
 	interval time.Duration,

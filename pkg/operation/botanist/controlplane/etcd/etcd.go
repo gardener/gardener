@@ -353,7 +353,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			hpaLabels                   = map[string]string{v1beta1constants.LabelRole: "etcd-hpa-" + e.role}
 			vpaLabels                   = map[string]string{v1beta1constants.LabelRole: "etcd-vpa-" + e.role}
 			updateModeAuto              = hvpav1alpha1.UpdateModeAuto
-			UpdateModeMaintenanceWindow = hvpav1alpha1.UpdateModeMaintenanceWindow
+			updateModeMaintenanceWindow = hvpav1alpha1.UpdateModeMaintenanceWindow
 			containerPolicyOff          = autoscalingv1beta2.ContainerScalingModeOff
 		)
 
@@ -416,7 +416,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				},
 				ScaleDown: hvpav1alpha1.ScaleType{
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: &UpdateModeMaintenanceWindow,
+						UpdateMode: &updateModeMaintenanceWindow,
 					},
 					StabilizationDuration: pointer.StringPtr("15m"),
 					MinChange: hvpav1alpha1.ScaleParams{

@@ -374,7 +374,7 @@ func (e *etcd) ScrapeConfigs() ([]string, error) {
 	}, nil
 }
 
-// AlertConfig returns the alerting configuration for AlertManager.
+// AlertingRules returns the alerting rules for AlertManager.
 func (e *etcd) AlertingRules() (map[string]string, error) {
 	var alertingRules bytes.Buffer
 	if err := monitoringAlertingRulesTemplate.Execute(&alertingRules, map[string]interface{}{
