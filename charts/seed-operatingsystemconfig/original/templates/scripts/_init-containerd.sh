@@ -16,7 +16,7 @@
         # use injected image as sandbox image
         sandbox_image_line="$(grep sandbox_image $FILE | sed -e 's/^[ ]*//')"
         pause_image={{ index .Values.images "pause-container" }}
-        sed -i  "s|$sandbox_image_line|sandbox_image = $pause_image|g" $FILE
+        sed -i  "s|$sandbox_image_line|sandbox_image = \"$pause_image\"|g" $FILE
 
         BIN_PATH={{ .Values.osc.cri.containerRuntimesBinaryPath }}
         mkdir -p $BIN_PATH
