@@ -11,7 +11,7 @@ In some cases it's desirable to opt-out of Pod injection:
 - DNS is disabled on that individual Pod, but it still needs to talk to the kube-apiserver.
 - Want to test the `kube-proxy` and `kubelet` in-cluster discovery.
 
-### Opt-out of pod injection for specific pods.
+### Opt-out of pod injection for specific pods
 
 To opt out of the injection, the Pod should be labeled with `apiserver-proxy.networking.gardener.cloud/inject: disable` e.g.:
 
@@ -60,3 +60,24 @@ kubectl label namespace my-namespace apiserver-proxy.networking.gardener.cloud/i
 ```
 
 > NOTE: Please be aware that it's not possible to disable injection on namespace level and enable it for individual pods in it.
+
+### Opt-out of pod injection for the entire cluster
+
+If the injection is causing problems for different workloads and ignoring individual pods or namespaces is not possible, then the feature could be disabled for the entire cluster with the `alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector` annotation with value `disable` on the `Shoot` resource itself:
+
+```yaml
+apiVersion: core.gardener.cloud/v1beta1
+kind: Shoot
+metadata:
+  annotations:
+    alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector: 'disable'
+  name: my-cluster
+```
+
+or via `kubectl` for existing shoot cluster:
+
+```console
+kubectl label shoot my-cluster alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector=disable
+```
+
+> NOTE: Please be aware that it's not possible to disable injection on cluster level and enable it for individual pods in it.

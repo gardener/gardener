@@ -1,3 +1,4 @@
+{{- if .Values.podMutatorEnabled }}
 apiVersion: {{ include "webhookadmissionregistration" . }}
 kind: MutatingWebhookConfiguration
 metadata:
@@ -43,3 +44,4 @@ webhooks:
     scope: '*'
   sideEffects: None
   timeoutSeconds: 2
+{{- end }}

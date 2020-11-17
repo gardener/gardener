@@ -157,6 +157,7 @@ limitsRequestsGapScaleParams:
 sni:
   enabled: false
   advertiseIP: 1.1.1.1
+  podMutatorEnabled: false
   # apiserverFQDN: foo.bar.
 
 mountHostCADirectories:

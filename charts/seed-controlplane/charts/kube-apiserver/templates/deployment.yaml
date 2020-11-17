@@ -301,7 +301,7 @@ spec:
           readOnly: true
           {{- end }}
         {{- end }}
-      {{- if .Values.sni.enabled }}
+      {{- if .Values.sni.podMutatorEnabled }}
       - name: apiserver-proxy-pod-mutator
         image: {{ index .Values.images "apiserver-proxy-pod-webhook" }}
         args:

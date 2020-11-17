@@ -11,3 +11,4 @@ proxySeedServer:
   port: 8443
 # this is the nodeExporter port + 1
 adminPort: 16910
+podMutatorEnabled: false

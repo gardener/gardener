@@ -474,6 +474,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		"webhook": map[string]interface{}{
 			"caBundle": b.Secrets[v1beta1constants.SecretNameCACluster].Data[secrets.DataKeyCertificateCA],
 		},
+		"podMutatorEnabled": b.APIServerSNIPodMutatorEnabled(),
 	}
 
 	apiserverProxy, err := b.InjectShootShootImages(apiserverProxyConfig, common.APIServerProxySidecarImageName, common.APIServerProxyImageName)
