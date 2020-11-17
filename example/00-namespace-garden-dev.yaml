@@ -6,3 +6,5 @@ metadata:
   labels:
     gardener.cloud/role: project
     project.gardener.cloud/name: dev
+  annotations:
+    namespace.gardener.cloud/keep-after-project-deletion: "true"
