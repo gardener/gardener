@@ -16,7 +16,6 @@
 {{- if semverCompare "< 1.14" .Values.kubernetes.version }}
 --feature-gates=SupportPodPidsLimit=true
 {{- end }}
---pod-infra-container-image={{ index .Values.images "pause-container" }}
 --kubeconfig=/var/lib/kubelet/kubeconfig-real
 --network-plugin=cni
 {{- if semverCompare "< 1.11" .Values.kubernetes.version }}
@@ -30,6 +29,10 @@
 {{- if eq .Values.worker.cri.name .Values.osc.cri.names.containerd }}
 --container-runtime=remote
 --container-runtime-endpoint=unix:///run/containerd/containerd.sock
+{{- else }}
+--pod-infra-container-image={{ index .Values.images "pause-container" }}
 {{- end -}}
+{{- else }}
+--pod-infra-container-image={{ index .Values.images "pause-container" }}
 {{- end -}}
 {{- end -}}
