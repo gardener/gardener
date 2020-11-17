@@ -24,7 +24,7 @@ Gardener reuses the identical Kubernetes design to span a scalable multi-cloud a
 * Node = Seed cluster
 * Pod = Shoot cluster
 
-Please find more information regarding the concepts and a detailed description of the architecture in our [Gardener Wiki](https://github.com/gardener/documentation/wiki/Architecture) and our blog posts on kubernetes.io: [Gardener - the Kubernetes Botanist (17.5.2018)](https://kubernetes.io/blog/2018/05/17/gardener/) and [Gardener Project Update (2.12.2019)](https://kubernetes.io/blog/2019/12/02/gardener-project-update/).
+Please find more information regarding the concepts and a detailed description of the architecture in our [Gardener Wiki](https://github.com/gardener/documentation/wiki/Architecture) and our blog posts on kubernetes.io: [Gardener - the Kubernetes Botanist (17.5.2018)](https://kubernetes.io/blog/2018/05/17/gardener) and [Gardener Project Update (2.12.2019)](https://kubernetes.io/blog/2019/12/02/gardener-project-update). For the relation between Gardener API and [Cluster API](https://github.com/kubernetes-sigs/cluster-api#cluster-api) (SIG Cluster Lifecycle), please see [here](docs/concepts/cluster-api.md).
 
 ----
 
