@@ -49,30 +49,34 @@ var _ = Describe("ingress", func() {
 	)
 
 	var (
-		ctx context.Context
-		c   client.Client
-		igw component.DeployWaiter
+		ctx            context.Context
+		c              client.Client
+		igw            component.DeployWaiter
+		igwAnnotations map[string]string
 	)
 
 	BeforeEach(func() {
 		ctx = context.TODO()
+		igwAnnotations = map[string]string{"foo": "bar"}
+	})
 
+	JustBeforeEach(func() {
 		s := runtime.NewScheme()
 		Expect(corev1.AddToScheme(s)).ToNot(HaveOccurred())
 		Expect(appsv1.AddToScheme(s)).ToNot(HaveOccurred())
 		Expect(policyv1beta1.AddToScheme(s)).ToNot(HaveOccurred())
-
 		c = fake.NewFakeClientWithScheme(s)
 		renderer := cr.NewWithServerVersion(&version.Info{})
 
 		ca := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
 		Expect(ca).NotTo(BeNil(), "should return chart applier")
+
 		igw = NewIngressGateway(
 			&IngressValues{
 				Image:           "foo/bar",
 				TrustDomain:     "foo.bar",
 				IstiodNamespace: "istio-test-system",
-				Annotations:     map[string]string{"foo": "bar"},
+				Annotations:     igwAnnotations,
 				Ports: []corev1.ServicePort{
 					{Name: "foo", Port: 999, TargetPort: intstr.FromInt(999)},
 				},
@@ -82,9 +86,6 @@ var _ = Describe("ingress", func() {
 			chartsRootPath,
 			c,
 		)
-	})
-
-	JustBeforeEach(func() {
 		Expect(igw.Deploy(ctx)).ToNot(HaveOccurred(), "ingress gateway deploy succeeds")
 	})
 
@@ -138,6 +139,27 @@ var _ = Describe("ingress", func() {
 
 		Expect(c.Get(ctx, client.ObjectKey{Name: "istio-ingressgateway", Namespace: deployNS}, svc)).To(Succeed())
 		Expect(svc.Annotations).To(HaveKeyWithValue("foo", "bar"))
+
+		// TODO (mvladev): remove the deprecated annotations in v1.17.0
+		Expect(svc.Annotations).To(HaveKeyWithValue("service.alpha.kubernetes.io/aws-load-balancer-type", "nlb"), "DEPRECATED - SHOULD BE REMOVED IN 1.17.0")
+		Expect(svc.Annotations).To(HaveKeyWithValue("service.beta.kubernetes.io/aws-load-balancer-type", "nlb"), "DEPRECATED - SHOULD BE REMOVED IN 1.17.0")
+	})
+
+	Context("DEPRECATED aws loadbalancer annotations", func() {
+		BeforeEach(func() {
+			igwAnnotations = map[string]string{
+				"service.alpha.kubernetes.io/aws-load-balancer-type": "not-nlb",
+				"service.beta.kubernetes.io/aws-load-balancer-type":  "not-nlb",
+			}
+		})
+
+		It("should be overwritten", func() {
+			svc := &corev1.Service{}
+
+			Expect(c.Get(ctx, client.ObjectKey{Name: "istio-ingressgateway", Namespace: deployNS}, svc)).To(Succeed())
+			Expect(svc.Annotations).To(HaveKeyWithValue("service.alpha.kubernetes.io/aws-load-balancer-type", "not-nlb"))
+			Expect(svc.Annotations).To(HaveKeyWithValue("service.beta.kubernetes.io/aws-load-balancer-type", "not-nlb"))
+		})
 	})
 
 	Describe("poddisruption budget", func() {
@@ -174,9 +196,7 @@ var _ = Describe("ingress", func() {
 	})
 
 	Context("custom override", func() {
-		var (
-			b *bootstrapv3.Bootstrap
-		)
+		var b *bootstrapv3.Bootstrap
 		JustBeforeEach(func() {
 			var (
 				cm = &corev1.ConfigMap{}
