@@ -324,17 +324,18 @@ func (c *Controller) deleteShoot(logger *logrus.Entry, shoot *gardencorev1beta1.
 		return reconcile.Result{}, nil
 	}
 
+	// Trigger regular shoot deletion flow.
+	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting Shoot cluster")
+	shootNamespace := shootpkg.ComputeTechnicalID(project.Name, shoot)
+	shoot, err = c.updateShootStatusOperationStart(ctx, gardenClient.GardenCore(), shoot, shootNamespace, operationType)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	o, operationErr := c.initializeOperation(ctx, logger, shoot, project, cloudProfile, seed)
 	if operationErr != nil {
 		_, updateErr := c.updateShootStatusOperationError(ctx, gardenClient.GardenCore(), shoot, fmt.Sprintf("Could not initialize a new operation for Shoot deletion: %s", operationErr.Error()), operationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
-	}
-
-	// Trigger regular shoot deletion flow.
-	c.recorder.Event(o.Shoot.Info, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting Shoot cluster")
-	o.Shoot.Info, err = c.updateShootStatusOperationStart(ctx, gardenClient.GardenCore(), o.Shoot.Info, o.Shoot.SeedNamespace, operationType)
-	if err != nil {
-		return reconcile.Result{}, err
 	}
 
 	// At this point the deletion is allowed, hence, check if the seed is up-to-date, then sync the Cluster resource
@@ -432,6 +433,13 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 		return reconcile.Result{RequeueAfter: durationUntilNextSync}, nil
 	}
 
+	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling Shoot cluster state")
+	shootNamespace := shootpkg.ComputeTechnicalID(project.Name, shoot)
+	shoot, err = c.updateShootStatusOperationStart(ctx, gardenClient.GardenCore(), shoot, shootNamespace, operationType)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	o, operationErr := c.initializeOperation(ctx, logger, shoot, project, cloudProfile, seed)
 	if operationErr != nil {
 		_, updateErr := c.updateShootStatusOperationError(ctx, gardenClient.GardenCore(), shoot, fmt.Sprintf("Could not initialize a new operation for Shoot reconciliation: %s", operationErr.Error()), operationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
@@ -440,19 +448,14 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 
 	// write UID to status when operation was created successfully once
 	if len(o.Shoot.Info.Status.UID) == 0 {
-		_, err := kutil.TryUpdateShootStatus(ctx, gardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+		if _, err := kutil.TryUpdateShootStatus(ctx, gardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 			func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 				shoot.Status.UID = shoot.UID
 				return shoot, nil
 			},
-		)
-		return reconcile.Result{}, err
-	}
-
-	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling Shoot cluster state")
-	o.Shoot.Info, err = c.updateShootStatusOperationStart(ctx, gardenClient.GardenCore(), o.Shoot.Info, o.Shoot.SeedNamespace, operationType)
-	if err != nil {
-		return reconcile.Result{}, err
+		); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	// At this point the reconciliation is allowed, hence, check if the seed is up-to-date, then sync the Cluster resource
