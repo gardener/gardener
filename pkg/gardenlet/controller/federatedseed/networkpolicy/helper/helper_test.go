@@ -39,17 +39,16 @@ import (
 var _ = Describe("helper", func() {
 	Describe("#GetEgressRules", func() {
 		It("should return and empty EgressRule", func() {
-			endpoints := corev1.Endpoints{}
-			Expect(GetEgressRules(&endpoints)).To(BeEmpty())
+			Expect(GetEgressRules()).To(BeEmpty())
 		})
 
 		It("should return the Egress rule with correct IP Blocks", func() {
-			ip1 := "10.250.119.142"
-			ip2 := "10.250.119.143"
-			ip3 := "10.250.119.144"
-			ip4 := "10.250.119.145"
-			endpoints := corev1.Endpoints{
-				Subsets: []corev1.EndpointSubset{
+			var (
+				ip1     = "10.250.119.142"
+				ip2     = "10.250.119.143"
+				ip3     = "10.250.119.144"
+				ip4     = "10.250.119.145"
+				subsets = []corev1.EndpointSubset{
 					{
 						Addresses: []corev1.EndpointAddress{
 							{
@@ -57,6 +56,9 @@ var _ = Describe("helper", func() {
 							},
 							{
 								IP: ip2,
+							},
+							{
+								IP: ip2, // duplicate address should be removed
 							},
 						},
 					},
@@ -68,6 +70,12 @@ var _ = Describe("helper", func() {
 							{
 								IP: ip4,
 							},
+							{
+								IP: ip2, // duplicate address should be removed
+							},
+							{
+								IP: ip4, // duplicate address should be removed
+							},
 						},
 						NotReadyAddresses: []corev1.EndpointAddress{
 							{
@@ -75,10 +83,10 @@ var _ = Describe("helper", func() {
 							},
 						},
 					},
-				},
-			}
+				}
+			)
 
-			egressRules := GetEgressRules(&endpoints)
+			egressRules := GetEgressRules(subsets...)
 			expectedRules := []networkingv1.NetworkPolicyEgressRule{
 				{
 					To: []networkingv1.NetworkPolicyPeer{
@@ -113,28 +121,30 @@ var _ = Describe("helper", func() {
 		})
 
 		It("should return the Egress rule with correct Ports", func() {
-			tcp := corev1.ProtocolTCP
-			udp := corev1.ProtocolUDP
-			endpoints := corev1.Endpoints{
-				Subsets: []corev1.EndpointSubset{
+			var (
+				tcp     = corev1.ProtocolTCP
+				udp     = corev1.ProtocolUDP
+				subsets = []corev1.EndpointSubset{
 					{
-						Ports: []corev1.EndpointPort{{
-							Protocol: tcp,
-							Port:     443,
-						},
+						Ports: []corev1.EndpointPort{
+							{
+								Protocol: tcp,
+								Port:     443,
+							},
 						},
 					},
 					{
-						Ports: []corev1.EndpointPort{{
-							Protocol: corev1.ProtocolUDP,
-							Port:     161,
-						},
+						Ports: []corev1.EndpointPort{
+							{
+								Protocol: corev1.ProtocolUDP,
+								Port:     161,
+							},
 						},
 					},
-				},
-			}
+				}
+			)
 
-			egressRules := GetEgressRules(&endpoints)
+			egressRules := GetEgressRules(subsets...)
 			port443 := intstr.FromInt(443)
 			port161 := intstr.FromInt(161)
 			expectedRules := []networkingv1.NetworkPolicyEgressRule{
