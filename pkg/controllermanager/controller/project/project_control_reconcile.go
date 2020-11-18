@@ -257,6 +257,12 @@ func (c *defaultControl) reconcileNamespaceForProject(ctx context.Context, garde
 			delete(ns.Labels, deprecatedLabel)
 		}
 
+		// If the project is reconciled for the first time then its observed generation is 0. Only in this case we want
+		// to add the "keep-after-project-deletion" annotation to the namespace when we adopt it.
+		if project.Status.ObservedGeneration == 0 {
+			ns.Annotations[common.NamespaceKeepAfterProjectDeletion] = "true"
+		}
+
 		return ns, nil
 	})
 	if err != nil {
