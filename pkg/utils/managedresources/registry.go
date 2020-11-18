@@ -18,19 +18,19 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"sync"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 // Registry stores objects and their serialized form. It allows to compute a map of all registered objects that can be
 // used as part of a Secret's data which is referenced by a ManagedResource.
 type Registry struct {
-	lock         sync.Mutex
+	scheme       *runtime.Scheme
 	codec        runtime.Codec
 	nameToObject map[string]*object
 }
@@ -49,6 +49,7 @@ func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializ
 	}
 
 	return &Registry{
+		scheme:       scheme,
 		codec:        codec.CodecForVersions(serializer, serializer, schema.GroupVersions(groupVersions), schema.GroupVersions(groupVersions)),
 		nameToObject: make(map[string]*object),
 	}
@@ -57,9 +58,6 @@ func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializ
 // Add adds the given object the registry. It computes a filename based on its type, namespace, and name. It serializes
 // the object to YAML and stores both representations (object and serialization) in the registry.
 func (r *Registry) Add(obj runtime.Object) error {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
 	if obj == nil || reflect.ValueOf(obj) == reflect.Zero(reflect.TypeOf(obj)) {
 		return nil
 	}
@@ -89,9 +87,6 @@ func (r *Registry) Add(obj runtime.Object) error {
 
 // SerializedObjects returns a map whose keys are filenames and whose values are serialized objects.
 func (r *Registry) SerializedObjects() map[string][]byte {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
 	out := make(map[string][]byte, len(r.nameToObject))
 	for name, object := range r.nameToObject {
 		out[name] = object.serialization
@@ -111,9 +106,6 @@ func (r *Registry) AddAllAndSerialize(objects ...runtime.Object) (map[string][]b
 
 // RegisteredObjects returns a map whose keys are filenames and whose values are objects.
 func (r *Registry) RegisteredObjects() map[string]runtime.Object {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
 	out := make(map[string]runtime.Object, len(r.nameToObject))
 	for name, object := range r.nameToObject {
 		out[name] = object.obj
@@ -123,9 +115,6 @@ func (r *Registry) RegisteredObjects() map[string]runtime.Object {
 
 // String returns the string representation of the registry.
 func (r *Registry) String() string {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
 	out := make([]string, 0, len(r.nameToObject))
 	for name, object := range r.nameToObject {
 		out = append(out, fmt.Sprintf("* %s:\n%s", name, object.serialization))
@@ -134,10 +123,10 @@ func (r *Registry) String() string {
 }
 
 func (r *Registry) objectName(obj runtime.Object) (string, error) {
-	var (
-		typeOf   = strings.Split(reflect.TypeOf(obj).String(), ".")
-		typeName = strings.ToLower(typeOf[len(typeOf)-1])
-	)
+	gvk, err := apiutil.GVKForObject(obj, r.scheme)
+	if err != nil {
+		return "", err
+	}
 
 	acc, err := meta.Accessor(obj)
 	if err != nil {
@@ -146,7 +135,7 @@ func (r *Registry) objectName(obj runtime.Object) (string, error) {
 
 	return fmt.Sprintf(
 		"%s__%s__%s",
-		typeName,
+		strings.ToLower(gvk.Kind),
 		acc.GetNamespace(),
 		strings.Replace(acc.GetName(), ":", "_", -1),
 	), nil
