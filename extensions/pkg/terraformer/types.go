@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,8 +33,8 @@ import (
 // * configName is the name of the ConfigMap containing the main Terraform file ('main.tf').
 // * variablesName is the name of the Secret containing the Terraform variables ('terraform.tfvars').
 // * stateName is the name of the ConfigMap containing the Terraform state ('terraform.tfstate').
-// * variablesEnvironment is a map of environment variables which will be injected in the resulting
-//   Terraform job/pod. These variables should contain Terraform variables (i.e., must be prefixed
+// * envVars is a list of environment variables which will be injected in the resulting
+//   Terraform pod. These variables can contain Terraform variables (i.e., must be prefixed
 //   with TF_VAR_).
 // * configurationDefined indicates whether the required configuration ConfigMaps/Secrets have been
 //   successfully defined.
@@ -57,7 +58,7 @@ type terraformer struct {
 	configName           string
 	variablesName        string
 	stateName            string
-	variablesEnvironment map[string]string
+	envVars              []corev1.EnvVar
 	configurationDefined bool
 
 	logLevel                      string
@@ -96,7 +97,9 @@ const (
 type Terraformer interface {
 	UseV2(bool) Terraformer
 	SetLogLevel(string) Terraformer
+	// Deprecated: use SetEnvVars instead
 	SetVariablesEnvironment(tfVarsEnvironment map[string]string) Terraformer
+	SetEnvVars(envVars ...corev1.EnvVar) Terraformer
 	SetTerminationGracePeriodSeconds(int64) Terraformer
 	SetDeadlineCleaning(time.Duration) Terraformer
 	SetDeadlinePod(time.Duration) Terraformer

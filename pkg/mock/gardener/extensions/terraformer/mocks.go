@@ -12,7 +12,8 @@ import (
 	terraformer "github.com/gardener/gardener/extensions/pkg/terraformer"
 	gomock "github.com/golang/mock/gomock"
 	logrus "github.com/sirupsen/logrus"
-	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	v1 "k8s.io/api/core/v1"
+	v10 "k8s.io/client-go/kubernetes/typed/core/v1"
 	rest "k8s.io/client-go/rest"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -231,6 +232,24 @@ func (mr *MockTerraformerMockRecorder) SetDeadlinePod(arg0 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDeadlinePod", reflect.TypeOf((*MockTerraformer)(nil).SetDeadlinePod), arg0)
 }
 
+// SetEnvVars mocks base method.
+func (m *MockTerraformer) SetEnvVars(arg0 ...v1.EnvVar) terraformer.Terraformer {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SetEnvVars", varargs...)
+	ret0, _ := ret[0].(terraformer.Terraformer)
+	return ret0
+}
+
+// SetEnvVars indicates an expected call of SetEnvVars.
+func (mr *MockTerraformerMockRecorder) SetEnvVars(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetEnvVars", reflect.TypeOf((*MockTerraformer)(nil).SetEnvVars), arg0...)
+}
+
 // SetLogLevel mocks base method.
 func (m *MockTerraformer) SetLogLevel(arg0 string) terraformer.Terraformer {
 	m.ctrl.T.Helper()
@@ -376,7 +395,7 @@ func (mr *MockFactoryMockRecorder) DefaultInitializer(arg0, arg1, arg2, arg3, ar
 }
 
 // New mocks base method.
-func (m *MockFactory) New(arg0 logrus.FieldLogger, arg1 client.Client, arg2 v1.CoreV1Interface, arg3, arg4, arg5, arg6 string) terraformer.Terraformer {
+func (m *MockFactory) New(arg0 logrus.FieldLogger, arg1 client.Client, arg2 v10.CoreV1Interface, arg3, arg4, arg5, arg6 string) terraformer.Terraformer {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "New", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].(terraformer.Terraformer)

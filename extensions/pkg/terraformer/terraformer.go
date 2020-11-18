@@ -357,19 +357,16 @@ func (t *terraformer) env() []corev1.EnvVar {
 	var envVars []corev1.EnvVar
 
 	if !t.useV2 {
-		envVars = []corev1.EnvVar{
+		envVars = append(envVars, []corev1.EnvVar{
 			{Name: "MAX_BACKOFF_SEC", Value: "60"},
 			{Name: "MAX_TIME_SEC", Value: "1800"},
 			{Name: "TF_CONFIGURATION_CONFIG_MAP_NAME", Value: t.configName},
 			{Name: "TF_STATE_CONFIG_MAP_NAME", Value: t.stateName},
 			{Name: "TF_VARIABLES_SECRET_NAME", Value: t.variablesName},
-		}
+		}...)
 	}
 
-	for k, v := range t.variablesEnvironment {
-		envVars = append(envVars, corev1.EnvVar{Name: k, Value: v})
-	}
-	return envVars
+	return append(envVars, t.envVars...)
 }
 
 // listTerraformerPods lists all pods in the Terraformer namespace which have labels 'terraformer.gardener.cloud/name'
