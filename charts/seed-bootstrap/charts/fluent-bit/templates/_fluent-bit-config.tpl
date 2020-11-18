@@ -87,7 +87,7 @@
 {{ .Values.fluentBitConfigurationsOverwrites.output | indent 4 }}
 {{ else }}
     [Output]
-        Name loki
+        Name gardenerloki
         Match kubernetes.*
         Url http://loki.garden.svc:3100/loki/api/v1/push
         LogLevel info
@@ -120,7 +120,7 @@
         TenantID operator
     
     [Output]
-        Name loki
+        Name gardenerloki
         Match {{ .Values.exposedComponentsTagPrefix }}.kubernetes.*
         Url http://loki.garden.svc:3100/loki/api/v1/push
         LogLevel info
@@ -153,7 +153,7 @@
         TenantID user
 
     [Output]
-        Name loki
+        Name gardenerloki
         Match journald.*
         Url http://loki.garden.svc:3100/loki/api/v1/push
         LogLevel info
