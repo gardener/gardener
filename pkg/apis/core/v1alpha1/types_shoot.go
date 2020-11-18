@@ -1134,6 +1134,9 @@ const (
 	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
 	// ShootHibernationPossible is a constant for a condition type indicating whether the Shoot can be hibernated.
 	ShootHibernationPossible ConditionType = "HibernationPossible"
+	// ShootMaintenancePreconditionsSatisfied is a constant for a condition type indicating whether all preconditions
+	// for a shoot maintenance operation are satisfied.
+	ShootMaintenancePreconditionsSatisfied ConditionType = "MaintenancePreconditionsSatisfied"
 )
 
 // ShootPurpose is a type alias for string.
