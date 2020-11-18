@@ -7,8 +7,6 @@
 |KubeApiServerTooManyOpenFileDescriptors|warning|seed|`The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.`|
 |KubeApiServerTooManyOpenFileDescriptors|critical|seed|`The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.`|
 |KubeApiServerLatency|warning|seed|`Kube API server latency for verb {{ $labels.verb }} is high. This could be because the shoot workers and the control plane are in different regions. 99th percentile of request latency is greater than 3 seconds.`|
-|KubeEtcd3DbSizeLimitApproaching|warning|seed|`Etcd3 {{ $labels.role }} DB size is approaching its current practical limit of 8GB. Etcd quota might need to be increased.`|
-|KubeEtcd3DbSizeLimitCrossed|critical|seed|`Etcd3 {{ $labels.role }} DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.`|
 |KubeKubeletNodeDown|warning|shoot|`The kubelet {{ $labels.instance }} has been unavailable/unreachable for more than 1 hour. Workloads on the affected node may not be schedulable.`|
 |KubeletTooManyOpenFileDescriptorsShoot|warning|shoot|`Shoot-kubelet ({{ $labels.kubernetes_io_hostname }}) is using {{ $value }}% of the available file/socket descriptors. Kubelet could be under heavy load.`|
 |KubeletTooManyOpenFileDescriptorsShoot|critical|shoot|`Shoot-kubelet ({{ $labels.kubernetes_io_hostname }}) is using {{ $value }}% of the available file/socket descriptors. Kubelet could be under heavy load.`|
