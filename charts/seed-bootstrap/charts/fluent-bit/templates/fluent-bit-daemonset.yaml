@@ -30,6 +30,7 @@ spec:
         volumeMounts:
         - name: plugins
           mountPath: "/plugins"
+      priorityClassName: fluent-bit
       containers:
       - name: fluent-bit
         image: {{ index .Values.global.images "fluent-bit" }}
