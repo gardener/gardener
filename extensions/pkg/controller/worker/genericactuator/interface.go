@@ -35,6 +35,8 @@ type WorkerDelegate interface {
 
 	// MachineClassKind yields the name of the provider specific machine class.
 	MachineClassKind() string
+	// MachineClass yields a newly initialized machine class object.
+	MachineClass() runtime.Object
 	// MachineClassList yields a newly initialized machine class list object.
 	MachineClassList() runtime.Object
 	// DeployMachineClasses generates and creates the provider specific machine classes.
