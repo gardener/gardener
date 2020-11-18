@@ -86,27 +86,31 @@ In [Issue #2181](https://github.com/gardener/gardener/issues/2181) it is already
 
 The `ShootedSeed` resource is a dedicated custom resource that represents a "shooted seed" and properly replaces the `use-as-seed` annotation. This resource contains:
 
-* A Shoot template that contains the Shoot spec and parts of the metadata, such as labels and annotations.
-* A Seed template that contains the Seed spec and parts of the metadata, such as labels and annotations.
-* A `gardenlet` section that contains:
-    * Whether `gardenlet` is enabled or not.
+* A `shoot` section that contains the Shoot spec and parts of the metadata, such as labels and annotations.
+* An optional `seed` section that contains the Seed spec and parts of the metadata, such as labels and annotations.
+* An optional `gardenlet` section that contains:
     * Certain aspects of the `gardenlet` deployment configuration, such as the number of replicas, the image, which bootstrap mechanism to use (bootstrap token / service account), etc.
     * The `GardenletConfiguration` resource that contains controllers configuration, feature gates, etc.
     
-A ShootedSeed allows fine-tuning the seed and the `gardenlet` configuration of shooted seeds in order to deviate from the global defaults, e.g. lower the concurrent sync for some of the seed's controllers or enable a feature gate only on certain seeds. Also, it could simplify the deletion protection of shooted seeds. Last but not least, ShootedSeeds could be used as the basis for creating and deleting seeds automatically via the `ShootedSeedSet` resource that is described in more details below.
+Either the `seed` or the `gardenlet` section must be specified, but not both: 
 
-Unlike the `Seed` resource, the `ShootedSeed` resource is namespaced. If created in the `garden` namespace, the resulting seeds are globally available. If created in a project namespace, the resulting seeds can be used as "private seeds" by shoots in the project, either by being decorated with project-specific taints and labels, or by being of the special `PrivateSeed` kind that is also namespaced. The concept of private seeds / cloudprofiles is described in [Issue #2874](https://github.com/gardener/gardener/issues/2874). Until this concept is implemented, `ShootedSeed` resources might need to be restricted to the `garden` namespace, similarly to how shoots with the `use-as-seed` annotation currently are.
+* If the `seed` section is specified, `gardenlet` should not be deployed in the shoot, and a new seed should be registered based on the `seed` section.
+* If the `gardenlet` section is specified, `gardenlet` should be deployed in the shoot, and it will register a new seed upon startup based on the `seedConfig` section of the `GardenletConfiguration` resource
+    
+A ShootedSeed allows fine-tuning the seed and the `gardenlet` configuration of shooted seeds in order to deviate from the global defaults, e.g. lower the concurrent sync for some of the seed's controllers or enable a feature gate only on certain seeds. Also, it simplifies the deletion protection of shooted seeds. Last but not least, ShootedSeeds could be used as the basis for creating and deleting seeds automatically via the `ShootedSeedSet` resource that is described in more details below.
 
-Example `ShootedSeed` resource:
+Unlike the `Seed` resource, the `ShootedSeed` resource is namespaced. If created in the `garden` namespace, the resulting seed is globally available. If created in a project namespace, the resulting seed can be used as a "private seed" by shoots in the project, either by being decorated with project-specific taints and labels, or by being of the special `PrivateSeed` kind that is also namespaced. The concept of private seeds / cloudprofiles is described in [Issue #2874](https://github.com/gardener/gardener/issues/2874). Until this concept is implemented, `ShootedSeed` resources might need to be restricted to the `garden` namespace, similarly to how shoots with the `use-as-seed` annotation currently are.
+
+Example `ShootedSeed` resource with a `seed` section:
 
 ```yaml
-apiVersion: core.gardener.cloud/v1beta1
+apiVersion: seedmanagement.gardener.cloud/v1alpha1
 kind: ShootedSeed
 metadata:
   name: crazy-botany
   namespace: garden
 spec:
-  shootTemplate: # Shoot template, including spec and parts of the metadata
+  shoot: # Shoot template, including spec and parts of the metadata
     metadata:
       labels:
         foo: bar
@@ -117,7 +121,7 @@ spec:
       provider:
         type: gcp
       ...
-  seedTemplate: # Seed template, including spec and parts of the metadata
+  seed: # Seed template, including spec and parts of the metadata
     metadata:
       labels:
         foo: bar
@@ -128,8 +132,29 @@ spec:
       taints:
       - key: seed.gardener.cloud/protected
       ...
+```
+
+Example `ShootedSeed` resource with a `gardenlet` section:
+
+```yaml
+apiVersion: seedmanagement.gardener.cloud/v1alpha1
+kind: ShootedSeed
+metadata:
+  name: crazy-botany
+  namespace: garden
+spec:
+  shoot: # Shoot template, including spec and parts of the metadata
+    metadata:
+      labels:
+        foo: bar
+    spec:
+      cloudProfileName: gcp
+      secretBindingName: shoot-operator-gcp
+      region: europe-west1
+      provider:
+        type: gcp
+      ...
   gardenlet: 
-    enabled: true
     deployment: # Gardenlet deployment configuration
       replicas: 1
       revisionHistoryLimit: 10
@@ -158,6 +183,8 @@ spec:
         ...
       vpa: false
     config: # GardenletConfiguration resource
+      seedConfig: # Configuration of the Seed to be registered
+        ...
       controllers:
         shoot:
           concurrentSyncs: 20
@@ -166,13 +193,75 @@ spec:
       ...
 ```
 
-#### ShootedSeed Controller
+#### SeedRegistration Resource
 
-ShootedSeeds are reconciled by a new *shooted seed controller* in `gardenlet`. During the reconciliation this controller creates, deletes, and updates Shoots, Seeds, and `gardenlet` Deployments in shooted seeds as needed. Its implementation is similar to the current [seed registration controller](https://github.com/gardener/gardener/blob/master/pkg/gardenlet/controller/shoot/seed_registration_control.go), with the difference that it reconciles the new `ShootedSeed` resource instead of  
+The `SeedRegistration` is a dedicated custom resource that represents the registration of a Shoot as a Seed. This resource contains:
+                              
+* The name of the Shoot that should be registered as a Seed.
+* An optional `seed` section and an optional `gardenlet` section with exactly the same semantics as in the [ShootedSeed Resource](#shootedseedset-resource).
 
-Once the `ShootedSeed` resource and its controller are considered sufficiently stable, the current `use-as-seed` annotation and the controller mentioned above should be marked as deprecated and eventually removed.
+The `SeedRegistration` resource is introduced mainly in order to decouple the reconciliation of the `ShootedSeed` resource (performed by `gardener-controller-manager`) from the actual Seed registration (performed by `gardenlet`). It can also be used on its own, as a more powerful alternative to the `use-as-seed` annotation. In fact, the implementation of the `use-as-seed` annotation could also be refactored to use a `SeedRegistration` resource extracted from the annotation by a controller in `gardener-controller-manager`.
+
+Example `SeedRegistration` resource with a `seed` section:
+
+```yaml
+apiVersion: seedmanagement.gardener.cloud/v1alpha1
+kind: SeedRegistration
+metadata:
+  name: crazy-botany
+  namespace: garden
+spec:
+  shootName: crazy-botany # Shoot that should be registered as a Seed
+  seed: # Seed template, including spec and parts of the metadata
+    metadata:
+      labels:
+        foo: bar
+    spec:
+      provider:
+        type: gcp
+        region: europe-west1
+      taints:
+      - key: seed.gardener.cloud/protected
+      ...
+```
+
+Example `SeedRegistration` resource with a `gardenlet` section:
+
+```yaml
+apiVersion: seedmanagement.gardener.cloud/v1alpha1
+kind: SeedRegistration
+metadata:
+  name: crazy-botany
+  namespace: garden
+spec:
+  shootName: crazy-bottany # Shoot that should be registered as a Seed
+  gardenlet: 
+    deployment: # Gardenlet deployment configuration
+      replicas: 1
+      ...
+    config: # GardenletConfiguration resource
+      seedConfig: # Configuration of the Seed to be registered
+        ...
+```
+
+#### ShootedSeed and SeedRegistration Controllers
+
+ShootedSeeds are reconciled by a new *shooted seed controller* in `gardener-controller-manager`. During the reconciliation this controller:
+
+* Creates, updates, or deletes a `Shoot` resource from the `shoot` section of the ShootedSeed.
+* Creates, updates, or deletes a `SeedRegistration` resource from the remaining sections of the ShootedSeed, referring to the previously created Shoot.
+
+SeedRegistrations are reconciled by a new *seed registration controller* in `gardenlet`. Its implementation is very similar to the current [seed registration controller](https://github.com/gardener/gardener/blob/master/pkg/gardenlet/controller/shoot/seed_registration_control.go), and in fact could be regarded as a refactoring of the latter, with the difference that it uses the `SeedRegistration` resource rather than the `use-as-seed` annotation on a Shoot, which actually simplifies the reconciliation logic. The `gardenlet` only reconciles SeedRegistrations that refer to Shoots scheduled on Seeds the `gardenlet` is responsible for.
+
+Once these two controllers are considered sufficiently stable, the current `use-as-seed` annotation and the controller mentioned above should be marked as deprecated and eventually removed.
 
 **Note:** Bootstrapping a new seed might require additional provider-specific actions to the ones performed automatically by the shooted seed controller. For example, on Azure this might include getting a new subscription, extending quotas, etc. This could eventually be automated by introducing an extension mechanism for the Gardener seed bootstrapping flow, to be handled by a new type of controller in the provider extensions. However, such an extension mechanism is not in the scope of this proposal and might require a separate GEP.
+
+## Changes to Existing Controllers
+
+Since the Shoot registration as a Seed is decoupled from the Shoot reconciliation, existing `gardenlet` controllers would not have to be changed in order to properly support ShootedSeeds. The only change to `gardenlet` that would be needed is introducing the new seed registration controller mentioned above, and possibly retiring the old one at some point.
+
+However, the introduction of the `ShootedSeed` resource would require adapting all `gardener-controller-manager` controllers that operate on Shoots (for example, shoot hibernation and maintenance controllers) to also operate on ShootedSeeds, since the Shoot resource created as a result of reconciling a ShootedSeed is owned by the latter and should never be changed directly, since any changes to its `spec` would be immediately overwritten by the reconciliation. Instead, changes should be applied to the `shoot` section of the ShootedSeed, which would result in propagating them to the owned Shoot by the shooted seed controller.
 
 ### ShootedSeedSets
 
@@ -187,7 +276,7 @@ A ShootedSeedSet is linked to its ShootedSeeds via the ShootedSeeds' `metadata.o
 Example `ShootedSeedSet` resource:
 
 ```yaml
-apiVersion: core.gardener.cloud/v1beta1
+apiVersion: seedmanagement.gardener.cloud/v1alpha1
 kind: ShootedSeedSet
 metadata:
   name: crazy-botany
@@ -202,17 +291,17 @@ spec:
       labels:
         foo: bar
     spec: # ShootedSeed resource
-      shootTemplate: 
+      shoot: 
         ...
-      seedTemplate: 
-        ...
-      gardenlet: 
+      seed: 
         ...
 ```
 
 #### ShootedSeedSet Controller
 
-ShootedSeedSets are reconciled by a new *shooted seed set controller* in `gardenlet`. During the reconciliation this controller creates and deletes ShootedSeeds in response to changes to the `replicas` and `selector` fields.
+ShootedSeedSets are reconciled by a new *shooted seed set controller* in `gardener-controller-manager`. During the reconciliation this controller creates and deletes ShootedSeeds in response to changes to the `replicas` and `selector` fields.
+
+**Note:** The introduction of the `ShootedSeedSet` resource would not require any changes to `gardenlet` or to existing `gardener-controller-manager` controllers. 
 
 #### ShootedSeedDeployments
 
@@ -252,14 +341,14 @@ The SeedAutoscaler is implemented as a custom resource and a new controller. The
 Example `SeedAutoscaler` resource:
 
 ```yaml
-apiVersion: core.gardener.cloud/v1beta1
+apiVersion: seedmanagement.gardener.cloud/v1alpha1
 kind: SeedAutoscaler
 metadata:
   name: crazy-botany
   namespace: garden
 spec:
   scaleTargetRef:
-    apiVersion: core.gardener.cloud/v1beta1
+    apiVersion: seedmanagement.gardener.cloud/v1alpha1
     kind: ShootedSeedSet
     name: crazy-botany
   minReplicas: 1
