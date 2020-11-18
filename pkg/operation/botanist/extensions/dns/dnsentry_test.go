@@ -75,6 +75,7 @@ var _ = Describe("#DNSEntry", func() {
 			Name:    "test-deploy",
 			DNSName: "test-name",
 			Targets: []string{"1.2.3.4", "5.6.7.8"},
+			TTL:     123,
 		}
 
 		expected = &dnsv1alpha1.DNSEntry{
@@ -84,7 +85,7 @@ var _ = Describe("#DNSEntry", func() {
 			},
 			Spec: dnsv1alpha1.DNSEntrySpec{
 				DNSName: "test-name",
-				TTL:     pointer.Int64Ptr(120),
+				TTL:     &vals.TTL,
 				Targets: []string{"1.2.3.4", "5.6.7.8"},
 			},
 		}

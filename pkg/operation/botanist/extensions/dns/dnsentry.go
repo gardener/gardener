@@ -39,6 +39,7 @@ type EntryValues struct {
 	DNSName string   `json:"dnsName,omitempty"`
 	Targets []string `json:"targets,omitempty"`
 	OwnerID string   `json:"ownerID,omitempty"`
+	TTL     int64    `json:"ttl,omitempty"`
 }
 
 // NewDNSEntry creates a new instance of DeployWaiter for a specific DNS entry.

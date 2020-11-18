@@ -154,6 +154,7 @@ func (b *Botanist) DefaultExternalDNSEntry(seedClient client.Client) component.D
 	return component.OpDestroy(dns.NewDNSEntry(
 		&dns.EntryValues{
 			Name: DNSExternalName,
+			TTL:  *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		},
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),
@@ -223,6 +224,7 @@ func (b *Botanist) DefaultInternalDNSEntry(seedClient client.Client) component.D
 	return component.OpDestroy(dns.NewDNSEntry(
 		&dns.EntryValues{
 			Name: DNSInternalName,
+			TTL:  *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		},
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),

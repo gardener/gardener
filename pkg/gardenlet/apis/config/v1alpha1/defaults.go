@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	"k8s.io/utils/pointer"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -247,6 +248,10 @@ func SetDefaults_ShootControllerConfiguration(obj *ShootControllerConfiguration)
 	if obj.RetryDuration == nil {
 		v := metav1.Duration{Duration: 12 * time.Hour}
 		obj.RetryDuration = &v
+	}
+
+	if obj.DNSEntryTTLSeconds == nil {
+		obj.DNSEntryTTLSeconds = pointer.Int64Ptr(120)
 	}
 }
 

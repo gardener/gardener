@@ -202,6 +202,9 @@ type ShootControllerConfiguration struct {
 	RetryDuration *metav1.Duration
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod *metav1.Duration
+	// DNSEntryTTLSeconds is the TTL in seconds that is being used for DNS entries when reconciling shoots.
+	// Default: 120s
+	DNSEntryTTLSeconds *int64
 }
 
 // ShootCareControllerConfiguration defines the configuration of the ShootCare

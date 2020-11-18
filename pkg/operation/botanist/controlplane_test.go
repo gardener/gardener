@@ -21,6 +21,7 @@ import (
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
@@ -60,12 +61,21 @@ var _ = Describe("controlplane", func() {
 		seedClient client.Client
 		s          *runtime.Scheme
 		ctx        context.Context
+
+		dnsEntryTTL int64 = 1234
 	)
 
 	BeforeEach(func() {
 		ctx = context.TODO()
 		b = &Botanist{
 			Operation: &operation.Operation{
+				Config: &config.GardenletConfiguration{
+					Controllers: &config.GardenletControllerConfiguration{
+						Shoot: &config.ShootControllerConfiguration{
+							DNSEntryTTLSeconds: &dnsEntryTTL,
+						},
+					},
+				},
 				Shoot: &shoot.Shoot{
 					Info: &v1beta1.Shoot{
 						ObjectMeta: metav1.ObjectMeta{Namespace: shootNS},
@@ -273,7 +283,7 @@ var _ = Describe("controlplane", func() {
 				},
 				Spec: dnsv1alpha1.DNSEntrySpec{
 					DNSName: "api.bar",
-					TTL:     pointer.Int64Ptr(120),
+					TTL:     &dnsEntryTTL,
 					Targets: []string{"1.2.3.4"},
 				},
 			}))
@@ -295,7 +305,7 @@ var _ = Describe("controlplane", func() {
 				},
 				Spec: dnsv1alpha1.DNSEntrySpec{
 					DNSName: "api.baz",
-					TTL:     pointer.Int64Ptr(120),
+					TTL:     &dnsEntryTTL,
 					Targets: []string{"1.2.3.4"},
 				},
 			}))

@@ -43,6 +43,7 @@ controllers:
 #   reconcileInMaintenanceOnly: true
   # `progressReportPeriod` specifies how often the progress of a shoot operation shall be reported in its status.
 #   progressReportPeriod: 5s
+#   dnsEntryTTLSeconds: 120
   shootCare:
     concurrentSyncs: 5
     syncPeriod: 30s

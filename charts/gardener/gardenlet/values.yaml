@@ -79,6 +79,7 @@ global:
           respectSyncPeriodOverwrite: false
           reconcileInMaintenanceOnly: false
         # progressReportPeriod: 5s
+        # dnsEntryTTLSeconds: 120
         shootCare:
           concurrentSyncs: 5
           syncPeriod: 30s

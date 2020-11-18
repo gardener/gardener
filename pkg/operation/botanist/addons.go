@@ -114,6 +114,7 @@ func (b *Botanist) DefaultNginxIngressDNSEntry(seedClient client.Client) compone
 	return component.OpDestroy(dns.NewDNSEntry(
 		&dns.EntryValues{
 			Name: DNSIngressName,
+			TTL:  *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		},
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),
@@ -158,6 +159,7 @@ func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Clie
 				DNSName: b.Shoot.GetIngressFQDN("*"),
 				Targets: []string{address},
 				OwnerID: ownerID,
+				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 			},
 			b.Shoot.SeedNamespace,
 			b.K8sSeedClient.ChartApplier(),

@@ -15,14 +15,23 @@
 package validation
 
 import (
+	"fmt"
+
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 
+	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // ValidateGardenletConfiguration validates a GardenletConfiguration object.
 func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	if cfg.Controllers != nil {
+		if cfg.Controllers.Shoot != nil {
+			allErrs = append(allErrs, ValidateShootControllerConfiguration(cfg.Controllers.Shoot, field.NewPath("controllers", "shoot"))...)
+		}
+	}
 
 	if (cfg.SeedConfig == nil && cfg.SeedSelector == nil) || (cfg.SeedConfig != nil && cfg.SeedSelector != nil) {
 		allErrs = append(allErrs, field.Invalid(field.NewPath("seedSelector/seedConfig"), cfg, "exactly one of `seedConfig` and `seedSelector` is required"))
@@ -81,6 +90,40 @@ func validateSNI(sniPath *field.Path, sni *config.SNI) field.ErrorList {
 		}
 		if sni.Ingress.ServiceName == nil || *sni.Ingress.ServiceName == "" {
 			allErrs = append(allErrs, field.Required(ingressPath.Child("serviceName"), "must specify ingress gateway service name"))
+		}
+	}
+
+	return allErrs
+}
+
+// ValidateShootControllerConfiguration validates the shoot controller configuration.
+func ValidateShootControllerConfiguration(cfg *config.ShootControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if cfg.ConcurrentSyncs != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*cfg.ConcurrentSyncs), fldPath.Child("concurrentSyncs"))...)
+	}
+
+	if cfg.ProgressReportPeriod != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(cfg.ProgressReportPeriod.Duration), fldPath.Child("progressReporterPeriod"))...)
+	}
+
+	if cfg.RetryDuration != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(cfg.RetryDuration.Duration), fldPath.Child("retryDuration"))...)
+	}
+
+	if cfg.SyncPeriod != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(cfg.SyncPeriod.Duration), fldPath.Child("syncPeriod"))...)
+	}
+
+	if cfg.DNSEntryTTLSeconds != nil {
+		const (
+			dnsEntryTTLSecondsMin = 30
+			dnsEntryTTLSecondsMax = 600
+		)
+
+		if *cfg.DNSEntryTTLSeconds < dnsEntryTTLSecondsMin || *cfg.DNSEntryTTLSeconds > dnsEntryTTLSecondsMax {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("dnsEntryTTLSeconds"), *cfg.DNSEntryTTLSeconds, fmt.Sprintf("must be within [%d,%d]", dnsEntryTTLSecondsMin, dnsEntryTTLSecondsMax)))
 		}
 	}
 
