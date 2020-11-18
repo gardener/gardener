@@ -55,7 +55,9 @@ const (
 	// SecretNameServer is the name of the kube-scheduler server certificate secret.
 	SecretNameServer = "kube-scheduler-server"
 
-	labelRole              = "scheduler"
+	// LabelRole is a constant for the value of a label with key 'role'.
+	LabelRole = "scheduler"
+
 	managedResourceName    = "shoot-core-kube-scheduler"
 	containerName          = v1beta1constants.DeploymentNameKubeScheduler
 	portNameMetrics        = "metrics"
@@ -293,7 +295,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
-		v1beta1constants.LabelRole: labelRole,
+		v1beta1constants.LabelRole: LabelRole,
 	}
 }
 

@@ -30,14 +30,14 @@ const (
 `
 	loggingFilter = `[FILTER]
     Name                parser
-    Match               kubernetes.*` + kubeControllerManagerContainerName + `*` + kubeControllerManagerContainerName + `*
+    Match               kubernetes.*` + containerName + `*` + containerName + `*
     Key_Name            log
     Parser              ` + loggingParserName + `
     Reserve_Data        True
 `
 )
 
-// LoggingConfiguration returns a fluent-bit parser and filter for the kube-controller-manager logs.
-func LoggingConfiguration() (component.LoggingConfig, error) {
-	return component.LoggingConfig{Filters: loggingFilter, Parsers: loggingParser, PodPrefix: v1beta1constants.DeploymentNameKubeControllerManager, UserExposed: true}, nil
+// CentralLoggingConfiguration returns a fluent-bit parser and filter for the kube-controller-manager logs.
+func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
+	return component.CentralLoggingConfig{Filters: loggingFilter, Parsers: loggingParser, PodPrefix: v1beta1constants.DeploymentNameKubeControllerManager, UserExposed: true}, nil
 }

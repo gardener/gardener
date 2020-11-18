@@ -26,17 +26,6 @@ data:
                 operator: NotIn
                 values:
                 - apiserver
-        etcd-main-client:
-          dependantPods:
-          - name: controlplane
-            selector:
-              matchExpressions:
-              - key: garden.sapcloud.io/role
-                operator: In
-                values:
-                - controlplane
-              - key: role
-                operator: In
-                values:
-                - apiserver
-
+{{- if .Values.config }}
+{{ .Values.config | indent 8 }}
+{{- end }}

@@ -78,4 +78,20 @@ var _ = Describe("utils", func() {
 		Entry("only key", "foo", nil, "foo"),
 		Entry("key and value", "foo", pointer.StringPtr("bar"), "foo=bar"),
 	)
+
+	Describe("#Indent", func() {
+		var spaces = 2
+
+		It("should not indent a single-line string", func() {
+			Expect(Indent("foo", spaces)).To(Equal("foo"))
+		})
+
+		It("should properly indent a multi-line string", func() {
+			Expect(Indent(`foo
+bar
+baz`, spaces)).To(Equal(`foo
+  bar
+  baz`))
+		})
+	})
 })

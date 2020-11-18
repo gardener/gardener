@@ -22,9 +22,9 @@ import (
 )
 
 var _ = Describe("Logging", func() {
-	Describe("#LoggingConfiguration", func() {
+	Describe("#CentralLoggingConfiguration", func() {
 		It("should return the expected logging parser and filter", func() {
-			loggingConfig, err := LoggingConfiguration()
+			loggingConfig, err := CentralLoggingConfiguration()
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(loggingConfig.Parsers).To(Equal(`[PARSER]
@@ -43,7 +43,7 @@ var _ = Describe("Logging", func() {
     Reserve_Data        True
 `))
 			Expect(loggingConfig.PodPrefix).To(Equal("cluster-autoscaler"))
-			Expect(loggingConfig.UserExposed).To(Equal(true))
+			Expect(loggingConfig.UserExposed).To(BeTrue())
 		})
 	})
 })

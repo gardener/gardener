@@ -26,12 +26,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -96,57 +93,6 @@ func (b *Botanist) WaitUntilShootLoadBalancerIsReady(ctx context.Context, namesp
 	}
 
 	return loadBalancerIngress, nil
-}
-
-// WaitUntilEtcdReady waits until the etcd statefulsets indicate readiness in their statuses.
-func (b *Botanist) WaitUntilEtcdReady(ctx context.Context) error {
-	var (
-		retryCountUntilSevere int
-		interval              = 5 * time.Second
-		severeThreshold       = 3 * time.Minute
-		timeout               = 5 * time.Minute
-	)
-
-	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
-		retryCountUntilSevere++
-
-		etcdList := &druidv1alpha1.EtcdList{}
-		if err := b.K8sSeedClient.DirectClient().List(ctx, etcdList,
-			client.InNamespace(b.Shoot.SeedNamespace),
-			client.MatchingLabels{"garden.sapcloud.io/role": "controlplane"},
-		); err != nil {
-			return retry.SevereError(err)
-		}
-
-		if n := len(etcdList.Items); n < 2 {
-			b.Logger.Info("Waiting until the etcd gets created...")
-			return retry.MinorError(fmt.Errorf("only %d/%d etcd resources found", n, 2))
-		}
-
-		var lastErrors error
-
-		for _, etcd := range etcdList.Items {
-			switch {
-			case etcd.Status.LastError != nil:
-				return retry.MinorOrSevereError(retryCountUntilSevere, int(severeThreshold.Nanoseconds()/interval.Nanoseconds()), fmt.Errorf("%s reconciliation errored: %s", etcd.Name, *etcd.Status.LastError))
-			case etcd.DeletionTimestamp != nil:
-				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s unexpectedly has a deletion timestamp", etcd.Name))
-			case etcd.Status.ObservedGeneration == nil || etcd.Generation != *etcd.Status.ObservedGeneration:
-				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s reconciliation pending", etcd.Name))
-			case metav1.HasAnnotation(etcd.ObjectMeta, v1beta1constants.GardenerOperation):
-				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s reconciliation in process", etcd.Name))
-			case !utils.IsTrue(etcd.Status.Ready):
-				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s is not ready yet", etcd.Name))
-			}
-		}
-
-		if lastErrors == nil {
-			return retry.Ok()
-		}
-
-		b.Logger.Info("Waiting until the both etcds are ready...")
-		return retry.MinorError(lastErrors)
-	})
 }
 
 // WaitUntilKubeAPIServerIsDeleted waits until the kube-apiserver is deleted

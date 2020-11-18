@@ -13,6 +13,7 @@
 // limitations under the License.
 
 //go:generate mockgen -package kubernetes -destination=mocks.go github.com/gardener/gardener/pkg/client/kubernetes Interface
+//go:generate mockgen -package kubernetes -destination=mocks_pods.go github.com/gardener/gardener/pkg/client/kubernetes PodExecutor
 //go:generate mockgen -package kubernetes -destination=mocks_applier.go github.com/gardener/gardener/pkg/client/kubernetes Applier
 //go:generate mockgen -package kubernetes -destination=mocks_chartapplier.go github.com/gardener/gardener/pkg/client/kubernetes ChartApplier
 

@@ -90,10 +90,14 @@ const (
 	// StatefulSetNameAlertManager is a constant for the name of a Kubernetes stateful set object that contains
 	// the alertmanager pod.
 	StatefulSetNameAlertManager = "alertmanager"
+	// ETCDRoleMain is a constant for the main etcd role.
+	ETCDRoleMain = "main"
+	// ETCDRoleEvents is a constant for the events etcd role.
+	ETCDRoleEvents = "events"
 	// ETCDMain is a constant for the name of etcd-main Etcd object.
-	ETCDMain = "etcd-main"
+	ETCDMain = "etcd-" + ETCDRoleMain
 	// ETCDEvents is a constant for the name of etcd-events Etcd object.
-	ETCDEvents = "etcd-events"
+	ETCDEvents = "etcd-" + ETCDRoleEvents
 	// StatefulSetNameLoki is a constant for the name of a Kubernetes stateful set object that contains
 	// the loki pod.
 	StatefulSetNameLoki = "loki"
@@ -103,6 +107,8 @@ const (
 
 	// GardenerPurpose is a constant for the key in a label describing the purpose of the respective object.
 	GardenerPurpose = "gardener.cloud/purpose"
+	// GardenerDescription is a constant for a key in an annotation describing what the resource is used for.
+	GardenerDescription = "gardener.cloud/description"
 
 	// GardenerOperation is a constant for an annotation on a resource that describes a desired operation.
 	GardenerOperation = "gardener.cloud/operation"

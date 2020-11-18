@@ -29,13 +29,6 @@ const (
 	// KonnectivityTunnel dictates that a konnectivity proxy is used as a tunnel between seed and shoot networks.
 	KonnectivityTunnel string = "konnectivity-agent"
 
-	// BackupBucketName is a constant for the name of bucket of object storage.
-	BackupBucketName = "bucketName"
-
-	// BackupSecretName defines the name of the secret containing the credentials which are required to
-	// authenticate against the respective cloud provider (required to store the backups of Shoot clusters).
-	BackupSecretName = "etcd-backup"
-
 	// BasicAuthSecretName is the name of the secret containing basic authentication credentials for the kube-apiserver.
 	BasicAuthSecretName = "kube-apiserver-basic-auth"
 
@@ -79,12 +72,6 @@ const (
 	// DNSExcludeZones is the key for an annotation on a Kubernetes Secret object whose value must point to a list
 	// of zones that shall be excluded.
 	DNSExcludeZones = "dns.gardener.cloud/exclude-zones"
-
-	// EtcdRoleMain is the constant defining the role for main etcd storing data about objects in Shoot.
-	EtcdRoleMain = "main"
-
-	// EtcdRoleEvents is the constant defining the role for etcd storing events in Shoot.
-	EtcdRoleEvents = "events"
 
 	// EtcdEncryptionSecretName is the name of the shoot-specific secret which contains
 	// that shoot's EncryptionConfiguration. The EncryptionConfiguration contains a key
@@ -482,8 +469,8 @@ const (
 	// APIServerProxyImageName is the image of apiserver-proxy
 	APIServerProxyImageName = "apiserver-proxy"
 
-	// APIServerPorxySidecarImageName is the image of apiserver-proxy sidecar
-	APIServerPorxySidecarImageName = "apiserver-proxy-sidecar"
+	// APIServerProxySidecarImageName is the image of apiserver-proxy sidecar
+	APIServerProxySidecarImageName = "apiserver-proxy-sidecar"
 
 	// ServiceAccountSigningKeySecretDataKey is the data key of a signing key Kubernetes secret.
 	ServiceAccountSigningKeySecretDataKey = "signing-key"
@@ -498,10 +485,6 @@ const (
 	GrafanaTLS = "grafana-tls"
 	// PrometheusTLS is the name of the secret resource which holds the TLS certificate for Prometheus.
 	PrometheusTLS = "prometheus-tls"
-	// EtcdServerTLS is the name of the secret resource which holds TLS server certificate of Etcd
-	EtcdServerTLS = "etcd-server-cert"
-	// EtcdClientTLS is the name of the secret resource which holds TLS client certificate of Etcd
-	EtcdClientTLS = "etcd-client-tls"
 
 	// EndUserCrtValidity is the time period a user facing certificate is valid.
 	EndUserCrtValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176

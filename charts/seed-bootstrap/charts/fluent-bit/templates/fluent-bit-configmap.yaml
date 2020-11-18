@@ -81,20 +81,6 @@ data:
 
     [FILTER]
         Name                parser
-        Match               kubernetes.*etcd*etcd*
-        Key_Name            log
-        Parser              etcdeventsParser
-        Reserve_Data        True
-
-    [FILTER]
-        Name                parser
-        Match               kubernetes.*etcd*backup-restore*
-        Key_Name            log
-        Parser              gsacParser
-        Reserve_Data        True
-
-    [FILTER]
-        Name                parser
         Match               kubernetes.*kube-state-metrics*kube-state-metrics*
         Key_Name            log
         Parser              kubeapiserverParser
@@ -263,13 +249,6 @@ data:
         Regex       ^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<log>.*)$
         Time_Key    time
         Time_Format %m%d %H:%M:%S.%L
-
-    [PARSER]
-        Name        etcdeventsParser
-        Format      regex
-        Regex       ^(?<time>\d{4}-\d{2}-\d{2}\s+[^ ]*)\s+(?<severity>\w+)\s+\|\s+(?<source>[^ :]*):\s+(?<log>.*)
-        Time_Key    time
-        Time_Format %Y-%m-%d %H:%M:%S.%L
 
     [PARSER]
         Name        alertmanagerParser

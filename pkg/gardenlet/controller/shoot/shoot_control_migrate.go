@@ -175,7 +175,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
-			Fn:           flow.TaskFn(botanist.DeployETCD).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
+			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(deploySecrets),
 		})
 		scaleETCDToOne = g.Add(flow.Task{
@@ -185,7 +185,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
-			Fn:           flow.TaskFn(botanist.WaitUntilEtcdReady).DoIf(nonTerminatingNamespace),
+			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleETCDToOne),
 		})
 		wakeUpKubeAPIServer = g.Add(flow.Task{
@@ -275,7 +275,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		})
 		createETCDSnapshot = g.Add(flow.Task{
 			Name:         "Creating ETCD Snapshot",
-			Fn:           flow.TaskFn(botanist.CreateETCDSnapshot).DoIf(nonTerminatingNamespace),
+			Fn:           flow.TaskFn(botanist.SnapshotEtcd).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
 		scaleETCDToZero = g.Add(flow.Task{

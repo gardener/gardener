@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
@@ -26,10 +27,16 @@ import (
 )
 
 // ScrapeConfigs is a utility test function for MonitoringComponents in order to test the scape configurations.
-func ScrapeConfigs(c component.MonitoringComponent, expectedScrapeConfig string) {
+func ScrapeConfigs(c component.MonitoringComponent, expectedScrapeConfigs ...string) {
 	scrapeConfigs, err := c.ScrapeConfigs()
 	Expect(err).NotTo(HaveOccurred())
-	Expect(scrapeConfigs).To(ConsistOf(Equal(expectedScrapeConfig)))
+
+	matchers := make([]interface{}, 0, len(expectedScrapeConfigs))
+	for _, sc := range expectedScrapeConfigs {
+		matchers = append(matchers, Equal(sc))
+	}
+
+	Expect(scrapeConfigs).To(ConsistOf(matchers...))
 }
 
 // AlertingRules is a utility test function for MonitoringComponents in order to test the alerting rules.
@@ -43,20 +50,23 @@ func AlertingRules(c component.MonitoringComponent, expectedAlertingRules map[st
 	}
 }
 
-// ExecutePromtool execute the promtool tests for the alerting rules.
+// ExecutePromtool execute the promtool tests for the alerting rules. It writes the rules into a temporary file in the
+// "testdata" directory.
 func ExecutePromtool(c component.MonitoringComponent, filenameRulesTest string) {
 	alertingRules, err := c.AlertingRules()
 	Expect(err).NotTo(HaveOccurred())
 
 	for filename, rule := range alertingRules {
-		Expect(ioutil.WriteFile(filename, []byte(rule), 0644)).To(Succeed())
+		filepath := filepath.Join("testdata", filename)
+
+		Expect(ioutil.WriteFile(filepath, []byte(rule), 0644)).To(Succeed())
 
 		var errBuf bytes.Buffer
 		cmd := exec.Command("promtool", "test", "rules", filenameRulesTest)
 		cmd.Stderr = &errBuf
 		Expect(cmd.Run()).To(Succeed(), errBuf.String())
 
-		Expect(os.Remove(filename)).To(Succeed())
+		Expect(os.Remove(filepath)).To(Succeed())
 	}
 }
 

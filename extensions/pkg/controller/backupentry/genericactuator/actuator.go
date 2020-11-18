@@ -17,11 +17,6 @@ package genericactuator
 import (
 	"context"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
-
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -29,6 +24,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 type actuator struct {
@@ -84,7 +84,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1a
 	}
 
 	backupSecretData := backupSecret.DeepCopy().Data
-	backupSecretData[backupBucketName] = []byte(be.Spec.BucketName)
+	backupSecretData[DataKeyBackupBucketName] = []byte(be.Spec.BucketName)
 	etcdSecretData, err := a.backupEntryDelegate.GetETCDSecretData(ctx, be, backupSecretData)
 	if err != nil {
 		return err
@@ -92,7 +92,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1a
 
 	etcdSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      EtcdBackupSecretName,
+			Name:      BackupSecretName,
 			Namespace: shootTechnicalID,
 		},
 	}

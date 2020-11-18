@@ -95,7 +95,7 @@ func (c *clusterAutoscaler) ScrapeConfigs() ([]string, error) {
 	return []string{scrapeConfig.String()}, nil
 }
 
-// AlertConfig returns the alerting configuration for AlertManager.
+// AlertingRules returns the alerting rules for AlertManager.
 func (c *clusterAutoscaler) AlertingRules() (map[string]string, error) {
 	return map[string]string{"cluster-autoscaler.rules.yaml": monitoringAlertingRules}, nil
 }

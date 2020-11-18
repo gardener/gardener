@@ -63,6 +63,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 	// Fetch component-specific monitoring configuration
 	monitoringComponents := []component.MonitoringComponent{
+		b.Shoot.Components.ControlPlane.EtcdMain,
+		b.Shoot.Components.ControlPlane.EtcdEvents,
 		b.Shoot.Components.ControlPlane.KubeScheduler,
 		b.Shoot.Components.ControlPlane.KubeControllerManager,
 	}
@@ -77,7 +79,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			return err
 		}
 		for _, config := range componentsScrapeConfigs {
-			scrapeConfigs.WriteString(fmt.Sprintf("- %s\n", indent(config, 2)))
+			scrapeConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
 		}
 
 		componentsAlertingRules, err := component.AlertingRules()
@@ -85,7 +87,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			return err
 		}
 		for filename, rule := range componentsAlertingRules {
-			alertingRules.WriteString(fmt.Sprintf("%s: |\n  %s\n", filename, indent(rule, 2)))
+			alertingRules.WriteString(fmt.Sprintf("%s: |\n  %s\n", filename, utils.Indent(rule, 2)))
 		}
 	}
 
@@ -537,8 +539,4 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 	}
 
 	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(), objects...)
-}
-
-func indent(str string, spaces int) string {
-	return strings.ReplaceAll(str, "\n", "\n"+strings.Repeat(" ", spaces))
 }

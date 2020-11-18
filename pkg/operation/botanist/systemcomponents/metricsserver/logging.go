@@ -36,7 +36,7 @@ const (
 `
 )
 
-// LoggingConfiguration returns a fluent-bit parser and filter for the metrics-server logs.
-func LoggingConfiguration() (component.LoggingConfig, error) {
-	return component.LoggingConfig{Filters: loggingFilter, Parsers: loggingParser}, nil
+// CentralLoggingConfiguration returns a fluent-bit parser and filter for the metrics-server logs.
+func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
+	return component.CentralLoggingConfig{Filters: loggingFilter, Parsers: loggingParser}, nil
 }

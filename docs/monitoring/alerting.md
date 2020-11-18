@@ -102,7 +102,7 @@ inhibit_rules:
     type: shoot
   equal: ['type', 'cluster']
 
-# Stop warning and critical alerts if there is a blocker - no workers nodes, no etcd main etc.
+# Stop warning and critical alerts if there is a blocker
 - source_match:
     severity: blocker
   target_match_re:

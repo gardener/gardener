@@ -4,6 +4,7 @@ priorityClassName: foo
 prometheus:
   port: 9090
   storage: 10Gi
+  additionalScrapeConfigs: ""
 
 aggregatePrometheus:
   port: 9090
@@ -230,8 +231,6 @@ reserveExcessCapacity: true
 
 replicas:
   reserve-excess-capacity: 0
-
-prometheusPort: 9090
 
 global:
   images:

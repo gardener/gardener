@@ -1,0 +1,81 @@
+rule_files:
+- kube-etcd3-test.rules.yaml
+
+evaluation_interval: 30s
+
+tests:
+- interval: 30s
+  input_series:
+  # KubeEtcdTestDown
+  - series: 'up{job="kube-etcd3-test"}'
+    values: '0+0x20'
+  # KubeEtcd3TestNoLeader
+  - series: 'etcd_server_has_leader{job="kube-etcd3-test"}'
+    values: '0+0x20'
+  # KubeEtcd3HighNumberOfFailedProposals
+  - series: 'etcd_server_proposals_failed_total{job="kube-etcd3-test", pod="etcd"}'
+    values: '0+2x60 121+0x60'
+  # KubeEtcd3DbSizeLimitApproaching
+  # KubeEtcd3DbSizeLimitCrossed
+  - series: 'etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-test"}'
+    values: '7194070000+107374182x20' # 6.7GB 6.8GB 6.9GB .. 7.7GB
+  alert_rule_test:
+  - eval_time: 5m
+    alertname: KubeEtcdTestDown
+    exp_alerts:
+    - exp_labels:
+        service: etcd
+        severity: blocker
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: Etcd3 cluster test is unavailable or cannot be scraped. As long as etcd3 test is down the cluster is unreachable.
+        summary: Etcd3 test cluster down.
+  - eval_time: 15m
+    alertname: KubeEtcd3TestNoLeader
+    exp_alerts:
+    - exp_labels:
+        service: etcd
+        severity: critical
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: Etcd3 test has no leader. No communication with etcd test possible. Apiserver is read only.
+        summary: Etcd3 test has no leader.
+  - eval_time: 1h
+    alertname: KubeEtcd3HighNumberOfFailedProposals
+    exp_alerts:
+    - exp_labels:
+        service: etcd
+        severity: warning
+        type: seed
+        visibility: operator
+        pod: etcd
+        job: kube-etcd3-test
+      exp_annotations:
+        description: Etcd3 test pod etcd has seen 121 proposal failures within the last hour.
+        summary: High number of failed etcd proposals
+  - eval_time: 5m
+    alertname: KubeEtcd3DbSizeLimitApproaching
+    exp_alerts:
+    - exp_labels:
+        job: kube-etcd3-test
+        service: etcd
+        severity: warning
+        type: seed
+        visibility: all
+      exp_annotations:
+        description: Etcd3 test DB size is approaching its current practical limit of 8GB. Etcd quota might need to be increased.
+        summary: Etcd3 test DB size is approaching its current practical limit.
+  - eval_time: 10m
+    alertname: KubeEtcd3DbSizeLimitCrossed
+    exp_alerts:
+    - exp_labels:
+        job: kube-etcd3-test
+        service: etcd
+        severity: critical
+        type: seed
+        visibility: all
+      exp_annotations:
+        description: Etcd3 test DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.
+        summary: Etcd3 test DB size has crossed its current practical limit.
