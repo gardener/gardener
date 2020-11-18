@@ -312,12 +312,13 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 								"--kubelet-preferred-address-types=[Hostname,InternalDNS,InternalIP,ExternalDNS,ExternalIP]",
 								fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate),
 								fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey),
-								"--v=2",
 							},
 							ReadinessProbe: &corev1.Probe{
 								Handler: corev1.Handler{
-									TCPSocket: &corev1.TCPSocketAction{
-										Port: intstr.FromInt(int(containerPort)),
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/readyz",
+										Port:   intstr.FromInt(int(containerPort)),
+										Scheme: corev1.URISchemeHTTPS,
 									},
 								},
 								InitialDelaySeconds: 5,
@@ -326,8 +327,10 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 							},
 							LivenessProbe: &corev1.Probe{
 								Handler: corev1.Handler{
-									TCPSocket: &corev1.TCPSocketAction{
-										Port: intstr.FromInt(int(containerPort)),
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/livez",
+										Port:   intstr.FromInt(int(containerPort)),
+										Scheme: corev1.URISchemeHTTPS,
 									},
 								},
 								InitialDelaySeconds: 30,
