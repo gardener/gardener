@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/validation/path"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 )
 
 // ValidateProject validates a Project object.
@@ -72,8 +73,23 @@ func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) fie
 	}
 	ownerFound := false
 
+	members := make(map[string]struct{}, len(projectSpec.Members))
+
 	for i, member := range projectSpec.Members {
 		idxPath := fldPath.Child("members").Index(i)
+
+		apiGroup, kind, namespace, name, err := ProjectMemberProperties(member)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("name"), member.Name, err.Error()))
+			continue
+		}
+		id := ProjectMemberId(apiGroup, kind, namespace, name)
+
+		if _, ok := members[id]; ok {
+			allErrs = append(allErrs, field.Duplicate(idxPath, member))
+		} else {
+			members[id] = struct{}{}
+		}
 
 		allErrs = append(allErrs, ValidateProjectMember(member, idxPath)...)
 
@@ -242,4 +258,33 @@ func ValidateProjectStatusUpdate(newProject, oldProject *core.Project) field.Err
 	}
 
 	return allErrs
+}
+
+// ProjectMemberProperties returns the properties for the given project member.
+func ProjectMemberProperties(member core.ProjectMember) (string, string, string, string, error) {
+	var (
+		apiGroup  = member.APIGroup
+		kind      = member.Kind
+		namespace = member.Namespace
+		name      = member.Name
+	)
+
+	if member.Kind == rbacv1.UserKind && strings.HasPrefix(member.Name, serviceaccount.ServiceAccountUsernamePrefix) {
+		user := strings.Split(member.Name, serviceaccount.ServiceAccountUsernameSeparator)
+		if len(user) < 4 {
+			return "", "", "", "", fmt.Errorf("unsupported service account user name: %q", member.Name)
+		}
+
+		apiGroup = ""
+		kind = rbacv1.ServiceAccountKind
+		namespace = user[2]
+		name = user[3]
+	}
+
+	return apiGroup, kind, namespace, name, nil
+}
+
+// ProjectMemberId returns an internal ID for the project member.
+func ProjectMemberId(apiGroup, kind, namespace, name string) string {
+	return fmt.Sprintf("%s_%s_%s_%s", apiGroup, kind, namespace, name)
 }
