@@ -71,7 +71,7 @@ func (c *defaultControl) releaseNamespace(ctx context.Context, gardenClient kube
 
 	// To prevent "stealing" namespaces by other projects we only delete the namespace if its labels match
 	// the project labels.
-	if !apiequality.Semantic.DeepDerivative(namespaceLabelsFromProjectDeprecated(project), namespace.Labels) {
+	if !apiequality.Semantic.DeepDerivative(namespaceLabelsFromProject(project), namespace.Labels) {
 		return true, nil
 	}
 
