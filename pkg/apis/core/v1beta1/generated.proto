@@ -723,6 +723,23 @@ message KubeAPIServerConfig {
   // cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
   // +optional
   optional WatchCacheSizes watchCacheSizes = 9;
+
+  // Requests contains configuration for request-specific settings for the kube-apiserver.
+  // +optional
+  optional KubeAPIServerRequests requests = 10;
+}
+
+// KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
+message KubeAPIServerRequests {
+  // MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
+  // exceeds this, it rejects requests.
+  // +optional
+  optional int32 maxNonMutatingInflight = 1;
+
+  // MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
+  // exceeds this, it rejects requests.
+  // +optional
+  optional int32 maxMutatingInflight = 2;
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.

@@ -1024,6 +1024,15 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		if watchCacheSizes := apiServerConfig.WatchCacheSizes; watchCacheSizes != nil {
 			defaultValues["watchCacheSizes"] = watchCacheSizes
 		}
+
+		if apiServerConfig.Requests != nil {
+			if v := apiServerConfig.Requests.MaxNonMutatingInflight; v != nil {
+				defaultValues["maxNonMutatingRequestsInflight"] = *v
+			}
+			if v := apiServerConfig.Requests.MaxMutatingInflight; v != nil {
+				defaultValues["maxMutatingRequestsInflight"] = *v
+			}
+		}
 	}
 
 	serviceAccountConfigVals["issuer"] = serviceAccountTokenIssuerURL

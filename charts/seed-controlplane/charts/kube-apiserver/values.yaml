@@ -168,3 +168,6 @@ mountHostCADirectories:
 #     - apiGroup: apps
 #       resource: deployments
 #       size: 500
+
+#maxNonMutatingRequestsInflight: 400
+#maxMutatingRequestsInflight: 200

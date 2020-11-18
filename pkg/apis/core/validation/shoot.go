@@ -571,7 +571,29 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 			}
 		}
 
-		allErrs = append(allErrs, ValidateWatchCacheSizes(kubeAPIServer.WatchCacheSizes, fldPath.Child("watchCacheSizes"))...)
+		allErrs = append(allErrs, ValidateWatchCacheSizes(kubeAPIServer.WatchCacheSizes, fldPath.Child("kubeAPIServer", "watchCacheSizes"))...)
+
+		if kubeAPIServer.Requests != nil {
+			const maxMaxNonMutatingRequestsInflight = 800
+			if v := kubeAPIServer.Requests.MaxNonMutatingInflight; v != nil {
+				path := fldPath.Child("kubeAPIServer", "requests", "maxNonMutatingInflight")
+
+				allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), path)...)
+				if *v > maxMaxNonMutatingRequestsInflight {
+					allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxMaxNonMutatingRequestsInflight)))
+				}
+			}
+
+			const maxMaxMutatingRequestsInflight = 400
+			if v := kubeAPIServer.Requests.MaxMutatingInflight; v != nil {
+				path := fldPath.Child("kubeAPIServer", "requests", "maxMutatingInflight")
+
+				allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*v), path)...)
+				if *v > maxMaxMutatingRequestsInflight {
+					allErrs = append(allErrs, field.Invalid(path, *v, fmt.Sprintf("cannot set higher than %d", maxMaxMutatingRequestsInflight)))
+				}
+			}
+		}
 	}
 
 	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.Version, kubernetes.KubeControllerManager, fldPath.Child("kubeControllerManager"))...)
