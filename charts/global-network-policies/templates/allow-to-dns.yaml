@@ -15,6 +15,16 @@ spec:
       networking.gardener.cloud/to-dns: allowed
   egress:
   - to:
+    {{- if .Values.nodeLocalDNSEnabled }}
+    {{- if .Values.dnsServer }}
+    - ipBlock:
+        cidr: {{ .Values.dnsServer }}/32 # required for node local dns feature, allows egress traffic to kube-dns
+    {{- end }}
+    {{- if .Values.nodeLocalIPVSAddress }}
+    - ipBlock:
+        cidr: {{ .Values.nodeLocalIPVSAddress }}/32 # required for node local dns feature, allows egress traffic to node local dns cache
+    {{- end }}
+    {{- end }}
     - namespaceSelector:
         matchLabels:
           role: kube-system

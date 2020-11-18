@@ -20,3 +20,7 @@ privateNetworks:
 - network: 100.64.0.0/10
   except:
   - 100.64.1.0/24
+
+dnsServer:  ""
+nodeLocalIPVSAddress: ""
+nodeLocalDNSEnabled: false
