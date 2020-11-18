@@ -184,12 +184,18 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	shoot.ExternalDomain = externalDomain
 
 	// Store the Kubernetes version in the format <major>.<minor> on the Shoot object.
-	v, err := semver.NewVersion(shootObject.Spec.Kubernetes.Version)
+	kubernetesVersion, err := semver.NewVersion(shootObject.Spec.Kubernetes.Version)
 	if err != nil {
 		return nil, err
 	}
-	shoot.KubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", v.Major(), v.Minor())
-	shoot.KubernetesVersion = v
+	shoot.KubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
+	shoot.KubernetesVersion = kubernetesVersion
+
+	gardenerVersion, err := semver.NewVersion(shootObject.Status.Gardener.Version)
+	if err != nil {
+		return nil, err
+	}
+	shoot.GardenerVersion = gardenerVersion
 
 	kubernetesVersionGeq118, err := versionutils.CheckVersionMeetsConstraint(shoot.KubernetesMajorMinorVersion, ">= 1.18")
 	if err != nil {

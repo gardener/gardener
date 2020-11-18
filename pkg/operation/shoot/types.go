@@ -56,6 +56,7 @@ type Shoot struct {
 	SeedNamespace               string
 	KubernetesMajorMinorVersion string
 	KubernetesVersion           *semver.Version
+	GardenerVersion             *semver.Version
 
 	DisableDNS            bool
 	InternalClusterDomain string
