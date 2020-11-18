@@ -3938,6 +3938,20 @@ int32
 <p>NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24)</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>podEvictionTimeout</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeProxyConfig">KubeProxyConfig

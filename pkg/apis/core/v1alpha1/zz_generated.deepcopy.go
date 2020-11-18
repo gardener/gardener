@@ -1396,6 +1396,11 @@ func (in *KubeControllerManagerConfig) DeepCopyInto(out *KubeControllerManagerCo
 		*out = new(int32)
 		**out = **in
 	}
+	if in.PodEvictionTimeout != nil {
+		in, out := &in.PodEvictionTimeout, &out.PodEvictionTimeout
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	return
 }
 

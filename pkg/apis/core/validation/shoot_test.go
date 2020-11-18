@@ -1658,7 +1658,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.kubernetes.kubeControllerManager.nodeCIDRMaskSize"),
-					}))))
+					})),
+				))
 			})
 
 			It("should succeed when nodeCIDRMaskSize is within boundaries", func() {
@@ -1666,6 +1667,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should prevent setting a negative pod eviction timeout", func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{Duration: -1}
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeControllerManager.podEvictionTimeout"),
+				}))))
+			})
+
+			It("should prevent setting the pod eviction timeout to 0", func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{}
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeControllerManager.podEvictionTimeout"),
+				}))))
 			})
 		})
 

@@ -76,11 +76,13 @@ var _ = Describe("KubeControllerManager", func() {
 			UpscaleDelay:            &metav1.Duration{Duration: 1 * time.Minute},
 		}
 
-		nodeCIDRMask int32 = 24
-		kcmConfig          = gardencorev1beta1.KubeControllerManagerConfig{
+		nodeCIDRMask       int32 = 24
+		podEvictionTimeout       = metav1.Duration{Duration: 3 * time.Minute}
+		kcmConfig                = gardencorev1beta1.KubeControllerManagerConfig{
 			KubernetesConfig:              gardencorev1beta1.KubernetesConfig{},
 			HorizontalPodAutoscalerConfig: &hpaConfig,
 			NodeCIDRMaskSize:              &nodeCIDRMask,
+			PodEvictionTimeout:            &podEvictionTimeout,
 		}
 
 		// checksums
@@ -391,7 +393,7 @@ var _ = Describe("KubeControllerManager", func() {
 											Name:            "kube-controller-manager",
 											Image:           image,
 											ImagePullPolicy: corev1.PullIfNotPresent,
-											Command:         commandForKubernetesVersion(version, portForKubernetesVersion(version), config.NodeCIDRMaskSize, namespace, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kutil.FeatureGatesToCommandLineParameter(config.FeatureGates)),
+											Command:         commandForKubernetesVersion(version, portForKubernetesVersion(version), config.NodeCIDRMaskSize, config.PodEvictionTimeout, namespace, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kutil.FeatureGatesToCommandLineParameter(config.FeatureGates)),
 											LivenessProbe: &corev1.Probe{
 												Handler: corev1.Handler{
 													HTTPGet: &corev1.HTTPGetAction{
@@ -551,8 +553,9 @@ subjects:
 					},
 					NodeCIDRMaskSize: nil,
 				}
-				configWithFeatureFlags     = &gardencorev1beta1.KubeControllerManagerConfig{KubernetesConfig: gardencorev1beta1.KubernetesConfig{FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false}}}
-				configWithNodeCIDRMaskSize = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: pointer.Int32Ptr(26)}
+				configWithFeatureFlags       = &gardencorev1beta1.KubeControllerManagerConfig{KubernetesConfig: gardencorev1beta1.KubernetesConfig{FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false}}}
+				configWithNodeCIDRMaskSize   = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: pointer.Int32Ptr(26)}
+				configWithPodEvictionTimeout = &gardencorev1beta1.KubeControllerManagerConfig{PodEvictionTimeout: &podEvictionTimeout}
 			)
 
 			DescribeTable("success tests for various kubernetes versions",
@@ -622,46 +625,55 @@ subjects:
 				Entry("kubernetes 1.19 with non-default autoscaler config", "1.19.0", configWithAutoscalerConfig),
 				Entry("kubernetes 1.19 with feature flags", "1.19.0", configWithFeatureFlags),
 				Entry("kubernetes 1.19 with NodeCIDRMaskSize", "1.19.0", configWithNodeCIDRMaskSize),
+				Entry("kubernetes 1.19 with PodEvictionTimeout", "1.19.0", configWithPodEvictionTimeout),
 
 				Entry("kubernetes 1.18 w/o config", "1.18.0", emptyConfig),
 				Entry("kubernetes 1.18 with non-default autoscaler config", "1.18.0", configWithAutoscalerConfig),
 				Entry("kubernetes 1.18 with feature flags", "1.18.0", configWithFeatureFlags),
 				Entry("kubernetes 1.18 with NodeCIDRMaskSize", "1.18.0", configWithNodeCIDRMaskSize),
+				Entry("kubernetes 1.18 with PodEvictionTimeout", "1.18.0", configWithPodEvictionTimeout),
 
 				Entry("kubernetes 1.17 w/o config", "1.17.0", emptyConfig),
 				Entry("kubernetes 1.17 with non-default autoscaler config", "1.17.0", configWithAutoscalerConfig),
 				Entry("kubernetes 1.17 with feature flags", "1.17.0", configWithFeatureFlags),
 				Entry("kubernetes 1.17 with NodeCIDRMaskSize", "1.17.0", configWithNodeCIDRMaskSize),
+				Entry("kubernetes 1.17 with PodEvictionTimeout", "1.17.0", configWithPodEvictionTimeout),
 
 				Entry("kubernetes 1.16 w/o config", "1.16.0", emptyConfig),
 				Entry("kubernetes 1.16 with non-default autoscaler config", "1.16.0", configWithAutoscalerConfig),
 				Entry("kubernetes 1.16 with feature flags", "1.16.0", configWithFeatureFlags),
 				Entry("kubernetes 1.16 with NodeCIDRMaskSize", "1.16.0", configWithNodeCIDRMaskSize),
+				Entry("kubernetes 1.16 with PodEvictionTimeout", "1.16.0", configWithPodEvictionTimeout),
 
 				Entry("kubernetes 1.15 w/o config", "1.15.0", emptyConfig),
 				Entry("kubernetes 1.15 with non-default autoscaler config", "1.15.0", configWithAutoscalerConfig),
 				Entry("kubernetes 1.15 with feature flags", "1.15.0", configWithFeatureFlags),
 				Entry("kubernetes 1.15 with NodeCIDRMaskSize", "1.15.0", configWithNodeCIDRMaskSize),
+				Entry("kubernetes 1.15 with PodEvictionTimeout", "1.15.0", configWithPodEvictionTimeout),
 
 				Entry("kubernetes 1.14 w/o config", "1.14.0", emptyConfig),
 				Entry("kubernetes 1.14 with non-default autoscaler config", "1.14.0", configWithAutoscalerConfig),
 				Entry("kubernetes 1.14 with feature flags", "1.14.0", configWithFeatureFlags),
 				Entry("kubernetes 1.14 with NodeCIDRMaskSize", "1.14.0", configWithNodeCIDRMaskSize),
+				Entry("kubernetes 1.14 with PodEvictionTimeout", "1.14.0", configWithPodEvictionTimeout),
 
 				Entry("kubernetes 1.13 w/o config", "1.13.0", emptyConfig),
 				Entry("kubernetes 1.13 with non-default autoscaler config", "1.13.0", configWithAutoscalerConfig),
 				Entry("kubernetes 1.13 with feature flags", "1.13.0", configWithFeatureFlags),
 				Entry("kubernetes 1.13 with NodeCIDRMaskSize", "1.13.0", configWithNodeCIDRMaskSize),
+				Entry("kubernetes 1.13 with PodEvictionTimeout", "1.13.0", configWithPodEvictionTimeout),
 
 				Entry("kubernetes 1.12 w/o config", "1.12.0", emptyConfig),
 				Entry("kubernetes 1.12 with non-default autoscaler config", "1.12.0", configWithAutoscalerConfig),
 				Entry("kubernetes 1.12 with feature flags", "1.12.0", configWithFeatureFlags),
 				Entry("kubernetes 1.12 with NodeCIDRMaskSize", "1.12.0", configWithNodeCIDRMaskSize),
+				Entry("kubernetes 1.12 with PodEvictionTimeout", "1.12.0", configWithPodEvictionTimeout),
 
 				Entry("kubernetes 1.11 w/ config", "1.11.0", emptyConfig),
 				Entry("kubernetes 1.11 with non-default autoscaler config", "1.11.0", configWithAutoscalerConfig),
 				Entry("kubernetes 1.11 with feature flags", "1.11.0", configWithFeatureFlags),
 				Entry("kubernetes 1.11 with NodeCIDRMaskSize", "1.11.0", configWithNodeCIDRMaskSize),
+				Entry("kubernetes 1.11 with PodEvictionTimeout", "1.11.0", configWithPodEvictionTimeout),
 			)
 		})
 	})
@@ -701,7 +713,16 @@ func probeSchemeForKubernetesVersion(version string) corev1.URIScheme {
 	return corev1.URISchemeHTTP
 }
 
-func commandForKubernetesVersion(version string, port int32, nodeCIDRMaskSize *int32, clusterName string, serviceNetwork, podNetwork *net.IPNet, horizontalPodAutoscalerConfig *gardencorev1beta1.HorizontalPodAutoscalerConfig, featureGateFlags string) []string {
+func commandForKubernetesVersion(
+	version string,
+	port int32,
+	nodeCIDRMaskSize *int32,
+	podEvictionTimeout *metav1.Duration,
+	clusterName string,
+	serviceNetwork, podNetwork *net.IPNet,
+	horizontalPodAutoscalerConfig *gardencorev1beta1.HorizontalPodAutoscalerConfig,
+	featureGateFlags string,
+) []string {
 	var command []string
 
 	if k8sVersionGreaterEqual117, _ := versionutils.CompareVersions(version, ">=", "1.17"); k8sVersionGreaterEqual117 {
@@ -755,13 +776,18 @@ func commandForKubernetesVersion(version string, port int32, nodeCIDRMaskSize *i
 		)
 	}
 
+	podEvictionTimeoutSetting := "2m0s"
+	if podEvictionTimeout != nil {
+		podEvictionTimeoutSetting = podEvictionTimeout.Duration.String()
+	}
+
 	command = append(command,
 		fmt.Sprintf("--horizontal-pod-autoscaler-sync-period=%s", horizontalPodAutoscalerConfig.SyncPeriod.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-tolerance=%v", *horizontalPodAutoscalerConfig.Tolerance),
 		"--kubeconfig=/var/lib/kube-controller-manager/kubeconfig",
 		"--leader-elect=true",
 		"--node-monitor-grace-period=120s",
-		"--pod-eviction-timeout=2m0s",
+		fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeoutSetting),
 		"--root-ca-file=/srv/kubernetes/ca/ca.crt",
 		"--service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa",
 		fmt.Sprintf("--service-cluster-ip-range=%s", serviceNetwork.String()),
