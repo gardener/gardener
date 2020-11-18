@@ -89,7 +89,7 @@ rules:
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{
-					"clusterrole.yaml": []byte(clusterRoleYAML),
+					"clusterrole____system_cluster-autoscaler-seed.yaml": []byte(clusterRoleYAML),
 				},
 			}
 			managedResource = &resourcesv1alpha1.ManagedResource{

@@ -17,6 +17,7 @@ package etcd
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"text/template"
 	"time"
 
@@ -33,10 +34,10 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
@@ -76,14 +77,8 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 	}
 
 	var (
-		versions = schema.GroupVersions([]schema.GroupVersion{
-			appsv1.SchemeGroupVersion,
-			corev1.SchemeGroupVersion,
-			rbacv1.SchemeGroupVersion,
-			autoscalingv1beta2.SchemeGroupVersion,
-		})
-		codec  = kubernetes.SeedCodec.CodecForVersions(kubernetes.SeedSerializer, kubernetes.SeedSerializer, versions, versions)
-		labels = func() map[string]string { return map[string]string{v1beta1constants.GardenRole: Druid} }
+		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+		labels   = func() map[string]string { return map[string]string{v1beta1constants.GardenRole: Druid} }
 
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
@@ -92,7 +87,6 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 				Labels:    labels(),
 			},
 		}
-		serviceAccountYAML, _ = runtime.Encode(codec, serviceAccount)
 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -132,7 +126,6 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 				},
 			},
 		}
-		clusterRoleYAML, _ = runtime.Encode(codec, clusterRole)
 
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
@@ -152,7 +145,6 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 				},
 			},
 		}
-		clusterRoleBindingYAML, _ = runtime.Encode(codec, clusterRoleBinding)
 
 		configMapImageVectorOverwrite = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -161,7 +153,6 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 				Labels:    labels(),
 			},
 		}
-		configMapImageVectorOverwriteYAML []byte
 
 		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 		vpa           = &autoscalingv1beta2.VerticalPodAutoscaler{
@@ -190,7 +181,6 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 				},
 			},
 		}
-		vpaYAML, _ = runtime.Encode(codec, vpa)
 
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -241,22 +231,17 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 			},
 		}
 
-		resources = map[string][]byte{
-			"crd.yaml":                crdYAML.Bytes(),
-			"serviceaccount.yaml":     serviceAccountYAML,
-			"clusterrole.yaml":        clusterRoleYAML,
-			"clusterrolebinding.yaml": clusterRoleBindingYAML,
-			"vpa.yaml":                vpaYAML,
+		resourcesToAdd = []runtime.Object{
+			serviceAccount,
+			clusterRole,
+			clusterRoleBinding,
+			vpa,
 		}
 	)
 
 	if imageVectorOverwrite != nil {
 		configMapImageVectorOverwrite.Data = map[string]string{druidConfigMapImageVectorOverwriteDataKey: *imageVectorOverwrite}
-		configMapImageVectorOverwriteYAML, err = runtime.Encode(codec, configMapImageVectorOverwrite)
-		if err != nil {
-			return err
-		}
-		resources["configmap-imagevector-overwrite.yaml"] = configMapImageVectorOverwriteYAML
+		resourcesToAdd = append(resourcesToAdd, configMapImageVectorOverwrite)
 
 		deployment.Spec.Template.Labels["checksum/configmap-imagevector-overwrite"] = utils.ComputeChecksum(configMapImageVectorOverwrite.Data)
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
@@ -280,11 +265,11 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 		})
 	}
 
-	deploymentYAML, err := runtime.Encode(codec, deployment)
+	resources, err := registry.AddAllAndSerialize(append(resourcesToAdd, deployment)...)
 	if err != nil {
 		return err
 	}
-	resources["deployment.yaml"] = deploymentYAML
+	resources["crd.yaml"] = crdYAML.Bytes()
 
 	if err := common.DeployManagedResourceForSeed(ctx, c, managedResourceControlName, namespace, false, resources); err != nil {
 		return err
@@ -298,6 +283,19 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 
 // DebootstrapSeed deletes all the resources deployed during the seed bootstrapping.
 func DebootstrapSeed(ctx context.Context, c client.Client, namespace string) error {
+	etcdList := &druidv1alpha1.EtcdList{}
+	if err := c.List(ctx, etcdList); err != nil {
+		return err
+	}
+
+	if len(etcdList.Items) > 0 {
+		return fmt.Errorf("cannot debootstrap etcd-druid because there are still druidv1alpha1.Etcd resources left in the cluster")
+	}
+
+	if err := common.ConfirmDeletion(ctx, c, &apiextensionsv1beta1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}); err != nil {
+		return err
+	}
+
 	if err := common.DeleteManagedResourceForSeed(ctx, c, managedResourceControlName, namespace); err != nil {
 		return err
 	}
@@ -323,10 +321,12 @@ func init() {
 	utilruntime.Must(err)
 }
 
-const crdTmpl = `apiVersion: apiextensions.k8s.io/v1beta1
+const (
+	crdName = "etcds.druid.gardener.cloud"
+	crdTmpl = `apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: etcds.druid.gardener.cloud
+  name: ` + crdName + `
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.4
   labels:
@@ -803,3 +803,4 @@ spec:
     served: true
     storage: true
 `
+)

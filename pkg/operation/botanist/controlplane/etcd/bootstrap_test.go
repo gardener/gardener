@@ -21,14 +21,17 @@ import (
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
+	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -333,12 +336,12 @@ status: {}
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{
-					"serviceaccount.yaml":     []byte(serviceAccountYAML),
-					"clusterrole.yaml":        []byte(clusterRoleYAML),
-					"clusterrolebinding.yaml": []byte(clusterRoleBindingYAML),
-					"vpa.yaml":                []byte(vpaYAML),
-					"crd.yaml":                []byte(crdK8sGreaterEqual112YAML),
-					"deployment.yaml":         []byte(deploymentWithoutImageVectorOverwriteYAML),
+					"serviceaccount__shoot--foo--bar__etcd-druid.yaml":            []byte(serviceAccountYAML),
+					"clusterrole____gardener.cloud_system_etcd-druid.yaml":        []byte(clusterRoleYAML),
+					"clusterrolebinding____gardener.cloud_system_etcd-druid.yaml": []byte(clusterRoleBindingYAML),
+					"verticalpodautoscaler__shoot--foo--bar__etcd-druid-vpa.yaml": []byte(vpaYAML),
+					"deployment__shoot--foo--bar__etcd-druid.yaml":                []byte(deploymentWithoutImageVectorOverwriteYAML),
+					"crd.yaml": []byte(crdK8sGreaterEqual112YAML),
 				},
 			}
 			managedResource = &resourcesv1alpha1.ManagedResource{
@@ -452,8 +455,8 @@ status: {}
 			})
 
 			It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
-				managedResourceSecret.Data["configmap-imagevector-overwrite.yaml"] = []byte(configMapImageVectorOverwriteYAML)
-				managedResourceSecret.Data["deployment.yaml"] = []byte(deploymentWithImageVectorOverwriteYAML)
+				managedResourceSecret.Data["configmap__shoot--foo--bar__etcd-druid-imagevector-overwrite.yaml"] = []byte(configMapImageVectorOverwriteYAML)
+				managedResourceSecret.Data["deployment__shoot--foo--bar__etcd-druid.yaml"] = []byte(deploymentWithImageVectorOverwriteYAML)
 
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -502,8 +505,8 @@ status: {}
 			})
 
 			It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
-				managedResourceSecret.Data["configmap-imagevector-overwrite.yaml"] = []byte(configMapImageVectorOverwriteYAML)
-				managedResourceSecret.Data["deployment.yaml"] = []byte(deploymentWithImageVectorOverwriteYAML)
+				managedResourceSecret.Data["configmap__shoot--foo--bar__etcd-druid-imagevector-overwrite.yaml"] = []byte(configMapImageVectorOverwriteYAML)
+				managedResourceSecret.Data["deployment__shoot--foo--bar__etcd-druid.yaml"] = []byte(deploymentWithImageVectorOverwriteYAML)
 
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -528,6 +531,7 @@ status: {}
 
 	Describe("#DebootstrapSeed", func() {
 		var (
+			crdName         = "etcds.druid.gardener.cloud"
 			secret          = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -539,10 +543,65 @@ status: {}
 					Class:       pointer.StringPtr("seed"),
 				},
 			}
+
+			timeNowFunc              = func() time.Time { return time.Time{} }
+			crdWithConfirmedDeletion = &apiextensionsv1beta1.CustomResourceDefinition{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: crdName,
+					Annotations: map[string]string{
+						"confirmation.gardener.cloud/deletion": "true",
+						"gardener.cloud/timestamp":             timeNowFunc().String(),
+					},
+				},
+			}
 		)
 
-		It("should fail when the managed resource deletion fails", func() {
+		It("should fail when the etcd listing fails", func() {
 			gomock.InOrder(
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})).Return(fakeErr),
+			)
+
+			Expect(DebootstrapSeed(ctx, c, namespace)).To(MatchError(fakeErr))
+		})
+
+		It("should fail when there are etcd resources left", func() {
+			gomock.InOrder(
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})).DoAndReturn(
+					func(ctx context.Context, obj runtime.Object, _ ...client.ListOptions) error {
+						(&druidv1alpha1.EtcdList{
+							Items: []druidv1alpha1.Etcd{{}},
+						}).DeepCopyInto(obj.(*druidv1alpha1.EtcdList))
+						return nil
+					},
+				),
+			)
+
+			Expect(DebootstrapSeed(ctx, c, namespace)).To(MatchError(ContainSubstring("because there are still druidv1alpha1.Etcd resources left in the cluster")))
+		})
+
+		It("should fail when the deletion confirmation fails", func() {
+			oldTimeNow := common.TimeNow
+			defer func() { common.TimeNow = oldTimeNow }()
+			common.TimeNow = timeNowFunc
+
+			gomock.InOrder(
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
+				c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
+				c.EXPECT().Update(ctx, crdWithConfirmedDeletion).Return(fakeErr),
+			)
+
+			Expect(DebootstrapSeed(ctx, c, namespace)).To(MatchError(fakeErr))
+		})
+
+		It("should fail when the managed resource deletion fails", func() {
+			oldTimeNow := common.TimeNow
+			defer func() { common.TimeNow = oldTimeNow }()
+			common.TimeNow = timeNowFunc
+
+			gomock.InOrder(
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
+				c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
+				c.EXPECT().Update(ctx, crdWithConfirmedDeletion),
 				c.EXPECT().Delete(ctx, managedResource).Return(fakeErr),
 			)
 
@@ -550,7 +609,14 @@ status: {}
 		})
 
 		It("should fail when the secret deletion fails", func() {
+			oldTimeNow := common.TimeNow
+			defer func() { common.TimeNow = oldTimeNow }()
+			common.TimeNow = timeNowFunc
+
 			gomock.InOrder(
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
+				c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
+				c.EXPECT().Update(ctx, crdWithConfirmedDeletion),
 				c.EXPECT().Delete(ctx, managedResource),
 				c.EXPECT().Delete(ctx, secret).Return(fakeErr),
 			)
@@ -559,7 +625,14 @@ status: {}
 		})
 
 		It("should fail when the wait for the managed resource deletion fails", func() {
+			oldTimeNow := common.TimeNow
+			defer func() { common.TimeNow = oldTimeNow }()
+			common.TimeNow = timeNowFunc
+
 			gomock.InOrder(
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
+				c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
+				c.EXPECT().Update(ctx, crdWithConfirmedDeletion),
 				c.EXPECT().Delete(ctx, managedResource),
 				c.EXPECT().Delete(ctx, secret),
 				c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
@@ -569,11 +642,18 @@ status: {}
 		})
 
 		It("should fail when the wait for the managed resource deletion times out", func() {
+			oldTimeNow := common.TimeNow
+			defer func() { common.TimeNow = oldTimeNow }()
+			common.TimeNow = timeNowFunc
+
 			oldTimeout := TimeoutWaitForManagedResource
 			defer func() { TimeoutWaitForManagedResource = oldTimeout }()
 			TimeoutWaitForManagedResource = time.Millisecond
 
 			gomock.InOrder(
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
+				c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
+				c.EXPECT().Update(ctx, crdWithConfirmedDeletion),
 				c.EXPECT().Delete(ctx, managedResource),
 				c.EXPECT().Delete(ctx, secret),
 				c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).AnyTimes(),
@@ -583,7 +663,14 @@ status: {}
 		})
 
 		It("should successfully delete all resources", func() {
+			oldTimeNow := common.TimeNow
+			defer func() { common.TimeNow = oldTimeNow }()
+			common.TimeNow = timeNowFunc
+
 			gomock.InOrder(
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
+				c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
+				c.EXPECT().Update(ctx, crdWithConfirmedDeletion),
 				c.EXPECT().Delete(ctx, managedResource),
 				c.EXPECT().Delete(ctx, secret),
 				c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),

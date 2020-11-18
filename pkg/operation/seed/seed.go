@@ -781,15 +781,13 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			return etcd.BootstrapSeed(ctx, c, namespace, version, image.String(), imageVectorOverwrite)
 		},
 	} {
+		fn := componentFn
 		bootstrapFunctions = append(bootstrapFunctions, func(ctx context.Context) error {
-			return componentFn(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace, k8sSeedClient.Version())
+			return fn(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace, k8sSeedClient.Version())
 		})
 	}
-	if err := flow.Parallel(bootstrapFunctions...)(ctx); err != nil {
-		return err
-	}
 
-	return nil
+	return flow.Parallel(bootstrapFunctions...)(ctx)
 }
 
 // DebootstrapCluster deletes certain resources from the seed cluster.
