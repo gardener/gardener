@@ -129,6 +129,8 @@ rules:
   - pods
   - nodes
   - nodes/stats
+  - namespaces
+  - configmaps
   verbs:
   - get
   - list
@@ -206,7 +208,9 @@ spec:
   selector:
     matchLabels:
       k8s-app: metrics-server
-  strategy: {}
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
   template:
     metadata:
       annotations:
@@ -225,6 +229,7 @@ spec:
       containers:
       - command:
         - /metrics-server
+        - --authorization-always-allow-paths=/livez,/readyz
         - --profiling=false
         - --cert-dir=/home/certdir
         - --secure-port=8443
@@ -292,7 +297,9 @@ spec:
   selector:
     matchLabels:
       k8s-app: metrics-server
-  strategy: {}
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
   template:
     metadata:
       annotations:
@@ -311,6 +318,7 @@ spec:
       containers:
       - command:
         - /metrics-server
+        - --authorization-always-allow-paths=/livez,/readyz
         - --profiling=false
         - --cert-dir=/home/certdir
         - --secure-port=8443

@@ -146,7 +146,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 			Rules: []rbacv1.PolicyRule{
 				{
 					APIGroups: []string{""},
-					Resources: []string{"pods", "nodes", "nodes/stats"},
+					Resources: []string{"pods", "nodes", "nodes/stats", "namespaces", "configmaps"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 			},
@@ -254,7 +254,8 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 
-		deployment = &appsv1.Deployment{
+		maxUnavailable = intstr.FromInt(0)
+		deployment     = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      deploymentName,
 				Namespace: metav1.NamespaceSystem,
@@ -266,6 +267,11 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 			Spec: appsv1.DeploymentSpec{
 				RevisionHistoryLimit: pointer.Int32Ptr(0),
 				Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
+				Strategy: appsv1.DeploymentStrategy{
+					RollingUpdate: &appsv1.RollingUpdateDeployment{
+						MaxUnavailable: &maxUnavailable,
+					},
+				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: utils.MergeStringMaps(getLabels(), map[string]string{
@@ -301,6 +307,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command: []string{
 								"/metrics-server",
+								"--authorization-always-allow-paths=/livez,/readyz",
 								"--profiling=false",
 								// nobody user only can write in home folder
 								"--cert-dir=/home/certdir",
