@@ -35,7 +35,7 @@ apk add --no-cache \
     gcc \
     sed
 
-GOLANG_VERSION="$(sed -rn 's/FROM golang:([^ ]+).*/\1/p' < "$repo_root_dir/Dockerfile")"
+GOLANG_VERSION="$(sed -rn 's/FROM (eu\.gcr\.io\/gardener-project\/3rd\/golang|golang):([^ ]+).*/\2/p' < "$repo_root_dir/Dockerfile")"
 
 export \
     GOROOT="$(go env GOROOT)" \
