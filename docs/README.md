@@ -19,6 +19,7 @@
   * [Gardenlet](concepts/gardenlet.md)
 * [Backup Restore](concepts/backup-restore.md)
 * [Network Policies](concepts/network_policies.md)
+* [Relation between Gardener API and Cluster API](concepts/cluster-api.md)
 
 ## Usage
 
