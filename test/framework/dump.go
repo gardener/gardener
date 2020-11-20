@@ -302,6 +302,18 @@ func (f *CommonFramework) dumpDaemonSetInfoForNamespace(ctx context.Context, ctx
 	return nil
 }
 
+// dumpNamespaceResource prints information about the Namespace itself
+func (f *CommonFramework) dumpNamespaceResource(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, namespace string) error {
+	f.Logger.Infof("%s [NAMESPACE RESOURCE %s]", ctxIdentifier, namespace)
+	ns := &corev1.Namespace{}
+	if err := k8sClient.DirectClient().Get(ctx, client.ObjectKey{Name: namespace}, ns); err != nil {
+		return err
+	}
+	f.Logger.Printf("Namespace %s - Spec %+v - Status %+v", namespace, ns.Spec, ns.Status)
+	f.Logger.Println()
+	return nil
+}
+
 // dumpServiceInfoForNamespace prints information about all Services of a namespace
 func (f *CommonFramework) dumpServiceInfoForNamespace(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, namespace string) error {
 	f.Logger.Infof("%s [NAMESPACE %s] [SERVICES]", ctxIdentifier, namespace)
@@ -310,7 +322,7 @@ func (f *CommonFramework) dumpServiceInfoForNamespace(ctx context.Context, ctxId
 		return err
 	}
 	for _, service := range services.Items {
-		f.Logger.Printf("Service %s - Spec %v - Status %v", service.Name, service.Spec, service.Status)
+		f.Logger.Printf("Service %s - Spec %+v - Status %+v", service.Name, service.Spec, service.Status)
 	}
 	f.Logger.Println()
 	return nil
@@ -324,7 +336,7 @@ func (f *CommonFramework) dumpVolumeInfoForNamespace(ctx context.Context, ctxIde
 		return err
 	}
 	for _, pvc := range pvcs.Items {
-		f.Logger.Printf("PVC %s - Spec %v - Status %v", pvc.Name, pvc.Spec, pvc.Status)
+		f.Logger.Printf("PVC %s - Spec %+v - Status %+v", pvc.Name, pvc.Spec, pvc.Status)
 	}
 	f.Logger.Println()
 
@@ -334,7 +346,7 @@ func (f *CommonFramework) dumpVolumeInfoForNamespace(ctx context.Context, ctxIde
 		return err
 	}
 	for _, pv := range pvs.Items {
-		f.Logger.Printf("PV %s - Spec %v - Status %v", pv.Name, pv.Spec, pv.Status)
+		f.Logger.Printf("PV %s - Spec %+v - Status %+v", pv.Name, pv.Spec, pv.Status)
 	}
 	f.Logger.Println()
 	return nil
