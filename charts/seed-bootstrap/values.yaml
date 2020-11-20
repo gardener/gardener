@@ -5,6 +5,7 @@ prometheus:
   port: 9090
   storage: 10Gi
   additionalScrapeConfigs: ""
+  additionalCAdvisorScrapeConfigMetricRelabelConfigs: ""
 
 aggregatePrometheus:
   port: 9090

@@ -289,51 +289,32 @@ metric_relabel_configs:
 - source_labels: [ __name__ ]
   action: keep
   regex: ^(` + strings.Join(monitoringAllowedMetricsBackupRestore, "|") + `)$`
+)
 
-	monitoringCentralScrapeConfig = `job_name: cadvisor-etcd
-honor_labels: false
-scheme: https
-tls_config:
-  ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-kubernetes_sd_configs:
-- role: node
-relabel_configs:
-- source_labels: [__meta_kubernetes_node_address_InternalIP]
-  target_label: instance
-- action: labelmap
-  regex: __meta_kubernetes_node_label_(.+)
-- target_label: __address__
-  replacement: kubernetes.default.svc
-- source_labels: [__meta_kubernetes_node_name]
-  regex: (.+)
-  target_label: __metrics_path__
-  replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
-- target_label: type
-  replacement: seed
+var (
+	// Collect additional filesystem metrics for etcd containers. We have to rename
+	// the metrics names for the matching etcd samples to a temporary metric name.
+	// After that we drop all the not matching filesystem metrics and rename the
+	// etcd samples back to the origin name.
+	monitoringCentralCAdvisorRelabelConfig1 = `target_label: __name__
+source_labels:
+- container
+- __name__
+regex: ` + containerNameEtcd + `;(` + monitoringMetricContainerFSWritesBytesTotal + `|` + monitoringMetricContainerFSReadsBytesTotal + `)
+replacement: 'GARDEN_TMP_${1}'
+action: replace`
 
-metric_relabel_configs:
-# Collect additional filesystem metrics for etcd containers. We have to rename
-# the metrics names for the matching etcd samples to a temporary metric name.
-# After that we drop all the not matching filesystem metrics and rename the
-# etcd samples back to the origin name.
-- target_label: __name__
-  source_labels:
-  - container
-  - __name__
-  regex: ` + containerNameEtcd + `;(` + monitoringMetricContainerFSWritesBytesTotal + `|` + monitoringMetricContainerFSReadsBytesTotal + `)
-  replacement: 'GARDEN_TMP_${1}'
-  action: replace
-# Drop all filesystem metrics which are not related to etcd.
-- source_labels: [ __name__ ]
-  regex: (` + monitoringMetricContainerFSWritesBytesTotal + `|` + monitoringMetricContainerFSReadsBytesTotal + `)
-  action: drop
-# Rename all the tmp metric names back to their origin names.
-- target_label: __name__
-  source_labels: [ __name__ ]
-  regex: GARDEN_TMP_(.*)
-  replacement: $1
-  action: replace`
+	// Drop all filesystem metrics which are not related to etcd.
+	monitoringCentralCAdvisorRelabelConfig2 = `source_labels: [ __name__ ]
+regex: (` + monitoringMetricContainerFSWritesBytesTotal + `|` + monitoringMetricContainerFSReadsBytesTotal + `)
+action: drop`
+
+	// Rename all the tmp metric names back to their origin names.
+	monitoringCentralCAdvisorRelabelConfig3 = `target_label: __name__
+source_labels: [ __name__ ]
+regex: GARDEN_TMP_(.*)
+replacement: $1
+action: replace`
 
 	monitoringAlertingRulesTemplate             *template.Template
 	monitoringScrapeConfigEtcdTemplate          *template.Template
@@ -392,5 +373,11 @@ func (e *etcd) AlertingRules() (map[string]string, error) {
 
 // CentralMonitoringConfiguration returns scape configuration for the central Prometheus.
 func CentralMonitoringConfiguration() (component.CentralMonitoringConfig, error) {
-	return component.CentralMonitoringConfig{ScrapeConfigs: []string{monitoringCentralScrapeConfig}}, nil
+	return component.CentralMonitoringConfig{
+		CAdvisorScrapeConfigMetricRelabelConfigs: []string{
+			monitoringCentralCAdvisorRelabelConfig1,
+			monitoringCentralCAdvisorRelabelConfig2,
+			monitoringCentralCAdvisorRelabelConfig3,
+		},
+	}, nil
 }
