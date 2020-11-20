@@ -173,7 +173,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 	}
 
 	stsName := Name(e.role)
-	if foundEtcd {
+	if foundEtcd && existingEtcd.Status.Etcd.Name != "" {
 		stsName = existingEtcd.Status.Etcd.Name
 	}
 
