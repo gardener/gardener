@@ -6,6 +6,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/ahmetb/gen-crd-api-reference-docs v0.2.0
 	github.com/coreos/go-systemd/v22 v22.1.0
+	github.com/emicklei/go-restful v2.9.6+incompatible
 	github.com/gardener/etcd-druid v0.3.0
 	github.com/gardener/external-dns-management v0.7.18
 	github.com/gardener/gardener-resource-manager v0.18.0
@@ -61,6 +62,7 @@ require (
 )
 
 replace (
+	github.com/emicklei/go-restful => github.com/emicklei/go-restful v2.9.5+incompatible // keep this value in sync with k8s.io/apiserver
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v0.9.2
 	k8s.io/api => k8s.io/api v0.18.10
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.10
