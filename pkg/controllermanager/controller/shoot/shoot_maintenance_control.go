@@ -195,9 +195,7 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 			metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, common.ShootOperationRetry)
 		}
 
-		if !gardencorev1beta1helper.HibernationIsEnabled(s) {
-			controllerutils.AddTasks(s.Annotations, common.ShootTaskDeployInfrastructure)
-		}
+		controllerutils.AddTasks(s.Annotations, common.ShootTaskDeployInfrastructure)
 		if utils.IsTrue(c.config.EnableShootControlPlaneRestarter) {
 			controllerutils.AddTasks(s.Annotations, common.ShootTaskRestartControlPlanePods)
 		}
