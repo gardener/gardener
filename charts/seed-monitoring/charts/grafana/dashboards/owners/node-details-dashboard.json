@@ -715,7 +715,7 @@
           "lines": true,
           "linewidth": 1,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null",
           "options": {
             "dataLinks": []
           },
@@ -826,7 +826,7 @@
           "lines": true,
           "linewidth": 1,
           "links": [],
-          "nullPointMode": "connected",
+          "nullPointMode": "null",
           "options": {
             "dataLinks": []
           },
