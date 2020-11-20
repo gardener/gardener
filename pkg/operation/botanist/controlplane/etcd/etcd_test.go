@@ -923,7 +923,7 @@ var _ = Describe("Etcd", func() {
 								},
 								Status: druidv1alpha1.EtcdStatus{
 									Etcd: druidv1alpha1.CrossVersionObjectReference{
-										Name: etcdName,
+										Name: "",
 									},
 								},
 							}).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
