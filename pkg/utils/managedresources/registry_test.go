@@ -148,10 +148,10 @@ roleRef:
 			Expect(registry.Add(secret)).To(Succeed())
 			Expect(registry.Add(roleBinding)).To(Succeed())
 
-			Expect(registry.String()).To(Equal(`* ` + secretFilename + `:
-` + string(secretSerialized) + `
-
-* ` + roleBindingFilename + `:
+			result := registry.String()
+			Expect(result).To(ContainSubstring(`* ` + secretFilename + `:
+` + string(secretSerialized)))
+			Expect(result).To(ContainSubstring(`* ` + roleBindingFilename + `:
 ` + string(roleBindingSerialized)))
 		})
 	})
