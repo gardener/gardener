@@ -45,13 +45,16 @@ import (
 )
 
 const (
-	name                = "gardener-seed-admission-controller"
-	managedResourceName = name
-	deploymentName      = name
-	containerName       = name
+	// Name is used as metadata.name of the ServiceAccount, ManagedResource,
+	// ClusterRole, ClusterRoleBinding, Service, Deployment and ValidatingWebhookConfiguration
+	// of the seed admission controller.
+	Name                = "gardener-seed-admission-controller"
+	managedResourceName = Name
+	deploymentName      = Name
+	containerName       = Name
 
 	port            = 10250
-	volumeName      = name + "-tls"
+	volumeName      = Name + "-tls"
 	volumeMountPath = "/srv/gardener-seed-admission-controller"
 )
 
@@ -83,7 +86,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      Name,
 				Namespace: g.namespace,
 				Labels:    getLabels(),
 			},
@@ -91,7 +94,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   name,
+				Name:   Name,
 				Labels: getLabels(),
 			},
 			Rules: []rbacv1.PolicyRule{
@@ -121,7 +124,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   name,
+				Name:   Name,
 				Labels: getLabels(),
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -138,7 +141,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      Name,
 				Namespace: g.namespace,
 				Labels:    getLabels(),
 			},
@@ -156,7 +159,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name + "-tls",
+				Name:      Name + "-tls",
 				Namespace: g.namespace,
 				Labels:    getLabels(),
 			},
@@ -239,7 +242,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 		minAvailable        = intstr.FromInt(1)
 		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      Name,
 				Namespace: g.namespace,
 				Labels:    getLabels(),
 			},
@@ -254,7 +257,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 		updateMode = autoscalingv1beta2.UpdateModeAuto
 		vpa        = &autoscalingv1beta2.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name + "-vpa",
+				Name:      Name + "-vpa",
 				Namespace: g.namespace,
 				Labels:    getLabels(),
 			},
@@ -273,7 +276,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 		failurePolicy                  = admissionregistrationv1beta1.Fail
 		validatingWebhookConfiguration = &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      Name,
 				Namespace: g.namespace,
 				Labels:    getLabels(),
 			},
@@ -291,7 +294,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 					FailurePolicy:     &failurePolicy,
 					NamespaceSelector: &metav1.LabelSelector{},
 					ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
-						CABundle: []byte(tlsCACert),
+						CABundle: []byte(TLSCACert),
 						Service: &admissionregistrationv1beta1.ServiceReference{
 							Name:      service.Name,
 							Namespace: service.Namespace,
@@ -322,7 +325,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 					FailurePolicy:     &failurePolicy,
 					NamespaceSelector: &metav1.LabelSelector{},
 					ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
-						CABundle: []byte(tlsCACert),
+						CABundle: []byte(TLSCACert),
 						Service: &admissionregistrationv1beta1.ServiceReference{
 							Name:      service.Name,
 							Namespace: service.Namespace,
@@ -397,7 +400,11 @@ func init() {
 }
 
 const (
-	tlsCACert = `-----BEGIN CERTIFICATE-----
+	// TLSCACert is the of certificate authority of the
+	// seed admission controller server.
+	// TODO(mvladev) this cert is hard-coded.
+	// fix it in another PR.
+	TLSCACert = `-----BEGIN CERTIFICATE-----
 MIIC+jCCAeKgAwIBAgIUTp3XvhrWOVM8ZGe86YoXMV/UJ7AwDQYJKoZIhvcNAQEL
 BQAwFTETMBEGA1UEAxMKa3ViZXJuZXRlczAeFw0xOTAyMjcxNTM0MDBaFw0yNDAy
 MjYxNTM0MDBaMBUxEzARBgNVBAMTCmt1YmVybmV0ZXMwggEiMA0GCSqGSIb3DQEB

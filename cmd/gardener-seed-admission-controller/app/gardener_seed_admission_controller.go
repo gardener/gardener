@@ -25,7 +25,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerlogger "github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/seed/scheduler"
 	"github.com/gardener/gardener/pkg/seedadmission"
 	"github.com/gardener/gardener/pkg/version/verflag"
 
@@ -152,7 +151,7 @@ func run(ctx context.Context, bindAddress string, port int, certPath, keyPath, k
 	mux.HandleFunc(
 		// in the future we might want to have additional scheduler names
 		// so lets have the handler be of pattern "/webhooks/default-pod-scheduler-name/{scheduler-name}"
-		fmt.Sprintf("/webhooks/default-pod-scheduler-name/%s", scheduler.GardenerShootControlPlaneSchedulerName),
+		fmt.Sprintf(seedadmission.GardenerShootControlPlaneSchedulerWebhookPath),
 		seedAdmissionController.defaultShootControlPlanePodsSchedulerName,
 	)
 
@@ -292,7 +291,7 @@ func (g *GardenerSeedAdmissionController) defaultShootControlPlanePodsSchedulerN
 
 	resp := admission.Allowed("")
 	resp.Patches = []jsonpatch.Operation{
-		jsonpatch.NewPatch("replace", "/spec/schedulerName", scheduler.GardenerShootControlPlaneSchedulerName),
+		jsonpatch.NewPatch("replace", "/spec/schedulerName", seedadmission.GardenerShootControlPlaneSchedulerName),
 	}
 
 	respond(w, &admission.Request{AdmissionRequest: *receivedReview.Request}, resp)

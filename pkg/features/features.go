@@ -83,4 +83,9 @@ const (
 	// owner: @stoyanr
 	// alpha: v1.12.0
 	SeedChange featuregate.Feature = "SeedChange"
+
+	// SeedKubeScheduler adds an additional kube-scheduler in seed clusters where the feature is enabled.
+	// owner: @mvladev
+	// alpha: v1.15.0
+	SeedKubeScheduler featuregate.Feature = "SeedKubeScheduler"
 )

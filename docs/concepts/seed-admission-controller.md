@@ -1,7 +1,7 @@
 # Gardener Seed Admission Controller
 
 The Gardener Seed admission controller is deployed by the Gardenlet as part of its seed bootstrapping phase and, consequently, running in every seed cluster.
-It's main purpose is to serve webhooks (validating or mutating) in order to admit or deny certain requests to the seed's API server. 
+It's main purpose is to serve webhooks (validating or mutating) in order to admit or deny certain requests to the seed's API server.
 
 ## What is it doing concretely?
 
@@ -19,4 +19,6 @@ This prevents that undesired `kubectl delete <...>` requests are accepted.
 
 ### Mutating Webhooks
 
-It doesn't serve any mutating webhooks yet.
+The admission controller endpoint `/webhooks/default-pod-scheduler-name/gardener-kube-scheduler` mutates `pods` and adds `gardener-kube-scheduler` to `.spec.scheduleName`.
+
+When `SeedKubeScheduler` feature gate is enabled, all control plane components are mutated. The scheduler scores `Nodes` with most resource usage higher than the rest, resulting in greater resource utilization.

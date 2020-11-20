@@ -14,6 +14,26 @@
 
 package scheduler
 
-// GardenerShootControlPlaneSchedulerName is the name of the scheduler used for
-// shoot control plane pods.
-const GardenerShootControlPlaneSchedulerName = "gardener-shoot-controlplane-scheduler"
+import (
+	"github.com/Masterminds/semver"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+)
+
+var (
+	versionConstraintEqual1_18 *semver.Constraints
+	versionConstraintEqual1_19 *semver.Constraints
+	versionConstraintEqual1_20 *semver.Constraints
+)
+
+func init() {
+	var err error
+
+	versionConstraintEqual1_18, err = semver.NewConstraint("1.18.x")
+	utilruntime.Must(err)
+
+	versionConstraintEqual1_19, err = semver.NewConstraint("1.19.x")
+	utilruntime.Must(err)
+
+	versionConstraintEqual1_20, err = semver.NewConstraint("1.20.x")
+	utilruntime.Must(err)
+}

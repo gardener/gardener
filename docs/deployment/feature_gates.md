@@ -27,6 +27,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | APIServerSNI | `false` | `Alpha` | `1.7` | |
 | MountHostCADirectories | `false` | `Alpha` | `1.11.0` | |
 | SeedChange | `false` | `Alpha` | `1.12.0` | |
+| SeedKubeScheduler | `false` | `Alpha` | `1.15.0` | |
 
 ## Using a feature
 
@@ -69,5 +70,6 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 * `HVPAForShootedSeed`  enables simultaneous horizontal and vertical scaling in shooted Seed clusters.
 * `ManagedIstio` enables a Gardener-tailored [Istio](https://istio.io) in each Seed cluster. Disable this feature if Istio is already installed in the cluster. Istio is not automatically removed if this feature is disabled. See the [detailed documentation](../usage/istio.md) for more information.
 * `APIServerSNI` enables only one LoadBalancer to be used for every Shoot cluster API server in a Seed. Enable this feature when `ManagedIstio` is enabled or Istio is manually deployed in Seed cluster. See [GEP-8](../proposals/08-shoot-apiserver-via-sni.md) for more details.
-* `MountHostCADirectories` enables mounting common CA certificate directories in the Shoot API server pod that might be required for webhooks or OIDC. 
+* `MountHostCADirectories` enables mounting common CA certificate directories in the Shoot API server pod that might be required for webhooks or OIDC.
 * `SeedChange` enables updating the `spec.seedName` field during shoot validation from a non-empty value in order to trigger shoot control plane migration.
+* `SeedKubeScheduler` adds custom `kube-scheduler` in `gardener-kube-scheduler` namespace. It schedules [pods with scheduler name](../concepts/seed-admission-controller.md#mutating-webhooks) `gardener-kube-scheduler` on Nodes with higher resource utilization. It requires Seed cluster with kubernetes version `1.18` or higher.
