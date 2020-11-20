@@ -387,6 +387,23 @@ func (b *Botanist) APIServerSNIEnabled() bool {
 	return gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) && b.NeedsInternalDNS() && b.NeedsExternalDNS()
 }
 
+// APIServerSNIPodMutatorEnabled returns false if the value of the Shoot annotation
+// 'alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector' is 'disable' or
+// APIServereSNI feature is disabled.
+func (b *Botanist) APIServerSNIPodMutatorEnabled() bool {
+	sniEnabled := b.APIServerSNIEnabled()
+	if !sniEnabled {
+		return false
+	}
+
+	vs, ok := b.Shoot.Info.GetAnnotations()[v1beta1constants.AnnotationShootAPIServerSNIPodInjector]
+	if !ok {
+		return true
+	}
+
+	return vs != v1beta1constants.AnnotationShootAPIServerSNIPodInjectorDisableValue
+}
+
 // DeleteDNSProviders deletes all DNS providers in the shoot namespace of the seed.
 func (b *Botanist) DeleteDNSProviders(ctx context.Context) error {
 	if err := b.K8sSeedClient.Client().DeleteAllOf(

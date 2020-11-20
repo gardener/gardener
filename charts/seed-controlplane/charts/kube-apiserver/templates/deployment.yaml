@@ -301,6 +301,20 @@ spec:
           readOnly: true
           {{- end }}
         {{- end }}
+      {{- if .Values.sni.podMutatorEnabled }}
+      - name: apiserver-proxy-pod-mutator
+        image: {{ index .Values.images "apiserver-proxy-pod-webhook" }}
+        args:
+        - --apiserver-fqdn={{ .Values.sni.apiserverFQDN }}
+        - --host=localhost
+        - --cert-dir=/srv/kubernetes/apiserver
+        - --cert-name=kube-apiserver.crt
+        - --key-name=kube-apiserver.key
+        - --port=9443
+        volumeMounts:
+        - name: kube-apiserver
+          mountPath: /srv/kubernetes/apiserver
+      {{- end }}
       {{- if .Values.konnectivityTunnel.enabled }}
       - name: konnectivity-server
         image: {{ index .Values.images "konnectivity-server" }}

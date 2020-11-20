@@ -20,6 +20,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy/helper"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy/hostnameresolver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
@@ -41,10 +42,18 @@ type namespaceReconciler struct {
 	seedName               string
 	endpointsLister        kubecorev1listers.EndpointsLister
 	shootNamespaceSelector labels.Selector
+	resolver               hostnameresolver.HostResolver
 }
 
 // newNamespaceReconciler returns the new namespace reconciler.
-func newNamespaceReconciler(ctx context.Context, seedLogger *logrus.Entry, seedClient client.Client, endpointsLister kubecorev1listers.EndpointsLister, seedName string, shootNamespaceSelector labels.Selector) reconcile.Reconciler {
+func newNamespaceReconciler(ctx context.Context,
+	seedLogger *logrus.Entry,
+	seedClient client.Client,
+	endpointsLister kubecorev1listers.EndpointsLister,
+	seedName string,
+	shootNamespaceSelector labels.Selector,
+	resolver hostnameresolver.HostResolver,
+) reconcile.Reconciler {
 	return &namespaceReconciler{
 		ctx:                    ctx,
 		seedClient:             seedClient,
@@ -52,6 +61,7 @@ func newNamespaceReconciler(ctx context.Context, seedLogger *logrus.Entry, seedC
 		log:                    seedLogger,
 		seedName:               seedName,
 		shootNamespaceSelector: shootNamespaceSelector,
+		resolver:               resolver,
 	}
 }
 
@@ -100,8 +110,7 @@ func (r *namespaceReconciler) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	egressRules := helper.GetEgressRules(kubernetesEndpoints)
-
+	egressRules := helper.GetEgressRules(append(kubernetesEndpoints.Subsets, r.resolver.Subset()...)...)
 	// avoid duplicate NetworkPolicy updates
 	policy := &networkingv1.NetworkPolicy{}
 	if err := r.seedClient.Get(r.ctx, kutil.Key(request.Name, helper.AllowToSeedAPIServer), policy); client.IgnoreNotFound(err) != nil {

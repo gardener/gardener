@@ -1,0 +1,47 @@
+{{- if .Values.podMutatorEnabled }}
+apiVersion: {{ include "webhookadmissionregistration" . }}
+kind: MutatingWebhookConfiguration
+metadata:
+  name: apiserver-proxy.networking.gardener.cloud
+  annotations:
+    networking.gardener.cloud/description: |-
+      This webhook adds `KUBERNETES_SERVICE_HOST` environment variable
+      to all containers and init containers matched by it.
+  labels:
+    gardener.cloud/role: system-component
+    origin: gardener
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    caBundle: {{ .Values.webhook.caBundle }}
+    url: https://127.0.0.1:9443/webhook/pod-apiserver-env
+  failurePolicy: Ignore
+  matchPolicy: Exact
+  name: apiserver-proxy.networking.gardener.cloud
+  namespaceSelector:
+    matchExpressions:
+    - key: apiserver-proxy.networking.gardener.cloud/inject
+      operator: NotIn
+      values:
+      - disable
+  objectSelector:
+    matchExpressions:
+    - key: apiserver-proxy.networking.gardener.cloud/inject
+      operator: NotIn
+      values:
+      - disable
+  reinvocationPolicy: Never
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - pods
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 2
+{{- end }}

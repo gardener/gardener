@@ -860,8 +860,10 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 
 	if b.APIServerSNIEnabled() {
 		defaultValues["sni"] = map[string]interface{}{
-			"enabled":     true,
-			"advertiseIP": b.APIServerClusterIP,
+			"enabled":           true,
+			"advertiseIP":       b.APIServerClusterIP,
+			"apiserverFQDN":     b.outOfClusterAPIServerFQDN(),
+			"podMutatorEnabled": b.APIServerSNIPodMutatorEnabled(),
 		}
 	}
 
@@ -1055,6 +1057,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		tunnelComponentImageName,
 		common.KubeAPIServerImageName,
 		common.AlpineIptablesImageName,
+		common.APIServerProxyPodMutatorWebhookImageName,
 	)
 	if err != nil {
 		return err

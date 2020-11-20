@@ -22,6 +22,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -30,13 +31,23 @@ import (
 
 const AllowToSeedAPIServer = "allow-to-seed-apiserver"
 
-// GetEgressRules creates Network Policy egress rules from a given endpoint resource
-func GetEgressRules(kubernetesEndpoints *corev1.Endpoints) []networkingv1.NetworkPolicyEgressRule {
-	var egressRules []networkingv1.NetworkPolicyEgressRule
+// GetEgressRules creates Network Policy egress rules from endpoint subsets.
+func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPolicyEgressRule {
+	var (
+		egressRules = []networkingv1.NetworkPolicyEgressRule{}
+		existingIPs = sets.NewString()
+	)
 
-	for _, subset := range kubernetesEndpoints.Subsets {
+	for _, subset := range subsets {
 		egressRule := networkingv1.NetworkPolicyEgressRule{}
+
 		for _, address := range subset.Addresses {
+			if existingIPs.Has(address.IP) {
+				continue
+			}
+
+			existingIPs.Insert(address.IP)
+
 			egressRule.To = append(egressRule.To, networkingv1.NetworkPolicyPeer{
 				IPBlock: &networkingv1.IPBlock{
 					CIDR: fmt.Sprintf("%s/32", address.IP),
@@ -53,8 +64,10 @@ func GetEgressRules(kubernetesEndpoints *corev1.Endpoints) []networkingv1.Networ
 			}
 			egressRule.Ports = append(egressRule.Ports, networkPolicyPort)
 		}
+
 		egressRules = append(egressRules, egressRule)
 	}
+
 	return egressRules
 }
 

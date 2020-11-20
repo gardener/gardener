@@ -469,8 +469,11 @@ const (
 	// APIServerProxyImageName is the image of apiserver-proxy
 	APIServerProxyImageName = "apiserver-proxy"
 
-	// APIServerProxySidecarImageName is the image of apiserver-proxy sidecar
+	// APIServerProxySidecarImageName is the image of apiserver-proxy sidecar.
 	APIServerProxySidecarImageName = "apiserver-proxy-sidecar"
+
+	// APIServerProxyPodMutatorWebhookImageName is the image of apiserver-proxy pod mutator webhook.
+	APIServerProxyPodMutatorWebhookImageName = "apiserver-proxy-pod-webhook"
 
 	// ServiceAccountSigningKeySecretDataKey is the data key of a signing key Kubernetes secret.
 	ServiceAccountSigningKeySecretDataKey = "signing-key"
