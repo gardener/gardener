@@ -1,4 +1,0 @@
-apiVersion: v1
-description: A helm chart to deploy etcd-druid
-name: etcd-druid
-version: 0.1.0

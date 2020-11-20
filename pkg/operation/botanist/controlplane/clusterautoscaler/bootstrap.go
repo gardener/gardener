@@ -25,8 +25,6 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -42,8 +40,7 @@ var TimeoutWaitForManagedResource = 2 * time.Minute
 // BootstrapSeed deploys the RBAC configuration for the control cluster.
 func BootstrapSeed(ctx context.Context, c client.Client, namespace, _ string) error {
 	var (
-		versions = schema.GroupVersions([]schema.GroupVersion{rbacv1.SchemeGroupVersion})
-		codec    = kubernetes.ShootCodec.CodecForVersions(kubernetes.SeedSerializer, kubernetes.SeedSerializer, versions, versions)
+		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -57,10 +54,14 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, _ string) er
 				},
 			},
 		}
-		clusterRoleYAML, _ = runtime.Encode(codec, clusterRole)
 	)
 
-	if err := common.DeployManagedResourceForSeed(ctx, c, managedResourceControlName, namespace, false, map[string][]byte{"clusterrole.yaml": clusterRoleYAML}); err != nil {
+	resources, err := registry.AddAllAndSerialize(clusterRole)
+	if err != nil {
+		return err
+	}
+
+	if err := common.DeployManagedResourceForSeed(ctx, c, managedResourceControlName, namespace, false, resources); err != nil {
 		return err
 	}
 

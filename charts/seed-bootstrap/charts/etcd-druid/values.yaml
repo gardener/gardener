@@ -1,7 +1,0 @@
-global:
-  images:
-    etcd-druid: image-repository:image-tag
-
-podAnnotations: {}
-labels:
-  gardener.cloud/role: etcd-druid

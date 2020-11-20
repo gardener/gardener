@@ -248,10 +248,6 @@ global:
     vpa-updater: image-repository:image-tag
     hvpa-controller: image-repository:image-tag
 
-  imageVectorOverwrites: {}
-#   etcd-druid: |
-#     Please find documentation in docs/deployment/image_vector.md
-
 fluent-bit:
   enabled: true
 

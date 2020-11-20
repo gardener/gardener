@@ -1,12 +1,336 @@
----
-apiVersion: apiextensions.k8s.io/v1beta1
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package etcd
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"text/template"
+	"time"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
+
+	"github.com/Masterminds/semver"
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	// Druid is a constant for the name of the etcd-druid.
+	Druid = "etcd-druid"
+
+	druidRBACName                          = "gardener.cloud:system:" + Druid
+	druidServiceAccountName                = Druid
+	druidVPAName                           = Druid + "-vpa"
+	druidConfigMapImageVectorOverwriteName = Druid + "-imagevector-overwrite"
+	druidDeploymentName                    = Druid
+	managedResourceControlName             = Druid
+
+	druidConfigMapImageVectorOverwriteDataKey          = "images_overwrite.yaml"
+	druidDeploymentVolumeMountPathImageVectorOverwrite = "/charts_overwrite"
+	druidDeploymentVolumeNameImageVectorOverwrite      = "imagevector-overwrite"
+)
+
+// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
+// or deleted.
+var TimeoutWaitForManagedResource = 2 * time.Minute
+
+// BootstrapSeed deploys the etcd-druid for the control cluster.
+func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion, etcdDruidImage string, imageVectorOverwrite *string) error {
+	v, err := semver.NewVersion(seedVersion)
+	if err != nil {
+		return err
+	}
+
+	var crdYAML bytes.Buffer
+	if err := crdTemplate.Execute(&crdYAML, map[string]bool{"k8sGreaterEqual112": versionConstraintK8sGreaterEqual112.Check(v)}); err != nil {
+		return err
+	}
+
+	var (
+		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
+		labels   = func() map[string]string { return map[string]string{v1beta1constants.GardenRole: Druid} }
+
+		serviceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      druidServiceAccountName,
+				Namespace: namespace,
+				Labels:    labels(),
+			},
+		}
+
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   druidRBACName,
+				Labels: labels(),
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{corev1.GroupName},
+					Resources: []string{"pods"},
+					Verbs:     []string{"list", "watch", "delete"},
+				},
+				{
+					APIGroups: []string{corev1.GroupName},
+					Resources: []string{"secrets", "endpoints"},
+					Verbs:     []string{"get", "list", "patch", "update", "watch"},
+				},
+				{
+					APIGroups: []string{corev1.GroupName},
+					Resources: []string{"events"},
+					Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
+				},
+				{
+					APIGroups: []string{corev1.GroupName, appsv1.GroupName},
+					Resources: []string{"services", "configmaps", "statefulsets"},
+					Verbs:     []string{"get", "list", "patch", "update", "watch", "create", "delete"},
+				},
+				{
+					APIGroups: []string{druidv1alpha1.GroupVersion.Group},
+					Resources: []string{"etcds"},
+					Verbs:     []string{"get", "list", "watch", "update", "patch"},
+				},
+				{
+					APIGroups: []string{druidv1alpha1.GroupVersion.Group},
+					Resources: []string{"etcds/status", "etcds/finalizers"},
+					Verbs:     []string{"get", "update", "patch", "create"},
+				},
+			},
+		}
+
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   druidRBACName,
+				Labels: labels(),
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     druidRBACName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Name:      druidServiceAccountName,
+					Namespace: namespace,
+				},
+			},
+		}
+
+		configMapImageVectorOverwrite = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      druidConfigMapImageVectorOverwriteName,
+				Namespace: namespace,
+				Labels:    labels(),
+			},
+		}
+
+		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
+		vpa           = &autoscalingv1beta2.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      druidVPAName,
+				Namespace: namespace,
+				Labels:    labels(),
+			},
+			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       druidDeploymentName,
+				},
+				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+					UpdateMode: &vpaUpdateMode,
+				},
+				ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
+					ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{{
+						ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
+						MinAllowed: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("50m"),
+							corev1.ResourceMemory: resource.MustParse("100M"),
+						},
+					}},
+				},
+			},
+		}
+
+		deployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      druidDeploymentName,
+				Namespace: namespace,
+				Labels:    labels(),
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas:             pointer.Int32Ptr(1),
+				RevisionHistoryLimit: pointer.Int32Ptr(0),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: labels(),
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: labels(),
+					},
+					Spec: corev1.PodSpec{
+						ServiceAccountName: druidServiceAccountName,
+						Containers: []corev1.Container{
+							{
+								Name:            Druid,
+								Image:           etcdDruidImage,
+								ImagePullPolicy: corev1.PullIfNotPresent,
+								Command: []string{
+									"/bin/etcd-druid",
+									"--enable-leader-election=true",
+									"--ignore-operation-annotation=false",
+									"--workers=50",
+								},
+								Resources: corev1.ResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("50m"),
+										corev1.ResourceMemory: resource.MustParse("128Mi"),
+									},
+									Limits: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("300m"),
+										corev1.ResourceMemory: resource.MustParse("512Mi"),
+									},
+								},
+								Ports: []corev1.ContainerPort{{
+									ContainerPort: 9569,
+								}},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		resourcesToAdd = []runtime.Object{
+			serviceAccount,
+			clusterRole,
+			clusterRoleBinding,
+			vpa,
+		}
+	)
+
+	if imageVectorOverwrite != nil {
+		configMapImageVectorOverwrite.Data = map[string]string{druidConfigMapImageVectorOverwriteDataKey: *imageVectorOverwrite}
+		resourcesToAdd = append(resourcesToAdd, configMapImageVectorOverwrite)
+
+		deployment.Spec.Template.Labels["checksum/configmap-imagevector-overwrite"] = utils.ComputeChecksum(configMapImageVectorOverwrite.Data)
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: druidDeploymentVolumeNameImageVectorOverwrite,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: druidConfigMapImageVectorOverwriteName,
+					},
+				},
+			},
+		})
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+			Name:      druidDeploymentVolumeNameImageVectorOverwrite,
+			MountPath: druidDeploymentVolumeMountPathImageVectorOverwrite,
+			ReadOnly:  true,
+		})
+		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+			Name:  imagevector.OverrideEnv,
+			Value: druidDeploymentVolumeMountPathImageVectorOverwrite + "/" + druidConfigMapImageVectorOverwriteDataKey,
+		})
+	}
+
+	resources, err := registry.AddAllAndSerialize(append(resourcesToAdd, deployment)...)
+	if err != nil {
+		return err
+	}
+	resources["crd.yaml"] = crdYAML.Bytes()
+
+	if err := common.DeployManagedResourceForSeed(ctx, c, managedResourceControlName, namespace, false, resources); err != nil {
+		return err
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilManagedResourceHealthy(timeoutCtx, c, namespace, managedResourceControlName)
+}
+
+// DebootstrapSeed deletes all the resources deployed during the seed bootstrapping.
+func DebootstrapSeed(ctx context.Context, c client.Client, namespace string) error {
+	etcdList := &druidv1alpha1.EtcdList{}
+	if err := c.List(ctx, etcdList); err != nil {
+		return err
+	}
+
+	if len(etcdList.Items) > 0 {
+		return fmt.Errorf("cannot debootstrap etcd-druid because there are still druidv1alpha1.Etcd resources left in the cluster")
+	}
+
+	if err := common.ConfirmDeletion(ctx, c, &apiextensionsv1beta1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}); err != nil {
+		return err
+	}
+
+	if err := common.DeleteManagedResourceForSeed(ctx, c, managedResourceControlName, namespace); err != nil {
+		return err
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilManagedResourceDeleted(timeoutCtx, c, namespace, managedResourceControlName)
+}
+
+var (
+	crdTemplate                         *template.Template
+	versionConstraintK8sGreaterEqual112 *semver.Constraints
+)
+
+func init() {
+	var err error
+
+	crdTemplate, err = template.New("crd").Parse(crdTmpl)
+	utilruntime.Must(err)
+
+	versionConstraintK8sGreaterEqual112, err = semver.NewConstraint(">= 1.12")
+	utilruntime.Must(err)
+}
+
+const (
+	crdName = "etcds.druid.gardener.cloud"
+	crdTmpl = `apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: etcds.druid.gardener.cloud
+  name: ` + crdName + `
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.4
   labels:
-    gardener.cloud/deletion-protected: "true"
+    ` + common.GardenerDeletionProtected + `: "true"
 spec:
   group: druid.gardener.cloud
   names:
@@ -463,7 +787,7 @@ spec:
               format: int32
               type: integer
           type: object
-      {{- if semverCompare ">= 1.12" .Capabilities.KubeVersion.GitVersion }}
+      {{- if .k8sGreaterEqual112 }}
       type: object
       {{- end }}
   additionalPrinterColumns:
@@ -478,3 +802,5 @@ spec:
   - name: v1alpha1
     served: true
     storage: true
+`
+)
