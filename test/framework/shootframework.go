@@ -141,7 +141,9 @@ func (f *ShootFramework) AfterEach(ctx context.Context) {
 		}
 		err = f.WaitUntilNamespaceIsDeleted(ctx, f.ShootClient, f.Namespace)
 		if err != nil {
-			err2 := f.DumpDefaultResourcesInNamespace(ctx, fmt.Sprintf("[SHOOT %s] [NAMESPACE %s]", f.Shoot.Name, f.Namespace), f.ShootClient, f.Namespace)
+			ctx2, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+			defer cancel()
+			err2 := f.DumpDefaultResourcesInNamespace(ctx2, fmt.Sprintf("[SHOOT %s] [NAMESPACE %s]", f.Shoot.Name, f.Namespace), f.ShootClient, f.Namespace)
 			ExpectNoError(err2)
 		}
 		ExpectNoError(err)
