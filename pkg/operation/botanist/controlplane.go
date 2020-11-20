@@ -729,8 +729,11 @@ func getResourcesForAPIServer(nodeCount int32, scalingClass string) (string, str
 func (b *Botanist) deployNetworkPolicies(ctx context.Context, denyAll bool) error {
 	var (
 		globalNetworkPoliciesValues = map[string]interface{}{
-			"blockedAddresses": b.Seed.Info.Spec.Networks.BlockCIDRs,
-			"denyAll":          denyAll,
+			"blockedAddresses":     b.Seed.Info.Spec.Networks.BlockCIDRs,
+			"denyAll":              denyAll,
+			"dnsServer":            b.Shoot.Networks.CoreDNS.String(),
+			"nodeLocalIPVSAddress": NodeLocalIPVSAddress,
+			"nodeLocalDNSEnabled":  b.Shoot.NodeLocalDNSEnabled,
 		}
 		excludeNets = []string{}
 		values      = map[string]interface{}{}
