@@ -401,7 +401,7 @@ func (b *HealthChecker) FailedCondition(condition gardencorev1beta1.Condition, r
 func (b *Botanist) checkAPIServerAvailability(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
 	return health.CheckAPIServerAvailability(ctx, condition, b.K8sShootClient.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
 		return checker.FailedCondition(condition, conditionType, message)
-	})
+	}, b.Logger)
 }
 
 // CheckClusterNodes checks whether cluster nodes in the given listers are healthy and within the desired range.
