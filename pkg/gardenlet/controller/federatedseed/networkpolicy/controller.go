@@ -17,8 +17,6 @@ package networkpolicy
 import (
 	"context"
 	"fmt"
-	"net"
-	"net/url"
 	"sync"
 	"time"
 
@@ -71,6 +69,11 @@ func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDef
 		return nil, err
 	}
 
+	provider, err := hostnameresolver.CreateForCluster(seedClient, seedLogger)
+	if err != nil {
+		return nil, err
+	}
+
 	var (
 		endpointsInformer = seedDefaultNamespaceKubeInformer.Core().V1().Endpoints()
 		namespaceQueue    = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "namespace")
@@ -80,40 +83,6 @@ func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDef
 		v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleShoot,
 		v1beta1constants.GardenRole:           v1beta1constants.GardenRoleShoot,
 	})
-
-	u, err := url.Parse(seedClient.RESTConfig().Host)
-	if err != nil {
-		return nil, err
-	}
-
-	var (
-		provider       = hostnameresolver.NewNoOpProvider()
-		serverHostname = u.Hostname()
-		providerLogger = seedLogger.WithField("hostname", serverHostname)
-	)
-
-	// If the hostname is not an IP address, then it should be resolved.
-	if net.ParseIP(serverHostname) == nil {
-		var (
-			port = "443"
-			host = serverHostname
-		)
-
-		if p := u.Port(); p != "" {
-			port = p
-		}
-
-		providerLogger.Infoln("using hostname resolver")
-
-		provider = hostnameresolver.NewProvider(
-			host,
-			port,
-			providerLogger,
-			time.Second*30,
-		)
-	} else {
-		providerLogger.Infoln("using no-op hostname resolver")
-	}
 
 	controller := &Controller{
 		ctx: ctx,

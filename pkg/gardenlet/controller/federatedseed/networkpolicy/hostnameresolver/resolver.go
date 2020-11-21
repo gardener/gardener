@@ -17,10 +17,13 @@ package hostnameresolver
 import (
 	"context"
 	"net"
+	"net/url"
+	"os"
 	"sort"
 	"sync"
 	"time"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -155,6 +158,54 @@ func (l *resolver) Subset() []corev1.EndpointSubset {
 // WithCallback calls onUpdate function when resolved IPs are changed.
 func (l *resolver) WithCallback(onUpdate func()) {
 	l.onUpdate = onUpdate
+}
+
+// CreateForCluster tries to use the hostname and port from the client to
+// create the provider. If that fails, then tries to use the
+// KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT environment variable.
+// If that fails it fallbacks to NoOpProvider().
+func CreateForCluster(client kubernetes.Interface, logger logrus.FieldLogger) (Provider, error) {
+	u, err := url.Parse(client.RESTConfig().Host)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		serverHostname       = u.Hostname()
+		providerLogger       = logger.WithField("hostname", serverHostname)
+		envHostname, envPort = os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
+		port                 = "443"
+	)
+
+	if net.ParseIP(serverHostname) == nil {
+		if p := u.Port(); p != "" {
+			port = p
+		}
+
+		providerLogger.Infoln("using hostname resolver")
+
+		return NewProvider(
+			serverHostname,
+			port,
+			providerLogger,
+			time.Second*30,
+		), nil
+	} else if envHostname != "" &&
+		envPort != "" &&
+		net.ParseIP(envHostname) == nil {
+		providerLogger.Infoln("fallback to environment variable hostname resolver")
+
+		return NewProvider(
+			envHostname,
+			envPort,
+			providerLogger,
+			time.Second*30,
+		), nil
+	}
+
+	providerLogger.Infoln("using no-op hostname resolver")
+
+	return NewNoOpProvider(), nil
 }
 
 func NewNoOpProvider() Provider { return &noOpResover{} }
