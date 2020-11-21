@@ -43,11 +43,6 @@ settings:
 hostpath:
   logdir: /var/log/
 
-# image:
-#   repository: k8s.gcr.io/node-problem-detector
-#   tag: v0.8.2
-#   pullPolicy: IfNotPresent
-
 images:
   node-problem-detector: image-repository:image-tag
   pullPolicy: IfNotPresent
