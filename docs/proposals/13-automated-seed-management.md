@@ -2,9 +2,10 @@
 
 Automated seed management involves automating certain aspects of managing seeds in Garden clusters, such as:
 
-* Ensuring that the seeds capacity for shoots is not exceeded.
-* Creating, deleting, and updating seeds declaratively (as "shooted seeds").
-* Auto-scaling seeds upon reaching capacity thresholds.
+* [Ensuring that the seeds capacity for shoots is not exceeded](#ensuring-seeds-capacity-for-shoots-is-not-exceeded)
+* [Creating, deleting, and updating seeds declaratively as "managed seeds"](#managedseeds)
+* [Declaratively managing sets of similar "managed seeds" as "managed seed sets" which can be scaled up/down](#managedseedsets)
+* [Auto-scaling seeds upon reaching capacity thresholds](#auto-scaling-seeds)
 
 Implementing the above features would involve changes to various existing Gardener components, as well as perhaps introducing new ones. This document describes these features in more detail and proposes a design approach for some of them.
 
@@ -42,7 +43,7 @@ status:
 
 ### Gardenlet Configuration
 
-As mentioned above, the total resource capacity for built-in resources such as the number of shoots is specified as part of the `gardenlet` configuration, not in the Seed spec. The `gardenlet` configuration itself could be specified in the spec of the newly introduced [ShootedSeed](#shootedseeds) resource, which also contains the Seed template. Here it is assumed that in the future this could become the recommended and most widely used way to manage seeds. If the same `gardenlet` is responsible for multiple seeds, they would all share the same capacity settings.
+As mentioned above, the total resource capacity for built-in resources such as the number of shoots is specified as part of the `gardenlet` configuration, not in the Seed spec. The `gardenlet` configuration itself could be specified in the spec of the newly introduced [ManagedSeed](#managedseeds) resource. Here it is assumed that in the future this could become the recommended and most widely used way to manage seeds. If the same `gardenlet` is responsible for multiple seeds, they would all share the same capacity settings.
 
 To specify the total resource capacity for built-in resources, as well as the amount of such resources reserved for Gardener, the 2 new fields `resources.capacity` and `resources.reserved` are introduced in the `GardenletConfiguration` resource. The `gardenlet` seed controller would then initialize the `capacity` and `allocatable` fields in the seed status as follows:
 
@@ -72,7 +73,7 @@ This scheduling algorithm should be adapted in order to properly take into accou
 
 Later, the scheduling algorithm could be further enhanced by replacing the step in which the region strategy is applied by a scoring step similar to the one in [Kubernetes Scheduler](https://kubernetes.io/docs/concepts/scheduling-eviction/kube-scheduler/). In this scoring step, the scheduler would rank the remaining seeds to choose the most suitable shoot placement. It would assign a score to each seed that survived filtering based on a list of scoring rules. These rules might include for example `MinimalDistance` and `SeedResourcesLeastAllocated`, among others. Each rule would produce its own score for the seed, and the overall seed score would be calculated as a weighted sum of all such scores. Finally, the scheduler would assign the shoot to the seed with the highest ranking. 
 
-## Creating, Deleting, and Updating Seeds Declaratively
+## ManagedSeeds
 
 When all or most of the existing seeds are near capacity, new seeds should be created in order to accommodate more shoots. Conversely, sometimes there could be too many seeds for the number of shoots, and so some of the seeds could be deleted to save resources. Currently, the process of creating a new seed involves a number of manual steps, such as creating a new shoot that meets certain criteria, and then registering it as a seed in Gardener. This could be automated to some extent by [annotating a shoot with the `use-as-seed` annotation](../usage/shooted_seed.md), in order to create a "shooted seed". However, adding more than one similar seeds still requires manually creating all needed shoots, annotating them appropriately, and making sure that they are successfully reconciled and registered.
 
@@ -80,13 +81,11 @@ To create, delete, and update seeds effectively in a declarative way and allow a
 
 In [Issue #2181](https://github.com/gardener/gardener/issues/2181) it is already proposed that the `use-as-seed` annotation is replaced by a dedicated `ShootedSeed` resource. The solution proposed here further elaborates on this idea.
 
-### ShootedSeeds
+### ManagedSeed Resource
 
-#### ShootedSeed Resource
+The `ManagedSeed` resource is a dedicated custom resource that represents an evolution of the "shooted seed" and properly replaces the `use-as-seed` annotation. This resource contains:
 
-The `ShootedSeed` resource is a dedicated custom resource that represents a "shooted seed" and properly replaces the `use-as-seed` annotation. This resource contains:
-
-* A `shoot` section that contains the Shoot spec and parts of the metadata, such as labels and annotations.
+* The name of the Shoot that should be registered as a Seed.
 * An optional `seed` section that contains the Seed spec and parts of the metadata, such as labels and annotations.
 * An optional `gardenlet` section that contains:
     * Certain aspects of the `gardenlet` deployment configuration, such as the number of replicas, the image, which bootstrap mechanism to use (bootstrap token / service account), etc.
@@ -95,32 +94,29 @@ The `ShootedSeed` resource is a dedicated custom resource that represents a "sho
 Either the `seed` or the `gardenlet` section must be specified, but not both: 
 
 * If the `seed` section is specified, `gardenlet` should not be deployed in the shoot, and a new seed should be registered based on the `seed` section.
-* If the `gardenlet` section is specified, `gardenlet` should be deployed in the shoot, and it will register a new seed upon startup based on the `seedConfig` section of the `GardenletConfiguration` resource
+* If the `gardenlet` section is specified, `gardenlet` should be deployed in the shoot, and it will register a new seed upon startup based on the `seedConfig` section of the `GardenletConfiguration` resource.
+
+A ManagedSeed allows fine-tuning the seed and the `gardenlet` configuration of shooted seeds in order to deviate from the global defaults, e.g. lower the concurrent sync for some of the seed's controllers or enable a feature gate only on certain seeds. Also, it simplifies the deletion protection of such seeds. 
+
+Also, the `ManagedSeed` resource is a more powerful alternative to the `use-as-seed` annotation. The implementation of the `use-as-seed` annotation itself could be refactored to use a `ManagedSeed` resource extracted from the annotation by a controller.
     
-A ShootedSeed allows fine-tuning the seed and the `gardenlet` configuration of shooted seeds in order to deviate from the global defaults, e.g. lower the concurrent sync for some of the seed's controllers or enable a feature gate only on certain seeds. Also, it simplifies the deletion protection of shooted seeds. Last but not least, ShootedSeeds could be used as the basis for creating and deleting seeds automatically via the `ShootedSeedSet` resource that is described in more details below.
+Although in this proposal a ManagedSeed is always a "shooted seed", that is a Shoot that is registered as a Seed, this idea could be further extended in the future by adding a `type` field that could be either `Shoot` (implied in this proposal), or something different. Such an extension would allow to register and manage as Seed a cluster that is not a Shoot, e.g. a GKE cluster.
 
-Unlike the `Seed` resource, the `ShootedSeed` resource is namespaced. If created in the `garden` namespace, the resulting seed is globally available. If created in a project namespace, the resulting seed can be used as a "private seed" by shoots in the project, either by being decorated with project-specific taints and labels, or by being of the special `PrivateSeed` kind that is also namespaced. The concept of private seeds / cloudprofiles is described in [Issue #2874](https://github.com/gardener/gardener/issues/2874). Until this concept is implemented, `ShootedSeed` resources might need to be restricted to the `garden` namespace, similarly to how shoots with the `use-as-seed` annotation currently are.
+Last but not least, ManagedSeeds could be used as the basis for creating and deleting seeds automatically via the `ManagedSeedSet` resource that is described in [ManagedSeedSets](#managedseedsets).
 
-Example `ShootedSeed` resource with a `seed` section:
+Unlike the `Seed` resource, the `ManagedSeed` resource is namespaced. If created in the `garden` namespace, the resulting seed is globally available. If created in a project namespace, the resulting seed can be used as a "private seed" by shoots in the project, either by being decorated with project-specific taints and labels, or by being of the special `PrivateSeed` kind that is also namespaced. The concept of private seeds / cloudprofiles is described in [Issue #2874](https://github.com/gardener/gardener/issues/2874). Until this concept is implemented, `ManagedSeed` resources might need to be restricted to the `garden` namespace, similarly to how shoots with the `use-as-seed` annotation currently are.
+
+Example `ManagedSeed` resource with a `seed` section:
 
 ```yaml
 apiVersion: seedmanagement.gardener.cloud/v1alpha1
-kind: ShootedSeed
+kind: ManagedSeed
 metadata:
   name: crazy-botany
   namespace: garden
 spec:
-  shoot: # Shoot template, including spec and parts of the metadata
-    metadata:
-      labels:
-        foo: bar
-    spec:
-      cloudProfileName: gcp
-      secretBindingName: shoot-operator-gcp
-      region: europe-west1
-      provider:
-        type: gcp
-      ...
+  shoot:
+    name: crazy-botany # Shoot that should be registered as a Seed
   seed: # Seed template, including spec and parts of the metadata
     metadata:
       labels:
@@ -134,26 +130,17 @@ spec:
       ...
 ```
 
-Example `ShootedSeed` resource with a `gardenlet` section:
+Example `ManagedSeed` resource with a `gardenlet` section:
 
 ```yaml
 apiVersion: seedmanagement.gardener.cloud/v1alpha1
-kind: ShootedSeed
+kind: ManagedSeed
 metadata:
   name: crazy-botany
   namespace: garden
 spec:
-  shoot: # Shoot template, including spec and parts of the metadata
-    metadata:
-      labels:
-        foo: bar
-    spec:
-      cloudProfileName: gcp
-      secretBindingName: shoot-operator-gcp
-      region: europe-west1
-      provider:
-        type: gcp
-      ...
+  shoot:
+    name: crazy-botany # Shoot that should be registered as a Seed
   gardenlet: 
     deployment: # Gardenlet deployment configuration
       replicas: 1
@@ -193,91 +180,46 @@ spec:
       ...
 ```
 
-#### SeedRegistration Resource
+### ManagedSeed Controller
 
-The `SeedRegistration` is a dedicated custom resource that represents the registration of a Shoot as a Seed. This resource contains:
-                              
-* The name of the Shoot that should be registered as a Seed.
-* An optional `seed` section and an optional `gardenlet` section with exactly the same semantics as in the [ShootedSeed Resource](#shootedseedset-resource).
+ManagedSeeds are reconciled by a new *managed seed controller* in `gardenlet`. Its implementation is very similar to the current [seed registration controller](https://github.com/gardener/gardener/blob/master/pkg/gardenlet/controller/shoot/seed_registration_control.go), and in fact could be regarded as a refactoring of the latter, with the difference that it uses the `ManagedSeed` resource rather than the `use-as-seed` annotation on a Shoot. The `gardenlet` only reconciles ManagedSeeds that refer to Shoots scheduled on Seeds the `gardenlet` is responsible for.
 
-The `SeedRegistration` resource is introduced mainly in order to decouple the reconciliation of the `ShootedSeed` resource (performed by `gardener-controller-manager`) from the actual Seed registration (performed by `gardenlet`). It can also be used on its own, as a more powerful alternative to the `use-as-seed` annotation. In fact, the implementation of the `use-as-seed` annotation could also be refactored to use a `SeedRegistration` resource extracted from the annotation by a controller in `gardener-controller-manager`.
+Once this controller is considered sufficiently stable, the current `use-as-seed` annotation and the controller mentioned above should be marked as deprecated and eventually removed.
 
-Example `SeedRegistration` resource with a `seed` section:
+A `ManagedSeed` that is in use by shoots cannot be deleted, unless the shoots are either deleted or moved to other seeds first. The managed seed controller ensures that this is the case.
 
-```yaml
-apiVersion: seedmanagement.gardener.cloud/v1alpha1
-kind: SeedRegistration
-metadata:
-  name: crazy-botany
-  namespace: garden
-spec:
-  shootName: crazy-botany # Shoot that should be registered as a Seed
-  seed: # Seed template, including spec and parts of the metadata
-    metadata:
-      labels:
-        foo: bar
-    spec:
-      provider:
-        type: gcp
-        region: europe-west1
-      taints:
-      - key: seed.gardener.cloud/protected
-      ...
-```
+### Provider-specific Seed Bootstrapping Actions
 
-Example `SeedRegistration` resource with a `gardenlet` section:
+Bootstrapping a new seed might require additional provider-specific actions to the ones performed automatically by the managed seed controller. For example, on Azure this might include getting a new subscription, extending quotas, etc. This could eventually be automated by introducing an extension mechanism for the Gardener seed bootstrapping flow, to be handled by a new type of controller in the provider extensions. However, such an extension mechanism is not in the scope of this proposal and might require a separate GEP.
 
-```yaml
-apiVersion: seedmanagement.gardener.cloud/v1alpha1
-kind: SeedRegistration
-metadata:
-  name: crazy-botany
-  namespace: garden
-spec:
-  shootName: crazy-bottany # Shoot that should be registered as a Seed
-  gardenlet: 
-    deployment: # Gardenlet deployment configuration
-      replicas: 1
-      ...
-    config: # GardenletConfiguration resource
-      seedConfig: # Configuration of the Seed to be registered
-        ...
-```
+One idea that could be further explored is the use *shoot readiness gates*, similar to Kubernetes [pod readiness gates](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-readiness-gate), in order to control whether a Shoot is considered `Ready` before it could be registered as a Seed. A provider-specific extension could set the special condition that is specified as a readiness gate to `True` only after it has successfully performed the provider-specific actions needed.
 
-#### ShootedSeed and SeedRegistration Controllers
+### Changes to Existing Controllers
 
-ShootedSeeds are reconciled by a new *shooted seed controller* in `gardener-controller-manager`. During the reconciliation this controller:
+Since the Shoot registration as a Seed is decoupled from the Shoot reconciliation, existing `gardenlet` controllers would not have to be changed in order to properly support ManagedSeeds. The only change to `gardenlet` that would be needed is introducing the new *managed seed controller* mentioned above, and possibly retiring the old one at some point. Also, the Shoot controller might need to be adapted to ensure that Shoots registered as Seeds cannot be deleted until they ManagedSeed that caused the registration is itself deleted.
 
-* Creates, updates, or deletes a `Shoot` resource from the `shoot` section of the ShootedSeed.
-* Creates, updates, or deletes a `SeedRegistration` resource from the remaining sections of the ShootedSeed, referring to the previously created Shoot.
+The introduction of the `ManagedSeed` resource would also require no changes to existing `gardener-controller-manager` controllers that operate on Shoots (for example, shoot hibernation and maintenance controllers).
 
-SeedRegistrations are reconciled by a new *seed registration controller* in `gardenlet`. Its implementation is very similar to the current [seed registration controller](https://github.com/gardener/gardener/blob/master/pkg/gardenlet/controller/shoot/seed_registration_control.go), and in fact could be regarded as a refactoring of the latter, with the difference that it uses the `SeedRegistration` resource rather than the `use-as-seed` annotation on a Shoot, which actually simplifies the reconciliation logic. The `gardenlet` only reconciles SeedRegistrations that refer to Shoots scheduled on Seeds the `gardenlet` is responsible for.
+## ManagedSeedSets
 
-Once these two controllers are considered sufficiently stable, the current `use-as-seed` annotation and the controller mentioned above should be marked as deprecated and eventually removed.
+Similarly to a [ReplicaSet](https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/), the purpose of a ManagedSeedSet is to maintain a stable set of replica [ManagedSeeds](#managedseeds) available at any given time. As such, it is used to guarantee the availability of a specified number of identical ManagedSeeds, on an equal number of identical Shoots.
 
-**Note:** Bootstrapping a new seed might require additional provider-specific actions to the ones performed automatically by the shooted seed controller. For example, on Azure this might include getting a new subscription, extending quotas, etc. This could eventually be automated by introducing an extension mechanism for the Gardener seed bootstrapping flow, to be handled by a new type of controller in the provider extensions. However, such an extension mechanism is not in the scope of this proposal and might require a separate GEP.
+### ManagedSeedSet Resource
 
-## Changes to Existing Controllers
+The `ManagedSeedSet` resource has a `selector` field that specifies how to identify ManagedSeeds it can acquire, a number of `replicas` indicating how many ManagedSeeds (and their corresponding Shoots) it should be maintaining, and a two templates:
 
-Since the Shoot registration as a Seed is decoupled from the Shoot reconciliation, existing `gardenlet` controllers would not have to be changed in order to properly support ShootedSeeds. The only change to `gardenlet` that would be needed is introducing the new seed registration controller mentioned above, and possibly retiring the old one at some point.
+* A ManagedSeed template (`template`) specifying the data of new ManagedSeeds it should create to meet the number of replicas criteria.
+* A Shoot template (`shootTemplate`) specifying the data of new Shoots it should create to host the ManagedSeeds. 
 
-However, the introduction of the `ShootedSeed` resource would require adapting all `gardener-controller-manager` controllers that operate on Shoots (for example, shoot hibernation and maintenance controllers) to also operate on ShootedSeeds, since the Shoot resource created as a result of reconciling a ShootedSeed is owned by the latter and should never be changed directly, since any changes to its `spec` would be immediately overwritten by the reconciliation. Instead, changes should be applied to the `shoot` section of the ShootedSeed, which would result in propagating them to the owned Shoot by the shooted seed controller.
+A ManagedSeedSet then fulfills its purpose by creating and deleting ManagedSeeds (and their corresponding Shoots) as needed to reach the desired number. 
 
-### ShootedSeedSets
+A ManagedSeedSet is linked to its ManagedSeeds and Shoots via the `metadata.ownerReferences` field, which specifies what resource the current object is owned by. All ManagedSeeds and Shoots acquired by a ManagedSeedSet have their owning ManagedSeedSet's identifying information within their `ownerReferences` field. 
 
-Similarly to a [ReplicaSet](https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/), the purpose of a ShootedSeedSet is to maintain a stable set of replica [ShootedSeeds](#shootedseeds) available at any given time. As such, it is used to guarantee the availability of a specified number of identical ShootedSeeds.
-
-#### ShootedSeedSet Resource
-
-The `ShootedSeedSet` resource has a `selector` field that specifies how to identify ShootedSeeds it can acquire, a number of `replicas` indicating how many ShootedSeeds it should be maintaining, and a shooted seed `template` specifying the data of new ShootedSeeds it should create to meet the number of replicas criteria. A ShootedSeedSet then fulfills its purpose by creating and deleting ShootedSeeds as needed to reach the desired number. 
-
-A ShootedSeedSet is linked to its ShootedSeeds via the ShootedSeeds' `metadata.ownerReferences` field, which specifies what resource the current object is owned by. All ShootedSeeds acquired by a ShootedSeedSet have their owning ShootedSeedSet's identifying information within their `ownerReferences` field. 
-
-Example `ShootedSeedSet` resource:
+Example `ManagedSeedSet` resource:
 
 ```yaml
 apiVersion: seedmanagement.gardener.cloud/v1alpha1
-kind: ShootedSeedSet
+kind: ManagedSeedSet
 metadata:
   name: crazy-botany
   namespace: garden
@@ -286,55 +228,79 @@ spec:
   selector:
     matchLabels:
       foo: bar
-  template:
+  template: # ManagedSeed template, including spec and parts of the metadata
     metadata:
       labels:
         foo: bar
-    spec: # ShootedSeed resource
-      shoot: 
+    spec: 
+      # shoot.name is not specified since it's filled automatically by the controller
+      seed: # Either a seed or a gardenlet section must be specified, see above
+        metadata:
+          labels:
+            foo: bar
+        provider:
+          type: gcp
+          region: europe-west1
+        taints:
+        - key: seed.gardener.cloud/protected
         ...
-      seed: 
-        ...
+  shootTemplate: # Shoot template, including spec and parts of the metadata
+    metadata:
+      labels:
+        foo: bar
+    spec:
+      cloudProfileName: gcp
+      secretBindingName: shoot-operator-gcp
+      region: europe-west1
+      provider:
+        type: gcp
+      ...
 ```
 
-#### ShootedSeedSet Controller
+### ManagedSeedSet Controller
 
-ShootedSeedSets are reconciled by a new *shooted seed set controller* in `gardener-controller-manager`. During the reconciliation this controller creates and deletes ShootedSeeds in response to changes to the `replicas` and `selector` fields.
+ManagedSeedSets are reconciled by a new *managed seed set controller* in `gardener-controller-manager`. During the reconciliation this controller creates and deletes ManagedSeeds and Shoots in response to changes to the `replicas` and `selector` fields.
 
-**Note:** The introduction of the `ShootedSeedSet` resource would not require any changes to `gardenlet` or to existing `gardener-controller-manager` controllers. 
+**Note:** The introduction of the `ManagedSeedSet` resource would not require any changes to `gardenlet` or to existing `gardener-controller-manager` controllers. 
 
-#### ShootedSeedDeployments
+### ManagedSeedDeployments
 
-A ShootedSeedSet, similarly to a `ReplicaSet`, does not manage updates to its replicas in any way. In the future, we might introduce ShootedSeedDeployments, a higher-level concept that manages ShootedSeedSets and provides declarative updates to ShootedSeeds along with other useful features, similarly to a [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/). However, there is an important difference between seeds and pods or nodes in that seeds are more "heavyweight" and therefore updating a set of seeds by introducing new seeds and moving shoots to them tends to be much more complex, time-consuming, and prone to failures compared to updating the seeds "in place". Furthermore, updating seeds in this way depends on a mature implementation of [GEP-7: Shoot Control Plane Migration](07-shoot-control-plane-migration.md), which is not available right now. Therefore, ShootedSeedDeployments are not described in detail here, as properly dealing with the challenges mentioned requires a separate GEP.
+A ManagedSeedSet, similarly to a `ReplicaSet`, does not manage updates to its replicas in any way. In the future, we might introduce ManagedSeedDeployments, a higher-level concept that manages ManagedSeedSets and provides declarative updates to ManagedSeeds along with other useful features, similarly to a [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/), or perhaps a [StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/). An implementation that is more like a StatefulSet rather than a Deployment would be rolling seed by seed, stopping on rollout-failures (see [Issue #87](https://github.com/gardener/gardener/issues/87)), etc.
 
-#### Deleting ShootedSeeds
+There is an important difference between seeds and pods or nodes in that seeds are more "heavyweight" and therefore updating a set of seeds by introducing new seeds and moving shoots to them tends to be much more complex, time-consuming, and prone to failures compared to updating the seeds "in place". Furthermore, updating seeds in this way depends on a mature implementation of [GEP-7: Shoot Control Plane Migration](07-shoot-control-plane-migration.md), which is not available right now. Therefore, ManagedSeedDeployments are not described in detail here, as properly dealing with the challenges mentioned requires a separate GEP.
 
-Deleting ShootedSeeds in response to decreasing the replicas of a ShootedSeedSet deserves special attention for two reasons:
+### Scaling-in ManagedSeedSets
+
+Deleting ManagedSeeds in response to decreasing the replicas of a ManagedSeedSet deserves special attention for two reasons:
 
 * A seed that is already in use by shoots cannot be deleted, unless the shoots are either deleted or moved to other seeds first.
 * When there are more empty seeds than requested for deletion, determining which seeds to delete might not be as straightforward as with pods or nodes, if the seeds are based on different versions of the template and therefore not completely identical.
 
 The above challenges could be addressed as follows:
 
-* In order to scale in a ShootedSeedSet successfully, there should be at least as many empty ShootedSeeds as the difference between the old and the new replicas. In some cases, the user might need to ensure that this is the case by draining some seeds manually before decreasing the replicas field.
-* It should be possible to protect ShootedSeeds from deletion even if they are empty, perhaps via an annotation such as `gardener.cloud/protected`. Such seeds are not taken into account when determining whether the scale in operation can succeed.
-* The decision which seeds to delete among the seeds that are empty and not protected should be based on a set of heuristics and hints, perhaps again in the form of annotations, that could be added manually by the user. 
+* In order to scale in a ManagedSeedSet successfully, there should be at least as many empty ManagedSeeds as the difference between the old and the new replicas. In some cases, the user might need to ensure that this is the case by draining some seeds manually before decreasing the replicas field.
+* It should be possible to protect ManagedSeeds from deletion even if they are empty, perhaps via an annotation such as `seedmanagement.gardener.cloud/protect-from-deletion`. Such seeds are not taken into account when determining whether the scale in operation can succeed.
+* The decision which seeds to delete among the ManagedSeeds that are empty and not protected should be based on hints, perhaps again in the form of annotations, that could be added manually by the user, as well as other factors, see [Prioritizing ManagedSeed Deletion](#prioritizing-managedseed-deletion).
+
+#### Prioritizing ManagedSeed Deletion
+
+To help the controller decide which empty ManagedSeeds are to be deleted first, the user could manually annotate ManagedSeeds with a *seed priority annotation* such as `seedmanagement.gardener.cloud/priority`. ManagedSeeds with lower priority are more likely to be deleted first. If not specified, a certain default value is assumed, for example 3.
+
+Besides this annotation, the controller should take into account also other factors, such as the current seed conditions (`NotReady` should be preferred for deletion over `Ready`), as well as its age (older should be preferred for deletion over newer). 
 
 ## Auto-scaling Seeds
 
 The most interesting and advanced automated seed management feature is making sure that a Garden cluster has enough seeds registered to schedule new shoots (and, in the future, reschedule shoots from drained seeds) without exceeding the seeds capacity for shoots, but not more than actually needed at any given moment. This would involve introducing an auto-scaling mechanism for seeds in Garden clusters. 
 
-The proposed solution builds upon the ideas introduced earlier. The [`ShootedSeedSet`](#shootedseeds) resource (and in the future, also the `ShootedSeedDeployment` resource) could have a `scale` subresource that changes the `replicas` field. This would allow a new "seed autoscaler" controller to scale these resources via a special "autoscaler" resource (for example `SeedAutoscaler`), similarly to how the Kubernetes [Horizontal Pod Autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) controller scales pods, as described in [Horizontal Pod Autoscaler Walkthrough](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/). 
+The proposed solution builds upon the ideas introduced earlier. The [`ManagedSeedSet`](#managedseeds) resource (and in the future, also the `ManagedSeedDeployment` resource) could have a `scale` subresource that changes the `replicas` field. This would allow a new "seed autoscaler" controller to scale these resources via a special "autoscaler" resource (for example `SeedAutoscaler`), similarly to how the Kubernetes [Horizontal Pod Autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) controller scales pods, as described in [Horizontal Pod Autoscaler Walkthrough](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/). 
 
 The primary metric used for scaling should be the number of shoots already scheduled onto that seed either as a direct value or as a percentage of the seed's capacity for shoots introduced in [Ensuring Seeds Capacity for Shoots Is Not Exceeded](#ensuring-seeds-capacity-for-shoots-is-not-exceeded) (*utilization*). Later, custom metrics based on other resources, including provider-specific resources, could be considered as well.
 
 **Note:** Even if the controller is called *Horizontal Pod Autoscaler*, it is capable of scaling any resource with a `scale` subresource, using any custom metric. Therefore, initially it was proposed to use this controller directly. However, a number of important drawbacks were identified with this approach, and so it is no longer proposed here.
 
-### SeedAutoscaler
+### SeedAutoscaler Resource
 
-The SeedAutoscaler automatically scales the number of [ShootedSeeds](#shootedseeds) in a [ShootedSeedSet](#shootedseedsets) based on observed resource utilization. The resource could be any resource that is tracked via the `capacity` and `allocatable` fields in the Seed status, including in particular the number of shoots already scheduled onto the seed.
-
-#### SeedAutoscaler Resource
+The SeedAutoscaler automatically scales the number of [ManagedSeeds](#managedseeds) in a [ManagedSeedSet](#managedseedsets) based on observed resource utilization. The resource could be any resource that is tracked via the `capacity` and `allocatable` fields in the Seed status, including in particular the number of shoots already scheduled onto the seed.
 
 The SeedAutoscaler is implemented as a custom resource and a new controller. The resource determines the behavior of the controller. The `SeedAutoscaler` resource has a `scaleTargetRef` that specifies the target resource to be scaled, the minimum and maximum number of replicas, as well as a list of metrics. The only supported metric type initially is `Resource` for resources that are tracked via the `capacity` and `allocatable` fields in the Seed status. The resource target can be of type `Utilization` or `AverageValue`.
 
@@ -349,7 +315,7 @@ metadata:
 spec:
   scaleTargetRef:
     apiVersion: seedmanagement.gardener.cloud/v1alpha1
-    kind: ShootedSeedSet
+    kind: ManagedSeedSet
     name: crazy-botany
   minReplicas: 1
   maxReplicas: 10
@@ -362,8 +328,17 @@ spec:
         averageUtilization: 50
 ```
 
-#### SeedAutoscaler Controller
+### SeedAutoscaler Controller
 
-`SeedAutoscaler` resources are reconciled by a new controller, either in `gardenlet` or out-of-tree, similarly to [cluster-autoscaler](https://github.com/gardener/autoscaler). The controller periodically adjusts the number of replicas in a ShootedSeedSet to match the observed average resource utilization to the target specified by user.
+`SeedAutoscaler` resources are reconciled by a new *seed autoscaler controller*, either in `gardener-controller-manager` or out-of-tree, similarly to [cluster-autoscaler](https://github.com/gardener/autoscaler). The controller periodically adjusts the number of replicas in a ManagedSeedSet to match the observed average resource utilization to the target specified by user.
 
-**Note:** The SeedAutoscaler controller is not limited to evaluating only metrics, it could also evaluate taints, label selectors, etc. This is not yet reflected in the example `SeedAutoscaler` resource below. Such details are intentionally not specified in this GEP, they should be further explored in the issues created to track the actual implementation.
+**Note:** The SeedAutoscaler controller should perhaps not be limited to evaluating only metrics, it could also take into account also taints, label selectors, etc. This is not yet reflected in the example `SeedAutoscaler` resource above. Such details are intentionally not specified in this GEP, they should be further explored in the issues created to track the actual implementation.
+
+#### Evaluating Metrics for Autoscaling
+
+The metrics used by the controller, for example the `shoots` metric above, could be evaluated in one of the following ways:
+
+* Directly, by looking at the `capacity` and `allocatable` fields in the Seed status and comparing to the actual resource consumption calculated by simply counting all shoots that meet a certain criteria (e.g. shoots that are scheduled onto the seed), then taking an average over all seeds in the set.
+* By sampling existing metrics exported for example by [`gardener-metrics-exporter`](https://github.com/gardener/gardener-metrics-exporter). 
+
+The second approach decouples the seed autoscaler controller from the actual metrics evaluation, and therefore allows plugging in new metrics more easily. It also has the advantage that the exported metrics could also be used for other purposes, e.g. for triggering Prometheus alerts or building Grafana dashboards. It has the disadvantage that the seed autoscaler controller would depend on the metrics exporter to do its job properly. 
