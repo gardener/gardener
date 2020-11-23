@@ -23,6 +23,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -60,13 +61,33 @@ const (
 	druidDeploymentVolumeNameImageVectorOverwrite      = "imagevector-overwrite"
 )
 
-// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
-// or deleted.
-var TimeoutWaitForManagedResource = 2 * time.Minute
+// NewBootstrapper creates a new instance of DeployWaiter for the etcd bootstrapper.
+func NewBootstrapper(
+	client client.Client,
+	namespace string,
+	image string,
+	kubernetesVersion string,
+	imageVectorOverwrite *string,
+) component.DeployWaiter {
+	return &bootstrapper{
+		client:               client,
+		namespace:            namespace,
+		image:                image,
+		kubernetesVersion:    kubernetesVersion,
+		imageVectorOverwrite: imageVectorOverwrite,
+	}
+}
 
-// BootstrapSeed deploys the etcd-druid for the control cluster.
-func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion, etcdDruidImage string, imageVectorOverwrite *string) error {
-	v, err := semver.NewVersion(seedVersion)
+type bootstrapper struct {
+	client               client.Client
+	namespace            string
+	image                string
+	kubernetesVersion    string
+	imageVectorOverwrite *string
+}
+
+func (b *bootstrapper) Deploy(ctx context.Context) error {
+	v, err := semver.NewVersion(b.kubernetesVersion)
 	if err != nil {
 		return err
 	}
@@ -83,7 +104,7 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      druidServiceAccountName,
-				Namespace: namespace,
+				Namespace: b.namespace,
 				Labels:    labels(),
 			},
 		}
@@ -141,7 +162,7 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 				{
 					Kind:      rbacv1.ServiceAccountKind,
 					Name:      druidServiceAccountName,
-					Namespace: namespace,
+					Namespace: b.namespace,
 				},
 			},
 		}
@@ -149,7 +170,7 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 		configMapImageVectorOverwrite = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      druidConfigMapImageVectorOverwriteName,
-				Namespace: namespace,
+				Namespace: b.namespace,
 				Labels:    labels(),
 			},
 		}
@@ -158,7 +179,7 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 		vpa           = &autoscalingv1beta2.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      druidVPAName,
-				Namespace: namespace,
+				Namespace: b.namespace,
 				Labels:    labels(),
 			},
 			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
@@ -185,7 +206,7 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      druidDeploymentName,
-				Namespace: namespace,
+				Namespace: b.namespace,
 				Labels:    labels(),
 			},
 			Spec: appsv1.DeploymentSpec{
@@ -203,7 +224,7 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 						Containers: []corev1.Container{
 							{
 								Name:            Druid,
-								Image:           etcdDruidImage,
+								Image:           b.image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Command: []string{
 									"/bin/etcd-druid",
@@ -239,8 +260,8 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 		}
 	)
 
-	if imageVectorOverwrite != nil {
-		configMapImageVectorOverwrite.Data = map[string]string{druidConfigMapImageVectorOverwriteDataKey: *imageVectorOverwrite}
+	if b.imageVectorOverwrite != nil {
+		configMapImageVectorOverwrite.Data = map[string]string{druidConfigMapImageVectorOverwriteDataKey: *b.imageVectorOverwrite}
 		resourcesToAdd = append(resourcesToAdd, configMapImageVectorOverwrite)
 
 		metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/configmap-imagevector-overwrite", utils.ComputeChecksum(configMapImageVectorOverwrite.Data))
@@ -271,20 +292,12 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 	}
 	resources["crd.yaml"] = crdYAML.Bytes()
 
-	if err := common.DeployManagedResourceForSeed(ctx, c, managedResourceControlName, namespace, false, resources); err != nil {
-		return err
-	}
-
-	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
-	defer cancel()
-
-	return managedresources.WaitUntilManagedResourceHealthy(timeoutCtx, c, namespace, managedResourceControlName)
+	return common.DeployManagedResourceForSeed(ctx, b.client, managedResourceControlName, b.namespace, false, resources)
 }
 
-// DebootstrapSeed deletes all the resources deployed during the seed bootstrapping.
-func DebootstrapSeed(ctx context.Context, c client.Client, namespace string) error {
+func (b *bootstrapper) Destroy(ctx context.Context) error {
 	etcdList := &druidv1alpha1.EtcdList{}
-	if err := c.List(ctx, etcdList); err != nil {
+	if err := b.client.List(ctx, etcdList); err != nil {
 		return err
 	}
 
@@ -292,18 +305,29 @@ func DebootstrapSeed(ctx context.Context, c client.Client, namespace string) err
 		return fmt.Errorf("cannot debootstrap etcd-druid because there are still druidv1alpha1.Etcd resources left in the cluster")
 	}
 
-	if err := common.ConfirmDeletion(ctx, c, &apiextensionsv1beta1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}); err != nil {
+	if err := common.ConfirmDeletion(ctx, b.client, &apiextensionsv1beta1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}); err != nil {
 		return err
 	}
 
-	if err := common.DeleteManagedResourceForSeed(ctx, c, managedResourceControlName, namespace); err != nil {
-		return err
-	}
+	return common.DeleteManagedResourceForSeed(ctx, b.client, managedResourceControlName, b.namespace)
+}
 
+// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
+// or deleted.
+var TimeoutWaitForManagedResource = 2 * time.Minute
+
+func (b *bootstrapper) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilManagedResourceDeleted(timeoutCtx, c, namespace, managedResourceControlName)
+	return managedresources.WaitUntilManagedResourceHealthy(timeoutCtx, b.client, b.namespace, managedResourceControlName)
+}
+
+func (b *bootstrapper) WaitCleanup(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilManagedResourceDeleted(timeoutCtx, b.client, b.namespace, managedResourceControlName)
 }
 
 var (

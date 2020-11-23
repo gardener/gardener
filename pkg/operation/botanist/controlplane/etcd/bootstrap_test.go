@@ -20,6 +20,7 @@ import (
 	"time"
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -42,12 +43,17 @@ import (
 
 var _ = Describe("Etcd", func() {
 	var (
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
+		ctrl         *gomock.Controller
+		c            *mockclient.MockClient
+		bootstrapper component.DeployWaiter
 
-		ctx       = context.TODO()
-		fakeErr   = fmt.Errorf("fake error")
-		namespace = "shoot--foo--bar"
+		ctx                       = context.TODO()
+		fakeErr                   = fmt.Errorf("fake error")
+		namespace                 = "shoot--foo--bar"
+		seedVersion               = "1.12.0"
+		etcdDruidImage            = "etcd/druid:1.2.3"
+		imageVectorOverwriteEmpty *string
+		imageVectorOverwriteFull  = pointer.StringPtr("some overwrite")
 
 		managedResourceName       = "etcd-druid"
 		managedResourceSecretName = "managedresource-" + managedResourceName
@@ -56,19 +62,15 @@ var _ = Describe("Etcd", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
+		bootstrapper = NewBootstrapper(c, namespace, etcdDruidImage, seedVersion, imageVectorOverwriteEmpty)
 	})
 
 	AfterEach(func() {
 		ctrl.Finish()
 	})
 
-	Describe("#BootstrapSeed", func() {
+	Describe("#Deploy", func() {
 		var (
-			seedVersion               = "1.12.0"
-			etcdDruidImage            = "etcd/druid:1.2.3"
-			imageVectorOverwriteEmpty *string
-			imageVectorOverwriteFull  = pointer.StringPtr("some overwrite")
-
 			serviceAccountYAML = `apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -308,25 +310,6 @@ status: {}
 
 			managedResourceSecret *corev1.Secret
 			managedResource       *resourcesv1alpha1.ManagedResource
-
-			managedResourceReady = &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{
-					Generation: 1,
-				},
-				Status: resourcesv1alpha1.ManagedResourceStatus{
-					ObservedGeneration: 1,
-					Conditions: []resourcesv1alpha1.ManagedResourceCondition{
-						{
-							Type:   resourcesv1alpha1.ResourcesApplied,
-							Status: resourcesv1alpha1.ConditionTrue,
-						},
-						{
-							Type:   resourcesv1alpha1.ResourcesHealthy,
-							Status: resourcesv1alpha1.ConditionTrue,
-						},
-					},
-				},
-			}
 		)
 
 		BeforeEach(func() {
@@ -366,7 +349,7 @@ status: {}
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
 			)
 
-			Expect(BootstrapSeed(ctx, c, namespace, seedVersion, etcdDruidImage, imageVectorOverwriteEmpty)).To(MatchError(fakeErr))
+			Expect(bootstrapper.Deploy(ctx)).To(MatchError(fakeErr))
 		})
 
 		It("should fail because the managed resource cannot be updated", func() {
@@ -377,61 +360,7 @@ status: {}
 				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
 			)
 
-			Expect(BootstrapSeed(ctx, c, namespace, seedVersion, etcdDruidImage, imageVectorOverwriteEmpty)).To(MatchError(fakeErr))
-		})
-
-		It("should fail because it cannot be checked if the managed resource became healthy", func() {
-			oldTimeout := TimeoutWaitForManagedResource
-			defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-			TimeoutWaitForManagedResource = time.Millisecond
-
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
-			)
-
-			Expect(BootstrapSeed(ctx, c, namespace, seedVersion, etcdDruidImage, imageVectorOverwriteEmpty)).To(MatchError(fakeErr))
-		})
-
-		It("should fail because the managed resource doesn't become healthy", func() {
-			oldTimeout := TimeoutWaitForManagedResource
-			defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-			TimeoutWaitForManagedResource = time.Millisecond
-
-			gomock.InOrder(
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
-					func(ctx context.Context, _ client.ObjectKey, obj runtime.Object) error {
-						(&resourcesv1alpha1.ManagedResource{
-							ObjectMeta: metav1.ObjectMeta{
-								Generation: 1,
-							},
-							Status: resourcesv1alpha1.ManagedResourceStatus{
-								ObservedGeneration: 1,
-								Conditions: []resourcesv1alpha1.ManagedResourceCondition{
-									{
-										Type:   resourcesv1alpha1.ResourcesApplied,
-										Status: resourcesv1alpha1.ConditionFalse,
-									},
-									{
-										Type:   resourcesv1alpha1.ResourcesHealthy,
-										Status: resourcesv1alpha1.ConditionFalse,
-									},
-								},
-							},
-						}).DeepCopyInto(obj.(*resourcesv1alpha1.ManagedResource))
-						return nil
-					},
-				).AnyTimes(),
-			)
-
-			Expect(BootstrapSeed(ctx, c, namespace, seedVersion, etcdDruidImage, imageVectorOverwriteEmpty)).To(MatchError(ContainSubstring("is not healthy")))
+			Expect(bootstrapper.Deploy(ctx)).To(MatchError(fakeErr))
 		})
 
 		Context("k8s >= 1.12", func() {
@@ -445,17 +374,14 @@ status: {}
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
-					c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
-						func(ctx context.Context, _ client.ObjectKey, obj runtime.Object) error {
-							managedResourceReady.DeepCopyInto(obj.(*resourcesv1alpha1.ManagedResource))
-							return nil
-						}),
 				)
 
-				Expect(BootstrapSeed(ctx, c, namespace, seedVersion, etcdDruidImage, imageVectorOverwriteEmpty)).To(Succeed())
+				Expect(bootstrapper.Deploy(ctx)).To(Succeed())
 			})
 
 			It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
+				bootstrapper = NewBootstrapper(c, namespace, etcdDruidImage, seedVersion, imageVectorOverwriteFull)
+
 				managedResourceSecret.Data["configmap__shoot--foo--bar__etcd-druid-imagevector-overwrite.yaml"] = []byte(configMapImageVectorOverwriteYAML)
 				managedResourceSecret.Data["deployment__shoot--foo--bar__etcd-druid.yaml"] = []byte(deploymentWithImageVectorOverwriteYAML)
 
@@ -468,14 +394,9 @@ status: {}
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
-					c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
-						func(ctx context.Context, _ client.ObjectKey, obj runtime.Object) error {
-							managedResourceReady.DeepCopyInto(obj.(*resourcesv1alpha1.ManagedResource))
-							return nil
-						}),
 				)
 
-				Expect(BootstrapSeed(ctx, c, namespace, seedVersion, etcdDruidImage, imageVectorOverwriteFull)).To(Succeed())
+				Expect(bootstrapper.Deploy(ctx)).To(Succeed())
 			})
 		})
 
@@ -486,6 +407,8 @@ status: {}
 			})
 
 			It("should successfully deploy all the resources (w/o image vector overwrite)", func() {
+				bootstrapper = NewBootstrapper(c, namespace, etcdDruidImage, seedVersion, imageVectorOverwriteEmpty)
+
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
@@ -495,17 +418,14 @@ status: {}
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
-					c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
-						func(ctx context.Context, _ client.ObjectKey, obj runtime.Object) error {
-							managedResourceReady.DeepCopyInto(obj.(*resourcesv1alpha1.ManagedResource))
-							return nil
-						}),
 				)
 
-				Expect(BootstrapSeed(ctx, c, namespace, seedVersion, etcdDruidImage, imageVectorOverwriteEmpty)).To(Succeed())
+				Expect(bootstrapper.Deploy(ctx)).To(Succeed())
 			})
 
 			It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
+				bootstrapper = NewBootstrapper(c, namespace, etcdDruidImage, seedVersion, imageVectorOverwriteFull)
+
 				managedResourceSecret.Data["configmap__shoot--foo--bar__etcd-druid-imagevector-overwrite.yaml"] = []byte(configMapImageVectorOverwriteYAML)
 				managedResourceSecret.Data["deployment__shoot--foo--bar__etcd-druid.yaml"] = []byte(deploymentWithImageVectorOverwriteYAML)
 
@@ -518,19 +438,90 @@ status: {}
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(managedResource))
 					}),
-					c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
-						func(ctx context.Context, _ client.ObjectKey, obj runtime.Object) error {
-							managedResourceReady.DeepCopyInto(obj.(*resourcesv1alpha1.ManagedResource))
-							return nil
-						}),
 				)
 
-				Expect(BootstrapSeed(ctx, c, namespace, seedVersion, etcdDruidImage, imageVectorOverwriteFull)).To(Succeed())
+				Expect(bootstrapper.Deploy(ctx)).To(Succeed())
 			})
 		})
 	})
 
-	Describe("#DebootstrapSeed", func() {
+	Describe("#Wait", func() {
+		It("should fail because it cannot be checked if the managed resource became healthy", func() {
+			oldTimeout := TimeoutWaitForManagedResource
+			defer func() { TimeoutWaitForManagedResource = oldTimeout }()
+			TimeoutWaitForManagedResource = time.Millisecond
+
+			c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr)
+
+			Expect(bootstrapper.Wait(ctx)).To(MatchError(fakeErr))
+		})
+
+		It("should fail because the managed resource doesn't become healthy", func() {
+			oldTimeout := TimeoutWaitForManagedResource
+			defer func() { TimeoutWaitForManagedResource = oldTimeout }()
+			TimeoutWaitForManagedResource = time.Millisecond
+
+			c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
+				func(ctx context.Context, _ client.ObjectKey, obj runtime.Object) error {
+					(&resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Generation: 1,
+						},
+						Status: resourcesv1alpha1.ManagedResourceStatus{
+							ObservedGeneration: 1,
+							Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+								{
+									Type:   resourcesv1alpha1.ResourcesApplied,
+									Status: resourcesv1alpha1.ConditionFalse,
+								},
+								{
+									Type:   resourcesv1alpha1.ResourcesHealthy,
+									Status: resourcesv1alpha1.ConditionFalse,
+								},
+							},
+						},
+					}).DeepCopyInto(obj.(*resourcesv1alpha1.ManagedResource))
+					return nil
+				},
+			).AnyTimes()
+
+			Expect(bootstrapper.Wait(ctx)).To(MatchError(ContainSubstring("is not healthy")))
+		})
+
+		It("should successfully wait for the managed resource to become healthy", func() {
+			oldTimeout := TimeoutWaitForManagedResource
+			defer func() { TimeoutWaitForManagedResource = oldTimeout }()
+			TimeoutWaitForManagedResource = time.Millisecond
+
+			c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(
+				func(ctx context.Context, _ client.ObjectKey, obj runtime.Object) error {
+					(&resourcesv1alpha1.ManagedResource{
+						ObjectMeta: metav1.ObjectMeta{
+							Generation: 1,
+						},
+						Status: resourcesv1alpha1.ManagedResourceStatus{
+							ObservedGeneration: 1,
+							Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+								{
+									Type:   resourcesv1alpha1.ResourcesApplied,
+									Status: resourcesv1alpha1.ConditionTrue,
+								},
+								{
+									Type:   resourcesv1alpha1.ResourcesHealthy,
+									Status: resourcesv1alpha1.ConditionTrue,
+								},
+							},
+						},
+					}).DeepCopyInto(obj.(*resourcesv1alpha1.ManagedResource))
+					return nil
+				},
+			)
+
+			Expect(bootstrapper.Wait(ctx)).To(Succeed())
+		})
+	})
+
+	Context("cleanup", func() {
 		var (
 			crdName         = "etcds.druid.gardener.cloud"
 			secret          = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}
@@ -557,16 +548,14 @@ status: {}
 			}
 		)
 
-		It("should fail when the etcd listing fails", func() {
-			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})).Return(fakeErr),
-			)
+		Describe("#Destroy", func() {
+			It("should fail when the etcd listing fails", func() {
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})).Return(fakeErr)
 
-			Expect(DebootstrapSeed(ctx, c, namespace)).To(MatchError(fakeErr))
-		})
+				Expect(bootstrapper.Destroy(ctx)).To(MatchError(fakeErr))
+			})
 
-		It("should fail when there are etcd resources left", func() {
-			gomock.InOrder(
+			It("should fail when there are etcd resources left", func() {
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})).DoAndReturn(
 					func(ctx context.Context, obj runtime.Object, _ ...client.ListOptions) error {
 						(&druidv1alpha1.EtcdList{
@@ -574,110 +563,107 @@ status: {}
 						}).DeepCopyInto(obj.(*druidv1alpha1.EtcdList))
 						return nil
 					},
-				),
-			)
+				)
 
-			Expect(DebootstrapSeed(ctx, c, namespace)).To(MatchError(ContainSubstring("because there are still druidv1alpha1.Etcd resources left in the cluster")))
+				Expect(bootstrapper.Destroy(ctx)).To(MatchError(ContainSubstring("because there are still druidv1alpha1.Etcd resources left in the cluster")))
+			})
+
+			It("should fail when the deletion confirmation fails", func() {
+				oldTimeNow := common.TimeNow
+				defer func() { common.TimeNow = oldTimeNow }()
+				common.TimeNow = timeNowFunc
+
+				gomock.InOrder(
+					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
+					c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
+					c.EXPECT().Update(ctx, crdWithConfirmedDeletion).Return(fakeErr),
+				)
+
+				Expect(bootstrapper.Destroy(ctx)).To(MatchError(fakeErr))
+			})
+
+			It("should fail when the managed resource deletion fails", func() {
+				oldTimeNow := common.TimeNow
+				defer func() { common.TimeNow = oldTimeNow }()
+				common.TimeNow = timeNowFunc
+
+				gomock.InOrder(
+					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
+					c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
+					c.EXPECT().Update(ctx, crdWithConfirmedDeletion),
+					c.EXPECT().Delete(ctx, managedResource).Return(fakeErr),
+				)
+
+				Expect(bootstrapper.Destroy(ctx)).To(MatchError(fakeErr))
+			})
+
+			It("should fail when the secret deletion fails", func() {
+				oldTimeNow := common.TimeNow
+				defer func() { common.TimeNow = oldTimeNow }()
+				common.TimeNow = timeNowFunc
+
+				gomock.InOrder(
+					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
+					c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
+					c.EXPECT().Update(ctx, crdWithConfirmedDeletion),
+					c.EXPECT().Delete(ctx, managedResource),
+					c.EXPECT().Delete(ctx, secret).Return(fakeErr),
+				)
+
+				Expect(bootstrapper.Destroy(ctx)).To(MatchError(fakeErr))
+			})
+
+			It("should successfully delete all resources", func() {
+				oldTimeNow := common.TimeNow
+				defer func() { common.TimeNow = oldTimeNow }()
+				common.TimeNow = timeNowFunc
+
+				gomock.InOrder(
+					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
+					c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
+					c.EXPECT().Update(ctx, crdWithConfirmedDeletion),
+					c.EXPECT().Delete(ctx, managedResource),
+					c.EXPECT().Delete(ctx, secret),
+				)
+
+				Expect(bootstrapper.Destroy(ctx)).To(Succeed())
+			})
 		})
 
-		It("should fail when the deletion confirmation fails", func() {
-			oldTimeNow := common.TimeNow
-			defer func() { common.TimeNow = oldTimeNow }()
-			common.TimeNow = timeNowFunc
+		Describe("#WaitCleanup", func() {
+			It("should fail when the wait for the managed resource deletion fails", func() {
+				oldTimeNow := common.TimeNow
+				defer func() { common.TimeNow = oldTimeNow }()
+				common.TimeNow = timeNowFunc
 
-			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
-				c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
-				c.EXPECT().Update(ctx, crdWithConfirmedDeletion).Return(fakeErr),
-			)
+				c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr)
 
-			Expect(DebootstrapSeed(ctx, c, namespace)).To(MatchError(fakeErr))
-		})
+				Expect(bootstrapper.WaitCleanup(ctx)).To(MatchError(fakeErr))
+			})
 
-		It("should fail when the managed resource deletion fails", func() {
-			oldTimeNow := common.TimeNow
-			defer func() { common.TimeNow = oldTimeNow }()
-			common.TimeNow = timeNowFunc
+			It("should fail when the wait for the managed resource deletion times out", func() {
+				oldTimeNow := common.TimeNow
+				defer func() { common.TimeNow = oldTimeNow }()
+				common.TimeNow = timeNowFunc
 
-			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
-				c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
-				c.EXPECT().Update(ctx, crdWithConfirmedDeletion),
-				c.EXPECT().Delete(ctx, managedResource).Return(fakeErr),
-			)
+				oldTimeout := TimeoutWaitForManagedResource
+				defer func() { TimeoutWaitForManagedResource = oldTimeout }()
+				TimeoutWaitForManagedResource = time.Millisecond
 
-			Expect(DebootstrapSeed(ctx, c, namespace)).To(MatchError(fakeErr))
-		})
+				c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).AnyTimes()
 
-		It("should fail when the secret deletion fails", func() {
-			oldTimeNow := common.TimeNow
-			defer func() { common.TimeNow = oldTimeNow }()
-			common.TimeNow = timeNowFunc
+				Expect(bootstrapper.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
+			})
 
-			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
-				c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
-				c.EXPECT().Update(ctx, crdWithConfirmedDeletion),
-				c.EXPECT().Delete(ctx, managedResource),
-				c.EXPECT().Delete(ctx, secret).Return(fakeErr),
-			)
+			It("should successfully delete all resources", func() {
+				oldTimeNow := common.TimeNow
+				defer func() { common.TimeNow = oldTimeNow }()
+				common.TimeNow = timeNowFunc
 
-			Expect(DebootstrapSeed(ctx, c, namespace)).To(MatchError(fakeErr))
-		})
+				c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
-		It("should fail when the wait for the managed resource deletion fails", func() {
-			oldTimeNow := common.TimeNow
-			defer func() { common.TimeNow = oldTimeNow }()
-			common.TimeNow = timeNowFunc
-
-			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
-				c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
-				c.EXPECT().Update(ctx, crdWithConfirmedDeletion),
-				c.EXPECT().Delete(ctx, managedResource),
-				c.EXPECT().Delete(ctx, secret),
-				c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
-			)
-
-			Expect(DebootstrapSeed(ctx, c, namespace)).To(MatchError(fakeErr))
-		})
-
-		It("should fail when the wait for the managed resource deletion times out", func() {
-			oldTimeNow := common.TimeNow
-			defer func() { common.TimeNow = oldTimeNow }()
-			common.TimeNow = timeNowFunc
-
-			oldTimeout := TimeoutWaitForManagedResource
-			defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-			TimeoutWaitForManagedResource = time.Millisecond
-
-			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
-				c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
-				c.EXPECT().Update(ctx, crdWithConfirmedDeletion),
-				c.EXPECT().Delete(ctx, managedResource),
-				c.EXPECT().Delete(ctx, secret),
-				c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).AnyTimes(),
-			)
-
-			Expect(DebootstrapSeed(ctx, c, namespace)).To(MatchError(ContainSubstring("still exists")))
-		})
-
-		It("should successfully delete all resources", func() {
-			oldTimeNow := common.TimeNow
-			defer func() { common.TimeNow = oldTimeNow }()
-			common.TimeNow = timeNowFunc
-
-			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
-				c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
-				c.EXPECT().Update(ctx, crdWithConfirmedDeletion),
-				c.EXPECT().Delete(ctx, managedResource),
-				c.EXPECT().Delete(ctx, secret),
-				c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
-			)
-
-			Expect(DebootstrapSeed(ctx, c, namespace)).To(Succeed())
+				Expect(bootstrapper.WaitCleanup(ctx)).To(Succeed())
+			})
 		})
 	})
 })

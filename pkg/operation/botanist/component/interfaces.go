@@ -18,8 +18,6 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Deployer is used to control the life-cycle of a component.
@@ -65,13 +63,6 @@ type CentralLoggingConfiguration func() (CentralLoggingConfig, error)
 
 // DependencyWatchdogConfiguration is a function alias for returning configuration for the dependency-watchdog.
 type DependencyWatchdogConfiguration func() (string, error)
-
-// BootstrapSeed is a function alias for components that require to bootstrap the seed cluster.
-type BootstrapSeed func(ctx context.Context, c client.Client, namespace, version string) error
-
-// DebootstrapSeed is a function alias for components that need to delete resources from the seed cluster that were
-// created during seed bootstrapping.
-type DebootstrapSeed func(ctx context.Context, c client.Client, namespace string) error
 
 // DeployWaiter controls and waits for life-cycle operations of a component.
 type DeployWaiter interface {
