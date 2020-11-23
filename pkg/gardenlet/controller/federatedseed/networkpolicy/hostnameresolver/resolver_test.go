@@ -17,15 +17,19 @@ package hostnameresolver
 import (
 	"context"
 	"errors"
+	"os"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/logger"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/rest"
 )
 
 func TestHostnameresolver(t *testing.T) {
@@ -173,4 +177,79 @@ var _ = Describe("resolver", func() {
 		cancelFunc()
 		close(done)
 	}, 0.2)
+})
+
+var _ = Describe("CreateForCluster", func() {
+	It("uses client host", func() {
+		c := fake.NewClientSetBuilder().WithRESTConfig(&rest.Config{
+			Host: "https://foo.bar:1234",
+		}).Build()
+
+		p, err := CreateForCluster(c, logger.NewNopLogger())
+		Expect(err).NotTo(HaveOccurred())
+		Expect(p).NotTo(BeNil())
+
+		v, ok := p.(*resolver)
+		Expect(ok).To(BeTrue(), "cast to resolver succeeds")
+		Expect(v.upstreamFQDN).To(Equal("foo.bar"))
+		Expect(v.upstreamPort).To(BeEquivalentTo(1234))
+	})
+
+	It("uses environment variable", func() {
+		var (
+			c = fake.NewClientSetBuilder().WithRESTConfig(&rest.Config{
+				Host: "https://1.2.3.4:1234",
+			}).Build()
+			existingHost, existingPort = os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
+		)
+
+		os.Setenv("KUBERNETES_SERVICE_HOST", "baz.bar")
+		os.Setenv("KUBERNETES_SERVICE_PORT", "4321")
+
+		defer func() {
+			if existingHost != "" {
+				Expect(os.Setenv("KUBERNETES_SERVICE_HOST", existingHost)).NotTo(HaveOccurred())
+			}
+			if existingPort != "" {
+				Expect(os.Setenv("KUBERNETES_SERVICE_PORT", existingPort)).NotTo(HaveOccurred())
+			}
+		}()
+
+		p, err := CreateForCluster(c, logger.NewNopLogger())
+		Expect(err).NotTo(HaveOccurred())
+		Expect(p).NotTo(BeNil())
+
+		v, ok := p.(*resolver)
+		Expect(ok).To(BeTrue(), "cast to resolver succeeds")
+		Expect(v.upstreamFQDN).To(Equal("baz.bar"))
+		Expect(v.upstreamPort).To(BeEquivalentTo(4321))
+	})
+
+	It("does nothing", func() {
+		var (
+			c = fake.NewClientSetBuilder().WithRESTConfig(&rest.Config{
+				Host: "https://1.2.3.4:1234",
+			}).Build()
+			existingHost, existingPort = os.Getenv("KUBERNETES_SERVICE_HOST"), os.Getenv("KUBERNETES_SERVICE_PORT")
+		)
+
+		os.Setenv("KUBERNETES_SERVICE_HOST", "5.6.7.8")
+		os.Setenv("KUBERNETES_SERVICE_PORT", "4321")
+
+		defer func() {
+			if existingHost != "" {
+				Expect(os.Setenv("KUBERNETES_SERVICE_HOST", existingHost)).NotTo(HaveOccurred())
+			}
+			if existingPort != "" {
+				Expect(os.Setenv("KUBERNETES_SERVICE_PORT", existingPort)).NotTo(HaveOccurred())
+			}
+		}()
+
+		p, err := CreateForCluster(c, logger.NewNopLogger())
+		Expect(err).NotTo(HaveOccurred())
+		Expect(p).NotTo(BeNil())
+
+		_, ok := p.(*noOpResover)
+		Expect(ok).To(BeTrue(), "cast to noOpResover succeeds")
+	})
 })
