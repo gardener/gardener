@@ -16,8 +16,8 @@ package terraformer
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -42,8 +42,25 @@ const (
 )
 
 // SetVariablesEnvironment sets the provided <tfvarsEnvironment> on the Terraformer object.
+// Deprecated: use SetEnvVars instead
 func (t *terraformer) SetVariablesEnvironment(tfvarsEnvironment map[string]string) Terraformer {
-	t.variablesEnvironment = tfvarsEnvironment
+	var envVars []corev1.EnvVar
+	for k, v := range tfvarsEnvironment {
+		envVars = append(envVars, corev1.EnvVar{Name: k, Value: v})
+	}
+
+	// maps are unsorted, sort resulting slice after looping over map to avoid flickering results
+	sort.Slice(envVars, func(i, j int) bool {
+		return envVars[i].Name < envVars[j].Name
+	})
+
+	t.envVars = append(t.envVars, envVars...)
+	return t
+}
+
+// SetEnvVars sets the provided environment variables for the Terraformer Pod.
+func (t *terraformer) SetEnvVars(envVars ...corev1.EnvVar) Terraformer {
+	t.envVars = append(t.envVars, envVars...)
 	return t
 }
 
@@ -188,10 +205,6 @@ func (t *terraformer) prepare(ctx context.Context) (int, error) {
 	numberOfExistingResources, err := t.NumberOfResources(ctx)
 	if err != nil {
 		return -1, err
-	}
-
-	if t.variablesEnvironment == nil {
-		return -1, errors.New("no Terraform variables environment provided")
 	}
 
 	// Clean up possible existing pod artifacts from previous runs
