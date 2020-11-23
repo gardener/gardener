@@ -30,6 +30,7 @@ spec:
 {{ toYaml .Values.annotations | indent 8 }}
 {{- end }}
     spec:
+      dnsPolicy: Default # make sure to not use the coredns for DNS resolution.
       serviceAccountName: node-problem-detector
       hostNetwork: {{ .Values.hostNetwork }}
       terminationGracePeriodSeconds: 30

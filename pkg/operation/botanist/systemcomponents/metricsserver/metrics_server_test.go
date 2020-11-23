@@ -266,6 +266,7 @@ spec:
         volumeMounts:
         - mountPath: /srv/metrics-server/tls
           name: metrics-server
+      dnsPolicy: Default
       nodeSelector:
         worker.gardener.cloud/system-components: "true"
       priorityClassName: system-cluster-critical
@@ -358,6 +359,7 @@ spec:
         volumeMounts:
         - mountPath: /srv/metrics-server/tls
           name: metrics-server
+      dnsPolicy: Default
       nodeSelector:
         worker.gardener.cloud/system-components: "true"
       priorityClassName: system-cluster-critical

@@ -300,6 +300,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 							RunAsUser: pointer.Int64Ptr(65534),
 							FSGroup:   pointer.Int64Ptr(65534),
 						},
+						DNSPolicy:          corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 						ServiceAccountName: serviceAccount.Name,
 						Containers: []corev1.Container{{
 							Name:            containerName,
