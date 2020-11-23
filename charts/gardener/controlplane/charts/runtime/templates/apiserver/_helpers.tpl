@@ -22,3 +22,20 @@ true
 true
 {{- end -}}
 {{- end -}}
+
+{{- define "gardener-apiserver.watchCacheSizes" -}}
+{{- with .Values.global.apiserver.watchCacheSizes }}
+{{- if not (kindIs "invalid" .default) }}
+- --default-watch-cache-size={{ .default }}
+{{- end }}
+{{- with .resources }}
+- --watch-cache-sizes={{ include "gardener-apiserver.resourceWatchCacheSize" . | trimSuffix "," }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{- define "gardener-apiserver.resourceWatchCacheSize" -}}
+{{- range . }}
+{{- required ".resource is required" .resource }}{{ if .apiGroup }}.{{ .apiGroup }}{{ end }}#{{ .size }},
+{{- end -}}
+{{- end -}}

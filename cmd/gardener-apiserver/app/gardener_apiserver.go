@@ -107,8 +107,8 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 
 	flags := cmd.Flags()
 	verflag.AddFlags(flags)
-	utilfeature.DefaultMutableFeatureGate.AddFlag(flags)
 	opts.Recommended.AddFlags(flags)
+	opts.ServerRunOptions.AddUniversalFlags(flags)
 	opts.ExtraOptions.AddFlags(flags)
 	return cmd
 }
@@ -116,6 +116,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 // Options has all the context and parameters needed to run a Gardener API server.
 type Options struct {
 	Recommended                 *genericoptions.RecommendedOptions
+	ServerRunOptions            *genericoptions.ServerRunOptions
 	ExtraOptions                *apiserver.ExtraOptions
 	CoreInformerFactory         gardencoreinformers.SharedInformerFactory
 	ExternalCoreInformerFactory gardenexternalcoreinformers.SharedInformerFactory
@@ -136,9 +137,10 @@ func NewOptions(out, errOut io.Writer) *Options {
 			),
 			genericoptions.NewProcessInfo("gardener-apiserver", "garden"),
 		),
-		ExtraOptions: &apiserver.ExtraOptions{},
-		StdOut:       out,
-		StdErr:       errOut,
+		ServerRunOptions: genericoptions.NewServerRunOptions(),
+		ExtraOptions:     &apiserver.ExtraOptions{},
+		StdOut:           out,
+		StdErr:           errOut,
 	}
 	o.Recommended.Etcd.StorageConfig.EncodeVersioner = runtime.NewMultiGroupVersioner(
 		gardencorev1beta1.SchemeGroupVersion,
@@ -150,8 +152,9 @@ func NewOptions(out, errOut io.Writer) *Options {
 
 // validate validates all the required options.
 func (o Options) validate(args []string) error {
-	errs := []error{}
+	var errs []error
 	errs = append(errs, o.Recommended.Validate()...)
+	errs = append(errs, o.ServerRunOptions.Validate()...)
 	errs = append(errs, o.ExtraOptions.Validate()...)
 
 	// Require server certificate specification
@@ -358,6 +361,9 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	gardenerAPIServerConfig.OpenAPIConfig.Info.Version = gardenerVersion.GitVersion
 	gardenerAPIServerConfig.Version = &gardenerVersion
 
+	if err := o.ServerRunOptions.ApplyTo(&gardenerAPIServerConfig.Config); err != nil {
+		return err
+	}
 	if err := o.Recommended.SecureServing.ApplyTo(&gardenerAPIServerConfig.SecureServing, &gardenerAPIServerConfig.LoopbackClientConfig); err != nil {
 		return err
 	}
