@@ -243,7 +243,7 @@ func BootstrapSeed(ctx context.Context, c client.Client, namespace, seedVersion,
 		configMapImageVectorOverwrite.Data = map[string]string{druidConfigMapImageVectorOverwriteDataKey: *imageVectorOverwrite}
 		resourcesToAdd = append(resourcesToAdd, configMapImageVectorOverwrite)
 
-		deployment.Spec.Template.Labels["checksum/configmap-imagevector-overwrite"] = utils.ComputeChecksum(configMapImageVectorOverwrite.Data)
+		metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/configmap-imagevector-overwrite", utils.ComputeChecksum(configMapImageVectorOverwrite.Data))
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
 			Name: druidDeploymentVolumeNameImageVectorOverwrite,
 			VolumeSource: corev1.VolumeSource{
