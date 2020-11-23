@@ -48,7 +48,6 @@ const (
 )
 
 var _ = Describe("Shoot NetworkPolicy Chart", func() {
-
 	var (
 		c            client.Client
 		ctx          context.Context
@@ -89,24 +88,35 @@ var _ = Describe("Shoot NetworkPolicy Chart", func() {
 					},
 				},
 				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-				Egress: []networkingv1.NetworkPolicyEgressRule{{
-					Ports: []networkingv1.NetworkPolicyPort{
-						{Protocol: &udp, Port: &port53},
-						{Protocol: &tcp, Port: &port53},
-						{Protocol: &udp, Port: &port8053},
-						{Protocol: &tcp, Port: &port8053},
-					},
-					To: []networkingv1.NetworkPolicyPeer{{
-						PodSelector: &metav1.LabelSelector{
-							MatchExpressions: []metav1.LabelSelectorRequirement{{
-								Key:      "k8s-app",
-								Operator: metav1.LabelSelectorOpIn,
-								Values:   []string{"kube-dns"},
-							}},
+				Egress: []networkingv1.NetworkPolicyEgressRule{
+					{
+						Ports: []networkingv1.NetworkPolicyPort{
+							{Protocol: &udp, Port: &port8053},
+							{Protocol: &tcp, Port: &port8053},
+						},
+						To: []networkingv1.NetworkPolicyPeer{
+							{
+								PodSelector: &metav1.LabelSelector{
+									MatchExpressions: []metav1.LabelSelectorRequirement{{
+										Key:      "k8s-app",
+										Operator: metav1.LabelSelectorOpIn,
+										Values:   []string{"kube-dns"},
+									}},
+								},
+							},
 						},
 					},
+					{
+						Ports: []networkingv1.NetworkPolicyPort{
+							{Protocol: &udp, Port: &port53},
+							{Protocol: &tcp, Port: &port53},
+						},
+						To: []networkingv1.NetworkPolicyPeer{{
+							IPBlock: &networkingv1.IPBlock{
+								CIDR: "0.0.0.0/0",
+							},
+						}},
 					},
-				},
 				},
 			},
 		}

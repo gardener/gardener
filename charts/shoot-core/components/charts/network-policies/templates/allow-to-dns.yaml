@@ -26,10 +26,16 @@ spec:
     {{- end }}
     ports:
     - protocol: UDP
-      port: 53
+      port: 8053
     - protocol: TCP
-      port: 53
+      port: 8053
+  # this allows Pods with 'dnsPolicy: Default' to talk to
+  # the node's DNS provider.
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
     - protocol: UDP
-      port: 8053
+      port: 53
     - protocol: TCP
-      port: 8053
+      port: 53
