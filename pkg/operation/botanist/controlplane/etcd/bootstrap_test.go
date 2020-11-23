@@ -262,9 +262,10 @@ spec:
   strategy: {}
   template:
     metadata:
+      annotations:
+        checksum/configmap-imagevector-overwrite: a131f53775a6f537386a63d22cf474b338bbab6d55e439b884c7dea9e148933d
       creationTimestamp: null
       labels:
-        checksum/configmap-imagevector-overwrite: a131f53775a6f537386a63d22cf474b338bbab6d55e439b884c7dea9e148933d
         gardener.cloud/role: etcd-druid
     spec:
       containers:
