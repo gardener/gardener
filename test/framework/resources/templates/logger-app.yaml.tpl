@@ -21,6 +21,7 @@ spec:
           - /bin/sh
           - -c
           - |-
+            /logs-generator --logtostderr --log-lines-total=1 --run-duration=180s
             /logs-generator --logtostderr --log-lines-total=${LOGS_GENERATOR_LINES_TOTAL} --run-duration=${LOGS_GENERATOR_DURATION}
 
             # Sleep forever to prevent restarts
@@ -31,4 +32,4 @@ spec:
         - name: LOGS_GENERATOR_LINES_TOTAL
           value: "{{ .LogsCount }}"
         - name: LOGS_GENERATOR_DURATION
-          value: 1s
+          value: 90s

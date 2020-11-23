@@ -23,6 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardenextensionsscheme "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -216,6 +217,7 @@ func (f *ShootFramework) AddShoot(ctx context.Context, shootName, shootNamespace
 		apiextensionsscheme.AddToScheme,
 		apiregistrationscheme.AddToScheme,
 		metricsscheme.AddToScheme,
+		gardenextensionsscheme.AddToScheme,
 	)
 	err = shootSchemeBuilder.AddToScheme(shootScheme)
 	if err != nil {
