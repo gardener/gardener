@@ -82,13 +82,13 @@ func (b *Botanist) constraintsChecks(
 
 	var newHibernationConstraint, newMaintenancePreconditionsSatisfiedConstraint *gardencorev1beta1.Condition
 
-	status, reason, message, err := b.CheckForProblematicWebhooks(ctx, hibernationPossibleConstraint)
+	status, reason, message, err := b.CheckForProblematicWebhooks(ctx)
 	if err == nil {
-		c := gardencorev1beta1helper.UpdatedCondition(hibernationPossibleConstraint, status, reason, message)
-		newHibernationConstraint = &c
+		updatedHibernationCondition := gardencorev1beta1helper.UpdatedCondition(hibernationPossibleConstraint, status, reason, message)
+		newHibernationConstraint = &updatedHibernationCondition
 
-		c = gardencorev1beta1helper.UpdatedCondition(maintenancePreconditionsSatisfiedConstraint, status, reason, message)
-		newMaintenancePreconditionsSatisfiedConstraint = &c
+		updatedMaintenanceCondition := gardencorev1beta1helper.UpdatedCondition(maintenancePreconditionsSatisfiedConstraint, status, reason, message)
+		newMaintenancePreconditionsSatisfiedConstraint = &updatedMaintenanceCondition
 	}
 
 	hibernationPossibleConstraint = newConditionOrError(hibernationPossibleConstraint, newHibernationConstraint, err)
@@ -99,7 +99,7 @@ func (b *Botanist) constraintsChecks(
 
 // CheckForProblematicWebhooks checks the Shoot for problematic webhooks which could prevent shoot worker nodes from
 // joining the cluster.
-func (b *Botanist) CheckForProblematicWebhooks(ctx context.Context, constraint gardencorev1beta1.Condition) (gardencorev1beta1.ConditionStatus, string, string, error) {
+func (b *Botanist) CheckForProblematicWebhooks(ctx context.Context) (gardencorev1beta1.ConditionStatus, string, string, error) {
 	validatingWebhookConfigs := &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}
 	if err := b.K8sShootClient.Client().List(ctx, validatingWebhookConfigs); err != nil {
 		return "", "", "", fmt.Errorf("could not get ValidatingWebhookConfigurations of Shoot cluster to check for problematic webhooks")
