@@ -213,6 +213,27 @@ func (a *genericActuator) cleanupMachineClassSecrets(ctx context.Context, logger
 	return nil
 }
 
+// updateCloudCredentialsInAllMachineClassSecrets updates the cloud credentials
+// for all existing machine class secrets.
+func (a *genericActuator) updateCloudCredentialsInAllMachineClassSecrets(ctx context.Context, logger logr.Logger, cloudCredentials map[string][]byte, namespace string) error {
+	logger.Info("Updating cloud credentials for existing machine class secrets")
+	secretList, err := a.listMachineClassSecrets(ctx, namespace)
+	if err != nil {
+		return errors.Wrapf(err, "failed to list machine class secrets in namespace %s", namespace)
+	}
+
+	for _, secret := range secretList.Items {
+		secretCopy := secret.DeepCopy()
+		for key, value := range cloudCredentials {
+			secretCopy.Data[key] = value
+		}
+		if err := a.client.Patch(ctx, secretCopy, client.MergeFrom(&secret)); err != nil {
+			return errors.Wrapf(err, "failed to patch secret %s/%s with cloud credentials", namespace, secret.Name)
+		}
+	}
+	return nil
+}
+
 // shallowDeleteMachineClassSecrets deletes all unused machine class secrets (i.e., those which are not part
 // of the provided list <usedSecrets>) without waiting for MCM to do this.
 func (a *genericActuator) shallowDeleteMachineClassSecrets(ctx context.Context, logger logr.Logger, namespace string, wantedMachineDeployments worker.MachineDeployments) error {
