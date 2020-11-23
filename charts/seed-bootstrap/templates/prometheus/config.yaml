@@ -63,6 +63,9 @@ data:
       - source_labels: [ pod ]
         regex: ^.+\.tf-pod.+$
         action: drop
+{{- if .Values.prometheus.additionalCAdvisorScrapeConfigMetricRelabelConfigs }}
+{{ toString .Values.prometheus.additionalCAdvisorScrapeConfigMetricRelabelConfigs | indent 6 }}
+{{- end }}
 
     - job_name: kubelet
       honor_labels: false

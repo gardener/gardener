@@ -353,7 +353,10 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	}
 
 	// Fetch component-specific central monitoring configuration
-	var centralScrapeConfigs = strings.Builder{}
+	var (
+		centralScrapeConfigs                            = strings.Builder{}
+		centralCAdvisorScrapeConfigMetricRelabelConfigs = strings.Builder{}
+	)
 
 	for _, componentFn := range []component.CentralMonitoringConfiguration{
 		etcd.CentralMonitoringConfiguration,
@@ -362,8 +365,13 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		if err != nil {
 			return err
 		}
+
 		for _, config := range centralMonitoringConfig.ScrapeConfigs {
 			centralScrapeConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
+		}
+
+		for _, config := range centralMonitoringConfig.CAdvisorScrapeConfigMetricRelabelConfigs {
+			centralCAdvisorScrapeConfigMetricRelabelConfigs.WriteString(fmt.Sprintf("- %s\n", utils.Indent(config, 2)))
 		}
 	}
 
@@ -696,6 +704,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		"prometheus": map[string]interface{}{
 			"storage":                 seed.GetValidVolumeSize("10Gi"),
 			"additionalScrapeConfigs": centralScrapeConfigs.String(),
+			"additionalCAdvisorScrapeConfigMetricRelabelConfigs": centralCAdvisorScrapeConfigMetricRelabelConfigs.String(),
 		},
 		"aggregatePrometheus": map[string]interface{}{
 			"storage":    seed.GetValidVolumeSize("20Gi"),

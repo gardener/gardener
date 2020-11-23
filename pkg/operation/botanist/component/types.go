@@ -28,6 +28,8 @@ type Secret struct {
 type CentralMonitoringConfig struct {
 	// ScrapeConfigs are the scrape configurations for central Prometheus.
 	ScrapeConfigs []string
+	// CAdvisorScrapeConfigMetricRelabelConfigs are metric_relabel_configs for the cadvisor scrape config job.
+	CAdvisorScrapeConfigMetricRelabelConfigs []string
 }
 
 // CentralLoggingConfig is a structure that contains configuration for the central logging stack.
