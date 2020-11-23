@@ -163,6 +163,21 @@ global:
           value: "1G"
           percentage: 70
 
+ #  goAwayChance: 0.1
+ #  http2MaxStreamsPerConnection: 1000
+ #  shutdownDelayDuration: 20s
+ #  requests:
+ #    maxNonMutatingInflight: 400
+ #    maxMutatingInflight: 200
+ #    minTimeout: 1m0s
+ #    timeout: 1m0s
+ #  watchCacheSizes:
+ #    default: 100
+ #    resources:
+ #    - apiGroup: core.gardener.cloud
+ #      resource: shoots
+ #      size: 500
+
     audit:
  #    dynamicConfiguration: false                             Enables dynamic audit configuration. This feature also requires the DynamicAuditing feature flag
       log:

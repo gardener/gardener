@@ -201,14 +201,38 @@ spec:
         {{- end }}
         {{- end }}
         {{- include "gardener-apiserver.featureGates" . | trimSuffix "," | indent 8 }}
+        {{- if .Values.global.apiserver.goAwayChance }}
+        - --goaway-chance={{ .Values.global.apiserver.goAwayChance }}
+        {{- end }}
+        {{- if .Values.global.apiserver.http2MaxStreamsPerConnection }}
+        - --http2-max-streams-per-connection={{ .Values.global.apiserver.http2MaxStreamsPerConnection }}
+        {{- end }}
         {{- if .Values.global.apiserver.kubeconfig }}
         - --authentication-kubeconfig=/etc/gardener-apiserver/kubeconfig/kubeconfig
         - --authorization-kubeconfig=/etc/gardener-apiserver/kubeconfig/kubeconfig
         - --kubeconfig=/etc/gardener-apiserver/kubeconfig/kubeconfig
         {{- end }}
+        {{- if .Values.global.apiserver.requests }}
+        {{- if .Values.global.apiserver.requests.maxMutatingInflight }}
+        - --max-mutating-requests-inflight={{ .Values.global.apiserver.requests.maxMutatingInflight }}
+        {{- end }}
+        {{- if .Values.global.apiserver.requests.maxNonMutatingInflight }}
+        - --max-requests-inflight={{ .Values.global.apiserver.requests.maxNonMutatingInflight }}
+        {{- end }}
+        {{- if .Values.global.apiserver.requests.minTimeout }}
+        - --min-request-timeout={{ .Values.global.apiserver.requests.minTimeout }}
+        {{- end }}
+        {{- if .Values.global.apiserver.requests.timeout }}
+        - --request-timeout={{ .Values.global.apiserver.requests.timeout }}
+        {{- end }}
+        {{- end }}
         - --secure-port=443
+        {{- if .Values.global.apiserver.shutdownDelayDuration }}
+        - --shutdown-delay-duration={{ .Values.global.apiserver.shutdownDelayDuration }}
+        {{- end }}
         - --tls-cert-file=/etc/gardener-apiserver/srv/gardener-apiserver.crt
         - --tls-private-key-file=/etc/gardener-apiserver/srv/gardener-apiserver.key
+        {{- include "gardener-apiserver.watchCacheSizes" . | indent 8 }}
         - --v=2
         lifecycle:
           preStop:
