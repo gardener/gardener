@@ -248,15 +248,6 @@ var _ = Describe("health check", func() {
 			return deployments
 		}
 
-		withDeprecatedVpaDeployments = func(deploys ...*appsv1.Deployment) []*appsv1.Deployment {
-			var deployments = make([]*appsv1.Deployment, 0, len(deploys))
-			deployments = append(deployments, deploys...)
-			for _, deploymentName := range v1beta1constants.GetShootVPADeploymentNames() {
-				deployments = append(deployments, newDeployment(seedNamespace, deploymentName, "vpa", true))
-			}
-			return deployments
-		}
-
 		// control plane etcds
 		etcdMain   = newEtcd(seedNamespace, v1beta1constants.ETCDMain, v1beta1constants.GardenRoleControlPlane, true, nil)
 		etcdEvents = newEtcd(seedNamespace, v1beta1constants.ETCDEvents, v1beta1constants.GardenRoleControlPlane, true, nil)
@@ -344,22 +335,6 @@ var _ = Describe("health check", func() {
 			gcpShootWantsVPA,
 			"gcp",
 			withVpaDeployments(
-				gardenerResourceManagerDeployment,
-				kubeAPIServerDeployment,
-				kubeControllerManagerDeployment,
-				kubeSchedulerDeployment,
-			),
-			requiredControlPlaneEtcds,
-			[]*extensionsv1alpha1.Worker{
-				{Status: extensionsv1alpha1.WorkerStatus{DefaultStatus: extensionsv1alpha1.DefaultStatus{
-					LastOperation: &gardencorev1beta1.LastOperation{
-						State: gardencorev1beta1.LastOperationStateSucceeded}}}},
-			},
-			BeNil()),
-		Entry("all healthy (VPA deprecated deployment)",
-			gcpShootWantsVPA,
-			"gcp",
-			withDeprecatedVpaDeployments(
 				gardenerResourceManagerDeployment,
 				kubeAPIServerDeployment,
 				kubeControllerManagerDeployment,
@@ -693,14 +668,14 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckMonitoringControlPlane",
-		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, isHealthCheckObsolete, wantsAlertmanager bool, conditionMatcher types.GomegaMatcher) {
+		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, isTestingShoot, wantsAlertmanager bool, conditionMatcher types.GomegaMatcher) {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
 				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
 			)
 
-			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, isHealthCheckObsolete, wantsAlertmanager, condition, deploymentLister, statefulSetLister)
+			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, isTestingShoot, wantsAlertmanager, condition, deploymentLister, statefulSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
@@ -754,13 +729,13 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckLoggingControlPlane",
-		func(statefulSets []*appsv1.StatefulSet, isHealthCheckObsolete bool, conditionMatcher types.GomegaMatcher) {
+		func(statefulSets []*appsv1.StatefulSet, isTestingShoot bool, conditionMatcher types.GomegaMatcher) {
 			var (
 				statefulSetLister = constStatefulSetLister(statefulSets)
 				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
 			)
 
-			exitCondition, err := checker.CheckLoggingControlPlane(seedNamespace, isHealthCheckObsolete, condition, statefulSetLister)
+			exitCondition, err := checker.CheckLoggingControlPlane(seedNamespace, isTestingShoot, condition, statefulSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},

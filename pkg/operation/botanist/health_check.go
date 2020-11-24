@@ -311,10 +311,6 @@ func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.String {
 	return requiredMonitoringStatefulSets
 }
 
-// deprecatedGardenRoleVPA is the role name for VPA deployments used by older Gardener versions.
-// TODO: remove in a future version
-const deprecatedGardenRoleVPA = "vpa"
-
 // CheckControlPlane checks whether the control plane components in the given listers are complete and healthy.
 func (b *HealthChecker) CheckControlPlane(
 	shoot *gardencorev1beta1.Shoot,
@@ -333,14 +329,6 @@ func (b *HealthChecker) CheckControlPlane(
 	if err != nil {
 		return nil, err
 	}
-
-	// Required for backwards compatibility
-	// TODO: remove in a future version
-	vpaDeployments, err := deploymentLister.Deployments(namespace).List(mustGardenRoleLabelSelector(deprecatedGardenRoleVPA))
-	if err != nil {
-		return nil, err
-	}
-	deployments = append(deployments, vpaDeployments...)
 
 	if exitCondition := b.checkRequiredDeployments(condition, requiredControlPlaneDeployments, deployments); exitCondition != nil {
 		return exitCondition, nil
@@ -476,11 +464,11 @@ func (b *HealthChecker) CheckMonitoringControlPlane(
 // CheckLoggingControlPlane checks whether the logging components in the given listers are complete and healthy.
 func (b *HealthChecker) CheckLoggingControlPlane(
 	namespace string,
-	checkObsolete bool,
+	isTestingShoot bool,
 	condition gardencorev1beta1.Condition,
 	statefulSetLister kutil.StatefulSetLister,
 ) (*gardencorev1beta1.Condition, error) {
-	if checkObsolete {
+	if isTestingShoot {
 		return nil, nil
 	}
 
@@ -555,7 +543,7 @@ func (b *Botanist) checkControlPlane(
 		return exitCondition, err
 	}
 	if gardenletfeatures.FeatureGate.Enabled(features.Logging) {
-		if exitCondition, err := checker.CheckLoggingControlPlane(b.Shoot.SeedNamespace, b.isLoggingHealthCheckObsolete(), condition, seedStatefulSetLister); err != nil || exitCondition != nil {
+		if exitCondition, err := checker.CheckLoggingControlPlane(b.Shoot.SeedNamespace, b.Shoot.GetPurpose() == gardencorev1beta1.ShootPurposeTesting, condition, seedStatefulSetLister); err != nil || exitCondition != nil {
 			return exitCondition, err
 		}
 	}
@@ -793,8 +781,6 @@ var (
 		v1beta1constants.GardenRoleControlPlane,
 		v1beta1constants.GardenRoleMonitoring,
 		v1beta1constants.GardenRoleLogging,
-		// TODO: remove in a future version
-		deprecatedGardenRoleVPA,
 	)
 )
 
@@ -866,30 +852,6 @@ func (b *Botanist) healthChecks(
 	})(ctx)
 
 	return apiserverAvailability, controlPlane, nodes, systemComponents
-}
-
-/*Shoot clusters prior gardener v1.8 were using EFK based stack, but from this version onward Loki is used.
-On some landscapes, shoots clusters are reconciled only in their maintenance time window and to prevent failing health checks,
-they are executed only for shoots that have already been reconciled by Gardener v1.8.x+ */
-func (b *Botanist) isLoggingHealthCheckObsolete() bool {
-	if b.Shoot.GetPurpose() == gardencorev1beta1.ShootPurposeTesting {
-		return true
-	}
-
-	if b.Shoot == nil || b.Shoot.Info == nil {
-		return true
-	}
-
-	c, err := semver.NewConstraint("<1.8.0")
-	if err != nil {
-		return true
-	}
-
-	lastGardenerVersion, err := semver.NewVersion(b.Shoot.Info.Status.Gardener.Version)
-	if err != nil {
-		return true
-	}
-	return c.Check(lastGardenerVersion)
 }
 
 func isUnstableLastOperation(lastOperation *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError) bool {
