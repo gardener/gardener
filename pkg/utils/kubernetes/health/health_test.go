@@ -227,6 +227,59 @@ var _ = Describe("health", func() {
 		)
 	})
 
+	Describe("CheckSeedForMigration", func() {
+		DescribeTable("seeds",
+			func(seed *gardencorev1beta1.Seed, identity *gardencorev1beta1.Gardener, matcher types.GomegaMatcher) {
+				Expect(health.CheckSeedForMigration(seed, identity)).To(matcher)
+			},
+			Entry("healthy with matching version", &gardencorev1beta1.Seed{
+				Status: gardencorev1beta1.SeedStatus{
+					Gardener: &gardencorev1beta1.Gardener{Version: "1.12.8"},
+					Conditions: []gardencorev1beta1.Condition{
+						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+					},
+				},
+			}, &gardencorev1beta1.Gardener{Version: "1.12.8"}, Succeed()),
+			Entry("healthy with non-matching version", &gardencorev1beta1.Seed{
+				Status: gardencorev1beta1.SeedStatus{
+					Gardener: &gardencorev1beta1.Gardener{Version: "1.12.8"},
+					Conditions: []gardencorev1beta1.Condition{
+						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+					},
+				},
+			}, &gardencorev1beta1.Gardener{Version: "1.13.8"}, HaveOccurred()),
+			Entry("unhealthy available condition (bootstrapped) and matching version", &gardencorev1beta1.Seed{
+				Status: gardencorev1beta1.SeedStatus{
+					Gardener: &gardencorev1beta1.Gardener{Version: "1.12.8"},
+					Conditions: []gardencorev1beta1.Condition{
+						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionTrue},
+						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionFalse},
+					},
+				},
+			}, &gardencorev1beta1.Gardener{Version: "1.12.8"}, HaveOccurred()),
+			Entry("unhealthy available condition (gardenlet ready) and matching version", &gardencorev1beta1.Seed{
+				Status: gardencorev1beta1.SeedStatus{
+					Gardener: &gardencorev1beta1.Gardener{Version: "1.12.8"},
+					Conditions: []gardencorev1beta1.Condition{
+						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionFalse},
+						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionTrue},
+					},
+				},
+			}, &gardencorev1beta1.Gardener{Version: "1.12.8"}, HaveOccurred()),
+			Entry("unhealthy available condition (both conditions) and matching version", &gardencorev1beta1.Seed{
+				Status: gardencorev1beta1.SeedStatus{
+					Gardener: &gardencorev1beta1.Gardener{Version: "1.12.8"},
+					Conditions: []gardencorev1beta1.Condition{
+						{Type: gardencorev1beta1.SeedGardenletReady, Status: gardencorev1beta1.ConditionFalse},
+						{Type: gardencorev1beta1.SeedBootstrapped, Status: gardencorev1beta1.ConditionFalse},
+					},
+				},
+			}, &gardencorev1beta1.Gardener{Version: "1.12.8"}, HaveOccurred()),
+		)
+	})
+
 	Describe("CheckExtensionObject", func() {
 		DescribeTable("extension objects",
 			func(obj runtime.Object, match types.GomegaMatcher) {

@@ -205,7 +205,7 @@ func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Res
 	log = log.WithField("operation", "reconcile")
 
 	if shouldPrepareShootForMigration(shoot) {
-		if err := c.isSeedAvailable(seed); err != nil {
+		if err := c.isSeedReadyForMigration(seed); err != nil {
 			return reconcile.Result{}, fmt.Errorf("target Seed is not available to host the Control Plane of Shoot %s: %v", shoot.GetName(), err)
 		}
 
@@ -365,12 +365,12 @@ func (c *Controller) finalizeShootDeletion(ctx context.Context, gardenClient kub
 	return reconcile.Result{}, c.removeFinalizerFrom(ctx, gardenClient, shoot)
 }
 
-func (c *Controller) isSeedAvailable(seed *gardencorev1beta1.Seed) error {
+func (c *Controller) isSeedReadyForMigration(seed *gardencorev1beta1.Seed) error {
 	if seed.DeletionTimestamp != nil {
 		return fmt.Errorf("seed is set for deletion")
 	}
 
-	return health.CheckSeed(seed, c.identity)
+	return health.CheckSeedForMigration(seed, c.identity)
 }
 
 func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
