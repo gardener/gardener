@@ -32,7 +32,7 @@ import (
 )
 
 // DefaultInfrastructure creates the default deployer for the Infrastructure custom resource.
-func (b *Botanist) DefaultInfrastructure(seedClient client.Client) shoot.Infrastructure {
+func (b *Botanist) DefaultInfrastructure(seedClient client.Client) shoot.ExtensionInfrastructure {
 	return infrastructure.New(
 		b.Logger,
 		seedClient,

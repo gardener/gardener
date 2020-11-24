@@ -286,7 +286,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		waitUntilControlPlaneReady = g.Add(flow.Task{
 			Name:         "Waiting until Shoot control plane has been reconciled",
-			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneReady).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ControlPlane.Wait).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded),
 			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
 		generateEncryptionConfigurationMetaData = g.Add(flow.Task{
@@ -330,7 +330,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		waitUntilControlPlaneExposureReady = g.Add(flow.Task{
 			Name:         "Waiting until Shoot control plane exposure has been reconciled",
-			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneExposureReady).SkipIf(useSNI).DoIf(cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ControlPlaneExposure.Wait).SkipIf(useSNI).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deployControlPlaneExposure),
 		})
 		initializeShootClients = g.Add(flow.Task{
@@ -491,12 +491,12 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		)
 		destroyControlPlane = g.Add(flow.Task{
 			Name:         "Destroying shoot control plane",
-			Fn:           flow.TaskFn(botanist.DestroyControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ControlPlane.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 		waitUntilControlPlaneDeleted = g.Add(flow.Task{
 			Name:         "Waiting until shoot control plane has been destroyed",
-			Fn:           botanist.WaitUntilControlPlaneDeleted,
+			Fn:           botanist.Shoot.Components.Extensions.ControlPlane.WaitCleanup,
 			Dependencies: flow.NewTaskIDs(destroyControlPlane),
 		})
 
@@ -508,12 +508,12 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 
 		destroyControlPlaneExposure = g.Add(flow.Task{
 			Name:         "Destroying shoot control plane exposure",
-			Fn:           flow.TaskFn(botanist.DestroyControlPlaneExposure),
+			Fn:           botanist.Shoot.Components.Extensions.ControlPlaneExposure.Destroy,
 			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
 		})
 		waitUntilControlPlaneExposureDeleted = g.Add(flow.Task{
 			Name:         "Waiting until shoot control plane exposure has been destroyed",
-			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneExposureDeleted),
+			Fn:           botanist.Shoot.Components.Extensions.ControlPlaneExposure.WaitCleanup,
 			Dependencies: flow.NewTaskIDs(destroyControlPlaneExposure),
 		})
 

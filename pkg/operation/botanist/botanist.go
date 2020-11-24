@@ -24,6 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
@@ -73,6 +74,8 @@ func New(o *operation.Operation) (*Botanist, error) {
 	}
 
 	// extension components
+	o.Shoot.Components.Extensions.ControlPlane = b.DefaultControlPlane(b.K8sSeedClient.DirectClient(), extensionsv1alpha1.Normal)
+	o.Shoot.Components.Extensions.ControlPlaneExposure = b.DefaultControlPlane(b.K8sSeedClient.DirectClient(), extensionsv1alpha1.Exposure)
 	o.Shoot.Components.Extensions.DNS.ExternalProvider = b.DefaultExternalDNSProvider(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.DNS.ExternalOwner = b.DefaultExternalDNSOwner(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.DNS.ExternalEntry = b.DefaultExternalDNSEntry(b.K8sSeedClient.DirectClient())

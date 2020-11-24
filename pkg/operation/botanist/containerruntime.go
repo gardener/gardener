@@ -24,7 +24,7 @@ import (
 )
 
 // DefaultContainerRuntime creates the default deployer for the ContainerRuntime custom resource.
-func (b *Botanist) DefaultContainerRuntime(seedClient client.Client) shoot.ContainerRuntime {
+func (b *Botanist) DefaultContainerRuntime(seedClient client.Client) shoot.ExtensionContainerRuntime {
 	return containerruntime.New(
 		b.Logger,
 		seedClient,

@@ -57,21 +57,21 @@ type Values struct {
 type containerruntime struct {
 	values              *Values
 	client              client.Client
-	logger              *logrus.Entry
+	logger              logrus.FieldLogger
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
 }
 
-// New creates a new instance of ContainerRuntime deployer.
+// New creates a new instance of ExtensionContainerRuntime deployer.
 func New(
-	logger *logrus.Entry,
+	logger logrus.FieldLogger,
 	client client.Client,
 	values *Values,
 	waitInterval time.Duration,
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
-) shoot.ContainerRuntime {
+) shoot.ExtensionContainerRuntime {
 	return &containerruntime{
 		values:              values,
 		client:              client,
@@ -127,7 +127,7 @@ func (d *containerruntime) WaitCleanup(ctx context.Context) error {
 		d.logger,
 		&extensionsv1alpha1.ContainerRuntimeList{},
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ContainerRuntime{} },
-		"ContainerRuntime",
+		extensionsv1alpha1.ContainerRuntimeResource,
 		d.values.Namespace,
 		d.waitInterval,
 		d.waitTimeout,
@@ -135,7 +135,7 @@ func (d *containerruntime) WaitCleanup(ctx context.Context) error {
 	)
 }
 
-// Restore uses the seed client and the ShootState to create the ContainereRuntime resources and restore their state.
+// Restore uses the seed client and the ShootState to create the ContainerRuntime resources and restore their state.
 func (d *containerruntime) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
 	fns := d.forEachContainerRuntime(func(ctx context.Context, workerName string, cr gardencorev1beta1.ContainerRuntime) error {
 		rd := resourceDeployer{d.values.Namespace, workerName, cr, d.client}

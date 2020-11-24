@@ -32,8 +32,10 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
+	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -374,198 +376,53 @@ func (b *Botanist) PrepareKubeAPIServerForMigration(ctx context.Context) error {
 	return b.DeleteKubeAPIServer(ctx)
 }
 
-// ControlPlaneDefaultTimeout is the default timeout and defines how long Gardener should wait
-// for a successful reconciliation of a control plane resource.
-const ControlPlaneDefaultTimeout = 3 * time.Minute
+// DefaultControlPlane creates the default deployer for the ControlPlane custom resource with the given purpose.
+func (b *Botanist) DefaultControlPlane(seedClient client.Client, purpose extensionsv1alpha1.Purpose) shoot.ExtensionControlPlane {
+	values := &extensionscontrolplane.Values{
+		Name:      b.Shoot.Info.Name,
+		Namespace: b.Shoot.SeedNamespace,
+		Purpose:   purpose,
+	}
 
-// DeployControlPlane creates the `ControlPlane` extension resource in the shoot namespace in the seed
-// cluster. Gardener waits until an external controller did reconcile the cluster successfully.
+	switch purpose {
+	case extensionsv1alpha1.Normal:
+		values.Type = b.Shoot.Info.Spec.Provider.Type
+		values.ProviderConfig = b.Shoot.Info.Spec.Provider.ControlPlaneConfig
+		values.Region = b.Shoot.Info.Spec.Region
+
+	case extensionsv1alpha1.Exposure:
+		values.Type = b.Seed.Info.Spec.Provider.Type
+		values.Region = b.Seed.Info.Spec.Provider.Region
+	}
+
+	return extensionscontrolplane.New(
+		b.Logger,
+		seedClient,
+		values,
+		extensionscontrolplane.DefaultInterval,
+		extensionscontrolplane.DefaultSevereThreshold,
+		extensionscontrolplane.DefaultTimeout,
+	)
+}
+
+// DeployControlPlane deploys or restores the ControlPlane custom resource (purpose normal).
 func (b *Botanist) DeployControlPlane(ctx context.Context) error {
-	var (
-		restorePhase      = b.isRestorePhase()
-		gardenerOperation = v1beta1constants.GardenerOperationReconcile
-		cp                = &extensionsv1alpha1.ControlPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      b.Shoot.Info.Name,
-				Namespace: b.Shoot.SeedNamespace,
-			},
-		}
-		providerConfig *runtime.RawExtension
-	)
-
-	if cfg := b.Shoot.Info.Spec.Provider.ControlPlaneConfig; cfg != nil {
-		providerConfig = &runtime.RawExtension{
-			Raw: cfg.Raw,
-		}
-	}
-
-	if restorePhase {
-		gardenerOperation = v1beta1constants.GardenerOperationWaitForState
-	}
-
-	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), cp, func() error {
-		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1beta1constants.GardenerOperation, gardenerOperation)
-		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
-
-		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
-			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type:           string(b.Shoot.Info.Spec.Provider.Type),
-				ProviderConfig: providerConfig,
-			},
-			Region: b.Shoot.Info.Spec.Region,
-			SecretRef: corev1.SecretReference{
-				Name:      v1beta1constants.SecretNameCloudProvider,
-				Namespace: cp.Namespace,
-			},
-			InfrastructureProviderStatus: &runtime.RawExtension{
-				Raw: b.Shoot.InfrastructureStatus,
-			},
-		}
-		return nil
+	b.Shoot.Components.Extensions.ControlPlane.SetInfrastructureProviderStatus(&runtime.RawExtension{
+		Raw: b.Shoot.InfrastructureStatus,
 	})
-	if err != nil {
-		return err
-	}
-
-	if restorePhase {
-		return b.restoreExtensionObject(ctx, cp, extensionsv1alpha1.ControlPlaneResource)
-	}
-
-	return nil
+	return b.deployOrRestoreControlPlane(ctx, b.Shoot.Components.Extensions.ControlPlane)
 }
 
-const controlPlaneExposureSuffix = "-exposure"
-
-// DeployControlPlaneExposure creates the `ControlPlane` extension resource with purpose `exposure` in the shoot
-// namespace in the seed cluster. Gardener waits until an external controller did reconcile the cluster successfully.
+// DeployControlPlane deploys or restores the ControlPlane custom resource (purpose exposure).
 func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
-	var (
-		restorePhase      = b.isRestorePhase()
-		gardenerOperation = v1beta1constants.GardenerOperationReconcile
-		cp                = &extensionsv1alpha1.ControlPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      b.Shoot.Info.Name + controlPlaneExposureSuffix,
-				Namespace: b.Shoot.SeedNamespace,
-			},
-		}
-	)
+	return b.deployOrRestoreControlPlane(ctx, b.Shoot.Components.Extensions.ControlPlaneExposure)
+}
 
-	purpose := new(extensionsv1alpha1.Purpose)
-	*purpose = extensionsv1alpha1.Exposure
-
-	if restorePhase {
-		gardenerOperation = v1beta1constants.GardenerOperationWaitForState
+func (b *Botanist) deployOrRestoreControlPlane(ctx context.Context, controlPlane shoot.ExtensionControlPlane) error {
+	if b.isRestorePhase() {
+		return controlPlane.Restore(ctx, b.ShootState)
 	}
-
-	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), cp, func() error {
-		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1beta1constants.GardenerOperation, gardenerOperation)
-		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
-		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
-			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type: b.Seed.Info.Spec.Provider.Type,
-			},
-			Region:  b.Seed.Info.Spec.Provider.Region,
-			Purpose: purpose,
-			SecretRef: corev1.SecretReference{
-				Name:      v1beta1constants.SecretNameCloudProvider,
-				Namespace: cp.Namespace,
-			},
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	if restorePhase {
-		return b.restoreExtensionObject(ctx, cp, extensionsv1alpha1.ControlPlaneResource)
-	}
-	return nil
-}
-
-// DestroyControlPlane deletes the `ControlPlane` extension resource in the shoot namespace in the seed cluster,
-// and it waits for a maximum of 10m until it is deleted.
-func (b *Botanist) DestroyControlPlane(ctx context.Context) error {
-	return b.destroyControlPlane(ctx, b.Shoot.Info.Name)
-}
-
-// DestroyControlPlaneExposure deletes the `ControlPlane` extension resource with purpose `exposure`
-// in the shoot namespace in the seed cluster, and it waits for a maximum of 10m until it is deleted.
-func (b *Botanist) DestroyControlPlaneExposure(ctx context.Context) error {
-	return b.destroyControlPlane(ctx, b.Shoot.Info.Name+controlPlaneExposureSuffix)
-}
-
-// destroyControlPlane deletes the `ControlPlane` extension resource with the following name in the shoot namespace
-// in the seed cluster, and it waits for a maximum of 10m until it is deleted.
-func (b *Botanist) destroyControlPlane(ctx context.Context, name string) error {
-	return common.DeleteExtensionCR(
-		ctx,
-		b.K8sSeedClient.Client(),
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
-		b.Shoot.SeedNamespace,
-		name,
-	)
-}
-
-// WaitUntilControlPlaneExposureReady waits until the control plane resource with purpose `exposure` has been reconciled successfully.
-func (b *Botanist) WaitUntilControlPlaneExposureReady(ctx context.Context) error {
-	return b.waitUntilControlPlaneReady(ctx, b.Shoot.Info.Name+controlPlaneExposureSuffix)
-}
-
-// WaitUntilControlPlaneReady waits until the control plane resource has been reconciled successfully.
-func (b *Botanist) WaitUntilControlPlaneReady(ctx context.Context) error {
-	return b.waitUntilControlPlaneReady(ctx, b.Shoot.Info.Name)
-}
-
-// waitUntilControlPlaneReady waits until the control plane resource has been reconciled successfully.
-func (b *Botanist) waitUntilControlPlaneReady(ctx context.Context, name string) error {
-	return common.WaitUntilExtensionCRReady(
-		ctx,
-		b.K8sSeedClient.DirectClient(),
-		b.Logger,
-		func() runtime.Object { return &extensionsv1alpha1.ControlPlane{} },
-		"ControlPlane",
-		b.Shoot.SeedNamespace,
-		name,
-		DefaultInterval,
-		DefaultSevereThreshold,
-		ControlPlaneDefaultTimeout,
-		func(o runtime.Object) error {
-			obj, ok := o.(extensionsv1alpha1.Object)
-			if !ok {
-				return fmt.Errorf("expected extensionsv1alpha1.Object but got %T", o)
-			}
-			if providerStatus := obj.GetExtensionStatus().GetProviderStatus(); providerStatus != nil {
-				b.Shoot.ControlPlaneStatus = providerStatus.Raw
-			}
-			return nil
-		},
-	)
-}
-
-// WaitUntilControlPlaneExposureDeleted waits until the control plane resource with purpose `exposure` has been deleted.
-func (b *Botanist) WaitUntilControlPlaneExposureDeleted(ctx context.Context) error {
-	return b.waitUntilControlPlaneDeleted(ctx, b.Shoot.Info.Name+controlPlaneExposureSuffix)
-}
-
-// WaitUntilControlPlaneDeleted waits until the control plane resource has been deleted.
-func (b *Botanist) WaitUntilControlPlaneDeleted(ctx context.Context) error {
-	return b.waitUntilControlPlaneDeleted(ctx, b.Shoot.Info.Name)
-}
-
-// waitUntilControlPlaneDeleted waits until the control plane resource with the following name has been deleted.
-func (b *Botanist) waitUntilControlPlaneDeleted(ctx context.Context, name string) error {
-	return common.WaitUntilExtensionCRDeleted(
-		ctx,
-		b.K8sSeedClient.DirectClient(),
-		b.Logger,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
-		"ControlPlane",
-		b.Shoot.SeedNamespace,
-		name,
-		DefaultInterval,
-		ControlPlaneDefaultTimeout,
-	)
+	return controlPlane.Deploy(ctx)
 }
 
 // DeployGardenerResourceManager deploys the gardener-resource-manager which will use CRD resources in order

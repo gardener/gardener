@@ -208,11 +208,7 @@ func DeleteExtensionCR(
 		return err
 	}
 
-	if err := client.IgnoreNotFound(c.Delete(ctx, obj, deleteOpts...)); err != nil {
-		return err
-	}
-
-	return nil
+	return client.IgnoreNotFound(c.Delete(ctx, obj, deleteOpts...))
 }
 
 // DeleteExtensionCRs lists all extension resources and loops over them. It executes the given <predicateFunc> for each
@@ -365,7 +361,7 @@ func RestoreExtensionWithDeployFunction(
 	return AnnotateExtensionObjectWithOperation(ctx, c, extensionObj, v1beta1constants.GardenerOperationRestore)
 }
 
-//RestoreExtensionObjectState restores the status.state field of the extension resources and deploys any required resources from the provided shoot state
+// RestoreExtensionObjectState restores the status.state field of the extension resources and deploys any required resources from the provided shoot state
 func RestoreExtensionObjectState(
 	ctx context.Context,
 	c client.Client,

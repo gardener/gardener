@@ -215,7 +215,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		})
 		waitUntilControlPlaneReady = g.Add(flow.Task{
 			Name:         "Waiting until shoot control plane has been reconciled",
-			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneReady),
+			Fn:           botanist.Shoot.Components.Extensions.ControlPlane.Wait,
 			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
 		generateEncryptionConfigurationMetaData = g.Add(flow.Task{
@@ -263,17 +263,17 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		})
 		waitUntilControlPlaneExposureReady = g.Add(flow.Task{
 			Name:         "Waiting until Shoot control plane exposure has been reconciled",
-			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneExposureReady).SkipIf(useSNI),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ControlPlaneExposure.Wait).SkipIf(useSNI),
 			Dependencies: flow.NewTaskIDs(deployControlPlaneExposure),
 		})
 		destroyControlPlaneExposure = g.Add(flow.Task{
 			Name:         "Destroying shoot control plane exposure",
-			Fn:           flow.TaskFn(botanist.DestroyControlPlaneExposure).DoIf(useSNI),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ControlPlaneExposure.Destroy).DoIf(useSNI),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		waitUntilControlPlaneExposureDeleted = g.Add(flow.Task{
 			Name:         "Waiting until shoot control plane exposure has been destroyed",
-			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneExposureDeleted).DoIf(useSNI),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ControlPlaneExposure.WaitCleanup).DoIf(useSNI),
 			Dependencies: flow.NewTaskIDs(destroyControlPlaneExposure),
 		})
 		initializeShootClients = g.Add(flow.Task{

@@ -47,7 +47,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("#Infrastructure", func() {
+var _ = Describe("#ExtensionInfrastructure", func() {
 	const (
 		namespace    = "test-namespace"
 		name         = "test-deploy"
@@ -69,7 +69,7 @@ var _ = Describe("#Infrastructure", func() {
 
 		infra        *extensionsv1alpha1.Infrastructure
 		values       *infrastructure.Values
-		deployWaiter shoot.Infrastructure
+		deployWaiter shoot.ExtensionInfrastructure
 		waiter       *retryfake.Ops
 
 		cleanupFunc func()
