@@ -90,21 +90,21 @@ type InitializerConfig struct {
 	InitializeState bool
 }
 
-func (t *terraformer) initializerConfig() *InitializerConfig {
+func (t *terraformer) initializerConfig(ctx context.Context) *InitializerConfig {
 	return &InitializerConfig{
 		Namespace:         t.namespace,
 		ConfigurationName: t.configName,
 		VariablesName:     t.variablesName,
 		StateName:         t.stateName,
-		InitializeState:   t.IsStateEmpty(),
+		InitializeState:   t.IsStateEmpty(ctx),
 	}
 }
 
 // InitializeWith initializes the Terraformer with the given Initializer. It is expected from the
 // Initializer to correctly create all the resources as specified in the given InitializerConfig.
 // A default implementation can be found in DefaultInitializer.
-func (t *terraformer) InitializeWith(initializer Initializer) Terraformer {
-	if err := initializer.Initialize(t.initializerConfig()); err != nil {
+func (t *terraformer) InitializeWith(ctx context.Context, initializer Initializer) Terraformer {
+	if err := initializer.Initialize(ctx, t.initializerConfig(ctx)); err != nil {
 		t.logger.Errorf("Could not create the Terraform ConfigMaps/Secrets: %s", err.Error())
 		return t
 	}
@@ -149,18 +149,17 @@ func CreateOrUpdateTFVarsSecret(ctx context.Context, c client.Client, namespace,
 }
 
 // initializerFunc implements Initializer.
-type initializerFunc func(config *InitializerConfig) error
+type initializerFunc func(ctx context.Context, config *InitializerConfig) error
 
 // Initialize implements Initializer.
-func (f initializerFunc) Initialize(config *InitializerConfig) error {
-	return f(config)
+func (f initializerFunc) Initialize(ctx context.Context, config *InitializerConfig) error {
+	return f(ctx, config)
 }
 
 // DefaultInitializer is an Initializer that initializes the configuration, variables and state resources
 // based on the given main, variables and tfvars content and on the given InitializerConfig.
 func DefaultInitializer(c client.Client, main, variables string, tfvars []byte, stateInitializer StateConfigMapInitializer) Initializer {
-	return initializerFunc(func(config *InitializerConfig) error {
-		ctx := context.TODO()
+	return initializerFunc(func(ctx context.Context, config *InitializerConfig) error {
 		if _, err := CreateOrUpdateConfigurationConfigMap(ctx, c, config.Namespace, config.ConfigurationName, main, variables); err != nil {
 			return err
 		}
@@ -221,8 +220,8 @@ func (t *terraformer) NumberOfResources(ctx context.Context) (int, error) {
 }
 
 // ConfigExists returns true if all three Terraform configuration secrets/configmaps exist, and false otherwise.
-func (t *terraformer) ConfigExists() (bool, error) {
-	numberOfExistingResources, err := t.NumberOfResources(context.TODO())
+func (t *terraformer) ConfigExists(ctx context.Context) (bool, error) {
+	numberOfExistingResources, err := t.NumberOfResources(ctx)
 	return numberOfExistingResources == numberOfConfigResources, err
 }
 
