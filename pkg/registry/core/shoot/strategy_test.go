@@ -349,28 +349,6 @@ var _ = Describe("Strategy", func() {
 				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
 			})
 		})
-
-		Context("admission plugin migration", func() {
-			It("should remove conflicting admission plugins", func() {
-				oldShoot := &core.Shoot{}
-				newShoot := oldShoot.DeepCopy()
-				newShoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{
-					AdmissionPlugins: []core.AdmissionPlugin{
-						{Name: "foo"},
-						{Name: "bar"},
-						{Name: "SecurityContextDeny"},
-						{Name: "baz"},
-					},
-				}
-
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins).To(ConsistOf(
-					Equal(core.AdmissionPlugin{Name: "foo"}),
-					Equal(core.AdmissionPlugin{Name: "bar"}),
-					Equal(core.AdmissionPlugin{Name: "baz"}),
-				))
-			})
-		})
 	})
 })
 

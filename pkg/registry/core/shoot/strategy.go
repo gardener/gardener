@@ -66,16 +66,6 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
-
-	// Remove the conflicting "SecurityContextDeny" admission plugin if present
-	// TODO: This can be removed in a future release.
-	if newShoot.Spec.Kubernetes.KubeAPIServer != nil {
-		for i := len(newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins) - 1; i >= 0; i-- {
-			if newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[i].Name == "SecurityContextDeny" {
-				newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = append(newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[:i], newShoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins[i+1:]...)
-			}
-		}
-	}
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {

@@ -121,5 +121,5 @@ func IsEmptyPatch(patch []byte) bool {
 
 // SubmitEmptyPatch submits an empty patch to the given `obj` with the given `client` instance.
 func SubmitEmptyPatch(ctx context.Context, c client.Client, obj runtime.Object) error {
-	return c.Patch(ctx, obj, client.ConstantPatch(types.StrategicMergePatchType, []byte("{}")))
+	return c.Patch(ctx, obj, client.RawPatch(types.StrategicMergePatchType, []byte("{}")))
 }

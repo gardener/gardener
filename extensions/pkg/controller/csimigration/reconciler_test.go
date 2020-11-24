@@ -56,7 +56,7 @@ var _ = Describe("reconciler", func() {
 			storageClassName              = "foo"
 			storageClassProvisioner       = "bar"
 
-			emptyPatch                      = client.ConstantPatch(types.StrategicMergePatchType, []byte("{}"))
+			emptyPatch                      = client.RawPatch(types.StrategicMergePatchType, []byte("{}"))
 			kubeAPIServerDeployment         = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: clusterName}}
 			kubeControllerManagerDeployment = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager, Namespace: clusterName}}
 			kubeSchedulerDeployment         = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler, Namespace: clusterName}}

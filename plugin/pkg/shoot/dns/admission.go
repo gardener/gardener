@@ -28,12 +28,10 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
-	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
@@ -46,13 +44,6 @@ const (
 	// PluginName is the name of this admission plugin.
 	PluginName = "ShootDNS"
 )
-
-var log = logger.NewLogger("").WithField("admission", PluginName)
-
-// SetLogger sets the logger for this admission plugin.
-func SetLogger(logger *logrus.Entry) {
-	log = logger
-}
 
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
