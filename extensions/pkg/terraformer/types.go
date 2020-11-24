@@ -97,8 +97,6 @@ const (
 type Terraformer interface {
 	UseV2(bool) Terraformer
 	SetLogLevel(string) Terraformer
-	// Deprecated: use SetEnvVars instead
-	SetVariablesEnvironment(tfVarsEnvironment map[string]string) Terraformer
 	SetEnvVars(envVars ...corev1.EnvVar) Terraformer
 	SetTerminationGracePeriodSeconds(int64) Terraformer
 	SetDeadlineCleaning(time.Duration) Terraformer

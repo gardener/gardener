@@ -16,9 +16,6 @@ package terraformer
 
 import (
 	"context"
-	"fmt"
-	"sort"
-	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -40,23 +37,6 @@ const (
 	// StateKey is the key of the terraform.tfstate file inside the state ConfigMap.
 	StateKey = "terraform.tfstate"
 )
-
-// SetVariablesEnvironment sets the provided <tfvarsEnvironment> on the Terraformer object.
-// Deprecated: use SetEnvVars instead
-func (t *terraformer) SetVariablesEnvironment(tfvarsEnvironment map[string]string) Terraformer {
-	var envVars []corev1.EnvVar
-	for k, v := range tfvarsEnvironment {
-		envVars = append(envVars, corev1.EnvVar{Name: k, Value: v})
-	}
-
-	// maps are unsorted, sort resulting slice after looping over map to avoid flickering results
-	sort.Slice(envVars, func(i, j int) bool {
-		return envVars[i].Name < envVars[j].Name
-	})
-
-	t.envVars = append(t.envVars, envVars...)
-	return t
-}
 
 // SetEnvVars sets the provided environment variables for the Terraformer Pod.
 func (t *terraformer) SetEnvVars(envVars ...corev1.EnvVar) Terraformer {
@@ -278,15 +258,4 @@ func (t *terraformer) EnsureCleanedUp(ctx context.Context) error {
 	}
 
 	return t.WaitForCleanEnvironment(ctx)
-}
-
-// GenerateVariablesEnvironment takes a <secret> and a <keyValueMap> and builds an environment which
-// can be injected into the Terraformer pod manifest. The keys of the <keyValueMap> will be prefixed with
-// 'TF_VAR_' and the value will be used to extract the respective data from the <secret>.
-func GenerateVariablesEnvironment(secret *corev1.Secret, keyValueMap map[string]string) map[string]string {
-	out := make(map[string]string, len(keyValueMap))
-	for key, value := range keyValueMap {
-		out[fmt.Sprintf("TF_VAR_%s", key)] = strings.TrimSpace(string(secret.Data[value]))
-	}
-	return out
 }
