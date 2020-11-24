@@ -16,9 +16,6 @@ package operation
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"net/http"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -31,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
-	prometheusapi "github.com/prometheus/client_golang/api"
 	prometheusclient "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -79,15 +75,4 @@ type Operation struct {
 
 	// ControlPlaneWildcardCert is a wildcard tls certificate which is issued for the seed's ingress domain.
 	ControlPlaneWildcardCert *corev1.Secret
-}
-
-type prometheusRoundTripper struct {
-	authHeader string
-	ca         *x509.CertPool
-}
-
-func (r prometheusRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Set("Authorization", r.authHeader)
-	prometheusapi.DefaultRoundTripper.(*http.Transport).TLSClientConfig = &tls.Config{RootCAs: r.ca}
-	return prometheusapi.DefaultRoundTripper.RoundTrip(req)
 }

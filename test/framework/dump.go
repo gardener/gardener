@@ -393,23 +393,6 @@ func (f *CommonFramework) dumpPodInfoForNamespace(ctx context.Context, ctxIdenti
 }
 
 // dumpEventsInNamespace prints all events of a namespace
-func (f *CommonFramework) dumpEventsInAllNamespace(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, filters ...EventFilterFunc) error {
-	namespaces := &corev1.NamespaceList{}
-	if err := k8sClient.DirectClient().List(ctx, namespaces); err != nil {
-		return err
-	}
-
-	var result error
-
-	for _, ns := range namespaces.Items {
-		if err := f.dumpEventsInNamespace(ctx, ctxIdentifier, k8sClient, ns.Name); err != nil {
-			result = multierror.Append(result, err)
-		}
-	}
-	return result
-}
-
-// dumpEventsInNamespace prints all events of a namespace
 func (f *CommonFramework) dumpEventsInNamespace(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, namespace string, filters ...EventFilterFunc) error {
 	f.Logger.Infof("%s [NAMESPACE %s] [EVENTS]", ctxIdentifier, namespace)
 	events := &corev1.EventList{}

@@ -22,7 +22,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/dns"
 
@@ -38,9 +37,7 @@ import (
 )
 
 var _ = Describe("dns", func() {
-	BeforeSuite(func() {
-		SetLogger(logger.NewNopLogger().WithField("test", "dns"))
-	})
+
 	Describe("#Admit", func() {
 		var (
 			admissionHandler    *DNS
