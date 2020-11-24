@@ -4,7 +4,7 @@ metadata:
   name: blackbox-exporter
   namespace: kube-system
   labels:
-    garden.sapcloud.io/role: monitoring
+    gardener.cloud/role: monitoring
     component: blackbox-exporter
     origin: gardener
 spec:
@@ -19,7 +19,7 @@ spec:
         checksum/configmap-blackbox-exporter-config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
       labels:
         origin: gardener
-        garden.sapcloud.io/role: monitoring
+        gardener.cloud/role: monitoring
         component: blackbox-exporter
         networking.gardener.cloud/from-seed: allowed
         networking.gardener.cloud/to-dns: allowed

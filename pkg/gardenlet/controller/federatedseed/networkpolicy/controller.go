@@ -80,8 +80,7 @@ func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDef
 	)
 
 	shootNamespaceSelector := labels.SelectorFromSet(labels.Set{
-		v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleShoot,
-		v1beta1constants.GardenRole:           v1beta1constants.GardenRoleShoot,
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
 	})
 
 	controller := &Controller{

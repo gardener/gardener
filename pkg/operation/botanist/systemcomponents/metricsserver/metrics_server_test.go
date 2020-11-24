@@ -198,7 +198,7 @@ kind: Deployment
 metadata:
   creationTimestamp: null
   labels:
-    garden.sapcloud.io/role: system-component
+    gardener.cloud/role: system-component
     k8s-app: metrics-server
     origin: gardener
   name: metrics-server
@@ -218,7 +218,7 @@ spec:
         scheduler.alpha.kubernetes.io/critical-pod: ""
       creationTimestamp: null
       labels:
-        garden.sapcloud.io/role: system-component
+        gardener.cloud/role: system-component
         k8s-app: metrics-server
         networking.gardener.cloud/from-seed: allowed
         networking.gardener.cloud/to-apiserver: allowed
@@ -288,7 +288,7 @@ kind: Deployment
 metadata:
   creationTimestamp: null
   labels:
-    garden.sapcloud.io/role: system-component
+    gardener.cloud/role: system-component
     k8s-app: metrics-server
     origin: gardener
   name: metrics-server
@@ -308,7 +308,7 @@ spec:
         scheduler.alpha.kubernetes.io/critical-pod: ""
       creationTimestamp: null
       labels:
-        garden.sapcloud.io/role: system-component
+        gardener.cloud/role: system-component
         k8s-app: metrics-server
         networking.gardener.cloud/from-seed: allowed
         networking.gardener.cloud/to-apiserver: allowed

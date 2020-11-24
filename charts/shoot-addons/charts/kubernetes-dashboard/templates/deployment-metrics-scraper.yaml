@@ -6,7 +6,7 @@ metadata:
   name: dashboard-metrics-scraper
   namespace: kubernetes-dashboard
   labels:
-    garden.sapcloud.io/role: optional-addon
+    gardener.cloud/role: optional-addon
     origin: gardener
     k8s-app: dashboard-metrics-scraper
 spec:
@@ -18,7 +18,7 @@ spec:
   template:
     metadata:
       labels:
-        garden.sapcloud.io/role: optional-addon
+        gardener.cloud/role: optional-addon
         k8s-app: dashboard-metrics-scraper
         origin: gardener
       annotations:

@@ -5,7 +5,6 @@ metadata:
     k8s-app: konnectivity-agent
     app: konnectivity-agent
     gardener.cloud/role: system-component
-    garden.sapcloud.io/role: system-component
     origin: gardener
   namespace: kube-system
   name: konnectivity-agent
@@ -22,7 +21,6 @@ spec:
         k8s-app: konnectivity-agent
         app: konnectivity-agent
         gardener.cloud/role: system-component
-        garden.sapcloud.io/role: system-component
         origin: gardener
       annotations:
 {{- if .Values.podAnnotations }}

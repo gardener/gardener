@@ -185,8 +185,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 		if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient.Client(), seed, func() error {
 			seed.Labels = utils.MergeStringMaps(map[string]string{
-				v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleSeed,
-				v1beta1constants.GardenRole:           v1beta1constants.GardenRoleSeed,
+				v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
 			}, c.config.SeedConfig.Labels)
 			seed.Spec = c.config.SeedConfig.Seed.Spec
 			return nil

@@ -5,7 +5,6 @@ kind: ClusterRole
 metadata:
   name: gardener.cloud:admin
   labels:
-    garden.sapcloud.io/role: admin
     gardener.cloud/role: admin
 rules:
 - apiGroups:
@@ -57,11 +56,7 @@ metadata:
 aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
-      garden.sapcloud.io/role: admin
-  - matchLabels:
       gardener.cloud/role: admin
-  - matchLabels:
-      garden.sapcloud.io/role: project-member
   - matchLabels:
       gardener.cloud/role: project-member
 rules: []
@@ -234,7 +229,6 @@ kind: ClusterRole
 metadata:
   name: gardener.cloud:system:project-viewer
   labels:
-    garden.sapcloud.io/role: project-viewer
     gardener.cloud/role: project-viewer
     app: gardener
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"

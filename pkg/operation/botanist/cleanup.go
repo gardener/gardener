@@ -70,7 +70,7 @@ var (
 	GracePeriodFiveMinutes = utilclient.DeleteWith{client.GracePeriodSeconds(5 * 60)}
 
 	// NotSystemComponent is a requirement that something doesn't have the GardenRole GardenRoleSystemComponent.
-	NotSystemComponent = utils.MustNewRequirement(v1beta1constants.DeprecatedGardenRole, selection.NotEquals, v1beta1constants.GardenRoleSystemComponent)
+	NotSystemComponent = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.NotEquals, v1beta1constants.GardenRoleSystemComponent)
 	// NoCleanupPrevention is a requirement that the ShootNoCleanup label of something is not true.
 	NoCleanupPrevention = utils.MustNewRequirement(common.ShootNoCleanup, selection.NotEquals, "true")
 	// NotKubernetesProvider is a requirement that the Provider label of something is not KubernetesProvider.

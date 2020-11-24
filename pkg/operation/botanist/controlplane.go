@@ -78,7 +78,6 @@ func (b *Botanist) DeployNamespace(ctx context.Context) error {
 			v1beta1constants.DeprecatedShootUID: string(b.Shoot.Info.Status.UID),
 		}
 		namespace.Labels = map[string]string{
-			v1beta1constants.DeprecatedGardenRole:    v1beta1constants.GardenRoleShoot,
 			v1beta1constants.GardenRole:              v1beta1constants.GardenRoleShoot,
 			v1beta1constants.LabelSeedProvider:       string(b.Seed.Info.Spec.Provider.Type),
 			v1beta1constants.LabelShootProvider:      string(b.Shoot.Info.Spec.Provider.Type),

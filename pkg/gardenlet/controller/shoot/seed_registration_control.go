@@ -399,8 +399,7 @@ func registerAsSeed(ctx context.Context, gardenClient client.Client, seedClient 
 
 	_, err = controllerutil.CreateOrUpdate(ctx, gardenClient, seed, func() error {
 		seed.Labels = utils.MergeStringMaps(shoot.Labels, map[string]string{
-			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleSeed,
-			v1beta1constants.GardenRole:           v1beta1constants.GardenRoleSeed,
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
 		})
 		seed.Spec = *seedSpec
 		return nil

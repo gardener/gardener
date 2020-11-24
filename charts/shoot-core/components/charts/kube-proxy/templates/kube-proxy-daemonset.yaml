@@ -5,7 +5,7 @@ metadata:
   name: kube-proxy
   namespace: kube-system
   labels:
-    garden.sapcloud.io/role: system-component
+    gardener.cloud/role: system-component
     origin: gardener
 spec:
   updateStrategy:
@@ -25,7 +25,7 @@ spec:
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
       labels:
-        garden.sapcloud.io/role: system-component
+        gardener.cloud/role: system-component
         origin: gardener
         app: kubernetes
         role: proxy

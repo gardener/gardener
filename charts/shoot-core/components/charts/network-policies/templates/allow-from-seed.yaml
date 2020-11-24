@@ -20,5 +20,5 @@ spec:
     - podSelector:
         matchLabels:
           app: vpn-shoot
-          garden.sapcloud.io/role: system-component
+          gardener.cloud/role: system-component
           origin: gardener

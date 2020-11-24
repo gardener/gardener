@@ -6,7 +6,6 @@ metadata:
   namespace: kube-system
   labels:
     gardener.cloud/role: system-component
-    garden.sapcloud.io/role: system-component
     origin: gardener
     k8s-app: node-local-dns
 spec:

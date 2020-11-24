@@ -4,7 +4,7 @@ metadata:
   name: kubernetes-dashboard
   namespace: {{ include "kubernetes-dashboard.namespace" . }}
   labels:
-    garden.sapcloud.io/role: optional-addon
+    gardener.cloud/role: optional-addon
     origin: gardener
     k8s-app: kubernetes-dashboard
 spec:
@@ -21,7 +21,7 @@ spec:
   template:
     metadata:
       labels:
-        garden.sapcloud.io/role: optional-addon
+        gardener.cloud/role: optional-addon
         origin: gardener
         k8s-app: kubernetes-dashboard
     spec:
