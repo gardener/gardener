@@ -237,7 +237,7 @@ data:
         Name        docker
         Format      json
         Time_Key    time
-        Time_Format %Y-%m-%dT%H:%M:%S.%L
+        Time_Format %Y-%m-%dT%H:%M:%S.%L%z
         Time_Keep   On
         # Command      |  Decoder | Field | Optional Action
         # =============|==================|=================

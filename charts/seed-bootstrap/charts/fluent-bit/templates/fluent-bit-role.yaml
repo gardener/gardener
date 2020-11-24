@@ -5,10 +5,6 @@ metadata:
   labels:
     {{- toYaml .Values.labels | nindent 4 }}
 rules:
-- apiGroups: [""]
-  resources:
-  - pods
-  verbs: ["get", "list", "watch"]
 - apiGroups:
   - extensions.gardener.cloud
   resources:
