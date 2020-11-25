@@ -26,6 +26,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
@@ -50,7 +51,7 @@ var _ = Describe("Etcd", func() {
 		ctx                       = context.TODO()
 		fakeErr                   = fmt.Errorf("fake error")
 		namespace                 = "shoot--foo--bar"
-		seedVersion               = "1.12.0"
+		seedVersion               = semver.MustParse("1.12.0")
 		etcdDruidImage            = "etcd/druid:1.2.3"
 		imageVectorOverwriteEmpty *string
 		imageVectorOverwriteFull  = pointer.StringPtr("some overwrite")
@@ -402,7 +403,7 @@ status: {}
 
 		Context("k8s < 1.12", func() {
 			BeforeEach(func() {
-				seedVersion = "1.11.2"
+				seedVersion = semver.MustParse("1.11.2")
 				managedResourceSecret.Data["crd.yaml"] = []byte(crdK8sSmaller112YAML)
 			})
 
