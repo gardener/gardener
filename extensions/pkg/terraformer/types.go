@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
@@ -46,7 +46,7 @@ import (
 type terraformer struct {
 	useV2 bool
 
-	logger       logrus.FieldLogger
+	logger       logr.Logger
 	client       client.Client
 	coreV1Client corev1client.CoreV1Interface
 
@@ -97,35 +97,33 @@ const (
 type Terraformer interface {
 	UseV2(bool) Terraformer
 	SetLogLevel(string) Terraformer
-	// Deprecated: use SetEnvVars instead
-	SetVariablesEnvironment(tfVarsEnvironment map[string]string) Terraformer
 	SetEnvVars(envVars ...corev1.EnvVar) Terraformer
 	SetTerminationGracePeriodSeconds(int64) Terraformer
 	SetDeadlineCleaning(time.Duration) Terraformer
 	SetDeadlinePod(time.Duration) Terraformer
-	InitializeWith(initializer Initializer) Terraformer
-	Apply() error
-	Destroy() error
-	GetRawState(context.Context) (*RawState, error)
-	GetState() ([]byte, error)
-	IsStateEmpty() bool
+	InitializeWith(ctx context.Context, initializer Initializer) Terraformer
+	Apply(ctx context.Context) error
+	Destroy(ctx context.Context) error
+	GetRawState(ctx context.Context) (*RawState, error)
+	GetState(ctx context.Context) ([]byte, error)
+	IsStateEmpty(ctx context.Context) bool
 	CleanupConfiguration(ctx context.Context) error
-	GetStateOutputVariables(variables ...string) (map[string]string, error)
-	ConfigExists() (bool, error)
-	NumberOfResources(context.Context) (int, error)
+	GetStateOutputVariables(ctx context.Context, variables ...string) (map[string]string, error)
+	ConfigExists(ctx context.Context) (bool, error)
+	NumberOfResources(ctx context.Context) (int, error)
 	EnsureCleanedUp(ctx context.Context) error
 	WaitForCleanEnvironment(ctx context.Context) error
 }
 
 // Initializer can initialize a Terraformer.
 type Initializer interface {
-	Initialize(config *InitializerConfig) error
+	Initialize(ctx context.Context, config *InitializerConfig) error
 }
 
 // Factory is a factory that can produce Terraformer and Initializer.
 type Factory interface {
-	NewForConfig(logger logrus.FieldLogger, config *rest.Config, purpose, namespace, name, image string) (Terraformer, error)
-	New(logger logrus.FieldLogger, client client.Client, coreV1Client corev1client.CoreV1Interface, purpose, namespace, name, image string) Terraformer
+	NewForConfig(logger logr.Logger, config *rest.Config, purpose, namespace, name, image string) (Terraformer, error)
+	New(logger logr.Logger, client client.Client, coreV1Client corev1client.CoreV1Interface, purpose, namespace, name, image string) Terraformer
 	DefaultInitializer(c client.Client, main, variables string, tfVars []byte, stateInitializer StateConfigMapInitializer) Initializer
 }
 

@@ -19,9 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -30,6 +28,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var (
@@ -41,11 +43,18 @@ var _ = Describe("terraformer", func() {
 	var (
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
+		ctx  context.Context
+
+		log logr.Logger
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
+
+		ctx = context.Background()
+
+		log = logzap.New(logzap.WriteTo(GinkgoWriter))
 	})
 
 	AfterEach(func() {
@@ -81,7 +90,7 @@ var _ = Describe("terraformer", func() {
 					Create(gomock.Any(), expected.DeepCopy()),
 			)
 
-			actual, err := CreateOrUpdateConfigurationConfigMap(context.TODO(), c, namespace, name, main, variables)
+			actual, err := CreateOrUpdateConfigurationConfigMap(ctx, c, namespace, name, main, variables)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(Equal(expected))
 		})
@@ -106,13 +115,13 @@ var _ = Describe("terraformer", func() {
 						StateKey: "",
 					},
 				}
-				stateConfigMapInitializer = StateConfigMapInitializerFunc(CreateState)
+				stateConfigMapInitializer = CreateState
 			})
 
 			It("should create the ConfigMap", func() {
 				c.EXPECT().Create(gomock.Any(), expected.DeepCopy())
 
-				err := stateConfigMapInitializer.Initialize(context.TODO(), c, namespace, name)
+				err := stateConfigMapInitializer.Initialize(ctx, c, namespace, name)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -121,7 +130,7 @@ var _ = Describe("terraformer", func() {
 					Create(gomock.Any(), expected.DeepCopy()).
 					Return(apierrors.NewAlreadyExists(configMapGroupResource, name))
 
-				err := stateConfigMapInitializer.Initialize(context.TODO(), c, namespace, name)
+				err := stateConfigMapInitializer.Initialize(ctx, c, namespace, name)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -130,7 +139,7 @@ var _ = Describe("terraformer", func() {
 					Create(gomock.Any(), expected.DeepCopy()).
 					Return(apierrors.NewForbidden(configMapGroupResource, name, fmt.Errorf("not allowed to create ConfigMap")))
 
-				err := stateConfigMapInitializer.Initialize(context.TODO(), c, namespace, name)
+				err := stateConfigMapInitializer.Initialize(ctx, c, namespace, name)
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
 			})
@@ -159,7 +168,7 @@ var _ = Describe("terraformer", func() {
 					c.EXPECT().Create(gomock.Any(), expected.DeepCopy()),
 				)
 
-				err := stateConfigMapInitializer.Initialize(context.TODO(), c, namespace, name)
+				err := stateConfigMapInitializer.Initialize(ctx, c, namespace, name)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -191,7 +200,7 @@ var _ = Describe("terraformer", func() {
 					Create(gomock.Any(), expected.DeepCopy()),
 			)
 
-			actual, err := CreateOrUpdateTFVarsSecret(context.TODO(), c, namespace, name, tfVars)
+			actual, err := CreateOrUpdateTFVarsSecret(ctx, c, namespace, name, tfVars)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(Equal(expected))
 		})
@@ -261,7 +270,7 @@ var _ = Describe("terraformer", func() {
 				state                                                   string
 				createState                                             *corev1.ConfigMap
 				configurationNotFound, variablesNotFound, stateNotFound *apierrors.StatusError
-				runInitializer                                          func(initializeState bool) error
+				runInitializer                                          func(ctx context.Context, initializeState bool) error
 			)
 
 			Context("When there is no init state", func() {
@@ -276,8 +285,8 @@ var _ = Describe("terraformer", func() {
 					configurationNotFound = apierrors.NewNotFound(configMapGroupResource, configurationName)
 					variablesNotFound = apierrors.NewNotFound(secretGroupResource, variablesName)
 
-					runInitializer = func(initializeState bool) error {
-						return DefaultInitializer(c, main, variables, tfVars, StateConfigMapInitializerFunc(CreateState)).Initialize(&InitializerConfig{
+					runInitializer = func(ctx context.Context, initializeState bool) error {
+						return DefaultInitializer(c, main, variables, tfVars, StateConfigMapInitializerFunc(CreateState)).Initialize(ctx, &InitializerConfig{
 							Namespace:         namespace,
 							ConfigurationName: configurationName,
 							VariablesName:     variablesName,
@@ -305,7 +314,7 @@ var _ = Describe("terraformer", func() {
 							Create(gomock.Any(), createState.DeepCopy()),
 					)
 
-					Expect(runInitializer(true)).NotTo(HaveOccurred())
+					Expect(runInitializer(ctx, true)).NotTo(HaveOccurred())
 				})
 
 				It("should not initialize state when initializeState is false", func() {
@@ -323,7 +332,7 @@ var _ = Describe("terraformer", func() {
 							Create(gomock.Any(), createVariables.DeepCopy()),
 					)
 
-					Expect(runInitializer(false)).NotTo(HaveOccurred())
+					Expect(runInitializer(ctx, false)).NotTo(HaveOccurred())
 				})
 			})
 
@@ -340,8 +349,8 @@ var _ = Describe("terraformer", func() {
 					variablesNotFound = apierrors.NewNotFound(secretGroupResource, variablesName)
 					stateNotFound = apierrors.NewNotFound(configMapGroupResource, stateName)
 
-					runInitializer = func(initializeState bool) error {
-						return DefaultInitializer(c, main, variables, tfVars, &CreateOrUpdateState{State: &state}).Initialize(&InitializerConfig{
+					runInitializer = func(ctx context.Context, initializeState bool) error {
+						return DefaultInitializer(c, main, variables, tfVars, &CreateOrUpdateState{State: &state}).Initialize(ctx, &InitializerConfig{
 							Namespace:         namespace,
 							ConfigurationName: configurationName,
 							VariablesName:     variablesName,
@@ -372,7 +381,7 @@ var _ = Describe("terraformer", func() {
 							Create(gomock.Any(), createState.DeepCopy()),
 					)
 
-					Expect(runInitializer(true)).NotTo(HaveOccurred())
+					Expect(runInitializer(ctx, true)).NotTo(HaveOccurred())
 				})
 
 				It("should not initialize state when initializeState is false", func() {
@@ -390,7 +399,7 @@ var _ = Describe("terraformer", func() {
 							Create(gomock.Any(), createVariables.DeepCopy()),
 					)
 
-					Expect(runInitializer(false)).NotTo(HaveOccurred())
+					Expect(runInitializer(ctx, false)).NotTo(HaveOccurred())
 				})
 			})
 		})
@@ -398,10 +407,10 @@ var _ = Describe("terraformer", func() {
 
 	Describe("#Apply", func() {
 		It("should return err when config is not defined", func() {
-			tf := New(nil, c, nil, "purpose", "namespace", "name", "image")
+			tf := New(log, c, nil, "purpose", "namespace", "name", "image")
 
-			err := tf.Apply()
-			Expect(err).To((HaveOccurred()))
+			err := tf.Apply(ctx)
+			Expect(err).To(HaveOccurred())
 		})
 	})
 
@@ -423,7 +432,7 @@ var _ = Describe("terraformer", func() {
 				"version": 1,
 			}
 			stateJSON, err := json.Marshal(state)
-			Expect(err).NotTo((HaveOccurred()))
+			Expect(err).NotTo(HaveOccurred())
 
 			c.EXPECT().
 				Get(gomock.Any(), stateKey, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
@@ -434,8 +443,8 @@ var _ = Describe("terraformer", func() {
 					return nil
 				})
 
-			terraformer := New(nil, c, nil, purpose, namespace, name, image)
-			actual, err := terraformer.GetStateOutputVariables("variableV1")
+			terraformer := New(log, c, nil, purpose, namespace, name, image)
+			actual, err := terraformer.GetStateOutputVariables(ctx, "variableV1")
 
 			Expect(actual).To(BeNil())
 			Expect(err).To(HaveOccurred())
@@ -455,7 +464,7 @@ var _ = Describe("terraformer", func() {
 				},
 			}
 			stateJSON, err := json.Marshal(state)
-			Expect(err).NotTo((HaveOccurred()))
+			Expect(err).NotTo(HaveOccurred())
 
 			c.EXPECT().
 				Get(gomock.Any(), stateKey, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
@@ -466,8 +475,8 @@ var _ = Describe("terraformer", func() {
 					return nil
 				})
 
-			terraformer := New(nil, c, nil, purpose, namespace, name, image)
-			actual, err := terraformer.GetStateOutputVariables("variableV3")
+			terraformer := New(log, c, nil, purpose, namespace, name, image)
+			actual, err := terraformer.GetStateOutputVariables(ctx, "variableV3")
 
 			expected := map[string]string{
 				"variableV3": "valueV3",
@@ -486,7 +495,7 @@ var _ = Describe("terraformer", func() {
 				},
 			}
 			stateJSON, err := json.Marshal(state)
-			Expect(err).NotTo((HaveOccurred()))
+			Expect(err).NotTo(HaveOccurred())
 
 			c.EXPECT().
 				Get(gomock.Any(), stateKey, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
@@ -497,8 +506,8 @@ var _ = Describe("terraformer", func() {
 					return nil
 				})
 
-			terraformer := New(nil, c, nil, purpose, namespace, name, image)
-			actual, err := terraformer.GetStateOutputVariables("variableV4")
+			terraformer := New(log, c, nil, purpose, namespace, name, image)
+			actual, err := terraformer.GetStateOutputVariables(ctx, "variableV4")
 
 			expected := map[string]string{
 				"variableV4": "valueV4",

@@ -16,9 +16,6 @@ package terraformer
 
 import (
 	"context"
-	"fmt"
-	"sort"
-	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -40,23 +37,6 @@ const (
 	// StateKey is the key of the terraform.tfstate file inside the state ConfigMap.
 	StateKey = "terraform.tfstate"
 )
-
-// SetVariablesEnvironment sets the provided <tfvarsEnvironment> on the Terraformer object.
-// Deprecated: use SetEnvVars instead
-func (t *terraformer) SetVariablesEnvironment(tfvarsEnvironment map[string]string) Terraformer {
-	var envVars []corev1.EnvVar
-	for k, v := range tfvarsEnvironment {
-		envVars = append(envVars, corev1.EnvVar{Name: k, Value: v})
-	}
-
-	// maps are unsorted, sort resulting slice after looping over map to avoid flickering results
-	sort.Slice(envVars, func(i, j int) bool {
-		return envVars[i].Name < envVars[j].Name
-	})
-
-	t.envVars = append(t.envVars, envVars...)
-	return t
-}
 
 // SetEnvVars sets the provided environment variables for the Terraformer Pod.
 func (t *terraformer) SetEnvVars(envVars ...corev1.EnvVar) Terraformer {
@@ -110,22 +90,22 @@ type InitializerConfig struct {
 	InitializeState bool
 }
 
-func (t *terraformer) initializerConfig() *InitializerConfig {
+func (t *terraformer) initializerConfig(ctx context.Context) *InitializerConfig {
 	return &InitializerConfig{
 		Namespace:         t.namespace,
 		ConfigurationName: t.configName,
 		VariablesName:     t.variablesName,
 		StateName:         t.stateName,
-		InitializeState:   t.IsStateEmpty(),
+		InitializeState:   t.IsStateEmpty(ctx),
 	}
 }
 
 // InitializeWith initializes the Terraformer with the given Initializer. It is expected from the
 // Initializer to correctly create all the resources as specified in the given InitializerConfig.
 // A default implementation can be found in DefaultInitializer.
-func (t *terraformer) InitializeWith(initializer Initializer) Terraformer {
-	if err := initializer.Initialize(t.initializerConfig()); err != nil {
-		t.logger.Errorf("Could not create the Terraform ConfigMaps/Secrets: %s", err.Error())
+func (t *terraformer) InitializeWith(ctx context.Context, initializer Initializer) Terraformer {
+	if err := initializer.Initialize(ctx, t.initializerConfig(ctx)); err != nil {
+		t.logger.Error(err, "Could not create Terraformer ConfigMaps/Secrets")
 		return t
 	}
 	t.configurationDefined = true
@@ -169,18 +149,17 @@ func CreateOrUpdateTFVarsSecret(ctx context.Context, c client.Client, namespace,
 }
 
 // initializerFunc implements Initializer.
-type initializerFunc func(config *InitializerConfig) error
+type initializerFunc func(ctx context.Context, config *InitializerConfig) error
 
 // Initialize implements Initializer.
-func (f initializerFunc) Initialize(config *InitializerConfig) error {
-	return f(config)
+func (f initializerFunc) Initialize(ctx context.Context, config *InitializerConfig) error {
+	return f(ctx, config)
 }
 
 // DefaultInitializer is an Initializer that initializes the configuration, variables and state resources
 // based on the given main, variables and tfvars content and on the given InitializerConfig.
 func DefaultInitializer(c client.Client, main, variables string, tfvars []byte, stateInitializer StateConfigMapInitializer) Initializer {
-	return initializerFunc(func(config *InitializerConfig) error {
-		ctx := context.TODO()
+	return initializerFunc(func(ctx context.Context, config *InitializerConfig) error {
 		if _, err := CreateOrUpdateConfigurationConfigMap(ctx, c, config.Namespace, config.ConfigurationName, main, variables); err != nil {
 			return err
 		}
@@ -241,25 +220,27 @@ func (t *terraformer) NumberOfResources(ctx context.Context) (int, error) {
 }
 
 // ConfigExists returns true if all three Terraform configuration secrets/configmaps exist, and false otherwise.
-func (t *terraformer) ConfigExists() (bool, error) {
-	numberOfExistingResources, err := t.NumberOfResources(context.TODO())
+func (t *terraformer) ConfigExists(ctx context.Context) (bool, error) {
+	numberOfExistingResources, err := t.NumberOfResources(ctx)
 	return numberOfExistingResources == numberOfConfigResources, err
 }
 
 // CleanupConfiguration deletes the two ConfigMaps which store the Terraform configuration and state. It also deletes
 // the Secret which stores the Terraform variables.
 func (t *terraformer) CleanupConfiguration(ctx context.Context) error {
-	t.logger.Debugf("Deleting Terraform variables Secret '%s'", t.variablesName)
+	t.logger.Info("Cleaning up all terraformer configuration")
+
+	t.logger.V(1).Info("Deleting Terraform variables Secret", "name", t.variablesName)
 	if err := t.client.Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.variablesName}}); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
-	t.logger.Debugf("Deleting Terraform configuration ConfigMap '%s'", t.configName)
+	t.logger.V(1).Info("Deleting Terraform configuration ConfigMap", "name", t.configName)
 	if err := t.client.Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.configName}}); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
-	t.logger.Debugf("Deleting Terraform state ConfigMap '%s'", t.stateName)
+	t.logger.V(1).Info("Deleting Terraform state ConfigMap", "name", t.stateName)
 	if err := t.client.Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.stateName}}); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
@@ -269,6 +250,8 @@ func (t *terraformer) CleanupConfiguration(ctx context.Context) error {
 
 // EnsureCleanedUp deletes the Terraformer pods, and waits until everything has been cleaned up.
 func (t *terraformer) EnsureCleanedUp(ctx context.Context) error {
+	t.logger.Info("Ensuring all terraformer Pods have been deleted")
+
 	podList, err := t.listTerraformerPods(ctx)
 	if err != nil {
 		return err
@@ -278,15 +261,4 @@ func (t *terraformer) EnsureCleanedUp(ctx context.Context) error {
 	}
 
 	return t.WaitForCleanEnvironment(ctx)
-}
-
-// GenerateVariablesEnvironment takes a <secret> and a <keyValueMap> and builds an environment which
-// can be injected into the Terraformer pod manifest. The keys of the <keyValueMap> will be prefixed with
-// 'TF_VAR_' and the value will be used to extract the respective data from the <secret>.
-func GenerateVariablesEnvironment(secret *corev1.Secret, keyValueMap map[string]string) map[string]string {
-	out := make(map[string]string, len(keyValueMap))
-	for key, value := range keyValueMap {
-		out[fmt.Sprintf("TF_VAR_%s", key)] = strings.TrimSpace(string(secret.Data[value]))
-	}
-	return out
 }

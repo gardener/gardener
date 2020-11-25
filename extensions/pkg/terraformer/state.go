@@ -44,8 +44,7 @@ type terraformStateV4 struct {
 }
 
 // GetState returns the Terraform state as byte slice.
-func (t *terraformer) GetState() ([]byte, error) {
-	ctx := context.TODO()
+func (t *terraformer) GetState(ctx context.Context) ([]byte, error) {
 	configMap := &corev1.ConfigMap{}
 	if err := t.client.Get(ctx, kutil.Key(t.namespace, t.stateName), configMap); err != nil {
 		return nil, err
@@ -56,7 +55,7 @@ func (t *terraformer) GetState() ([]byte, error) {
 
 // GetStateOutputVariables returns the given <variable> from the given Terraform <stateData>.
 // In case the variable was not found, an error is returned.
-func (t *terraformer) GetStateOutputVariables(variables ...string) (map[string]string, error) {
+func (t *terraformer) GetStateOutputVariables(ctx context.Context, variables ...string) (map[string]string, error) {
 	var (
 		output = make(map[string]string)
 
@@ -64,7 +63,7 @@ func (t *terraformer) GetStateOutputVariables(variables ...string) (map[string]s
 		foundVariables  = sets.NewString()
 	)
 
-	stateConfigMap, err := t.GetState()
+	stateConfigMap, err := t.GetState(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -93,8 +92,8 @@ func (t *terraformer) GetStateOutputVariables(variables ...string) (map[string]s
 }
 
 // IsStateEmpty returns true if the Terraform state is empty, and false otherwise.
-func (t *terraformer) IsStateEmpty() bool {
-	state, err := t.GetState()
+func (t *terraformer) IsStateEmpty(ctx context.Context) bool {
+	state, err := t.GetState(ctx)
 	if err != nil {
 		return apierrors.IsNotFound(err)
 	}
@@ -164,7 +163,7 @@ func sniffJSONStateVersion(stateConfigMap []byte) (uint64, error) {
 	return *sniff.Version, nil
 }
 
-// Initialize implements
+// Initialize implements StateConfigMapInitializer
 func (f StateConfigMapInitializerFunc) Initialize(ctx context.Context, c client.Client, namespace, name string) error {
 	return f(ctx, c, namespace, name)
 }

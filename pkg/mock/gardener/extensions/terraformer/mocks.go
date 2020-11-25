@@ -10,8 +10,8 @@ import (
 	time "time"
 
 	terraformer "github.com/gardener/gardener/extensions/pkg/terraformer"
+	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
-	logrus "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	v10 "k8s.io/client-go/kubernetes/typed/core/v1"
 	rest "k8s.io/client-go/rest"
@@ -42,17 +42,17 @@ func (m *MockTerraformer) EXPECT() *MockTerraformerMockRecorder {
 }
 
 // Apply mocks base method.
-func (m *MockTerraformer) Apply() error {
+func (m *MockTerraformer) Apply(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Apply")
+	ret := m.ctrl.Call(m, "Apply", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Apply indicates an expected call of Apply.
-func (mr *MockTerraformerMockRecorder) Apply() *gomock.Call {
+func (mr *MockTerraformerMockRecorder) Apply(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockTerraformer)(nil).Apply))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockTerraformer)(nil).Apply), arg0)
 }
 
 // CleanupConfiguration mocks base method.
@@ -70,32 +70,32 @@ func (mr *MockTerraformerMockRecorder) CleanupConfiguration(arg0 interface{}) *g
 }
 
 // ConfigExists mocks base method.
-func (m *MockTerraformer) ConfigExists() (bool, error) {
+func (m *MockTerraformer) ConfigExists(arg0 context.Context) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ConfigExists")
+	ret := m.ctrl.Call(m, "ConfigExists", arg0)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ConfigExists indicates an expected call of ConfigExists.
-func (mr *MockTerraformerMockRecorder) ConfigExists() *gomock.Call {
+func (mr *MockTerraformerMockRecorder) ConfigExists(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConfigExists", reflect.TypeOf((*MockTerraformer)(nil).ConfigExists))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConfigExists", reflect.TypeOf((*MockTerraformer)(nil).ConfigExists), arg0)
 }
 
 // Destroy mocks base method.
-func (m *MockTerraformer) Destroy() error {
+func (m *MockTerraformer) Destroy(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Destroy")
+	ret := m.ctrl.Call(m, "Destroy", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Destroy indicates an expected call of Destroy.
-func (mr *MockTerraformerMockRecorder) Destroy() *gomock.Call {
+func (mr *MockTerraformerMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockTerraformer)(nil).Destroy))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockTerraformer)(nil).Destroy), arg0)
 }
 
 // EnsureCleanedUp mocks base method.
@@ -128,25 +128,25 @@ func (mr *MockTerraformerMockRecorder) GetRawState(arg0 interface{}) *gomock.Cal
 }
 
 // GetState mocks base method.
-func (m *MockTerraformer) GetState() ([]byte, error) {
+func (m *MockTerraformer) GetState(arg0 context.Context) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetState")
+	ret := m.ctrl.Call(m, "GetState", arg0)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetState indicates an expected call of GetState.
-func (mr *MockTerraformerMockRecorder) GetState() *gomock.Call {
+func (mr *MockTerraformerMockRecorder) GetState(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetState", reflect.TypeOf((*MockTerraformer)(nil).GetState))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetState", reflect.TypeOf((*MockTerraformer)(nil).GetState), arg0)
 }
 
 // GetStateOutputVariables mocks base method.
-func (m *MockTerraformer) GetStateOutputVariables(arg0 ...string) (map[string]string, error) {
+func (m *MockTerraformer) GetStateOutputVariables(arg0 context.Context, arg1 ...string) (map[string]string, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{}
-	for _, a := range arg0 {
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetStateOutputVariables", varargs...)
@@ -156,37 +156,38 @@ func (m *MockTerraformer) GetStateOutputVariables(arg0 ...string) (map[string]st
 }
 
 // GetStateOutputVariables indicates an expected call of GetStateOutputVariables.
-func (mr *MockTerraformerMockRecorder) GetStateOutputVariables(arg0 ...interface{}) *gomock.Call {
+func (mr *MockTerraformerMockRecorder) GetStateOutputVariables(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStateOutputVariables", reflect.TypeOf((*MockTerraformer)(nil).GetStateOutputVariables), arg0...)
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStateOutputVariables", reflect.TypeOf((*MockTerraformer)(nil).GetStateOutputVariables), varargs...)
 }
 
 // InitializeWith mocks base method.
-func (m *MockTerraformer) InitializeWith(arg0 terraformer.Initializer) terraformer.Terraformer {
+func (m *MockTerraformer) InitializeWith(arg0 context.Context, arg1 terraformer.Initializer) terraformer.Terraformer {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InitializeWith", arg0)
+	ret := m.ctrl.Call(m, "InitializeWith", arg0, arg1)
 	ret0, _ := ret[0].(terraformer.Terraformer)
 	return ret0
 }
 
 // InitializeWith indicates an expected call of InitializeWith.
-func (mr *MockTerraformerMockRecorder) InitializeWith(arg0 interface{}) *gomock.Call {
+func (mr *MockTerraformerMockRecorder) InitializeWith(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeWith", reflect.TypeOf((*MockTerraformer)(nil).InitializeWith), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeWith", reflect.TypeOf((*MockTerraformer)(nil).InitializeWith), arg0, arg1)
 }
 
 // IsStateEmpty mocks base method.
-func (m *MockTerraformer) IsStateEmpty() bool {
+func (m *MockTerraformer) IsStateEmpty(arg0 context.Context) bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsStateEmpty")
+	ret := m.ctrl.Call(m, "IsStateEmpty", arg0)
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
 // IsStateEmpty indicates an expected call of IsStateEmpty.
-func (mr *MockTerraformerMockRecorder) IsStateEmpty() *gomock.Call {
+func (mr *MockTerraformerMockRecorder) IsStateEmpty(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsStateEmpty", reflect.TypeOf((*MockTerraformer)(nil).IsStateEmpty))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsStateEmpty", reflect.TypeOf((*MockTerraformer)(nil).IsStateEmpty), arg0)
 }
 
 // NumberOfResources mocks base method.
@@ -278,20 +279,6 @@ func (mr *MockTerraformerMockRecorder) SetTerminationGracePeriodSeconds(arg0 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTerminationGracePeriodSeconds", reflect.TypeOf((*MockTerraformer)(nil).SetTerminationGracePeriodSeconds), arg0)
 }
 
-// SetVariablesEnvironment mocks base method.
-func (m *MockTerraformer) SetVariablesEnvironment(arg0 map[string]string) terraformer.Terraformer {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetVariablesEnvironment", arg0)
-	ret0, _ := ret[0].(terraformer.Terraformer)
-	return ret0
-}
-
-// SetVariablesEnvironment indicates an expected call of SetVariablesEnvironment.
-func (mr *MockTerraformerMockRecorder) SetVariablesEnvironment(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetVariablesEnvironment", reflect.TypeOf((*MockTerraformer)(nil).SetVariablesEnvironment), arg0)
-}
-
 // UseV2 mocks base method.
 func (m *MockTerraformer) UseV2(arg0 bool) terraformer.Terraformer {
 	m.ctrl.T.Helper()
@@ -344,17 +331,17 @@ func (m *MockInitializer) EXPECT() *MockInitializerMockRecorder {
 }
 
 // Initialize mocks base method.
-func (m *MockInitializer) Initialize(arg0 *terraformer.InitializerConfig) error {
+func (m *MockInitializer) Initialize(arg0 context.Context, arg1 *terraformer.InitializerConfig) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Initialize", arg0)
+	ret := m.ctrl.Call(m, "Initialize", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Initialize indicates an expected call of Initialize.
-func (mr *MockInitializerMockRecorder) Initialize(arg0 interface{}) *gomock.Call {
+func (mr *MockInitializerMockRecorder) Initialize(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Initialize", reflect.TypeOf((*MockInitializer)(nil).Initialize), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Initialize", reflect.TypeOf((*MockInitializer)(nil).Initialize), arg0, arg1)
 }
 
 // MockFactory is a mock of Factory interface.
@@ -395,7 +382,7 @@ func (mr *MockFactoryMockRecorder) DefaultInitializer(arg0, arg1, arg2, arg3, ar
 }
 
 // New mocks base method.
-func (m *MockFactory) New(arg0 logrus.FieldLogger, arg1 client.Client, arg2 v10.CoreV1Interface, arg3, arg4, arg5, arg6 string) terraformer.Terraformer {
+func (m *MockFactory) New(arg0 logr.Logger, arg1 client.Client, arg2 v10.CoreV1Interface, arg3, arg4, arg5, arg6 string) terraformer.Terraformer {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "New", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].(terraformer.Terraformer)
@@ -409,7 +396,7 @@ func (mr *MockFactoryMockRecorder) New(arg0, arg1, arg2, arg3, arg4, arg5, arg6 
 }
 
 // NewForConfig mocks base method.
-func (m *MockFactory) NewForConfig(arg0 logrus.FieldLogger, arg1 *rest.Config, arg2, arg3, arg4, arg5 string) (terraformer.Terraformer, error) {
+func (m *MockFactory) NewForConfig(arg0 logr.Logger, arg1 *rest.Config, arg2, arg3, arg4, arg5 string) (terraformer.Terraformer, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewForConfig", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(terraformer.Terraformer)

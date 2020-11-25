@@ -145,9 +145,7 @@ func (r *reconciler) removeFinalizerFromWorker(logger logr.Logger, worker *exten
 
 func (r *reconciler) removeAnnotation(logger logr.Logger, worker *extensionsv1alpha1.Worker) error {
 	logger.Info("Removing operation annotation")
-	withOpAnnotation := worker.DeepCopyObject()
-	delete(worker.Annotations, v1beta1constants.GardenerOperation)
-	return r.client.Patch(r.ctx, worker, client.MergeFrom(withOpAnnotation))
+	return extensionscontroller.RemoveAnnotation(r.ctx, r.client, worker, v1beta1constants.GardenerOperation)
 }
 
 func (r *reconciler) migrate(logger logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
@@ -192,7 +190,6 @@ func (r *reconciler) delete(logger logr.Logger, worker *extensionsv1alpha1.Worke
 
 	if err := r.actuator.Delete(r.ctx, worker, cluster); err != nil {
 		r.updateStatusError(err, worker, gardencorev1beta1.LastOperationTypeDelete, "Error deleting worker")
-
 		return extensionscontroller.ReconcileErr(err)
 	}
 

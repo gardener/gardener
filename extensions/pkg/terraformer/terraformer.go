@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -35,6 +35,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -47,11 +48,11 @@ const (
 
 type factory struct{}
 
-func (factory) NewForConfig(logger logrus.FieldLogger, config *rest.Config, purpose, namespace, name, image string) (Terraformer, error) {
+func (factory) NewForConfig(logger logr.Logger, config *rest.Config, purpose, namespace, name, image string) (Terraformer, error) {
 	return NewForConfig(logger, config, purpose, namespace, name, image)
 }
 
-func (f factory) New(logger logrus.FieldLogger, client client.Client, coreV1Client corev1client.CoreV1Interface, purpose, namespace, name, image string) Terraformer {
+func (f factory) New(logger logr.Logger, client client.Client, coreV1Client corev1client.CoreV1Interface, purpose, namespace, name, image string) Terraformer {
 	return New(logger, client, coreV1Client, purpose, namespace, name, image)
 }
 
@@ -66,7 +67,7 @@ func DefaultFactory() Factory {
 
 // NewForConfig creates a new Terraformer and its dependencies from the given configuration.
 func NewForConfig(
-	logger logrus.FieldLogger,
+	logger logr.Logger,
 	config *rest.Config,
 	purpose,
 	namespace,
@@ -92,8 +93,8 @@ func NewForConfig(
 // values for the namespace and the names which will be used for all the stored resources like
 // ConfigMaps/Secrets.
 func New(
-	logger logrus.FieldLogger,
-	client client.Client,
+	logger logr.Logger,
+	c client.Client,
 	coreV1Client corev1client.CoreV1Interface,
 	purpose,
 	namespace,
@@ -103,8 +104,8 @@ func New(
 	var prefix = fmt.Sprintf("%s.%s", name, purpose)
 
 	return &terraformer{
-		logger:       logger,
-		client:       client,
+		logger:       logger.WithName("terraformer"),
+		client:       c,
 		coreV1Client: coreV1Client,
 
 		name:      name,
@@ -125,29 +126,33 @@ func New(
 }
 
 // Apply executes a Terraform Pod by running the 'terraform apply' command.
-func (t *terraformer) Apply() error {
+func (t *terraformer) Apply(ctx context.Context) error {
 	if !t.configurationDefined {
-		return errors.New("terraformer configuration has not been defined, cannot execute the Terraform scripts")
+		return errors.New("terraformer configuration has not been defined, cannot execute Terraformer")
 	}
-	return t.execute(context.TODO(), "apply")
+	return t.execute(ctx, "apply")
 }
 
 // Destroy executes a Terraform Pod by running the 'terraform destroy' command.
-func (t *terraformer) Destroy() error {
-	if err := t.execute(context.TODO(), "destroy"); err != nil {
+func (t *terraformer) Destroy(ctx context.Context) error {
+	if err := t.execute(ctx, "destroy"); err != nil {
 		return err
 	}
-	return t.CleanupConfiguration(context.TODO())
+	return t.CleanupConfiguration(ctx)
 }
 
 // execute creates a Terraform Pod which runs the provided scriptName (apply or destroy), waits for the Pod to be completed
 // (either successful or not), prints its logs, deletes it and returns whether it was successful or not.
 func (t *terraformer) execute(ctx context.Context, command string) error {
 	var (
+		logger = t.logger.WithValues("command", command)
+
 		succeeded             = true  // Success status of the Terraform apply/destroy pod
 		execute               = false // Should we skip the rest of the function depending on whether all ConfigMaps/Secrets exist/do not exist?
 		skipApplyOrDestroyPod = false // Should we skip the execution of the Terraform apply/destroy command (actual execution of the Terraform config)?
 	)
+
+	logger.V(1).Info("Waiting until all configuration resources exist")
 
 	// We should retry the preparation check in order to allow the kube-apiserver to actually create the ConfigMaps.
 	if err := retry.UntilTimeout(ctx, 5*time.Second, 30*time.Second, func(ctx context.Context) (done bool, err error) {
@@ -156,14 +161,14 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 			return retry.SevereError(err)
 		}
 		if numberOfExistingResources == 0 {
-			t.logger.Debugf("All ConfigMaps/Secrets do not exist, can not execute the Terraform %s Pod.", command)
+			logger.Info("All ConfigMaps and Secrets missing, can not execute Terraformer Pod")
 			return retry.Ok()
 		} else if numberOfExistingResources == numberOfConfigResources {
-			t.logger.Debugf("All ConfigMaps/Secrets exist, will execute the Terraform %s Pod.", command)
+			logger.Info("All ConfigMaps and Secrets exist, will execute Terraformer Pod")
 			execute = true
 			return retry.Ok()
 		} else {
-			t.logger.Errorf("Can not execute Terraform %s Pod as ConfigMaps/Secrets are missing!", command)
+			logger.Error(fmt.Errorf("ConfigMaps or Secrets are missing"), "Cannot execute Terraformer Pod")
 			return retry.MinorError(fmt.Errorf("%d/%d terraform resources are missing", numberOfConfigResources-numberOfExistingResources, numberOfConfigResources))
 		}
 	}); err != nil {
@@ -178,50 +183,56 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 	// because of syntax errors. In this case, we want to skip the Terraform destroy pod (as it wouldn't do anything
 	// anyway) and just delete the related ConfigMaps/Secrets.
 	if command == "destroy" {
-		skipApplyOrDestroyPod = t.IsStateEmpty()
+		skipApplyOrDestroyPod = t.IsStateEmpty(ctx)
 	}
 
 	if !skipApplyOrDestroyPod {
 		// Create Terraform Pod which executes the provided command
 		generateName := t.computePodGenerateName(command)
+
+		logger.Info("Deploying Terraformer Pod", "generateName", generateName)
 		pod, err := t.deployTerraformerPod(ctx, generateName, command)
 		if err != nil {
-			return fmt.Errorf("failed to deploy the Terraformer Pod with .meta.generateName '%s': %s", generateName, err.Error())
+			return fmt.Errorf("failed to deploy the Terraformer Pod with .meta.generateName %q: %w", generateName, err)
 		}
 
-		t.logger.Infof("Successfully created Terraformer Pod '%s'.", pod.Name)
+		logger.Info("Successfully created Terraformer Pod", "pod", kutils.KeyFromObject(pod))
 
 		// Wait for the Terraform apply/destroy Pod to be completed
-		exitCode := t.waitForPod(ctx, pod.Name, t.deadlinePod)
+		exitCode := t.waitForPod(ctx, logger, pod, t.deadlinePod)
 		succeeded = exitCode == 0
-		t.logger.Infof("Terraform Pod '%s' finished with exit code %d.", pod.Name, exitCode)
+		if succeeded {
+			logger.Info("Terraformer Pod finished successfully")
+		} else {
+			logger.Info("Terraformer Pod finished with error", "exitCode", exitCode)
+		}
 	}
 
 	// Retrieve the logs of the apply/destroy Pods
 	podList, err := t.listTerraformerPods(ctx)
 	if err != nil {
-		t.logger.Errorf("Could not retrieve list of pods belonging to Terraformer '%s': %s", t.name, err.Error())
+		logger.Error(err, "Could not retrieve list of Terraformer pods")
 		podList = &corev1.PodList{}
 	}
 
-	t.logger.Infof("Fetching the logs for all pods belonging to Terraformer '%s'...", t.name)
-	logList, err := t.retrievePodLogs(ctx, podList)
+	logger.V(1).Info("Fetching the logs for all Terraformer pods")
+	logList, err := t.retrievePodLogs(ctx, logger, podList)
 	if err != nil {
-		t.logger.Errorf("Could not retrieve the logs of the pods belonging to Terraformer '%s': %s", t.name, err.Error())
+		logger.Error(err, "Could not retrieve the logs of the Terraformer pods")
 		logList = map[string]string{}
 	}
 	for podName, podLogs := range logList {
-		t.logger.Infof("Logs of Pod '%s' belonging to Terraformer '%s':\n%s", podName, t.name, podLogs)
+		logger.V(1).Info("Logs of Terraformer Pod: "+podLogs, "pod", client.ObjectKey{Namespace: t.namespace, Name: podName})
 	}
 
 	// Delete the Terraformer Pods
-	t.logger.Infof("Cleaning up pods created by Terraformer '%s'...", t.name)
+	logger.Info("Cleaning up pods created by Terraformer")
 	if err := t.deleteTerraformerPods(ctx, podList); err != nil {
 		return err
 	}
 
 	// Evaluate whether the execution was successful or not
-	t.logger.Infof("Terraformer '%s' execution for command '%s' has been completed.", t.name, command)
+	logger.Info("Terraformer execution has been completed")
 	if !succeeded {
 		errorMessage := fmt.Sprintf("Terraform execution for command '%s' could not be completed.", command)
 		if terraformErrors := retrieveTerraformErrors(logList); terraformErrors != nil {
@@ -291,7 +302,6 @@ func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, co
 		return nil, err
 	}
 
-	t.logger.Infof("Deploying Terraformer Pod with .meta.generateName '%s'.", generateName)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: generateName,
@@ -390,7 +400,7 @@ func (t *terraformer) listTerraformerPods(ctx context.Context) (*corev1.PodList,
 
 // retrievePodLogs fetches the logs of the created Pods by the Terraformer and returns them as a map whose
 // keys are pod names and whose values are the corresponding logs.
-func (t *terraformer) retrievePodLogs(ctx context.Context, podList *corev1.PodList) (map[string]string, error) {
+func (t *terraformer) retrievePodLogs(ctx context.Context, logger logr.Logger, podList *corev1.PodList) (map[string]string, error) {
 	logChan := make(chan map[string]string, 1)
 	go func() {
 		var logList = map[string]string{}
@@ -398,7 +408,7 @@ func (t *terraformer) retrievePodLogs(ctx context.Context, podList *corev1.PodLi
 			name := pod.Name
 			logs, err := kubernetes.GetPodLogs(ctx, t.coreV1Client.Pods(pod.Namespace), name, &corev1.PodLogOptions{})
 			if err != nil {
-				t.logger.Warnf("Could not retrieve the logs of Terraform pod %s: '%v'", name, err)
+				logger.Error(err, "Could not retrieve the logs of Terraformer pod", "pod", kutils.KeyFromObject(&pod))
 				continue
 			}
 			logList[name] = string(logs)
@@ -410,7 +420,7 @@ func (t *terraformer) retrievePodLogs(ctx context.Context, podList *corev1.PodLi
 	case result := <-logChan:
 		return result, nil
 	case <-time.After(2 * time.Minute):
-		return nil, fmt.Errorf("timeout when reading the logs of all pods created by Terraformer '%s'", t.name)
+		return nil, fmt.Errorf("timeout when reading the logs of all pods created by Terraformer")
 	}
 }
 
@@ -419,10 +429,7 @@ func (t *terraformer) deleteTerraformerPods(ctx context.Context, podList *corev1
 		if err := t.client.Delete(ctx, &pod); client.IgnoreNotFound(err) != nil {
 			return err
 		}
-
-		t.logger.Infof("Deleted Terraform Pod '%s'", pod.Name)
 	}
-
 	return nil
 }
 

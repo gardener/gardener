@@ -27,7 +27,7 @@ import (
 func retrieveTerraformErrors(logList map[string]string) []string {
 	var (
 		foundErrors = map[string]string{}
-		errorList   = []string{}
+		errorList   []string
 	)
 
 	for podName, output := range logList {
@@ -58,7 +58,7 @@ func findTerraformErrors(output string) string {
 		regexMultiNewline   = regexp.MustCompile(`\n{2,}`)
 
 		errorMessage = output
-		valid        = []string{}
+		valid        []string
 	)
 
 	// Strip optional explanation how Terraform behaves in case of errors.
