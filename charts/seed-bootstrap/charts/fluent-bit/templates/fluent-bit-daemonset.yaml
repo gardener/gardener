@@ -60,10 +60,13 @@ spec:
           httpGet:
             path: /api/v1/metrics/prometheus
             port: 2020
+          periodSeconds: 10
         livenessProbe:
           httpGet:
             path: /
             port: 2020
+          initialDelaySeconds: 90
+          periodSeconds: 10
         volumeMounts:
         - name: config
           mountPath: /fluent-bit/etc
