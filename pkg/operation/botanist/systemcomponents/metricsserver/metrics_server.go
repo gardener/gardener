@@ -260,8 +260,8 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 				Name:      deploymentName,
 				Namespace: metav1.NamespaceSystem,
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
-					common.ManagedResourceLabelKeyOrigin:  common.ManagedResourceLabelValueGardener,
-					v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleSystemComponent,
+					common.ManagedResourceLabelKeyOrigin: common.ManagedResourceLabelValueGardener,
+					v1beta1constants.GardenRole:          v1beta1constants.GardenRoleSystemComponent,
 				}),
 			},
 			Spec: appsv1.DeploymentSpec{
@@ -276,7 +276,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 							common.ManagedResourceLabelKeyOrigin:                common.ManagedResourceLabelValueGardener,
-							v1beta1constants.DeprecatedGardenRole:               v1beta1constants.GardenRoleSystemComponent,
+							v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleSystemComponent,
 							v1beta1constants.LabelNetworkPolicyShootFromSeed:    v1beta1constants.LabelNetworkPolicyAllowed,
 							v1beta1constants.LabelNetworkPolicyShootToAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 							v1beta1constants.LabelNetworkPolicyShootToKubelet:   v1beta1constants.LabelNetworkPolicyAllowed,

@@ -57,8 +57,7 @@ apiVersion: core.gardener.cloud/v1beta1
 kind: Shoot
 metadata:
   labels:
-    shoot.garden.sapcloud.io/status: unhealthy
-    shoot.garden.sapcloud.io/unhealthy: "true"
+    shoot.gardener.cloud/status: unhealthy
   name: some-shoot
   namespace: garden-core
 spec:

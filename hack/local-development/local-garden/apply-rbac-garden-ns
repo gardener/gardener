@@ -14,7 +14,6 @@ kind: ClusterRole
 metadata:
   name: gardener.cloud:admin
   labels:
-    garden.sapcloud.io/role: admin
     gardener.cloud/role: admin
 rules:
 - apiGroups:

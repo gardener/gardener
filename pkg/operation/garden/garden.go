@@ -370,8 +370,7 @@ func generateMonitoringSecret(k8sGardenClient kubernetes.Interface, gardenNamesp
 	}
 	if _, err := controllerutil.CreateOrUpdate(context.TODO(), k8sGardenClient.Client(), secret, func() error {
 		secret.Labels = map[string]string{
-			v1beta1constants.GardenRole:           common.GardenRoleGlobalMonitoring,
-			v1beta1constants.DeprecatedGardenRole: common.GardenRoleGlobalMonitoring,
+			v1beta1constants.GardenRole: common.GardenRoleGlobalMonitoring,
 		}
 		secret.Type = corev1.SecretTypeOpaque
 		secret.Data = basicAuth.SecretData()
