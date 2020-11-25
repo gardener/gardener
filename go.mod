@@ -76,5 +76,5 @@ replace (
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.18.10
 	k8s.io/kube-openapi => github.com/gardener/kube-openapi v0.0.0-20200831104310-b5db060350c7
 	sigs.k8s.io/controller-runtime => github.com/gardener/controller-runtime v0.6.3-gardener.1
-	sigs.k8s.io/structured-merge-diff/v3 => github.com/gardener/structured-merge-diff/v3 v3.0.0-gardener.1
+	sigs.k8s.io/structured-merge-diff/v3 => sigs.k8s.io/structured-merge-diff/v3 v3.0.1-0.20201124164700-f5fd4ea1e4c9
 )
