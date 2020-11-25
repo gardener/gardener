@@ -63,6 +63,8 @@
 * [GEP-9: Gardener integration test framework](proposals/09-test-framework.md)
 * [GEP-10: Support additional container runtimes](proposals/10-shoot-additional-container-runtimes.md)
 * [GEP-11: Utilize API Server Network Proxy to Invert Seed-to-Shoot Connectivity](proposals/11-apiserver-network-proxy.md)
+* [GEP-12: OIDC Webhook Authenticator](proposals/12-oidc-webhook-authenticator.md)
+* [GEP-13: Automated Seed Management](proposals/13-automated-seed-management.md)
 
 ## Development
 
