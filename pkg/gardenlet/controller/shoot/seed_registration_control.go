@@ -32,9 +32,11 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -43,6 +45,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/version"
 
+	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
@@ -53,6 +56,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -62,6 +66,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+var minimumAPIServerSNISidecarConstraint *semver.Constraints
+
+func init() {
+	var err error
+	// 1.13.0-0 must be used or no 1.13.0-dev version can be matched
+	minimumAPIServerSNISidecarConstraint, err = semver.NewConstraint(">= 1.13.0-0")
+	utilruntime.Must(err)
+}
 
 func (c *Controller) seedRegistrationAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
@@ -663,6 +676,7 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 					"repository": repository,
 					"tag":        tag,
 				},
+				"podAnnotations":                 gardenletAnnotations(shoot),
 				"revisionHistoryLimit":           0,
 				"vpa":                            true,
 				"imageVectorOverwrite":           imageVectorOverwrite,
@@ -803,4 +817,25 @@ func computeServerConfig(serverConfig *configv1alpha1.ServerConfiguration) (map[
 	return map[string]interface{}{
 		"https": httpsConfig,
 	}, nil
+}
+
+func gardenletAnnotations(shoot *gardencorev1beta1.Shoot) map[string]string {
+	var gardenletAnnotations map[string]string
+
+	// if APIServerSNI is enabled for the Seed cluster then
+	// the gardenlet must be restarted, so the Pod injector would
+	// add `KUBERNETES_SERVICE_HOST` environment variable.
+	if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
+		vers, err := semver.NewVersion(shoot.Status.Gardener.Version)
+		// We can't really do anything in case of error - it is not a transient error.
+		// Throwing error would force another reconciliation that would fail again here.
+		// Reconciling from this point makes no sense, unless the Shoot is updated.
+		if err == nil && vers != nil && minimumAPIServerSNISidecarConstraint.Check(vers) {
+			gardenletAnnotations = map[string]string{
+				"networking.gardener.cloud/seed-sni-enabled": "true",
+			}
+		}
+	}
+
+	return gardenletAnnotations
 }
