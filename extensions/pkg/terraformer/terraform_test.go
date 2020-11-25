@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -42,6 +44,8 @@ var _ = Describe("terraformer", func() {
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
 		ctx  context.Context
+
+		log logr.Logger
 	)
 
 	BeforeEach(func() {
@@ -49,6 +53,8 @@ var _ = Describe("terraformer", func() {
 		c = mockclient.NewMockClient(ctrl)
 
 		ctx = context.Background()
+
+		log = logzap.New(logzap.WriteTo(GinkgoWriter))
 	})
 
 	AfterEach(func() {
@@ -401,7 +407,7 @@ var _ = Describe("terraformer", func() {
 
 	Describe("#Apply", func() {
 		It("should return err when config is not defined", func() {
-			tf := New(nil, c, nil, "purpose", "namespace", "name", "image")
+			tf := New(log, c, nil, "purpose", "namespace", "name", "image")
 
 			err := tf.Apply(ctx)
 			Expect(err).To(HaveOccurred())
@@ -437,7 +443,7 @@ var _ = Describe("terraformer", func() {
 					return nil
 				})
 
-			terraformer := New(nil, c, nil, purpose, namespace, name, image)
+			terraformer := New(log, c, nil, purpose, namespace, name, image)
 			actual, err := terraformer.GetStateOutputVariables(ctx, "variableV1")
 
 			Expect(actual).To(BeNil())
@@ -469,7 +475,7 @@ var _ = Describe("terraformer", func() {
 					return nil
 				})
 
-			terraformer := New(nil, c, nil, purpose, namespace, name, image)
+			terraformer := New(log, c, nil, purpose, namespace, name, image)
 			actual, err := terraformer.GetStateOutputVariables(ctx, "variableV3")
 
 			expected := map[string]string{
@@ -500,7 +506,7 @@ var _ = Describe("terraformer", func() {
 					return nil
 				})
 
-			terraformer := New(nil, c, nil, purpose, namespace, name, image)
+			terraformer := New(log, c, nil, purpose, namespace, name, image)
 			actual, err := terraformer.GetStateOutputVariables(ctx, "variableV4")
 
 			expected := map[string]string{

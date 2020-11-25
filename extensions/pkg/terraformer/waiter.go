@@ -19,10 +19,12 @@ import (
 	"fmt"
 	"time"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 // WaitForCleanEnvironment waits until no Terraform Pod(s) exist for the current instance
@@ -31,15 +33,15 @@ func (t *terraformer) WaitForCleanEnvironment(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, t.deadlineCleaning)
 	defer cancel()
 
+	t.logger.Info("Waiting for clean environment")
 	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
 		podList, err := t.listTerraformerPods(ctx)
 		if err != nil {
 			return retry.SevereError(err)
 		}
-		if len(podList.Items) != 0 {
-			labels := fmt.Sprintf("%s=%s,%s=%s", TerraformerLabelKeyName, t.name, TerraformerLabelKeyPurpose, t.purpose)
-			t.logger.Infof("Waiting until no Terraform Pods with labels '%s' exist any more in namespace '%s'...", labels, t.namespace)
-			return retry.MinorError(fmt.Errorf("terraform pods with labels '%s' still exist in namespace '%s'", labels, t.namespace))
+		if len(podList.Items) > 0 {
+			t.logger.Info("Waiting until all Terraformer Pods have been cleaned up")
+			return retry.MinorError(fmt.Errorf("at least one terraformer pod still exists: %s", podList.Items[0].Name))
 		}
 
 		return retry.Ok()
@@ -48,7 +50,7 @@ func (t *terraformer) WaitForCleanEnvironment(ctx context.Context) error {
 
 // waitForPod waits for the Terraform Pod to be completed (either successful or failed).
 // It checks the Pod status field to identify the state.
-func (t *terraformer) waitForPod(ctx context.Context, podName string, deadline time.Duration) int32 {
+func (t *terraformer) waitForPod(ctx context.Context, logger logr.Logger, pod *corev1.Pod, deadline time.Duration) int32 {
 	// 'terraform plan' returns exit code 2 if the plan succeeded and there is a diff
 	// If we can't read the terminated state of the container we simply force that the Terraform
 	// job gets created.
@@ -56,15 +58,17 @@ func (t *terraformer) waitForPod(ctx context.Context, podName string, deadline t
 	ctx, cancel := context.WithTimeout(ctx, deadline)
 	defer cancel()
 
+	logger = logger.WithValues("pod", kutil.KeyFromObject(pod))
+
+	logger.Info("Waiting for Terraformer Pod to be completed...")
 	if err := retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-		t.logger.Infof("Waiting for Terraform Pod '%s' to be completed...", podName)
-		pod := &corev1.Pod{}
-		err = t.client.Get(ctx, kutil.Key(t.namespace, podName), pod)
+		err = t.client.Get(ctx, kutil.KeyFromObject(pod), pod)
 		if apierrors.IsNotFound(err) {
-			t.logger.Warnf("Terraform Pod '%s' disappeared unexpectedly, somebody must have manually deleted it!", podName)
+			logger.Info("Terraformer Pod disappeared unexpectedly, somebody must have manually deleted it")
 			return retry.Ok()
 		}
 		if err != nil {
+			logger.Error(err, "Error retrieving Pod")
 			return retry.SevereError(err)
 		}
 
@@ -81,7 +85,8 @@ func (t *terraformer) waitForPod(ctx context.Context, podName string, deadline t
 			return retry.Ok()
 		}
 
-		return retry.MinorError(fmt.Errorf("pod was not successful (phase=%s, no-of-container-states=%d)", phase, len(containerStatuses)))
+		logger.Info("Waiting for terraformer pod to be completed, pod hasn't finished yet", "phase", phase, "len-of-containerstatuses", len(containerStatuses))
+		return retry.MinorError(fmt.Errorf("pod was not successful: phase=%s, len-of-containerstatuses=%d", phase, len(containerStatuses)))
 	}); err != nil {
 		exitCode = 1
 	}

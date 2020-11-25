@@ -10,8 +10,8 @@ import (
 	time "time"
 
 	terraformer "github.com/gardener/gardener/extensions/pkg/terraformer"
+	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
-	logrus "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	v10 "k8s.io/client-go/kubernetes/typed/core/v1"
 	rest "k8s.io/client-go/rest"
@@ -382,7 +382,7 @@ func (mr *MockFactoryMockRecorder) DefaultInitializer(arg0, arg1, arg2, arg3, ar
 }
 
 // New mocks base method.
-func (m *MockFactory) New(arg0 logrus.FieldLogger, arg1 client.Client, arg2 v10.CoreV1Interface, arg3, arg4, arg5, arg6 string) terraformer.Terraformer {
+func (m *MockFactory) New(arg0 logr.Logger, arg1 client.Client, arg2 v10.CoreV1Interface, arg3, arg4, arg5, arg6 string) terraformer.Terraformer {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "New", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].(terraformer.Terraformer)
@@ -396,7 +396,7 @@ func (mr *MockFactoryMockRecorder) New(arg0, arg1, arg2, arg3, arg4, arg5, arg6 
 }
 
 // NewForConfig mocks base method.
-func (m *MockFactory) NewForConfig(arg0 logrus.FieldLogger, arg1 *rest.Config, arg2, arg3, arg4, arg5 string) (terraformer.Terraformer, error) {
+func (m *MockFactory) NewForConfig(arg0 logr.Logger, arg1 *rest.Config, arg2, arg3, arg4, arg5 string) (terraformer.Terraformer, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewForConfig", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(terraformer.Terraformer)

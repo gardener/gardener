@@ -105,7 +105,7 @@ func (t *terraformer) initializerConfig(ctx context.Context) *InitializerConfig 
 // A default implementation can be found in DefaultInitializer.
 func (t *terraformer) InitializeWith(ctx context.Context, initializer Initializer) Terraformer {
 	if err := initializer.Initialize(ctx, t.initializerConfig(ctx)); err != nil {
-		t.logger.Errorf("Could not create the Terraform ConfigMaps/Secrets: %s", err.Error())
+		t.logger.Error(err, "Could not create Terraformer ConfigMaps/Secrets")
 		return t
 	}
 	t.configurationDefined = true
@@ -228,17 +228,19 @@ func (t *terraformer) ConfigExists(ctx context.Context) (bool, error) {
 // CleanupConfiguration deletes the two ConfigMaps which store the Terraform configuration and state. It also deletes
 // the Secret which stores the Terraform variables.
 func (t *terraformer) CleanupConfiguration(ctx context.Context) error {
-	t.logger.Debugf("Deleting Terraform variables Secret '%s'", t.variablesName)
+	t.logger.Info("Cleaning up all terraformer configuration")
+
+	t.logger.V(1).Info("Deleting Terraform variables Secret", "name", t.variablesName)
 	if err := t.client.Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.variablesName}}); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
-	t.logger.Debugf("Deleting Terraform configuration ConfigMap '%s'", t.configName)
+	t.logger.V(1).Info("Deleting Terraform configuration ConfigMap", "name", t.configName)
 	if err := t.client.Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.configName}}); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
-	t.logger.Debugf("Deleting Terraform state ConfigMap '%s'", t.stateName)
+	t.logger.V(1).Info("Deleting Terraform state ConfigMap", "name", t.stateName)
 	if err := t.client.Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.stateName}}); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
@@ -248,6 +250,8 @@ func (t *terraformer) CleanupConfiguration(ctx context.Context) error {
 
 // EnsureCleanedUp deletes the Terraformer pods, and waits until everything has been cleaned up.
 func (t *terraformer) EnsureCleanedUp(ctx context.Context) error {
+	t.logger.Info("Ensuring all terraformer Pods have been deleted")
+
 	podList, err := t.listTerraformerPods(ctx)
 	if err != nil {
 		return err
