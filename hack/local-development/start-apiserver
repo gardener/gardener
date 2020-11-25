@@ -24,6 +24,17 @@ tls_dir="$__tmp_tls_dir"
 trap cleanup_kubeconfig EXIT
 trap cleanup_tls_dir EXIT
 
+case $(k8s_env) in
+  $REMOTE)
+    TLS_CERT_FILE=$(dirname "${0}")/../../dev/tls/gardener-apiserver.crt
+    TLS_KEY_FILE=$(dirname "${0}")/../../dev/tls/gardener-apiserver.key
+    ;;
+  *)
+    TLS_CERT_FILE=$tls_dir/tls.crt
+    TLS_KEY_FILE=$tls_dir/tls.key
+    ;;
+esac
+
 apiserver_flags="
   --authentication-kubeconfig $kubeconfig \
   --authorization-kubeconfig $kubeconfig \
@@ -31,8 +42,8 @@ apiserver_flags="
   --authorization-always-allow-paths=/healthz \
   --kubeconfig $kubeconfig \
   --secure-port=8443 \
-  --tls-cert-file $tls_dir/tls.crt \
-  --tls-private-key-file $tls_dir/tls.key \
+  --tls-cert-file $TLS_CERT_FILE \
+  --tls-private-key-file $TLS_KEY_FILE \
   --feature-gates SeedChange=true \
   --v 2"
 
@@ -74,6 +85,15 @@ case $(k8s_env) in
         ;;
     $NODELESS)
         echo "Found Nodeless Kubernetes ..."
+        GO111MODULE=on go run \
+          -mod=vendor \
+          -ldflags "$ld_flags" \
+          "$(dirname $0)"/../../cmd/gardener-apiserver/main.go \
+          --etcd-servers http://localhost:22379 \
+          $apiserver_flags
+        ;;
+    $REMOTE)
+        echo "Found Remote Kubernetes ..."
         GO111MODULE=on go run \
           -mod=vendor \
           -ldflags "$ld_flags" \

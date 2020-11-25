@@ -21,6 +21,7 @@ MINIKUBE="minikube"
 KIND="kind"
 KIND_NODE_NAME_SUFFIX="-control-plane"
 NODELESS="nodeless"
+REMOTE="remote"
 
 API_SERVER_SECURE_PORT="${API_SERVER_SECURE_PORT:-8443}"
 ADMISSION_CONTROLLER_SECURE_PORT="${CONTROLLER_MANAGER_SECURE_PORT:-2721}"
@@ -61,7 +62,13 @@ k8s_env() {
       return
     fi
 
-    >&2 echo "Unsupported Kubernetes Environment: $__k8s_env"
+    garden_purpose=$(kubectl get ns garden -o json | jq '.metadata.labels["gardener.cloud/purpose"]' |  tr -d \")
+    if [[ "$garden_purpose" == "remote-garden" ]]; then
+      echo $REMOTE
+      return
+    fi
+
+    >&2 echo "Unsupported Kubernetes environment"
     return 1
 }
 
