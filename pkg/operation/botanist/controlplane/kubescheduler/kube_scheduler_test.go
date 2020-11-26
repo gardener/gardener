@@ -143,6 +143,7 @@ var _ = Describe("KubeScheduler", func() {
 					Labels: map[string]string{
 						"app":                     "kubernetes",
 						"role":                    "scheduler",
+						"gardener.cloud/role":     "controlplane",
 						"garden.sapcloud.io/role": "controlplane",
 					},
 				},

@@ -25,7 +25,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -899,7 +898,7 @@ func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []c
 }
 
 func (v ValidateShoot) validateShootedSeed(a admission.Attributes, shoot, oldShoot *core.Shoot) error {
-	if shoot.Namespace != constants.GardenNamespace {
+	if shoot.Namespace != v1beta1constants.GardenNamespace {
 		return nil
 	}
 
@@ -917,12 +916,12 @@ func (v ValidateShoot) validateShootedSeed(a admission.Attributes, shoot, oldSho
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
-		return apierrors.NewInternalError(fmt.Errorf("could not get seed '%s' to verify that annotation '%s' can be removed: %v", shoot.Name, constants.AnnotationShootUseAsSeed, err))
+		return apierrors.NewInternalError(fmt.Errorf("could not get seed '%s' to verify that annotation '%s' can be removed: %v", shoot.Name, v1beta1constants.AnnotationShootUseAsSeed, err))
 	}
 
 	shoots, err := v.shootLister.List(labels.Everything())
 	if err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that annotation '%s' can be removed: %v", constants.AnnotationShootUseAsSeed, err))
+		return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that annotation '%s' can be removed: %v", v1beta1constants.AnnotationShootUseAsSeed, err))
 	}
 
 	if admissionutils.IsSeedUsedByShoot(shoot.Name, shoots) {

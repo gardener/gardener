@@ -5,6 +5,7 @@ metadata:
   name: gardener-resource-manager
   namespace: {{ .Release.Namespace }}
   labels:
+    gardener.cloud/role: controlplane
     garden.sapcloud.io/role: controlplane
     app: gardener-resource-manager
 spec:

@@ -165,6 +165,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, k.client, deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
+			v1beta1constants.GardenRole:           v1beta1constants.GardenRoleControlPlane,
 			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
 		})
 		deployment.Spec.Replicas = &k.replicas
