@@ -86,7 +86,6 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		csrInformer         = f.k8sInformers.Certificates().V1beta1().CertificateSigningRequests().Informer()
 		namespaceInformer   = f.k8sInformers.Core().V1().Namespaces().Informer()
 		secretInformer      = f.k8sInformers.Core().V1().Secrets().Informer()
-		clusterRoleInformer = f.k8sInformers.Rbac().V1().ClusterRoles().Informer()
 		roleBindingInformer = f.k8sInformers.Rbac().V1().RoleBindings().Informer()
 		leaseInformer       = f.k8sInformers.Coordination().V1().Leases().Informer()
 	)
@@ -106,7 +105,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	}
 
 	f.k8sInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), configMapInformer.HasSynced, csrInformer.HasSynced, namespaceInformer.HasSynced, secretInformer.HasSynced, clusterRoleInformer.HasSynced, roleBindingInformer.HasSynced, leaseInformer.HasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), configMapInformer.HasSynced, csrInformer.HasSynced, namespaceInformer.HasSynced, secretInformer.HasSynced, roleBindingInformer.HasSynced, leaseInformer.HasSynced) {
 		return errors.New("Timed out waiting for Kube caches to sync")
 	}
 
