@@ -87,5 +87,5 @@ The management of service account subjects (`kind=ServiecAccount` or `name=syste
 
 All newly created projects will only bind the owner to the `uam` role.
 The owner can still grant the `uam` role to other members if desired.
-For projects created before Gardener v1.8 the Gardener Controller Manager will migrate all projects to also assign the `uam` role to all `admin` members (to not break existing use-cases).
+For projects created before Gardener v1.8 the Gardener Controller Manager will migrate all projects to also assign the `uam` role to all `admin` members (to not break existing use-cases). The corresponding migration logic is present in Gardener Controller Manager from v1.8 to v1.13.
 The project owner can gradually remove these roles if desired. 
