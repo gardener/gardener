@@ -39,7 +39,10 @@ import (
 )
 
 const (
+	deltaLogsCount            = 1
+	deltaLogsDuration         = "180s"
 	logsCount                 = 2000
+	logsDuration              = "90s"
 	numberOfSimulatedClusters = 100
 
 	initializationTimeout          = 5 * time.Minute
@@ -49,6 +52,7 @@ const (
 	fluentBitName                 = "fluent-bit"
 	lokiName                      = "loki"
 	garden                        = "garden"
+	loggerDeploymentName          = "logger"
 	logger                        = "logger-.*"
 	fluentBitConfigMapName        = "fluent-bit-config"
 	fluentBitClusterRoleName      = "fluent-bit-read"
@@ -183,12 +187,14 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			framework.ExpectNoError(create(ctx, f.ShootClient.Client(), lokiShootService))
 
 			ginkgo.By(fmt.Sprintf("Deploy the logger application in namespace %s", shootNamespace.Name))
-			loggerParams := struct {
-				HelmDeployNamespace string
-				LogsCount           int
-			}{
-				shootNamespace.Name,
-				logsCount,
+			loggerParams := map[string]interface{}{
+				"LoggerName":          loggerDeploymentName,
+				"HelmDeployNamespace": shootNamespace.Name,
+				"AppLabel":            loggerDeploymentName,
+				"DeltaLogsCount":      deltaLogsCount,
+				"DeltaLogsDuration":   deltaLogsDuration,
+				"LogsCount":           logsCount,
+				"LogsDuration":        logsDuration,
 			}
 			framework.ExpectNoError(f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.LoggerAppName, loggerParams))
 		}
@@ -203,7 +209,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		}
 
 		ginkgo.By("Verify loki received logger application logs for all namespaces")
-		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, v1beta1constants.GardenNamespace, "pod_name", logger, logsCount*numberOfSimulatedClusters, numberOfSimulatedClusters, f.ShootClient))
+		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, "", v1beta1constants.GardenNamespace, "pod_name", logger, logsCount*numberOfSimulatedClusters, numberOfSimulatedClusters, f.ShootClient))
 
 	}, getLogsFromLokiTimeout, framework.WithCAfterTest(func(ctx context.Context) {
 		ginkgo.By("Cleaning up logger app resources")

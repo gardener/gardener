@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -63,9 +64,9 @@ func checkRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interf
 }
 
 // WaitUntilLokiReceivesLogs waits until the loki instance in <lokiNamespace> receives <expected> logs for <key>=<value>
-func WaitUntilLokiReceivesLogs(ctx context.Context, interval time.Duration, f *framework.ShootFramework, lokiNamespace, key, value string, expected, delta int, client kubernetes.Interface) error {
+func WaitUntilLokiReceivesLogs(ctx context.Context, interval time.Duration, f *framework.ShootFramework, tenant, lokiNamespace, key, value string, expected, delta int, client kubernetes.Interface) error {
 	return retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
-		search, err := f.GetLokiLogs(ctx, lokiNamespace, key, value, client)
+		search, err := f.GetLokiLogs(ctx, tenant, lokiNamespace, key, value, client)
 		if err != nil {
 			return retry.SevereError(err)
 		}
@@ -166,4 +167,38 @@ func getLokiShootService(number int) *corev1.Service {
 			// },
 		},
 	}
+}
+
+func getXScopeOrgID(annotations map[string]string) string {
+	for key, value := range annotations {
+		if key == "nginx.ingress.kubernetes.io/configuration-snippet" {
+			configurations := strings.Split(value, ";")
+			for _, config := range configurations {
+				config = strings.TrimLeft(config, "\t \n")
+				if strings.HasPrefix(config, "proxy_set_header") {
+					proxySetHeaderFields := strings.Fields(config)
+					if len(proxySetHeaderFields) == 3 && proxySetHeaderFields[1] == "X-Scope-OrgID" {
+						return proxySetHeaderFields[2]
+					}
+				}
+			}
+		}
+	}
+	return "fake"
+}
+
+func getLogCountFromResult(search *framework.SearchResponse) (int, error) {
+	var totalLogs int
+	for _, result := range search.Data.Result {
+		currentStr, ok := result.Value[1].(string)
+		if !ok {
+			return totalLogs, fmt.Errorf("Data.Result.Value[1] is not a string")
+		}
+		current, err := strconv.Atoi(currentStr)
+		if err != nil {
+			return totalLogs, fmt.Errorf("Data.Result.Value[1] string is not parsable to intiger")
+		}
+		totalLogs += current
+	}
+	return totalLogs, nil
 }
