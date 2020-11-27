@@ -861,7 +861,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		defaultValues["sni"] = map[string]interface{}{
 			"enabled":           true,
 			"advertiseIP":       b.APIServerClusterIP,
-			"apiserverFQDN":     b.outOfClusterAPIServerFQDN(),
+			"apiserverFQDN":     b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
 			"podMutatorEnabled": b.APIServerSNIPodMutatorEnabled(),
 		}
 	}
