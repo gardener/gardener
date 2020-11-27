@@ -5,6 +5,7 @@ metadata:
   name: grafana-{{ .Values.role }}
   namespace: {{ .Release.Namespace }}
   labels:
+    gardener.cloud/role: monitoring
     garden.sapcloud.io/role: monitoring
     component: grafana
     role: {{ .Values.role }}

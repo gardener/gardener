@@ -217,6 +217,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Labels: map[string]string{
 						"app":                     "kubernetes",
 						"role":                    "cluster-autoscaler",
+						"gardener.cloud/role":     "controlplane",
 						"garden.sapcloud.io/role": "controlplane",
 					},
 				},
