@@ -38,6 +38,7 @@
 * [Seed Settings](usage/seed_settings.md)
 * [Shoot cluster purposes](usage/shoot_purposes.md)
 * [Shoot Kubernetes and Operating System Versioning](usage/shoot_versions.md)
+* [Shoot Networking](usage/shoot_networking.md)
 * [Shoot Maintenance](usage/shoot_maintenance.md)
 * [Shoot Status](usage/shoot_status.md)
 * [Shoot Updates and Upgrades](usage/shoot_updates.md)
