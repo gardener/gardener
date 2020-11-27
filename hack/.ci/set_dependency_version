@@ -109,6 +109,8 @@ elif name == 'external-dns-management':
     names = ['dns-controller-manager']
 elif name == 'logging':
     names = ['fluent-bit-plugin-installer']
+elif name == 'etcd-custom-image':
+    names = ['etcd']
 else:
     names = [name]
 
