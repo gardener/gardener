@@ -64,42 +64,40 @@ func (f *fakeLookup) setErr(err error) {
 
 var _ = Describe("resolver", func() {
 	var (
-		updateCalled bool
-		r            *resolver
-		ctx          context.Context
-		cancelFunc   context.CancelFunc
-		f            *fakeLookup
-		lock         sync.Mutex
+		updateCount uint8
+		r           *resolver
+		ctx         context.Context
+		cancelFunc  context.CancelFunc
+		f           *fakeLookup
 	)
 	BeforeEach(func() {
-		updateCalled = false
-		lock = sync.Mutex{}
+		ctx, cancelFunc = context.WithCancel(context.Background())
+		updateCount = 0
 		f = &fakeLookup{
 			addrs: []string{"5.6.7.8", "1.2.3.4"}, // sorting check
 		}
 		r = &resolver{
 			lookup:        f,
 			upstreamPort:  1234,
-			refreshTicker: time.NewTicker(time.Millisecond * 3),
+			refreshTicker: time.NewTicker(time.Millisecond),
 			log:           logger.NewNopLogger(),
 			onUpdate: func() {
-				lock.Lock()
-				updateCalled = true
-				cancelFunc()
-				lock.Unlock()
+				updateCount++
 			},
 		}
 	})
 
 	It("should return correct subset", func(done Done) {
-		ctx, cancelFunc = context.WithTimeout(context.Background(), time.Millisecond*2)
-
 		Expect(r.HasSynced()).To(BeFalse(), "HasSync should be false before starting")
 
-		r.Start(ctx)
+		go r.Start(ctx)
 
-		Expect(r.HasSynced()).To(BeTrue(), "HasSync should be true after start")
-		Expect(updateCalled).To(BeTrue(), "update should be called")
+		Eventually(func() bool { //nolint:unlambda
+			return r.HasSynced()
+		}, time.Millisecond*10, time.Millisecond).Should(BeTrue(), "HasSync should be true after start")
+		Eventually(func() uint8 { //nolint:unlambda
+			return updateCount
+		}, time.Millisecond*10, time.Millisecond).Should(BeEquivalentTo(1), "update should be called once")
 
 		Expect(r.Subset()).To(ConsistOf(corev1.EndpointSubset{
 			Addresses: []corev1.EndpointAddress{
@@ -108,57 +106,51 @@ var _ = Describe("resolver", func() {
 			Ports: []corev1.EndpointPort{{Protocol: corev1.ProtocolTCP, Port: 1234}},
 		}))
 
+		cancelFunc()
 		close(done)
-	}, 0.2)
+	})
 
-	It("should not return that it has synced", func(done Done) {
-		ctx, cancelFunc = context.WithTimeout(context.Background(), time.Millisecond*2)
-
-		Expect(updateCalled).To(BeFalse(), "update should not be called")
+	It("should not return that it has synced because it was not started", func(done Done) {
+		Expect(updateCount).To(BeEquivalentTo(0), "update should not be called")
 		Expect(r.HasSynced()).To(BeFalse(), "HasSync should be false")
 
+		cancelFunc()
 		close(done)
-	}, 0.2)
+	})
 
 	It("should not return that it has synced if error occurs", func(done Done) {
-		ctx, cancelFunc = context.WithTimeout(context.Background(), time.Millisecond*2)
-
 		f.setAddrs(nil)
 		f.setErr(errors.New("some-error"))
 
-		r.Start(ctx)
+		go r.Start(ctx)
+		cancelFunc()
 
-		Expect(updateCalled).To(BeFalse(), "update should not be called")
-		Expect(r.HasSynced()).To(BeFalse(), "HasSync should be false")
+		Eventually(func() bool { //nolint:unlambda
+			return r.HasSynced()
+		}, time.Millisecond*10, time.Millisecond).Should(BeFalse(), "HasSync should always be false")
+		Eventually(func() uint8 { //nolint:unlambda
+			return updateCount
+		}, time.Millisecond*10, time.Millisecond).Should(BeZero(), "update should never be called")
 
 		close(done)
-	}, 0.2)
+	})
 
 	It("should return correct subset after resync", func(done Done) {
-		ctx, cancelFunc = context.WithTimeout(context.Background(), time.Millisecond*10)
-		r.onUpdate = func() {
-			lock.Lock()
-			updateCalled = true
-			lock.Unlock()
-		}
-
 		Expect(r.HasSynced()).To(BeFalse(), "HasSync should be false before starting")
 
 		go r.Start(ctx)
 
 		Eventually(func() bool { //nolint:unlambda
 			return r.HasSynced()
-		}, time.Millisecond*3, time.Millisecond).Should(BeTrue(), "HasSync should be true after start")
+		}, time.Millisecond*50, time.Millisecond).Should(BeTrue(), "HasSync should be true after start")
 
-		Eventually(func() bool { //nolint:unlambda
-			lock.Lock()
-			defer lock.Unlock()
-			return updateCalled
-		}, time.Millisecond*3, time.Millisecond).Should(BeTrue(), "update should be called")
+		Eventually(func() uint8 { //nolint:unlambda
+			return updateCount
+		}, time.Millisecond*10, time.Millisecond).Should(BeEquivalentTo(1), "update should be called")
 
 		Consistently(func() []corev1.EndpointSubset { //nolint:unlambda
 			return r.Subset()
-		}, time.Millisecond*3, time.Millisecond).Should(ConsistOf(corev1.EndpointSubset{
+		}, time.Millisecond*10, time.Millisecond).Should(ConsistOf(corev1.EndpointSubset{
 			Addresses: []corev1.EndpointAddress{
 				{IP: "1.2.3.4"}, {IP: "5.6.7.8"},
 			},
@@ -169,14 +161,16 @@ var _ = Describe("resolver", func() {
 
 		Eventually(func() []corev1.EndpointSubset { //nolint:unlambda
 			return r.Subset()
-		}, time.Millisecond*3, time.Millisecond).Should(ConsistOf(corev1.EndpointSubset{
+		}, time.Millisecond*10, time.Millisecond).Should(ConsistOf(corev1.EndpointSubset{
 			Addresses: []corev1.EndpointAddress{{IP: "5.6.7.8"}},
 			Ports:     []corev1.EndpointPort{{Protocol: corev1.ProtocolTCP, Port: 1234}},
 		}))
 
+		Expect(updateCount).To(BeEquivalentTo(2), "update should be called twice")
+
 		cancelFunc()
 		close(done)
-	}, 0.2)
+	})
 })
 
 var _ = Describe("CreateForCluster", func() {
