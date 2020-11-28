@@ -112,7 +112,7 @@ func (c *Controller) shootMaintenanceRequeue(key string, shoot *gardencorev1beta
 	var (
 		now             = time.Now()
 		window          = common.EffectiveShootMaintenanceTimeWindow(shoot)
-		duration        = window.RandomDurationUntilNext(now)
+		duration        = window.RandomDurationUntilNext(now, false)
 		nextMaintenance = time.Now().UTC().Add(duration)
 	)
 
