@@ -695,6 +695,13 @@ const (
 // Maintenance relevant types                                                                   //
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
+const (
+	// MaintenanceTimeWindowDurationMinimum is the minimum duration for a maintenance time window.
+	MaintenanceTimeWindowDurationMinimum = 30 * time.Minute
+	// MaintenanceTimeWindowDurationMaximum is the maximum duration for a maintenance time window.
+	MaintenanceTimeWindowDurationMaximum = 6 * time.Hour
+)
+
 // Maintenance contains information about the time window for maintenance operations and which
 // operations should be performed.
 type Maintenance struct {

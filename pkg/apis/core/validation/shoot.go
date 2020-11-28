@@ -823,12 +823,12 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path) fie
 
 		if err == nil {
 			duration := maintenanceTimeWindow.Duration()
-			if duration > 6*time.Hour {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("timeWindow"), "time window must not be greater than 6 hours"))
+			if duration > core.MaintenanceTimeWindowDurationMaximum {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("timeWindow"), fmt.Sprintf("time window must not be greater than %s", core.MaintenanceTimeWindowDurationMaximum)))
 				return allErrs
 			}
-			if duration < 30*time.Minute {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("timeWindow"), "time window must not be smaller than 30 minutes"))
+			if duration < core.MaintenanceTimeWindowDurationMinimum {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("timeWindow"), fmt.Sprintf("time window must not be smaller than %s", core.MaintenanceTimeWindowDurationMinimum)))
 				return allErrs
 			}
 		}
