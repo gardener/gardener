@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -182,6 +183,7 @@ func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Res
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	key := shootKey(shoot)
 
 	// fetch related objects required for shoot operation
 	project, err := common.ProjectForNamespace(c.k8sGardenCoreInformers.Core().V1beta1().Projects().Lister(), shoot.Namespace)
@@ -199,12 +201,14 @@ func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Res
 
 	if shoot.DeletionTimestamp != nil {
 		log = log.WithField("operation", "delete")
+		c.shootReconciliationDueTracker.off(key)
 		return c.deleteShoot(log, shoot, project, cloudProfile, seed)
 	}
 
-	log = log.WithField("operation", "reconcile")
-
 	if shouldPrepareShootForMigration(shoot) {
+		log = log.WithField("operation", "migrate")
+		c.shootReconciliationDueTracker.off(key)
+
 		if err := c.isSeedReadyForMigration(seed); err != nil {
 			return reconcile.Result{}, fmt.Errorf("target Seed is not available to host the Control Plane of Shoot %s: %v", shoot.GetName(), err)
 		}
@@ -213,8 +217,11 @@ func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Res
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+
 		return c.prepareShootForMigration(log, shoot, project, cloudProfile, sourceSeed)
 	}
+
+	log = log.WithField("operation", "reconcile")
 	return c.reconcileShoot(log, shoot, project, cloudProfile, seed)
 }
 
@@ -377,6 +384,7 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 	var (
 		ctx = context.TODO()
 
+		key                                        = shootKey(shoot)
 		operationType                              = gardencorev1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
 		respectSyncPeriodOverwrite                 = c.respectSyncPeriodOverwrite()
 		failed                                     = common.IsShootFailed(shoot)
@@ -385,7 +393,9 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 		reconcileInMaintenanceOnly                 = c.reconcileInMaintenanceOnly()
 		isUpToDate                                 = common.IsObservedAtLatestGenerationAndSucceeded(shoot)
 		isNowInEffectiveShootMaintenanceTimeWindow = common.IsNowInEffectiveShootMaintenanceTimeWindow(shoot)
-		reconcileAllowed                           = !failedOrIgnored && ((!reconcileInMaintenanceOnly && !confineSpecUpdateRollout(shoot.Spec.Maintenance)) || !isUpToDate || isNowInEffectiveShootMaintenanceTimeWindow)
+		alreadyReconciledDuringThisTimeWindow      = common.LastReconciliationDuringThisTimeWindow(shoot)
+		regularReconciliationIsDue                 = isUpToDate && isNowInEffectiveShootMaintenanceTimeWindow && !alreadyReconciledDuringThisTimeWindow
+		reconcileAllowed                           = !failedOrIgnored && ((!reconcileInMaintenanceOnly && !confineSpecUpdateRollout(shoot.Spec.Maintenance)) || !isUpToDate || (isNowInEffectiveShootMaintenanceTimeWindow && !alreadyReconciledDuringThisTimeWindow))
 	)
 
 	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
@@ -409,6 +419,8 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 		"reconcileInMaintenanceOnly": reconcileInMaintenanceOnly,
 		"isUpToDate":                 isUpToDate,
 		"isNowInEffectiveShootMaintenanceTimeWindow": isNowInEffectiveShootMaintenanceTimeWindow,
+		"alreadyReconciledDuringThisTimeWindow":      alreadyReconciledDuringThisTimeWindow,
+		"regularReconciliationIsDue":                 regularReconciliationIsDue,
 		"reconcileAllowed":                           reconcileAllowed,
 	}).Info("Checking if Shoot can be reconciled")
 
@@ -427,10 +439,12 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 
 	// If reconciliation is not allowed then compute the duration until the next sync and requeue.
 	if !reconcileAllowed {
-		durationUntilNextSync := c.durationUntilNextShootSync(shoot)
-		message := fmt.Sprintf("Reconciliation not allowed, scheduling next sync in %s (%s)", durationUntilNextSync, time.Now().UTC().Add(durationUntilNextSync))
-		logger.Infof(message)
-		return reconcile.Result{RequeueAfter: durationUntilNextSync}, nil
+		return c.scheduleNextSync(logger, shoot, regularReconciliationIsDue, "Reconciliation is not allowed"), nil
+	}
+
+	if regularReconciliationIsDue && !c.shootReconciliationDueTracker.tracked(key) {
+		c.shootReconciliationDueTracker.on(key)
+		return c.scheduleNextSync(logger, shoot, regularReconciliationIsDue, "Reconciliation allowed and due but not yet tracked (jittering next sync)"), nil
 	}
 
 	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling Shoot cluster state")
@@ -464,6 +478,8 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 		return c.updateShootStatusAndRequeueOnSyncError(ctx, gardenClient.GardenCore(), o.Shoot.Info, logger, err)
 	}
 
+	c.shootReconciliationDueTracker.off(key)
+
 	if flowErr := c.runReconcileShootFlow(o); flowErr != nil {
 		c.recorder.Event(o.Shoot.Info, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, flowErr.Description)
 		_, updateErr := c.updateShootStatusOperationError(ctx, gardenClient.GardenCore(), o.Shoot.Info, flowErr.Description, operationType, flowErr.LastErrors...)
@@ -477,17 +493,22 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 	}
 
 	if syncErr := c.syncClusterResourceToSeed(ctx, o.Shoot.Info, project, cloudProfile, seed); syncErr != nil {
-		logger.WithError(syncErr).Infof("Cluster resource sync to shoot failed")
+		logger.WithError(syncErr).Infof("Cluster resource sync to seed failed")
 		_, updateErr := c.updateShootStatusOperationError(ctx, gardenClient.GardenCore(), o.Shoot.Info, syncErr.Error(), operationType, o.Shoot.Info.Status.LastErrors...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(syncErr, updateErr)
 	}
 
-	durationUntilNextSync := c.durationUntilNextShootSync(o.Shoot.Info)
-	logger.Infof("Scheduled next queuing time in %s (%s)", durationUntilNextSync, time.Now().UTC().Add(durationUntilNextSync))
-	return reconcile.Result{RequeueAfter: durationUntilNextSync}, nil
+	c.shootReconciliationDueTracker.on(key)
+	return c.scheduleNextSync(logger, o.Shoot.Info, false, "Reconciliation finished successfully"), nil
 }
 
-func (c *Controller) durationUntilNextShootSync(shoot *gardencorev1beta1.Shoot) time.Duration {
+func (c *Controller) scheduleNextSync(logger logrus.FieldLogger, shoot *gardencorev1beta1.Shoot, regularReconciliationIsDue bool, reason string) reconcile.Result {
+	durationUntilNextSync := c.durationUntilNextShootSync(shoot, regularReconciliationIsDue)
+	logger.Infof("%s - scheduling next queuing time in %s (%s)", reason, durationUntilNextSync, time.Now().UTC().Add(durationUntilNextSync))
+	return reconcile.Result{RequeueAfter: durationUntilNextSync}
+}
+
+func (c *Controller) durationUntilNextShootSync(shoot *gardencorev1beta1.Shoot, regularReconciliationIsDue bool) time.Duration {
 	syncPeriod := common.SyncPeriodOfShoot(c.respectSyncPeriodOverwrite(), c.config.Controllers.Shoot.SyncPeriod.Duration, shoot)
 	if !c.reconcileInMaintenanceOnly() && !confineSpecUpdateRollout(shoot.Spec.Maintenance) {
 		return syncPeriod
@@ -496,10 +517,7 @@ func (c *Controller) durationUntilNextShootSync(shoot *gardencorev1beta1.Shoot) 
 	now := time.Now()
 	window := common.EffectiveShootMaintenanceTimeWindow(shoot)
 
-	if !window.Contains(now.Add(syncPeriod)) {
-		return window.RandomDurationUntilNext(now)
-	}
-	return syncPeriod
+	return window.RandomDurationUntilNext(now, regularReconciliationIsDue)
 }
 
 func (c *Controller) updateShootStatusAndRequeueOnSyncError(ctx context.Context, g gardencore.Interface, shoot *gardencorev1beta1.Shoot, logger *logrus.Entry, err error) (reconcile.Result, error) {
@@ -681,4 +699,36 @@ func (c *Controller) isHibernationActive(ctx context.Context, shootSeedNamespace
 	}
 
 	return gardencorev1beta1helper.HibernationIsEnabled(shoot), nil
+}
+
+func shootKey(shoot *gardencorev1beta1.Shoot) string {
+	return shoot.Namespace + "/" + shoot.Name
+}
+
+type reconciliationDueTracker struct {
+	lock    sync.Mutex
+	tracker map[string]bool
+}
+
+func newReconciliationDueTracker() *reconciliationDueTracker {
+	return &reconciliationDueTracker{tracker: make(map[string]bool)}
+}
+
+func (t *reconciliationDueTracker) on(key string) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	t.tracker[key] = true
+}
+
+func (t *reconciliationDueTracker) off(key string) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	delete(t.tracker, key)
+}
+
+func (t *reconciliationDueTracker) tracked(key string) bool {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	v, ok := t.tracker[key]
+	return ok && v
 }

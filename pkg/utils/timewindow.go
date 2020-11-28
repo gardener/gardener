@@ -191,20 +191,33 @@ func (m *MaintenanceTimeWindow) Contains(tTime time.Time) bool {
 	return t.Compare(m.begin) >= 0 && t.Compare(m.end) <= 0
 }
 
-var (
-	// RandomFunc is a function that computes a random number.
-	RandomFunc = rand.Int63nRange
-)
+// RandomFunc is a function that computes a random number.
+var RandomFunc = rand.Int63nRange
 
 // RandomDurationUntilNext computes the duration until a random time within the time window for the next maintenance
 // execution.
-func (m *MaintenanceTimeWindow) RandomDurationUntilNext(from time.Time) time.Duration {
+// The <from> parameter is the time from which the calculation for the next maintenance time window shall be performed
+// (typically: time.Now()).
+// The <shiftBeginToFromIfContained> parameter controls whether the beginning of the maintenance time window should be
+// changed to <from> if <from> is already inside the maintenance time window (otherwise, it has no effect). As a
+// consequence, this will return a random duration from <from> until the end of the maintenance time window which is
+// shorter than 24h.
+func (m *MaintenanceTimeWindow) RandomDurationUntilNext(from time.Time, shiftBeginToFromIfContained bool) time.Duration {
 	from = from.UTC()
 
 	var (
 		begin = m.adjustedBegin(from)
 		end   = m.adjustedEnd(from)
 	)
+
+	if shiftBeginToFromIfContained && m.Contains(from) {
+		dayOffset := 0
+		if from.Hour()-begin.Hour() < 0 {
+			dayOffset = 1
+		}
+		begin = from.AddDate(0, 0, dayOffset)
+		from = from.AddDate(0, 0, dayOffset)
+	}
 
 	if begin.Sub(from) < 0 && (m.Contains(from) || from.After(end)) {
 		begin = begin.AddDate(0, 0, 1)

@@ -58,6 +58,7 @@ type Controller struct {
 	recorder                      record.EventRecorder
 	secrets                       map[string]*corev1.Secret
 	imageVector                   imagevector.ImageVector
+	shootReconciliationDueTracker *reconciliationDueTracker
 
 	controllerInstallationLister gardencorelisters.ControllerInstallationLister
 	seedLister                   gardencorelisters.SeedLister
@@ -108,6 +109,7 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 		recorder:                      recorder,
 		secrets:                       secrets,
 		imageVector:                   imageVector,
+		shootReconciliationDueTracker: newReconciliationDueTracker(),
 
 		seedLister:                   seedLister,
 		shootLister:                  shootLister,
