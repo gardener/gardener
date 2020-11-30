@@ -168,9 +168,8 @@ func (a *Agnostic) CloudControllerManagerNotSecured() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(10253),
 		Pod: NewPod("cloud-controller-manager-http", labels.Set{
-			v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
-			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
-			v1beta1constants.LabelRole:            "cloud-controller-manager",
+			v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
+			v1beta1constants.LabelRole: "cloud-controller-manager",
 		}, "< 1.13"),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
@@ -187,9 +186,8 @@ func (a *Agnostic) CloudControllerManagerSecured() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(10258),
 		Pod: NewPod("cloud-controller-manager-https", labels.Set{
-			v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
-			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
-			v1beta1constants.LabelRole:            "cloud-controller-manager",
+			v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
+			v1beta1constants.LabelRole: "cloud-controller-manager",
 		}, ">= 1.13"),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
@@ -259,9 +257,8 @@ func (a *Agnostic) MachineControllerManager() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(10258),
 		Pod: NewPod("machine-controller-manager", labels.Set{
-			v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
-			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
-			v1beta1constants.LabelRole:            "machine-controller-manager",
+			v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
+			v1beta1constants.LabelRole: "machine-controller-manager",
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
