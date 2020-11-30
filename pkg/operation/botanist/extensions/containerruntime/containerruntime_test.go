@@ -60,9 +60,9 @@ var _ = Describe("#ContainerRuntimee", func() {
 		c        client.Client
 		expected []*extensionsv1alpha1.ContainerRuntime
 		values   *containerruntime.Values
-		log      *logrus.Entry
+		log      logrus.FieldLogger
 
-		defaultDepWaiter shoot.ContainerRuntime
+		defaultDepWaiter shoot.ExtensionContainerRuntime
 		workers          []gardencorev1beta1.Worker
 
 		mockNow *mocktime.MockNow
@@ -74,12 +74,10 @@ var _ = Describe("#ContainerRuntimee", func() {
 		mockNow = mocktime.NewMockNow(ctrl)
 
 		ctx = context.TODO()
-
-		log = logrus.NewEntry(logger.NewNopLogger())
+		log = logger.NewNopLogger()
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
-
 		c = fake.NewFakeClientWithScheme(s)
 
 		workers = make([]gardencorev1beta1.Worker, 0, len(workerNames))
@@ -192,7 +190,7 @@ var _ = Describe("#ContainerRuntimee", func() {
 	})
 
 	Describe("#Destroy", func() {
-		It("should not return erorr when not found", func() {
+		It("should not return error when not found", func() {
 			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
 		})
 

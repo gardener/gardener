@@ -108,10 +108,12 @@ type ControlPlane struct {
 
 // Extensions contains references to extension resources.
 type Extensions struct {
-	DNS              *DNS
-	Infrastructure   Infrastructure
-	Network          component.DeployMigrateWaiter
-	ContainerRuntime ContainerRuntime
+	ControlPlane         ExtensionControlPlane
+	ControlPlaneExposure ExtensionControlPlane
+	DNS                  *DNS
+	Infrastructure       ExtensionInfrastructure
+	Network              component.DeployMigrateWaiter
+	ContainerRuntime     ExtensionContainerRuntime
 }
 
 // SystemComponents contains references to system components.
@@ -132,17 +134,24 @@ type DNS struct {
 	NginxEntry          component.DeployWaiter
 }
 
-// Infrastructure contains references to an Infrastructure extension deployer and its generated
-// provider status.
-type Infrastructure interface {
+// ExtensionInfrastructure contains references to an Infrastructure extension deployer and its generated provider
+// status.
+type ExtensionInfrastructure interface {
 	component.DeployWaiter
 	SetSSHPublicKey([]byte)
 	ProviderStatus() *runtime.RawExtension
 	NodesCIDR() *string
 }
 
-// ContainerRuntime contains references to a ContainerRuntime extension deployer.
-type ContainerRuntime interface {
+// ExtensionControlPlane contains references to a ControlPlane extension deployer and its generated provider status.
+type ExtensionControlPlane interface {
+	component.DeployMigrateWaiter
+	SetInfrastructureProviderStatus(*runtime.RawExtension)
+	ProviderStatus() *runtime.RawExtension
+}
+
+// ExtensionContainerRuntime contains references to a ContainerRuntime extension deployer.
+type ExtensionContainerRuntime interface {
 	component.DeployMigrateWaiter
 	DeleteStaleResources(ctx context.Context) error
 }

@@ -72,12 +72,12 @@ type Values struct {
 	DeploymentRequested bool
 }
 
-// New creates a new instance of an Infrastructure deployer.
+// New creates a new instance of an ExtensionInfrastructure deployer.
 func New(
 	logger logrus.FieldLogger,
 	client client.Client,
 	values *Values,
-) shoot.Infrastructure {
+) shoot.ExtensionInfrastructure {
 	return &infrastructure{
 		client:              client,
 		logger:              logger,
@@ -166,7 +166,7 @@ func (i *infrastructure) Wait(ctx context.Context) error {
 		i.client,
 		i.logger,
 		func() runtime.Object { return &extensionsv1alpha1.Infrastructure{} },
-		"Infrastructure",
+		extensionsv1alpha1.InfrastructureResource,
 		i.values.Namespace,
 		i.values.Name,
 		i.waitInterval,
@@ -192,7 +192,7 @@ func (i *infrastructure) WaitCleanup(ctx context.Context) error {
 		i.client,
 		i.logger,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Infrastructure{} },
-		"Infrastructure",
+		extensionsv1alpha1.InfrastructureResource,
 		i.values.Namespace,
 		i.values.Name,
 		i.waitInterval,
