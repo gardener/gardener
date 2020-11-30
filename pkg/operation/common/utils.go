@@ -644,6 +644,23 @@ func IsNowInEffectiveShootMaintenanceTimeWindow(shoot *gardencorev1beta1.Shoot) 
 	return EffectiveShootMaintenanceTimeWindow(shoot).Contains(time.Now())
 }
 
+// LastReconciliationDuringThisTimeWindow returns true if <now> is contained in the given effective maintenance time
+// window of the shoot and if the <lastReconciliation> did not happen longer than the longest possible duration of a
+// maintenance time window.
+func LastReconciliationDuringThisTimeWindow(shoot *gardencorev1beta1.Shoot) bool {
+	if shoot.Status.LastOperation == nil {
+		return false
+	}
+
+	var (
+		timeWindow         = EffectiveShootMaintenanceTimeWindow(shoot)
+		now                = time.Now()
+		lastReconciliation = shoot.Status.LastOperation.LastUpdateTime.Time
+	)
+
+	return timeWindow.Contains(lastReconciliation) && now.UTC().Sub(lastReconciliation.UTC()) <= gardencorev1beta1.MaintenanceTimeWindowDurationMaximum
+}
+
 // IsObservedAtLatestGenerationAndSucceeded checks whether the Shoot's generation has changed or if the LastOperation status
 // is Succeeded.
 func IsObservedAtLatestGenerationAndSucceeded(shoot *gardencorev1beta1.Shoot) bool {

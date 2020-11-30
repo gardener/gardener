@@ -11,13 +11,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package utils_test
 
 import (
 	"fmt"
 	"time"
-
-	"k8s.io/apimachinery/pkg/util/rand"
 
 	. "github.com/gardener/gardener/pkg/utils"
 
@@ -25,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	"k8s.io/apimachinery/pkg/util/rand"
 )
 
 var _ = Describe("utils", func() {
@@ -242,29 +242,47 @@ var _ = Describe("utils", func() {
 		)
 
 		DescribeTable("#RandomDurationUntilNext",
-			func(maintenanceTimeWindow *MaintenanceTimeWindow, now time.Time, expected time.Duration) {
+			func(maintenanceTimeWindow *MaintenanceTimeWindow, shiftBeginToFromIfContained bool, now time.Time, expected time.Duration) {
 				randomFunc := RandomFunc
 				defer func() { RandomFunc = randomFunc }()
-				RandomFunc = func(int64, int64) int64 {
-					return 0
+				RandomFunc = func(_ int64, delta int64) int64 {
+					return delta
 				}
 
-				Expect(maintenanceTimeWindow.RandomDurationUntilNext(now)).To(Equal(expected))
+				Expect(maintenanceTimeWindow.RandomDurationUntilNext(now, shiftBeginToFromIfContained)).To(Equal(expected))
 			},
 
-			Entry("begin and end on the same day (16-19), does contain now", from16to19, newTime(17, 0, 0, 0), 23*time.Hour),
-			Entry("begin and end on the same day (16-19), does not contain now (before)", from16to19, newTime(15, 0, 0, 0), time.Hour),
-			Entry("begin and end on the same day (16-19), does not contain now (after)", from16to19, newTime(20, 0, 0, 0), 20*time.Hour),
-			Entry("begin and end on the same day (0-1), does contain now", from0to1, newTime(0, 30, 0, 0), 23*time.Hour+30*time.Minute),
-			Entry("begin and end on the same day (0-1), does not contain now (before)", from0to1, newTime(19, 0, 0, 0), 5*time.Hour),
-			Entry("begin and end on the same day (0-1), does not contain now (after)", from0to1, newTime(1, 59, 1, 0), 22*time.Hour+59*time.Second),
+			// same day, begin should stay as it is even if the time is contained
+			Entry("(16-19), keep begin as is, does contain now", from16to19, false, newTime(17, 0, 0, 0), 26*time.Hour),
+			Entry("(16-19), keep begin as is, does not contain now (before)", from16to19, false, newTime(15, 0, 0, 0), 4*time.Hour),
+			Entry("(16-19), keep begin as is, does not contain now (after)", from16to19, false, newTime(20, 0, 0, 0), 23*time.Hour),
+			Entry("(0-1), keep begin as is, does contain now", from0to1, false, newTime(0, 30, 0, 0), 24*time.Hour+30*time.Minute),
+			Entry("(0-1), keep begin as is, does not contain now (before)", from0to1, false, newTime(19, 0, 0, 0), 6*time.Hour),
+			Entry("(0-1), keep begin as is, does not contain now (after)", from0to1, false, newTime(1, 59, 1, 0), 23*time.Hour+59*time.Second),
 
-			Entry("begin and end on different day (23-1), does contain now", from23to1, newTime(0, 0, 0, 0), 23*time.Hour),
-			Entry("begin and end on different day (23-1), does not contain now (before)", from23to1, newTime(21, 0, 0, 0), 2*time.Hour),
-			Entry("begin and end on different day (23-1), does not contain now (after)", from23to1, newTime(2, 0, 0, 0), 21*time.Hour),
-			Entry("begin and end on different day (23-0), does contain now", from23to0, newTime(23, 30, 0, 0), 23*time.Hour+30*time.Minute),
-			Entry("begin and end on different day (23-0), does not contain now (before)", from23to0, newTime(20, 0, 0, 0), 3*time.Hour),
-			Entry("begin and end on different day (23-0), does not contain now (after)", from23to0, newTime(0, 59, 1, 0), 22*time.Hour+59*time.Second),
+			// different day, begin should stay as it is even if the time is contained
+			Entry("(23-1), keep begin as is, does contain now", from23to1, false, newTime(0, 0, 0, 0), 25*time.Hour),
+			Entry("(23-1), keep begin as is, does not contain now (before)", from23to1, false, newTime(21, 0, 0, 0), 4*time.Hour),
+			Entry("(23-1), keep begin as is, does not contain now (after)", from23to1, false, newTime(2, 0, 0, 0), 23*time.Hour),
+			Entry("(23-0), keep begin as is, does contain now", from23to0, false, newTime(23, 30, 0, 0), 24*time.Hour+30*time.Minute),
+			Entry("(23-0), keep begin as is, does not contain now (before)", from23to0, false, newTime(20, 0, 0, 0), 4*time.Hour),
+			Entry("(23-0), keep begin as is, does not contain now (after)", from23to0, false, newTime(0, 59, 1, 0), 23*time.Hour+59*time.Second),
+
+			// same day, begin should be shifted to the time if it is contained
+			Entry("(16-19), shift begin if contained, does contain now", from16to19, true, newTime(17, 0, 0, 0), 2*time.Hour),
+			Entry("(16-19), shift begin if contained, does not contain now (before)", from16to19, true, newTime(15, 0, 0, 0), 4*time.Hour),
+			Entry("(16-19), shift begin if contained, does not contain now (after)", from16to19, true, newTime(20, 0, 0, 0), 23*time.Hour),
+			Entry("(0-1), shift begin if contained, does contain now", from0to1, true, newTime(0, 30, 0, 0), 30*time.Minute),
+			Entry("(0-1), shift begin if contained, does not contain now (before)", from0to1, true, newTime(19, 0, 0, 0), 6*time.Hour),
+			Entry("(0-1), shift begin if contained, does not contain now (after)", from0to1, true, newTime(1, 59, 1, 0), 23*time.Hour+59*time.Second),
+
+			// different day, begin should be shifted to the time if it is contained
+			Entry("(23-1), shift begin if contained, does contain now", from23to1, true, newTime(0, 0, 0, 0), time.Hour),
+			Entry("(23-1), shift begin if contained, does not contain now (before)", from23to1, true, newTime(21, 0, 0, 0), 4*time.Hour),
+			Entry("(23-1), shift begin if contained, does not contain now (after)", from23to1, true, newTime(2, 0, 0, 0), 23*time.Hour),
+			Entry("(23-0), shift begin if contained, does contain now", from23to0, true, newTime(23, 30, 0, 0), 30*time.Minute),
+			Entry("(23-0), shift begin if contained, does not contain now (before)", from23to0, true, newTime(20, 0, 0, 0), 4*time.Hour),
+			Entry("(23-0), shift begin if contained, does not contain now (after)", from23to0, true, newTime(0, 59, 1, 0), 23*time.Hour+59*time.Second),
 		)
 
 		DescribeTable("#Duration",
