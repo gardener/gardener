@@ -95,14 +95,11 @@ func (l *resolver) Start(stopCtx context.Context) {
 
 		sort.Strings(addresses)
 
-		l.lock.RLock()
+		l.lock.Lock()
 		updated := !equal(addresses, l.addrs)
-		l.lock.RUnlock()
 
 		if updated {
-			l.lock.Lock()
 			l.addrs = addresses
-			l.lock.Unlock()
 
 			l.log.WithField("resolvedIPs", l.addrs).Infoln("updated resolved addresses")
 
@@ -110,6 +107,8 @@ func (l *resolver) Start(stopCtx context.Context) {
 				l.onUpdate()
 			}
 		}
+
+		l.lock.Unlock()
 	}
 
 	// start the update in the beginning
