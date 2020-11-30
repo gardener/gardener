@@ -24,7 +24,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
@@ -246,5 +248,85 @@ var _ = Describe("Actuator", func() {
 			Entry("should be stuck - machine set does not have matching matching class", []machinev1alpha1.MachineSet{machineSetOtherMachineClass}, machineDeployments, true),
 			Entry("should be stuck - no machine set with matching owner reference", []machinev1alpha1.MachineSet{machineSetOtherOwner}, machineDeployments, true),
 		)
+	})
+
+	Describe("#updateCloudCredentialsForUnwantedMachineDeployments", func() {
+		const (
+			workerNamespace           = "test-ns"
+			machineClassSecretName1   = "machine-class-secret1"
+			machineClassSecretName2   = "machine-class-secret2"
+			nonMachineClassSecretName = "non-machine-class-secret"
+		)
+
+		var (
+			all    []runtime.Object
+			logger = log.Log.WithName("test")
+
+			usernameKey   = "username"
+			usernameValue = []byte("username")
+
+			cloudCredentials = map[string][]byte{
+				usernameKey: usernameValue,
+			}
+			machineClassSecret1 = &corev1.Secret{
+				Data: map[string][]byte{
+					"key": []byte("value"),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      machineClassSecretName1,
+					Namespace: workerNamespace,
+					Labels:    map[string]string{"gardener.cloud/purpose": "machineclass"},
+				},
+			}
+			machineClassSecret2 = &corev1.Secret{
+				Data: map[string][]byte{
+					usernameKey: []byte("outadated-username"),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      machineClassSecretName2,
+					Namespace: workerNamespace,
+					Labels:    map[string]string{"gardener.cloud/purpose": "machineclass"},
+				},
+			}
+			nonMachineClassSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      nonMachineClassSecretName,
+					Namespace: workerNamespace,
+				},
+			}
+		)
+
+		BeforeEach(func() {
+			all = []runtime.Object{
+				machineClassSecret1,
+				machineClassSecret2,
+				nonMachineClassSecret,
+			}
+		})
+
+		It("should update the cloud credentials for all machine class secret", func() {
+			a := &genericActuator{client: fake.NewFakeClient(all...)}
+			secret1 := &corev1.Secret{}
+			secret2 := &corev1.Secret{}
+			secret3 := &corev1.Secret{}
+
+			Expect(a.updateCloudCredentialsInAllMachineClassSecrets(context.TODO(), logger, cloudCredentials, workerNamespace)).ToNot(HaveOccurred())
+			Expect(a.client.Get(context.TODO(), client.ObjectKey{Name: machineClassSecretName1, Namespace: workerNamespace}, secret1)).ToNot(HaveOccurred())
+			Expect(a.client.Get(context.TODO(), client.ObjectKey{Name: machineClassSecretName2, Namespace: workerNamespace}, secret2)).ToNot(HaveOccurred())
+			Expect(a.client.Get(context.TODO(), client.ObjectKey{Name: nonMachineClassSecretName, Namespace: workerNamespace}, secret3)).ToNot(HaveOccurred())
+
+			for key, value := range cloudCredentials {
+				v, ok := secret1.Data[key]
+				Expect(ok).To(BeTrue())
+				Expect(v).To(Equal(value))
+
+				v, ok = secret2.Data[key]
+				Expect(ok).To(BeTrue())
+				Expect(v).To(Equal(value))
+
+				_, ok = secret3.Data[key]
+				Expect(ok).To(BeFalse())
+			}
+		})
 	})
 })
