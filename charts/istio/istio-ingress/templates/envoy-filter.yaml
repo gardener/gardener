@@ -68,6 +68,72 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
+  name: tcp-stats-filter-1.8
+  namespace: {{ .Release.Namespace }}
+spec:
+  configPatches:
+  - applyTo: NETWORK_FILTER
+    match:
+      context: GATEWAY
+      proxy:
+        proxyVersion: '^1\.8.*'
+      listener:
+        filterChain:
+          filter:
+            name: "envoy.tcp_proxy"
+    patch:
+      operation: INSERT_BEFORE
+      value:
+        name: istio.stats
+        typed_config:
+          "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+          type_url: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
+          value:
+            config:
+              root_id: stats_outbound
+              configuration:
+                "@type": "type.googleapis.com/google.protobuf.StringValue"
+                value: |
+                  {
+                  }
+              vm_config:
+                vm_id: tcp_stats_outbound
+                runtime: envoy.wasm.runtime.null
+                code:
+                  local:
+                    inline_string: "envoy.wasm.stats"
+
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: tcp-metadata-exchange-1.8
+  namespace: {{ .Release.Namespace }}
+spec:
+  configPatches:
+  - applyTo: CLUSTER
+    match:
+      context: GATEWAY
+      proxy:
+        proxyVersion: '^1\.8.*'
+      cluster: {}
+    patch:
+      operation: MERGE
+      value:
+        filters:
+        - name: istio.metadata_exchange
+          typed_config:
+            "@type": type.googleapis.com/udpa.type.v1.TypedStruct
+            type_url: type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
+            value:
+              protocol: istio-peer-exchange
+
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
   name: tcp-stats-filter-1.7
   namespace: {{ .Release.Namespace }}
 spec:
@@ -86,12 +152,12 @@ spec:
       value:
         name: istio.stats
         typed_config:
-          '@type': type.googleapis.com/udpa.type.v1.TypedStruct
+          "@type": type.googleapis.com/udpa.type.v1.TypedStruct
           type_url: type.googleapis.com/envoy.extensions.filters.network.wasm.v3.Wasm
           value:
             config:
               configuration:
-                '@type': type.googleapis.com/google.protobuf.StringValue
+                "@type": type.googleapis.com/google.protobuf.StringValue
                 value: |
                   {
                     "debug": "false",

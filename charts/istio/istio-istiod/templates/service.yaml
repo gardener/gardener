@@ -10,11 +10,14 @@ spec:
   ports:
   - name: https-sds # mTLS with k8s-signed cert
     port: 15012
+    protocol: TCP
   - name: https-webhook # validation and injection
     port: 443
+    protocol: TCP
     targetPort: {{ .Values.ports.https }}
   - name: metrics # prometheus metrics
     port: 15014
+    protocol: TCP
     targetPort: 15014
   selector:
 {{ .Values.labels | toYaml | indent 4 }}

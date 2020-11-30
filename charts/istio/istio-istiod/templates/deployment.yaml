@@ -38,11 +38,12 @@ spec:
         - --log_output_level=all:warn,ads:error
         - --domain={{ .Values.trustDomain }}
         - --plugins=authn,authz,health # remove mixer plugin
-        - --trust-domain={{ .Values.trustDomain }}
         - --keepaliveMaxServerConnectionAge=30m
         ports:
         - containerPort: 15012
+          protocol: TCP
         - containerPort: {{ .Values.ports.https }}
+          protocol: TCP
         readinessProbe:
           exec:
             command:
@@ -88,6 +89,10 @@ spec:
           value: "false"
         - name: CLUSTER_ID
           value: "Kubernetes"
+        - name: EXTERNAL_ISTIOD
+          value: "false"
+        - name: PILOT_ENDPOINT_TELEMETRY_LABEL
+          value: "true"
         resources:
           requests:
             cpu: 250m

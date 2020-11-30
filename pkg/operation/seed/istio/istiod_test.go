@@ -85,7 +85,6 @@ var _ = Describe("istiod", func() {
 			chartsRootPath,
 			c,
 		)
-
 	})
 
 	JustBeforeEach(func() {
@@ -107,7 +106,6 @@ var _ = Describe("istiod", func() {
 		Expect(c.Get(ctx, client.ObjectKey{Name: "istiod", Namespace: deployNS}, actualDeploy)).ToNot(HaveOccurred())
 		envs := actualDeploy.Spec.Template.Spec.Containers[0].Env
 
-		Expect(envs).To(HaveLen(13))
 		Expect(envs).To(ContainElement(env))
 	},
 		Entry("JWT policy is third-party", simplEnv("JWT_POLICY", "third-party-jwt")),
@@ -125,10 +123,15 @@ var _ = Describe("istiod", func() {
 		Entry("CLUSTER_ID is Kubernetes", simplEnv("CLUSTER_ID", "Kubernetes")),
 	)
 
+	It("istiod deployment has correct number of environment variables", func() {
+		actualDeploy := &appsv1.Deployment{}
+
+		Expect(c.Get(ctx, client.ObjectKey{Name: "istiod", Namespace: deployNS}, actualDeploy)).ToNot(HaveOccurred())
+		Expect(actualDeploy.Spec.Template.Spec.Containers[0].Env).To(HaveLen(15))
+	})
+
 	Describe("poddisruption budget", func() {
-		var (
-			pdb *policyv1beta1.PodDisruptionBudget
-		)
+		var pdb *policyv1beta1.PodDisruptionBudget
 
 		JustBeforeEach(func() {
 			pdb = &policyv1beta1.PodDisruptionBudget{}

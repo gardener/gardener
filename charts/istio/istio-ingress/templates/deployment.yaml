@@ -45,6 +45,7 @@ spec:
         - containerPort: 15021
         {{- range .Values.ports }}
         - containerPort: {{ .targetPort }}
+          protocol: TCP
         {{- end }}
         args:
         - proxy
@@ -61,7 +62,6 @@ spec:
         - --statusPort=15021
         - --controlPlaneAuthPolicy=NONE
         - --discoveryAddress=istiod.{{ .Values.istiodNamespace }}.svc:15012
-        - --trust-domain={{ .Values.trustDomain }}
         readinessProbe:
           failureThreshold: 30
           httpGet:
@@ -132,12 +132,10 @@ spec:
           value: istio-ingressgateway
         - name: ISTIO_META_OWNER
           value: kubernetes://apis/apps/v1/namespaces/{{ .Release.Namespace }}/deployments/istio-ingressgateway
-        - name: ISTIO_META_MESH_ID
-          value: "{{ .Values.trustDomain }}"
         - name: ISTIO_AUTO_MTLS_ENABLED
           value: "true"
         - name: ISTIO_META_ROUTER_MODE
-          value: sni-dnat
+          value: standard
         - name: ISTIO_META_CLUSTER_ID
           value: "Kubernetes"
         - name: ISTIO_BOOTSTRAP_OVERRIDE
@@ -155,6 +153,8 @@ spec:
           readOnly: true
         - name: ingressgatewaysdsudspath
           mountPath: /var/run/ingress_gateway
+        - name: istio-data
+          mountPath: /var/lib/istio/data
         - name: podinfo
           mountPath: /etc/istio/pod
       volumes:
@@ -176,6 +176,8 @@ spec:
       - emptyDir: {}
         name: istio-envoy
       - name: ingressgatewaysdsudspath
+        emptyDir: {}
+      - name: istio-data
         emptyDir: {}
       - name: istio-token
         projected:
