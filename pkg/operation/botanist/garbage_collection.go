@@ -67,7 +67,7 @@ func (b *Botanist) deleteStalePods(ctx context.Context, c client.Client, podList
 	var result error
 
 	for _, pod := range podList.Items {
-		if strings.Contains(pod.Status.Reason, "Evicted") {
+		if strings.Contains(pod.Status.Reason, "Evicted") || strings.HasPrefix(pod.Status.Reason, "OutOf") {
 			b.Logger.Debugf("Deleting pod %s as its reason is %s.", pod.Name, pod.Status.Reason)
 			if err := c.Delete(ctx, &pod, kubernetes.DefaultDeleteOptions...); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)
