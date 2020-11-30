@@ -880,7 +880,7 @@
           "yaxes": [
             {
               "format": "bytes",
-              "label": "Cores",
+              "label": "Memory",
               "logBase": 1,
               "max": null,
               "min": null,
