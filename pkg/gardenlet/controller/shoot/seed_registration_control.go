@@ -50,7 +50,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,7 +75,7 @@ func init() {
 	utilruntime.Must(err)
 }
 
-func (c *Controller) seedRegistrationAdd(obj interface{}) {
+func (c *Controller) seedRegistrationAdd(obj interface{}, immediately bool) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		return
@@ -89,12 +88,17 @@ func (c *Controller) seedRegistrationAdd(obj interface{}) {
 		return
 	}
 
-	// spread registration of shooted seeds (including gardenlet updates/rollouts) across the configured sync jitter
-	// period to avoid overloading the gardener-apiserver if all gardenlets in all shooted seeds are (re)starting
-	// roughly at the same time
-	duration := utils.RandomDurationWithMetaDuration(c.config.Controllers.ShootedSeedRegistration.SyncJitterPeriod)
-	logger.Logger.Infof("Added shooted seed %q with delay %s to the registration queue", key, duration)
-	c.seedRegistrationQueue.AddAfter(key, duration)
+	if immediately {
+		logger.Logger.Infof("Added shooted seed %q without delay to the registration queue", key)
+		c.seedRegistrationQueue.Add(key)
+	} else {
+		// spread registration of shooted seeds (including gardenlet updates/rollouts) across the configured sync jitter
+		// period to avoid overloading the gardener-apiserver if all gardenlets in all shooted seeds are (re)starting
+		// roughly at the same time
+		duration := utils.RandomDurationWithMetaDuration(c.config.Controllers.ShootedSeedRegistration.SyncJitterPeriod)
+		logger.Logger.Infof("Added shooted seed %q with delay %s to the registration queue", key, duration)
+		c.seedRegistrationQueue.AddAfter(key, duration)
+	}
 }
 
 func (c *Controller) seedRegistrationUpdate(oldObj, newObj interface{}) {
@@ -107,11 +111,12 @@ func (c *Controller) seedRegistrationUpdate(oldObj, newObj interface{}) {
 		return
 	}
 
-	if newShoot.Generation == newShoot.Status.ObservedGeneration && apiequality.Semantic.DeepEqual(newShoot.Annotations, oldShoot.Annotations) {
+	if newShoot.Generation == newShoot.Status.ObservedGeneration &&
+		newShoot.Annotations[v1beta1constants.AnnotationShootUseAsSeed] == oldShoot.Annotations[v1beta1constants.AnnotationShootUseAsSeed] {
 		return
 	}
 
-	c.seedRegistrationAdd(newObj)
+	c.seedRegistrationAdd(newObj, true)
 }
 
 func (c *Controller) reconcileShootedSeedRegistrationKey(req reconcile.Request) (reconcile.Result, error) {
