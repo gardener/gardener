@@ -66,7 +66,7 @@ func NewBootstrapper(
 	client client.Client,
 	namespace string,
 	image string,
-	kubernetesVersion string,
+	kubernetesVersion *semver.Version,
 	imageVectorOverwrite *string,
 ) component.DeployWaiter {
 	return &bootstrapper{
@@ -82,18 +82,13 @@ type bootstrapper struct {
 	client               client.Client
 	namespace            string
 	image                string
-	kubernetesVersion    string
+	kubernetesVersion    *semver.Version
 	imageVectorOverwrite *string
 }
 
 func (b *bootstrapper) Deploy(ctx context.Context) error {
-	v, err := semver.NewVersion(b.kubernetesVersion)
-	if err != nil {
-		return err
-	}
-
 	var crdYAML bytes.Buffer
-	if err := crdTemplate.Execute(&crdYAML, map[string]bool{"k8sGreaterEqual112": versionConstraintK8sGreaterEqual112.Check(v)}); err != nil {
+	if err := crdTemplate.Execute(&crdYAML, map[string]bool{"k8sGreaterEqual112": versionConstraintK8sGreaterEqual112.Check(b.kubernetesVersion)}); err != nil {
 		return err
 	}
 
