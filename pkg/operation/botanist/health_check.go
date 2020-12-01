@@ -31,6 +31,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/namespaces"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -566,7 +567,7 @@ func init() {
 }
 
 var managedResourcesShoot = sets.NewString(
-	common.ManagedResourceCoreNamespaceName,
+	namespaces.ManagedResourceName,
 	common.ManagedResourceShootCoreName,
 	common.ManagedResourceAddonsName,
 )

@@ -65,61 +65,6 @@ import (
 
 var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
 
-// DeployNamespace creates a namespace in the Seed cluster which is used to deploy all the control plane
-// components for the Shoot cluster. Moreover, the cloud provider configuration and all the secrets will be
-// stored as ConfigMaps/Secrets.
-func (b *Botanist) DeployNamespace(ctx context.Context) error {
-	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: b.Shoot.SeedNamespace,
-		},
-	}
-
-	if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), namespace, func() error {
-		namespace.Annotations = map[string]string{
-			v1beta1constants.DeprecatedShootUID: string(b.Shoot.Info.Status.UID),
-		}
-		namespace.Labels = map[string]string{
-			v1beta1constants.GardenRole:              v1beta1constants.GardenRoleShoot,
-			v1beta1constants.LabelSeedProvider:       string(b.Seed.Info.Spec.Provider.Type),
-			v1beta1constants.LabelShootProvider:      string(b.Shoot.Info.Spec.Provider.Type),
-			v1beta1constants.LabelNetworkingProvider: string(b.Shoot.Info.Spec.Networking.Type),
-			v1beta1constants.LabelBackupProvider:     string(b.Seed.Info.Spec.Provider.Type),
-		}
-
-		if b.Seed.Info.Spec.Backup != nil {
-			namespace.Labels[v1beta1constants.LabelBackupProvider] = string(b.Seed.Info.Spec.Backup.Provider)
-		}
-
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	b.SeedNamespaceObject = namespace
-	return nil
-}
-
-// DeleteNamespace deletes the namespace in the Seed cluster which holds the control plane components. The built-in
-// garbage collection in Kubernetes will automatically delete all resources which belong to this namespace. This
-// comprises volumes and load balancers as well.
-func (b *Botanist) DeleteNamespace(ctx context.Context) error {
-	return b.deleteNamespace(ctx, b.Shoot.SeedNamespace)
-}
-
-func (b *Botanist) deleteNamespace(ctx context.Context, name string) error {
-	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-	}
-	err := b.K8sSeedClient.Client().Delete(ctx, namespace, kubernetes.DefaultDeleteOptions...)
-	if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
-		return nil
-	}
-	return err
-}
-
 // EnsureClusterIdentity ensures that Shoot cluster-identity ConfigMap exists and stores its data
 // in the operation. Updates shoot.status.clusterIdentity if it doesn't exist already.
 func (b *Botanist) EnsureClusterIdentity(ctx context.Context) error {
