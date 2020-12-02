@@ -238,8 +238,18 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	}
 
 	if oldShoot.Spec.SeedName != nil && !apiequality.Semantic.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName) &&
-		seed != nil && seed.Spec.Backup == nil {
-		return admission.NewForbidden(a, fmt.Errorf("cannot change seed name, because seed backup is not configured, for shoot %q", shoot.Name))
+		seed != nil {
+		if seed.Spec.Backup == nil {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name, because seed backup is not configured, for shoot %q", shoot.Name))
+		}
+
+		oldSeed, err := v.seedLister.Get(*oldShoot.Spec.SeedName)
+		if err != nil {
+			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed: %+v", err.Error()))
+		}
+		if oldSeed.Spec.Provider.Type != seed.Spec.Provider.Type {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name, because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", seed.Spec.Provider.Type, oldSeed.Spec.Provider.Type))
+		}
 	}
 
 	if shoot.Spec.Provider.Type != cloudProfile.Spec.Type {
