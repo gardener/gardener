@@ -54,7 +54,10 @@ spec:
             memory: 150Mi
         ports:
         - name: metrics
-          containerPort: 2020
+          containerPort: {{ .Values.ports.metrics }}
+          protocol: TCP
+        - name: metrics-plugin
+          containerPort: {{ .Values.ports.outputPluginMetrics }}
           protocol: TCP
         readinessProbe:
           httpGet:

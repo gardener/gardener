@@ -24,10 +24,10 @@
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 12,
         "x": 0,
-        "y": 2
+        "y": 0
       },
       "hiddenSeries": false,
       "id": 2,
@@ -51,9 +51,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.2.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -76,7 +77,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Input Bytes Processing Rate",
+      "title": "[Fluentbit] Input Bytes Per Second",
       "tooltip": {
         "shared": true,
         "sort": 2,
@@ -92,6 +93,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:297",
           "format": "Bps",
           "label": null,
           "logBase": 1,
@@ -100,6 +102,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:298",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -129,10 +132,10 @@
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 12,
         "x": 12,
-        "y": 2
+        "y": 0
       },
       "hiddenSeries": false,
       "id": 9,
@@ -154,9 +157,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.2.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -179,7 +183,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Output Bytes Processing Rate",
+      "title": "[Fluentbit] Output Bytes Per Second",
       "tooltip": {
         "shared": true,
         "sort": 2,
@@ -232,10 +236,10 @@
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 5
       },
       "hiddenSeries": false,
       "id": 40,
@@ -257,9 +261,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.2.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -282,7 +287,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Input Records Processing Rate",
+      "title": "[Fluentbit] Input Records Per Second",
       "tooltip": {
         "shared": true,
         "sort": 2,
@@ -298,6 +303,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:1387",
           "format": "rps",
           "label": null,
           "logBase": 1,
@@ -306,6 +312,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:1388",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -335,10 +342,10 @@
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
-        "h": 6,
+        "h": 5,
         "w": 12,
         "x": 12,
-        "y": 8
+        "y": 5
       },
       "hiddenSeries": false,
       "id": 41,
@@ -362,9 +369,10 @@
       "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.2.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -387,7 +395,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Output Record Processing Rate",
+      "title": "[Fluentbit] Output Records Per Second",
       "tooltip": {
         "shared": true,
         "sort": 2,
@@ -430,10 +438,27 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "Failed retries of the fluent-bit's output plugin.",
+      "description": "Output plugin total logs",
       "fieldConfig": {
         "defaults": {
-          "custom": {}
+          "custom": {
+            "align": null,
+            "filterable": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -443,34 +468,28 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 14
+        "y": 10
       },
       "hiddenSeries": false,
-      "id": 11,
+      "id": 56,
       "legend": {
-        "alignAsTable": false,
-        "avg": true,
-        "current": true,
-        "hideEmpty": true,
-        "hideZero": true,
-        "max": true,
+        "avg": false,
+        "current": false,
+        "max": false,
         "min": false,
-        "rightSide": false,
-        "show": false,
-        "sort": "current",
-        "sortDesc": true,
+        "show": true,
         "total": false,
-        "values": true
+        "values": false
       },
       "lines": true,
       "linewidth": 1,
-      "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
-      "pointradius": 5,
+      "pluginVersion": "7.2.1",
+      "pointradius": 2,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
@@ -479,20 +498,17 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_output_retries_total[$__rate_interval])) by (pod, name)",
-          "format": "time_series",
-          "hide": false,
+          "expr": "sum(rate(fluentbit_loki_gardener_incoming_logs_total[$__rate_interval]))",
+          "instant": false,
           "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "{{pod}} Retries to {{name}}",
+          "legendFormat": "Incoming Logs",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(fluentbit_output_retries_failed_total[$__rate_interval])) by (pod, name)",
-          "format": "time_series",
+          "expr": "sum(rate(fluentbit_loki_gardener_forwarded_logs_total[$__rate_interval]))",
+          "instant": false,
           "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "{{pod}} Failed Retries to {{ name }}",
+          "legendFormat": "Transferred to Promtail",
           "refId": "B"
         }
       ],
@@ -500,12 +516,13 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Output Retry/Failed Rates",
+      "title": "[Output Plugin] Processed Logs",
       "tooltip": {
-        "shared": false,
-        "sort": 2,
+        "shared": true,
+        "sort": 0,
         "value_type": "individual"
       },
+      "transformations": [],
       "type": "graph",
       "xaxis": {
         "buckets": null,
@@ -516,21 +533,22 @@
       },
       "yaxes": [
         {
-          "decimals": null,
+          "$$hashKey": "object:1440",
           "format": "short",
-          "label": "",
+          "label": null,
           "logBase": 1,
           "max": null,
-          "min": "0",
+          "min": null,
           "show": true
         },
         {
+          "$$hashKey": "object:1441",
           "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
           "min": "0",
-          "show": false
+          "show": true
         }
       ],
       "yaxis": {
@@ -544,7 +562,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
-      "description": "Errors of the fluent-bit's output plugin.",
+      "description": "Summary for the all custom fail metrics in the output plugin",
       "fieldConfig": {
         "defaults": {
           "custom": {}
@@ -557,34 +575,28 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 14
+        "y": 10
       },
       "hiddenSeries": false,
-      "id": 10,
+      "id": 59,
       "legend": {
-        "alignAsTable": false,
         "avg": false,
-        "current": true,
-        "hideEmpty": true,
-        "hideZero": true,
+        "current": false,
         "max": false,
         "min": false,
-        "rightSide": false,
         "show": true,
-        "sort": "current",
-        "sortDesc": true,
         "total": false,
-        "values": true
+        "values": false
       },
       "lines": true,
       "linewidth": 1,
-      "links": [],
       "nullPointMode": "null",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
-      "pointradius": 5,
+      "pluginVersion": "7.2.1",
+      "pointradius": 2,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [],
@@ -593,20 +605,41 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_output_errors_total[$__rate_interval])) by (pod, name)",
-          "format": "time_series",
-          "hide": false,
+          "expr": "sum(rate(fluentbit_loki_gardener_dropped_logs_total[$__rate_interval]))",
           "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "{{ pod }}/{{ name }}",
-          "refId": "A"
+          "legendFormat": "Dropt Logs",
+          "refId": "C"
+        },
+        {
+          "expr": "sum(rate(prometheus_target_scrapes_sample_out_of_order_total[$__rate_interval]))",
+          "interval": "",
+          "legendFormat": "OutOfOrder Logs",
+          "refId": "D"
+        },
+        {
+          "expr": "sum(rate(fluentbit_loki_gardener_logs_without_metadata_total[$__rate_interval]))",
+          "interval": "",
+          "legendFormat": "Missing Metadata",
+          "refId": "E"
+        },
+        {
+          "expr": "sum(rate(fluentbit_loki_gardener_errors_total[$__rate_interval]))",
+          "interval": "",
+          "legendFormat": "Errors",
+          "refId": "F"
+        },
+        {
+          "expr": "sum(rate(promtail_dropped_entries_total[$__rate_interval]))",
+          "interval": "",
+          "legendFormat": "Promtail Dropped",
+          "refId": "G"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Output Error Rate",
+      "title": "[Output Plugin] Fails Summary",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -622,16 +655,18 @@
       },
       "yaxes": [
         {
-          "format": "errors/sec",
-          "label": null,
+          "$$hashKey": "object:421",
+          "format": "short",
+          "label": "",
           "logBase": 1,
           "max": null,
           "min": "0",
           "show": true
         },
         {
+          "$$hashKey": "object:422",
           "format": "short",
-          "label": null,
+          "label": "",
           "logBase": 1,
           "max": null,
           "min": null,
@@ -642,17 +677,468 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "datasource": null,
+      "description": "Table which shows the total incoming logs from the Output plugin",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "filterable": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "hideTimeOverride": true,
+      "id": 62,
+      "interval": "",
+      "options": {
+        "frameIndex": 0,
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "7.2.1",
+      "targets": [
+        {
+          "expr": "sum(increase(fluentbit_loki_gardener_incoming_logs_total[$__rate_interval])) by (host)",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{host}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "[Output Plugin] Incoming logs",
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "delta"
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Delta": "Total number of logs",
+              "Field": "Namespace",
+              "Last": "Dropped logs from last 1h",
+              "Mean": "Average number of incoming logs per hour",
+              "Total": ""
+            }
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Namespace": {
+                "aggregations": [],
+                "operation": "aggregate"
+              }
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": null,
+      "description": "Table which shows the transferred logs from Output plugin to the Promtail per hour.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "filterable": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 49,
+      "options": {
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "7.2.1",
+      "targets": [
+        {
+          "expr": "sum(increase(fluentbit_loki_gardener_forwarded_logs_total[$__rate_interval])) by (host)",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{host}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "[Output Plugin] Transferred Logs to Promtail",
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "delta"
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Delta": "Total number of logs",
+              "Field": "Namespace",
+              "Last": "Logs from last 1h",
+              "Mean": "Average number of logs per hour"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": null,
+      "description": "Table which shows the total dropped entries by promtail per hour",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "filterable": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": null
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 22
+      },
+      "hideTimeOverride": true,
+      "id": 58,
+      "options": {
+        "frameIndex": 0,
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "7.2.1",
+      "targets": [
+        {
+          "expr": "sum(increase(promtail_dropped_entries_total[$__rate_interval])) by (host)",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{host}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "[Promtail] Dropped Logs",
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "delta"
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Delta": "Total number of logs",
+              "Field": "Source",
+              "Last": "Dropped logs from last 1h",
+              "Mean": "Average number of dropped logs per hour",
+              "Total": ""
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": null,
+      "description": "Table which shows dropped logs for all namespaces.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "filterable": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "hideTimeOverride": true,
+      "id": 53,
+      "options": {
+        "frameIndex": 0,
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "7.2.1",
+      "targets": [
+        {
+          "expr": "sum(increase(fluentbit_loki_gardener_dropped_logs_total[$__rate_interval])) by (host)",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{ host }}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "[Output Plugin] Dropped Logs",
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "delta"
+            ]
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": null,
+      "description": "Table which shows logs without metadata for all namespaces.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "filterable": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 28
+      },
+      "hideTimeOverride": true,
+      "id": 52,
+      "options": {
+        "frameIndex": 0,
+        "showHeader": true
+      },
+      "pluginVersion": "7.2.1",
+      "targets": [
+        {
+          "expr": "sum(increase(fluentbit_loki_gardener_logs_without_metadata_total[$__rate_interval])) by (host)",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{ type }}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "[Output Plugin] Missing Metadata Logs",
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "delta"
+            ]
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": null,
+      "description": "Table which shows errors in the output plugin",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "filterable": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      },
+      "hideTimeOverride": true,
+      "id": 54,
+      "options": {
+        "frameIndex": 0,
+        "showHeader": true
+      },
+      "pluginVersion": "7.2.1",
+      "targets": [
+        {
+          "expr": "sum(increase(fluentbit_loki_gardener_errors_total[$__rate_interval])) by (host)",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{ type }}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "[Output Plugin] Errors",
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "delta"
+            ]
+          }
+        }
+      ],
+      "type": "table"
     }
   ],
   "refresh": "5s",
-  "schemaVersion": 25,
+  "schemaVersion": 26,
   "style": "dark",
   "tags": [],
   "templating": {
     "list": []
   },
   "time": {
-    "from": "now-15m",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {

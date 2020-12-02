@@ -11,3 +11,7 @@ spec:
     port: {{ .Values.ports.metrics }}
     protocol: TCP
     targetPort: {{ .Values.ports.metrics }}
+  - name: metrics-plugin
+    port: {{ .Values.ports.outputPluginMetrics }}
+    protocol: TCP
+    targetPort: {{ .Values.ports.outputPluginMetrics }}
