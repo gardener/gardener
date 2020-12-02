@@ -282,6 +282,7 @@ const (
 	secretSuffixKubeConfig = "kubeconfig"
 	secretSuffixSSHKeyPair = v1beta1constants.SecretNameSSHKeyPair
 	secretSuffixMonitoring = "monitoring"
+	secretSuffixLogging    = "logging" // deprecated, used only to delete unused secrets
 )
 
 func computeProjectSecretName(shootName, suffix string) string {
@@ -348,6 +349,19 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 			return err
 		})
 	}
+
+	// Clean Kibana credentials that are not used since https://github.com/gardener/gardener/pull/2515
+	// TOOD, remove in future version.
+	fns = append(fns, func(ctx context.Context) error {
+		secretObj := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      computeProjectSecretName(b.Shoot.Info.Name, secretSuffixLogging),
+				Namespace: b.Shoot.Info.Namespace,
+			},
+		}
+
+		return client.IgnoreNotFound(b.K8sGardenClient.Client().Delete(ctx, secretObj, &client.DeleteOptions{}))
+	})
 
 	return flow.Parallel(fns...)(ctx)
 }
