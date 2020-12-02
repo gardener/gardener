@@ -587,18 +587,21 @@ func (c *Controller) updateShootStatusOperationStart(ctx context.Context, g gard
 
 func (c *Controller) updateShootStatusOperationSuccess(ctx context.Context, g gardencore.Interface, shoot *gardencorev1beta1.Shoot, shootSeedNamespace string, seedName *string, operationType gardencorev1beta1.LastOperationType) (*gardencorev1beta1.Shoot, error) {
 	var (
-		now          = metav1.NewTime(time.Now().UTC())
-		description  string
-		err          error
-		isHibernated = gardencorev1beta1helper.HibernationIsEnabled(shoot)
+		now                        = metav1.NewTime(time.Now().UTC())
+		description                string
+		setConditionsToProgressing bool
+		err                        error
+		isHibernated               = gardencorev1beta1helper.HibernationIsEnabled(shoot)
 	)
 
 	switch operationType {
 	case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile:
 		description = "Shoot cluster state has been successfully reconciled."
+		setConditionsToProgressing = true
 
 	case gardencorev1beta1.LastOperationTypeDelete:
 		description = "Shoot cluster has been successfully deleted."
+		setConditionsToProgressing = false
 	}
 
 	if len(shootSeedNamespace) > 0 {
@@ -610,6 +613,31 @@ func (c *Controller) updateShootStatusOperationSuccess(ctx context.Context, g ga
 
 	return kutil.TryUpdateShootStatus(ctx, g, retry.DefaultRetry, shoot.ObjectMeta,
 		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
+			if setConditionsToProgressing {
+				for i, cond := range shoot.Status.Conditions {
+					switch cond.Type {
+					case gardencorev1beta1.ShootAPIServerAvailable,
+						gardencorev1beta1.ShootControlPlaneHealthy,
+						gardencorev1beta1.ShootEveryNodeReady,
+						gardencorev1beta1.ShootSystemComponentsHealthy:
+						if cond.Status != gardencorev1beta1.ConditionFalse {
+							shoot.Status.Conditions[i].Status = gardencorev1beta1.ConditionProgressing
+							shoot.Status.Conditions[i].LastUpdateTime = metav1.Now()
+						}
+					}
+				}
+				for i, constr := range shoot.Status.Constraints {
+					switch constr.Type {
+					case gardencorev1beta1.ShootHibernationPossible,
+						gardencorev1beta1.ShootMaintenancePreconditionsSatisfied:
+						if constr.Status != gardencorev1beta1.ConditionFalse {
+							shoot.Status.Constraints[i].Status = gardencorev1beta1.ConditionProgressing
+							shoot.Status.Conditions[i].LastUpdateTime = metav1.Now()
+						}
+					}
+				}
+			}
+
 			shoot.Status.SeedName = seedName
 			shoot.Status.IsHibernated = isHibernated
 			shoot.Status.RetryCycleStartTime = nil

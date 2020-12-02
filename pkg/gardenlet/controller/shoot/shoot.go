@@ -138,7 +138,8 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 	shootInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controllerutils.ShootFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister, config.SeedSelector),
 		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc: shootController.shootCareAdd,
+			AddFunc:    shootController.shootCareAdd,
+			UpdateFunc: shootController.shootCareUpdate,
 		},
 	})
 

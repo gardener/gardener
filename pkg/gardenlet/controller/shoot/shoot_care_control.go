@@ -67,6 +67,36 @@ func (c *Controller) shootCareAdd(obj interface{}) {
 	c.shootCareQueue.Add(key)
 }
 
+func (c *Controller) shootCareUpdate(oldObj, newObj interface{}) {
+	key, err := cache.MetaNamespaceKeyFunc(newObj)
+	if err != nil {
+		return
+	}
+
+	oldShoot, ok := oldObj.(*gardencorev1beta1.Shoot)
+	if !ok {
+		return
+	}
+	newShoot, ok := newObj.(*gardencorev1beta1.Shoot)
+	if !ok {
+		return
+	}
+
+	// re-evaluate shoot health status right after a reconciliation operation has finished
+	if shootReconciliationFinishedSuccessful(oldShoot, newShoot) {
+		c.shootCareQueue.Add(key)
+	}
+}
+
+func shootReconciliationFinishedSuccessful(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
+	return oldShoot.Status.LastOperation != nil &&
+		oldShoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeDelete &&
+		oldShoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateProcessing &&
+		newShoot.Status.LastOperation != nil &&
+		newShoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeDelete &&
+		newShoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded
+}
+
 func (c *Controller) reconcileShootCareKey(key string) error {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
