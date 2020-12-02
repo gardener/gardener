@@ -35,7 +35,6 @@ rules:
   - gateways
 # istio configuration
 - apiGroups:
-  - config.istio.io
   - rbac.istio.io
   - security.istio.io
   - networking.istio.io
@@ -46,21 +45,28 @@ rules:
   - list
   resources:
   - "*"
+- apiGroups:
+  - networking.istio.io
+  verbs:
+  - update
+  - patch
+  - create
+  - delete
+  resources:
+  - workloadentries
+- apiGroups:
+  - networking.istio.io
+  verbs:
+  - update
+  - patch
+  resources:
+  - workloadentries/status
+
 # auto-detect installed CRD definitions
 - apiGroups:
   - apiextensions.k8s.io
   resources:
   - customresourcedefinitions
-  verbs:
-  - get
-  - list
-  - watch
-# discovery and routing
-- apiGroups:
-  - extensions
-  - apps
-  resources:
-  - deployments
   verbs:
   - get
   - list
@@ -126,6 +132,14 @@ rules:
   - get
   - delete
   - watch
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - signers
+  resourceNames:
+  - kubernetes.io/legacy-unknown
+  verbs:
+  - approve
 # Used by Istiod to verify the JWT tokens
 - apiGroups:
   - authentication.k8s.io
@@ -133,23 +147,27 @@ rules:
   - tokenreviews
   verbs:
   - create
-# TODO: remove, no longer needed at cluster
+# Used by Istiod to verify gateway SDS
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+# Use for Kubernetes Service APIs
+- apiGroups:
+  - networking.x-k8s.io
+  resources:
+  - "*"
+  verbs:
+  - get
+  - watch
+  - list
+# Needed for multicluster secret reading, possibly ingress certs in the future
 - apiGroups:
   - ''
   resources:
   - secrets
-  verbs:
-  - create
-  - get
-  - watch
-  - list
-  - update
-  - delete
-# TODO: remove, no longer needed at cluster
-- apiGroups:
-  - ''
-  resources:
-  - serviceaccounts
   verbs:
   - get
   - watch

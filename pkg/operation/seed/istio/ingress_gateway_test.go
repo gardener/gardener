@@ -98,10 +98,7 @@ var _ = Describe("ingress", func() {
 			actualDeploy := &appsv1.Deployment{}
 
 			Expect(c.Get(ctx, client.ObjectKey{Name: "istio-ingressgateway", Namespace: deployNS}, actualDeploy)).ToNot(HaveOccurred())
-			envs := actualDeploy.Spec.Template.Spec.Containers[0].Env
-
-			Expect(envs).To(HaveLen(19))
-			Expect(envs).To(ContainElement(env))
+			Expect(actualDeploy.Spec.Template.Spec.Containers[0].Env).To(ContainElement(env))
 		},
 		Entry("NODE_NAME is projected", fieldEnv("NODE_NAME", "spec.nodeName")),
 		Entry("POD_NAME is projected", fieldEnv("POD_NAME", "metadata.name")),
@@ -118,13 +115,19 @@ var _ = Describe("ingress", func() {
 		Entry("workload name is set", simplEnv("ISTIO_META_WORKLOAD_NAME", "istio-ingressgateway")),
 		Entry("meta owner is igw",
 			simplEnv("ISTIO_META_OWNER", "kubernetes://apis/apps/v1/namespaces/test-ingress/deployments/istio-ingressgateway")),
-		Entry("mesh id is the trust domain", simplEnv("ISTIO_META_MESH_ID", "foo.bar")),
 		Entry("auto mTLS is enabled", simplEnv("ISTIO_AUTO_MTLS_ENABLED", "true")),
-		Entry("router mode is sni-dnat", simplEnv("ISTIO_META_ROUTER_MODE", "sni-dnat")),
+		Entry("router mode is standard", simplEnv("ISTIO_META_ROUTER_MODE", "standard")),
 		Entry("ISTIO_META_CLUSTER_ID is Kubernetes", simplEnv("ISTIO_META_CLUSTER_ID", "Kubernetes")),
 		Entry("ISTIO_BOOTSTRAP_OVERRIDE is set to override",
 			simplEnv("ISTIO_BOOTSTRAP_OVERRIDE", "/etc/istio/custom-bootstrap/custom_bootstrap.yaml")),
 	)
+
+	It("ingress gateway deployment has correct amount of environment variables", func() {
+		actualDeploy := &appsv1.Deployment{}
+
+		Expect(c.Get(ctx, client.ObjectKey{Name: "istio-ingressgateway", Namespace: deployNS}, actualDeploy)).ToNot(HaveOccurred())
+		Expect(actualDeploy.Spec.Template.Spec.Containers[0].Env).To(HaveLen(18))
+	})
 
 	It("ingress gateway service has load balancer annotations", func() {
 		svc := &corev1.Service{}
@@ -134,9 +137,7 @@ var _ = Describe("ingress", func() {
 	})
 
 	Describe("poddisruption budget", func() {
-		var (
-			pdb *policyv1beta1.PodDisruptionBudget
-		)
+		var pdb *policyv1beta1.PodDisruptionBudget
 
 		JustBeforeEach(func() {
 			pdb = &policyv1beta1.PodDisruptionBudget{}
