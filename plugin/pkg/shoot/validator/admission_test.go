@@ -903,7 +903,7 @@ var _ = Describe("validator", func() {
 			})
 		})
 
-		Context("tests for infrastructure update", func() {
+		Context("tests infrastructure deploy task", func() {
 			var (
 				oldShoot *core.Shoot
 			)
@@ -913,6 +913,29 @@ var _ = Describe("validator", func() {
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+			})
+
+			It("should add deploy infrastructure task because shoot is being created", func() {
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, common.ShootTaskDeployInfrastructure)).To(BeTrue())
+			})
+
+			It("should add deploy infrastructure task because shoot is waking up from hibernation", func() {
+				oldShoot.Spec.Hibernation = &core.Hibernation{
+					Enabled: pointer.BoolPtr(true),
+				}
+				shoot.Spec.Hibernation = &core.Hibernation{
+					Enabled: pointer.BoolPtr(false),
+				}
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, common.ShootTaskDeployInfrastructure)).To(BeTrue())
 			})
 
 			It("should add deploy infrastructure task because spec has changed", func() {

@@ -155,20 +155,6 @@ var _ = Describe("#ExtensionInfrastructure", func() {
 				values.ProviderConfig = nil
 				infra.Spec.ProviderConfig = nil
 			}),
-			Entry("creation phase", func() {
-				values.IsInCreationPhase = true
-				infra.Annotations = map[string]string{
-					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-					v1beta1constants.GardenerTimestamp: now.UTC().String(),
-				}
-			}),
-			Entry("wake up phase", func() {
-				values.IsWakingUp = true
-				infra.Annotations = map[string]string{
-					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-					v1beta1constants.GardenerTimestamp: now.UTC().String(),
-				}
-			}),
 			Entry("deployment task", func() {
 				values.DeploymentRequested = true
 				infra.Annotations = map[string]string{

@@ -224,6 +224,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		if project.DeletionTimestamp != nil {
 			return admission.NewForbidden(a, fmt.Errorf("cannot create shoot '%s' in project '%s' already marked for deletion", shoot.Name, project.Name))
 		}
+		addInfrastructureDeploymentTask(shoot)
 	}
 
 	mustCheckIfTaintsTolerated := a.GetOperation() == admission.Create || (a.GetOperation() == admission.Update && !apiequality.Semantic.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName))
@@ -318,6 +319,10 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		}
 	}
 
+	if !newIsHibernated && oldIsHibernated {
+		addInfrastructureDeploymentTask(shoot)
+	}
+
 	if seed != nil {
 		if shoot.Spec.Networking.Pods == nil && seed.Spec.Networks.ShootDefaults != nil {
 			shoot.Spec.Networking.Pods = seed.Spec.Networks.ShootDefaults.Pods
@@ -328,10 +333,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	}
 
 	if !reflect.DeepEqual(oldShoot.Spec.Provider.InfrastructureConfig, shoot.Spec.Provider.InfrastructureConfig) {
-		if shoot.ObjectMeta.Annotations == nil {
-			shoot.ObjectMeta.Annotations = make(map[string]string)
-		}
-		controllerutils.AddTasks(shoot.ObjectMeta.Annotations, common.ShootTaskDeployInfrastructure)
+		addInfrastructureDeploymentTask(shoot)
 	}
 
 	if shoot.Spec.Maintenance != nil && utils.IsTrue(shoot.Spec.Maintenance.ConfineSpecUpdateRollout) &&
@@ -929,4 +931,11 @@ func (v ValidateShoot) validateShootedSeed(a admission.Attributes, shoot, oldSho
 	}
 
 	return nil
+}
+
+func addInfrastructureDeploymentTask(shoot *core.Shoot) {
+	if shoot.ObjectMeta.Annotations == nil {
+		shoot.ObjectMeta.Annotations = make(map[string]string)
+	}
+	controllerutils.AddTasks(shoot.ObjectMeta.Annotations, common.ShootTaskDeployInfrastructure)
 }
