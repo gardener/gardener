@@ -17,9 +17,7 @@ package botanist
 import (
 	"context"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/infrastructure"
@@ -42,8 +40,6 @@ func (b *Botanist) DefaultInfrastructure(seedClient client.Client) shoot.Extensi
 			Type:                                    b.Shoot.Info.Spec.Provider.Type,
 			ProviderConfig:                          b.Shoot.Info.Spec.Provider.InfrastructureConfig,
 			Region:                                  b.Shoot.Info.Spec.Region,
-			IsInCreationPhase:                       b.Shoot.Info.Status.LastOperation != nil && b.Shoot.Info.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate,
-			IsWakingUp:                              !gardencorev1beta1helper.HibernationIsEnabled(b.Shoot.Info) && b.Shoot.Info.Status.IsHibernated,
 			IsInRestorePhaseOfControlPlaneMigration: b.isRestorePhase(),
 			DeploymentRequested:                     controllerutils.HasTask(b.Shoot.Info.Annotations, common.ShootTaskDeployInfrastructure),
 		},
