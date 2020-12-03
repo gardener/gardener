@@ -2,17 +2,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: logger
+  name: {{ .LoggerName }}
   namespace: {{ .HelmDeployNamespace }}
+  labels:
+    app: {{ .AppLabel }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: logger
+      app: {{ .AppLabel }}
   template:
     metadata:
       labels:
-        app: logger
+        app: {{ .AppLabel }}
     spec:
       containers:
       - name: logger
@@ -21,7 +23,9 @@ spec:
           - /bin/sh
           - -c
           - |-
-            /logs-generator --logtostderr --log-lines-total=1 --run-duration=180s
+{{ if .DeltaLogsCount }}
+            /logs-generator --logtostderr --log-lines-total=${DELTA_LOGS_GENERATOR_LINES_TOTAL} --run-duration=${DELTA_LOGS_GENERATOR_DURATION}
+{{- end }}
             /logs-generator --logtostderr --log-lines-total=${LOGS_GENERATOR_LINES_TOTAL} --run-duration=${LOGS_GENERATOR_DURATION}
 
             # Sleep forever to prevent restarts
@@ -29,7 +33,21 @@ spec:
               sleep 3600;
             done
         env:
+{{ if .DeltaLogsCount }}
+        - name: DELTA_LOGS_GENERATOR_LINES_TOTAL
+          value: "{{ .DeltaLogsCount }}"
+        - name: DELTA_LOGS_GENERATOR_DURATION
+{{ if .DeltaLogsDuration }}
+          value: "{{ .DeltaLogsDuration }}"
+{{ else }}
+          value: 0s
+{{- end }}
+{{- end }}
         - name: LOGS_GENERATOR_LINES_TOTAL
           value: "{{ .LogsCount }}"
         - name: LOGS_GENERATOR_DURATION
-          value: 90s
+{{ if .LogsDuration }}
+          value: "{{ .LogsDuration }}"
+{{ else }}
+          value: 0s
+{{- end }}

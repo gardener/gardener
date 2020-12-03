@@ -46,15 +46,19 @@ func (f *ShootFramework) ShootKubeconfigSecretName() string {
 }
 
 // GetLokiLogs gets logs from the last 1 hour for <key>, <value> from the loki instance in <lokiNamespace>
-func (f *ShootFramework) GetLokiLogs(ctx context.Context, lokiNamespace, key, value string, client kubernetes.Interface) (*SearchResponse, error) {
+func (f *ShootFramework) GetLokiLogs(ctx context.Context, tenant, lokiNamespace, key, value string, client kubernetes.Interface) (*SearchResponse, error) {
 	lokiLabels := labels.SelectorFromSet(labels.Set(map[string]string{
 		"app":  lokiLogging,
 		"role": "logging",
 	}))
 
+	if tenant == "" {
+		tenant = "fake"
+	}
+
 	query := fmt.Sprintf("query=count_over_time({%s=~\"%s\"}[1h])", key, value)
 
-	command := fmt.Sprintf("wget 'http://localhost:%d/loki/api/v1/query' -O- --post-data='%s'", lokiPort, query)
+	command := fmt.Sprintf("wget 'http://localhost:%d/loki/api/v1/query' -O- '--header=X-Scope-OrgID: %s' --post-data='%s'", lokiPort, tenant, query)
 
 	var reader io.Reader
 	err := retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (bool, error) {
