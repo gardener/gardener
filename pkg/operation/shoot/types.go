@@ -118,6 +118,7 @@ type Extensions struct {
 
 // SystemComponents contains references to system components.
 type SystemComponents struct {
+	Namespaces    component.DeployWaiter
 	MetricsServer metricsserver.MetricsServer
 }
 

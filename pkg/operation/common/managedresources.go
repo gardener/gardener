@@ -38,7 +38,7 @@ func DeployManagedResourceForShoot(ctx context.Context, c client.Client, name, n
 
 // DeleteManagedResourceForShoot deploys a ManagedResource CR for the shoot's gardener-resource-manager.
 func DeleteManagedResourceForShoot(ctx context.Context, c client.Client, name, namespace string) error {
-	return deleteManagedResource(ctx, c, name, namespace, NewManagedResourceForShoot(c, name, namespace, false))
+	return deleteManagedResource(ctx, c, name, namespace, manager.NewManagedResource(c).WithNamespacedName(namespace, name))
 }
 
 // DeployManagedResourceForSeed deploys a ManagedResource CR for the seed's gardener-resource-manager.
@@ -48,7 +48,7 @@ func DeployManagedResourceForSeed(ctx context.Context, c client.Client, name, na
 
 // DeleteManagedResourceForSeed deploys a ManagedResource CR for the seed's gardener-resource-manager.
 func DeleteManagedResourceForSeed(ctx context.Context, c client.Client, name, namespace string) error {
-	return deleteManagedResource(ctx, c, name, namespace, NewManagedResourceForSeed(c, name, namespace, false))
+	return deleteManagedResource(ctx, c, name, namespace, manager.NewManagedResource(c).WithNamespacedName(namespace, name))
 }
 
 func deployManagedResource(ctx context.Context, c client.Client, name, namespace string, data map[string][]byte, managedResource *manager.ManagedResource) error {

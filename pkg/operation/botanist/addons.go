@@ -199,22 +199,16 @@ func (b *Botanist) GenerateNginxIngressConfig() (map[string]interface{}, error) 
 
 // DeployManagedResources deploys all the ManagedResource CRDs for the gardener-resource-manager.
 func (b *Botanist) DeployManagedResources(ctx context.Context) error {
-	type managedResourceOptions struct {
-		keepObjects     bool
-		chartRenderFunc func() (*chartrenderer.RenderedChart, error)
-	}
-
-	for name, options := range map[string]managedResourceOptions{
-		common.ManagedResourceShootCoreName:     {false, b.generateCoreAddonsChart},
-		common.ManagedResourceCoreNamespaceName: {true, b.generateCoreNamespacesChart},
-		common.ManagedResourceAddonsName:        {false, b.generateOptionalAddonsChart},
+	for name, chartRenderFunc := range map[string]func() (*chartrenderer.RenderedChart, error){
+		common.ManagedResourceShootCoreName: b.generateCoreAddonsChart,
+		common.ManagedResourceAddonsName:    b.generateOptionalAddonsChart,
 	} {
-		renderedChart, err := options.chartRenderFunc()
+		renderedChart, err := chartRenderFunc()
 		if err != nil {
 			return fmt.Errorf("error rendering %q chart: %+v", name, err)
 		}
 
-		if err := common.DeployManagedResourceForShoot(ctx, b.K8sSeedClient.Client(), name, b.Shoot.SeedNamespace, options.keepObjects, renderedChart.AsSecretData()); err != nil {
+		if err := common.DeployManagedResourceForShoot(ctx, b.K8sSeedClient.Client(), name, b.Shoot.SeedNamespace, false, renderedChart.AsSecretData()); err != nil {
 			return err
 		}
 	}
@@ -554,16 +548,6 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 	}
 
 	return b.K8sShootClient.ChartRenderer().Render(filepath.Join(common.ChartPath, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, values)
-}
-
-// generateCoreNamespacesChart renders the gardener-resource-manager configuration for the core namespaces. After that it
-// creates a ManagedResource CRD that references the rendered manifests and creates it.
-func (b *Botanist) generateCoreNamespacesChart() (*chartrenderer.RenderedChart, error) {
-	return b.K8sShootClient.ChartRenderer().Render(filepath.Join(common.ChartPath, "shoot-core", "namespaces"), "shoot-core-namespaces", metav1.NamespaceSystem, map[string]interface{}{
-		"labels": map[string]string{
-			v1beta1constants.GardenerPurpose: metav1.NamespaceSystem,
-		},
-	})
 }
 
 // generateOptionalAddonsChart renders the gardener-resource-manager chart for the optional addons. After that it

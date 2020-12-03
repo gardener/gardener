@@ -123,6 +123,7 @@ func New(o *operation.Operation) (*Botanist, error) {
 	}
 
 	// system components
+	o.Shoot.Components.SystemComponents.Namespaces = b.DefaultShootNamespaces()
 	o.Shoot.Components.SystemComponents.MetricsServer, err = b.DefaultMetricsServer()
 	if err != nil {
 		return nil, err

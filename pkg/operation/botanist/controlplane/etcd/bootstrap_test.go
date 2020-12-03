@@ -528,12 +528,8 @@ status: {}
 			secret          = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace,
 					Name:      managedResourceName,
-				},
-				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					KeepObjects: pointer.BoolPtr(false),
-					Class:       pointer.StringPtr("seed"),
+					Namespace: namespace,
 				},
 			}
 

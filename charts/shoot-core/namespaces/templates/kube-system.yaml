@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: kube-system
-{{- if .Values.labels }}
-  labels:
-{{ toYaml .Values.labels | indent 4 }}
-{{- end }}

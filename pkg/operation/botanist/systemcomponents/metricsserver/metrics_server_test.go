@@ -507,8 +507,12 @@ status: {}
 		var managedResourceToDelete *resourcesv1alpha1.ManagedResource
 
 		BeforeEach(func() {
-			managedResourceToDelete = managedResource.DeepCopy()
-			managedResourceToDelete.Spec.SecretRefs = nil
+			managedResourceToDelete = &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      managedResourceName,
+					Namespace: namespace,
+				},
+			}
 		})
 
 		It("should fail because the managed resource cannot be deleted", func() {

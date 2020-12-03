@@ -111,11 +111,6 @@ var _ = Describe("ManagedResources", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
-					Labels:    map[string]string{"origin": "gardener"},
-				},
-				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-					KeepObjects:  pointer.BoolPtr(false),
 				},
 			}
 		)
@@ -204,10 +199,6 @@ var _ = Describe("ManagedResources", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
-				},
-				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					Class:       pointer.StringPtr("seed"),
-					KeepObjects: pointer.BoolPtr(false),
 				},
 			}
 		)
