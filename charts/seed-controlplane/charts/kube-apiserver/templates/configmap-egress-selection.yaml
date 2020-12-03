@@ -16,7 +16,7 @@ data:
         transport:
           uds:
             udsName: /etc/srv/kubernetes/konnectivity-server/konnectivity-server.socket
-    - name: master
+    - name: {{ if semverCompare "< 1.20" .Values.kubernetesVersion }}master{{ else }}controlplane{{ end }}
       connection:
         proxyProtocol: Direct
     - name: etcd
