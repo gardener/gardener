@@ -13,7 +13,6 @@ spec:
   selector:
     matchLabels:
       app: vpa-exporter
-      garden.sapcloud.io/role: vpa
   template:
     metadata:
       labels:

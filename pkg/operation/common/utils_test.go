@@ -22,8 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -44,6 +42,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -670,7 +669,6 @@ var _ = Describe("common", func() {
 
 		AfterEach(func() {
 			ctrl.Finish()
-
 		})
 
 		It("should add the deletion confirmation annotation for an object without annotations", func() {
@@ -764,6 +762,98 @@ var _ = Describe("common", func() {
 	Describe("#ExtensionID", func() {
 		It("should return the expected identifier", func() {
 			Expect(ExtensionID("foo", "bar")).To(Equal("foo/bar"))
+		})
+	})
+
+	Describe("#DeleteDeploymentsHavingDeprecatedRoleLabelKey", func() {
+		var (
+			ctrl *gomock.Controller
+			c    *mockclient.MockClient
+
+			ctx     context.Context
+			deploy1 *appsv1.Deployment
+			deploy2 *appsv1.Deployment
+			key1    client.ObjectKey
+			key2    client.ObjectKey
+		)
+
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+			c = mockclient.NewMockClient(ctrl)
+
+			ctx = context.TODO()
+			deploy1 = &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: v1beta1constants.GardenNamespace,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"app": "foo"},
+					},
+				},
+			}
+			deploy2 = &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: v1beta1constants.GardenNamespace,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"app": "bar"},
+					},
+				},
+			}
+			key1 = client.ObjectKey{Name: deploy1.Name, Namespace: deploy1.Namespace}
+			key2 = client.ObjectKey{Name: deploy2.Name, Namespace: deploy2.Namespace}
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		It("should return error if error occurs during get of deployment", func() {
+			fakeErr := fmt.Errorf("fake err")
+
+			c.EXPECT().Get(ctx, key1, gomock.AssignableToTypeOf(&appsv1.Deployment{})).Return(fakeErr)
+
+			err := DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx, c, []client.ObjectKey{key1, key2})
+			Expect(err).To(MatchError(fakeErr))
+		})
+
+		It("should do nothing when the deployments are missing", func() {
+			c.EXPECT().Get(ctx, key1, gomock.AssignableToTypeOf(&appsv1.Deployment{})).
+				Return(apierrors.NewNotFound(appsv1.Resource("Deployment"), deploy1.Name))
+			c.EXPECT().Get(ctx, key2, gomock.AssignableToTypeOf(&appsv1.Deployment{})).
+				Return(apierrors.NewNotFound(appsv1.Resource("Deployment"), deploy2.Name))
+
+			err := DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx, c, []client.ObjectKey{key1, key2})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should do nothing when .spec.selector does not have the label key", func() {
+			c.EXPECT().Get(ctx, key1, gomock.AssignableToTypeOf(&appsv1.Deployment{})).SetArg(2, *deploy1)
+			c.EXPECT().Get(ctx, key2, gomock.AssignableToTypeOf(&appsv1.Deployment{})).SetArg(2, *deploy2)
+
+			err := DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx, c, []client.ObjectKey{key1, key2})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should delete the deployments when .spec.selector has the label key", func() {
+			labelSelector := &metav1.LabelSelector{
+				MatchLabels: map[string]string{v1beta1constants.DeprecatedGardenRole: "bar"},
+			}
+			deploy1.Spec.Selector = labelSelector
+			deploy2.Spec.Selector = labelSelector
+
+			c.EXPECT().Get(ctx, key1, gomock.AssignableToTypeOf(&appsv1.Deployment{})).SetArg(2, *deploy1)
+			c.EXPECT().Get(ctx, key2, gomock.AssignableToTypeOf(&appsv1.Deployment{})).SetArg(2, *deploy2)
+
+			c.EXPECT().Delete(ctx, deploy1)
+			c.EXPECT().Delete(ctx, deploy2)
+
+			err := DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx, c, []client.ObjectKey{key1, key2})
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

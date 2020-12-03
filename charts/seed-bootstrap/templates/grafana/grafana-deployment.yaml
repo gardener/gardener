@@ -5,7 +5,7 @@ metadata:
   name: grafana
   namespace: {{ .Release.Namespace }}
   labels:
-    garden.sapcloud.io/role: monitoring
+    role: monitoring
     component: grafana
 spec:
   revisionHistoryLimit: 0
@@ -20,7 +20,7 @@ spec:
         checksum/configmap-datasources: {{ include (print $.Template.BasePath "/grafana/grafana-datasources-configmap.yaml") . | sha256sum }}
         checksum/configmap-dashboard-providers: {{ include (print $.Template.BasePath "/grafana/grafana-dashboard-providers-configmap.yaml") . | sha256sum }}
       labels:
-        garden.sapcloud.io/role: monitoring
+        role: monitoring
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-aggregate-prometheus: allowed
         networking.gardener.cloud/to-loki: allowed

@@ -834,3 +834,26 @@ func ConfirmDeletion(ctx context.Context, c client.Client, obj runtime.Object) e
 func ExtensionID(extensionKind, extensionType string) string {
 	return fmt.Sprintf("%s/%s", extensionKind, extensionType)
 }
+
+// DeleteDeploymentsHavingDeprecatedRoleLabelKey deletes the Deployments with the passed object keys if
+// the corresponding Deployment .spec.selector contains the deprecated "garden.sapcloud.io/role" label key.
+func DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx context.Context, c client.Client, keys []client.ObjectKey) error {
+	for _, key := range keys {
+		deployment := &appsv1.Deployment{}
+		if err := c.Get(ctx, key, deployment); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+
+			return err
+		}
+
+		if _, ok := deployment.Spec.Selector.MatchLabels[v1beta1constants.DeprecatedGardenRole]; ok {
+			if err := c.Delete(ctx, deployment); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
