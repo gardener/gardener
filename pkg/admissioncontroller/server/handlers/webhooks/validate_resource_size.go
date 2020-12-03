@@ -42,9 +42,7 @@ type objectSizeHandler struct {
 	logger logrus.FieldLogger
 }
 
-const (
-	validatorName = "resource_size_validator"
-)
+const resourceSizeValidatorName = "resource_size_validator"
 
 // NewValidateResourceSizeHandler creates a new handler for validating the resource size of a request.
 func NewValidateResourceSizeHandler(config *apisconfig.ResourceAdmissionConfiguration) http.HandlerFunc {
@@ -54,7 +52,7 @@ func NewValidateResourceSizeHandler(config *apisconfig.ResourceAdmissionConfigur
 	h := &objectSizeHandler{
 		config: config,
 		codecs: serializer.NewCodecFactory(scheme),
-		logger: logger.NewFieldLogger(logger.Logger, "component", validatorName),
+		logger: logger.NewFieldLogger(logger.Logger, "component", resourceSizeValidatorName),
 	}
 	return h.ValidateResourceSize
 }
@@ -64,15 +62,16 @@ func (h *objectSizeHandler) ValidateResourceSize(w http.ResponseWriter, r *http.
 	var (
 		deserializer   = h.codecs.UniversalDeserializer()
 		receivedReview = &admissionv1beta1.AdmissionReview{}
+		requestLogger  = logger.NewIDLogger(h.logger)
 	)
 
-	if err := DecodeAdmissionRequest(r, deserializer, receivedReview, maxRequestBody); err != nil {
+	if err := DecodeAdmissionRequest(r, deserializer, receivedReview, maxRequestBody, requestLogger); err != nil {
 		h.logger.Errorf(err.Error())
 		respond(w, errToAdmissionResponse(err))
 		return
 	}
 
-	logEntry := h.logger.WithField("resource", receivedReview.Request.Resource).WithField("name", receivedReview.Request.Name)
+	logEntry := requestLogger.WithField("resource", receivedReview.Request.Resource).WithField("name", receivedReview.Request.Name)
 	if receivedReview.Request.Namespace != "" {
 		logEntry = logEntry.WithField("namespace", receivedReview.Request.Namespace)
 	}

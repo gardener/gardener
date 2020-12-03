@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 
+	"github.com/sirupsen/logrus"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,14 +34,20 @@ import (
 
 type kubeconfigSecretValidator struct {
 	codecs serializer.CodecFactory
+	logger logrus.FieldLogger
 }
+
+const kubeconfigValidatorName = "kubeconfig_validator"
 
 // NewValidateKubeconfigSecretsHandler creates a new handler for validating namespace deletions.
 func NewValidateKubeconfigSecretsHandler() http.HandlerFunc {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(corev1.AddToScheme(scheme))
 
-	h := &kubeconfigSecretValidator{serializer.NewCodecFactory(scheme)}
+	h := &kubeconfigSecretValidator{
+		codecs: serializer.NewCodecFactory(scheme),
+		logger: logger.NewFieldLogger(logger.Logger, "component", kubeconfigValidatorName),
+	}
 	return h.ValidateKubeconfigSecrets
 }
 
@@ -49,10 +56,11 @@ func (h *kubeconfigSecretValidator) ValidateKubeconfigSecrets(w http.ResponseWri
 	var (
 		deserializer   = h.codecs.UniversalDeserializer()
 		receivedReview = &admissionv1beta1.AdmissionReview{}
+		requestLogger  = logger.NewIDLogger(h.logger)
 	)
 
-	if err := DecodeAdmissionRequest(r, deserializer, receivedReview, maxRequestBody); err != nil {
-		logger.Logger.Errorf(err.Error())
+	if err := DecodeAdmissionRequest(r, deserializer, receivedReview, maxRequestBody, requestLogger); err != nil {
+		requestLogger.Errorf(err.Error())
 		respond(w, errToAdmissionResponse(err))
 		return
 	}
@@ -66,7 +74,7 @@ func (h *kubeconfigSecretValidator) ValidateKubeconfigSecrets(w http.ResponseWri
 	// Now that all checks have been passed we can actually validate the admission request.
 	reviewResponse := h.admitSecrets(receivedReview.Request, deserializer)
 	if !reviewResponse.Allowed && reviewResponse.Result != nil {
-		logger.Logger.Infof("Rejected '%s secret/%s/%s' request of user '%s': %v", receivedReview.Request.Operation, receivedReview.Request.Namespace, receivedReview.Request.Name, receivedReview.Request.UserInfo.Username, reviewResponse.Result.Message)
+		requestLogger.Infof("Rejected '%s secret/%s/%s' request of user '%s': %v", receivedReview.Request.Operation, receivedReview.Request.Namespace, receivedReview.Request.Name, receivedReview.Request.UserInfo.Username, reviewResponse.Result.Message)
 	}
 	respond(w, reviewResponse)
 }

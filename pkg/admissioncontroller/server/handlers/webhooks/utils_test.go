@@ -22,6 +22,8 @@ import (
 	"net/http/httptest"
 	"reflect"
 
+	"github.com/gardener/gardener/pkg/logger"
+
 	. "github.com/gardener/gardener/pkg/admissioncontroller/server/handlers/webhooks"
 	core "github.com/gardener/gardener/pkg/apis/core/install"
 
@@ -72,7 +74,7 @@ var _ = Describe("Utils tests", func() {
 		DescribeTable("#DecodeAdmissionRequest",
 			func(r func() *http.Request, limit int64, objMatcher gomegatypes.GomegaMatcher, errMatcher gomegatypes.GomegaMatcher) {
 				into := &admissionv1beta1.AdmissionReview{}
-				err := DecodeAdmissionRequest(r(), decoder, into, limit)
+				err := DecodeAdmissionRequest(r(), decoder, into, limit, logger.NewNopLogger())
 				Expect(into).To(objMatcher)
 				Expect(err).To(errMatcher)
 			},
@@ -95,7 +97,7 @@ var _ = Describe("Utils tests", func() {
 				r.Header.Set("Content-Type", runtime.ContentTypeYAML)
 				return r
 			}, sizeRequest, Ignore(),
-				MatchError(fmt.Sprintf("contentType=%s, expect %s", runtime.ContentTypeYAML, runtime.ContentTypeJSON)),
+				MatchError(fmt.Sprintf("contentType not supported, expect %s", runtime.ContentTypeJSON)),
 			),
 		)
 	})

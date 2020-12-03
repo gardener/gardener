@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 
+	"github.com/sirupsen/logrus"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,9 +42,13 @@ type namespaceDeletionHandler struct {
 	k8sGardenClient kubernetes.Interface
 
 	codecs serializer.CodecFactory
+	logger logrus.FieldLogger
 }
 
-const waitForCachesToSyncTimeout = 5 * time.Minute
+const (
+	namespaceValidatorName     = "namespace_validator"
+	waitForCachesToSyncTimeout = 5 * time.Minute
+)
 
 // NewValidateNamespaceDeletionHandler creates a new handler for validating namespace deletions.
 func NewValidateNamespaceDeletionHandler(ctx context.Context, k8sGardenClient kubernetes.Interface) (http.HandlerFunc, error) {
@@ -69,7 +74,11 @@ func NewValidateNamespaceDeletionHandler(ctx context.Context, k8sGardenClient ku
 	scheme := runtime.NewScheme()
 	utilruntime.Must(corev1.AddToScheme(scheme))
 
-	h := &namespaceDeletionHandler{k8sGardenClient, serializer.NewCodecFactory(scheme)}
+	h := &namespaceDeletionHandler{
+		k8sGardenClient: k8sGardenClient,
+		codecs:          serializer.NewCodecFactory(scheme),
+		logger:          logger.NewFieldLogger(logger.Logger, "component", namespaceValidatorName),
+	}
 	return h.ValidateNamespaceDeletion, nil
 }
 
@@ -78,10 +87,11 @@ func (h *namespaceDeletionHandler) ValidateNamespaceDeletion(w http.ResponseWrit
 	var (
 		deserializer   = h.codecs.UniversalDeserializer()
 		receivedReview = &admissionv1beta1.AdmissionReview{}
+		requestLogger  = logger.NewIDLogger(h.logger)
 	)
 
-	if err := DecodeAdmissionRequest(r, deserializer, receivedReview, maxRequestBody); err != nil {
-		logger.Logger.Errorf(err.Error())
+	if err := DecodeAdmissionRequest(r, deserializer, receivedReview, maxRequestBody, requestLogger); err != nil {
+		requestLogger.Errorf(err.Error())
 		respond(w, errToAdmissionResponse(err))
 		return
 	}
@@ -95,7 +105,7 @@ func (h *namespaceDeletionHandler) ValidateNamespaceDeletion(w http.ResponseWrit
 	// Now that all checks have been passed we can actually validate the admission request.
 	reviewResponse := h.admitNamespaces(receivedReview.Request)
 	if !reviewResponse.Allowed && reviewResponse.Result != nil {
-		logger.Logger.Infof("Rejected 'DELETE namespace' request of user '%s': %v", receivedReview.Request.UserInfo.Username, reviewResponse.Result.Message)
+		requestLogger.Infof("Rejected 'DELETE namespace' request of user '%s': %v", receivedReview.Request.UserInfo.Username, reviewResponse.Result.Message)
 	}
 	respond(w, reviewResponse)
 }
