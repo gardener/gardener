@@ -519,11 +519,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		}
 	}
 
-	nodes := &corev1.NodeList{}
-	if err = k8sSeedClient.Client().List(ctx, nodes); err != nil {
-		return err
-	}
-
 	chartApplier := k8sSeedClient.ChartApplier()
 
 	var (
