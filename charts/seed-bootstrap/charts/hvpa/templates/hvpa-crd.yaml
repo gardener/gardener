@@ -10,6 +10,9 @@ spec:
     kind: Hvpa
     plural: hvpas
   scope: ""
+{{- if semverCompare ">= 1.15-0" .Capabilities.KubeVersion.GitVersion }}
+  preserveUnknownFields: false
+{{- end }}
   subresources:
     scale:
       labelSelectorPath: .status.targetSelector

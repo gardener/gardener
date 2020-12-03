@@ -44,68 +44,95 @@ spec:
   - JSONPath: .metadata.creationTimestamp
     name: AGE
     type: date
+{{- if semverCompare ">= 1.15-0" .Capabilities.KubeVersion.GitVersion }}
+  preserveUnknownFields: false
+{{- end }}
   validation:
     openAPIV3Schema:
       properties:
         apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation
-            of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
           type: string
         kind:
-          description: 'Kind is a string value representing the REST resource this
-            object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
           type: string
         metadata:
           type: object
         spec:
           properties:
             cnameLookupInterval:
+              description: lookup interval for CNAMEs that must be resolved to IP addresses
               format: int64
               type: integer
             dnsName:
+              description: full qualified domain name
               type: string
             ownerId:
+              description: owner id used to tag entries in external DNS system
               type: string
+            reference:
+              description: reference to base entry used to inherit attributes from
+              properties:
+                name:
+                  description: name of the referenced DNSEntry object
+                  type: string
+                namespace:
+                  description: namespace of the referenced DNSEntry object
+                  type: string
+              required:
+                - name
+              type: object
             targets:
+              description: target records (CNAME or A records), either text or targets must be specified
               items:
                 type: string
               type: array
             text:
+              description: text records, either text or targets must be specified
               items:
                 type: string
               type: array
             ttl:
+              description: time to live for records in external DNS system
               format: int64
               type: integer
           required:
-          - dnsName
+            - dnsName
           type: object
         status:
           properties:
+            lastUpdateTime:
+              description: lastUpdateTime contains the timestamp of the last status update
+              format: date-time
+              type: string
             message:
+              description: message describing the reason for the state
               type: string
             observedGeneration:
               format: int64
               type: integer
             provider:
+              description: assigned provider
               type: string
             providerType:
+              description: provider type used for the entry
               type: string
             state:
+              description: entry state
               type: string
             targets:
+              description: effective targets generated for the entry
               items:
                 type: string
               type: array
             ttl:
+              description: time to live used for the entry
               format: int64
               type: integer
             zone:
+              description: zone used for the entry
               type: string
-          required:
-          - state
           type: object
       required:
         - spec
+      type: object
