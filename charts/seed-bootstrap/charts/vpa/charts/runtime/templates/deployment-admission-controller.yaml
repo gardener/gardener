@@ -53,15 +53,16 @@ spec:
         image: {{ index .Values.global.images "vpa-admission-controller" }}
         imagePullPolicy: IfNotPresent
         env:
-        - name: NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
 {{- if not .Values.admissionController.enableServiceAccount }}
         - name: KUBERNETES_SERVICE_HOST
           value: kube-apiserver
         - name: KUBERNETES_SERVICE_PORT
           value: "443"
+{{- else }}
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
 {{- end }}
         volumeMounts:
           - name: vpa-tls-certs
