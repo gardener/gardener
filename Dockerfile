@@ -72,3 +72,17 @@ COPY --from=builder /go/bin/gardener-seed-admission-controller /gardener-seed-ad
 WORKDIR /
 
 ENTRYPOINT ["/gardener-seed-admission-controller"]
+
+############# konnectivity-server-base #############
+# Make sure to update Makefile when updating this version!!!
+FROM k8s.gcr.io/kas-network-proxy/proxy-server:v0.0.14 AS konnectivity-server-base
+
+############# konnectivity-server-reloader #############
+FROM base AS konnectivity-server-reloader
+
+COPY --from=builder /go/bin/konnectivity-server-reloader /konnectivity-server-reloader
+COPY --from=konnectivity-server-base /proxy-server /proxy-server
+
+WORKDIR /
+
+ENTRYPOINT ["/konnectivity-server-reloader"]

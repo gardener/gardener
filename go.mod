@@ -52,6 +52,7 @@ require (
 	k8s.io/gengo v0.0.0-20200413195148-3a45101e95ac
 	k8s.io/helm v2.16.1+incompatible
 	k8s.io/klog v1.0.0
+	k8s.io/klog/v2 v2.0.0
 	k8s.io/kube-aggregator v0.18.10
 	k8s.io/kube-openapi v0.0.0-20200410145947-bcb3869e6f29 // release-1.18
 	k8s.io/kubelet v0.18.10
