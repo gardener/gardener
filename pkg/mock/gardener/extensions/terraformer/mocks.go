@@ -13,7 +13,8 @@ import (
 	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
-	v10 "k8s.io/client-go/kubernetes/typed/core/v1"
+	v10 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v11 "k8s.io/client-go/kubernetes/typed/core/v1"
 	rest "k8s.io/client-go/rest"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -368,21 +369,21 @@ func (m *MockFactory) EXPECT() *MockFactoryMockRecorder {
 }
 
 // DefaultInitializer mocks base method.
-func (m *MockFactory) DefaultInitializer(arg0 client.Client, arg1, arg2 string, arg3 []byte, arg4 terraformer.StateConfigMapInitializer) terraformer.Initializer {
+func (m *MockFactory) DefaultInitializer(arg0 client.Client, arg1, arg2 string, arg3 []byte, arg4 terraformer.StateConfigMapInitializer, arg5 *v10.OwnerReference) terraformer.Initializer {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DefaultInitializer", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "DefaultInitializer", arg0, arg1, arg2, arg3, arg4, arg5)
 	ret0, _ := ret[0].(terraformer.Initializer)
 	return ret0
 }
 
 // DefaultInitializer indicates an expected call of DefaultInitializer.
-func (mr *MockFactoryMockRecorder) DefaultInitializer(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+func (mr *MockFactoryMockRecorder) DefaultInitializer(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultInitializer", reflect.TypeOf((*MockFactory)(nil).DefaultInitializer), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultInitializer", reflect.TypeOf((*MockFactory)(nil).DefaultInitializer), arg0, arg1, arg2, arg3, arg4, arg5)
 }
 
 // New mocks base method.
-func (m *MockFactory) New(arg0 logr.Logger, arg1 client.Client, arg2 v10.CoreV1Interface, arg3, arg4, arg5, arg6 string) terraformer.Terraformer {
+func (m *MockFactory) New(arg0 logr.Logger, arg1 client.Client, arg2 v11.CoreV1Interface, arg3, arg4, arg5, arg6 string) terraformer.Terraformer {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "New", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 	ret0, _ := ret[0].(terraformer.Terraformer)

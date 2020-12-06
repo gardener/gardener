@@ -34,6 +34,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -56,8 +57,8 @@ func (f factory) New(logger logr.Logger, client client.Client, coreV1Client core
 	return New(logger, client, coreV1Client, purpose, namespace, name, image)
 }
 
-func (f factory) DefaultInitializer(c client.Client, main, variables string, tfVars []byte, stateInitializer StateConfigMapInitializer) Initializer {
-	return DefaultInitializer(c, main, variables, tfVars, stateInitializer)
+func (f factory) DefaultInitializer(c client.Client, main, variables string, tfVars []byte, stateInitializer StateConfigMapInitializer, ownerRef *metav1.OwnerReference) Initializer {
+	return DefaultInitializer(c, main, variables, tfVars, stateInitializer, ownerRef)
 }
 
 // DefaultFactory returns the default factory.
@@ -187,6 +188,12 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 	}
 
 	if !skipApplyOrDestroyPod {
+		// TODO: remove after several releases
+		// ensure ownerRef for already existing state configmaps
+		if err := t.ensureStateHasOwnerRef(ctx); err != nil {
+			return fmt.Errorf("failed to ensure owner reference for the state configmap: %w", err)
+		}
+
 		// Create Terraform Pod which executes the provided command
 		generateName := t.computePodGenerateName(command)
 
@@ -295,6 +302,30 @@ func (t *terraformer) createOrUpdateTerraformerAuth(ctx context.Context) error {
 		return err
 	}
 	return t.createOrUpdateRoleBinding(ctx)
+}
+
+func (t *terraformer) ensureStateHasOwnerRef(ctx context.Context) error {
+	infra := &extensionsv1alpha1.Infrastructure{}
+	if err := t.client.Get(ctx, kutils.Key(t.namespace, t.name), infra); err != nil {
+		return err
+	}
+
+	configMap := &corev1.ConfigMap{}
+	if err := t.client.Get(ctx, kutils.Key(t.namespace, t.stateName), configMap); err != nil {
+		return err
+	}
+
+	owner := metav1.NewControllerRef(
+		infra,
+		extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.InfrastructureResource),
+	)
+	oldConfigMap := configMap.DeepCopy()
+	configMap.SetOwnerReferences(kutils.MergeOwnerReferences(configMap.OwnerReferences, *owner))
+
+	return t.client.Patch(ctx, configMap, client.MergeFromWithOptions(
+		oldConfigMap,
+		client.MergeFromWithOptimisticLock{},
+	))
 }
 
 func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, command string) (*corev1.Pod, error) {

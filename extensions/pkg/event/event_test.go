@@ -20,6 +20,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func TestEvent(t *testing.T) {
@@ -37,5 +39,24 @@ var _ = Describe("Event", func() {
 			Expect(event.Object).To(BeIdenticalTo(obj))
 			Expect(event.Meta).To(BeIdenticalTo(obj))
 		})
+
+		It("should not use object metadata and return a generic event", func() {
+			obj := noMeta{}
+
+			event := NewFromObject(obj)
+
+			Expect(event.Object).To(BeIdenticalTo(obj))
+			Expect(event.Meta).To(BeNil())
+		})
 	})
 })
+
+type noMeta struct {
+}
+
+func (noMeta) GetObjectKind() schema.ObjectKind {
+	return nil
+}
+func (noMeta) DeepCopyObject() runtime.Object {
+	return nil
+}

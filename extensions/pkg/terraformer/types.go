@@ -20,6 +20,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -124,16 +125,16 @@ type Initializer interface {
 type Factory interface {
 	NewForConfig(logger logr.Logger, config *rest.Config, purpose, namespace, name, image string) (Terraformer, error)
 	New(logger logr.Logger, client client.Client, coreV1Client corev1client.CoreV1Interface, purpose, namespace, name, image string) Terraformer
-	DefaultInitializer(c client.Client, main, variables string, tfVars []byte, stateInitializer StateConfigMapInitializer) Initializer
+	DefaultInitializer(c client.Client, main, variables string, tfVars []byte, stateInitializer StateConfigMapInitializer, ownerRef *metav1.OwnerReference) Initializer
 }
 
 // StateConfigMapInitializer initialize terraformer state ConfigMap
 type StateConfigMapInitializer interface {
-	Initialize(ctx context.Context, c client.Client, namespace, name string) error
+	Initialize(ctx context.Context, c client.Client, namespace, name string, ownerRef *metav1.OwnerReference) error
 }
 
 // StateConfigMapInitializerFunc implements StateConfigMapInitializer
-type StateConfigMapInitializerFunc func(ctx context.Context, c client.Client, namespace, name string) error
+type StateConfigMapInitializerFunc func(ctx context.Context, c client.Client, namespace, name string, ownerRef *metav1.OwnerReference) error
 
 // CreateOrUpdateState implements StateConfigMapInitializer.
 // It use it field state for creating or updating the state ConfigMap
