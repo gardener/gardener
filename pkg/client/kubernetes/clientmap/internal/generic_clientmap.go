@@ -212,6 +212,12 @@ func (cm *GenericClientMap) InvalidateClient(key clientmap.ClientSetKey) error {
 
 	delete(cm.clientSets, key)
 
+	if invalidate, ok := cm.factory.(clientmap.Invalidate); ok {
+		if err := invalidate.InvalidateClient(key); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

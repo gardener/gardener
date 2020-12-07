@@ -39,6 +39,7 @@ type shootClientMap struct {
 
 // NewShootClientMap creates a new shootClientMap with the given factory and logger.
 func NewShootClientMap(factory *ShootClientSetFactory, logger logrus.FieldLogger) clientmap.ClientMap {
+	factory.clientKeyToSeedInfo = make(map[ShootClientSetKey]seedInfo)
 	return &shootClientMap{
 		ClientMap: NewGenericClientMap(factory, logger),
 	}
@@ -57,6 +58,13 @@ type ShootClientSetFactory struct {
 
 	// Log is a logger for logging entries related to creating Shoot ClientSets.
 	Log logrus.FieldLogger
+
+	clientKeyToSeedInfo map[ShootClientSetKey]seedInfo
+}
+
+type seedInfo struct {
+	namespace string
+	seedName  string
 }
 
 // CalculateClientSetHash calculates a SHA256 hash of the kubeconfig in the 'gardener' secret in the Shoot's Seed namespace.
@@ -123,7 +131,43 @@ func (f *ShootClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cl
 	return clientSet, err
 }
 
+var _ clientmap.Invalidate = &ShootClientSetFactory{}
+
+// InvalidateClient invalidates information cached for the given ClientSetKey in the factory.
+func (f *ShootClientSetFactory) InvalidateClient(k clientmap.ClientSetKey) error {
+	key, ok := k.(ShootClientSetKey)
+	if !ok {
+		return fmt.Errorf("unsupported ClientSetKey: expected %T got %T", ShootClientSetKey{}, k)
+	}
+	delete(f.clientKeyToSeedInfo, key)
+	return nil
+}
+
+func (f *ShootClientSetFactory) seedInfoFromCache(ctx context.Context, key ShootClientSetKey) (string, kubernetes.Interface, error) {
+	cache, ok := f.clientKeyToSeedInfo[key]
+	if !ok {
+		return "", nil, fmt.Errorf("no seed info cached for client %s", key)
+	}
+	seedClient, err := f.GetSeedClient(ctx, cache.seedName)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to get seed client from cached seed info %w", err)
+	}
+
+	return cache.namespace, seedClient, nil
+}
+
+func (f *ShootClientSetFactory) seedInfoToCache(key ShootClientSetKey, namespace, seedName string) {
+	f.clientKeyToSeedInfo[key] = seedInfo{
+		namespace: namespace,
+		seedName:  seedName,
+	}
+}
+
 func (f *ShootClientSetFactory) getSeedNamespace(ctx context.Context, key ShootClientSetKey) (string, kubernetes.Interface, error) {
+	if namespace, seedClient, err := f.seedInfoFromCache(ctx, key); err == nil {
+		return namespace, seedClient, nil
+	}
+
 	gardenClient, err := f.GetGardenClient(ctx)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to get garden client: %w", err)
@@ -134,25 +178,30 @@ func (f *ShootClientSetFactory) getSeedNamespace(ctx context.Context, key ShootC
 		return "", nil, fmt.Errorf("failed to get Shoot object %q: %w", key.Key(), err)
 	}
 
-	if shoot.Spec.SeedName == nil {
+	seedName := shoot.Spec.SeedName
+	if seedName == nil {
 		return "", nil, fmt.Errorf("shoot %q is not scheduled yet", key.Key())
 	}
 
-	seedClient, err := f.GetSeedClient(ctx, *shoot.Spec.SeedName)
+	seedClient, err := f.GetSeedClient(ctx, *seedName)
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to get seed client: %w", err)
 	}
 
+	var namespace string
 	if len(shoot.Status.TechnicalID) > 0 {
-		return shoot.Status.TechnicalID, seedClient, nil
+		namespace = shoot.Status.TechnicalID
+	} else {
+		project, err := ProjectForNamespaceWithClient(ctx, gardenClient.Client(), shoot.Namespace)
+		if err != nil {
+			return "", seedClient, fmt.Errorf("failed to get Project for Shoot %q: %w", key.Key(), err)
+		}
+		namespace = shootpkg.ComputeTechnicalID(project.Name, shoot)
 	}
 
-	project, err := ProjectForNamespaceWithClient(ctx, gardenClient.Client(), shoot.Namespace)
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to get Project for Shoot %q: %w", key.Key(), err)
-	}
+	f.seedInfoToCache(key, namespace, *seedName)
 
-	return shootpkg.ComputeTechnicalID(project.Name, shoot), seedClient, nil
+	return namespace, seedClient, nil
 }
 
 // ShootClientSetKey is a ClientSetKey for a Shoot cluster.
