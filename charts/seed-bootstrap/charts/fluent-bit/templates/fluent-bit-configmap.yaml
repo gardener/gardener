@@ -220,6 +220,12 @@ data:
         script              modify_severity.lua
         call                cb_modify
 
+    [FILTER]
+        Name                lua
+        Match               {{ .Values.exposedComponentsTagPrefix }}.kubernetes.*
+        script              modify_severity.lua
+        call                cb_modify
+
   output.conf: |-
     # Output section
 {{- include "output.conf" . }}
