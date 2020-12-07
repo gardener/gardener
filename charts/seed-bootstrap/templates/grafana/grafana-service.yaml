@@ -6,7 +6,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     component: grafana
-    garden.sapcloud.io/role: monitoring
+    role: monitoring
 spec:
   type: ClusterIP
   ports:

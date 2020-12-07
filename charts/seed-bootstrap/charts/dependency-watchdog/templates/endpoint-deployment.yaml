@@ -6,7 +6,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     role: dependency-watchdog-endpoint
-    garden.sapcloud.io/role: controlplane
 spec:
   replicas: {{ .Values.replicas }}
   revisionHistoryLimit: 0

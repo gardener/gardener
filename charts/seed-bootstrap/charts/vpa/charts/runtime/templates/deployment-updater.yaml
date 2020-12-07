@@ -17,7 +17,6 @@ spec:
   selector:
     matchLabels:
       app: vpa-updater
-{{ toYaml .Values.labels | indent 6 }}
   template:
     metadata:
 {{- if .Values.updater.podAnnotations }}

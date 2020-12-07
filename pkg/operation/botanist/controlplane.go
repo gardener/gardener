@@ -105,6 +105,18 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 		return common.DeleteVpa(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, true)
 	}
 
+	// .spec.selector of a Deployment is immutable. If Deployment's .spec.selector contains
+	// the deprecated role label key, we delete it and let it to be re-created below with the chart apply.
+	// TODO: remove in a future version
+	deploymentKeys := []client.ObjectKey{
+		kutil.Key(b.Shoot.SeedNamespace, "vpa-updater"),
+		kutil.Key(b.Shoot.SeedNamespace, "vpa-recommender"),
+		kutil.Key(b.Shoot.SeedNamespace, "vpa-admission-controller"),
+	}
+	if err := common.DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx, b.K8sSeedClient.Client(), deploymentKeys); err != nil {
+		return err
+	}
+
 	var (
 		podLabels = map[string]interface{}{
 			v1beta1constants.LabelNetworkPolicyToDNS:            "allowed",

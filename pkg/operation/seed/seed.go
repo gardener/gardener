@@ -667,6 +667,23 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		}
 	}
 
+	// .spec.selector of a Deployment is immutable. If Deployment's .spec.selector contains
+	// the deprecated role label key, we delete it and let it to be re-created below with the chart apply.
+	// TODO: remove in a future version
+	deploymentKeys := []client.ObjectKey{
+		kutil.Key(v1beta1constants.GardenNamespace, "vpa-exporter"),
+	}
+	if vpaEnabled {
+		deploymentKeys = append(deploymentKeys,
+			kutil.Key(v1beta1constants.GardenNamespace, "vpa-updater"),
+			kutil.Key(v1beta1constants.GardenNamespace, "vpa-recommender"),
+			kutil.Key(v1beta1constants.GardenNamespace, "vpa-admission-controller"),
+		)
+	}
+	if err := common.DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx, k8sSeedClient.Client(), deploymentKeys); err != nil {
+		return err
+	}
+
 	values := kubernetes.Values(map[string]interface{}{
 		"cloudProvider":     seed.Info.Spec.Provider.Type,
 		"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane,

@@ -41,7 +41,6 @@ metadata:
   name: alertmanager
   namespace: {{ .Release.Namespace }}
   labels:
-    garden.sapcloud.io/role: monitoring
     component: alertmanager
     role: monitoring
 spec:
@@ -55,7 +54,6 @@ spec:
   template:
     metadata:
       labels:
-        garden.sapcloud.io/role: monitoring
         component: alertmanager
         role: monitoring
     spec:

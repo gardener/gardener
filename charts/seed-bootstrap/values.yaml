@@ -283,7 +283,7 @@ vpa:
     port: 9570
     servicePort: 9570
     labels:
-      garden.sapcloud.io/role: vpa
+      gardener.cloud/role: vpa
 
 istio:
   enabled: false

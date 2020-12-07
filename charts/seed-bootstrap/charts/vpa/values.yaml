@@ -6,7 +6,7 @@ global:
     vpa-exporter: image-repository:image-tag
 
 labels:
-  garden.sapcloud.io/role: vpa
+  gardener.cloud/role: vpa
 
 clusterType: seed
 
