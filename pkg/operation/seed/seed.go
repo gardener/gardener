@@ -335,9 +335,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		centralCAdvisorScrapeConfigMetricRelabelConfigs = strings.Builder{}
 	)
 
-	for _, componentFn := range []component.CentralMonitoringConfiguration{
-		etcd.CentralMonitoringConfiguration,
-	} {
+	for _, componentFn := range []component.CentralMonitoringConfiguration{} {
 		centralMonitoringConfig, err := componentFn()
 		if err != nil {
 			return err

@@ -21,7 +21,6 @@ import (
 	"text/template"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
@@ -45,8 +44,6 @@ const (
 	monitoringMetricEtcdServerProposalsPending                 = "etcd_server_proposals_pending"
 	monitoringMetricGrpcServerHandledTotal                     = "grpc_server_handled_total"
 	monitoringMetricGrpcServerStartedTotal                     = "grpc_server_started_total"
-	monitoringMetricContainerFSWritesBytesTotal                = "container_fs_writes_bytes_total"
-	monitoringMetricContainerFSReadsBytesTotal                 = "container_fs_reads_bytes_total"
 
 	monitoringMetricBackupRestoreDefragmentationDurationSecondsBucket = "etcdbr_defragmentation_duration_seconds_bucket"
 	monitoringMetricBackupRestoreDefragmentationDurationSecondsCount  = "etcdbr_defragmentation_duration_seconds_count"
@@ -292,30 +289,6 @@ metric_relabel_configs:
 )
 
 var (
-	// Collect additional filesystem metrics for etcd containers. We have to rename
-	// the metrics names for the matching etcd samples to a temporary metric name.
-	// After that we drop all the not matching filesystem metrics and rename the
-	// etcd samples back to the origin name.
-	monitoringCentralCAdvisorRelabelConfig1 = `target_label: __name__
-source_labels:
-- container
-- __name__
-regex: ` + containerNameEtcd + `;(` + monitoringMetricContainerFSWritesBytesTotal + `|` + monitoringMetricContainerFSReadsBytesTotal + `)
-replacement: 'GARDEN_TMP_${1}'
-action: replace`
-
-	// Drop all filesystem metrics which are not related to etcd.
-	monitoringCentralCAdvisorRelabelConfig2 = `source_labels: [ __name__ ]
-regex: (` + monitoringMetricContainerFSWritesBytesTotal + `|` + monitoringMetricContainerFSReadsBytesTotal + `)
-action: drop`
-
-	// Rename all the tmp metric names back to their origin names.
-	monitoringCentralCAdvisorRelabelConfig3 = `target_label: __name__
-source_labels: [ __name__ ]
-regex: GARDEN_TMP_(.*)
-replacement: $1
-action: replace`
-
 	monitoringAlertingRulesTemplate             *template.Template
 	monitoringScrapeConfigEtcdTemplate          *template.Template
 	monitoringScrapeConfigBackupRestoreTemplate *template.Template
@@ -369,15 +342,4 @@ func (e *etcd) AlertingRules() (map[string]string, error) {
 	}
 
 	return map[string]string{fmt.Sprintf("kube-etcd3-%s.rules.yaml", e.role): alertingRules.String()}, nil
-}
-
-// CentralMonitoringConfiguration returns scape configuration for the central Prometheus.
-func CentralMonitoringConfiguration() (component.CentralMonitoringConfig, error) {
-	return component.CentralMonitoringConfig{
-		CAdvisorScrapeConfigMetricRelabelConfigs: []string{
-			monitoringCentralCAdvisorRelabelConfig1,
-			monitoringCentralCAdvisorRelabelConfig2,
-			monitoringCentralCAdvisorRelabelConfig3,
-		},
-	}, nil
 }

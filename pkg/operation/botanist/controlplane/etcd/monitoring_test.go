@@ -22,7 +22,6 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Monitoring", func() {
@@ -74,19 +73,6 @@ var _ = Describe("Monitoring", func() {
 					filepath.Join("testdata", "monitoring_alertingrules_important_with_backup.yaml"),
 				)
 			})
-		})
-	})
-
-	Describe("#CentralMonitoringConfiguration", func() {
-		It("should return the expected central monitoring configuration", func() {
-			config, err := CentralMonitoringConfiguration()
-			Expect(config.ScrapeConfigs).To(BeNil())
-			Expect(config.CAdvisorScrapeConfigMetricRelabelConfigs).To(ConsistOf(
-				expectedCentralCAdvisorRelabelConfig1,
-				expectedCentralCAdvisorRelabelConfig2,
-				expectedCentralCAdvisorRelabelConfig3,
-			))
-			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })
@@ -297,20 +283,4 @@ metric_relabel_configs:
 	expectedAlertingRulesImportantWithoutBackup = alertingRulesImportant + alertingRulesDefault
 	expectedAlertingRulesNormalWithBackup       = alertingRulesNormal + alertingRulesDefault + alertingRulesBackup
 	expectedAlertingRulesImportantWithBackup    = alertingRulesImportant + alertingRulesDefault + alertingRulesBackup
-
-	expectedCentralCAdvisorRelabelConfig1 = `target_label: __name__
-source_labels:
-- container
-- __name__
-regex: etcd;(container_fs_writes_bytes_total|container_fs_reads_bytes_total)
-replacement: 'GARDEN_TMP_${1}'
-action: replace`
-	expectedCentralCAdvisorRelabelConfig2 = `source_labels: [ __name__ ]
-regex: (container_fs_writes_bytes_total|container_fs_reads_bytes_total)
-action: drop`
-	expectedCentralCAdvisorRelabelConfig3 = `target_label: __name__
-source_labels: [ __name__ ]
-regex: GARDEN_TMP_(.*)
-replacement: $1
-action: replace`
 )
