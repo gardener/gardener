@@ -4,6 +4,7 @@ rule_files:
 evaluation_interval: 30s
 
 tests:
+
 - interval: 30s
   external_labels:
     seed: aws
@@ -21,6 +22,99 @@ tests:
         type: seed
         visibility: operator
       exp_annotations:
-        description: "There are no fluent-bit pods running on seed: aws. No logs will be collected."
+        description: >
+          There are no fluent-bit pods running on seed: aws.
+          No logs will be collected.
         summary: Fluent-bit is down
 
+- interval: 1m
+  external_labels:
+    seed: aws
+  input_series:
+  # FluentBitReceivesLogsWithoutMetadata
+  - series: 'fluentbit_loki_gardener_logs_without_metadata_total{pod="fluent-bit-test"}'
+    values: '0+0x3 0+1x30'
+  alert_rule_test:
+  - eval_time: 22m
+    alertname: FluentBitReceivesLogsWithoutMetadata
+    exp_alerts:
+    - exp_labels:
+        pod: fluent-bit-test
+        service: logging
+        severity: warning
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: >
+          fluent-bit-test receives logs without metadata on seed:
+          aws. These logs will be dropped.
+        summary: Fluent-bit receives logs without metadata
+
+- interval: 1m
+  external_labels:
+    seed: aws
+  input_series:
+  # FluentBitSendsOoOLogs
+  - series: 'prometheus_target_scrapes_sample_out_of_order_total{pod="fluent-bit-test"}'
+    values: '0+0x3 0+1x30'
+  alert_rule_test:
+  - eval_time: 22m
+    alertname: FluentBitSendsOoOLogs
+    exp_alerts:
+    - exp_labels:
+        pod: fluent-bit-test
+        service: logging
+        severity: warning
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: >
+          fluent-bit-test on seed: aws sends OutOfOrder logs
+          to the Loki. These logs will be dropped.
+        summary: Fluent-bit sends OoO logs
+
+- interval: 1m
+  external_labels:
+    seed: aws
+  input_series:
+  # FluentBitGardenerLokiPluginErrors
+  - series: 'fluentbit_loki_gardener_errors_total{pod="fluent-bit-test"}'
+    values: '0+0x3 0+1x30'
+  alert_rule_test:
+  - eval_time: 22m
+    alertname: FluentBitGardenerLokiPluginErrors
+    exp_alerts:
+    - exp_labels:
+        pod: fluent-bit-test
+        service: logging
+        severity: warning
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: >
+          There are errors in the fluent-bit-test GardenerLoki plugin on seed:
+          aws.
+        summary: Errors in Fluent-bit GardenerLoki plugin
+
+- interval: 1m
+  external_labels:
+    seed: aws
+  input_series:
+  # FluentBitGardenerLokiPluginDoesNotSendLogs
+  - series: 'fluentbit_loki_gardener_forwarded_logs_total{pod="fluent-bit-test"}'
+    values: '1+1x3 4+0x30'
+  alert_rule_test:
+  - eval_time: 22m
+    alertname: FluentBitGardenerLokiPluginDoesNotSendLogs
+    exp_alerts:
+    - exp_labels:
+        pod: fluent-bit-test
+        service: logging
+        severity: warning
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: >
+          fluent-bit-test GardenerLoki plugin on seed: aws
+          does not send logs.
+        summary: Fluent-bit GardenerLoki plugin does not send logs
