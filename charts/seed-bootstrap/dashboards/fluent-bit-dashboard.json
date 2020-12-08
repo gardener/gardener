@@ -721,7 +721,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_incoming_logs_total[$__rate_interval])) by (host)",
+          "expr": "sum(increase(fluentbit_loki_gardener_incoming_logs_total[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -809,7 +809,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_forwarded_logs_total[$__rate_interval])) by (host)",
+          "expr": "sum(increase(fluentbit_loki_gardener_forwarded_logs_total[$__rate_interval]) != 0) by (host)",
           "instant": false,
           "interval": "",
           "legendFormat": "{{host}}",
@@ -899,7 +899,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(promtail_dropped_entries_total[$__rate_interval])) by (host)",
+          "expr": "sum(increase(promtail_dropped_entries_total[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -978,7 +978,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_dropped_logs_total[$__rate_interval])) by (host)",
+          "expr": "sum(increase(fluentbit_loki_gardener_dropped_logs_total[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -996,6 +996,17 @@
             "reducers": [
               "delta"
             ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Delta": "Total number of logs",
+              "Field": "Namespace"
+            }
           }
         }
       ],
@@ -1042,7 +1053,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_logs_without_metadata_total[$__rate_interval])) by (host)",
+          "expr": "sum(increase(fluentbit_loki_gardener_logs_without_metadata_total[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1106,7 +1117,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_errors_total[$__rate_interval])) by (host)",
+          "expr": "sum(increase(fluentbit_loki_gardener_errors_total[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
