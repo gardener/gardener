@@ -24,7 +24,7 @@ images:
 - name: gardener-resource-manager
   sourceRepository: github.com/gardener/gardener-resource-manager
   repository: eu.gcr.io/gardener-project/gardener/gardener-resource-manager
-  tag: "v0.20.0"
+  tag: "v0.21.0"
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
