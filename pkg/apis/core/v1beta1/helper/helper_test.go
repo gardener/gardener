@@ -1619,4 +1619,26 @@ var _ = Describe("helper", func() {
 
 	})
 
+	Describe("#GetPurpose", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{},
+			}
+		})
+
+		It("should get default purpose if not defined", func() {
+			purpose := GetPurpose(shoot)
+			Expect(purpose).To(Equal(gardencorev1beta1.ShootPurposeEvaluation))
+		})
+
+		It("should get purpose", func() {
+			shootPurpose := gardencorev1beta1.ShootPurposeProduction
+			shoot.Spec.Purpose = &shootPurpose
+			purpose := GetPurpose(shoot)
+			Expect(purpose).To(Equal(shootPurpose))
+		})
+	})
+
 })

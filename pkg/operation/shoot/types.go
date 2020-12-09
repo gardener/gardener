@@ -64,6 +64,7 @@ type Shoot struct {
 	ExternalClusterDomain *string
 	ExternalDomain        *garden.Domain
 
+	Purpose                    gardencorev1beta1.ShootPurpose
 	WantsClusterAutoscaler     bool
 	WantsVerticalPodAutoscaler bool
 	WantsAlertmanager          bool

@@ -1126,3 +1126,11 @@ func (s *ShootItems) Union(shootItems *ShootItems) []gardencorev1beta1.Shoot {
 func objectKey(namesapce, name string) string {
 	return fmt.Sprintf("%s/%s", namesapce, name)
 }
+
+// GetPurpose returns the purpose of the shoot or 'evaluation' if it's nil.
+func GetPurpose(s *gardencorev1beta1.Shoot) gardencorev1beta1.ShootPurpose {
+	if v := s.Spec.Purpose; v != nil {
+		return *v
+	}
+	return gardencorev1beta1.ShootPurposeEvaluation
+}
