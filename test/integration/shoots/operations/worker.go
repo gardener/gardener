@@ -89,7 +89,7 @@ var _ = ginkgo.Describe("Shoot worker operation testing", func() {
 
 	}, scaleWorkerTimeout)
 
-	f.Beta().CIt("Shoot node's operating systems should differ if the the specified workers are different", func(ctx context.Context) {
+	f.Beta().CIt("Shoot node's operating systems should differ if the specified workers are different", func(ctx context.Context) {
 		ginkgo.By("Checking if shoot is compatible for testing")
 
 		if len(f.Shoot.Spec.Provider.Workers) >= 1 {
