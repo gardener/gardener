@@ -71,7 +71,7 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 	}
 	mcmValues["replicas"] = replicaCount
 
-	if err := a.mcmSeedChart.Apply(ctx, a.chartApplier, workerObj.Namespace,
+	if err := a.mcmSeedChart.Apply(ctx, a.chartApplier, a.client, workerObj.Namespace,
 		a.imageVector, a.gardenerClientset.Version(), cluster.Shoot.Spec.Kubernetes.Version, mcmValues); err != nil {
 		return errors.Wrapf(err, "could not apply MCM chart in seed for worker '%s'", kutil.ObjectName(workerObj))
 	}

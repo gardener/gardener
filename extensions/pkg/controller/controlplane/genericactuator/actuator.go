@@ -204,7 +204,7 @@ func (a *actuator) reconcileControlPlaneExposure(
 	// Apply control plane exposure chart
 	a.logger.Info("Applying control plane exposure chart", "controlplaneexposure", kutil.ObjectName(cp), "values", values)
 	version := cluster.Shoot.Spec.Kubernetes.Version
-	if err := a.controlPlaneExposureChart.Apply(ctx, a.chartApplier, cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
+	if err := a.controlPlaneExposureChart.Apply(ctx, a.chartApplier, a.client, cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
 		return false, errors.Wrapf(err, "could not apply control plane exposure chart for controlplane '%s'", kutil.ObjectName(cp))
 	}
 
@@ -241,7 +241,7 @@ func (a *actuator) reconcileControlPlane(
 
 		// Apply config chart
 		a.logger.Info("Applying configuration chart", "controlplane", kutil.ObjectName(cp))
-		if err := a.configChart.Apply(ctx, a.chartApplier, cp.Namespace, nil, "", "", values); err != nil {
+		if err := a.configChart.Apply(ctx, a.chartApplier, a.client, cp.Namespace, nil, "", "", values); err != nil {
 			return false, errors.Wrapf(err, "could not apply configuration chart for controlplane '%s'", kutil.ObjectName(cp))
 		}
 	}
@@ -291,7 +291,7 @@ func (a *actuator) reconcileControlPlane(
 	// Apply control plane chart
 	version := cluster.Shoot.Spec.Kubernetes.Version
 	a.logger.Info("Applying control plane chart", "controlplane", kutil.ObjectName(cp))
-	if err := a.controlPlaneChart.Apply(ctx, a.chartApplier, cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
+	if err := a.controlPlaneChart.Apply(ctx, a.chartApplier, a.client, cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
 		return false, errors.Wrapf(err, "could not apply control plane chart for controlplane '%s'", kutil.ObjectName(cp))
 	}
 

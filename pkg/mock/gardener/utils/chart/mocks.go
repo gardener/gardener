@@ -39,17 +39,17 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 }
 
 // Apply mocks base method.
-func (m *MockInterface) Apply(arg0 context.Context, arg1 kubernetes.ChartApplier, arg2 string, arg3 imagevector.ImageVector, arg4, arg5 string, arg6 map[string]interface{}) error {
+func (m *MockInterface) Apply(arg0 context.Context, arg1 kubernetes.ChartApplier, arg2 client.Client, arg3 string, arg4 imagevector.ImageVector, arg5, arg6 string, arg7 map[string]interface{}) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Apply", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+	ret := m.ctrl.Call(m, "Apply", arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Apply indicates an expected call of Apply.
-func (mr *MockInterfaceMockRecorder) Apply(arg0, arg1, arg2, arg3, arg4, arg5, arg6 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Apply(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockInterface)(nil).Apply), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Apply", reflect.TypeOf((*MockInterface)(nil).Apply), arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
 }
 
 // Delete mocks base method.

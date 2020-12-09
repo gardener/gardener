@@ -295,11 +295,11 @@ var _ = Describe("Actuator", func() {
 			var configChart chart.Interface
 			if configName != "" {
 				cc := mockchartutil.NewMockInterface(ctrl)
-				cc.EXPECT().Apply(ctx, chartApplier, namespace, nil, "", "", configChartValues).Return(nil)
+				cc.EXPECT().Apply(ctx, chartApplier, client, namespace, nil, "", "", configChartValues).Return(nil)
 				configChart = cc
 			}
 			ccmChart := mockchartutil.NewMockInterface(ctrl)
-			ccmChart.EXPECT().Apply(ctx, chartApplier, namespace, imageVector, seedVersion, shootVersion, controlPlaneChartValues).Return(nil)
+			ccmChart.EXPECT().Apply(ctx, chartApplier, client, namespace, imageVector, seedVersion, shootVersion, controlPlaneChartValues).Return(nil)
 			ccmShootChart := mockchartutil.NewMockInterface(ctrl)
 			ccmShootChart.EXPECT().Render(chartRenderer, metav1.NamespaceSystem, imageVector, shootVersion, shootVersion, controlPlaneShootChartValues).Return(chartName, []byte(renderedContent), nil)
 			storageClassesChart := mockchartutil.NewMockInterface(ctrl)
@@ -380,6 +380,9 @@ var _ = Describe("Actuator", func() {
 
 	DescribeTable("#ReconcileExposure",
 		func() {
+			// Create mock client
+			client := mockclient.NewMockClient(ctrl)
+
 			// Create mock Gardener clientset and chart applier
 			gardenerClientset := mockkubernetes.NewMockInterface(ctrl)
 			gardenerClientset.EXPECT().Version().Return(seedVersion)
@@ -389,7 +392,7 @@ var _ = Describe("Actuator", func() {
 			exposureSecrets := mocksecretsutil.NewMockInterface(ctrl)
 			exposureSecrets.EXPECT().Deploy(ctx, gomock.Any(), gardenerClientset, namespace).Return(deployedExposureSecrets, nil)
 			cpExposureChart := mockchartutil.NewMockInterface(ctrl)
-			cpExposureChart.EXPECT().Apply(ctx, chartApplier, namespace, imageVector, seedVersion, shootVersion, controlPlaneExposureChartValues).Return(nil)
+			cpExposureChart.EXPECT().Apply(ctx, chartApplier, client, namespace, imageVector, seedVersion, shootVersion, controlPlaneExposureChartValues).Return(nil)
 
 			// Create mock values provider
 			vp := mockgenericactuator.NewMockValuesProvider(ctrl)
@@ -399,6 +402,7 @@ var _ = Describe("Actuator", func() {
 			a := NewActuator(providerName, nil, exposureSecrets, nil, nil, nil, nil, cpExposureChart, vp, nil, imageVector, "", nil, 0, logger)
 			a.(*actuator).gardenerClientset = gardenerClientset
 			a.(*actuator).chartApplier = chartApplier
+			a.(*actuator).client = client
 
 			// Call Reconcile method and check the result
 			requeue, err := a.Reconcile(ctx, cpExposure, cluster)
