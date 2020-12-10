@@ -61,7 +61,7 @@ var _ = ginkgo.Describe("Shoot application metrics testing", func() {
 		name = "metrics-test"
 	)
 
-	f.Beta().CIt("should read runtime metrics", func(ctx context.Context) {
+	f.Default().CIt("should read runtime metrics", func(ctx context.Context) {
 		templateParams := map[string]string{
 			"name":      name,
 			"namespace": f.Namespace,

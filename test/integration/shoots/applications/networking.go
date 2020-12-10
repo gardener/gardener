@@ -60,7 +60,7 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 		name = "net-test"
 	)
 
-	f.Beta().CIt("should reach all webservers on all nodes", func(ctx context.Context) {
+	f.Default().CIt("should reach all webservers on all nodes", func(ctx context.Context) {
 		templateParams := map[string]string{
 			"name":      name,
 			"namespace": f.Namespace,
