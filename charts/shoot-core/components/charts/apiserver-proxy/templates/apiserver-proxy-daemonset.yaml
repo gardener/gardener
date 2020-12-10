@@ -29,7 +29,7 @@ spec:
         networking.gardener.cloud/from-seed: allowed
     spec:
       serviceAccountName: apiserver-proxy
-      priorityClassName: system-cluster-critical
+      priorityClassName: system-node-critical
       tolerations:
       - effect: NoSchedule
         operator: Exists
@@ -76,8 +76,8 @@ spec:
             cpu: 20m
             memory: 20Mi
           limits:
-            cpu: 60m
-            memory: 40Mi
+            cpu: 200m
+            memory: 200Mi
       - name: proxy
         image: {{ index .Values.images "apiserver-proxy" }}
         imagePullPolicy: IfNotPresent
@@ -94,8 +94,8 @@ spec:
             cpu: 20m
             memory: 20Mi
           limits:
-            cpu: 100m
-            memory: 100Mi
+            cpu: 200m
+            memory: 300Mi
         readinessProbe:
           httpGet:
             path: /ready
