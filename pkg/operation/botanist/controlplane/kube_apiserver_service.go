@@ -167,10 +167,9 @@ func (d *kubeAPIService) Wait(ctx context.Context) error {
 }
 
 func (d *kubeAPIService) WaitCleanup(ctx context.Context) error {
-	return nil
+	return kutil.WaitUntilResourceDeleted(ctx, d.client, d.getService(), 5*time.Second)
 }
 
-// entry returns an empty DNSEntry used for deletion.
 func (d *kubeAPIService) getService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: d.service.Name, Namespace: d.service.Namespace}}
 }

@@ -305,6 +305,10 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Destroy(ctx); err != nil {
 			return err
 		}
+
+		if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.WaitCleanup(ctx); err != nil {
+			return err
+		}
 	}
 
 	if err := b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Destroy(ctx); err != nil {
