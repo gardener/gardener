@@ -19,6 +19,7 @@ rules:
   - ""
   resources:
   - namespaces
+  - resourcequotas
   verbs:
   - '*'
 - apiGroups:
