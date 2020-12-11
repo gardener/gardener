@@ -21,6 +21,7 @@ import (
 
 	apisconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/helper"
+	"github.com/gardener/gardener/pkg/admissioncontroller/server/metrics"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/sirupsen/logrus"
@@ -68,6 +69,8 @@ func (h *objectSizeHandler) ValidateResourceSize(w http.ResponseWriter, r *http.
 	if err := DecodeAdmissionRequest(r, deserializer, receivedReview, maxRequestBody, requestLogger); err != nil {
 		h.logger.Errorf(err.Error())
 		respond(w, errToAdmissionResponse(err))
+
+		metrics.InvalidWebhookRequest.WithLabelValues().Inc()
 		return
 	}
 
@@ -80,6 +83,13 @@ func (h *objectSizeHandler) ValidateResourceSize(w http.ResponseWriter, r *http.
 	reviewResponse := h.admit(receivedReview.Request, logEntry)
 	if !reviewResponse.Allowed && reviewResponse.Result != nil {
 		logEntry.Infof("Rejected request of user '%s': %v", receivedReview.Request.UserInfo.Username, reviewResponse.Result.Message)
+
+		metrics.RejectedResources.WithLabelValues(
+			fmt.Sprint(receivedReview.Request.Operation),
+			receivedReview.Request.Kind.Kind,
+			receivedReview.Request.Namespace,
+			metrics.ReasonSizeExceeded,
+		).Inc()
 	}
 	respond(w, reviewResponse)
 }

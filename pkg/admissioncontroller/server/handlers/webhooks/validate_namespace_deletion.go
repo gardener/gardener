@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gardener/gardener/pkg/admissioncontroller/server/metrics"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
@@ -93,6 +94,7 @@ func (h *namespaceDeletionHandler) ValidateNamespaceDeletion(w http.ResponseWrit
 	if err := DecodeAdmissionRequest(r, deserializer, receivedReview, maxRequestBody, requestLogger); err != nil {
 		requestLogger.Errorf(err.Error())
 		respond(w, errToAdmissionResponse(err))
+		metrics.InvalidWebhookRequest.WithLabelValues().Inc()
 		return
 	}
 
