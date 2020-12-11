@@ -209,7 +209,7 @@ func careSetupFailure(ctx context.Context, gardenClient kubernetes.Interface, sh
 		return nil
 	}
 
-	_, err := updateShootStatus(ctx, gardenClient.GardenCore(), shoot, conditions, constraints)
+	_, err := updateShootStatus(ctx, gardenClient.GardenCore(), shoot, updatedConditions, updatedConstraints)
 	return err
 }
 
@@ -227,23 +227,6 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return fmt.Errorf("failed to get garden client: %w", err)
-	}
-
-	operation, err := operation.
-		NewBuilder().
-		WithLogger(shootLogger).
-		WithConfig(c.config).
-		WithGardenerInfo(c.identity).
-		WithGardenClusterIdentity(c.gardenClusterIdentity).
-		WithSecrets(c.secrets).
-		WithImageVector(c.imageVector).
-		WithGardenFrom(c.k8sGardenCoreInformers, shoot.Namespace).
-		WithSeedFrom(c.k8sGardenCoreInformers, *shoot.Spec.SeedName).
-		WithShootFrom(c.k8sGardenCoreInformers, shoot).
-		Build(ctx, c.clientMap)
-	if err != nil {
-		shootLogger.Errorf("could not initialize a new operation: %s", err.Error())
-		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
 	// Initialize conditions based on the current status.
@@ -269,29 +252,44 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		}
 	)
 
-	botanist, err := botanistpkg.New(operation)
+	operation, err := operation.
+		NewBuilder().
+		WithLogger(shootLogger).
+		WithConfig(c.config).
+		WithGardenerInfo(c.identity).
+		WithGardenClusterIdentity(c.gardenClusterIdentity).
+		WithSecrets(c.secrets).
+		WithImageVector(c.imageVector).
+		WithGardenFrom(c.k8sGardenCoreInformers, shoot.Namespace).
+		WithSeedFrom(c.k8sGardenCoreInformers, *shoot.Spec.SeedName).
+		WithShootFrom(c.k8sGardenCoreInformers, shoot).
+		Build(ctx, c.clientMap)
 	if err != nil {
-		message := fmt.Sprintf("Failed to create a botanist object to perform the care operations (%s)", err.Error())
-		operation.Logger.Error(message)
+		shootLogger.Errorf("could not initialize a new operation: %s", err.Error())
 
-		if err := careSetupFailure(ctx, gardenClient, shoot, message, oldConditions, oldConstraints); err != nil {
-			operation.Logger.Error(err)
+		if err := careSetupFailure(ctx, gardenClient, shoot, "precondition failed: operation could not be initialized", oldConditions, oldConstraints); err != nil {
+			shootLogger.Error(err)
 		}
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
-	initializeShootClients := shootClientInitializer(ctx, botanist)
+	botanist, err := botanistpkg.New(operation)
+	if err != nil {
+		shootLogger.Errorf("Failed to create a botanist object to perform the care operations: %s", err.Error())
+
+		if err := careSetupFailure(ctx, gardenClient, shoot, "Precondition failed: botanist could not be initialized", oldConditions, oldConstraints); err != nil {
+			shootLogger.Error(err)
+		}
+		return nil // We do not want to run in the exponential backoff for the condition checks.
+	}
 
 	cluster, err := gardenerextensions.GetCluster(ctx, botanist.K8sSeedClient.Client(), botanist.Shoot.SeedNamespace)
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			message := "health checks cannot be performed because of missing cluster resource"
-			if err := careSetupFailure(ctx, gardenClient, shoot, message, oldConditions, oldConstraints); err != nil {
-				operation.Logger.Error(err)
-			}
-			return nil
+		shootLogger.Errorf("Health checks cannot be performed: %s", err.Error())
+
+		if err := careSetupFailure(ctx, gardenClient, shoot, "Precondition failed: cluster resource could not be retrieved", oldConditions, oldConstraints); err != nil {
+			shootLogger.Error(err)
 		}
-		operation.Logger.Errorf("health checks cannot be performed: %v", err)
 		return nil
 	}
 
@@ -299,12 +297,15 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 	// With the "confineSpecUpdateRollout" feature enabled, shoot resources have a spec which is not yet active.
 	clusterShoot := cluster.Shoot
 	if clusterShoot == nil {
-		message := "health checks cannot be performed because of missing shoot in cluster resource"
-		if err := careSetupFailure(ctx, gardenClient, shoot, message, oldConditions, oldConstraints); err != nil {
-			operation.Logger.Error(err)
+		shootLogger.Error("Health checks cannot be performed: missing shoot in cluster resource")
+
+		if err := careSetupFailure(ctx, gardenClient, shoot, "Precondition failed: missing shoot in cluster resource", oldConditions, oldConstraints); err != nil {
+			shootLogger.Error(err)
 		}
 		return nil
 	}
+
+	initializeShootClients := shootClientInitializer(ctx, botanist)
 
 	_ = flow.Parallel(
 		// Trigger health check
