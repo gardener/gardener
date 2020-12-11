@@ -182,10 +182,15 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 					Spec: corev1.PodSpec{
 						Affinity: &corev1.Affinity{
 							PodAntiAffinity: &corev1.PodAntiAffinity{
-								RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{{
-									TopologyKey:   corev1.LabelHostname,
-									LabelSelector: &metav1.LabelSelector{MatchLabels: getLabels()},
-								}},
+								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+									{
+										Weight: 100,
+										PodAffinityTerm: corev1.PodAffinityTerm{
+											TopologyKey:   corev1.LabelHostname,
+											LabelSelector: &metav1.LabelSelector{MatchLabels: getLabels()},
+										},
+									},
+								},
 							},
 						},
 						ServiceAccountName: serviceAccount.Name,
