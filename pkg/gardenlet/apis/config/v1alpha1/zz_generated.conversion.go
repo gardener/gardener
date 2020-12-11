@@ -139,6 +139,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*GardenletLeaderElectionConfiguration)(nil), (*config.GardenletLeaderElectionConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_GardenletLeaderElectionConfiguration_To_config_GardenletLeaderElectionConfiguration(a.(*GardenletLeaderElectionConfiguration), b.(*config.GardenletLeaderElectionConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.GardenletLeaderElectionConfiguration)(nil), (*GardenletLeaderElectionConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_GardenletLeaderElectionConfiguration_To_v1alpha1_GardenletLeaderElectionConfiguration(a.(*config.GardenletLeaderElectionConfiguration), b.(*GardenletLeaderElectionConfiguration), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*HTTPSServer)(nil), (*config.HTTPSServer)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_HTTPSServer_To_config_HTTPSServer(a.(*HTTPSServer), b.(*config.HTTPSServer), scope)
 	}); err != nil {
@@ -146,16 +156,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*config.HTTPSServer)(nil), (*HTTPSServer)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_config_HTTPSServer_To_v1alpha1_HTTPSServer(a.(*config.HTTPSServer), b.(*HTTPSServer), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*LeaderElectionConfiguration)(nil), (*config.LeaderElectionConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_LeaderElectionConfiguration_To_config_LeaderElectionConfiguration(a.(*LeaderElectionConfiguration), b.(*config.LeaderElectionConfiguration), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*config.LeaderElectionConfiguration)(nil), (*LeaderElectionConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_config_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfiguration(a.(*config.LeaderElectionConfiguration), b.(*LeaderElectionConfiguration), scope)
 	}); err != nil {
 		return err
 	}
@@ -366,9 +366,7 @@ func Convert_config_BackupEntryControllerConfiguration_To_v1alpha1_BackupEntryCo
 
 func autoConvert_v1alpha1_ConditionThreshold_To_config_ConditionThreshold(in *ConditionThreshold, out *config.ConditionThreshold, s conversion.Scope) error {
 	out.Type = in.Type
-	if err := v1.Convert_v1_Duration_To_Pointer_v1_Duration(&in.Duration, &out.Duration, s); err != nil {
-		return err
-	}
+	out.Duration = in.Duration
 	return nil
 }
 
@@ -379,9 +377,7 @@ func Convert_v1alpha1_ConditionThreshold_To_config_ConditionThreshold(in *Condit
 
 func autoConvert_config_ConditionThreshold_To_v1alpha1_ConditionThreshold(in *config.ConditionThreshold, out *ConditionThreshold, s conversion.Scope) error {
 	out.Type = in.Type
-	if err := v1.Convert_Pointer_v1_Duration_To_v1_Duration(&in.Duration, &out.Duration, s); err != nil {
-		return err
-	}
+	out.Duration = in.Duration
 	return nil
 }
 
@@ -536,20 +532,12 @@ func autoConvert_v1alpha1_GardenletConfiguration_To_config_GardenletConfiguratio
 	} else {
 		out.ShootClientConnection = nil
 	}
-	if in.Controllers != nil {
-		in, out := &in.Controllers, &out.Controllers
-		*out = new(config.GardenletControllerConfiguration)
-		if err := Convert_v1alpha1_GardenletControllerConfiguration_To_config_GardenletControllerConfiguration(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Controllers = nil
-	}
+	out.Controllers = (*config.GardenletControllerConfiguration)(unsafe.Pointer(in.Controllers))
 	out.Resources = (*config.ResourcesConfiguration)(unsafe.Pointer(in.Resources))
 	if in.LeaderElection != nil {
 		in, out := &in.LeaderElection, &out.LeaderElection
-		*out = new(config.LeaderElectionConfiguration)
-		if err := Convert_v1alpha1_LeaderElectionConfiguration_To_config_LeaderElectionConfiguration(*in, *out, s); err != nil {
+		*out = new(config.GardenletLeaderElectionConfiguration)
+		if err := Convert_v1alpha1_GardenletLeaderElectionConfiguration_To_config_GardenletLeaderElectionConfiguration(*in, *out, s); err != nil {
 			return err
 		}
 	} else {
@@ -599,20 +587,12 @@ func autoConvert_config_GardenletConfiguration_To_v1alpha1_GardenletConfiguratio
 	} else {
 		out.ShootClientConnection = nil
 	}
-	if in.Controllers != nil {
-		in, out := &in.Controllers, &out.Controllers
-		*out = new(GardenletControllerConfiguration)
-		if err := Convert_config_GardenletControllerConfiguration_To_v1alpha1_GardenletControllerConfiguration(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Controllers = nil
-	}
+	out.Controllers = (*GardenletControllerConfiguration)(unsafe.Pointer(in.Controllers))
 	out.Resources = (*ResourcesConfiguration)(unsafe.Pointer(in.Resources))
 	if in.LeaderElection != nil {
 		in, out := &in.LeaderElection, &out.LeaderElection
-		*out = new(LeaderElectionConfiguration)
-		if err := Convert_config_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfiguration(*in, *out, s); err != nil {
+		*out = new(GardenletLeaderElectionConfiguration)
+		if err := Convert_config_GardenletLeaderElectionConfiguration_To_v1alpha1_GardenletLeaderElectionConfiguration(*in, *out, s); err != nil {
 			return err
 		}
 	} else {
@@ -642,15 +622,7 @@ func autoConvert_v1alpha1_GardenletControllerConfiguration_To_config_GardenletCo
 	out.ControllerInstallationRequired = (*config.ControllerInstallationRequiredControllerConfiguration)(unsafe.Pointer(in.ControllerInstallationRequired))
 	out.Seed = (*config.SeedControllerConfiguration)(unsafe.Pointer(in.Seed))
 	out.Shoot = (*config.ShootControllerConfiguration)(unsafe.Pointer(in.Shoot))
-	if in.ShootCare != nil {
-		in, out := &in.ShootCare, &out.ShootCare
-		*out = new(config.ShootCareControllerConfiguration)
-		if err := Convert_v1alpha1_ShootCareControllerConfiguration_To_config_ShootCareControllerConfiguration(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.ShootCare = nil
-	}
+	out.ShootCare = (*config.ShootCareControllerConfiguration)(unsafe.Pointer(in.ShootCare))
 	out.ShootStateSync = (*config.ShootStateSyncControllerConfiguration)(unsafe.Pointer(in.ShootStateSync))
 	out.ShootedSeedRegistration = (*config.ShootedSeedRegistrationControllerConfiguration)(unsafe.Pointer(in.ShootedSeedRegistration))
 	out.SeedAPIServerNetworkPolicy = (*config.SeedAPIServerNetworkPolicyControllerConfiguration)(unsafe.Pointer(in.SeedAPIServerNetworkPolicy))
@@ -670,15 +642,7 @@ func autoConvert_config_GardenletControllerConfiguration_To_v1alpha1_GardenletCo
 	out.ControllerInstallationRequired = (*ControllerInstallationRequiredControllerConfiguration)(unsafe.Pointer(in.ControllerInstallationRequired))
 	out.Seed = (*SeedControllerConfiguration)(unsafe.Pointer(in.Seed))
 	out.Shoot = (*ShootControllerConfiguration)(unsafe.Pointer(in.Shoot))
-	if in.ShootCare != nil {
-		in, out := &in.ShootCare, &out.ShootCare
-		*out = new(ShootCareControllerConfiguration)
-		if err := Convert_config_ShootCareControllerConfiguration_To_v1alpha1_ShootCareControllerConfiguration(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.ShootCare = nil
-	}
+	out.ShootCare = (*ShootCareControllerConfiguration)(unsafe.Pointer(in.ShootCare))
 	out.ShootStateSync = (*ShootStateSyncControllerConfiguration)(unsafe.Pointer(in.ShootStateSync))
 	out.ShootedSeedRegistration = (*ShootedSeedRegistrationControllerConfiguration)(unsafe.Pointer(in.ShootedSeedRegistration))
 	out.SeedAPIServerNetworkPolicy = (*SeedAPIServerNetworkPolicyControllerConfiguration)(unsafe.Pointer(in.SeedAPIServerNetworkPolicy))
@@ -688,6 +652,34 @@ func autoConvert_config_GardenletControllerConfiguration_To_v1alpha1_GardenletCo
 // Convert_config_GardenletControllerConfiguration_To_v1alpha1_GardenletControllerConfiguration is an autogenerated conversion function.
 func Convert_config_GardenletControllerConfiguration_To_v1alpha1_GardenletControllerConfiguration(in *config.GardenletControllerConfiguration, out *GardenletControllerConfiguration, s conversion.Scope) error {
 	return autoConvert_config_GardenletControllerConfiguration_To_v1alpha1_GardenletControllerConfiguration(in, out, s)
+}
+
+func autoConvert_v1alpha1_GardenletLeaderElectionConfiguration_To_config_GardenletLeaderElectionConfiguration(in *GardenletLeaderElectionConfiguration, out *config.GardenletLeaderElectionConfiguration, s conversion.Scope) error {
+	if err := configv1alpha1.Convert_v1alpha1_LeaderElectionConfiguration_To_config_LeaderElectionConfiguration(&in.LeaderElectionConfiguration, &out.LeaderElectionConfiguration, s); err != nil {
+		return err
+	}
+	out.LockObjectNamespace = (*string)(unsafe.Pointer(in.LockObjectNamespace))
+	out.LockObjectName = (*string)(unsafe.Pointer(in.LockObjectName))
+	return nil
+}
+
+// Convert_v1alpha1_GardenletLeaderElectionConfiguration_To_config_GardenletLeaderElectionConfiguration is an autogenerated conversion function.
+func Convert_v1alpha1_GardenletLeaderElectionConfiguration_To_config_GardenletLeaderElectionConfiguration(in *GardenletLeaderElectionConfiguration, out *config.GardenletLeaderElectionConfiguration, s conversion.Scope) error {
+	return autoConvert_v1alpha1_GardenletLeaderElectionConfiguration_To_config_GardenletLeaderElectionConfiguration(in, out, s)
+}
+
+func autoConvert_config_GardenletLeaderElectionConfiguration_To_v1alpha1_GardenletLeaderElectionConfiguration(in *config.GardenletLeaderElectionConfiguration, out *GardenletLeaderElectionConfiguration, s conversion.Scope) error {
+	if err := configv1alpha1.Convert_config_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfiguration(&in.LeaderElectionConfiguration, &out.LeaderElectionConfiguration, s); err != nil {
+		return err
+	}
+	out.LockObjectNamespace = (*string)(unsafe.Pointer(in.LockObjectNamespace))
+	out.LockObjectName = (*string)(unsafe.Pointer(in.LockObjectName))
+	return nil
+}
+
+// Convert_config_GardenletLeaderElectionConfiguration_To_v1alpha1_GardenletLeaderElectionConfiguration is an autogenerated conversion function.
+func Convert_config_GardenletLeaderElectionConfiguration_To_v1alpha1_GardenletLeaderElectionConfiguration(in *config.GardenletLeaderElectionConfiguration, out *GardenletLeaderElectionConfiguration, s conversion.Scope) error {
+	return autoConvert_config_GardenletLeaderElectionConfiguration_To_v1alpha1_GardenletLeaderElectionConfiguration(in, out, s)
 }
 
 func autoConvert_v1alpha1_HTTPSServer_To_config_HTTPSServer(in *HTTPSServer, out *config.HTTPSServer, s conversion.Scope) error {
@@ -714,34 +706,6 @@ func autoConvert_config_HTTPSServer_To_v1alpha1_HTTPSServer(in *config.HTTPSServ
 // Convert_config_HTTPSServer_To_v1alpha1_HTTPSServer is an autogenerated conversion function.
 func Convert_config_HTTPSServer_To_v1alpha1_HTTPSServer(in *config.HTTPSServer, out *HTTPSServer, s conversion.Scope) error {
 	return autoConvert_config_HTTPSServer_To_v1alpha1_HTTPSServer(in, out, s)
-}
-
-func autoConvert_v1alpha1_LeaderElectionConfiguration_To_config_LeaderElectionConfiguration(in *LeaderElectionConfiguration, out *config.LeaderElectionConfiguration, s conversion.Scope) error {
-	if err := configv1alpha1.Convert_v1alpha1_LeaderElectionConfiguration_To_config_LeaderElectionConfiguration(&in.LeaderElectionConfiguration, &out.LeaderElectionConfiguration, s); err != nil {
-		return err
-	}
-	out.LockObjectNamespace = (*string)(unsafe.Pointer(in.LockObjectNamespace))
-	out.LockObjectName = (*string)(unsafe.Pointer(in.LockObjectName))
-	return nil
-}
-
-// Convert_v1alpha1_LeaderElectionConfiguration_To_config_LeaderElectionConfiguration is an autogenerated conversion function.
-func Convert_v1alpha1_LeaderElectionConfiguration_To_config_LeaderElectionConfiguration(in *LeaderElectionConfiguration, out *config.LeaderElectionConfiguration, s conversion.Scope) error {
-	return autoConvert_v1alpha1_LeaderElectionConfiguration_To_config_LeaderElectionConfiguration(in, out, s)
-}
-
-func autoConvert_config_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfiguration(in *config.LeaderElectionConfiguration, out *LeaderElectionConfiguration, s conversion.Scope) error {
-	if err := configv1alpha1.Convert_config_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfiguration(&in.LeaderElectionConfiguration, &out.LeaderElectionConfiguration, s); err != nil {
-		return err
-	}
-	out.LockObjectNamespace = (*string)(unsafe.Pointer(in.LockObjectNamespace))
-	out.LockObjectName = (*string)(unsafe.Pointer(in.LockObjectName))
-	return nil
-}
-
-// Convert_config_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfiguration is an autogenerated conversion function.
-func Convert_config_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfiguration(in *config.LeaderElectionConfiguration, out *LeaderElectionConfiguration, s conversion.Scope) error {
-	return autoConvert_config_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfiguration(in, out, s)
 }
 
 func autoConvert_v1alpha1_Logging_To_config_Logging(in *Logging, out *config.Logging, s conversion.Scope) error {
@@ -966,17 +930,7 @@ func autoConvert_v1alpha1_ShootCareControllerConfiguration_To_config_ShootCareCo
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	out.StaleExtensionHealthCheckThreshold = (*v1.Duration)(unsafe.Pointer(in.StaleExtensionHealthCheckThreshold))
-	if in.ConditionThresholds != nil {
-		in, out := &in.ConditionThresholds, &out.ConditionThresholds
-		*out = make([]config.ConditionThreshold, len(*in))
-		for i := range *in {
-			if err := Convert_v1alpha1_ConditionThreshold_To_config_ConditionThreshold(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.ConditionThresholds = nil
-	}
+	out.ConditionThresholds = *(*[]config.ConditionThreshold)(unsafe.Pointer(&in.ConditionThresholds))
 	return nil
 }
 
@@ -989,17 +943,7 @@ func autoConvert_config_ShootCareControllerConfiguration_To_v1alpha1_ShootCareCo
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	out.StaleExtensionHealthCheckThreshold = (*v1.Duration)(unsafe.Pointer(in.StaleExtensionHealthCheckThreshold))
-	if in.ConditionThresholds != nil {
-		in, out := &in.ConditionThresholds, &out.ConditionThresholds
-		*out = make([]ConditionThreshold, len(*in))
-		for i := range *in {
-			if err := Convert_config_ConditionThreshold_To_v1alpha1_ConditionThreshold(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.ConditionThresholds = nil
-	}
+	out.ConditionThresholds = *(*[]ConditionThreshold)(unsafe.Pointer(&in.ConditionThresholds))
 	return nil
 }
 

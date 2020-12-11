@@ -1,0 +1,20 @@
+{
+    "hideMemberFields": [
+        "TypeMeta"
+    ],
+    "hideTypePatterns": [
+        "ParseError$",
+        "List$"
+    ],
+    "externalPackages": [
+        {
+            "typeMatchPrefix": "^k8s\\.io/(api|apimachinery/pkg/apis)/",
+            "docsURLTemplate": "https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#{{lower .TypeIdentifier}}-{{arrIndex .PackageSegments -1}}-{{arrIndex .PackageSegments -2}}"
+        }
+    ],
+    "typeDisplayNamePrefixOverrides": {
+        "k8s.io/api/": "Kubernetes ",
+        "k8s.io/apimachinery/pkg/apis/": "Kubernetes "
+    },
+    "markdownDisabled": false
+}

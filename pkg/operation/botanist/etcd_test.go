@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -99,7 +99,7 @@ var _ = Describe("Etcd", func() {
 
 		Context("no shooted seed", func() {
 			BeforeEach(func() {
-				botanist.ShootedSeed = nil
+				botanist.ManagedSeed = nil
 			})
 
 			It("should successfully create an etcd interface (normal class)", func() {
@@ -163,7 +163,7 @@ var _ = Describe("Etcd", func() {
 			hvpaForShootedSeedEnabled := false
 
 			BeforeEach(func() {
-				botanist.ShootedSeed = &gardencorev1beta1helper.ShootedSeed{}
+				botanist.ManagedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 			})
 
 			It("should successfully create an etcd interface (normal class)", func() {

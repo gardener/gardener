@@ -260,11 +260,11 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 	}
 	operation.Shoot = shoot
 
-	shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(shoot.Info)
+	managedSeed, err := gardencorev1beta1helper.GetManagedSeed(ctx, gardenClient.Client(), shoot.Info)
 	if err != nil {
-		logger.Warnf("Cannot use shoot %s/%s as shooted seed: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
+		logger.Warnf("Cannot use shoot %s/%s as managed seed: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
 	} else {
-		operation.ShootedSeed = shootedSeed
+		operation.ManagedSeed = managedSeed
 	}
 
 	operation.ChartsRootPath = b.chartsRootPathFunc()

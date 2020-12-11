@@ -18,6 +18,7 @@ import (
 	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	"github.com/gardener/gardener/third_party/forked/kubernetes/pkg/quota/v1"
 
@@ -49,6 +50,12 @@ type WantsExternalCoreInformerFactory interface {
 // WantsKubeInformerFactory defines a function which sets InformerFactory for admission plugins that need it.
 type WantsKubeInformerFactory interface {
 	SetKubeInformerFactory(kubeinformers.SharedInformerFactory)
+	admission.InitializationValidator
+}
+
+// WantsSeedManagementInformerFactory defines a function which sets InformerFactory for admission plugins that need it.
+type WantsSeedManagementInformerFactory interface {
+	SetSeedManagementInformerFactory(seedmanagementinformers.SharedInformerFactory)
 	admission.InitializationValidator
 }
 
@@ -88,7 +95,8 @@ type pluginInitializer struct {
 
 	externalCoreInformers externalcoreinformers.SharedInformerFactory
 
-	settingsInformers settingsinformer.SharedInformerFactory
+	seedManagementInformers seedmanagementinformers.SharedInformerFactory
+	settingsInformers       settingsinformer.SharedInformerFactory
 
 	kubeInformers kubeinformers.SharedInformerFactory
 	kubeClient    kubernetes.Interface

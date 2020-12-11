@@ -105,7 +105,7 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 		gardenClusterIdentity:         gardenClusterIdentity,
 		careControl:                   NewDefaultCareControl(clientMap, gardenCoreV1beta1Informer, secrets, imageVector, identity, gardenClusterIdentity, config),
 		controllerInstallationControl: NewDefaultControllerInstallationControl(clientMap, gardenCoreV1beta1Informer, recorder),
-		seedRegistrationControl:       NewDefaultSeedRegistrationControl(clientMap, gardenCoreV1beta1Informer, imageVector, config, recorder),
+		seedRegistrationControl:       NewDefaultSeedRegistrationControl(clientMap, recorder),
 		recorder:                      recorder,
 		secrets:                       secrets,
 		imageVector:                   imageVector,
@@ -154,7 +154,7 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 	shootInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controllerutils.ShootFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister, config.SeedSelector),
 		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    func(obj interface{}) { shootController.seedRegistrationAdd(obj, false) },
+			AddFunc:    shootController.seedRegistrationAdd,
 			UpdateFunc: shootController.seedRegistrationUpdate,
 		},
 	})

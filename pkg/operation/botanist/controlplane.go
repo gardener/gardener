@@ -556,7 +556,7 @@ func (b *Botanist) deployNetworkPolicies(ctx context.Context, denyAll bool) erro
 		values      = map[string]interface{}{}
 	)
 
-	switch b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase { //nolint:exhaustive
+	switch b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase { // nolint:exhaustive
 	case component.PhaseEnabled, component.PhaseEnabling, component.PhaseDisabling:
 		// Enable network policies for SNI
 		// When disabling SNI (previously enabled), the control plane is transitioning between states, thus
@@ -617,7 +617,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		memoryMetricForHpaEnabled = false
 	)
 
-	if b.ShootedSeed != nil {
+	if b.ManagedSeed != nil {
 		// Override for shooted seeds
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 		memoryMetricForHpaEnabled = true
@@ -705,19 +705,31 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		foundDeployment = false
 	}
 
-	if b.ShootedSeed != nil {
-		var (
-			apiServer  = b.ShootedSeed.APIServer
-			autoscaler = apiServer.Autoscaler
-		)
-		minReplicas = *autoscaler.MinReplicas
-		maxReplicas = autoscaler.MaxReplicas
+	if b.ManagedSeed != nil && b.ManagedSeed.Spec.Shoot != nil {
+		minReplicas, maxReplicas = 3, 3
+		if apiServer := b.ManagedSeed.Spec.Shoot.APIServer; apiServer != nil {
+			if autoscaler := apiServer.Autoscaler; autoscaler != nil {
+				if autoscaler.MaxReplicas != nil {
+					maxReplicas = *autoscaler.MaxReplicas
+				}
+				if autoscaler.MinReplicas != nil {
+					minReplicas = *autoscaler.MinReplicas
+				} else if minReplicas > maxReplicas {
+					minReplicas = maxReplicas
+				}
+			}
+		}
 	}
 
-	if b.ShootedSeed != nil && !hvpaEnabled {
-		apiServer := b.ShootedSeed.APIServer
+	if b.ManagedSeed != nil && b.ManagedSeed.Spec.Shoot != nil && !hvpaEnabled {
+		var replicas int32 = 3
+		if apiServer := b.ManagedSeed.Spec.Shoot.APIServer; apiServer != nil {
+			if apiServer.Replicas != nil {
+				replicas = *apiServer.Replicas
+			}
+		}
 
-		defaultValues["replicas"] = *apiServer.Replicas
+		defaultValues["replicas"] = replicas
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"requests": map[string]interface{}{
 				"cpu":    "1750m",

@@ -21,6 +21,7 @@ import (
 
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes/utils"
+	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	corev1 "k8s.io/api/core/v1"
@@ -288,6 +289,11 @@ func newClientSet(conf *Config) (Interface, error) {
 		return nil, err
 	}
 
+	gardenSeedManagement, err := gardenseedmanagementclientset.NewForConfig(conf.restConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	apiRegistration, err := apiserviceclientset.NewForConfig(conf.restConfig)
 	if err != nil {
 		return nil, err
@@ -309,10 +315,11 @@ func newClientSet(conf *Config) (Interface, error) {
 		directClient: directClient,
 		cache:        runtimeCache,
 
-		kubernetes:      kubernetes,
-		gardenCore:      gardenCore,
-		apiregistration: apiRegistration,
-		apiextension:    apiExtension,
+		kubernetes:           kubernetes,
+		gardenCore:           gardenCore,
+		gardenSeedManagement: gardenSeedManagement,
+		apiregistration:      apiRegistration,
+		apiextension:         apiExtension,
 	}
 
 	if _, err := cs.DiscoverVersion(); err != nil {

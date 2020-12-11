@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot
+package managedseed
 
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -39,7 +39,7 @@ var _ = Describe("gardenletAnnotations", func() {
 			},
 		}
 
-		actualAnnotations := gardenletAnnotations(s)
+		actualAnnotations := getParentPodAnnotations(s)
 
 		if added {
 			Expect(actualAnnotations).To(HaveKeyWithValue("networking.gardener.cloud/seed-sni-enabled", "true"))

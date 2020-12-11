@@ -42,7 +42,7 @@ type GardenletConfiguration struct {
 	// Resources defines the total capacity for seed resources and the amount reserved for use by Gardener.
 	Resources *ResourcesConfiguration
 	// LeaderElection defines the configuration of leader election client.
-	LeaderElection *LeaderElectionConfiguration
+	LeaderElection *GardenletLeaderElectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel *string
 	// KubernetesLogLevel is the log level used for Kubernetes' k8s.io/klog functions.
@@ -139,7 +139,7 @@ type BackupBucketControllerConfiguration struct {
 type BackupEntryControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	ConcurrentSyncs *int
-	// DeletionGracePeriodHours holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.
+	// DeletionGracePeriodHours holds the period in number of hours to delete the BackupEntry after deletion timestamp is set.
 	// If value is set to 0 then the BackupEntryController will trigger deletion immediately.
 	DeletionGracePeriodHours *int
 }
@@ -180,7 +180,7 @@ type SeedControllerConfiguration struct {
 	SyncPeriod *metav1.Duration
 }
 
-// ShootControllerConfiguration defines the configuration of the CloudProfile
+// ShootControllerConfiguration defines the configuration of the Shoot
 // controller.
 type ShootControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
@@ -240,17 +240,15 @@ type ConditionThreshold struct {
 	// Type is the type of the condition to define the threshold for.
 	Type string
 	// Duration is the duration how long the condition can stay in the progressing state.
-	Duration *metav1.Duration
+	Duration metav1.Duration
 }
 
-// ShootStateSyncControllerConfiguration defines the configuration of the
-// ShootStateController controller.
+// ShootStateSyncControllerConfiguration defines the configuration of the ShootState Sync controller.
 type ShootStateSyncControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs *int
-	// SyncPeriod is the duration how often the existing extension resources are
-	// synced to the ShootState resource
+	// SyncPeriod is the duration how often the existing extension resources are synced to the ShootState resource
 	SyncPeriod *metav1.Duration
 }
 
@@ -270,9 +268,9 @@ type ResourcesConfiguration struct {
 	Reserved corev1.ResourceList
 }
 
-// LeaderElectionConfiguration defines the configuration of leader election
+// GardenletLeaderElectionConfiguration defines the configuration of leader election
 // clients for components that can run with leader election enabled.
-type LeaderElectionConfiguration struct {
+type GardenletLeaderElectionConfiguration struct {
 	componentbaseconfig.LeaderElectionConfiguration
 	// LockObjectNamespace defines the namespace of the lock object.
 	LockObjectNamespace *string

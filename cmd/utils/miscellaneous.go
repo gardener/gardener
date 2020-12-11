@@ -18,6 +18,7 @@ import (
 	"context"
 
 	coreinstall "github.com/gardener/gardener/pkg/apis/core/install"
+	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
 	"github.com/gardener/gardener/pkg/logger"
 
 	corev1 "k8s.io/api/core/v1"
@@ -32,6 +33,7 @@ func CreateRecorder(kubeClient k8s.Interface, eventSourceName string) record.Eve
 	scheme := scheme.Scheme
 
 	coreinstall.Install(scheme)
+	seedmanagementinstall.Install(scheme)
 
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(logger.Logger.Debugf)

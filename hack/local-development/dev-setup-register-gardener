@@ -31,6 +31,7 @@ fi
 
 CORE_V1ALPHA1_APISERVICE_NAME="v1alpha1.core.gardener.cloud"
 CORE_V1BETA1_APISERVICE_NAME="v1beta1.core.gardener.cloud"
+SEEDMANAGEMENT_APISERVICE_NAME="v1alpha1.seedmanagement.gardener.cloud"
 SETTINGS_APISERVICE_NAME="v1alpha1.settings.gardener.cloud"
 
 ADMISSION_CONTROLLER_SERVICE_NAME="gardener-admission-controller"
@@ -60,6 +61,10 @@ fi
 if kubectl get apiservice "$CORE_V1BETA1_APISERVICE_NAME" &> /dev/null; then
   kubectl delete apiservice $CORE_V1BETA1_APISERVICE_NAME --wait=false
   kubectl patch  apiservice $CORE_V1BETA1_APISERVICE_NAME -p '{"metadata":{"finalizers":null}}' 2> /dev/null || true
+fi
+if kubectl get apiservice "$SEEDMANAGEMENT_APISERVICE_NAME" &> /dev/null; then
+  kubectl delete apiservice $SEEDMANAGEMENT_APISERVICE_NAME --wait=false
+  kubectl patch  apiservice $SEEDMANAGEMENT_APISERVICE_NAME -p '{"metadata":{"finalizers":null}}' 2> /dev/null || true
 fi
 if kubectl get apiservice "$SETTINGS_APISERVICE_NAME" &> /dev/null; then
   kubectl delete apiservice $SETTINGS_APISERVICE_NAME --wait=false
@@ -187,6 +192,21 @@ $APISERVICE_PORT_STRING
 apiVersion: apiregistration.k8s.io/v1
 kind: APIService
 metadata:
+  name: $SEEDMANAGEMENT_APISERVICE_NAME
+spec:
+  insecureSkipTLSVerify: true
+  group: seedmanagement.gardener.cloud
+  version: v1alpha1
+  groupPriorityMinimum: 10000
+  versionPriority: 20
+  service:
+    name: gardener-apiserver
+    namespace: garden
+$APISERVICE_PORT_STRING
+---
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
   name: $SETTINGS_APISERVICE_NAME
 spec:
   insecureSkipTLSVerify: true
@@ -299,6 +319,15 @@ $ADMISSION_CONTROLLER_PORT_STRING
     - secretbindings
     - quotas
     - plants
+  - apiGroups:
+    - seedmanagement.gardener.cloud
+    apiVersions:
+    - "*"
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - managedseeds
   - apiGroups:
     - settings.gardener.cloud
     apiVersions:

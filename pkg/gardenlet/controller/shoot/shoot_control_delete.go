@@ -99,8 +99,8 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		}),
 		// Check if Seed object for shooted seed has been deleted
 		errors.ToExecute("Check if Seed object for shooted seed has been deleted", func() error {
-			if o.ShootedSeed != nil {
-				if err := o.K8sGardenClient.DirectClient().Get(ctx, kutil.Key(o.Shoot.Info.Name), &gardencorev1beta1.Seed{}); err != nil {
+			if o.ManagedSeed != nil {
+				if err := o.K8sGardenClient.DirectClient().Get(ctx, kutil.Key(o.ManagedSeed.Name), &gardencorev1beta1.Seed{}); err != nil {
 					if !apierrors.IsNotFound(err) {
 						return err
 					}
@@ -111,10 +111,10 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			return nil
 		}),
 		errors.ToExecute("Wait for seed deletion", func() error {
-			if o.Shoot.Info.Namespace == v1beta1constants.GardenNamespace && o.ShootedSeed != nil {
+			if o.Shoot.Info.Namespace == v1beta1constants.GardenNamespace && o.ManagedSeed != nil {
 				// wait for seed object to be deleted before going on with shoot deletion
 				if err := retryutils.UntilTimeout(ctx, time.Second, 300*time.Second, func(context.Context) (done bool, err error) {
-					_, err = o.K8sGardenClient.GardenCore().CoreV1beta1().Seeds().Get(ctx, o.Shoot.Info.Name, kubernetes.DefaultGetOptions())
+					_, err = o.K8sGardenClient.GardenCore().CoreV1beta1().Seeds().Get(ctx, o.ManagedSeed.Name, kubernetes.DefaultGetOptions())
 					if apierrors.IsNotFound(err) {
 						return retryutils.Ok()
 					}

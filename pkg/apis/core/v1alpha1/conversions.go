@@ -143,6 +143,12 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 		return err
 	}
 
+	if err := scheme.AddConversionFunc((*core.ShootSpec)(nil), (*ShootSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootSpec_To_v1alpha1_ShootSpec(a.(*core.ShootSpec), b.(*ShootSpec), scope)
+	}); err != nil {
+		return err
+	}
+
 	if err := scheme.AddConversionFunc((*core.ShootStatus)(nil), (*ShootStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_ShootStatus_To_v1alpha1_ShootStatus(a.(*core.ShootStatus), b.(*ShootStatus), scope)
 	}); err != nil {
@@ -245,6 +251,10 @@ func Convert_v1alpha1_SeedNetworks_To_core_SeedNetworks(in *SeedNetworks, out *c
 
 func Convert_core_SeedStatus_To_v1alpha1_SeedStatus(in *core.SeedStatus, out *SeedStatus, s conversion.Scope) error {
 	return autoConvert_core_SeedStatus_To_v1alpha1_SeedStatus(in, out, s)
+}
+
+func Convert_core_ShootSpec_To_v1alpha1_ShootSpec(in *core.ShootSpec, out *ShootSpec, s conversion.Scope) error {
+	return autoConvert_core_ShootSpec_To_v1alpha1_ShootSpec(in, out, s)
 }
 
 func Convert_core_ShootStatus_To_v1alpha1_ShootStatus(in *core.ShootStatus, out *ShootStatus, s conversion.Scope) error {

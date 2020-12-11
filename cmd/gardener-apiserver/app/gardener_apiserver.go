@@ -24,6 +24,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
@@ -33,6 +34,8 @@ import (
 	gardenexternalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
+	seedmanagementinformer "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	settingsclientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	"github.com/gardener/gardener/pkg/openapi"
@@ -97,15 +100,16 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 
 // Options has all the context and parameters needed to run a Gardener API server.
 type Options struct {
-	Recommended                 *genericoptions.RecommendedOptions
-	ServerRunOptions            *genericoptions.ServerRunOptions
-	ExtraOptions                *apiserver.ExtraOptions
-	CoreInformerFactory         gardencoreinformers.SharedInformerFactory
-	ExternalCoreInformerFactory gardenexternalcoreinformers.SharedInformerFactory
-	KubeInformerFactory         kubeinformers.SharedInformerFactory
-	SettingsInformerFactory     settingsinformer.SharedInformerFactory
-	StdOut                      io.Writer
-	StdErr                      io.Writer
+	Recommended                   *genericoptions.RecommendedOptions
+	ServerRunOptions              *genericoptions.ServerRunOptions
+	ExtraOptions                  *apiserver.ExtraOptions
+	CoreInformerFactory           gardencoreinformers.SharedInformerFactory
+	ExternalCoreInformerFactory   gardenexternalcoreinformers.SharedInformerFactory
+	KubeInformerFactory           kubeinformers.SharedInformerFactory
+	SeedManagementInformerFactory seedmanagementinformer.SharedInformerFactory
+	SettingsInformerFactory       settingsinformer.SharedInformerFactory
+	StdOut                        io.Writer
+	StdErr                        io.Writer
 }
 
 // NewOptions returns a new Options object.
@@ -115,6 +119,7 @@ func NewOptions(out, errOut io.Writer) *Options {
 			"/registry-gardener",
 			api.Codecs.LegacyCodec(
 				gardencorev1alpha1.SchemeGroupVersion,
+				seedmanagementv1alpha1.SchemeGroupVersion,
 				settingsv1alpha1.SchemeGroupVersion,
 			),
 			genericoptions.NewProcessInfo("gardener-apiserver", "garden"),
@@ -173,6 +178,13 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 		}
 		o.ExternalCoreInformerFactory = gardenexternalcoreinformers.NewSharedInformerFactory(versionedCoreClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
 
+		// seedmanagement client
+		seedManagementClient, err := seedmanagementclientset.NewForConfig(gardenerAPIServerConfig.LoopbackClientConfig)
+		if err != nil {
+			return nil, err
+		}
+		o.SeedManagementInformerFactory = seedmanagementinformer.NewSharedInformerFactory(seedManagementClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
+
 		// settings client
 		settingsClient, err := settingsclientset.NewForConfig(gardenerAPIServerConfig.LoopbackClientConfig)
 		if err != nil {
@@ -191,6 +203,7 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 				o.CoreInformerFactory,
 				coreClient,
 				o.ExternalCoreInformerFactory,
+				o.SeedManagementInformerFactory,
 				o.SettingsInformerFactory,
 				o.KubeInformerFactory,
 				kubeClient,
@@ -243,6 +256,7 @@ func (o Options) run(stopCh <-chan struct{}) error {
 		o.CoreInformerFactory.Start(context.StopCh)
 		o.ExternalCoreInformerFactory.Start(context.StopCh)
 		o.KubeInformerFactory.Start(context.StopCh)
+		o.SeedManagementInformerFactory.Start(context.StopCh)
 		o.SettingsInformerFactory.Start(context.StopCh)
 		return nil
 	}); err != nil {
@@ -334,6 +348,7 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	resourceConfig := serverstorage.NewResourceConfig()
 	resourceConfig.EnableVersions(
 		gardencorev1alpha1.SchemeGroupVersion,
+		seedmanagementv1alpha1.SchemeGroupVersion,
 		settingsv1alpha1.SchemeGroupVersion,
 	)
 

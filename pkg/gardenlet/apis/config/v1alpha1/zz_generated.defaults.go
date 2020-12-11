@@ -82,7 +82,7 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 		}
 	}
 	if in.LeaderElection != nil {
-		SetDefaults_LeaderElectionConfiguration(in.LeaderElection)
+		SetDefaults_GardenletLeaderElectionConfiguration(in.LeaderElection)
 	}
 	if in.SNI != nil {
 		SetDefaults_SNI(in.SNI)

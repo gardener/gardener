@@ -442,7 +442,7 @@ func garbageCollection(ctx context.Context, initShootClients func() (bool, error
 }
 
 func retrieveSeedConditions(ctx context.Context, botanist *botanistpkg.Botanist) ([]gardencorev1beta1.Condition, error) {
-	if botanist.ShootedSeed == nil {
+	if botanist.ManagedSeed == nil {
 		return nil, nil
 	}
 

@@ -21,6 +21,8 @@ import (
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencorescheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	gardenextensionsscheme "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
+	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
+	gardenseedmanagementscheme "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/scheme"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
@@ -91,6 +93,7 @@ func init() {
 	gardenSchemeBuilder := runtime.NewSchemeBuilder(
 		corescheme.AddToScheme,
 		gardencorescheme.AddToScheme,
+		gardenseedmanagementscheme.AddToScheme,
 	)
 	utilruntime.Must(gardenSchemeBuilder.AddToScheme(GardenScheme))
 
@@ -157,6 +160,7 @@ type Interface interface {
 
 	Kubernetes() kubernetesclientset.Interface
 	GardenCore() gardencoreclientset.Interface
+	GardenSeedManagement() gardenseedmanagementclientset.Interface
 	APIExtension() apiextensionsclientset.Interface
 	APIRegistration() apiregistrationclientset.Interface
 

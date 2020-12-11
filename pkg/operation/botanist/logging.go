@@ -57,7 +57,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 
 	hvpaValues := make(map[string]interface{})
 	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
-	if b.ShootedSeed != nil {
+	if b.ManagedSeed != nil {
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 

@@ -1598,6 +1598,18 @@ SeedSelector
 <p>Tolerations contains the tolerations for taints on seed clusters.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>managedSeedName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ManagedSeedName is the name of the ManagedSeed resource for this Shoot.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -8269,6 +8281,18 @@ SeedSelector
 <td>
 <em>(Optional)</em>
 <p>Tolerations contains the tolerations for taints on seed clusters.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>managedSeedName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ManagedSeedName is the name of the ManagedSeed resource for this Shoot.</p>
 </td>
 </tr>
 </tbody>

@@ -18,6 +18,7 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -150,5 +151,35 @@ func BackupEntryFilterFunc(ctx context.Context, c client.Client, seedName string
 			return *backupEntry.Spec.SeedName == seedName
 		}
 		return seedLabelsMatchWithClient(ctx, c, *backupEntry.Spec.SeedName, labelSelector)
+	}
+}
+
+// ManagedSeedFilterFunc returns a filtering func for the seeds and the given label selector.
+func ManagedSeedFilterFunc(seedName string, seedLister gardencorelisters.SeedLister, shootLister gardencorelisters.ShootLister, labelSelector *metav1.LabelSelector) func(obj interface{}) bool {
+	return func(obj interface{}) bool {
+		managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
+		if !ok {
+			return false
+		}
+		if managedSeed.Spec.Shoot == nil || managedSeed.Spec.Shoot.Name == "" {
+			return false
+		}
+		shoot, err := shootLister.Shoots(managedSeed.Namespace).Get(managedSeed.Spec.Shoot.Name)
+		if err != nil {
+			return false
+		}
+		if shoot.Spec.SeedName == nil {
+			return false
+		}
+		if len(seedName) > 0 {
+			if shoot.Status.SeedName == nil || *shoot.Spec.SeedName == *shoot.Status.SeedName {
+				return *shoot.Spec.SeedName == seedName
+			}
+			return *shoot.Status.SeedName == seedName
+		}
+		if shoot.Status.SeedName == nil || *shoot.Spec.SeedName == *shoot.Status.SeedName {
+			return SeedLabelsMatch(seedLister, *shoot.Spec.SeedName, labelSelector)
+		}
+		return SeedLabelsMatch(seedLister, *shoot.Status.SeedName, labelSelector)
 	}
 }
