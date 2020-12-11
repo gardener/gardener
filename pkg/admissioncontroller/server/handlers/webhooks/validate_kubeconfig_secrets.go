@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/gardener/gardener/pkg/admissioncontroller/server/metrics"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -62,6 +63,7 @@ func (h *kubeconfigSecretValidator) ValidateKubeconfigSecrets(w http.ResponseWri
 	if err := DecodeAdmissionRequest(r, deserializer, receivedReview, maxRequestBody, requestLogger); err != nil {
 		requestLogger.Errorf(err.Error())
 		respond(w, errToAdmissionResponse(err))
+		metrics.InvalidWebhookRequest.WithLabelValues().Inc()
 		return
 	}
 
@@ -75,6 +77,13 @@ func (h *kubeconfigSecretValidator) ValidateKubeconfigSecrets(w http.ResponseWri
 	reviewResponse := h.admitSecrets(receivedReview.Request, deserializer)
 	if !reviewResponse.Allowed && reviewResponse.Result != nil {
 		requestLogger.Infof("Rejected '%s secret/%s/%s' request of user '%s': %v", receivedReview.Request.Operation, receivedReview.Request.Namespace, receivedReview.Request.Name, receivedReview.Request.UserInfo.Username, reviewResponse.Result.Message)
+
+		metrics.RejectedResources.WithLabelValues(
+			fmt.Sprint(receivedReview.Request.Operation),
+			receivedReview.Request.Kind.Kind,
+			receivedReview.Request.Namespace,
+			metrics.ReasonRejectedKubeconfig,
+		).Inc()
 	}
 	respond(w, reviewResponse)
 }

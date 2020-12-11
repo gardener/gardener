@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
 	"github.com/gardener/gardener/pkg/version/verflag"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -199,6 +200,7 @@ func (a *AdmissionController) Run(ctx context.Context) error {
 		WithBindAddress(a.Config.Server.HTTPS.BindAddress).
 		WithPort(a.Config.Server.HTTPS.Port).
 		WithTLS(a.Config.Server.HTTPS.TLS.ServerCertPath, a.Config.Server.HTTPS.TLS.ServerKeyPath).
+		WithHandler("/metrics", promhttp.Handler()).
 		WithHandler("/webhooks/validate-namespace-deletion", namespaceValidationHandler).
 		WithHandler("/webhooks/validate-kubeconfig-secrets", webhooks.NewValidateKubeconfigSecretsHandler()).
 		WithHandler("/webhooks/validate-resource-size", webhooks.NewValidateResourceSizeHandler(a.Config.Server.ResourceAdmissionConfiguration)).
