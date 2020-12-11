@@ -199,6 +199,34 @@ minikube start --embed-certs #  `--embed-certs` can be omitted if minikube has a
 🏄  Done! Thank you for using minikube!
 ```
 
+**Using a remote cluster as Garden cluster**
+
+For some testing scenarios, you may want to use a remote cluster instead of a local one as your Garden cluster. 
+To do this, you can use the "remote Garden cluster setup" residing in `hack/remote-garden`. 
+To avoid mistakes, the remote cluster must have a `garden` namespace labeled with `gardener.cloud/purpose=remote-garden`. 
+You must create the `garden` namespace and label it manually before running `make remote-garden-up` as described below.
+
+Use the provided `Makefile` rules to bootstrap your remote Garden:
+
+```bash
+export KUBECONFIG=<path to kubeconfig>
+make remote-garden-up
+[...]
+# Start gardener etcd used to store gardener resources (e.g., seeds, shoots)
+Starting gardener-dev-remote gardener-etcd cluster!
+[...]
+# Open tunnels for accessing local gardener components from the remote cluster
+[...]
+```
+
+This will start an `etcd` instance for the `gardener-apiserver` as a Docker container, and open tunnels for accessing local gardener components from the remote cluster.
+
+To close the tunnels and remove the locally-running Docker containers, run:
+
+```bash
+make remote-garden-down
+```
+
 #### Prepare the Gardener
 
 Now, that you have started your local cluster, we can go ahead and register the Gardener API Server.

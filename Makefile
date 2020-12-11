@@ -24,6 +24,7 @@ VERSION                             := $(shell cat VERSION)
 EFFECTIVE_VERSION                   := $(VERSION)-$(shell git rev-parse HEAD)
 REPO_ROOT                           := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 LOCAL_GARDEN_LABEL                  := local-garden
+REMOTE_GARDEN_LABEL                 := remote-garden
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
@@ -66,6 +67,28 @@ local-garden-up:
 .PHONY: local-garden-down
 local-garden-down:
 	@-./hack/local-development/local-garden/cleanup
+
+.PHONY: remote-garden-up
+remote-garden-up:
+	# Remove old containers and create the docker user network
+	@-./hack/local-development/remote-garden/cleanup
+	@-docker network create gardener-dev-remote --label $(REMOTE_GARDEN_LABEL)
+
+	# Start gardener etcd used to store gardener resources (e.g., seeds, shoots)
+	@./hack/local-development/remote-garden/run-gardener-etcd $(REMOTE_GARDEN_LABEL)
+
+	# Open tunnels for accessing local gardener components from the remote cluster
+	@./hack/local-development/remote-garden/open-gardener-tunnels ip $(REMOTE_GARDEN_LABEL)
+
+	# Now, run `make dev-setup` to setup config and certificates files for gardener's components and to register the gardener-apiserver.
+	# Finally, run `make start-apiserver,start-controller-manager,start-scheduler,start-gardenlet` to start the gardener components as usual.
+
+.PHONY: remote-garden-down
+remote-garden-down:
+	# Cleanup tunnels for accessing local gardener components from the remote cluster
+	@./hack/local-development/remote-garden/open-gardener-tunnels -c
+	# Remove docker containers and networks
+	@-./hack/local-development/remote-garden/cleanup $(REMOTE_GARDEN_LABEL)
 
 .PHONY: start-apiserver
 start-apiserver:

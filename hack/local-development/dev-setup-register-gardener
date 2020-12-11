@@ -66,17 +66,19 @@ if kubectl get apiservice "$SETTINGS_APISERVICE_NAME" &> /dev/null; then
   kubectl patch  apiservice $SETTINGS_APISERVICE_NAME -p '{"metadata":{"finalizers":null}}' 2> /dev/null || true
 fi
 
-if kubectl -n garden get service "$APISERVER_SERVICE_NAME" &> /dev/null; then
-  kubectl -n garden delete service $APISERVER_SERVICE_NAME
-fi
-if kubectl -n garden get service "$ADMISSION_CONTROLLER_SERVICE_NAME" &> /dev/null; then
-  kubectl -n garden delete service $ADMISSION_CONTROLLER_SERVICE_NAME
-fi
-if kubectl -n garden get endpoints "$APISERVER_ENDPOINT_NAME" &> /dev/null; then
-  kubectl -n garden delete endpoints $APISERVER_ENDPOINT_NAME
-fi
-if kubectl -n garden get endpoints "$ADMISSION_CONTROLLER_ENDPOINT_NAME" &> /dev/null; then
-  kubectl -n garden delete endpoints $ADMISSION_CONTROLLER_ENDPOINT_NAME
+if [[ $(k8s_env) != "$REMOTE" ]]; then
+  if kubectl -n garden get service "$APISERVER_SERVICE_NAME" &> /dev/null; then
+    kubectl -n garden delete service $APISERVER_SERVICE_NAME
+  fi
+  if kubectl -n garden get service "$ADMISSION_CONTROLLER_SERVICE_NAME" &> /dev/null; then
+    kubectl -n garden delete service $ADMISSION_CONTROLLER_SERVICE_NAME
+  fi
+  if kubectl -n garden get endpoints "$APISERVER_ENDPOINT_NAME" &> /dev/null; then
+    kubectl -n garden delete endpoints $APISERVER_ENDPOINT_NAME
+  fi
+  if kubectl -n garden get endpoints "$ADMISSION_CONTROLLER_ENDPOINT_NAME" &> /dev/null; then
+    kubectl -n garden delete endpoints $ADMISSION_CONTROLLER_ENDPOINT_NAME
+  fi
 fi
 
 if [[ $(k8s_env) == "$NODELESS" ]]; then
@@ -99,7 +101,7 @@ spec:
   type: ExternalName
   externalName: $ADMISSION_CONTROLLER_EXTERNAL_NAME
 EOF
-else
+elif [[ $(k8s_env) != "$REMOTE" ]]; then
   cat <<EOF | kubectl apply -f -
 kind: Service
 apiVersion: v1
