@@ -18,8 +18,15 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - events
   - namespaces
   - resourcequotas
+  verbs:
+  - '*'
+- apiGroups:
+  - events.k8s.io
+  resources:
+  - events
   verbs:
   - '*'
 - apiGroups:
@@ -178,6 +185,14 @@ rules:
   - list
   - watch
 - apiGroups:
+  - events.k8s.io
+  resources:
+  - events
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - core.gardener.cloud
   resources:
   - shoots
@@ -258,6 +273,14 @@ rules:
   - configmaps
   - resourcequotas
   - serviceaccounts
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - events.k8s.io
+  resources:
+  - events
   verbs:
   - get
   - list
