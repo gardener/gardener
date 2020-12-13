@@ -123,6 +123,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
+	o.Shoot.Components.ControlPlane.ResourceManager, err = b.DefaultResourceManager()
+	if err != nil {
+		return nil, err
+	}
 	o.Shoot.Components.ControlPlane.ClusterAutoscaler, err = b.DefaultClusterAutoscaler()
 	if err != nil {
 		return nil, err

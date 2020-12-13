@@ -37,6 +37,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/botanist/seedsystemcomponents/seedadmission"
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
@@ -69,6 +70,7 @@ import (
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/component-base/version"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -404,6 +406,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		componentsFunctions := []component.CentralLoggingConfiguration{
 			// seed system components
 			seedadmission.CentralLoggingConfiguration,
+			resourcemanager.CentralLoggingConfiguration,
 			// shoot control plane components
 			etcd.CentralLoggingConfiguration,
 			clusterautoscaler.CentralLoggingConfiguration,
@@ -761,9 +764,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			"privateNetworks": privateNetworks,
 			"sniEnabled":      gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) || anySNI,
 		},
-		"gardenerResourceManager": map[string]interface{}{
-			"resourceClass": v1beta1constants.SeedResourceManagerClass,
-		},
 		"ingress": map[string]interface{}{
 			"basicAuthSecret": monitoringBasicAuth,
 		},
@@ -840,7 +840,6 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 		return nil, err
 	}
 
-	// cluster-autoscaler
 	components = append(components, clusterautoscaler.NewBootstrapper(c.Client(), namespace))
 
 	// etcd
@@ -861,6 +860,21 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 		}
 	}
 	components = append(components, etcd.NewBootstrapper(c.Client(), namespace, etcdImage, kubernetesVersion, etcdImageVectorOverwrite))
+
+	// gardener-resource-manager
+	image, err := imageVector.FindImage(common.GardenerResourceManagerImageName, imagevector.RuntimeVersion(c.Version()), imagevector.TargetVersion(c.Version()))
+	if err != nil {
+		return nil, err
+	}
+	cfg := resourcemanager.Config{
+		ConcurrentSyncs:  pointer.Int32Ptr(20),
+		ClusterRoleName:  pointer.StringPtr("gardener-resource-manager-seed"),
+		HealthSyncPeriod: pointer.StringPtr("1m0s"),
+		ResourceClass:    pointer.StringPtr(v1beta1constants.SeedResourceManagerClass),
+		SyncPeriod:       pointer.StringPtr("1h0m0s"),
+	}
+	rm := resourcemanager.New(c.Client(), namespace, image.String(), 1, cfg)
+	components = append(components, rm)
 
 	// gardener-seed-admission-controller
 	var gsacImage imagevector.Image
