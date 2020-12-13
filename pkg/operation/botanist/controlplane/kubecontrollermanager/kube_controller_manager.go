@@ -512,6 +512,7 @@ var (
 	versionConstraintK8sGreaterEqual115 *semver.Constraints
 	versionConstraintK8sGreaterEqual116 *semver.Constraints
 	versionConstraintK8sGreaterEqual117 *semver.Constraints
+	versionConstraintK8sGreaterEqual120 *semver.Constraints
 )
 
 func init() {
@@ -530,6 +531,8 @@ func init() {
 	versionConstraintK8sGreaterEqual116, err = semver.NewConstraint(">= 1.16")
 	utilruntime.Must(err)
 	versionConstraintK8sGreaterEqual117, err = semver.NewConstraint(">= 1.17")
+	utilruntime.Must(err)
+	versionConstraintK8sGreaterEqual120, err = semver.NewConstraint(">= 1.20")
 	utilruntime.Must(err)
 }
 

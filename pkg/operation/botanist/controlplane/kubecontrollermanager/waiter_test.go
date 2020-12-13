@@ -19,11 +19,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,6 +50,7 @@ var _ = Describe("WaiterTest", func() {
 		fakeErr               = fmt.Errorf(errorMsg)
 		kubeControllerManager KubeControllerManager
 		namespace             = "shoot--foo--bar"
+		version               = semver.MustParse("v1.16.8")
 
 		// mock
 		ctrl        *gomock.Controller
@@ -82,7 +85,7 @@ var _ = Describe("WaiterTest", func() {
 				testLogger,
 				seedClient,
 				namespace,
-				nil,
+				version,
 				"",
 				nil,
 				nil,
@@ -112,9 +115,7 @@ var _ = Describe("WaiterTest", func() {
 				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).Return(notFoundError),
 			)
 
-			err := kubeControllerManager.WaitForControllerToBeActive(ctx)
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("kube controller manager deployment not found:  \"kube-controller-manager\" not found"))
+			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(MatchError("kube controller manager deployment not found:  \"kube-controller-manager\" not found"))
 		})
 
 		It("should fail if it fails to list pods in the shoot namespace in the Seed", func() {
@@ -123,8 +124,7 @@ var _ = Describe("WaiterTest", func() {
 				seedClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PodList{}), listOptions).Return(fakeErr),
 			)
 
-			err := kubeControllerManager.WaitForControllerToBeActive(ctx)
-			Expect(err).To(MatchError(fmt.Sprintf("could not check whether controller kube-controller-manager is active: %s", errorMsg)))
+			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(MatchError(fmt.Sprintf("could not check whether controller kube-controller-manager is active: %s", errorMsg)))
 		})
 
 		It("should fail if there is more than one kube controller manager pod", func() {
@@ -139,9 +139,7 @@ var _ = Describe("WaiterTest", func() {
 				}),
 			)
 
-			err := kubeControllerManager.WaitForControllerToBeActive(ctx)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("retry failed with max attempts reached, last error: controller kube-controller-manager is not active"))
+			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(MatchError(Equal("retry failed with max attempts reached, last error: controller kube-controller-manager is not active")))
 		})
 
 		It("should fail if no kube controller manager pod can be found", func() {
@@ -153,9 +151,7 @@ var _ = Describe("WaiterTest", func() {
 				}),
 			)
 
-			err := kubeControllerManager.WaitForControllerToBeActive(ctx)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("retry failed with max attempts reached, last error: controller kube-controller-manager is not active"))
+			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(MatchError(Equal("retry failed with max attempts reached, last error: controller kube-controller-manager is not active")))
 		})
 
 		It("should fail if the existing kube controller manager pod has a deletion timestamp", func() {
@@ -170,9 +166,7 @@ var _ = Describe("WaiterTest", func() {
 				}),
 			)
 
-			err := kubeControllerManager.WaitForControllerToBeActive(ctx)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("retry failed with max attempts reached, last error: controller kube-controller-manager is not active"))
+			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(MatchError(Equal("retry failed with max attempts reached, last error: controller kube-controller-manager is not active")))
 		})
 
 		It("should fail if the existing kube controller manager misses leader election annotation control-plane.alpha.kubernetes.io/leader on the endpoints resource", func() {
@@ -187,9 +181,7 @@ var _ = Describe("WaiterTest", func() {
 				shootClient.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "kube-controller-manager"), gomock.AssignableToTypeOf(&corev1.Endpoints{})),
 			)
 
-			err := kubeControllerManager.WaitForControllerToBeActive(ctx)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("could not check whether controller kube-controller-manager is active: could not find key control-plane.alpha.kubernetes.io/leader in annotations"))
+			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(MatchError(Equal("could not check whether controller kube-controller-manager is active: could not find key \"control-plane.alpha.kubernetes.io/leader\" in annotations")))
 		})
 
 		It("should fail if the existing kube controller manager fails to acquire leader election", func() {
@@ -219,12 +211,10 @@ var _ = Describe("WaiterTest", func() {
 				}),
 			)
 
-			err := kubeControllerManager.WaitForControllerToBeActive(ctx)
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(Equal("retry failed with max attempts reached, last error: controller kube-controller-manager is not active"))
+			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(MatchError(Equal("retry failed with max attempts reached, last error: controller kube-controller-manager is not active")))
 		})
 
-		It("should not fail", func() {
+		It("should succeed (k8s < 1.20)", func() {
 			gomock.InOrder(
 				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 				seedClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PodList{}), listOptions).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
@@ -251,8 +241,41 @@ var _ = Describe("WaiterTest", func() {
 				}),
 			)
 
-			err := kubeControllerManager.WaitForControllerToBeActive(ctx)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(Succeed())
+		})
+
+		It("should succeed (k8s >= 1.20)", func() {
+			kubeControllerManager = New(
+				testLogger,
+				seedClient,
+				namespace,
+				semver.MustParse("v1.20.1"),
+				"",
+				nil,
+				nil,
+				nil,
+			)
+			kubeControllerManager.SetShootClient(shootClient)
+
+			gomock.InOrder(
+				seedClient.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+				seedClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.PodList{}), listOptions).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
+					*list = corev1.PodList{Items: []corev1.Pod{
+						{ObjectMeta: metav1.ObjectMeta{Name: "pod1"}},
+					}}
+					return nil
+				}),
+				shootClient.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "kube-controller-manager"), gomock.AssignableToTypeOf(&coordinationv1.Lease{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *coordinationv1.Lease) error {
+					*actual = coordinationv1.Lease{
+						Spec: coordinationv1.LeaseSpec{
+							RenewTime: &metav1.MicroTime{Time: time.Now().UTC()},
+						},
+					}
+					return nil
+				}),
+			)
+
+			Expect(kubeControllerManager.WaitForControllerToBeActive(ctx)).To(Succeed())
 		})
 	})
 })
