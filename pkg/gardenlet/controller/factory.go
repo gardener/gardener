@@ -146,7 +146,8 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	}
 
 	gardenNamespace := &corev1.Namespace{}
-	runtime.Must(k8sGardenClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace))
+	// Use direct client here since we don't want to cache all namespaces of the Garden cluster.
+	runtime.Must(k8sGardenClient.DirectClient().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace))
 
 	// Initialize the workqueue metrics collection.
 	gardenmetrics.RegisterWorkqueMetrics()

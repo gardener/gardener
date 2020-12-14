@@ -20,20 +20,23 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
+// Invalidate is an interface used to invalidate client specific information.
+type Invalidate interface {
+	// InvalidateClient removes cached client information identified by the given `ClientSetKey`.
+	InvalidateClient(key ClientSetKey) error
+}
+
 // A ClientMap is a collection of kubernetes ClientSets, which can be used to dynamically create and lookup different
 // ClientSets during runtime. ClientSets are identified by a ClientSetKey, which can have different forms, as there
 // are different kinds of ClientMaps (for example one for Seed clients and one for Shoot clients).
 // Implementations will provide suitable mechanisms to create a ClientSet for a given key and should come with some
 // easy ways of constructing ClientSetKeys that their callers can use to lookup ClientSets in the map.
 type ClientMap interface {
+	Invalidate
 	// GetClient returns the corresponding ClientSet for the given key in the ClientMap or creates a new ClientSet for
 	// it if the map does not contain a corresponding ClientSet. If the ClientMap was started before by a call to Start,
 	// newly created ClientSets will be started automatically using the stop channel provided to Start.
 	GetClient(ctx context.Context, key ClientSetKey) (kubernetes.Interface, error)
-
-	// InvalidateClient stops the ClientSet identified by the given key and removes it from the map. If the map doesn't
-	// contain a corresponding ClientSet, it does nothing.
-	InvalidateClient(key ClientSetKey) error
 
 	// Start starts the ClientMap, i.e. starts all ClientSets already contained in the map and saves the stop channel
 	// for starting new ClientSets, when they are created.
