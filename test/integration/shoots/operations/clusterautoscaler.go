@@ -71,7 +71,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		origMaxWorkers              int32
 	)
 
-	f.Beta().Serial().CIt("should autoscale a single worker group", func(ctx context.Context) {
+	f.Default().Serial().CIt("should autoscale a single worker group", func(ctx context.Context) {
 		var (
 			shoot = f.Shoot
 
@@ -153,7 +153,7 @@ var _ = ginkgo.Describe("Shoot clusterautoscaler testing", func() {
 		framework.ExpectNoError(err)
 	}, cleanupTimeout))
 
-	f.Beta().Serial().CIt("should autoscale a single worker group to/from zero", func(ctx context.Context) {
+	f.Default().Serial().CIt("should autoscale a single worker group to/from zero", func(ctx context.Context) {
 		var shoot = f.Shoot
 
 		origClusterAutoscalerConfig = shoot.Spec.Kubernetes.ClusterAutoscaler.DeepCopy()

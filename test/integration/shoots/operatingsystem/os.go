@@ -49,8 +49,7 @@ var _ = ginkgo.Describe("Operating system testing", func() {
 
 		var rootPodExecutor framework.RootPodExecutor
 
-		f.Beta().Serial().CIt("should not segfault", func(ctx context.Context) {
-
+		f.Default().Serial().CIt("should not segfault", func(ctx context.Context) {
 			// choose random node
 			nodes := &corev1.NodeList{}
 			err := f.ShootClient.DirectClient().List(ctx, nodes)

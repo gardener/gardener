@@ -49,7 +49,7 @@ var _ = ginkgo.Describe("Shoot Care testing", func() {
 		err          error
 	)
 
-	f.Beta().Serial().CIt("Should observe failed health condition in the Shoot when scaling down the API Server of the Shoot", func(ctx context.Context) {
+	f.Default().Serial().CIt("Should observe failed health condition in the Shoot when scaling down the API Server of the Shoot", func(ctx context.Context) {
 		cond := helper.GetCondition(f.Shoot.Status.Conditions, gardencorev1beta1.ShootAPIServerAvailable)
 		gomega.Expect(cond).ToNot(gomega.BeNil())
 		gomega.Expect(cond.Status).To(gomega.Equal(gardencorev1beta1.ConditionTrue))

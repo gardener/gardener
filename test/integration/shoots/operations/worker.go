@@ -53,7 +53,7 @@ var _ = ginkgo.Describe("Shoot worker operation testing", func() {
 
 	f := framework.NewShootFramework(nil)
 
-	f.Beta().Serial().CIt("should add one machine to the worker pool and remove it again", func(ctx context.Context) {
+	f.Default().Serial().CIt("should add one machine to the worker pool and remove it again", func(ctx context.Context) {
 		shoot := f.Shoot
 		if len(shoot.Spec.Provider.Workers) == 0 {
 			ginkgo.Skip("no workers defined")
