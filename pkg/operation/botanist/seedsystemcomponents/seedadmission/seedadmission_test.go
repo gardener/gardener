@@ -127,12 +127,14 @@ spec:
     spec:
       affinity:
         podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchLabels:
-                app: gardener
-                role: seed-admission-controller
-            topologyKey: kubernetes.io/hostname
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: gardener
+                  role: seed-admission-controller
+              topologyKey: kubernetes.io/hostname
+            weight: 100
       containers:
       - command:
         - /gardener-seed-admission-controller
