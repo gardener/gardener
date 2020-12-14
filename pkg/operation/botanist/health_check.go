@@ -525,7 +525,7 @@ func (b *Botanist) checkControlPlane(
 		return exitCondition, err
 	}
 
-	wantsAlertmanager := !gardencorev1beta1helper.ShootIgnoresAlerts(effectiveShoot) && effectiveShoot.Spec.Monitoring != nil && effectiveShoot.Spec.Monitoring.Alerting != nil && len(effectiveShoot.Spec.Monitoring.Alerting.EmailReceivers) > 0
+	wantsAlertmanager := gardencorev1beta1helper.ShootWantsAlertManager(effectiveShoot)
 	if exitCondition, err := checker.CheckMonitoringControlPlane(b.Shoot.SeedNamespace, gardencorev1beta1helper.GetPurpose(effectiveShoot) == gardencorev1beta1.ShootPurposeTesting, wantsAlertmanager, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}

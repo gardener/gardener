@@ -753,6 +753,11 @@ func ShootIgnoresAlerts(shoot *gardencorev1beta1.Shoot) bool {
 	return ignore
 }
 
+// ShootWantsAlertManager checks if the given shoot specification requires an alert manager.
+func ShootWantsAlertManager(shoot *gardencorev1beta1.Shoot) bool {
+	return !ShootIgnoresAlerts(shoot) && shoot.Spec.Monitoring != nil && shoot.Spec.Monitoring.Alerting != nil && len(shoot.Spec.Monitoring.Alerting.EmailReceivers) > 0
+}
+
 // ShootWantsBasicAuthentication returns true if basic authentication is not configured or
 // if it is set explicitly to 'true'.
 func ShootWantsBasicAuthentication(shoot *gardencorev1beta1.Shoot) bool {

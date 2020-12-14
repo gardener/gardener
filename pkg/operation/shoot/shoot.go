@@ -160,7 +160,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	shoot.InternalClusterDomain = ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomain)
 	shoot.ExternalClusterDomain = ConstructExternalClusterDomain(shootObject)
 	shoot.IgnoreAlerts = gardencorev1beta1helper.ShootIgnoresAlerts(shootObject)
-	shoot.WantsAlertmanager = !shoot.IgnoreAlerts && shootObject.Spec.Monitoring != nil && shootObject.Spec.Monitoring.Alerting != nil && len(shootObject.Spec.Monitoring.Alerting.EmailReceivers) > 0
+	shoot.WantsAlertmanager = gardencorev1beta1helper.ShootWantsAlertManager(shootObject)
 	shoot.WantsVerticalPodAutoscaler = gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(shootObject)
 	shoot.Components = &Components{
 		Extensions: &Extensions{
