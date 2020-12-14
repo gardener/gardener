@@ -498,17 +498,17 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_incoming_logs_total[$__rate_interval]))",
+          "expr": "sum(rate(fluentbit_loki_gardener_incoming_logs_total[$__rate_interval])) by (pod)",
           "instant": false,
           "interval": "",
-          "legendFormat": "Incoming Logs",
+          "legendFormat": "Incoming Logs-{{pod}}",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_forwarded_logs_total[$__rate_interval]))",
+          "expr": "sum(rate(fluentbit_loki_gardener_forwarded_logs_total[$__rate_interval])) by (pod)",
           "instant": false,
           "interval": "",
-          "legendFormat": "Transferred to Promtail",
+          "legendFormat": "Transferred to Promtail-{{pod}}",
           "refId": "B"
         }
       ],
@@ -605,33 +605,33 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_dropped_logs_total[$__rate_interval]))",
+          "expr": "sum(rate(fluentbit_loki_gardener_dropped_logs_total[$__rate_interval])) by (pod)",
           "interval": "",
-          "legendFormat": "Dropt Logs",
+          "legendFormat": "Dropped Logs-{{pod}}",
           "refId": "C"
         },
         {
-          "expr": "sum(rate(prometheus_target_scrapes_sample_out_of_order_total[$__rate_interval]))",
+          "expr": "sum(rate(prometheus_target_scrapes_sample_out_of_order_total[$__rate_interval])) by (pod)",
           "interval": "",
-          "legendFormat": "OutOfOrder Logs",
+          "legendFormat": "OutOfOrder Logs-{{pod}}",
           "refId": "D"
         },
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_logs_without_metadata_total[$__rate_interval]))",
+          "expr": "sum(rate(fluentbit_loki_gardener_logs_without_metadata_total[$__rate_interval])) by (pod)",
           "interval": "",
-          "legendFormat": "Missing Metadata",
+          "legendFormat": "Missing Metadata-{{pod}}",
           "refId": "E"
         },
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_errors_total[$__rate_interval]))",
+          "expr": "sum(rate(fluentbit_loki_gardener_errors_total[$__rate_interval])) by (pod)",
           "interval": "",
-          "legendFormat": "Errors",
+          "legendFormat": "Errors-{{pod}}",
           "refId": "F"
         },
         {
-          "expr": "sum(rate(promtail_dropped_entries_total[$__rate_interval]))",
+          "expr": "sum(rate(promtail_dropped_entries_total[$__rate_interval])) by (pod)",
           "interval": "",
-          "legendFormat": "Promtail Dropped",
+          "legendFormat": "Promtail Dropped-{{pod}}",
           "refId": "G"
         }
       ],

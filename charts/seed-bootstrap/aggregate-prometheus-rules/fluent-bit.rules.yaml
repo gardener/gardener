@@ -1,14 +1,94 @@
 groups:
-- name: fluent-bit.rules
-  rules:
-  - alert: FluentBitDown
-    expr: absent(up{job="fluent-bit"} == 1)
-    for: 15m
-    labels:
-      service: logging
-      severity: warning
-      type: seed
-      visibility: operator
-    annotations:
-      description: "There are no fluent-bit pods running on seed: {{ .ExternalLabels.seed }}. No logs will be collected."
-      summary: Fluent-bit is down
+  - name: fluent-bit.rules
+    rules:
+  
+    - alert: FluentBitDown
+      expr: |
+        absent(
+          up{job="fluent-bit"}
+          == 1
+        )
+      for: 15m
+      labels:
+        severity: warning
+        service: logging
+        type: seed
+        visibility: operator
+      annotations:
+        summary: Fluent-bit is down
+        description: >
+          There are no fluent-bit pods running on seed: {{$externalLabels.seed}}.
+          No logs will be collected.
+  
+    - alert: FluentBitReceivesLogsWithoutMetadata
+      expr: |
+        sum by (pod) (
+          increase(
+            fluentbit_loki_gardener_logs_without_metadata_total[4m]
+          )
+        ) > 0
+      labels:
+        severity: warning
+        service: logging
+        type: seed
+        visibility: operator
+      annotations:
+        summary: Fluent-bit receives logs without metadata
+        description: >
+          {{$labels.pod}} receives logs without metadata on seed:
+          {{$externalLabels.seed}}. These logs will be dropped.
+  
+    - alert: FluentBitSendsOoOLogs
+      expr: |
+        sum by (pod) (
+          increase(
+            prometheus_target_scrapes_sample_out_of_order_total[4m]
+          )
+        ) > 0
+      labels:
+        severity: warning
+        service: logging
+        type: seed
+        visibility: operator
+      annotations:
+        summary: Fluent-bit sends OoO logs
+        description: >
+          {{$labels.pod}} on seed: {{$externalLabels.seed}} sends OutOfOrder logs
+          to the Loki. These logs will be dropped.
+  
+    - alert: FluentBitGardenerLokiPluginErrors
+      expr: |
+        sum by (pod) (
+          increase(
+            fluentbit_loki_gardener_errors_total[4m]
+          )
+        ) > 0
+      labels:
+        severity: warning
+        service: logging
+        type: seed
+        visibility: operator
+      annotations:
+        summary: Errors in Fluent-bit GardenerLoki plugin
+        description: >
+          There are errors in the {{$labels.pod}} GardenerLoki plugin on seed:
+          {{$externalLabels.seed}}.
+  
+    - alert: FluentBitGardenerLokiPluginDoesNotSendLogs
+      expr: |
+        sum by (pod) (
+          rate(
+            fluentbit_loki_gardener_forwarded_logs_total[4m]
+          )
+        ) == 0
+      for: 15m
+      labels:
+        severity: warning
+        service: logging
+        type: seed
+        visibility: operator
+      annotations:
+        summary: Fluent-bit GardenerLoki plugin does not send logs
+        description: >
+          {{$labels.pod}} GardenerLoki plugin on seed: {{$externalLabels.seed}}
+          does not send logs.
