@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
@@ -121,7 +120,7 @@ func (c *Controller) reconcileShootCareKey(key string) error {
 	}
 
 	// if shoot is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue
-	if seedName := confighelper.SeedNameFromSeedConfig(c.config.SeedConfig); (len(seedName) > 0 && *shoot.Spec.SeedName != seedName) || (len(seedName) == 0 && !controllerutils.SeedLabelsMatch(c.seedLister, *shoot.Spec.SeedName, c.config.SeedSelector)) {
+	if !controllerutils.ShootIsManagedByThisGardenlet(shoot, c.config, c.seedLister) {
 		return nil
 	}
 

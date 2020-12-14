@@ -183,7 +183,6 @@ func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Res
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	key := shootKey(shoot)
 
 	// fetch related objects required for shoot operation
 	project, err := common.ProjectForNamespace(c.k8sGardenCoreInformers.Core().V1beta1().Projects().Lister(), shoot.Namespace)
@@ -199,6 +198,7 @@ func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
+	key := shootKey(shoot)
 	if shoot.DeletionTimestamp != nil {
 		log = log.WithField("operation", "delete")
 		c.shootReconciliationDueTracker.off(key)
@@ -219,6 +219,12 @@ func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Res
 		}
 
 		return c.prepareShootForMigration(log, shoot, project, cloudProfile, sourceSeed)
+	}
+
+	// if shoot is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue
+	if !controllerutils.ShootIsManagedByThisGardenlet(shoot, c.config, c.seedLister) {
+		log.Debugf("Skipping because Shoot is not managed by this gardenlet in seed %s", *shoot.Spec.SeedName)
+		return reconcile.Result{}, nil
 	}
 
 	log = log.WithField("operation", "reconcile")
