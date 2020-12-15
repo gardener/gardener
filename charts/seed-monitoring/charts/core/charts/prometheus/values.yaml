@@ -68,15 +68,19 @@ allowedMetrics:
   - process_max_fds
   - process_open_fds
   kubeAPIServer:
+  - apiserver_audit_error_total
+  - apiserver_audit_event_total
+  - apiserver_current_inflight_requests
+  - apiserver_current_inqueue_requests
+  - apiserver_dropped_requests_total
   - apiserver_registered_watchers
   - apiserver_request_count
-  - apiserver_request_total
   - apiserver_request_duration_seconds_bucket
+  - apiserver_request_terminations_total
+  - apiserver_request_total
   - etcd_object_counts
   - process_max_fds
   - process_open_fds
-  - apiserver_audit_event_total
-  - apiserver_audit_error_total
   kubeProxy:
   - kubeproxy_network_programming_duration_seconds_bucket
   - kubeproxy_network_programming_duration_seconds_count
