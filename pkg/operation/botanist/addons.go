@@ -473,7 +473,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
-		}, b.Shoot.GetPurpose() != gardencorev1beta1.ShootPurposeTesting),
+		}, b.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting),
 		"network-policies":        networkPolicyConfig,
 		"node-problem-detector":   common.GenerateAddonConfig(nodeProblemDetector, true),
 		"podsecuritypolicies":     common.GenerateAddonConfig(podSecurityPolicies, true),

@@ -160,7 +160,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	shoot.InternalClusterDomain = ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomain)
 	shoot.ExternalClusterDomain = ConstructExternalClusterDomain(shootObject)
 	shoot.IgnoreAlerts = gardencorev1beta1helper.ShootIgnoresAlerts(shootObject)
-	shoot.WantsAlertmanager = !shoot.IgnoreAlerts && shootObject.Spec.Monitoring != nil && shootObject.Spec.Monitoring.Alerting != nil && len(shootObject.Spec.Monitoring.Alerting.EmailReceivers) > 0
+	shoot.WantsAlertmanager = gardencorev1beta1helper.ShootWantsAlertManager(shootObject)
 	shoot.WantsVerticalPodAutoscaler = gardencorev1beta1helper.ShootWantsVerticalPodAutoscaler(shootObject)
 	shoot.Components = &Components{
 		Extensions: &Extensions{
@@ -221,6 +221,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 
 	shoot.ResourceRefs = getResourceRefs(shootObject)
 	shoot.NodeLocalDNSEnabled = gardenletfeatures.FeatureGate.Enabled(features.NodeLocalDNS)
+	shoot.Purpose = gardencorev1beta1helper.GetPurpose(shootObject)
 
 	return shoot, nil
 }
@@ -240,14 +241,6 @@ func (s *Shoot) GetIngressFQDN(subDomain string) string {
 		return ""
 	}
 	return fmt.Sprintf("%s.%s.%s", subDomain, common.IngressPrefix, *(s.Info.Spec.DNS.Domain))
-}
-
-// GetPurpose returns the purpose of the shoot or 'evaluation' if it's nil.
-func (s *Shoot) GetPurpose() gardencorev1beta1.ShootPurpose {
-	if v := s.Info.Spec.Purpose; v != nil {
-		return *v
-	}
-	return gardencorev1beta1.ShootPurposeEvaluation
 }
 
 // GetWorkerNames returns a list of names of the worker groups in the Shoot manifest.

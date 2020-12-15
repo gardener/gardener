@@ -1619,4 +1619,86 @@ var _ = Describe("helper", func() {
 
 	})
 
+	Describe("#GetPurpose", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{},
+			}
+		})
+
+		It("should get default purpose if not defined", func() {
+			purpose := GetPurpose(shoot)
+			Expect(purpose).To(Equal(gardencorev1beta1.ShootPurposeEvaluation))
+		})
+
+		It("should get purpose", func() {
+			shootPurpose := gardencorev1beta1.ShootPurposeProduction
+			shoot.Spec.Purpose = &shootPurpose
+			purpose := GetPurpose(shoot)
+			Expect(purpose).To(Equal(shootPurpose))
+		})
+	})
+
+	Context("Shoot Alerts", func() {
+		var shoot *gardencorev1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{}
+		})
+
+		Describe("#ShootIgnoresAlerts", func() {
+			It("should not ignore alerts because no annotations given", func() {
+				Expect(ShootIgnoresAlerts(shoot)).To(BeFalse())
+			})
+			It("should not ignore alerts because annotation is not given", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "foo", "bar")
+				Expect(ShootIgnoresAlerts(shoot)).To(BeFalse())
+			})
+			It("should not ignore alerts because annotation value is false", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootIgnoreAlerts, "false")
+				Expect(ShootIgnoresAlerts(shoot)).To(BeFalse())
+			})
+			It("should ignore alerts because annotation value is true", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootIgnoreAlerts, "true")
+				Expect(ShootIgnoresAlerts(shoot)).To(BeTrue())
+			})
+		})
+
+		Describe("#ShootWantsAlertManager", func() {
+			It("should not want alert manager because alerts are ignored", func() {
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.AnnotationShootIgnoreAlerts, "true")
+				Expect(ShootWantsAlertManager(shoot)).To(BeFalse())
+			})
+			It("should not want alert manager because of missing monitoring configuration", func() {
+				Expect(ShootWantsAlertManager(shoot)).To(BeFalse())
+			})
+			It("should not want alert manager because of missing alerting configuration", func() {
+				shoot.Spec = gardencorev1beta1.ShootSpec{
+					Monitoring: &gardencorev1beta1.Monitoring{},
+				}
+				Expect(ShootWantsAlertManager(shoot)).To(BeFalse())
+			})
+			It("should not want alert manager because of missing email configuration", func() {
+				shoot.Spec = gardencorev1beta1.ShootSpec{
+					Monitoring: &gardencorev1beta1.Monitoring{
+						Alerting: &gardencorev1beta1.Alerting{},
+					},
+				}
+				Expect(ShootWantsAlertManager(shoot)).To(BeFalse())
+			})
+			It("should want alert manager", func() {
+				shoot.Spec = gardencorev1beta1.ShootSpec{
+					Monitoring: &gardencorev1beta1.Monitoring{
+						Alerting: &gardencorev1beta1.Alerting{
+							EmailReceivers: []string{"operators@gardener.clou"},
+						},
+					},
+				}
+				Expect(ShootWantsAlertManager(shoot)).To(BeTrue())
+			})
+		})
+	})
+
 })

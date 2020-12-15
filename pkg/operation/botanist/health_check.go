@@ -26,7 +26,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
@@ -43,7 +42,6 @@ import (
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -514,6 +512,7 @@ func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Cond
 // checkControlPlane checks whether the control plane of the Shoot cluster is healthy.
 func (b *Botanist) checkControlPlane(
 	ctx context.Context,
+	effectiveShoot *gardencorev1beta1.Shoot,
 	checker *HealthChecker,
 	condition gardencorev1beta1.Condition,
 	seedDeploymentLister kutil.DeploymentLister,
@@ -522,30 +521,16 @@ func (b *Botanist) checkControlPlane(
 	seedWorkerLister kutil.WorkerLister,
 	extensionConditions []ExtensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
-	cluster, err := gardenerextensions.GetCluster(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			c := checker.FailedCondition(condition, "ControlPlaneNotReady", "Control plane is not yet ready because of missing cluster resource.")
-			return &c, nil
-		}
-		b.Logger.Errorf("Failed to execute control plane health checks: %v", err)
-		return nil, err
-	}
-	// Use shoot from cluster resource here because it reflects the actual or "active" spec to determine which health checks are required.
-	// With the "confineSpecUpdateRollout" feature enabled, shoot resources have a spec which is not yet active.
-	shoot := cluster.Shoot
-	if shoot == nil {
-		return nil, errors.New("failed to execute control plane health checks because shoot is missing in cluster resource")
-	}
-
-	if exitCondition, err := checker.CheckControlPlane(shoot, b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedEtcdLister, seedWorkerLister); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckControlPlane(effectiveShoot, b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedEtcdLister, seedWorkerLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
-	if exitCondition, err := checker.CheckMonitoringControlPlane(b.Shoot.SeedNamespace, b.Shoot.GetPurpose() == gardencorev1beta1.ShootPurposeTesting, b.Shoot.WantsAlertmanager, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
+
+	wantsAlertmanager := gardencorev1beta1helper.ShootWantsAlertManager(effectiveShoot)
+	if exitCondition, err := checker.CheckMonitoringControlPlane(b.Shoot.SeedNamespace, gardencorev1beta1helper.GetPurpose(effectiveShoot) == gardencorev1beta1.ShootPurposeTesting, wantsAlertmanager, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 	if gardenletfeatures.FeatureGate.Enabled(features.Logging) {
-		if exitCondition, err := checker.CheckLoggingControlPlane(b.Shoot.SeedNamespace, b.Shoot.GetPurpose() == gardencorev1beta1.ShootPurposeTesting, condition, seedStatefulSetLister); err != nil || exitCondition != nil {
+		if exitCondition, err := checker.CheckLoggingControlPlane(b.Shoot.SeedNamespace, gardencorev1beta1helper.GetPurpose(effectiveShoot) == gardencorev1beta1.ShootPurposeTesting, condition, seedStatefulSetLister); err != nil || exitCondition != nil {
 			return exitCondition, err
 		}
 	}
@@ -629,12 +614,13 @@ func (b *Botanist) checkSystemComponents(
 // checkClusterNodes checks whether every node registered at the Shoot cluster is in "Ready" state, that
 // as many nodes are registered as desired, and that every machine is running.
 func (b *Botanist) checkClusterNodes(
+	effectiveShoot *gardencorev1beta1.Shoot,
 	checker *HealthChecker,
 	condition gardencorev1beta1.Condition,
 	shootNodeLister kutil.NodeLister,
 	extensionConditions []ExtensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := checker.CheckClusterNodes(b.Shoot.Info.Spec.Provider.Workers, condition, shootNodeLister); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckClusterNodes(effectiveShoot.Spec.Provider.Workers, condition, shootNodeLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
@@ -788,6 +774,7 @@ var (
 
 func (b *Botanist) healthChecks(
 	ctx context.Context,
+	effectiveShoot *gardencorev1beta1.Shoot,
 	initializeShootClients func() (bool, error),
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
 	healthCheckOutdatedThreshold *metav1.Duration,
@@ -802,7 +789,7 @@ func (b *Botanist) healthChecks(
 	gardencorev1beta1.Condition,
 	gardencorev1beta1.Condition,
 ) {
-	if b.Shoot.HibernationEnabled || b.Shoot.Info.Status.IsHibernated {
+	if gardencorev1beta1helper.HibernationIsEnabled(effectiveShoot) || b.Shoot.Info.Status.IsHibernated {
 		return shootHibernatedCondition(apiserverAvailability), shootHibernatedCondition(controlPlane), shootHibernatedCondition(nodes), shootHibernatedCondition(systemComponents)
 	}
 
@@ -831,7 +818,7 @@ func (b *Botanist) healthChecks(
 		nodes = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(nodes, message)
 		systemComponents = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(systemComponents, message)
 
-		newControlPlane, err := b.checkControlPlane(ctx, checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedEtcdLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
+		newControlPlane, err := b.checkControlPlane(ctx, effectiveShoot, checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedEtcdLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
 		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
 		return apiserverAvailability, controlPlane, nodes, systemComponents
 	}
@@ -840,11 +827,11 @@ func (b *Botanist) healthChecks(
 		apiserverAvailability = b.checkAPIServerAvailability(ctx, checker, apiserverAvailability)
 		return nil
 	}, func(ctx context.Context) error {
-		newControlPlane, err := b.checkControlPlane(ctx, checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedEtcdLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
+		newControlPlane, err := b.checkControlPlane(ctx, effectiveShoot, checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedEtcdLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
 		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
 		return nil
 	}, func(ctx context.Context) error {
-		newNodes, err := b.checkClusterNodes(checker, nodes, makeNodeLister(ctx, b.K8sShootClient.Client()), extensionConditionsEveryNodeReady)
+		newNodes, err := b.checkClusterNodes(effectiveShoot, checker, nodes, makeNodeLister(ctx, b.K8sShootClient.Client()), extensionConditionsEveryNodeReady)
 		nodes = newConditionOrError(nodes, newNodes, err)
 		return nil
 	}, func(ctx context.Context) error {
@@ -882,6 +869,7 @@ func PardonCondition(condition gardencorev1beta1.Condition, lastOp *gardencorev1
 // HealthChecks conducts the health checks on all the given conditions.
 func (b *Botanist) HealthChecks(
 	ctx context.Context,
+	effectiveShoot *gardencorev1beta1.Shoot,
 	initializeShootClients func() (bool, error),
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
 	healthCheckOutdatedThreshold *metav1.Duration,
@@ -896,7 +884,7 @@ func (b *Botanist) HealthChecks(
 	gardencorev1beta1.Condition,
 	gardencorev1beta1.Condition,
 ) {
-	apiServerAvailable, controlPlaneHealthy, everyNodeReady, systemComponentsHealthy := b.healthChecks(ctx, initializeShootClients, thresholdMappings, healthCheckOutdatedThreshold, gardenerVersion, apiserverAvailability, controlPlane, nodes, systemComponents)
+	apiServerAvailable, controlPlaneHealthy, everyNodeReady, systemComponentsHealthy := b.healthChecks(ctx, effectiveShoot, initializeShootClients, thresholdMappings, healthCheckOutdatedThreshold, gardenerVersion, apiserverAvailability, controlPlane, nodes, systemComponents)
 	lastOp := b.Shoot.Info.Status.LastOperation
 	lastErrors := b.Shoot.Info.Status.LastErrors
 	return PardonCondition(apiServerAvailable, lastOp, lastErrors),

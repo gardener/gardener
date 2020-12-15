@@ -753,6 +753,11 @@ func ShootIgnoresAlerts(shoot *gardencorev1beta1.Shoot) bool {
 	return ignore
 }
 
+// ShootWantsAlertManager checks if the given shoot specification requires an alert manager.
+func ShootWantsAlertManager(shoot *gardencorev1beta1.Shoot) bool {
+	return !ShootIgnoresAlerts(shoot) && shoot.Spec.Monitoring != nil && shoot.Spec.Monitoring.Alerting != nil && len(shoot.Spec.Monitoring.Alerting.EmailReceivers) > 0
+}
+
 // ShootWantsBasicAuthentication returns true if basic authentication is not configured or
 // if it is set explicitly to 'true'.
 func ShootWantsBasicAuthentication(shoot *gardencorev1beta1.Shoot) bool {
@@ -1125,4 +1130,12 @@ func (s *ShootItems) Union(shootItems *ShootItems) []gardencorev1beta1.Shoot {
 
 func objectKey(namesapce, name string) string {
 	return fmt.Sprintf("%s/%s", namesapce, name)
+}
+
+// GetPurpose returns the purpose of the shoot or 'evaluation' if it's nil.
+func GetPurpose(s *gardencorev1beta1.Shoot) gardencorev1beta1.ShootPurpose {
+	if v := s.Spec.Purpose; v != nil {
+		return *v
+	}
+	return gardencorev1beta1.ShootPurposeEvaluation
 }
