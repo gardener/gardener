@@ -38,22 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/openapi"
 	"github.com/gardener/gardener/pkg/version"
 	"github.com/gardener/gardener/pkg/version/verflag"
-	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
-	"github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
-	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
-	"github.com/gardener/gardener/plugin/pkg/global/extensionvalidation"
-	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
-	plantvalidator "github.com/gardener/gardener/plugin/pkg/plant"
-	seedvalidator "github.com/gardener/gardener/plugin/pkg/seed/validator"
-	shootdns "github.com/gardener/gardener/plugin/pkg/shoot/dns"
-	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
-	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
-	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
-	shoottolerationrestriction "github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction"
-	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
-	shootstatedeletionvalidator "github.com/gardener/gardener/plugin/pkg/shootstate/validator"
 	"github.com/gardener/gardener/third_party/forked/kubernetes/pkg/quota/v1/generic"
-	"github.com/gardener/gardener/third_party/forked/kubernetes/plugin/pkg/admission/resourcequota"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -95,10 +80,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 		RunE: func(c *cobra.Command, args []string) error {
 			verflag.PrintAndExitIfRequested()
 
-			if err := opts.complete(); err != nil {
-				return err
-			}
-			if err := opts.validate(args); err != nil {
+			if err := opts.validate(); err != nil {
 				return err
 			}
 			return opts.run(stopCh)
@@ -147,11 +129,14 @@ func NewOptions(out, errOut io.Writer) *Options {
 		schema.GroupKind{Group: gardencorev1alpha1.GroupName},
 		schema.GroupKind{Group: gardencorev1beta1.GroupName},
 	)
+	apiserver.RegisterAllAdmissionPlugins(o.Recommended.Admission.Plugins)
+	o.Recommended.Admission.RecommendedPluginOrder = apiserver.AllOrderedPlugins
+
 	return o
 }
 
 // validate validates all the required options.
-func (o Options) validate(args []string) error {
+func (o Options) validate() error {
 	var errs []error
 	errs = append(errs, o.Recommended.Validate()...)
 	errs = append(errs, o.ServerRunOptions.Validate()...)
@@ -164,48 +149,6 @@ func (o Options) validate(args []string) error {
 	}
 
 	return utilerrors.NewAggregate(errs)
-}
-
-func (o *Options) complete() error {
-	// Admission plugin registration
-	resourcereferencemanager.Register(o.Recommended.Admission.Plugins)
-	deletionconfirmation.Register(o.Recommended.Admission.Plugins)
-	extensionvalidation.Register(o.Recommended.Admission.Plugins)
-	shoottolerationrestriction.Register(o.Recommended.Admission.Plugins)
-	shootquotavalidator.Register(o.Recommended.Admission.Plugins)
-	shootdns.Register(o.Recommended.Admission.Plugins)
-	shootvalidator.Register(o.Recommended.Admission.Plugins)
-	seedvalidator.Register(o.Recommended.Admission.Plugins)
-	controllerregistrationresources.Register(o.Recommended.Admission.Plugins)
-	plantvalidator.Register(o.Recommended.Admission.Plugins)
-	openidconnectpreset.Register(o.Recommended.Admission.Plugins)
-	clusteropenidconnectpreset.Register(o.Recommended.Admission.Plugins)
-	shootstatedeletionvalidator.Register(o.Recommended.Admission.Plugins)
-	customverbauthorizer.Register(o.Recommended.Admission.Plugins)
-	resourcequota.Register(o.Recommended.Admission.Plugins)
-
-	allOrderedPlugins := []string{
-		resourcereferencemanager.PluginName,
-		extensionvalidation.PluginName,
-		shoottolerationrestriction.PluginName,
-		shootdns.PluginName,
-		shootquotavalidator.PluginName,
-		shootvalidator.PluginName,
-		seedvalidator.PluginName,
-		controllerregistrationresources.PluginName,
-		plantvalidator.PluginName,
-		deletionconfirmation.PluginName,
-		openidconnectpreset.PluginName,
-		clusteropenidconnectpreset.PluginName,
-		shootstatedeletionvalidator.PluginName,
-		customverbauthorizer.PluginName,
-		// This plugin must remain the last one in the list since it updates the quota usage
-		// which can only happen reliably if previous plugins permitted the request.
-		resourcequota.PluginName,
-	}
-	o.Recommended.Admission.RecommendedPluginOrder = append(o.Recommended.Admission.RecommendedPluginOrder, allOrderedPlugins...)
-
-	return nil
 }
 
 func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernetes.Clientset) (*apiserver.Config, error) {
