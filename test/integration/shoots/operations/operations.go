@@ -41,9 +41,7 @@
 package operations
 
 import (
-	"bytes"
 	"context"
-	"io/ioutil"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -110,15 +108,13 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 	f.Default().Serial().CIt("should rotate kubeconfig for a shoot cluster", func(ctx context.Context) {
 		ginkgo.By("rotate kubeconfig")
 		var (
-			oldKubeconfigPath = "old.kubeconfig"
-			newKubeconfigPath = "new.kubeconfig"
-			secretName        = f.Shoot.Name + ".kubeconfig"
+			secretName = f.Shoot.Name + ".kubeconfig"
 		)
 
-		err := framework.DownloadKubeconfig(ctx, f.GardenClient, f.ProjectNamespace, secretName, oldKubeconfigPath)
+		oldKubeconfig, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.ProjectNamespace, secretName, framework.KubeconfigSecretKeyName)
 		framework.ExpectNoError(err)
 
-		oldClient, err := kubernetes.NewClientFromFile("", oldKubeconfigPath)
+		oldClient, err := kubernetes.NewClientFromBytes([]byte(oldKubeconfig))
 		framework.ExpectNoError(err)
 		_, err = oldClient.Kubernetes().Discovery().ServerVersion()
 		framework.ExpectNoError(err)
@@ -129,10 +125,10 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 		})
 		framework.ExpectNoError(err)
 
-		err = framework.DownloadKubeconfig(ctx, f.GardenClient, f.ProjectNamespace, secretName, newKubeconfigPath)
+		newKubeconfig, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.ProjectNamespace, secretName, framework.KubeconfigSecretKeyName)
 		framework.ExpectNoError(err)
 
-		newClient, err := kubernetes.NewClientFromFile("", newKubeconfigPath)
+		newClient, err := kubernetes.NewClientFromBytes([]byte(newKubeconfig))
 		framework.ExpectNoError(err)
 		_, err = newClient.Kubernetes().Discovery().ServerVersion()
 		framework.ExpectNoError(err)
@@ -140,10 +136,6 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 		_, err = oldClient.Kubernetes().Discovery().ServerVersion()
 		gomega.Expect(err).To(gomega.HaveOccurred())
 
-		oldKubeconfig, err := ioutil.ReadFile(oldKubeconfigPath)
-		framework.ExpectNoError(err)
-		newKubeconfig, err := ioutil.ReadFile(newKubeconfigPath)
-		framework.ExpectNoError(err)
-		gomega.Expect(bytes.Compare(oldKubeconfig, newKubeconfig)).ToNot(gomega.BeZero())
+		gomega.Expect(oldKubeconfig).ToNot(gomega.Equal(newKubeconfig))
 	}, reconcileTimeout)
 })
