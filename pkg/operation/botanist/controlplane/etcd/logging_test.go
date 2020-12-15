@@ -39,7 +39,7 @@ var _ = Describe("Logging", func() {
     Format      regex
     Regex       ^time="(?<time>\d{4}-\d{2}-\d{2}T[^"]*)"\s+level=(?<severity>\w+)\smsg="(?<log>.*)"
     Time_Key    time
-    Time_Format %Y-%m-%dT%H:%M:%S.%L
+    Time_Format %Y-%m-%dT%H:%M:%S%Z
 `))
 
 			Expect(loggingConfig.Filters).To(Equal(`[FILTER]
