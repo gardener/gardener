@@ -31,7 +31,7 @@ var _ = ginkgo.Describe("Shoot container runtime testing", func() {
 
 	f := framework.NewShootFramework(nil)
 
-	f.Beta().Serial().CIt("should add worker pool with containerd", func(ctx context.Context) {
+	f.Default().Serial().CIt("should add worker pool with containerd", func(ctx context.Context) {
 		var (
 			shoot       = f.Shoot
 			worker      = shoot.Spec.Provider.Workers[0]

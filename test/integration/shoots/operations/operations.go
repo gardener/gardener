@@ -91,7 +91,7 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 
 	}, hibernationTestTimeout)
 
-	f.Beta().Serial().CIt("should fully maintain and reconcile a shoot cluster", func(ctx context.Context) {
+	f.Default().Serial().CIt("should fully maintain and reconcile a shoot cluster", func(ctx context.Context) {
 		ginkgo.By("maintain shoot")
 		err := f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
 			shoot.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationMaintain
@@ -107,7 +107,7 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 		framework.ExpectNoError(err)
 	}, reconcileTimeout)
 
-	f.Beta().Serial().CIt("should rotate kubeconfig for a shoot cluster", func(ctx context.Context) {
+	f.Default().Serial().CIt("should rotate kubeconfig for a shoot cluster", func(ctx context.Context) {
 		ginkgo.By("rotate kubeconfig")
 		var (
 			oldKubeconfigPath = "old.kubeconfig"
