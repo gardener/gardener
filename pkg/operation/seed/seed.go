@@ -234,8 +234,21 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
 func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubernetes.Interface, seed *Seed, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, componentImageVectors imagevector.ComponentImageVectors, conf *config.GardenletConfiguration) error {
-	const chartName = "seed-bootstrap"
+	vpaGK := schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
 
+	vpaEnabled := seed.Info.Spec.Settings == nil || seed.Info.Spec.Settings.VerticalPodAutoscaler == nil || seed.Info.Spec.Settings.VerticalPodAutoscaler.Enabled
+	if !vpaEnabled {
+		// VPA is a prerequisite. If it's not enabled via the seed spec it must be provided through some other mechanism.
+		if _, err := k8sSeedClient.RESTMapper().RESTMapping(vpaGK); err != nil {
+			return fmt.Errorf("VPA is required for seed cluster: %s", err)
+		}
+
+		if err := common.DeleteVpa(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace, false); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	const chartName = "seed-bootstrap"
 	var (
 		loggingConfig   = conf.Logging
 		gardenNamespace = &corev1.Namespace{
@@ -453,13 +466,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		}
 	}
 
-	vpaEnabled := seed.Info.Spec.Settings == nil || seed.Info.Spec.Settings.VerticalPodAutoscaler == nil || seed.Info.Spec.Settings.VerticalPodAutoscaler.Enabled
-	if !vpaEnabled {
-		if err := common.DeleteVpa(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace, false); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-	}
-
 	existingSecrets := &corev1.SecretList{}
 	if err = k8sSeedClient.Client().List(ctx, existingSecrets, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
 		return err
@@ -525,7 +531,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			// Apply status from old Object to retain status information
 			new.Object["status"] = old.Object["status"]
 		}
-		vpaGK                 = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
 		hvpaGK                = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "Hvpa"}
 		issuerGK              = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
 		grafanaHost           = seed.GetIngressFQDN(grafanaPrefix)

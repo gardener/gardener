@@ -58,3 +58,5 @@ By default, the seed controller deploys the VPA components into the `garden` nam
 In case you want to manage the VPA deployment on your own or have a custom one then you might want to disable the automatic deployment of Gardener.
 Otherwise, you might end up with two VPAs which will cause erratic behaviour.
 By setting the `.spec.settings.verticalPodAutoscaler.enabled=false` you can disable the automatic deployment.
+
+⚠️ In any case, there must be a VPA available for your seed cluster. Using a seed without VPA is not supported.
