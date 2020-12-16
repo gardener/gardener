@@ -285,7 +285,8 @@ const (
 	// ShootTasks is a constant for an annotation on a Shoot which states that certain tasks should be done.
 	ShootTasks = "shoot.gardener.cloud/tasks"
 
-	// ShootTaskDeployInfrastructure is a name for a Shoot's infrastructure deployment task.
+	// ShootTaskDeployInfrastructure is a name for a Shoot's infrastructure deployment task. It indicates that the
+	// Infrastructure extension resource shall be reconciled.
 	ShootTaskDeployInfrastructure = "deployInfrastructure"
 
 	// ShootTaskRestartControlPlanePods is a name for a Shoot task which is dedicated to restart related control plane pods.
