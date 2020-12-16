@@ -19,6 +19,8 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -69,6 +71,16 @@ func ShootFilterFunc(seedName string, seedLister gardencorelisters.SeedLister, l
 		}
 		return SeedLabelsMatch(seedLister, *shoot.Status.SeedName, labelSelector)
 	}
+}
+
+// ShootIsManagedByThisGardenlet checks if the given shoot is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration
+// or by checking whether the seed labels mathes the seed seoector from the GardenletConfiguration.
+func ShootIsManagedByThisGardenlet(shoot *gardencorev1beta1.Shoot, gc *config.GardenletConfiguration, seedLister gardencorelisters.SeedLister) bool {
+	seedName := confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
+	if len(seedName) > 0 {
+		return *shoot.Spec.SeedName == seedName
+	}
+	return SeedLabelsMatch(seedLister, *shoot.Spec.SeedName, gc.SeedSelector)
 }
 
 // SeedLabelsMatch fetches the given seed via a lister by its name and then checks whether the given label selector matches
