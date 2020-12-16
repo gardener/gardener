@@ -32,9 +32,6 @@ type WorkerDelegate interface {
 	// GetMachineControllerManagerShootChartValues should return the values to render the chart containing resources
 	// that are required by the machine-controller-manager inside the shoot cluster itself.
 	GetMachineControllerManagerShootChartValues(context.Context) (map[string]interface{}, error)
-	// GetMachineControllerManagerCloudCredentials should return the IaaS credentials
-	// with the secret keys used by the machine-controller-manager.
-	GetMachineControllerManagerCloudCredentials(context.Context) (map[string][]byte, error)
 
 	// MachineClassKind yields the name of the provider specific machine class.
 	MachineClassKind() string
@@ -59,6 +56,18 @@ type WorkerDelegate interface {
 
 	// CleanupMachineDependencies is a hook to cleanup external machine dependencies.
 	CleanupMachineDependencies(context.Context) error
+}
+
+// WorkerCredentialsDelegate is an interface that can optionally be implemented to be
+// used during the Worker reconciliation to keep all machine class secrets up to date.
+// DEPRECATED: extensions should instead provide credentials only (!) via the machine class field .spec.credentialsSecretRef
+// referencing the Worker's secret reference (spec.SecretRef). This way all machine classes
+// reference the same secret - there is no need anymore to update all machine class secrets.
+// please see [here](https://github.com/gardener/machine-controller-manager/pull/578) for more details
+type WorkerCredentialsDelegate interface {
+	// GetMachineControllerManagerCloudCredentials should return the IaaS credentials
+	// with the secret keys used by the machine-controller-manager.
+	GetMachineControllerManagerCloudCredentials(context.Context) (map[string][]byte, error)
 }
 
 // DelegateFactory acts upon Worker resources.
