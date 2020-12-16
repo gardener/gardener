@@ -343,7 +343,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		})
 		waitUntilWorkerReady = g.Add(flow.Task{
 			Name:         "Waiting until shoot worker nodes have been reconciled",
-			Fn:           flow.TaskFn(botanist.WaitUntilWorkerReady),
+			Fn:           botanist.Shoot.Components.Extensions.Worker.Wait,
 			Dependencies: flow.NewTaskIDs(deployWorker),
 		})
 		nginxLBReady = g.Add(flow.Task{

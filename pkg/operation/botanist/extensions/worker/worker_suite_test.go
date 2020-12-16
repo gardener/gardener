@@ -12,6 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -package component -destination=mocks.go github.com/gardener/gardener/pkg/operation/botanist/component Deployer,Waiter,DeployWaiter,DeployMigrateWaiter
+package worker_test
 
-package component
+import (
+	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+)
+
+func TestWorker(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Botanist Extensions Worker Suite")
+}

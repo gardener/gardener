@@ -231,17 +231,15 @@ var _ = Describe("ControlPlane", func() {
 			defer test.WithVars(&common.TimeNow, mockNow.Do)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			values.Purpose = extensionsv1alpha1.Exposure
 			fakeErr := fmt.Errorf("some random error")
 			obj := cp.DeepCopy()
-			obj.Name += "-exposure"
 			obj.Annotations = map[string]string{
 				"confirmation.gardener.cloud/deletion": "true",
 				"gardener.cloud/timestamp":             now.UTC().String(),
 			}
 
 			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Get(ctx, kutil.Key(obj.Namespace, obj.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
+			mc.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
 			mc.EXPECT().Update(ctx, obj)
 			mc.EXPECT().Delete(ctx, obj).Return(fakeErr)
 
@@ -253,15 +251,17 @@ var _ = Describe("ControlPlane", func() {
 			defer test.WithVars(&common.TimeNow, mockNow.Do)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
+			values.Purpose = extensionsv1alpha1.Exposure
 			fakeErr := fmt.Errorf("some random error")
 			obj := cp.DeepCopy()
+			obj.Name += "-exposure"
 			obj.Annotations = map[string]string{
 				"confirmation.gardener.cloud/deletion": "true",
 				"gardener.cloud/timestamp":             now.UTC().String(),
 			}
 
 			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
+			mc.EXPECT().Get(ctx, kutil.Key(obj.Namespace, obj.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
 			mc.EXPECT().Update(ctx, obj)
 			mc.EXPECT().Delete(ctx, obj).Return(fakeErr)
 
@@ -426,11 +426,7 @@ var _ = Describe("ControlPlane", func() {
 		})
 
 		It("should not return error if resource gets migrated successfully (purpose != exposure)", func() {
-			values.Purpose = extensionsv1alpha1.Exposure
-			defaultDepWaiter = controlplane.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-
 			obj := cp.DeepCopy()
-			obj.Name += "-exposure"
 			obj.Status.LastError = nil
 			obj.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
@@ -442,7 +438,11 @@ var _ = Describe("ControlPlane", func() {
 		})
 
 		It("should not return error if resource gets migrated successfully (purpose == exposure)", func() {
+			values.Purpose = extensionsv1alpha1.Exposure
+			defaultDepWaiter = controlplane.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+
 			obj := cp.DeepCopy()
+			obj.Name += "-exposure"
 			obj.Status.LastError = nil
 			obj.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,

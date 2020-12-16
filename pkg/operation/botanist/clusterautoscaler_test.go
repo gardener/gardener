@@ -22,6 +22,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockkubernetes "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
 	mockclusterautoscaler "github.com/gardener/gardener/pkg/mock/gardener/operation/botanist/controlplane/clusterautoscaler"
+	mockshoot "github.com/gardener/gardener/pkg/mock/gardener/operation/shoot"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -84,6 +85,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 	Describe("#DeployClusterAutoscaler", func() {
 		var (
 			clusterAutoscaler *mockclusterautoscaler.MockClusterAutoscaler
+			worker            *mockshoot.MockExtensionWorker
 
 			ctx                = context.TODO()
 			fakeErr            = fmt.Errorf("fake err")
@@ -95,6 +97,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 		BeforeEach(func() {
 			clusterAutoscaler = mockclusterautoscaler.NewMockClusterAutoscaler(ctrl)
+			worker = mockshoot.NewMockExtensionWorker(ctrl)
 
 			botanist.CheckSums = map[string]string{
 				secretName: checksum,
@@ -109,8 +112,10 @@ var _ = Describe("ClusterAutoscaler", func() {
 					ControlPlane: &shootpkg.ControlPlane{
 						ClusterAutoscaler: clusterAutoscaler,
 					},
+					Extensions: &shootpkg.Extensions{
+						Worker: worker,
+					},
 				},
-				MachineDeployments: machineDeployments,
 			}
 		})
 
@@ -122,6 +127,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Kubeconfig: component.Secret{Name: secretName, Checksum: checksum},
 				})
 				clusterAutoscaler.EXPECT().SetNamespaceUID(namespaceUID)
+				worker.EXPECT().MachineDeployments().Return(machineDeployments)
 				clusterAutoscaler.EXPECT().SetMachineDeployments(machineDeployments)
 			})
 

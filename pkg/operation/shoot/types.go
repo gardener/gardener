@@ -79,8 +79,6 @@ type Shoot struct {
 	OperatingSystemConfigsMap map[string]OperatingSystemConfigs
 	Extensions                map[string]Extension
 	InfrastructureStatus      []byte
-	ControlPlaneStatus        []byte
-	MachineDeployments        []extensionsv1alpha1.MachineDeployment
 
 	ETCDEncryption *etcdencryption.EncryptionConfig
 
@@ -109,12 +107,13 @@ type ControlPlane struct {
 
 // Extensions contains references to extension resources.
 type Extensions struct {
+	ContainerRuntime     ExtensionContainerRuntime
 	ControlPlane         ExtensionControlPlane
 	ControlPlaneExposure ExtensionControlPlane
 	DNS                  *DNS
 	Infrastructure       ExtensionInfrastructure
 	Network              component.DeployMigrateWaiter
-	ContainerRuntime     ExtensionContainerRuntime
+	Worker               ExtensionWorker
 }
 
 // SystemComponents contains references to system components.
@@ -156,6 +155,15 @@ type ExtensionControlPlane interface {
 type ExtensionContainerRuntime interface {
 	component.DeployMigrateWaiter
 	DeleteStaleResources(ctx context.Context) error
+}
+
+// ExtensionWorker contains references to a Worker extension deployer.
+type ExtensionWorker interface {
+	component.DeployMigrateWaiter
+	SetSSHPublicKey([]byte)
+	SetInfrastructureProviderStatus(*runtime.RawExtension)
+	SetOperatingSystemConfigMaps(map[string]OperatingSystemConfigs)
+	MachineDeployments() []extensionsv1alpha1.MachineDeployment
 }
 
 // Networks contains pre-calculated subnets and IP address for various components.

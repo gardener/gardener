@@ -74,6 +74,7 @@ func New(o *operation.Operation) (*Botanist, error) {
 	}
 
 	// extension components
+	o.Shoot.Components.Extensions.ContainerRuntime = b.DefaultContainerRuntime(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.ControlPlane = b.DefaultControlPlane(b.K8sSeedClient.DirectClient(), extensionsv1alpha1.Normal)
 	o.Shoot.Components.Extensions.ControlPlaneExposure = b.DefaultControlPlane(b.K8sSeedClient.DirectClient(), extensionsv1alpha1.Exposure)
 	o.Shoot.Components.Extensions.DNS.ExternalProvider = b.DefaultExternalDNSProvider(b.K8sSeedClient.DirectClient())
@@ -90,7 +91,7 @@ func New(o *operation.Operation) (*Botanist, error) {
 	}
 	o.Shoot.Components.Extensions.Infrastructure = b.DefaultInfrastructure(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.Network = b.DefaultNetwork(b.K8sSeedClient.DirectClient())
-	o.Shoot.Components.Extensions.ContainerRuntime = b.DefaultContainerRuntime(b.K8sSeedClient.DirectClient())
+	o.Shoot.Components.Extensions.Worker = b.DefaultWorker(b.K8sSeedClient.DirectClient())
 
 	sniPhase, err := b.SNIPhase(ctx)
 	if err != nil {

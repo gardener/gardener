@@ -29,7 +29,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/containerruntime"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/network"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/worker"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/sirupsen/logrus"
 
@@ -98,14 +100,24 @@ var _ = Describe("control plane migration", func() {
 					SeedNamespace: testSeedNamespace,
 					Components: &shoot.Components{
 						Extensions: &shoot.Extensions{
-							Network: network.New(log, fakeClient, &network.Values{
-								Namespace: testSeedNamespace,
-								Name:      networkName,
-							}, time.Second, 2*time.Second, 3*time.Second),
 							ContainerRuntime: containerruntime.New(log, fakeClient, &containerruntime.Values{
 								Namespace: testSeedNamespace,
 								Workers:   []gardencorev1beta1.Worker{},
-							}, time.Second, 2*time.Second, 3*time.Second),
+							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
+							ControlPlane: controlplane.New(log, fakeClient, &controlplane.Values{
+								Namespace: testSeedNamespace,
+							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
+							ControlPlaneExposure: controlplane.New(log, fakeClient, &controlplane.Values{
+								Namespace: testSeedNamespace,
+							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
+							Network: network.New(log, fakeClient, &network.Values{
+								Namespace: testSeedNamespace,
+								Name:      networkName,
+							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
+							Worker: worker.New(log, fakeClient, &worker.Values{
+								Namespace: testSeedNamespace,
+								Name:      workerName,
+							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
 						},
 					},
 				}

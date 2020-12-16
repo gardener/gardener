@@ -32,12 +32,18 @@ import (
 
 // AnnotateExtensionCRsForMigration annotates extension CRs with migrate operation annotation
 func (b *Botanist) AnnotateExtensionCRsForMigration(ctx context.Context) (err error) {
-	var fns []flow.TaskFn
-	fns, err = b.applyFuncToAllExtensionCRs(ctx, annotateObjectForMigrationFunc(ctx, b.K8sSeedClient.DirectClient()))
+	fns, err := b.applyFuncToAllExtensionCRs(ctx, annotateObjectForMigrationFunc(ctx, b.K8sSeedClient.DirectClient()))
 	if err != nil {
 		return err
 	}
-	fns = append(fns, b.Shoot.Components.Extensions.Network.Migrate, b.Shoot.Components.Extensions.ContainerRuntime.Migrate)
+
+	fns = append(fns,
+		b.Shoot.Components.Extensions.ContainerRuntime.Migrate,
+		b.Shoot.Components.Extensions.ControlPlane.Migrate,
+		b.Shoot.Components.Extensions.ControlPlaneExposure.Migrate,
+		b.Shoot.Components.Extensions.Network.Migrate,
+		b.Shoot.Components.Extensions.Worker.Migrate,
+	)
 
 	return flow.Parallel(fns...)(ctx)
 }
@@ -69,7 +75,14 @@ func (b *Botanist) WaitForExtensionsOperationMigrateToSucceed(ctx context.Contex
 	if err != nil {
 		return err
 	}
-	fns = append(fns, b.Shoot.Components.Extensions.Network.WaitMigrate, b.Shoot.Components.Extensions.ContainerRuntime.WaitMigrate)
+
+	fns = append(fns,
+		b.Shoot.Components.Extensions.ContainerRuntime.WaitMigrate,
+		b.Shoot.Components.Extensions.ControlPlane.WaitMigrate,
+		b.Shoot.Components.Extensions.ControlPlaneExposure.WaitMigrate,
+		b.Shoot.Components.Extensions.Network.WaitMigrate,
+		b.Shoot.Components.Extensions.Worker.WaitMigrate,
+	)
 
 	return flow.Parallel(fns...)(ctx)
 }
@@ -81,13 +94,19 @@ func (b *Botanist) DeleteAllExtensionCRs(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-
 		return common.DeleteExtensionCR(ctx, b.K8sSeedClient.Client(), func() extensionsv1alpha1.Object { return extensionObj }, extensionObj.GetNamespace(), extensionObj.GetName())
 	})
 	if err != nil {
 		return err
 	}
-	fns = append(fns, b.Shoot.Components.Extensions.Network.Destroy, b.Shoot.Components.Extensions.ContainerRuntime.Destroy)
+
+	fns = append(fns,
+		b.Shoot.Components.Extensions.ContainerRuntime.Destroy,
+		b.Shoot.Components.Extensions.ControlPlane.Destroy,
+		b.Shoot.Components.Extensions.ControlPlaneExposure.Destroy,
+		b.Shoot.Components.Extensions.Network.Destroy,
+		b.Shoot.Components.Extensions.Worker.Destroy,
+	)
 
 	return flow.Parallel(fns...)(ctx)
 }
@@ -159,6 +178,7 @@ func (b *Botanist) DeleteBackupEntryFromSeed(ctx context.Context) error {
 
 func (b *Botanist) isRestorePhase() bool {
 	return b.Shoot != nil &&
+		b.Shoot.Info != nil &&
 		b.Shoot.Info.Status.LastOperation != nil &&
 		b.Shoot.Info.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore
 }
