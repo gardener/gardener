@@ -163,11 +163,13 @@ allowedMetrics:
   - node_filesystem_free_bytes
   - node_filesystem_size_bytes
   - node_load1
-  - node_load5
   - node_load15
+  - node_load5
   - node_memory_Active_bytes
   - node_nf_conntrack_entries
   - node_nf_conntrack_entries_limit
+  - node_scrape_collector_duration_seconds
+  - node_scrape_collector_success
   - process_max_fds
   - process_open_fds
   prometheus:
