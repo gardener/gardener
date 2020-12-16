@@ -110,13 +110,15 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 		return errors.Wrapf(err, "failed to deploy the machine classes")
 	}
 
-	// Update cloud credentials for all existing machine class secrets
-	cloudCredentials, err := workerDelegate.GetMachineControllerManagerCloudCredentials(ctx)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get the cloud credentials in namespace %s", worker.Namespace)
-	}
-	if err = a.updateCloudCredentialsInAllMachineClassSecrets(ctx, logger, cloudCredentials, worker.Namespace); err != nil {
-		return errors.Wrapf(err, "failed to update cloud credentials in machine class secrets for namespace %s", worker.Namespace)
+	if workerCredentialsDelegate, ok := workerDelegate.(WorkerCredentialsDelegate); ok {
+		// Update cloud credentials for all existing machine class secrets
+		cloudCredentials, err := workerCredentialsDelegate.GetMachineControllerManagerCloudCredentials(ctx)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get the cloud credentials in namespace %s", worker.Namespace)
+		}
+		if err = a.updateCloudCredentialsInAllMachineClassSecrets(ctx, logger, cloudCredentials, worker.Namespace); err != nil {
+			return errors.Wrapf(err, "failed to update cloud credentials in machine class secrets for namespace %s", worker.Namespace)
+		}
 	}
 
 	// Update the machine images in the worker provider status.
