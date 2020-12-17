@@ -130,8 +130,12 @@ const (
 
 	// DeprecatedShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
-	// +deprecated: Use `Cluster` resource instead.
+	//
+	// Deprecated: Use the `Cluster` resource or the annotation key from the new API group `ShootUID`.
 	DeprecatedShootUID = "shoot.garden.sapcloud.io/uid"
+	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
+	// which value will be the value of `shoot.status.uid`
+	ShootUID = "shoot.gardener.cloud/uid"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.

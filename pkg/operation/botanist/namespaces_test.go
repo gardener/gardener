@@ -108,6 +108,7 @@ var _ = Describe("Namespaces", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 					Annotations: map[string]string{
+						"shoot.gardener.cloud/uid":     string(uid),
 						"shoot.garden.sapcloud.io/uid": string(uid),
 					},
 					Labels: map[string]string{
