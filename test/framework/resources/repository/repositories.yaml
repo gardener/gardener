@@ -5,5 +5,5 @@ repositories:
     keyFile: ""
     name: stable
     password: ""
-    url: https://kubernetes-charts.storage.googleapis.com
+    url: https://charts.bitnami.com/bitnami
     username: ""
