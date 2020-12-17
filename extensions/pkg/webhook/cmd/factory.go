@@ -15,6 +15,8 @@
 package cmd
 
 import (
+	"sort"
+
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -52,6 +54,12 @@ func (a *FactoryAggregator) Webhooks(mgr manager.Manager) ([]*extensionswebhook.
 
 		webhooks = append(webhooks, wh)
 	}
+
+	// ensure stable order of webhooks, otherwise the WebhookConfig might be reordered on every restart
+	// leading to a different invocation order which can lead to unnecessary rollouts of components
+	sort.Slice(webhooks, func(i, j int) bool {
+		return webhooks[i].Name < webhooks[j].Name
+	})
 
 	return webhooks, nil
 }
