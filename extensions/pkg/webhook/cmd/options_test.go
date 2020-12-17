@@ -15,8 +15,6 @@
 package cmd
 
 import (
-	"testing"
-
 	"github.com/gardener/gardener/extensions/pkg/util/test"
 
 	"github.com/golang/mock/gomock"
@@ -24,11 +22,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/spf13/pflag"
 )
-
-func TestCmd(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Webhook Cmd Suite")
-}
 
 var _ = Describe("Options", func() {
 	var (
