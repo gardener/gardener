@@ -54,8 +54,6 @@ Parameter | Description | Default
 `controller.defaultBackendService` | default 404 backend service; required only if `defaultBackend.enabled = false` | `""`
 `controller.electionID` | election ID to use for the status update | `ingress-controller-leader`
 `controller.ingressClass` | name of the ingress class to route through this controller | `nginx`
-`controller.scope.enabled` | limit the scope of the ingress controller | `false` (watch all namespaces)
-`controller.scope.namespace` | namespace to watch for ingress | `""` (use the release namespace)
 `controller.extraArgs` | Additional controller container arguments | `{}`
 `controller.kind` | install as Deployment or DaemonSet | `Deployment`
 `controller.nodeSelector` | node labels for pod assignment | `{}`

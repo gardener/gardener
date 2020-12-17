@@ -12,7 +12,9 @@ rules:
   - apiGroups:
       - ""
     resources:
+{{- if semverCompare "< 1.20-0" .Capabilities.KubeVersion.GitVersion }}
       - configmaps
+{{- end }}
       - endpoints
       - nodes
       - pods
@@ -20,16 +22,6 @@ rules:
     verbs:
       - list
       - watch
-{{- if and .Values.controller.scope.enabled .Values.controller.scope.namespace }}
-  - apiGroups:
-      - ""
-    resources:
-      - namespaces
-    resourceNames:
-      - "{{ .Values.controller.scope.namespace }}"
-    verbs:
-      - get
-{{- end }}
   - apiGroups:
       - ""
     resources:
@@ -40,6 +32,9 @@ rules:
       - ""
     resources:
       - services
+{{- if semverCompare ">= 1.20-0" .Capabilities.KubeVersion.GitVersion }}
+      - configmaps
+{{- end }}
     verbs:
       - get
       - list
@@ -68,4 +63,14 @@ rules:
       - ingresses/status
     verbs:
       - update
+{{- if semverCompare ">= 1.20-0" .Capabilities.KubeVersion.GitVersion }}
+  - apiGroups:
+      - "networking.k8s.io" # k8s 1.14+
+    resources:
+      - ingressclasses
+    verbs:
+      - get
+      - list
+      - watch
+{{- end }}
 {{- end -}}

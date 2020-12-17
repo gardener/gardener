@@ -10,6 +10,7 @@ metadata:
   name: {{ template "nginx-ingress.fullname" . }}
   namespace: kube-system
 rules:
+{{- if semverCompare "< 1.20-0" .Capabilities.KubeVersion.GitVersion }}
   - apiGroups:
       - ""
     resources:
@@ -52,6 +53,17 @@ rules:
       - ingresses/status
     verbs:
       - update
+{{- else }}
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - namespaces
+      - pods
+      - secrets
+    verbs:
+      - get
+{{- end }}
   - apiGroups:
       - ""
     resources:
@@ -75,6 +87,7 @@ rules:
       - create
       - get
       - update
+{{- if semverCompare "< 1.20-0" .Capabilities.KubeVersion.GitVersion }}
   - apiGroups:
       - ""
     resources:
@@ -82,4 +95,5 @@ rules:
     verbs:
       - create
       - patch
+{{- end }}
 {{- end -}}
