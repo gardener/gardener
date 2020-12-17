@@ -16,6 +16,7 @@ package kubernetes
 
 import (
 	"context"
+	"regexp"
 	"time"
 
 	"github.com/gardener/gardener/pkg/utils"
@@ -30,6 +31,10 @@ import (
 
 // ComputeBootstrapToken computes and creates a new bootstrap token, and returns it.
 func ComputeBootstrapToken(ctx context.Context, c client.Client, tokenID, description string, validity time.Duration) (secret *corev1.Secret, err error) {
+	var (
+		bootstrapTokenSecretKey string
+	)
+
 	secret = &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      bootstraptokenutil.BootstrapTokenSecretName(tokenID),
@@ -37,13 +42,18 @@ func ComputeBootstrapToken(ctx context.Context, c client.Client, tokenID, descri
 		},
 	}
 
-	if err := c.Get(ctx, Key(secret.Namespace, secret.Name), secret); client.IgnoreNotFound(err) != nil {
+	if err = c.Get(ctx, Key(secret.Namespace, secret.Name), secret); client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
 
-	bootstrapTokenSecretKey, err := utils.GenerateRandomStringFromCharset(16, "0123456789abcdefghijklmnopqrstuvwxyz")
-	if err != nil {
-		return nil, err
+	validBootstrapTokenSecret, _ := regexp.Compile(`[a-z0-9]{16}`)
+	if existingSecretToken, ok := secret.Data[bootstraptokenapi.BootstrapTokenSecretKey]; ok && validBootstrapTokenSecret.Match(existingSecretToken) {
+		bootstrapTokenSecretKey = string(existingSecretToken)
+	} else {
+		bootstrapTokenSecretKey, err = utils.GenerateRandomStringFromCharset(16, "0123456789abcdefghijklmnopqrstuvwxyz")
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	data := map[string][]byte{
