@@ -1,4 +1,3 @@
-{{ if .Values.vpa.enabled }}
 apiVersion: "autoscaling.k8s.io/v1beta2"
 kind: VerticalPodAutoscaler
 metadata:
@@ -11,4 +10,3 @@ spec:
     name: aggregate-prometheus
   updatePolicy:
     updateMode: "Auto"
-{{ end }}
