@@ -38,6 +38,7 @@ func (b *Botanist) AnnotateExtensionCRsForMigration(ctx context.Context) (err er
 	}
 
 	fns = append(fns,
+		b.Shoot.Components.Extensions.BackupEntry.Migrate,
 		b.Shoot.Components.Extensions.ContainerRuntime.Migrate,
 		b.Shoot.Components.Extensions.ControlPlane.Migrate,
 		b.Shoot.Components.Extensions.ControlPlaneExposure.Migrate,
@@ -79,6 +80,7 @@ func (b *Botanist) WaitForExtensionsOperationMigrateToSucceed(ctx context.Contex
 	}
 
 	fns = append(fns,
+		b.Shoot.Components.Extensions.BackupEntry.WaitMigrate,
 		b.Shoot.Components.Extensions.ContainerRuntime.WaitMigrate,
 		b.Shoot.Components.Extensions.ControlPlane.WaitMigrate,
 		b.Shoot.Components.Extensions.ControlPlaneExposure.WaitMigrate,
@@ -105,6 +107,7 @@ func (b *Botanist) DeleteAllExtensionCRs(ctx context.Context) error {
 	}
 
 	fns = append(fns,
+		b.Shoot.Components.Extensions.BackupEntry.Destroy,
 		b.Shoot.Components.Extensions.ContainerRuntime.Destroy,
 		b.Shoot.Components.Extensions.ControlPlane.Destroy,
 		b.Shoot.Components.Extensions.ControlPlaneExposure.Destroy,
@@ -142,44 +145,6 @@ func (b *Botanist) restoreExtensionObject(ctx context.Context, extensionObj exte
 	}
 
 	return common.AnnotateExtensionObjectWithOperation(ctx, b.K8sSeedClient.Client(), extensionObj, v1beta1constants.GardenerOperationRestore)
-}
-
-// AnnotateBackupEntryInSeedForMigration annotates the BackupEntry with gardener.cloud/operation=migrate
-func (b *Botanist) AnnotateBackupEntryInSeedForMigration(ctx context.Context) error {
-	name := common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
-	return common.MigrateExtensionCR(
-		ctx,
-		b.K8sSeedClient.Client(),
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupEntry{} },
-		"",
-		name,
-	)
-}
-
-// WaitForBackupEntryOperationMigrateToSucceed waits until BackupEntry has lastOperation equal to Migrate=Succeeded
-func (b *Botanist) WaitForBackupEntryOperationMigrateToSucceed(ctx context.Context) error {
-	name := common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
-	return common.WaitUntilExtensionCRMigrated(
-		ctx,
-		b.K8sSeedClient.DirectClient(),
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupEntry{} },
-		"",
-		name,
-		5*time.Second,
-		600*time.Second,
-	)
-}
-
-// DeleteBackupEntryFromSeed deletes the migrated BackupEntry from the Seed
-func (b *Botanist) DeleteBackupEntryFromSeed(ctx context.Context) error {
-	name := common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
-	return common.DeleteExtensionCR(
-		ctx,
-		b.K8sSeedClient.Client(),
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupEntry{} },
-		"",
-		name,
-	)
 }
 
 func (b *Botanist) isRestorePhase() bool {

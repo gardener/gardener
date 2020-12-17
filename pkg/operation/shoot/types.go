@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
+	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/extensions/backupentry"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/extension"
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
@@ -87,6 +88,7 @@ type Shoot struct {
 
 // Components contains different components deployed in the Shoot cluster.
 type Components struct {
+	BackupEntry      component.DeployWaiter
 	ClusterIdentity  component.Deployer
 	Extensions       *Extensions
 	ControlPlane     *ControlPlane
@@ -107,6 +109,7 @@ type ControlPlane struct {
 
 // Extensions contains references to extension resources.
 type Extensions struct {
+	BackupEntry          extensionsbackupentry.BackupEntry
 	ContainerRuntime     ExtensionContainerRuntime
 	ControlPlane         ExtensionControlPlane
 	ControlPlaneExposure ExtensionControlPlane

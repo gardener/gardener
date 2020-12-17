@@ -60,7 +60,6 @@ import (
 	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
@@ -413,55 +412,6 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 	}
 
 	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), b.Shoot.SeedNamespace, name, kubernetes.Values(values))
-}
-
-// DeployBackupEntryInGarden deploys the BackupEntry resource in garden.
-func (b *Botanist) DeployBackupEntryInGarden(ctx context.Context) error {
-	var (
-		name        = common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
-		backupEntry = &gardencorev1beta1.BackupEntry{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: b.Shoot.Info.Namespace,
-			},
-		}
-		bucketName string
-		seedName   *string
-	)
-
-	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, name), backupEntry); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-
-		// If backupEntry doesn't already exists, we have to assign backupBucket to backupEntry.
-		bucketName = string(b.Seed.Info.UID)
-		seedName = &b.Seed.Info.Name
-	} else if b.isRestorePhase() {
-		bucketName = backupEntry.Spec.BucketName
-		seedName = &b.Seed.Info.Name
-	} else {
-		bucketName = backupEntry.Spec.BucketName
-		seedName = backupEntry.Spec.SeedName
-	}
-	ownerRef := metav1.NewControllerRef(b.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
-	blockOwnerDeletion := false
-	ownerRef.BlockOwnerDeletion = &blockOwnerDeletion
-
-	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), backupEntry, func() error {
-		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
-
-		finalizers := sets.NewString(backupEntry.GetFinalizers()...)
-		finalizers.Insert(gardencorev1beta1.GardenerName)
-		backupEntry.SetFinalizers(finalizers.UnsortedList())
-
-		backupEntry.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*ownerRef}
-		backupEntry.Spec.BucketName = bucketName
-		backupEntry.Spec.SeedName = seedName
-		return nil
-	})
-	return err
 }
 
 const (

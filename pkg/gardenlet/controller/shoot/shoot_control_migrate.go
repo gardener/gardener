@@ -208,21 +208,6 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 			Fn:           botanist.WaitForExtensionsOperationMigrateToSucceed,
 			Dependencies: flow.NewTaskIDs(annotateExtensionCRsForMigration),
 		})
-		annotateBackupEntryInSeedForMigration = g.Add(flow.Task{
-			Name:         "Annotating BackupEntry in Seed with operation - migration",
-			Fn:           botanist.AnnotateBackupEntryInSeedForMigration,
-			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
-		})
-		waitForBackupEntryOperationMigrateToSucceed = g.Add(flow.Task{
-			Name:         "Waiting until BackupEntry in Seed has lastOperation Status Migrate = Succeeded",
-			Fn:           botanist.WaitForBackupEntryOperationMigrateToSucceed,
-			Dependencies: flow.NewTaskIDs(annotateBackupEntryInSeedForMigration),
-		})
-		deleteBackupEntryFromSeed = g.Add(flow.Task{
-			Name:         "Deleting BackupEntry from Seed",
-			Fn:           botanist.DeleteBackupEntryFromSeed,
-			Dependencies: flow.NewTaskIDs(waitForBackupEntryOperationMigrateToSucceed),
-		})
 		deleteAllExtensionCRs = g.Add(flow.Task{
 			Name:         "Deleting all extension CRs from the Shoot namespace",
 			Dependencies: flow.NewTaskIDs(waitForExtensionCRsOperationMigrateToSucceed),
@@ -286,7 +271,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteSeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deleteAllExtensionCRs, destroyDNSProviders, deleteBackupEntryFromSeed, waitForManagedResourcesDeletion, scaleETCDToZero),
+			Dependencies: flow.NewTaskIDs(deleteAllExtensionCRs, destroyDNSProviders, waitForManagedResourcesDeletion, scaleETCDToZero),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace in Seed has been deleted",

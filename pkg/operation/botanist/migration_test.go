@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist"
+	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/extensions/backupentry"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/containerruntime"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/extension"
@@ -54,6 +55,7 @@ var _ = Describe("control plane migration", func() {
 		networkName          = "test-network"
 		containerRuntimeName = "testContainerRuntime"
 		extensionName        = "testExtension"
+		backupEntryName      = "test-backupEntry"
 	)
 
 	var (
@@ -109,6 +111,9 @@ var _ = Describe("control plane migration", func() {
 					SeedNamespace: testSeedNamespace,
 					Components: &shoot.Components{
 						Extensions: &shoot.Extensions{
+							BackupEntry: extensionsbackupentry.New(log, fakeClient, &extensionsbackupentry.Values{
+								Name: backupEntryName,
+							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
 							ContainerRuntime: containerruntime.New(log, fakeClient, &containerruntime.Values{
 								Namespace: testSeedNamespace,
 								Workers:   []gardencorev1beta1.Worker{},
