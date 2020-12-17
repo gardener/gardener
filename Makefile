@@ -166,6 +166,7 @@ install-requirements:
 	@go install -mod=vendor github.com/onsi/ginkgo/ginkgo
 	@go install -mod=vendor github.com/ahmetb/gen-crd-api-reference-docs
 	@go install -mod=vendor github.com/golang/mock/mockgen
+	@go install -mod=vendor sigs.k8s.io/controller-tools/cmd/controller-gen
 	@GO111MODULE=off go get github.com/prometheus/prometheus/cmd/promtool
 	@./hack/install-requirements.sh
 
@@ -190,6 +191,10 @@ check:
 .PHONY: generate
 generate:
 	@hack/generate.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
+
+.PHONY: generate-extensions-crds
+generate-extensions-crds:
+	@controller-gen crd paths=./pkg/apis/extensions/... output:crd:dir=./dev/extensions-crds output:stdout
 
 .PHONY: format
 format:

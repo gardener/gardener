@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 
 	. "github.com/onsi/ginkgo"
@@ -47,25 +48,21 @@ var _ = Describe("BackupBucket Controller", func() {
 	BeforeSuite(func() {
 		// enable manager logs
 		logf.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
-
 		log := logrus.New()
 		log.SetOutput(GinkgoWriter)
 		logger = logrus.NewEntry(log)
 
 		By("starting test environment")
-		repoRoot := filepath.Join("..", "..", "..", "..")
-		testEnv = &envtest.Environment{
-			CRDInstallOptions: envtest.CRDInstallOptions{
-				Paths: []string{
-					filepath.Join(repoRoot, "charts", "seed-bootstrap", "templates", "extensions", "crd-cluster.yaml"),
-					filepath.Join(repoRoot, "charts", "seed-bootstrap", "templates", "extensions", "crd-backupbucket.yaml"),
-				},
-			},
-		}
-
+		testEnv = &envtest.Environment{}
 		restConfig, err = testEnv.Start()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(restConfig).ToNot(BeNil())
+
+		By("installing CRDs")
+		applier, err := kubernetes.NewChartApplierForConfig(restConfig)
+		Expect(err).NotTo(HaveOccurred())
+		repoRoot := filepath.Join("..", "..", "..", "..")
+		Expect(applier.Apply(ctx, filepath.Join(repoRoot, "charts", "seed-bootstrap", "charts", "extensions"), "extensions", "")).To(Succeed())
 	})
 
 	AfterSuite(func() {

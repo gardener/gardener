@@ -20,7 +20,6 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -74,7 +73,12 @@ func (k *kubeControllerManager) WaitForControllerToBeActive(ctx context.Context)
 		}
 
 		// Check if the controller is active by reading its leader election record.
-		leaderElectionRecord, err := common.ReadLeaderElectionRecord(ctx, k.shootClient, resourcelock.EndpointsResourceLock, metav1.NamespaceSystem, v1beta1constants.DeploymentNameKubeControllerManager)
+		lock := resourcelock.EndpointsResourceLock
+		if versionConstraintK8sGreaterEqual120.Check(k.version) {
+			lock = resourcelock.LeasesResourceLock
+		}
+
+		leaderElectionRecord, err := kutil.ReadLeaderElectionRecord(ctx, k.shootClient, lock, metav1.NamespaceSystem, v1beta1constants.DeploymentNameKubeControllerManager)
 		if err != nil {
 			return retry.SevereError(fmt.Errorf("could not check whether controller %s is active: %w", v1beta1constants.DeploymentNameKubeControllerManager, err))
 		}

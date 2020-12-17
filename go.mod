@@ -58,6 +58,7 @@ require (
 	k8s.io/metrics v0.18.10
 	k8s.io/utils v0.0.0-20200619165400-6e3d28b6ed19
 	sigs.k8s.io/controller-runtime v0.6.3
+	sigs.k8s.io/controller-tools v0.3.0
 	sigs.k8s.io/yaml v1.2.0
 )
 

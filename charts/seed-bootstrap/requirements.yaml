@@ -22,3 +22,6 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: global-network-policies.enabled
+- name: extensions
+  repository: http://localhost:10191
+  version: 0.1.0

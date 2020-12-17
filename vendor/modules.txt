@@ -48,6 +48,8 @@ github.com/emicklei/go-restful
 github.com/emicklei/go-restful/log
 # github.com/evanphx/json-patch v4.9.0+incompatible
 github.com/evanphx/json-patch
+# github.com/fatih/color v1.7.0
+github.com/fatih/color
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
 # github.com/gardener/etcd-druid v0.3.0
@@ -90,6 +92,8 @@ github.com/go-openapi/spec
 github.com/go-openapi/swag
 # github.com/gobuffalo/envy v1.7.0
 github.com/gobuffalo/envy
+# github.com/gobuffalo/flect v0.2.0
+github.com/gobuffalo/flect
 # github.com/gobuffalo/packd v0.3.0
 github.com/gobuffalo/packd
 github.com/gobuffalo/packd/internal/takeon/github.com/markbates/errx
@@ -205,6 +209,10 @@ github.com/magiconair/properties
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
+# github.com/mattn/go-colorable v0.1.2
+github.com/mattn/go-colorable
+# github.com/mattn/go-isatty v0.0.12
+github.com/mattn/go-isatty
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mholt/archiver v3.1.1+incompatible
@@ -582,6 +590,8 @@ gopkg.in/tomb.v1
 # gopkg.in/yaml.v2 v2.3.0
 ## explicit
 gopkg.in/yaml.v2
+# gopkg.in/yaml.v3 v3.0.0-20191120175047-4206685974f2
+gopkg.in/yaml.v3
 # honnef.co/go/tools v0.0.1-2019.2.3
 honnef.co/go/tools/arg
 honnef.co/go/tools/cmd/staticcheck
@@ -1255,6 +1265,22 @@ sigs.k8s.io/controller-runtime/pkg/webhook/admission
 sigs.k8s.io/controller-runtime/pkg/webhook/conversion
 sigs.k8s.io/controller-runtime/pkg/webhook/internal/certwatcher
 sigs.k8s.io/controller-runtime/pkg/webhook/internal/metrics
+# sigs.k8s.io/controller-tools v0.3.0
+## explicit
+sigs.k8s.io/controller-tools/cmd/controller-gen
+sigs.k8s.io/controller-tools/pkg/crd
+sigs.k8s.io/controller-tools/pkg/crd/markers
+sigs.k8s.io/controller-tools/pkg/deepcopy
+sigs.k8s.io/controller-tools/pkg/genall
+sigs.k8s.io/controller-tools/pkg/genall/help
+sigs.k8s.io/controller-tools/pkg/genall/help/pretty
+sigs.k8s.io/controller-tools/pkg/loader
+sigs.k8s.io/controller-tools/pkg/markers
+sigs.k8s.io/controller-tools/pkg/rbac
+sigs.k8s.io/controller-tools/pkg/schemapatcher
+sigs.k8s.io/controller-tools/pkg/schemapatcher/internal/yaml
+sigs.k8s.io/controller-tools/pkg/version
+sigs.k8s.io/controller-tools/pkg/webhook
 # sigs.k8s.io/structured-merge-diff/v3 v3.0.0 => sigs.k8s.io/structured-merge-diff/v3 v3.0.1-0.20201124164700-f5fd4ea1e4c9
 sigs.k8s.io/structured-merge-diff/v3/fieldpath
 sigs.k8s.io/structured-merge-diff/v3/merge

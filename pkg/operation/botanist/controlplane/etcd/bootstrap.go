@@ -88,7 +88,10 @@ type bootstrapper struct {
 
 func (b *bootstrapper) Deploy(ctx context.Context) error {
 	var crdYAML bytes.Buffer
-	if err := crdTemplate.Execute(&crdYAML, map[string]bool{"k8sGreaterEqual112": versionConstraintK8sGreaterEqual112.Check(b.kubernetesVersion)}); err != nil {
+	if err := crdTemplate.Execute(&crdYAML, map[string]bool{
+		"k8sGreaterEqual112": versionConstraintK8sGreaterEqual112.Check(b.kubernetesVersion),
+		"k8sGreaterEqual115": versionConstraintK8sGreaterEqual115.Check(b.kubernetesVersion),
+	}); err != nil {
 		return err
 	}
 
@@ -328,6 +331,7 @@ func (b *bootstrapper) WaitCleanup(ctx context.Context) error {
 var (
 	crdTemplate                         *template.Template
 	versionConstraintK8sGreaterEqual112 *semver.Constraints
+	versionConstraintK8sGreaterEqual115 *semver.Constraints
 )
 
 func init() {
@@ -337,6 +341,8 @@ func init() {
 	utilruntime.Must(err)
 
 	versionConstraintK8sGreaterEqual112, err = semver.NewConstraint(">= 1.12")
+	utilruntime.Must(err)
+	versionConstraintK8sGreaterEqual115, err = semver.NewConstraint(">= 1.15")
 	utilruntime.Must(err)
 }
 
@@ -364,6 +370,9 @@ spec:
       specReplicasPath: .spec.replicas
       statusReplicasPath: .status.replicas
     status: {}
+{{- if .k8sGreaterEqual115 }}
+  preserveUnknownFields: false
+{{- end }}
   validation:
     openAPIV3Schema:
       description: Etcd is the Schema for the etcds API
