@@ -301,7 +301,7 @@ data:
         Name        extensionsParser
         Format      json
         Time_Key    ts
-        Time_Format %Y-%m-%dT%H:%M:%S.%L
+        Time_Format %Y-%m-%dT%H:%M:%S.%Z
 
 {{ if .Values.additionalParsers }}
 {{- toString .Values.additionalParsers | indent 4 }}
