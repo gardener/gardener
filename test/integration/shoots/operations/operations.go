@@ -42,6 +42,9 @@ package operations
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -105,7 +108,7 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 		framework.ExpectNoError(err)
 	}, reconcileTimeout)
 
-	f.Default().Serial().CIt("should rotate kubeconfig for a shoot cluster", func(ctx context.Context) {
+	f.Default().Serial().CIt("should rotate the kubeconfig for a shoot cluster", func(ctx context.Context) {
 		ginkgo.By("rotate kubeconfig")
 		var (
 			secretName = f.Shoot.Name + ".kubeconfig"
@@ -127,6 +130,17 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 
 		newKubeconfig, err := framework.GetObjectFromSecret(ctx, f.GardenClient, f.ProjectNamespace, secretName, framework.KubeconfigSecretKeyName)
 		framework.ExpectNoError(err)
+
+		// write the updated kubeconfig to the testmachinery shoot kubeconfig path
+		defer func() {
+			kubeconfigsPath := os.Getenv(framework.TestMachineryKubeconfigsPathEnvVarName)
+			if len(kubeconfigsPath) == 0 {
+				// do nothing if the environment variable is not defined.
+				return
+			}
+			shootKubeconfigPath := filepath.Join(kubeconfigsPath, "shoot.config")
+			framework.ExpectNoError(ioutil.WriteFile(shootKubeconfigPath, []byte(newKubeconfig), os.ModePerm))
+		}()
 
 		newClient, err := kubernetes.NewClientFromBytes([]byte(newKubeconfig))
 		framework.ExpectNoError(err)
