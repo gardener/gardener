@@ -20,6 +20,24 @@ It should be possible to easily extend and tweak the scheduler in the future.
 Possibly, similar to the Kubernetes scheduler, hooks could be provided which influence the scheduling decisions.
 It should be also possible to completely replace the standard Gardener Scheduler with a custom implementation.
 
+## Algorithm overview
+
+The following **sequence** describes the steps involved to determine a seed candidate:
+
+1. Determine usable seeds with "usable" defined as follows:
+   * no `.metadata.deletionTimestamp`
+   * `.spec.settings.scheduling.visible` is `true`
+   * conditions `Bootstrapped`, `GardenletReady` are `true`
+1. Filter seeds:
+   * matching `.spec.seedSelector` in `CloudProfile` used by the `Shoot`
+   * matching `.spec.seedSelector` in `Shoot`
+   * having no network intersection with the `Shoot`'s networks (due to the VPN connectivity between seeds and shoots their networks must be disjoint)
+   * having `.spec.settings.shootDNS.enabled=false` (only if the shoot specifies a DNS domain or does not use the `unmanaged` DNS provider)
+   * whose taints (`.spec.taints`) are tolerated by the `Shoot` (`.spec.tolerations`)
+   * whose capacity for shoots would not be exceeded if the shoot is scheduled onto the seed, see [Ensuring seeds capacity for shoots is not exceeded](#ensuring-seeds-capacity-for-shoots-is-not-exceeded)
+1. Apply active [strategy](#strategies) e.g., _Minimal Distance strategy_
+1. Choose least utilized seed, i.e., the one with the least number of shoot control planes, will be the winner and written to the `.spec.seedName` field of the `Shoot`.
+
 ## Configuration
 
 The Gardener Scheduler configuration has to be supplied on startup. It is a mandatory and also the only available flag.
@@ -28,14 +46,16 @@ The Gardener Scheduler configuration has to be supplied on startup. It is a mand
 Most of the configuration options are the same as in the Gardener Controller Manager (leader election, client connection, ...).
 However, the Gardener Scheduler on the other hand does not need a TLS configuration, because there are currently no webhooks configurable.
 
-The scheduling strategy is defined in the _**candidateDeterminationStrategy**_ and can have the possible values `SameRegion` and `MinimalDistance`.
+## Strategies
+
+The scheduling strategy is defined in the _**candidateDeterminationStrategy**_ of the scheduler's configuration and can have the possible values `SameRegion` and `MinimalDistance`.
 The `SameRegion` strategy is the default strategy.
 
 1. *Same Region strategy*
 
    The Gardener Scheduler reads the `spec.provider.type` and `.spec.region` fields from the `Shoot` resource.
-It tries to find a Seed that has the identical `.spec.provider.type` and `.spec.provider.region` fields set.
-If it cannot find a suitable Seed, it adds an event to the shoot stating, that it is unschedulable.
+It tries to find a seed that has the identical `.spec.provider.type` and `.spec.provider.region` fields set.
+If it cannot find a suitable seed, it adds an event to the shoot stating, that it is unschedulable.
 
 2. *Minimal Distance strategy*
 
@@ -51,31 +71,16 @@ If the provider differs the correction value is additionally incremented by 2.
 
    Because of this a matching region with a matching provider is always prefered.
 
-In the last step, the scheduler picks the one seed having the least shoots currently deployed.
-
 In order to put the scheduling decision into effect, the scheduler sends an update request for the `Shoot` resource to
 the API server. After validation, the Gardener Aggregated API server updates the shoot to have the `spec.seedName` field set.
 Subsequently, the Gardenlet picks up and starts to create the cluster on the specified seed.
 
-### Special handling based on shoot cluster purpose
+3. *Special handling based on shoot cluster purpose*
 
 Every shoot cluster can have a purpose that describes what the cluster is used for, and also influences how the cluster is setup (see [this document](../usage/shoot_purposes.md) for more information).
 
 In case the shoot has the `testing` purpose then the scheduler only reads the `.spec.provider.type` from the `Shoot` resource and tries to find a `Seed` that has the identical `.spec.provider.type`.
 The region does not matter, i.e., `testing` shoots may also be scheduled on a seed in a complete different region if it is better for balancing the whole Gardener system.
-
-## Filtering to determine the best candidate
-
-The section above has explained which strategies are used to determine the potential seed candidates.
-Once this list has been computed the scheduler tries to find the best one out of them to which, eventually, the shoot gets assigned to.
-It filters out `Seed`s
-
-* whose networks have intersections with the `Shoot`'s networks (due to the VPN connectivity between seeds and shoots their networks must be disjoint)
-* that have `.spec.settings.shootDNS.enabled=false` (only if the shoot specifies a DNS domain or does not use the `unmanaged` DNS provider)
-* whose labels don't match the `.spec.seedSelector` field of the `CloudProfile` that is used in the `Shoot` (there might be multiple environments for the same provider type, e.g., you might have multiple OpenStack systems connected to Gardener)
-* whose capacity for shoots would be exceeded if the shoot is scheduled onto the seed, see [Ensuring seeds capacity for shoots is not exceeded](#ensuring-seeds-capacity-for-shoots-is-not-exceeded)
-
-After this filtering process the least utilized seed, i.e., the one with the least number of shoot control planes, will be the winner and written to the `.spec.seedName` field of the `Shoot`.
 
 ## `seedSelector` field in the `Shoot` specification
 
