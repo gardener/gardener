@@ -24,7 +24,8 @@ func GetShootNamespacedCRsLists() []runtime.Object {
 	return []runtime.Object{
 		//The ControlPlane CR is now handled as a shoot component
 		//&extensionsv1alpha1.ControlPlaneList{},
-		&extensionsv1alpha1.ExtensionList{},
+		//The Extension CR is now handled as a shoot component
+		//&extensionsv1alpha1.ExtensionList{},
 		&extensionsv1alpha1.InfrastructureList{},
 		//The Network CR is now handled as a shoot component
 		//&extensionsv1alpha1.NetworkList{},

@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/containerruntime"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/extension"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/network"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/worker"
 	"github.com/gardener/gardener/pkg/operation/shoot"
@@ -51,6 +52,7 @@ var _ = Describe("control plane migration", func() {
 		workerName           = "test-worker"
 		networkName          = "test-network"
 		containerRuntimeName = "testContainerRuntime"
+		extensionName        = "testExtension"
 	)
 
 	var (
@@ -63,6 +65,12 @@ var _ = Describe("control plane migration", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		expected = []runtime.Object{
+			&extensionsv1alpha1.Extension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      extensionName,
+					Namespace: testSeedNamespace,
+				},
+			},
 			&extensionsv1alpha1.Worker{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      workerName,
@@ -108,6 +116,9 @@ var _ = Describe("control plane migration", func() {
 								Namespace: testSeedNamespace,
 							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
 							ControlPlaneExposure: controlplane.New(log, fakeClient, &controlplane.Values{
+								Namespace: testSeedNamespace,
+							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
+							Extension: extension.New(log, fakeClient, &extension.Values{
 								Namespace: testSeedNamespace,
 							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
 							Network: network.New(log, fakeClient, &network.Values{

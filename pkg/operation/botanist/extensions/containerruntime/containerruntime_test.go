@@ -132,7 +132,7 @@ var _ = Describe("#ContainerRuntimee", func() {
 			Namespace: namespace,
 			Workers:   workers,
 		}
-		defaultDepWaiter = containerruntime.New(log, c, values, time.Second, 2*time.Second, 3*time.Second)
+		defaultDepWaiter = containerruntime.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 	})
 
 	AfterEach(func() {
@@ -245,7 +245,7 @@ var _ = Describe("#ContainerRuntimee", func() {
 			defaultDepWaiter = containerruntime.New(log, mc, &containerruntime.Values{
 				Namespace: namespace,
 				Workers:   []gardencorev1beta1.Worker{worker},
-			}, time.Second, 2*time.Second, 3*time.Second)
+			}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 
 			err := defaultDepWaiter.Destroy(ctx)
 			Expect(err).To(HaveOccurred())
@@ -340,7 +340,7 @@ var _ = Describe("#ContainerRuntimee", func() {
 				&containerruntime.Values{
 					namespace,
 					[]gardencorev1beta1.Worker{worker},
-				}, time.Second, 2*time.Second, 3*time.Second)
+				}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 
 			Expect(defaultDepWaiter.Restore(ctx, shootState)).To(Succeed())
 		})
