@@ -40,7 +40,7 @@ import (
 
 // Builder is an object that builds Shoot objects.
 type Builder struct {
-	shootObjectFunc  func() (*gardencorev1beta1.Shoot, error)
+	shootObjectFunc  func(context.Context) (*gardencorev1beta1.Shoot, error)
 	cloudProfileFunc func(string) (*gardencorev1beta1.CloudProfile, error)
 	shootSecretFunc  func(context.Context, client.Client, string, string) (*corev1.Secret, error)
 	projectName      string

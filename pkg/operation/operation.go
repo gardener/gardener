@@ -26,6 +26,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -185,6 +186,29 @@ func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Inter
 			WithInternalDomain(gardenObj.InternalDomain).
 			WithDefaultDomains(gardenObj.DefaultDomains).
 			Build(ctx, c)
+	}
+	return b
+}
+
+// WithShootFromCluster sets the shootFunc attribute at the Builder which will build a new Shoot object constructed from the cluster resource.
+// The shoot status is still taken from the passed `shoot`, though.
+func (b *Builder) WithShootFromCluster(k8sGardenCoreInformers gardencoreinformers.Interface, seedClient kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
+	b.shootFunc = func(ctx context.Context, c client.Client, gardenObj *garden.Garden, seedObj *seed.Seed) (*shoot.Shoot, error) {
+		shoot, err := shoot.
+			NewBuilder().
+			WithShootObjectFromCluster(seedClient, shoot.ComputeTechnicalID(gardenObj.Project.Name, s)).
+			WithCloudProfileObjectFromLister(k8sGardenCoreInformers.CloudProfiles().Lister()).
+			WithShootSecretFromSecretBindingLister(k8sGardenCoreInformers.SecretBindings().Lister()).
+			WithProjectName(gardenObj.Project.Name).
+			WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
+			WithInternalDomain(gardenObj.InternalDomain).
+			WithDefaultDomains(gardenObj.DefaultDomains).
+			Build(ctx, c)
+		if err != nil {
+			return nil, err
+		}
+		shoot.Info.Status = s.Status
+		return shoot, nil
 	}
 	return b
 }

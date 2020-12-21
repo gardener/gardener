@@ -21,9 +21,8 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/operation/care"
 	"github.com/gardener/gardener/pkg/operation/common"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
@@ -41,7 +40,6 @@ import (
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
-	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -166,32 +164,32 @@ func (c *defaultCareControl) conditionThresholdsToProgressingMapping() map[garde
 	return out
 }
 
-func shootClientInitializer(ctx context.Context, b *botanistpkg.Botanist) func() (bool, error) {
+func shootClientInitializer(ctx context.Context, o *operation.Operation) func() (kubernetes.Interface, bool, error) {
 	var (
 		once             sync.Once
 		apiServerRunning bool
 		err              error
 	)
-	return func() (bool, error) {
+	return func() (kubernetes.Interface, bool, error) {
 		once.Do(func() {
 			// Don't initialize clients for Shoots, for which the API server is not running
-			apiServerRunning, err = b.IsAPIServerRunning(ctx)
+			apiServerRunning, err = o.IsAPIServerRunning(ctx)
 			if err != nil || !apiServerRunning {
 				return
 			}
 
-			err = b.InitializeShootClients(ctx)
+			err = o.InitializeShootClients(ctx)
 
 			// b.InitializeShootClients might not initialize b.K8sShootClient in case the Shoot is being hibernated
 			// and the API server has just been scaled down. So, double-check if b.K8sShootClient is set/initialized,
 			// otherwise we cannot execute health and constraint checks and garbage collection
 			// This is done to prevent a race between the two calls to b.IsAPIServerRunning which would cause the care
 			// controller to use a nil shoot client (panic)
-			if b.K8sShootClient == nil {
+			if o.K8sShootClient == nil {
 				apiServerRunning = false
 			}
 		})
-		return apiServerRunning, err
+		return o.K8sShootClient, apiServerRunning, err
 	}
 }
 
@@ -232,27 +230,34 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 	}
 
 	// Initialize conditions based on the current status.
-	var (
-		conditionAPIServerAvailable      = gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Conditions, gardencorev1beta1.ShootAPIServerAvailable)
-		conditionControlPlaneHealthy     = gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Conditions, gardencorev1beta1.ShootControlPlaneHealthy)
-		conditionEveryNodeReady          = gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Conditions, gardencorev1beta1.ShootEveryNodeReady)
-		conditionSystemComponentsHealthy = gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Conditions, gardencorev1beta1.ShootSystemComponentsHealthy)
-		oldConditions                    = []gardencorev1beta1.Condition{
-			conditionAPIServerAvailable,
-			conditionControlPlaneHealthy,
-			conditionEveryNodeReady,
-			conditionSystemComponentsHealthy,
-		}
+	var conditions []gardencorev1beta1.Condition
+	for _, cond := range []gardencorev1beta1.ConditionType{
+		gardencorev1beta1.ShootAPIServerAvailable,
+		gardencorev1beta1.ShootControlPlaneHealthy,
+		gardencorev1beta1.ShootEveryNodeReady,
+		gardencorev1beta1.ShootSystemComponentsHealthy,
+	} {
+		conditions = append(conditions, gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Conditions, cond))
+	}
 
-		seedConditions []gardencorev1beta1.Condition
+	// Initialize constraints
+	var constraints []gardencorev1beta1.Condition
+	for _, cond := range []gardencorev1beta1.ConditionType{
+		gardencorev1beta1.ShootHibernationPossible,
+		gardencorev1beta1.ShootMaintenancePreconditionsSatisfied,
+	} {
+		constraints = append(constraints, gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Conditions, cond))
+	}
 
-		constraintHibernationPossible               = gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Constraints, gardencorev1beta1.ShootHibernationPossible)
-		constraintMaintenancePreconditionsSatisfied = gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Constraints, gardencorev1beta1.ShootMaintenancePreconditionsSatisfied)
-		oldConstraints                              = []gardencorev1beta1.Condition{
-			constraintHibernationPossible,
-			constraintMaintenancePreconditionsSatisfied,
+	seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeedWithName(*shoot.Spec.SeedName))
+	if err != nil {
+		shootLogger.Errorf("seedClient cannot be constructed: %s", err.Error())
+
+		if err := careSetupFailure(ctx, gardenClient, shoot, "Precondition failed: seed client cannot be constructed", conditions, constraints); err != nil {
+			shootLogger.Error(err)
 		}
-	)
+		return nil
+	}
 
 	operation, err := operation.
 		NewBuilder().
@@ -264,114 +269,77 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		WithImageVector(c.imageVector).
 		WithGardenFrom(c.k8sGardenCoreInformers, shoot.Namespace).
 		WithSeedFrom(c.k8sGardenCoreInformers, *shoot.Spec.SeedName).
-		WithShootFrom(c.k8sGardenCoreInformers, shoot).
+		WithShootFromCluster(c.k8sGardenCoreInformers, seedClient, shootObj).
 		Build(ctx, c.clientMap)
 	if err != nil {
 		shootLogger.Errorf("could not initialize a new operation: %s", err.Error())
 
-		if err := careSetupFailure(ctx, gardenClient, shoot, "precondition failed: operation could not be initialized", oldConditions, oldConstraints); err != nil {
+		if err := careSetupFailure(ctx, gardenClient, shoot, "precondition failed: operation could not be initialized", conditions, constraints); err != nil {
 			shootLogger.Error(err)
 		}
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
-	botanist, err := botanistpkg.New(ctx, operation)
-	if err != nil {
-		shootLogger.Errorf("Failed to create a botanist object to perform the care operations: %s", err.Error())
-
-		if err := careSetupFailure(ctx, gardenClient, shoot, "Precondition failed: botanist could not be initialized", oldConditions, oldConstraints); err != nil {
-			shootLogger.Error(err)
-		}
-		return nil // We do not want to run in the exponential backoff for the condition checks.
-	}
-
-	cluster, err := gardenerextensions.GetCluster(ctx, botanist.K8sSeedClient.Client(), botanist.Shoot.SeedNamespace)
-	if err != nil {
+	if err := operation.InitializeSeedClients(ctx); err != nil {
 		shootLogger.Errorf("Health checks cannot be performed: %s", err.Error())
 
-		if err := careSetupFailure(ctx, gardenClient, shoot, "Precondition failed: cluster resource could not be retrieved", oldConditions, oldConstraints); err != nil {
+		if err := careSetupFailure(ctx, gardenClient, shoot, "Precondition failed: seed client cannot be constructed", conditions, constraints); err != nil {
 			shootLogger.Error(err)
 		}
 		return nil
 	}
 
-	// Use shoot from cluster resource here because it reflects the actual or "active" spec to determine which health checks are required.
-	// With the "confineSpecUpdateRollout" feature enabled, shoot resources have a spec which is not yet active.
-	clusterShoot := cluster.Shoot
-	if clusterShoot == nil {
-		shootLogger.Error("Health checks cannot be performed: missing shoot in cluster resource")
-
-		if err := careSetupFailure(ctx, gardenClient, shoot, "Precondition failed: missing shoot in cluster resource", oldConditions, oldConstraints); err != nil {
-			shootLogger.Error(err)
-		}
-		return nil
-	}
-
-	initializeShootClients := shootClientInitializer(ctx, botanist)
 	staleExtensionHealthCheckThreshold := confighelper.StaleExtensionHealthChecksThreshold(c.config.Controllers.ShootCare.StaleExtensionHealthChecks)
+	initializeShootClients := shootClientInitializer(ctx, operation)
+
+	var updatedConditions, updatedConstraints, seedConditions []gardencorev1beta1.Condition
 
 	_ = flow.Parallel(
 		// Trigger health check
 		func(ctx context.Context) error {
-			conditionAPIServerAvailable, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy = botanist.HealthChecks(
+			shootHealth := care.NewHealth(operation, initializeShootClients)
+			updatedConditions = shootHealth.HealthChecks(
 				ctx,
-				clusterShoot,
-				initializeShootClients,
 				c.conditionThresholdsToProgressingMapping(),
 				staleExtensionHealthCheckThreshold,
-				botanist.Shoot.GardenerVersion,
-				conditionAPIServerAvailable,
-				conditionControlPlaneHealthy,
-				conditionEveryNodeReady,
-				conditionSystemComponentsHealthy,
+				conditions,
 			)
 			return nil
 		},
 		// Fetch seed conditions if shoot is a seed
 		func(ctx context.Context) error {
-			seedConditions, err = retrieveSeedConditions(ctx, botanist)
+			seedConditions, err = retrieveSeedConditions(ctx, operation)
 			if err != nil {
-				botanist.Logger.Errorf("Error retrieving seed conditions: %+v", err)
+				operation.Logger.Errorf("Error retrieving seed conditions: %+v", err)
 			}
 			return nil
 		},
 		// Trigger constraint checks
 		func(ctx context.Context) error {
-			constraintHibernationPossible, constraintMaintenancePreconditionsSatisfied = botanist.ConstraintsChecks(
+			constraint := care.NewConstraint(operation, initializeShootClients)
+			updatedConstraints = constraint.ConstraintsChecks(
 				ctx,
-				initializeShootClients,
-				constraintHibernationPossible,
-				constraintMaintenancePreconditionsSatisfied,
+				constraints,
 			)
 			return nil
 		},
 		// Trigger garbage collection
 		func(ctx context.Context) error {
-			garbageCollection(ctx, initializeShootClients, botanist)
+			garbageCollector := care.NewGarbageCollection(operation, initializeShootClients)
+			garbageCollector.GarbageCollection(ctx)
 			// errors during garbage collection are only being logged and do not cause the care operation to fail
 			return nil
 		},
 	)(ctx)
 
-	var (
-		conditions = append([]gardencorev1beta1.Condition{
-			conditionAPIServerAvailable,
-			conditionControlPlaneHealthy,
-			conditionEveryNodeReady,
-			conditionSystemComponentsHealthy,
-		}, seedConditions...)
-		constraints = []gardencorev1beta1.Condition{
-			constraintHibernationPossible,
-			constraintMaintenancePreconditionsSatisfied,
-		}
-	)
+	conditions = append(conditions, seedConditions...)
 
 	// Update Shoot status if necessary
-	if gardencorev1beta1helper.ConditionsNeedUpdate(oldConditions, conditions) ||
-		gardencorev1beta1helper.ConditionsNeedUpdate(oldConstraints, constraints) {
-		updatedShoot, err := updateShootStatus(ctx, gardenClient.GardenCore(), shoot, conditions, constraints)
+	if gardencorev1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) ||
+		gardencorev1beta1helper.ConditionsNeedUpdate(constraints, updatedConstraints) {
+		updatedShoot, err := updateShootStatus(ctx, gardenClient.GardenCore(), shoot, updatedConditions, updatedConstraints)
 		if err != nil {
-			botanist.Logger.Errorf("Could not update Shoot status: %+v", err)
+			operation.Logger.Errorf("Could not update Shoot status: %+v", err)
 			return nil // We do not want to run in the exponential backoff for the condition checks.
 		}
 		shoot = updatedShoot
@@ -382,13 +350,10 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 	kutil.SetMetaDataLabel(&shoot.ObjectMeta, common.ShootStatus, string(shootpkg.ComputeStatus(
 		shoot.Status.LastOperation,
 		shoot.Status.LastErrors,
-		conditionAPIServerAvailable,
-		conditionControlPlaneHealthy,
-		conditionEveryNodeReady,
-		conditionSystemComponentsHealthy,
+		conditions...,
 	)))
 	if err := gardenClient.Client().Patch(ctx, shoot, client.MergeFrom(oldObj)); err != nil {
-		botanist.Logger.Errorf("Could not update Shoot health label: %+v", err)
+		operation.Logger.Errorf("Could not update Shoot health label: %+v", err)
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
@@ -405,47 +370,13 @@ func updateShootStatus(ctx context.Context, g gardencore.Interface, shoot *garde
 	)
 }
 
-// garbageCollection cleans the Seed and the Shoot cluster from no longer required
-// objects. It receives a botanist object <botanist> which stores the Shoot object.
-func garbageCollection(ctx context.Context, initShootClients func() (bool, error), botanist *botanistpkg.Botanist) {
-	var (
-		qualifiedShootName = fmt.Sprintf("%s/%s", botanist.Shoot.Info.Namespace, botanist.Shoot.Info.Name)
-		wg                 sync.WaitGroup
-	)
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := botanist.PerformGarbageCollectionSeed(ctx); err != nil {
-			botanist.Logger.Errorf("Error during seed garbage collection: %+v", err)
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if apiServerRunning, err := initShootClients(); err != nil || !apiServerRunning {
-			if err != nil {
-				botanist.Logger.Errorf("Could not initialize Shoot client for garbage collection of shoot %s: %+v", qualifiedShootName, err)
-			}
-			return
-		}
-		if err := botanist.PerformGarbageCollectionShoot(ctx); err != nil {
-			botanist.Logger.Errorf("Error during shoot garbage collection: %+v", err)
-		}
-	}()
-
-	wg.Wait()
-	botanist.Logger.Debugf("Successfully performed full garbage collection for Shoot cluster %s", qualifiedShootName)
-}
-
-func retrieveSeedConditions(ctx context.Context, botanist *botanistpkg.Botanist) ([]gardencorev1beta1.Condition, error) {
-	if botanist.ShootedSeed == nil {
+func retrieveSeedConditions(ctx context.Context, operation *operation.Operation) ([]gardencorev1beta1.Condition, error) {
+	if operation.ShootedSeed == nil {
 		return nil, nil
 	}
 
 	seed := &gardencorev1beta1.Seed{}
-	if err := botanist.K8sGardenClient.Client().Get(ctx, kutil.Key(botanist.Shoot.Info.Name), seed); client.IgnoreNotFound(err) != nil {
+	if err := operation.K8sGardenClient.Client().Get(ctx, kutil.Key(operation.Shoot.Info.Name), seed); client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
 	return seed.Status.Conditions, nil

@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -38,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -1099,30 +1100,7 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 // CheckTunnelConnection checks if the tunnel connection between the control plane and the shoot networks
 // is established.
 func (b *Botanist) CheckTunnelConnection(ctx context.Context, logger *logrus.Entry, tunnelName string) (bool, error) {
-	podList := &corev1.PodList{}
-	if err := b.K8sShootClient.Client().List(ctx, podList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"app": tunnelName}); err != nil {
-		return retry.SevereError(err)
-	}
-
-	var tunnelPod *corev1.Pod
-	for _, pod := range podList.Items {
-		if pod.Status.Phase == corev1.PodRunning {
-			tunnelPod = &pod
-			break
-		}
-	}
-
-	if tunnelPod == nil {
-		logger.Infof("Waiting until a running %s pod exists in the Shoot cluster...", tunnelName)
-		return retry.MinorError(fmt.Errorf("no running %s pod found yet in the shoot cluster", tunnelName))
-	}
-	if err := b.K8sShootClient.CheckForwardPodPort(tunnelPod.Namespace, tunnelPod.Name, 0, 22); err != nil {
-		logger.Info("Waiting until the tunnel connection has been established...")
-		return retry.MinorError(fmt.Errorf("could not forward to %s pod: %v", tunnelName, err))
-	}
-
-	logger.Info("Tunnel connection has been established.")
-	return retry.Ok()
+	return health.CheckTunnelConnection(ctx, b.K8sShootClient, logger, tunnelName)
 }
 
 // RestartControlPlanePods restarts (deletes) pods of the shoot control plane.
