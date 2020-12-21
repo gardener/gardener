@@ -251,7 +251,7 @@ var _ = Describe("Predicate", func() {
 				Object: infrastructure,
 			}
 
-			cache.EXPECT().WaitForCacheSync(gomock.AssignableToTypeOf(make(<-chan struct{}))).Return(true)
+			cache.EXPECT().WaitForCacheSync(gomock.Any()).Return(true)
 		})
 
 		It("should return true because shoot has no last operation", func() {
