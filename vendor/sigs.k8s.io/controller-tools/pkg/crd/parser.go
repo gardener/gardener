@@ -18,7 +18,6 @@ package crd
 
 import (
 	"fmt"
-	"go/ast"
 
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -73,6 +72,20 @@ type Parser struct {
 	packages map[*loader.Package]struct{}
 
 	flattener *Flattener
+
+	// AllowDangerousTypes controls the handling of non-recommended types such as float. If
+	// false (the default), these types are not supported.
+	// There is a continuum here:
+	//    1. Types that are always supported.
+	//    2. Types that are allowed by default, but not recommended (warning emitted when they are encountered as per PR #443).
+	//       Possibly they are allowed by default for historical reasons and may even be "on their way out" at some point in the future.
+	//    3. Types that are not allowed by default, not recommended, but there are some legitimate reasons to need them in certain corner cases.
+	//       Possibly these types should also emit a warning as per PR #443 even when they are "switched on" (an integration point between
+	//       this feature and #443 if desired). This is the category that this flag deals with.
+	//    4. Types that are not allowed and will not be allowed, possibly because it just "doesn't make sense" or possibly
+	//       because the implementation is too difficult/clunky to promote them to category 3.
+	// TODO: Should we have a more formal mechanism for putting "type patterns" in each of the above categories?
+	AllowDangerousTypes bool
 }
 
 func (p *Parser) init() {
@@ -162,7 +175,7 @@ func (p *Parser) NeedSchemaFor(typ TypeIdent) {
 	// avoid tripping recursive schemata, like ManagedFields, by adding an empty WIP schema
 	p.Schemata[typ] = apiext.JSONSchemaProps{}
 
-	schemaCtx := newSchemaContext(typ.Package, p)
+	schemaCtx := newSchemaContext(typ.Package, p, p.AllowDangerousTypes)
 	ctxForInfo := schemaCtx.ForInfo(info)
 
 	pkgMarkers, err := markers.PackageMarkers(p.Collector, typ.Package)
@@ -202,7 +215,7 @@ func (p *Parser) AddPackage(pkg *loader.Package) {
 		return
 	}
 	p.indexTypes(pkg)
-	p.Checker.Check(pkg, filterTypesForCRDs)
+	p.Checker.Check(pkg)
 	p.packages[pkg] = struct{}{}
 }
 
@@ -221,23 +234,4 @@ func (p *Parser) NeedPackage(pkg *loader.Package) {
 		return
 	}
 	p.AddPackage(pkg)
-}
-
-// filterTypesForCRDs filters out all nodes that aren't used in CRD generation,
-// like interfaces and struct fields without JSON tag.
-func filterTypesForCRDs(node ast.Node) bool {
-	switch node := node.(type) {
-	case *ast.InterfaceType:
-		// skip interfaces, we never care about references in them
-		return false
-	case *ast.StructType:
-		return true
-	case *ast.Field:
-		_, hasTag := loader.ParseAstTag(node.Tag).Lookup("json")
-		// fields without JSON tags mean we have custom serialization,
-		// so only visit fields with tags.
-		return hasTag
-	default:
-		return true
-	}
 }

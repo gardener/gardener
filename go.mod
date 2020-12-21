@@ -19,14 +19,14 @@ require (
 	github.com/gobuffalo/packr v1.30.1
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.4.4-0.20200731163441-8734ec565a4d
-	github.com/googleapis/gnostic v0.4.1
+	github.com/googleapis/gnostic v0.5.1
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/huandu/xstrings v1.3.1
 	github.com/json-iterator/go v1.1.10
 	github.com/mholt/archiver v3.1.1+incompatible
-	github.com/onsi/ginkgo v1.14.0
-	github.com/onsi/gomega v1.10.1
+	github.com/onsi/ginkgo v1.14.1
+	github.com/onsi/gomega v1.10.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
 	github.com/robfig/cron v1.2.0
@@ -35,11 +35,11 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.1
 	github.com/texttheater/golang-levenshtein v0.0.0-20191208221605-eb6844b05fc6
-	go.uber.org/zap v1.13.0
+	go.uber.org/zap v1.15.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b
-	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
-	gomodules.xyz/jsonpatch/v2 v2.0.1
+	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
+	gomodules.xyz/jsonpatch/v2 v2.1.0
 	gopkg.in/yaml.v2 v2.3.0
 	istio.io/api v0.0.0-20201123152548-197f11e4ea09
 	istio.io/client-go v1.8.1
@@ -56,13 +56,13 @@ require (
 	k8s.io/helm v2.16.1+incompatible
 	k8s.io/klog v1.0.0
 	k8s.io/kube-aggregator v0.19.6
-	k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6 // release-1.18
+	k8s.io/kube-openapi v0.0.0-20201221124747-75e88872edcf // k8s-1.19
 	k8s.io/kube-scheduler v0.19.6
 	k8s.io/kubelet v0.19.6
 	k8s.io/metrics v0.19.6
-	k8s.io/utils v0.0.0-20200729134348-d5654de09c73
-	sigs.k8s.io/controller-runtime v0.6.3
-	sigs.k8s.io/controller-tools v0.3.0
+	k8s.io/utils v0.0.0-20200912215256-4140de9c8800
+	sigs.k8s.io/controller-runtime v0.7.0
+	sigs.k8s.io/controller-tools v0.4.1
 	sigs.k8s.io/yaml v1.2.0
 )
 
@@ -82,7 +82,5 @@ replace (
 	k8s.io/component-base => k8s.io/component-base v0.19.6
 	k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.19.6
-	k8s.io/kube-openapi => github.com/gardener/kube-openapi v0.0.0-20200831104310-b5db060350c7
-	sigs.k8s.io/controller-runtime => github.com/gardener/controller-runtime v0.6.3-gardener.1
-	sigs.k8s.io/structured-merge-diff/v3 => sigs.k8s.io/structured-merge-diff/v3 v3.0.1-0.20201124164700-f5fd4ea1e4c9
+	k8s.io/kube-openapi => github.com/gardener/kube-openapi v0.0.0-20201221124747-75e88872edcf // k8s-1.19
 )
