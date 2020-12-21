@@ -23,7 +23,6 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -34,25 +33,20 @@ var json = jsoniter.ConfigFastest
 
 // TryPatch tries to apply the given transformation function onto the given object, and to patch it afterwards with optimistic locking.
 // It retries the patch with an exponential backoff.
-func TryPatch(ctx context.Context, backoff wait.Backoff, c client.Client, obj runtime.Object, transform func() error) error {
+func TryPatch(ctx context.Context, backoff wait.Backoff, c client.Client, obj client.Object, transform func() error) error {
 	return tryPatch(ctx, backoff, c, obj, c.Patch, transform)
 }
 
 // TryPatchStatus tries to apply the given transformation function onto the given object, and to patch its
 // status afterwards with optimistic locking. It retries the status patch with an exponential backoff.
-func TryPatchStatus(ctx context.Context, backoff wait.Backoff, c client.Client, obj runtime.Object, transform func() error) error {
+func TryPatchStatus(ctx context.Context, backoff wait.Backoff, c client.Client, obj client.Object, transform func() error) error {
 	return tryPatch(ctx, backoff, c, obj, c.Status().Patch, transform)
 }
 
-func tryPatch(ctx context.Context, backoff wait.Backoff, c client.Client, obj runtime.Object, patchFunc func(context.Context, runtime.Object, client.Patch, ...client.PatchOption) error, transform func() error) error {
-	key, err := client.ObjectKeyFromObject(obj)
-	if err != nil {
-		return err
-	}
-
+func tryPatch(ctx context.Context, backoff wait.Backoff, c client.Client, obj client.Object, patchFunc func(context.Context, client.Object, client.Patch, ...client.PatchOption) error, transform func() error) error {
 	resetCopy := obj.DeepCopyObject()
 	return exponentialBackoff(ctx, backoff, func() (bool, error) {
-		if err := c.Get(ctx, key, obj); err != nil {
+		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 			return false, err
 		}
 		beforeTransform := obj.DeepCopyObject()
@@ -120,6 +114,6 @@ func IsEmptyPatch(patch []byte) bool {
 }
 
 // SubmitEmptyPatch submits an empty patch to the given `obj` with the given `client` instance.
-func SubmitEmptyPatch(ctx context.Context, c client.Client, obj runtime.Object) error {
+func SubmitEmptyPatch(ctx context.Context, c client.Client, obj client.Object) error {
 	return c.Patch(ctx, obj, client.RawPatch(types.StrategicMergePatchType, []byte("{}")))
 }

@@ -174,12 +174,10 @@ var _ = Describe("Utils", func() {
 				},
 			}
 			ctx := context.TODO()
-			key, err := client.ObjectKeyFromObject(worker)
-			Expect(err).NotTo(HaveOccurred())
 
 			gomock.InOrder(
 				c.EXPECT().
-					Get(ctx, key, worker).
+					Get(ctx, client.ObjectKeyFromObject(worker), worker).
 					DoAndReturn(func(_ context.Context, _ client.ObjectKey, worker *extensionsv1alpha1.Worker) error {
 						if len(worker.Finalizers) < 1 {
 							return fmt.Errorf("Worker %s has no finalizers", worker.Name)

@@ -221,7 +221,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 		ctx,
 		a.seedClient.DirectClient(),
 		a.logger,
-		func() runtime.Object { return &extensionsv1alpha1.BackupBucket{} },
+		func() client.Object { return &extensionsv1alpha1.BackupBucket{} },
 		extensionsv1alpha1.BackupBucketResource,
 		"",
 		a.backupBucket.Name,

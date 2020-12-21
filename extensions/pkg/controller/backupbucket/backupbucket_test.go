@@ -115,7 +115,7 @@ func createAndStartManager(ignoreOperationAnnotation bool) error {
 
 	go func() {
 		defer GinkgoRecover()
-		if err := mgr.Start(mgrContext.Done()); err != nil {
+		if err := mgr.Start(mgrContext); err != nil {
 			Expect(err).NotTo(HaveOccurred())
 		}
 	}()
@@ -384,7 +384,7 @@ func waitForBackupBucketToBeReady(ctx context.Context, c client.Client, logger *
 		c,
 		logger,
 		health.And(healthFuncs...),
-		func() runtime.Object { return &extensionsv1alpha1.BackupBucket{} },
+		func() client.Object { return &extensionsv1alpha1.BackupBucket{} },
 		extensionsv1alpha1.BackupBucketResource,
 		backupBucket.Namespace,
 		backupBucket.Name,

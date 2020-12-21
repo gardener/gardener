@@ -101,7 +101,7 @@ var _ = Describe("extensions", func() {
 		It("should return error if extension CR does not exist", func() {
 			err := WaitUntilExtensionCRReady(
 				ctx, c, log,
-				func() runtime.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
+				func() client.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
 				namespace, name,
 				defaultInterval, defaultTimeout, defaultTimeout, nil,
 			)
@@ -116,7 +116,7 @@ var _ = Describe("extensions", func() {
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
 			err := WaitUntilExtensionCRReady(
 				ctx, c, log,
-				func() runtime.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
+				func() client.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
 				namespace, name,
 				defaultInterval, defaultThreshold, defaultTimeout, nil,
 			)
@@ -131,7 +131,7 @@ var _ = Describe("extensions", func() {
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
 			err := WaitUntilExtensionCRReady(
 				ctx, c, log,
-				func() runtime.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
+				func() client.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
 				namespace, name,
 				defaultInterval, defaultThreshold, defaultTimeout, nil,
 			)
@@ -148,7 +148,7 @@ var _ = Describe("extensions", func() {
 			val := 0
 			err := WaitUntilExtensionCRReady(
 				ctx, c, log,
-				func() runtime.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
+				func() client.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
 				namespace, name,
 				defaultInterval, defaultThreshold, defaultTimeout, func(runtime.Object) error {
 					val++
@@ -167,7 +167,7 @@ var _ = Describe("extensions", func() {
 				func(obj runtime.Object) error {
 					return nil
 				},
-				func() runtime.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
+				func() client.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
 				namespace, name,
 				defaultInterval, defaultThreshold, defaultTimeout,
 				nil,
@@ -182,7 +182,7 @@ var _ = Describe("extensions", func() {
 				func(obj runtime.Object) error {
 					return errors.New("error")
 				},
-				func() runtime.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
+				func() client.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
 				namespace, name,
 				defaultInterval, defaultThreshold, defaultTimeout,
 				nil,
@@ -197,7 +197,7 @@ var _ = Describe("extensions", func() {
 				func(obj runtime.Object) error {
 					return nil
 				},
-				func() runtime.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
+				func() client.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
 				namespace, name,
 				defaultInterval, defaultThreshold, defaultTimeout,
 				nil,
@@ -213,7 +213,7 @@ var _ = Describe("extensions", func() {
 					Expect(obj).To(Equal(expected))
 					return nil
 				},
-				func() runtime.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
+				func() client.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
 				namespace, name,
 				defaultInterval, defaultThreshold, defaultTimeout,
 				nil,
@@ -234,7 +234,7 @@ var _ = Describe("extensions", func() {
 				func(obj runtime.Object) error {
 					return nil
 				},
-				func() runtime.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
+				func() client.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
 				namespace, name,
 				defaultInterval, defaultThreshold, defaultTimeout, func(runtime.Object) error {
 					val++

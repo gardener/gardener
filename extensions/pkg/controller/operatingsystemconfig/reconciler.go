@@ -120,7 +120,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 func (r *reconciler) reconcile(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, osc); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, osc, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -150,7 +150,7 @@ func (r *reconciler) reconcile(ctx context.Context, osc *extensionsv1alpha1.Oper
 }
 
 func (r *reconciler) restore(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, osc); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, osc, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -207,7 +207,7 @@ func (r *reconciler) delete(ctx context.Context, osc *extensionsv1alpha1.Operati
 	}
 
 	r.logger.Info("Removing finalizer.", "osc", osc.Name)
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, osc); err != nil {
+	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, osc, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from OperationSystemConfig: %+v", err)
 	}
 

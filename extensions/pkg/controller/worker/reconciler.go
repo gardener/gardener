@@ -137,7 +137,7 @@ func (r *reconciler) updateStatusSuccess(logger logr.Logger, worker *extensionsv
 
 func (r *reconciler) removeFinalizerFromWorker(logger logr.Logger, worker *extensionsv1alpha1.Worker) error {
 	logger.Info("Removing finalizer")
-	if err := extensionscontroller.DeleteFinalizer(r.ctx, r.client, FinalizerName, worker); err != nil {
+	if err := extensionscontroller.DeleteFinalizer(r.ctx, r.client, worker, FinalizerName); err != nil {
 		return fmt.Errorf("error removing finalizer from Worker: %+v", err)
 	}
 	return nil
@@ -203,7 +203,7 @@ func (r *reconciler) delete(logger logr.Logger, worker *extensionsv1alpha1.Worke
 
 func (r *reconciler) reconcile(logger logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
 	logger.Info("Ensuring finalizer")
-	if err := controller.EnsureFinalizer(r.ctx, r.client, FinalizerName, worker); err != nil {
+	if err := controller.EnsureFinalizer(r.ctx, r.client, worker, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 	if err := r.updateStatusProcessing(logger, worker, operationType, "Reconciling the worker"); err != nil {

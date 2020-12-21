@@ -32,62 +32,47 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type objectsRemaining []runtime.Object
-
-var unknownKey = client.ObjectKey{Namespace: "<unknown>", Name: "<unknown>"}
+type objectsRemaining []client.Object
 
 // Error implements error.
-func (n *objectsRemaining) Error() string {
-	out := make([]string, 0, len(*n))
-	for _, obj := range *n {
-		key, err := client.ObjectKeyFromObject(obj)
-		if err != nil {
-			key = unknownKey
-		}
-
+func (n objectsRemaining) Error() string {
+	out := make([]string, 0, len(n))
+	for _, obj := range n {
 		var typeID string
 		gvk := obj.GetObjectKind().GroupVersionKind()
 		if gvk.Empty() {
-			typeID = fmt.Sprintf("%T", (*n)[0])
+			typeID = fmt.Sprintf("%T", n[0])
 		} else {
 			typeID = gvk.String()
 		}
 
-		out = append(out, fmt.Sprintf("%s %s", typeID, key.String()))
+		out = append(out, fmt.Sprintf("%s %s", typeID, client.ObjectKeyFromObject(obj).String()))
 	}
 	return fmt.Sprintf("remaining objects are still present: %v", out)
 }
 
 // AreObjectsRemaining checks whether the given error is an 'objects remaining error'.
 func AreObjectsRemaining(err error) bool {
-	_, ok := err.(*objectsRemaining)
+	_, ok := err.(objectsRemaining)
 	return ok
 }
 
 // NewObjectsRemaining returns a new error with the remaining objects.
-func NewObjectsRemaining(remaining runtime.Object) error {
-	if meta.IsListType(remaining) {
-		items, _ := meta.ExtractList(remaining)
-		err := objectsRemaining(items)
-		return &err
+func NewObjectsRemaining(obj runtime.Object) error {
+	switch remaining := obj.(type) {
+	case client.ObjectList:
+		r := make(objectsRemaining, 0, meta.LenList(remaining))
+		if err := meta.EachListItem(remaining, func(obj runtime.Object) error {
+			r = append(r, obj.(client.Object))
+			return nil
+		}); err != nil {
+			return err
+		}
+		return r
+	case client.Object:
+		return objectsRemaining{remaining.(client.Object)}
 	}
-
-	err := objectsRemaining{remaining}
-	return &err
-}
-
-// RemainingObjects retrieves the remaining objects of an `AreObjectsRemaining` error.
-//
-// If the error does not match `AreObjectsRemaining`, this returns nil.
-func RemainingObjects(err error) []runtime.Object {
-	if nEmpty, ok := err.(*objectsRemaining); ok {
-		return *nEmpty
-	}
-	return nil
-}
-
-func delete(ctx context.Context, c client.Client, obj runtime.Object, opts ...client.DeleteOption) error {
-	return c.Delete(ctx, obj, opts...)
+	return fmt.Errorf("type %T does neither implement client.Object nor client.ObjectList", obj)
 }
 
 type finalizer struct{}
@@ -100,25 +85,15 @@ func NewFinalizer() Finalizer {
 var defaultFinalizer = NewFinalizer()
 
 // Finalize removes the finalizers (.meta.finalizers) of given resource.
-func (f *finalizer) Finalize(ctx context.Context, c client.Client, obj runtime.Object) error {
-	acc, err := meta.Accessor(obj)
-	if err != nil {
-		return err
-	}
-
+func (f *finalizer) Finalize(ctx context.Context, c client.Client, obj client.Object) error {
 	withFinalizers := obj.DeepCopyObject()
-	acc.SetFinalizers(nil)
+	obj.SetFinalizers(nil)
 	return c.Patch(ctx, obj, client.MergeFrom(withFinalizers))
 }
 
 // HasFinalizers checks whether the given resource has finalizers (.meta.finalizers).
-func (f *finalizer) HasFinalizers(obj runtime.Object) (bool, error) {
-	acc, err := meta.Accessor(obj)
-	if err != nil {
-		return false, err
-	}
-
-	return len(acc.GetFinalizers()) > 0, nil
+func (f *finalizer) HasFinalizers(obj client.Object) (bool, error) {
+	return len(obj.GetFinalizers()) > 0, nil
 }
 
 type crdFinalizer struct {
@@ -134,7 +109,7 @@ func NewCRDFinalizer() Finalizer {
 // For Kubernetes < v1.15 it is required to file a DELETE request after
 // patching .meta.finalizers of the CustomResourceDefinition.
 // Ref: https://github.com/kubernetes/kubernetes/issues/84354
-func (f *crdFinalizer) Finalize(ctx context.Context, c client.Client, obj runtime.Object) error {
+func (f *crdFinalizer) Finalize(ctx context.Context, c client.Client, obj client.Object) error {
 	if err := f.finalizer.Finalize(ctx, c, obj); err != nil {
 		return err
 	}
@@ -154,7 +129,7 @@ func NewNamespaceFinalizer(namespaceInterface typedcorev1.NamespaceInterface) Fi
 // Finalize removes the finalizers of given namespace resource.
 // Because of legacy reasons namespaces have both .meta.finalizers and .spec.finalizers.
 // Both of them are removed. An error is returned when the given resource is not a namespace.
-func (f *namespaceFinalizer) Finalize(ctx context.Context, c client.Client, obj runtime.Object) error {
+func (f *namespaceFinalizer) Finalize(ctx context.Context, c client.Client, obj client.Object) error {
 	namespace, ok := obj.(*corev1.Namespace)
 	if !ok {
 		return errors.New("corev1.Namespace is expected")
@@ -171,7 +146,7 @@ func (f *namespaceFinalizer) Finalize(ctx context.Context, c client.Client, obj 
 
 // HasFinalizers checks whether the given namespace has finalizers
 // (.meta.finalizers and .spec.finalizers).
-func (f *namespaceFinalizer) HasFinalizers(obj runtime.Object) (bool, error) {
+func (f *namespaceFinalizer) HasFinalizers(obj client.Object) (bool, error) {
 	namespace, ok := obj.(*corev1.Namespace)
 	if !ok {
 		return false, errors.New("corev1.Namespace expected")
@@ -208,41 +183,39 @@ func NewNamespaceCleaner(namespaceInterface typedcorev1.NamespaceInterface) Clea
 }
 
 // Clean deletes and optionally finalizes resources that expired their termination date.
-func (o *cleaner) Clean(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOption) error {
+func (cl *cleaner) Clean(ctx context.Context, c client.Client, obj runtime.Object, opts ...CleanOption) error {
 	cleanOptions := &CleanOptions{}
 	cleanOptions.ApplyOptions(opts)
 
-	if meta.IsListType(obj) {
-		return o.cleanCollection(ctx, c, obj, cleanOptions)
+	switch o := obj.(type) {
+	case client.ObjectList:
+		return cl.cleanCollection(ctx, c, o, cleanOptions)
+	case client.Object:
+		return cl.clean(ctx, c, o, cleanOptions)
 	}
-	return o.clean(ctx, c, obj, cleanOptions)
+	return fmt.Errorf("type %T does neither implement client.Object nor client.ObjectList", obj)
 }
 
-func (o *cleaner) doClean(ctx context.Context, c client.Client, obj runtime.Object, cleanOptions *CleanOptions) error {
-	acc, err := meta.Accessor(obj)
-	if err != nil {
-		return err
-	}
-
+func (cl *cleaner) doClean(ctx context.Context, c client.Client, obj client.Object, cleanOptions *CleanOptions) error {
 	gracePeriod := time.Second
-	if cleanOptions != nil && cleanOptions.FinalizeGracePeriodSeconds != nil {
+	if cleanOptions.FinalizeGracePeriodSeconds != nil {
 		gracePeriod *= time.Duration(*cleanOptions.FinalizeGracePeriodSeconds)
 	}
 
-	if !acc.GetDeletionTimestamp().IsZero() && acc.GetDeletionTimestamp().Time.Add(gracePeriod).Before(o.time.Now()) {
-		hasFinalizers, err := o.finalizer.HasFinalizers(obj)
+	if !obj.GetDeletionTimestamp().IsZero() && obj.GetDeletionTimestamp().Time.Add(gracePeriod).Before(cl.time.Now()) {
+		hasFinalizers, err := cl.finalizer.HasFinalizers(obj)
 		if err != nil {
 			return err
 		}
 
 		if hasFinalizers {
-			return o.finalizer.Finalize(ctx, c, obj)
+			return cl.finalizer.Finalize(ctx, c, obj)
 		}
 	}
 
 	// Ref: https://github.com/kubernetes/kubernetes/issues/83771
-	if acc.GetDeletionTimestamp().IsZero() {
-		if err := delete(ctx, c, obj, cleanOptions.DeleteOptions...); err != nil {
+	if obj.GetDeletionTimestamp().IsZero() {
+		if err := c.Delete(ctx, obj, cleanOptions.DeleteOptions...); err != nil {
 			for _, tolerate := range cleanOptions.ErrorToleration {
 				if tolerate(err) {
 					return nil
@@ -280,28 +253,20 @@ type beforeGoneEnsurer struct {
 // EnsureGoneBefore ensures that no given object or objects in the list exist before the given time.
 func (b *beforeGoneEnsurer) EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...client.ListOption) error {
 	if err := EnsureGone(ctx, c, obj, opts...); err != nil {
-		if _, ok := err.(*objectsRemaining); !ok {
+		remainingObjs, ok := err.(objectsRemaining)
+		if !ok {
 			return err
 		}
-		var (
-			relevants  []runtime.Object
-			remainings = err.(*objectsRemaining)
-		)
 
-		for _, remaining := range *remainings {
-			accessor, err := meta.Accessor(remaining)
-			if err != nil {
-				return err
-			}
-
-			if accessor.GetCreationTimestamp().Time.Before(b.time) {
+		var relevants []client.Object
+		for _, remaining := range remainingObjs {
+			if remaining.GetCreationTimestamp().Time.Before(b.time) {
 				relevants = append(relevants, remaining)
 			}
 		}
 
 		if len(relevants) > 0 {
-			err := objectsRemaining(relevants)
-			return &err
+			return objectsRemaining(relevants)
 		}
 	}
 	return nil
@@ -309,19 +274,17 @@ func (b *beforeGoneEnsurer) EnsureGone(ctx context.Context, c client.Client, obj
 
 // EnsureGone ensures that the given object or list is gone.
 func EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...client.ListOption) error {
-	if meta.IsListType(obj) {
-		return ensureCollectionGone(ctx, c, obj, opts...)
+	switch o := obj.(type) {
+	case client.ObjectList:
+		return ensureCollectionGone(ctx, c, o, opts...)
+	case client.Object:
+		return ensureGone(ctx, c, o)
 	}
-	return ensureGone(ctx, c, obj)
+	return fmt.Errorf("type %T does neither implement client.Object nor client.ObjectList", obj)
 }
 
-func ensureGone(ctx context.Context, c client.Client, obj runtime.Object) error {
-	key, err := client.ObjectKeyFromObject(obj)
-	if err != nil {
-		return err
-	}
-
-	if err := c.Get(ctx, key, obj); err != nil {
+func ensureGone(ctx context.Context, c client.Client, obj client.Object) error {
+	if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
@@ -330,7 +293,7 @@ func ensureGone(ctx context.Context, c client.Client, obj runtime.Object) error 
 	return NewObjectsRemaining(obj)
 }
 
-func ensureCollectionGone(ctx context.Context, c client.Client, list runtime.Object, opts ...client.ListOption) error {
+func ensureCollectionGone(ctx context.Context, c client.Client, list client.ObjectList, opts ...client.ListOption) error {
 	if err := c.List(ctx, list, opts...); err != nil {
 		return err
 	}
@@ -341,23 +304,18 @@ func ensureCollectionGone(ctx context.Context, c client.Client, list runtime.Obj
 	return nil
 }
 
-func (o *cleaner) clean(ctx context.Context, c client.Client, obj runtime.Object, cleanOptions *CleanOptions) error {
-	key, err := client.ObjectKeyFromObject(obj)
-	if err != nil {
+func (cl *cleaner) clean(ctx context.Context, c client.Client, obj client.Object, cleanOptions *CleanOptions) error {
+	if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 		return err
 	}
 
-	if err := c.Get(ctx, key, obj); err != nil {
-		return err
-	}
-
-	return o.doClean(ctx, c, obj, cleanOptions)
+	return cl.doClean(ctx, c, obj, cleanOptions)
 }
 
-func (o *cleaner) cleanCollection(
+func (cl *cleaner) cleanCollection(
 	ctx context.Context,
 	c client.Client,
-	list runtime.Object,
+	list client.ObjectList,
 	cleanOptions *CleanOptions,
 ) error {
 	if err := c.List(ctx, list, cleanOptions.ListOptions...); err != nil {
@@ -367,7 +325,7 @@ func (o *cleaner) cleanCollection(
 	tasks := make([]flow.TaskFn, 0, meta.LenList(list))
 	if err := meta.EachListItem(list, func(obj runtime.Object) error {
 		tasks = append(tasks, func(ctx context.Context) error {
-			return client.IgnoreNotFound(o.doClean(ctx, c, obj, cleanOptions))
+			return client.IgnoreNotFound(cl.doClean(ctx, c, obj.(client.Object), cleanOptions))
 		})
 		return nil
 	}); err != nil {

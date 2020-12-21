@@ -18,21 +18,16 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ObjectName returns the name of the given object in the format <namespace>/<name>
-func ObjectName(obj runtime.Object) string {
-	k, err := client.ObjectKeyFromObject(obj)
-	if err != nil {
-		return "/"
-	}
-	return k.String()
+func ObjectName(obj client.Object) string {
+	return client.ObjectKeyFromObject(obj).String()
 }
 
 // DeleteObjects deletes a list of Kubernetes objects.
-func DeleteObjects(ctx context.Context, c client.Client, objects ...runtime.Object) error {
+func DeleteObjects(ctx context.Context, c client.Client, objects ...client.Object) error {
 	for _, obj := range objects {
 		if err := DeleteObject(ctx, c, obj); err != nil {
 			return err
@@ -42,7 +37,7 @@ func DeleteObjects(ctx context.Context, c client.Client, objects ...runtime.Obje
 }
 
 // DeleteObject deletes a Kubernetes object. It ignores 'not found' and 'no match' errors.
-func DeleteObject(ctx context.Context, c client.Client, object runtime.Object) error {
+func DeleteObject(ctx context.Context, c client.Client, object client.Object) error {
 	if err := c.Delete(ctx, object); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
 		return err
 	}

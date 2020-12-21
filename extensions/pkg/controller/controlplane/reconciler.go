@@ -123,7 +123,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 func (r *reconciler) reconcile(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, cp); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, cp, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -154,7 +154,7 @@ func (r *reconciler) reconcile(ctx context.Context, cp *extensionsv1alpha1.Contr
 }
 
 func (r *reconciler) restore(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, cp); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, cp, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -260,7 +260,7 @@ func (r *reconciler) delete(ctx context.Context, cp *extensionsv1alpha1.ControlP
 	}
 
 	r.logger.Info("Removing finalizer.", "controlplane", cp.Name)
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, cp); err != nil {
+	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, cp, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from ControlPlane: %+v", err)
 	}
 

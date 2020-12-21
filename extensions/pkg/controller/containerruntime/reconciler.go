@@ -126,7 +126,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 func (r *reconciler) reconcile(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, cr); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, cr, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -146,7 +146,7 @@ func (r *reconciler) reconcile(ctx context.Context, cr *extensionsv1alpha1.Conta
 }
 
 func (r *reconciler) restore(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, cr); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, cr, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -196,7 +196,7 @@ func (r *reconciler) delete(ctx context.Context, cr *extensionsv1alpha1.Containe
 	}
 
 	r.logger.Info("Removing finalizer.", "containerruntime", cr.Name)
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, cr); err != nil {
+	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, cr, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from the container runtime resource: %+v", err)
 	}
 

@@ -124,7 +124,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 func (r *reconciler) reconcile(logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
 	logger.Info("Ensuring finalizer")
-	if err := extensionscontroller.EnsureFinalizer(r.ctx, r.client, FinalizerName, infrastructure); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(r.ctx, r.client, infrastructure, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -199,7 +199,7 @@ func (r *reconciler) migrate(logger logr.Logger, infrastructure *extensionsv1alp
 
 func (r *reconciler) restore(logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
 	logger.Info("Ensuring finalizer")
-	if err := extensionscontroller.EnsureFinalizer(r.ctx, r.client, FinalizerName, infrastructure); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(r.ctx, r.client, infrastructure, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -251,7 +251,7 @@ func (r *reconciler) updateStatusSuccess(logger logr.Logger, infrastructure *ext
 
 func (r *reconciler) removeFinalizerFromInfrastructure(logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure) error {
 	logger.Info("Removing finalizer")
-	if err := extensionscontroller.DeleteFinalizer(r.ctx, r.client, FinalizerName, infrastructure); err != nil {
+	if err := extensionscontroller.DeleteFinalizer(r.ctx, r.client, infrastructure, FinalizerName); err != nil {
 		msg := fmt.Sprintf("error removing finalizer from Infrastructure: %+v", err)
 		r.recorder.Eventf(infrastructure, corev1.EventTypeWarning, EventInfrastructureMigration, msg)
 		return fmt.Errorf(msg)

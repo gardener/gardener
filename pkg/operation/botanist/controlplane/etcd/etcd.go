@@ -525,7 +525,7 @@ func (e *etcd) getExistingStatefulSet(ctx context.Context, name string) (*appsv1
 	return nil, found, err
 }
 
-func (e *etcd) getExistingResource(ctx context.Context, name string, obj runtime.Object) (runtime.Object, bool, error) {
+func (e *etcd) getExistingResource(ctx context.Context, name string, obj client.Object) (runtime.Object, bool, error) {
 	if err := e.client.Get(ctx, kutil.Key(e.namespace, name), obj); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return nil, false, err

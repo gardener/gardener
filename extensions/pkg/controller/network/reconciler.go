@@ -121,7 +121,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 func (r *reconciler) reconcile(ctx context.Context, network *extensionsv1alpha1.Network, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, network); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, network, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -142,7 +142,7 @@ func (r *reconciler) reconcile(ctx context.Context, network *extensionsv1alpha1.
 }
 
 func (r *reconciler) restore(ctx context.Context, network *extensionsv1alpha1.Network, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, network); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, network, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -195,7 +195,7 @@ func (r *reconciler) delete(ctx context.Context, network *extensionsv1alpha1.Net
 	}
 
 	r.logger.Info("Removing finalizer.", "network", network.Name)
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, network); err != nil {
+	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, network, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from the Network resource: %+v", err)
 	}
 

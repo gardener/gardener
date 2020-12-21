@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
@@ -33,7 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 )
@@ -79,29 +80,17 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 
 	framework.CBeforeEach(func(ctx context.Context) {
 		checkRequiredResources(ctx, f.SeedClient)
-		//Get the Fluent-Bit DaemonSet from the seed
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBit))
-		//Get the Fluent-Bit ConfigMap from the seed
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitConfigMapName}, fluentBitConfMap))
-		//Get the Fluent-Bit Service from the seed
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBitService))
-		//Get the Fluent-Bit ClusterRole from the seed
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitClusterRoleName}, fluentBitClusterRole))
-		//Get the Fluent-Bit Rolebinding from the seed
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitClusterRoleName}, fluentBitClusterRoleBinding))
-		//Get the Fluent-Bit ServiceAccount from the seed
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBitServiceAccount))
-		//Get the Fluent-Bit PriorityClass from the seed
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBitPriorityClass))
-		//Get the cluster CRD from the seed
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: "", Name: "clusters.extensions.gardener.cloud"}, clusterCRD))
-		//Get the Loki StS from the seed
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, lokiSts))
-		//Get the Loki ServiceAccount from the seed
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, lokiServiceAccount))
-		//Get the Loki Service from the seed
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, lokiService))
-		//Get the Loki ConfigMap from the seed
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiConfigMapName}, lokiConfMap))
 	}, initializationTimeout)
 
@@ -200,9 +189,9 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			framework.ExpectNoError(f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.LoggerAppName, loggerParams))
 		}
 
-		loggerLabels := labels.SelectorFromSet(labels.Set(map[string]string{
+		loggerLabels := labels.SelectorFromSet(map[string]string{
 			"app": "logger",
-		}))
+		})
 		for i := 0; i < numberOfSimulatedClusters; i++ {
 			shootNamespace := fmt.Sprintf("%s%v", simulatesShootNamespacePrefix, i)
 			ginkgo.By(fmt.Sprintf("Wait until logger application is ready in namespace %s", shootNamespace))
@@ -234,7 +223,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		}
 
 		ginkgo.By("Cleaning up garden namespace")
-		objectsToDelete := []runtime.Object{
+		objectsToDelete := []client.Object{
 			fluentBit,
 			fluentBitConfMap,
 			fluentBitService,

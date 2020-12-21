@@ -95,7 +95,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, bb); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, bb, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on backup bucket: %+v", err)
 	}
 
@@ -108,7 +108,7 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, secret); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, secret, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on bucket secret: %+v", err)
 	}
 
@@ -165,12 +165,12 @@ func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBu
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, secret); err != nil {
+	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, secret, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to remove finalizer on bucket secret: %+v", err)
 	}
 
 	r.logger.Info("Removing finalizer.", "backupbucket", bb.Name)
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, bb); err != nil {
+	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, bb, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from backupbucket: %+v", err)
 	}
 

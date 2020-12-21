@@ -21,6 +21,13 @@ import (
 	"sync"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -31,12 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
-
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 var operatingSystemConfigChartPath = filepath.Join(common.ChartPath, "seed-operatingsystemconfig")
@@ -415,7 +416,7 @@ func (b *Botanist) applyAndWaitForShootOperatingSystemConfig(ctx context.Context
 		ctx,
 		b.K8sSeedClient.DirectClient(),
 		b.Logger,
-		func() runtime.Object { return &extensionsv1alpha1.OperatingSystemConfig{} },
+		func() client.Object { return &extensionsv1alpha1.OperatingSystemConfig{} },
 		"OperatingSystemConfig",
 		b.Shoot.SeedNamespace,
 		name,
