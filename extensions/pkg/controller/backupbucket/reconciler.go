@@ -18,12 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -34,6 +28,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 const (
@@ -47,7 +46,6 @@ type reconciler struct {
 	logger   logr.Logger
 	actuator Actuator
 
-	ctx      context.Context
 	client   client.Client
 	recorder record.EventRecorder
 }
@@ -73,14 +71,9 @@ func (r *reconciler) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (r *reconciler) InjectStopChannel(stopCh <-chan struct{}) error {
-	r.ctx = contextutil.FromStopChannel(stopCh)
-	return nil
-}
-
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	bb := &extensionsv1alpha1.BackupBucket{}
-	if err := r.client.Get(r.ctx, request.NamespacedName, bb); err != nil {
+	if err := r.client.Get(ctx, request.NamespacedName, bb); err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
@@ -88,10 +81,10 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	if bb.DeletionTimestamp != nil {
-		return r.delete(r.ctx, bb)
+		return r.delete(ctx, bb)
 	}
 
-	return r.reconcile(r.ctx, bb)
+	return r.reconcile(ctx, bb)
 }
 
 func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) (reconcile.Result, error) {
@@ -147,7 +140,7 @@ func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBu
 
 	r.logger.Info("Starting the deletion of backupbucket", "backupbucket", bb.Name)
 	r.recorder.Event(bb, corev1.EventTypeNormal, EventBackupBucketDeletion, "Deleting the backupbucket")
-	if err := r.actuator.Delete(r.ctx, bb); err != nil {
+	if err := r.actuator.Delete(ctx, bb); err != nil {
 		msg := "Error deleting backupbucket"
 		r.recorder.Eventf(bb, corev1.EventTypeWarning, EventBackupBucketDeletion, "%s: %+v", msg, err)
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), bb, operationType, msg)

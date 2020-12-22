@@ -38,7 +38,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -663,7 +662,7 @@ func needsControlPlaneDeployment(ctx context.Context, o *operation.Operation, ku
 	return false, nil
 }
 
-func extensionResourceStillExists(ctx context.Context, c client.Client, obj runtime.Object, namespace, name string) (bool, error) {
+func extensionResourceStillExists(ctx context.Context, c client.Client, obj client.Object, namespace, name string) (bool, error) {
 	if err := c.Get(ctx, kutil.Key(namespace, name), obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil

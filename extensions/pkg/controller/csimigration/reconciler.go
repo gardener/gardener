@@ -23,7 +23,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/version"
 
@@ -45,7 +44,6 @@ const RequeueAfter = time.Minute
 type reconciler struct {
 	logger logr.Logger
 
-	ctx     context.Context
 	client  client.Client
 	decoder runtime.Decoder
 
@@ -74,14 +72,9 @@ func (r *reconciler) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (r *reconciler) InjectStopChannel(stopCh <-chan struct{}) error {
-	r.ctx = contextutil.FromStopChannel(stopCh)
-	return nil
-}
-
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	cluster := &extensionsv1alpha1.Cluster{}
-	if err := r.client.Get(r.ctx, request.NamespacedName, cluster); err != nil {
+	if err := r.client.Get(ctx, request.NamespacedName, cluster); err != nil {
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
@@ -104,7 +97,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	r.logger.Info("CSI migration controller got called with cluster", "name", cluster.Name)
 
-	return r.reconcile(r.ctx, cluster, shoot)
+	return r.reconcile(ctx, cluster, shoot)
 }
 
 // NewClientForShoot is a function to create a new client for shoots.

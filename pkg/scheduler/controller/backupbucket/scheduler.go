@@ -58,7 +58,7 @@ func NewGardenerScheduler(ctx context.Context, k8sGardenClient kubernetes.Interf
 	)
 
 	schedulerController := &SchedulerController{
-		reconciler:        newReconciler(ctx, k8sGardenClient.Client(), recorder),
+		reconciler:        newReconciler(k8sGardenClient.Client(), recorder),
 		config:            config,
 		recorder:          recorder,
 		backupBucketQueue: backupBuckerQueue,

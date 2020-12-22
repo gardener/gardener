@@ -21,7 +21,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
@@ -51,7 +50,6 @@ type stateReconciler struct {
 	actuator StateActuator
 	recorder record.EventRecorder
 
-	ctx    context.Context
 	client client.Client
 }
 
@@ -74,14 +72,9 @@ func (r *stateReconciler) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (r *stateReconciler) InjectStopChannel(stopCh <-chan struct{}) error {
-	r.ctx = contextutil.FromStopChannel(stopCh)
-	return nil
-}
-
-func (r *stateReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *stateReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	worker := &extensionsv1alpha1.Worker{}
-	if err := r.client.Get(r.ctx, request.NamespacedName, worker); err != nil {
+	if err := r.client.Get(ctx, request.NamespacedName, worker); err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
@@ -92,7 +85,7 @@ func (r *stateReconciler) Reconcile(request reconcile.Request) (reconcile.Result
 
 	// Deletion flow
 	if worker.DeletionTimestamp != nil {
-		//Nothing to do
+		// Nothing to do
 		return reconcile.Result{}, nil
 	}
 
@@ -101,13 +94,13 @@ func (r *stateReconciler) Reconcile(request reconcile.Request) (reconcile.Result
 	if operationType != gardencorev1beta1.LastOperationTypeReconcile {
 		return reconcile.Result{Requeue: true}, nil
 	} else if isWorkerMigrated(worker) {
-		//Nothing to do
+		// Nothing to do
 		return reconcile.Result{}, nil
 	}
 
 	r.recorder.Event(worker, corev1.EventTypeNormal, StartToSyncState, "Updating the worker state")
 
-	if err := r.actuator.Reconcile(r.ctx, worker); err != nil {
+	if err := r.actuator.Reconcile(ctx, worker); err != nil {
 		msg := "Error updating worker state"
 		logger.Error(err, msg)
 		r.recorder.Event(worker, corev1.EventTypeWarning, ErrorStateSync, msg)

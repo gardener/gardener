@@ -18,13 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -36,6 +29,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 const (
@@ -55,7 +54,6 @@ type reconciler struct {
 	logger   logr.Logger
 	actuator Actuator
 
-	ctx      context.Context
 	client   client.Client
 	recorder record.EventRecorder
 }
@@ -84,23 +82,17 @@ func (r *reconciler) InjectClient(client client.Client) error {
 	return nil
 }
 
-// InjectStopChannel is an implementation for getting the respective stop channel managed by the controller-runtime.
-func (r *reconciler) InjectStopChannel(stopCh <-chan struct{}) error {
-	r.ctx = contextutil.FromStopChannel(stopCh)
-	return nil
-}
-
 // Reconcile is the reconciler function that gets executed in case there are new events for `ContainerRuntime` resources.
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	cr := &extensionsv1alpha1.ContainerRuntime{}
-	if err := r.client.Get(r.ctx, request.NamespacedName, cr); err != nil {
+	if err := r.client.Get(ctx, request.NamespacedName, cr); err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
 	}
 
-	cluster, err := extensionscontroller.GetCluster(r.ctx, r.client, cr.Namespace)
+	cluster, err := extensionscontroller.GetCluster(ctx, r.client, cr.Namespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -115,13 +107,13 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	case extensionscontroller.IsMigrated(cr):
 		return reconcile.Result{}, nil
 	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
-		return r.migrate(r.ctx, cr, cluster)
+		return r.migrate(ctx, cr, cluster)
 	case cr.DeletionTimestamp != nil:
-		return r.delete(r.ctx, cr, cluster)
+		return r.delete(ctx, cr, cluster)
 	case cr.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
-		return r.restore(r.ctx, cr, cluster)
+		return r.restore(ctx, cr, cluster)
 	default:
-		return r.reconcile(r.ctx, cr, cluster, operationType)
+		return r.reconcile(ctx, cr, cluster, operationType)
 	}
 }
 
@@ -186,7 +178,7 @@ func (r *reconciler) delete(ctx context.Context, cr *extensionsv1alpha1.Containe
 		return reconcile.Result{}, err
 	}
 
-	if err := r.actuator.Delete(r.ctx, cr, cluster); err != nil {
+	if err := r.actuator.Delete(ctx, cr, cluster); err != nil {
 		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cr, gardencorev1beta1.LastOperationTypeDelete, EventContainerRuntimeDeletion, "Error deleting container runtime"))
 		return extensionscontroller.ReconcileErr(err)
 	}
@@ -208,7 +200,7 @@ func (r *reconciler) migrate(ctx context.Context, cr *extensionsv1alpha1.Contain
 		return reconcile.Result{}, err
 	}
 
-	if err := r.actuator.Migrate(r.ctx, cr, cluster); err != nil {
+	if err := r.actuator.Migrate(ctx, cr, cluster); err != nil {
 		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cr, gardencorev1beta1.LastOperationTypeMigrate, EventContainerRuntimeMigration, "Error migrating container runtime"))
 		return extensionscontroller.ReconcileErr(err)
 	}

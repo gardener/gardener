@@ -18,13 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,6 +28,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 // reconciler reconciles OperatingSystemConfig resources of Gardener's `extensions.gardener.cloud`
@@ -43,12 +42,9 @@ type reconciler struct {
 	logger   logr.Logger
 	actuator Actuator
 
-	ctx    context.Context
 	client client.Client
 	scheme *runtime.Scheme
 }
-
-var _ reconcile.Reconciler = &reconciler{}
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // OperatingSystemConfig resources of Gardener's `extensions.gardener.cloud` API group.
@@ -56,7 +52,10 @@ func NewReconciler(actuator Actuator) reconcile.Reconciler {
 	logger := log.Log.WithName(name)
 	return extensionscontroller.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.OperatingSystemConfig{} },
-		&reconciler{logger: logger, actuator: actuator},
+		&reconciler{
+			logger:   logger,
+			actuator: actuator,
+		},
 	)
 }
 
@@ -76,24 +75,18 @@ func (r *reconciler) InjectScheme(scheme *runtime.Scheme) error {
 	return nil
 }
 
-// InjectStopChannel is an implementation for getting the respective stop channel managed by the controller-runtime.
-func (r *reconciler) InjectStopChannel(stopCh <-chan struct{}) error {
-	r.ctx = contextutil.FromStopChannel(stopCh)
-	return nil
-}
-
 // Reconcile is the reconciler function that gets executed in case there are new events for the `OperatingSystemConfig`
 // resources.
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	osc := &extensionsv1alpha1.OperatingSystemConfig{}
-	if err := r.client.Get(r.ctx, request.NamespacedName, osc); err != nil {
+	if err := r.client.Get(ctx, request.NamespacedName, osc); err != nil {
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("could not fetch OperatingSystemConfig: %+v", err)
 	}
 
-	shoot, err := extensionscontroller.GetShoot(r.ctx, r.client, request.Namespace)
+	shoot, err := extensionscontroller.GetShoot(ctx, r.client, request.Namespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -109,13 +102,13 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	case extensionscontroller.IsMigrated(osc):
 		return reconcile.Result{}, nil
 	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
-		return r.migrate(r.ctx, osc)
+		return r.migrate(ctx, osc)
 	case osc.DeletionTimestamp != nil:
-		return r.delete(r.ctx, osc)
+		return r.delete(ctx, osc)
 	case osc.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
-		return r.restore(r.ctx, osc)
+		return r.restore(ctx, osc)
 	default:
-		return r.reconcile(r.ctx, osc, operationType)
+		return r.reconcile(ctx, osc, operationType)
 	}
 }
 

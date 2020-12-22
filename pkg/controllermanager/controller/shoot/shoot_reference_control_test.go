@@ -24,7 +24,7 @@ import (
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	config "github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -41,7 +41,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 var _ = Describe("Shoot References", func() {
@@ -82,9 +81,6 @@ var _ = Describe("Shoot References", func() {
 
 	JustBeforeEach(func() {
 		reconciler = NewShootReferenceReconciler(logger.NewNopLogger(), clientMap, secretLister, configMapLister, cfg)
-		injected, err := inject.StopChannelInto(ctx.Done(), reconciler)
-		Expect(injected).To(BeTrue())
-		Expect(err).NotTo(HaveOccurred())
 	})
 
 	Context("Common controller tests", func() {
@@ -101,7 +97,7 @@ var _ = Describe("Shoot References", func() {
 			cl.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(apierrors.NewNotFound(gardencorev1beta1.SchemeGroupVersion.WithResource("shoots").GroupResource(), namespacedName.Name))
 
 			request := reconcile.Request{NamespacedName: namespacedName}
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(ctx, request)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(emptyResult()))
@@ -111,7 +107,7 @@ var _ = Describe("Shoot References", func() {
 			cl.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(errors.New("foo"))
 
 			request := reconcile.Request{NamespacedName: namespacedName}
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(ctx, request)
 
 			Expect(err).To(HaveOccurred())
 			Expect(result).To(Equal(emptyResult()))
@@ -175,7 +171,7 @@ var _ = Describe("Shoot References", func() {
 				})
 
 			request := reconcile.Request{NamespacedName: namespacedName}
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(ctx, request)
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(Equal(emptyResult()))
@@ -209,7 +205,7 @@ var _ = Describe("Shoot References", func() {
 				})
 
 			request := reconcile.Request{NamespacedName: namespacedName}
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(ctx, request)
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(Equal(emptyResult()))
@@ -282,7 +278,7 @@ var _ = Describe("Shoot References", func() {
 				})
 
 			request := reconcile.Request{NamespacedName: namespacedName}
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(ctx, request)
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(Equal(emptyResult()))
@@ -356,7 +352,7 @@ var _ = Describe("Shoot References", func() {
 				})
 
 			request := reconcile.Request{NamespacedName: namespacedName}
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(ctx, request)
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(Equal(emptyResult()))
@@ -418,7 +414,7 @@ var _ = Describe("Shoot References", func() {
 				})
 
 			request := reconcile.Request{NamespacedName: namespacedName}
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(ctx, request)
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(Equal(emptyResult()))
@@ -472,7 +468,7 @@ var _ = Describe("Shoot References", func() {
 				})
 
 			request := reconcile.Request{NamespacedName: namespacedName}
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(ctx, request)
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(Equal(emptyResult()))
@@ -539,7 +535,7 @@ var _ = Describe("Shoot References", func() {
 				})
 
 			request := reconcile.Request{NamespacedName: namespacedName}
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(ctx, request)
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(Equal(emptyResult()))
@@ -597,7 +593,7 @@ var _ = Describe("Shoot References", func() {
 				})
 
 			request := reconcile.Request{NamespacedName: namespacedName}
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(ctx, request)
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(Equal(emptyResult()))
@@ -668,7 +664,7 @@ var _ = Describe("Shoot References", func() {
 				})
 
 			request := reconcile.Request{NamespacedName: namespacedName}
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(ctx, request)
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(Equal(emptyResult()))
@@ -735,7 +731,7 @@ var _ = Describe("Shoot References", func() {
 				})
 
 			request := reconcile.Request{NamespacedName: namespacedName}
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(ctx, request)
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(Equal(emptyResult()))
@@ -792,7 +788,7 @@ var _ = Describe("Shoot References", func() {
 				})
 
 			request := reconcile.Request{NamespacedName: namespacedName}
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(ctx, request)
 
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(Equal(emptyResult()))

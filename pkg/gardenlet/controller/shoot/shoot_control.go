@@ -172,7 +172,7 @@ func (c *Controller) deleteClusterResourceFromSeed(ctx context.Context, shoot *g
 	return client.IgnoreNotFound(seedClient.Client().Delete(ctx, cluster))
 }
 
-func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Result, error) {
+func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logger.NewShootLogger(logger.Logger, req.Name, req.Namespace)
 
 	shoot, err := c.shootLister.Shoots(req.Namespace).Get(req.Name)
@@ -202,7 +202,7 @@ func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Res
 	if shoot.DeletionTimestamp != nil {
 		log = log.WithField("operation", "delete")
 		c.shootReconciliationDueTracker.off(key)
-		return c.deleteShoot(log, shoot, project, cloudProfile, seed)
+		return c.deleteShoot(ctx, log, shoot, project, cloudProfile, seed)
 	}
 
 	if shouldPrepareShootForMigration(shoot) {
@@ -218,7 +218,7 @@ func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Res
 			return reconcile.Result{}, err
 		}
 
-		return c.prepareShootForMigration(log, shoot, project, cloudProfile, sourceSeed)
+		return c.prepareShootForMigration(ctx, log, shoot, project, cloudProfile, sourceSeed)
 	}
 
 	// if shoot is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue
@@ -228,7 +228,7 @@ func (c *Controller) reconcileShootRequest(req reconcile.Request) (reconcile.Res
 	}
 
 	log = log.WithField("operation", "reconcile")
-	return c.reconcileShoot(log, shoot, project, cloudProfile, seed)
+	return c.reconcileShoot(ctx, log, shoot, project, cloudProfile, seed)
 }
 
 func shouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
@@ -289,9 +289,8 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 		Build(ctx, c.clientMap)
 }
 
-func (c *Controller) deleteShoot(logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
+func (c *Controller) deleteShoot(ctx context.Context, logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
 	var (
-		ctx = context.TODO()
 		err error
 
 		operationType              = gardencorev1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
@@ -386,10 +385,8 @@ func (c *Controller) isSeedReadyForMigration(seed *gardencorev1beta1.Seed) error
 	return health.CheckSeedForMigration(seed, c.identity)
 }
 
-func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
+func (c *Controller) reconcileShoot(ctx context.Context, logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
 	var (
-		ctx = context.TODO()
-
 		key                                        = shootKey(shoot)
 		operationType                              = gardencorev1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
 		respectSyncPeriodOverwrite                 = c.respectSyncPeriodOverwrite()
@@ -488,7 +485,7 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 
 	c.shootReconciliationDueTracker.off(key)
 
-	if flowErr := c.runReconcileShootFlow(o); flowErr != nil {
+	if flowErr := c.runReconcileShootFlow(ctx, o); flowErr != nil {
 		c.recorder.Event(o.Shoot.Info, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, flowErr.Description)
 		_, updateErr := c.updateShootStatusOperationError(ctx, gardenClient, o.Shoot.Info, flowErr.Description, operationType, flowErr.LastErrors...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(flowErr.Description), updateErr)
