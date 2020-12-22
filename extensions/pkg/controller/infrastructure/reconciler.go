@@ -63,7 +63,7 @@ type reconciler struct {
 // infrastructure resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler {
 	return extensionscontroller.OperationAnnotationWrapper(
-		&extensionsv1alpha1.Infrastructure{},
+		func() client.Object { return &extensionsv1alpha1.Infrastructure{} },
 		&reconciler{
 			logger:   log.Log.WithName(ControllerName),
 			actuator: actuator,

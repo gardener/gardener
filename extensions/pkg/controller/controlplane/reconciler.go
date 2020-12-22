@@ -49,7 +49,7 @@ const (
 	EventControlPlaneMigration string = "ControlPlaneMigration"
 
 	// RequeueAfter is the duration to requeue a controlplane reconciliation if indicated by the actuator.
-	RequeueAfter time.Duration = 2 * time.Second
+	RequeueAfter = 2 * time.Second
 )
 
 type reconciler struct {
@@ -65,7 +65,7 @@ type reconciler struct {
 // controlplane resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler {
 	return extensionscontroller.OperationAnnotationWrapper(
-		&extensionsv1alpha1.ControlPlane{},
+		func() client.Object { return &extensionsv1alpha1.ControlPlane{} },
 		&reconciler{
 			logger:   log.Log.WithName(ControllerName),
 			actuator: actuator,

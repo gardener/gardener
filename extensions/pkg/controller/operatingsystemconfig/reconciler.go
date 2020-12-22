@@ -55,7 +55,7 @@ var _ reconcile.Reconciler = &reconciler{}
 func NewReconciler(actuator Actuator) reconcile.Reconciler {
 	logger := log.Log.WithName(name)
 	return extensionscontroller.OperationAnnotationWrapper(
-		&extensionsv1alpha1.OperatingSystemConfig{},
+		func() client.Object { return &extensionsv1alpha1.OperatingSystemConfig{} },
 		&reconciler{logger: logger, actuator: actuator},
 	)
 }

@@ -61,7 +61,7 @@ type reconciler struct {
 // backupentry resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler {
 	return extensionscontroller.OperationAnnotationWrapper(
-		&extensionsv1alpha1.BackupEntry{},
+		func() client.Object { return &extensionsv1alpha1.BackupEntry{} },
 		&reconciler{
 			logger:   log.Log.WithName(ControllerName),
 			actuator: actuator,

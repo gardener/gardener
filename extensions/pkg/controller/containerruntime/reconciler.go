@@ -64,7 +64,7 @@ type reconciler struct {
 // ContainerRuntime resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler {
 	return extensionscontroller.OperationAnnotationWrapper(
-		&extensionsv1alpha1.ContainerRuntime{},
+		func() client.Object { return &extensionsv1alpha1.ContainerRuntime{} },
 		&reconciler{
 			logger:   log.Log.WithName(ControllerName),
 			actuator: actuator,

@@ -134,7 +134,7 @@ func NewReconciler(args AddArgs) reconcile.Reconciler {
 	logger := log.Log.WithName(args.Name)
 	finalizer := fmt.Sprintf("%s/%s", FinalizerPrefix, args.FinalizerSuffix)
 	return extensionscontroller.OperationAnnotationWrapper(
-		&extensionsv1alpha1.Extension{},
+		func() client.Object { return &extensionsv1alpha1.Extension{} },
 		&reconciler{
 			logger:        logger,
 			actuator:      args.Actuator,
