@@ -100,8 +100,8 @@ func NewGardenerScheduler(k8sGardenClient kubernetes.Interface, gardenCoreInform
 func (c *SchedulerController) Run(ctx context.Context) {
 	var waitGroup sync.WaitGroup
 
-	c.k8sGardenClient.Start(ctx.Done())
-	if !c.k8sGardenClient.WaitForCacheSync(ctx.Done()) {
+	c.k8sGardenClient.Start(ctx)
+	if !c.k8sGardenClient.WaitForCacheSync(ctx) {
 		panic("Timed out waiting for the controller-runtime cache to sync")
 	}
 

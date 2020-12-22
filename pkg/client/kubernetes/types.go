@@ -173,7 +173,7 @@ type Interface interface {
 
 	// Start starts the cache of the ClientSet's controller-runtime client and returns immediately.
 	// It must be called first before using the client to retrieve objects from the API server.
-	Start(stopCh <-chan struct{})
+	Start(ctx context.Context)
 	// WaitForCacheSync waits for the cache of the ClientSet's controller-runtime client to be synced.
-	WaitForCacheSync(stopCh <-chan struct{}) bool
+	WaitForCacheSync(ctx context.Context) bool
 }
