@@ -18,8 +18,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
@@ -61,54 +60,36 @@ func PrefixLogValues(prefix string, logValues []interface{}) []interface{} {
 	return out
 }
 
-func eventObjectLogValues(meta metav1.Object, obj runtime.Object) []interface{} {
-	var values []interface{}
-	if meta != nil {
-		values = append(values, MetaObjectLogValues(meta)...)
-	}
-	if obj != nil {
-		values = append(values, RuntimeObjectLogValues(obj)...)
-	}
-	return values
-}
-
 // CreateEventLogValues extracts the log values from the given CreateEvent.
 func CreateEventLogValues(event event.CreateEvent) []interface{} {
-	return eventObjectLogValues(event.Meta, event.Object)
+	return ObjectLogValues(event.Object)
 }
 
 // DeleteEventLogValues extracts the log values from the given DeleteEvent.
 func DeleteEventLogValues(event event.DeleteEvent) []interface{} {
-	return append(eventObjectLogValues(event.Meta, event.Object), "delete-state-unknown", event.DeleteStateUnknown)
+	return append(ObjectLogValues(event.Object), "delete-state-unknown", event.DeleteStateUnknown)
 }
 
 // GenericEventLogValues extracts the log values from the given GenericEvent.
 func GenericEventLogValues(event event.GenericEvent) []interface{} {
-	return eventObjectLogValues(event.Meta, event.Object)
+	return ObjectLogValues(event.Object)
 }
 
 // UpdateEventLogValues extracts the log values from the given UpdateEvent.
 func UpdateEventLogValues(event event.UpdateEvent) []interface{} {
 	var values []interface{}
-	values = append(values, PrefixLogValues("old", eventObjectLogValues(event.MetaOld, event.ObjectOld))...)
-	values = append(values, PrefixLogValues("new", eventObjectLogValues(event.MetaNew, event.ObjectNew))...)
+	values = append(values, PrefixLogValues("old", ObjectLogValues(event.ObjectOld))...)
+	values = append(values, PrefixLogValues("new", ObjectLogValues(event.ObjectNew))...)
 	return values
 }
 
-// MetaObjectLogValues extracts the log values from the given metav1.Object.
-func MetaObjectLogValues(obj metav1.Object) []interface{} {
+// ObjectLogValues extracts the log values from the given client.Object.
+func ObjectLogValues(obj client.Object) []interface{} {
 	values := []interface{}{"meta.name", obj.GetName()}
 	if namespace := obj.GetNamespace(); namespace != "" {
 		values = append(values, "meta.namespace", namespace)
 	}
-	return values
-}
-
-// RuntimeObjectLogValues extracts the log values from the given runtime.Object.
-func RuntimeObjectLogValues(obj runtime.Object) []interface{} {
 	apiVersion, kind := obj.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
-	return []interface{}{
-		"object.apiVersion", apiVersion,
-		"object.kind", kind,
-	}
+	values = append(values, "object.apiVersion", apiVersion, "object.kind", kind)
+	return values
 }
