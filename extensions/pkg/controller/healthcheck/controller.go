@@ -176,9 +176,10 @@ func add(mgr manager.Manager, args AddArgs) error {
 
 	// watch Cluster of Shoot provider type (e.g aws)
 	// this is to be notified when the Shoot is being hibernated (stop health checks) and wakes up (start health checks again)
-	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Cluster{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
-		ToRequests: extensionshandler.SimpleMapper(extensionshandler.ClusterToObjectMapper(args.GetExtensionObjListFunc, predicates), extensionshandler.UpdateWithNew),
-	})
+	return ctrl.Watch(
+		&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
+		extensionshandler.EnqueueRequestsFromMapper(extensionshandler.ClusterToObjectMapper(args.GetExtensionObjListFunc, predicates), extensionshandler.UpdateWithNew),
+	)
 }
 
 func getHealthCheckTypes(healthChecks []ConditionTypeToHealthCheck) []string {

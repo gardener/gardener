@@ -17,27 +17,34 @@ package handler
 import (
 	"context"
 
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	contextutil "github.com/gardener/gardener/pkg/utils/context"
 )
 
 type clusterToObjectMapper struct {
+	ctx            context.Context
 	client         client.Client
-	newObjListFunc func() runtime.Object
+	newObjListFunc func() client.ObjectList
 	predicates     []predicate.Predicate
 }
 
 func (m *clusterToObjectMapper) InjectClient(c client.Client) error {
 	m.client = c
+	return nil
+}
+
+func (m *clusterToObjectMapper) InjectStopChannel(stopCh <-chan struct{}) error {
+	m.ctx = contextutil.FromStopChannel(stopCh)
 	return nil
 }
 
@@ -50,39 +57,29 @@ func (m *clusterToObjectMapper) InjectFunc(f inject.Func) error {
 	return nil
 }
 
-func (m *clusterToObjectMapper) Map(obj handler.MapObject) []reconcile.Request {
-	ctx := context.TODO()
-
-	if obj.Object == nil {
-		return nil
-	}
-
-	cluster, ok := obj.Object.(*extensionsv1alpha1.Cluster)
+func (m *clusterToObjectMapper) Map(obj client.Object) []reconcile.Request {
+	cluster, ok := obj.(*extensionsv1alpha1.Cluster)
 	if !ok {
 		return nil
 	}
 
 	objList := m.newObjListFunc()
-	if err := m.client.List(ctx, objList, client.InNamespace(cluster.Name)); err != nil {
+	if err := m.client.List(m.ctx, objList, client.InNamespace(cluster.Name)); err != nil {
 		return nil
 	}
 
 	var requests []reconcile.Request
 
 	utilruntime.HandleError(meta.EachListItem(objList, func(obj runtime.Object) error {
-		accessor, err := meta.Accessor(obj)
-		if err != nil {
-			return err
-		}
-
-		if !extensionspredicate.EvalGeneric(obj, m.predicates...) {
+		o := obj.(client.Object)
+		if !extensionspredicate.EvalGeneric(o, m.predicates...) {
 			return nil
 		}
 
 		requests = append(requests, reconcile.Request{
 			NamespacedName: types.NamespacedName{
-				Namespace: accessor.GetNamespace(),
-				Name:      accessor.GetName(),
+				Namespace: o.GetNamespace(),
+				Name:      o.GetName(),
 			},
 		})
 		return nil
@@ -92,6 +89,6 @@ func (m *clusterToObjectMapper) Map(obj handler.MapObject) []reconcile.Request {
 
 // ClusterToObjectMapper returns a mapper that returns requests for objects whose
 // referenced clusters have been modified.
-func ClusterToObjectMapper(newObjListFunc func() runtime.Object, predicates []predicate.Predicate) handler.Mapper {
+func ClusterToObjectMapper(newObjListFunc func() client.ObjectList, predicates []predicate.Predicate) Mapper {
 	return &clusterToObjectMapper{newObjListFunc: newObjListFunc, predicates: predicates}
 }

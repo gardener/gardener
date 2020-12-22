@@ -72,7 +72,7 @@ func (m *mapperWithTriggers) InjectFunc(f inject.Func) error {
 // Create implements Predicate.
 func (m *mapperWithTriggers) Create(e event.CreateEvent) bool {
 	if _, ok := m.triggers[CreateTrigger]; ok {
-		return m.mapper.Map(event.GenericEvent{Object: e.Object})
+		return m.mapper.Map(event.GenericEvent(e))
 	}
 	return true
 }

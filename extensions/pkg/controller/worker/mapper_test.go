@@ -17,10 +17,6 @@ package worker_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/worker"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -29,10 +25,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	"github.com/gardener/gardener/extensions/pkg/controller/worker"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
 var _ = Describe("Worker Mapper", func() {
@@ -62,7 +61,7 @@ var _ = Describe("Worker Mapper", func() {
 
 			c.EXPECT().
 				List(
-					gomock.AssignableToTypeOf(context.TODO()),
+					gomock.Any(),
 					gomock.AssignableToTypeOf(&extensionsv1alpha1.WorkerList{}),
 					gomock.AssignableToTypeOf(client.InNamespace(namespace)),
 				).
@@ -80,11 +79,9 @@ var _ = Describe("Worker Mapper", func() {
 					return nil
 				})
 
-			result := mapper.Map(handler.MapObject{
-				Object: &machinev1alpha1.MachineSet{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: namespace,
-					},
+			result := mapper.Map(&machinev1alpha1.MachineSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
 				},
 			})
 
@@ -111,7 +108,7 @@ var _ = Describe("Worker Mapper", func() {
 
 			c.EXPECT().
 				List(
-					gomock.AssignableToTypeOf(context.TODO()),
+					gomock.Any(),
 					gomock.AssignableToTypeOf(&extensionsv1alpha1.WorkerList{}),
 					gomock.AssignableToTypeOf(client.InNamespace(namespace)),
 				).
@@ -129,11 +126,9 @@ var _ = Describe("Worker Mapper", func() {
 					return nil
 				})
 
-			result := mapper.Map(handler.MapObject{
-				Object: &machinev1alpha1.MachineSet{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: namespace,
-					},
+			result := mapper.Map(&machinev1alpha1.MachineSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
 				},
 			})
 
@@ -142,12 +137,11 @@ var _ = Describe("Worker Mapper", func() {
 
 		It("should find no objects because list is empty", func() {
 			mapper := worker.MachineSetToWorkerMapper(nil)
-
 			ExpectInject(inject.ClientInto(c, mapper))
 
 			c.EXPECT().
 				List(
-					gomock.AssignableToTypeOf(context.TODO()),
+					gomock.Any(),
 					gomock.AssignableToTypeOf(&extensionsv1alpha1.WorkerList{}),
 					gomock.AssignableToTypeOf(client.InNamespace(namespace)),
 				).
@@ -156,11 +150,9 @@ var _ = Describe("Worker Mapper", func() {
 					return nil
 				})
 
-			result := mapper.Map(handler.MapObject{
-				Object: &machinev1alpha1.MachineSet{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: namespace,
-					},
+			result := mapper.Map(&machinev1alpha1.MachineSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
 				},
 			})
 
@@ -169,10 +161,7 @@ var _ = Describe("Worker Mapper", func() {
 
 		It("should find no objects because the passed object is no worker", func() {
 			mapper := worker.MachineSetToWorkerMapper(nil)
-			result := mapper.Map(handler.MapObject{
-				Object: &extensionsv1alpha1.Cluster{},
-			})
-			ExpectInject(inject.ClientInto(c, mapper))
+			result := mapper.Map(&extensionsv1alpha1.Cluster{})
 			Expect(result).To(BeNil())
 		})
 	})
@@ -189,7 +178,7 @@ var _ = Describe("Worker Mapper", func() {
 
 			c.EXPECT().
 				List(
-					gomock.AssignableToTypeOf(context.TODO()),
+					gomock.Any(),
 					gomock.AssignableToTypeOf(&extensionsv1alpha1.WorkerList{}),
 					gomock.AssignableToTypeOf(client.InNamespace(namespace)),
 				).
@@ -207,11 +196,9 @@ var _ = Describe("Worker Mapper", func() {
 					return nil
 				})
 
-			result := mapper.Map(handler.MapObject{
-				Object: &machinev1alpha1.Machine{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: namespace,
-					},
+			result := mapper.Map(&machinev1alpha1.Machine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
 				},
 			})
 
@@ -238,7 +225,7 @@ var _ = Describe("Worker Mapper", func() {
 
 			c.EXPECT().
 				List(
-					gomock.AssignableToTypeOf(context.TODO()),
+					gomock.Any(),
 					gomock.AssignableToTypeOf(&extensionsv1alpha1.WorkerList{}),
 					gomock.AssignableToTypeOf(client.InNamespace(namespace)),
 				).
@@ -256,11 +243,9 @@ var _ = Describe("Worker Mapper", func() {
 					return nil
 				})
 
-			result := mapper.Map(handler.MapObject{
-				Object: &machinev1alpha1.Machine{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: namespace,
-					},
+			result := mapper.Map(&machinev1alpha1.Machine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
 				},
 			})
 
@@ -269,12 +254,11 @@ var _ = Describe("Worker Mapper", func() {
 
 		It("should find no objects because list is empty", func() {
 			mapper := worker.MachineToWorkerMapper(nil)
-
 			ExpectInject(inject.ClientInto(c, mapper))
 
 			c.EXPECT().
 				List(
-					gomock.AssignableToTypeOf(context.TODO()),
+					gomock.Any(),
 					gomock.AssignableToTypeOf(&extensionsv1alpha1.WorkerList{}),
 					gomock.AssignableToTypeOf(client.InNamespace(namespace)),
 				).
@@ -283,11 +267,9 @@ var _ = Describe("Worker Mapper", func() {
 					return nil
 				})
 
-			result := mapper.Map(handler.MapObject{
-				Object: &machinev1alpha1.Machine{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: namespace,
-					},
+			result := mapper.Map(&machinev1alpha1.Machine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
 				},
 			})
 
@@ -296,10 +278,7 @@ var _ = Describe("Worker Mapper", func() {
 
 		It("should find no objects because the passed object is no worker", func() {
 			mapper := worker.MachineToWorkerMapper(nil)
-			result := mapper.Map(handler.MapObject{
-				Object: &extensionsv1alpha1.Cluster{},
-			})
-			ExpectInject(inject.ClientInto(c, mapper))
+			result := mapper.Map(&extensionsv1alpha1.Cluster{})
 			Expect(result).To(BeNil())
 		})
 	})

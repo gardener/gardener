@@ -18,6 +18,8 @@ import (
 	"context"
 	"encoding/json"
 
+	corev1 "k8s.io/api/core/v1"
+
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -55,7 +57,7 @@ var _ = Describe("Predicate", func() {
 	Describe("#HasType", func() {
 		var (
 			extensionType string
-			object        runtime.Object
+			object        client.Object
 			createEvent   event.CreateEvent
 			updateEvent   event.UpdateEvent
 			deleteEvent   event.DeleteEvent
@@ -115,21 +117,24 @@ var _ = Describe("Predicate", func() {
 		)
 
 		BeforeEach(func() {
-			objectMeta := metav1.ObjectMeta{
-				Name: name,
+			configMpa := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: name,
+				},
 			}
+
 			createEvent = event.CreateEvent{
-				Meta: &objectMeta,
+				Object: configMpa,
 			}
 			updateEvent = event.UpdateEvent{
-				MetaNew: &objectMeta,
-				MetaOld: &objectMeta,
+				ObjectOld: configMpa,
+				ObjectNew: configMpa,
 			}
 			deleteEvent = event.DeleteEvent{
-				Meta: &objectMeta,
+				Object: configMpa,
 			}
 			genericEvent = event.GenericEvent{
-				Meta: &objectMeta,
+				Object: configMpa,
 			}
 		})
 
@@ -247,7 +252,6 @@ var _ = Describe("Predicate", func() {
 
 			infrastructure = &extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{Namespace: name}}
 			e = event.GenericEvent{
-				Meta:   &infrastructure.ObjectMeta,
 				Object: infrastructure,
 			}
 
