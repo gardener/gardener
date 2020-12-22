@@ -22,7 +22,7 @@ GO111MODULE=off go get golang.org/x/tools/cmd/goimports
 
 export GO111MODULE=on
 curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.27.0
-curl -s "https://raw.githubusercontent.com/helm/helm/v2.16.9/scripts/get" | bash -s -- --version 'v2.13.1'
+curl -s "https://raw.githubusercontent.com/helm/helm/v2.17.0/scripts/get" | bash -s -- --version 'v2.17.0'
 
 if [[ "$(uname -s)" == *"Darwin"* ]]; then
   cat <<EOM
