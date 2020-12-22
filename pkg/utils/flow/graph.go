@@ -81,19 +81,12 @@ func (g *Graph) Add(task Task) TaskID {
 
 // Compile compiles the graph into an executable Flow.
 func (g *Graph) Compile() *Flow {
-	var (
-		nodes = make(nodes, len(g.tasks))
-		roots = NewTaskIDs()
-	)
+	nodes := make(nodes, len(g.tasks))
 
 	for taskName, taskSpec := range g.tasks {
 		for dependencyID := range taskSpec.Dependencies {
 			dependency := nodes.getOrCreate(dependencyID)
 			dependency.addTargets(taskName)
-		}
-
-		if taskSpec.Dependencies.Len() == 0 {
-			roots.Insert(taskName)
 		}
 
 		node := nodes.getOrCreate(taskName)
