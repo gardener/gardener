@@ -5,6 +5,12 @@ metadata:
   name: vpa-admission-controller
   namespace: {{ .Release.Namespace }}
 spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      minAllowed:
+        cpu: 50m
+        memory: 100Mi
   targetRef:
     apiVersion: {{ include "deploymentversion" . }}
     kind: Deployment
