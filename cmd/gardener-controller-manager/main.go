@@ -15,11 +15,10 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
+
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/gardener/gardener/cmd/gardener-controller-manager/app"
 	"github.com/gardener/gardener/pkg/controllermanager/features"
@@ -28,23 +27,8 @@ import (
 func main() {
 	features.RegisterFeatureGates()
 
-	// Setup signal handler if running inside a Kubernetes cluster
-	ctx, cancel := context.WithCancel(context.Background())
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	defer func() {
-		signal.Stop(c)
-		cancel()
-	}()
-	go func() {
-		<-c
-		cancel()
-		<-c
-		os.Exit(1)
-	}()
-
-	command := app.NewCommandStartGardenerControllerManager(ctx, cancel)
-	if err := command.Execute(); err != nil {
+	ctx := signals.SetupSignalHandler()
+	if err := app.NewCommandStartGardenerControllerManager().ExecuteContext(ctx); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

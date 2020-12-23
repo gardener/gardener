@@ -91,7 +91,7 @@ func (o *Options) run(ctx context.Context) {
 }
 
 // NewCommandStartGardenerSeedAdmissionController creates a *cobra.Command object with default parameters
-func NewCommandStartGardenerSeedAdmissionController(ctx context.Context) *cobra.Command {
+func NewCommandStartGardenerSeedAdmissionController() *cobra.Command {
 	opts := &Options{}
 
 	cmd := &cobra.Command{
@@ -108,7 +108,7 @@ func NewCommandStartGardenerSeedAdmissionController(ctx context.Context) *cobra.
 				logger.Infof("FLAG: --%s=%s", flag.Name, flag.Value)
 			})
 
-			opts.run(ctx)
+			opts.run(cmd.Context())
 		},
 	}
 

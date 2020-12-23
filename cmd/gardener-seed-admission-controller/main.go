@@ -18,17 +18,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gardener/gardener/cmd/gardener-seed-admission-controller/app"
-	"github.com/gardener/gardener/cmd/utils"
-
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+
+	"github.com/gardener/gardener/cmd/gardener-seed-admission-controller/app"
 )
 
 func main() {
-	ctx := utils.ContextFromStopChannel(signals.SetupSignalHandler())
-	command := app.NewCommandStartGardenerSeedAdmissionController(ctx)
-
-	if err := command.Execute(); err != nil {
+	ctx := signals.SetupSignalHandler()
+	if err := app.NewCommandStartGardenerSeedAdmissionController().ExecuteContext(ctx); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

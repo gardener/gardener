@@ -19,7 +19,6 @@ import (
 	"os"
 
 	"github.com/gardener/gardener/cmd/gardener-scheduler/app"
-	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/scheduler/features"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
@@ -28,10 +27,8 @@ import (
 func main() {
 	features.RegisterFeatureGates()
 
-	ctx := utils.ContextFromStopChannel(signals.SetupSignalHandler())
-	command := app.NewCommandStartGardenerScheduler(ctx)
-
-	if err := command.Execute(); err != nil {
+	ctx := signals.SetupSignalHandler()
+	if err := app.NewCommandStartGardenerScheduler().ExecuteContext(ctx); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
