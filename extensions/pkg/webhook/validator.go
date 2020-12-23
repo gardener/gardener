@@ -18,13 +18,13 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 // Validator validates objects.
 type Validator interface {
-	Validate(ctx context.Context, new, old runtime.Object) error
+	Validate(ctx context.Context, new, old client.Object) error
 }
 
 type validationWrapper struct {
@@ -32,7 +32,7 @@ type validationWrapper struct {
 }
 
 // Mutate implements the `Mutator` interface and calls the `Validate` function of the underlying validator.
-func (d *validationWrapper) Mutate(ctx context.Context, new, old runtime.Object) error {
+func (d *validationWrapper) Mutate(ctx context.Context, new, old client.Object) error {
 	return d.Validate(ctx, new, old)
 }
 

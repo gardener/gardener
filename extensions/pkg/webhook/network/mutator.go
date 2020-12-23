@@ -18,14 +18,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/extensions/pkg/webhook"
-
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/extensions/pkg/webhook"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 type MutateFn func(new, old *extensionsv1alpha1.Network) error
@@ -51,18 +48,14 @@ func (m *mutator) InjectClient(client client.Client) error {
 }
 
 // Mutate validates and if needed mutates the given object.
-func (m *mutator) Mutate(ctx context.Context, new, old runtime.Object) error {
+func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 	var (
 		newNetwork, oldNetwork *extensionsv1alpha1.Network
 		ok                     bool
 	)
 
-	acc, err := meta.Accessor(new)
-	if err != nil {
-		return errors.Wrapf(err, "could not create accessor during webhook")
-	}
 	// If the object does have a deletion timestamp then we don't want to mutate anything.
-	if acc.GetDeletionTimestamp() != nil {
+	if new.GetDeletionTimestamp() != nil {
 		return nil
 	}
 

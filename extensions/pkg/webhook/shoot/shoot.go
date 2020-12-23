@@ -17,15 +17,15 @@ package shoot
 import (
 	"fmt"
 
-	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 const (
@@ -40,7 +40,7 @@ var logger = log.Log.WithName("shoot-webhook")
 // Args are arguments for creating a webhook targeting a shoot.
 type Args struct {
 	// Types is a list of resource types.
-	Types []runtime.Object
+	Types []client.Object
 	// Mutator is a mutator to be used by the admission handler. It doesn't need the shoot client.
 	Mutator extensionswebhook.Mutator
 	// MutatorWithShootClient is a mutator to be used by the admission handler. It needs the shoot client.

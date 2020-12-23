@@ -25,7 +25,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
@@ -68,7 +67,7 @@ func (m *mutator) InjectScheme(scheme *runtime.Scheme) error {
 }
 
 // Mutate validates and if needed mutates the given object.
-func (m *mutator) Mutate(ctx context.Context, new, old runtime.Object) error {
+func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 	acc, err := meta.Accessor(new)
 	if err != nil {
 		return fmt.Errorf("could not create accessor during webhook: %v", err)
@@ -94,11 +93,7 @@ func (m *mutator) Mutate(ctx context.Context, new, old runtime.Object) error {
 		}
 	}
 
-	o, ok := new.(metav1.Object)
-	if !ok {
-		return fmt.Errorf("could not cast runtime object to %q", "metav1.Object")
-	}
-	etcx := gcontext.NewGardenContext(m.client, o)
+	etcx := gcontext.NewGardenContext(m.client, new)
 	webhook.LogMutation(m.logger, newSecret.Kind, newSecret.Namespace, newSecret.Name)
 	return m.ensurer.EnsureCloudProviderSecret(ctx, etcx, newSecret, oldSecret)
 }

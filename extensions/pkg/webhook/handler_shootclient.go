@@ -23,30 +23,42 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gardener/gardener/extensions/pkg/util"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	"k8s.io/api/admission/v1beta1"
+	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/gardener/gardener/extensions/pkg/util"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 var (
-	admissionScheme = runtime.NewScheme()
-	admissionCodecs = serializer.NewCodecFactory(admissionScheme)
+	admissionScheme  *runtime.Scheme
+	admissionDecoder runtime.Decoder
 )
 
+func init() {
+	admissionScheme = runtime.NewScheme()
+	schemeBuilder := runtime.NewSchemeBuilder(
+		admissionv1.AddToScheme,
+		admissionv1beta1.AddToScheme,
+	)
+	utilruntime.Must(schemeBuilder.AddToScheme(admissionScheme))
+
+	admissionDecoder = serializer.NewCodecFactory(admissionScheme).UniversalDecoder(admissionv1.SchemeGroupVersion)
+}
+
 // NewHandlerWithShootClient creates a new handler for the given types, using the given mutator, and logger.
-func NewHandlerWithShootClient(mgr manager.Manager, types []runtime.Object, mutator MutatorWithShootClient, logger logr.Logger) (*handlerShootClient, error) {
+func NewHandlerWithShootClient(mgr manager.Manager, types []client.Object, mutator MutatorWithShootClient, logger logr.Logger) (*handlerShootClient, error) {
 	// Build a map of the given types keyed by their GVKs
 	typesMap, err := buildTypesMap(mgr.GetScheme(), types)
 	if err != nil {
@@ -62,7 +74,7 @@ func NewHandlerWithShootClient(mgr manager.Manager, types []runtime.Object, muta
 }
 
 type handlerShootClient struct {
-	typesMap map[metav1.GroupVersionKind]runtime.Object
+	typesMap map[metav1.GroupVersionKind]client.Object
 	mutator  MutatorWithShootClient
 	client   client.Client
 	decoder  runtime.Decoder
@@ -75,18 +87,19 @@ func (h *handlerShootClient) InjectScheme(s *runtime.Scheme) error {
 	return nil
 }
 
-// InjectClient injects the given client into the mutator.
-// TODO Replace this with the more generic InjectFunc when controller runtime supports it
+// InjectFunc injects stuff into the mutator.
+func (h *handlerShootClient) InjectFunc(f inject.Func) error {
+	return f(h.mutator)
+}
+
+// InjectClient injects a client.
 func (h *handlerShootClient) InjectClient(client client.Client) error {
 	h.client = client
-	if _, err := inject.ClientInto(client, h.mutator); err != nil {
-		return errors.Wrap(err, "could not inject the client into the mutator")
-	}
 	return nil
 }
 
 func (h *handlerShootClient) HandleWithRequest(ctx context.Context, req admission.Request, r *http.Request) admission.Response {
-	var mut MutateFunc = func(ctx context.Context, new, old runtime.Object) error {
+	var mut MutateFunc = func(ctx context.Context, new, old client.Object) error {
 		ipPort := strings.Split(r.RemoteAddr, ":")
 		if len(ipPort) < 1 {
 			return fmt.Errorf("remote address not parseable: %s", r.RemoteAddr)
@@ -162,11 +175,11 @@ func (h *handlerShootClient) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req := admission.Request{}
-	ar := admissionv1beta1.AdmissionReview{
+	ar := admissionv1.AdmissionReview{
 		// avoid an extra copy
 		Request: &req.AdmissionRequest,
 	}
-	if _, _, err := admissionCodecs.UniversalDeserializer().Decode(body, nil, &ar); err != nil {
+	if err := runtime.DecodeInto(admissionDecoder, body, &ar); err != nil {
 		h.logger.Error(err, "unable to decode the request")
 		reviewResponse = admission.Errored(http.StatusBadRequest, err)
 		h.writeResponse(w, reviewResponse)
@@ -178,7 +191,7 @@ func (h *handlerShootClient) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handlerShootClient) writeResponse(w io.Writer, response admission.Response) {
-	if err := json.NewEncoder(w).Encode(v1beta1.AdmissionReview{
+	if err := json.NewEncoder(w).Encode(admissionv1.AdmissionReview{
 		Response: &response.AdmissionResponse,
 	}); err != nil {
 		h.logger.Error(err, "unable to encode the response")
