@@ -32,7 +32,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	admissionv1 "k8s.io/api/admission/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -47,7 +47,7 @@ var _ = Describe("Extension CRDs", func() {
 		var (
 			ctx     = context.Background()
 			logger  = gardenlogger.NewNopLogger()
-			request *admissionv1beta1.AdmissionRequest
+			request *admissionv1.AdmissionRequest
 
 			ctrl *gomock.Controller
 			c    *mockclient.MockClient
@@ -57,7 +57,7 @@ var _ = Describe("Extension CRDs", func() {
 			ctrl = gomock.NewController(GinkgoT())
 			c = mockclient.NewMockClient(ctrl)
 
-			request = &admissionv1beta1.AdmissionRequest{}
+			request = &admissionv1.AdmissionRequest{}
 		})
 
 		AfterEach(func() {
@@ -513,7 +513,7 @@ type unstructuredInterface interface {
 	SetKind(string)
 }
 
-func prepareRequestAndObjectWithResource(request *admissionv1beta1.AdmissionRequest, obj unstructuredInterface, resource metav1.GroupVersionResource) {
+func prepareRequestAndObjectWithResource(request *admissionv1.AdmissionRequest, obj unstructuredInterface, resource metav1.GroupVersionResource) {
 	request.Kind.Group = resource.Group
 	request.Kind.Version = resource.Version
 	obj.SetAPIVersion(request.Kind.Group + "/" + request.Kind.Version)
@@ -550,7 +550,7 @@ func testDeletionUnconfirmed(
 	ctx context.Context,
 	c *mockclient.MockClient,
 	logger *logrus.Logger,
-	request *admissionv1beta1.AdmissionRequest,
+	request *admissionv1.AdmissionRequest,
 	resource metav1.GroupVersionResource,
 ) {
 	request.Resource = resource
@@ -563,7 +563,7 @@ func testDeletionConfirmed(
 	ctx context.Context,
 	c *mockclient.MockClient,
 	logger *logrus.Logger,
-	request *admissionv1beta1.AdmissionRequest,
+	request *admissionv1.AdmissionRequest,
 	resource metav1.GroupVersionResource,
 ) {
 	request.Resource = resource

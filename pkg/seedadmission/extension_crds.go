@@ -20,22 +20,22 @@ import (
 	"strconv"
 	"strings"
 
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardenlogger "github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
-
 	"github.com/sirupsen/logrus"
-	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	admissionv1 "k8s.io/api/admission/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gardenlogger "github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 // ValidateExtensionDeletion validates whether it is allowed to delete extension CRDs or extension resources.
-func ValidateExtensionDeletion(ctx context.Context, c client.Client, logger *logrus.Logger, request *admissionv1beta1.AdmissionRequest) error {
+func ValidateExtensionDeletion(ctx context.Context, c client.Client, logger *logrus.Logger, request *admissionv1.AdmissionRequest) error {
 	// Ignore all resources other than our expected ones
 	switch request.Resource {
 	case

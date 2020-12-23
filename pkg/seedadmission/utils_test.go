@@ -20,23 +20,24 @@ import (
 	"errors"
 	"fmt"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Utils", func() {
 	var (
 		ctx     = context.Background()
-		request *admissionv1beta1.AdmissionRequest
+		request *admissionv1.AdmissionRequest
 
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
@@ -46,7 +47,7 @@ var _ = Describe("Utils", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 
-		request = &admissionv1beta1.AdmissionRequest{}
+		request = &admissionv1.AdmissionRequest{}
 	})
 
 	AfterEach(func() {

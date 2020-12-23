@@ -18,14 +18,15 @@ import (
 	"context"
 	"encoding/json"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-func getRequestObject(ctx context.Context, c client.Client, request *admissionv1beta1.AdmissionRequest) (runtime.Object, error) {
+func getRequestObject(ctx context.Context, c client.Client, request *admissionv1.AdmissionRequest) (runtime.Object, error) {
 	// Older Kubernetes versions don't provide the object neither in OldObject nor in the Object field. In this case
 	// we have to look it up ourselves.
 	var (

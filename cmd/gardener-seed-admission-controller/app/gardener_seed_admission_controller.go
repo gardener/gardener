@@ -31,9 +31,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"gomodules.xyz/jsonpatch/v2"
+	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -127,9 +126,12 @@ func NewCommandStartGardenerSeedAdmissionController(ctx context.Context) *cobra.
 // run runs the Gardener seed admission controller. This should never exit.
 func run(ctx context.Context, bindAddress string, port int, certPath, keyPath, kubeconfigPath string) {
 	scheme := runtime.NewScheme()
-	utilruntime.Must(corev1.AddToScheme(scheme))
-	utilruntime.Must(admissionregistrationv1beta1.AddToScheme(scheme))
-	deserializer := serializer.NewCodecFactory(scheme).UniversalDeserializer()
+	schemeBuilder := runtime.NewSchemeBuilder(
+		admissionv1beta1.AddToScheme,
+		admissionv1.AddToScheme,
+	)
+	utilruntime.Must(schemeBuilder.AddToScheme(scheme))
+	decoder := serializer.NewCodecFactory(scheme).UniversalDecoder(admissionv1.SchemeGroupVersion)
 
 	mux := http.NewServeMux()
 
@@ -142,7 +144,7 @@ func run(ctx context.Context, bindAddress string, port int, certPath, keyPath, k
 	}
 
 	seedAdmissionController := &GardenerSeedAdmissionController{
-		deserializer,
+		decoder,
 		k8sClient.DirectClient(),
 		metav1.GroupVersionKind{Group: "", Kind: "Pod", Version: "v1"},
 	}
@@ -183,7 +185,7 @@ func respond(w http.ResponseWriter, request *admission.Request, response admissi
 		}
 	}
 
-	jsonResponse, err := json.Marshal(admissionv1beta1.AdmissionReview{Response: &response.AdmissionResponse})
+	jsonResponse, err := json.Marshal(admissionv1.AdmissionReview{Response: &response.AdmissionResponse})
 	if err != nil {
 		logger.Error(err)
 	}
@@ -196,15 +198,15 @@ func respond(w http.ResponseWriter, request *admission.Request, response admissi
 // GardenerSeedAdmissionController represents all the parameters required to start the
 // Gardener seed admission controller.
 type GardenerSeedAdmissionController struct {
-	codecs runtime.Decoder
-	client client.Client
-	podGVK metav1.GroupVersionKind
+	decoder runtime.Decoder
+	client  client.Client
+	podGVK  metav1.GroupVersionKind
 }
 
-func (g *GardenerSeedAdmissionController) handleAdmissionReview(w http.ResponseWriter, r *http.Request) (admissionv1beta1.AdmissionReview, error) {
+func (g *GardenerSeedAdmissionController) handleAdmissionReview(w http.ResponseWriter, r *http.Request) (admissionv1.AdmissionReview, error) {
 	var (
 		body           []byte
-		receivedReview = admissionv1beta1.AdmissionReview{}
+		receivedReview = admissionv1.AdmissionReview{}
 	)
 
 	// Read HTTP request body into variable.
@@ -222,8 +224,8 @@ func (g *GardenerSeedAdmissionController) handleAdmissionReview(w http.ResponseW
 		return receivedReview, err
 	}
 
-	// Deserialize HTTP request body into admissionv1beta1.AdmissionReview object.
-	if _, _, err := g.codecs.Decode(body, nil, &receivedReview); err != nil {
+	// Deserialize HTTP request body into admissionv1.AdmissionReview object.
+	if err := runtime.DecodeInto(g.decoder, body, &receivedReview); err != nil {
 		err = fmt.Errorf("invalid request body (error decoding body): %+v", err)
 		logger.Errorf(err.Error())
 		respond(w, nil, admission.Errored(http.StatusBadRequest, err))
@@ -248,7 +250,7 @@ func (g *GardenerSeedAdmissionController) validateExtensionCRDDeletion(w http.Re
 	}
 
 	// If the request does not indicate the correct operation (DELETE) we allow the review without further doing.
-	if receivedReview.Request.Operation != admissionv1beta1.Delete {
+	if receivedReview.Request.Operation != admissionv1.Delete {
 		respond(w, nil, admission.Allowed("operation is no DELETE operation"))
 		return
 	}
@@ -274,7 +276,7 @@ func (g *GardenerSeedAdmissionController) defaultShootControlPlanePodsSchedulerN
 	}
 
 	// If the request does not indicate the correct operation (CREATE) we allow the review without further doing.
-	if receivedReview.Request.Operation != admissionv1beta1.Create {
+	if receivedReview.Request.Operation != admissionv1.Create {
 		respond(w, nil, admission.Allowed("operation is no CREATE operation"))
 		return
 	}
@@ -291,7 +293,7 @@ func (g *GardenerSeedAdmissionController) defaultShootControlPlanePodsSchedulerN
 
 	resp := admission.Allowed("")
 	resp.Patches = []jsonpatch.Operation{
-		jsonpatch.NewPatch("replace", "/spec/schedulerName", seedadmission.GardenerShootControlPlaneSchedulerName),
+		jsonpatch.NewOperation("replace", "/spec/schedulerName", seedadmission.GardenerShootControlPlaneSchedulerName),
 	}
 
 	respond(w, &admission.Request{AdmissionRequest: *receivedReview.Request}, resp)
