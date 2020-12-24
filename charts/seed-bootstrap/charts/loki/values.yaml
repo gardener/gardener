@@ -33,12 +33,14 @@ livenessProbe:
     path: /ready
     port: metrics
   initialDelaySeconds: 120
+  failureThreshold: 5
 
 readinessProbe:
   httpGet:
     path: /ready
     port: metrics
-  initialDelaySeconds: 120
+  initialDelaySeconds: 80
+  failureThreshold: 7
 
 replicas: 1
 
