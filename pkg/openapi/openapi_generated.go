@@ -79,6 +79,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Hibernation":                           schema_pkg_apis_core_v1alpha1_Hibernation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.HibernationSchedule":                   schema_pkg_apis_core_v1alpha1_HibernationSchedule(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.HorizontalPodAutoscalerConfig":         schema_pkg_apis_core_v1alpha1_HorizontalPodAutoscalerConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Ingress":                               schema_pkg_apis_core_v1alpha1_Ingress(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.IngressController":                     schema_pkg_apis_core_v1alpha1_IngressController(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeAPIServerConfig":                   schema_pkg_apis_core_v1alpha1_KubeAPIServerConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeAPIServerRequests":                 schema_pkg_apis_core_v1alpha1_KubeAPIServerRequests(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeControllerManagerConfig":           schema_pkg_apis_core_v1alpha1_KubeControllerManagerConfig(ref),
@@ -133,6 +135,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Seed":                                  schema_pkg_apis_core_v1alpha1_Seed(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedBackup":                            schema_pkg_apis_core_v1alpha1_SeedBackup(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedDNS":                               schema_pkg_apis_core_v1alpha1_SeedDNS(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedDNSProvider":                       schema_pkg_apis_core_v1alpha1_SeedDNSProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedList":                              schema_pkg_apis_core_v1alpha1_SeedList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks":                          schema_pkg_apis_core_v1alpha1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider":                          schema_pkg_apis_core_v1alpha1_SeedProvider(ref),
@@ -211,6 +214,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation":                            schema_pkg_apis_core_v1beta1_Hibernation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HibernationSchedule":                    schema_pkg_apis_core_v1beta1_HibernationSchedule(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HorizontalPodAutoscalerConfig":          schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress":                                schema_pkg_apis_core_v1beta1_Ingress(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.IngressController":                      schema_pkg_apis_core_v1beta1_IngressController(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerConfig":                    schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerRequests":                  schema_pkg_apis_core_v1beta1_KubeAPIServerRequests(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeControllerManagerConfig":            schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref),
@@ -264,6 +269,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Seed":                                   schema_pkg_apis_core_v1beta1_Seed(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup":                             schema_pkg_apis_core_v1beta1_SeedBackup(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS":                                schema_pkg_apis_core_v1beta1_SeedDNS(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProvider":                        schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedList":                               schema_pkg_apis_core_v1beta1_SeedList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks":                           schema_pkg_apis_core_v1beta1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider":                           schema_pkg_apis_core_v1beta1_SeedProvider(ref),
@@ -2525,6 +2531,64 @@ func schema_pkg_apis_core_v1alpha1_HorizontalPodAutoscalerConfig(ref common.Refe
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_Ingress(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Ingress configures the Ingress specific settings of the Seed cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"domain": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"controller": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Controller configures a Gardener managed Ingress Controller listening on the ingressDomain",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.IngressController"),
+						},
+					},
+				},
+				Required: []string{"domain", "controller"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.IngressController"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_IngressController(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "IngressController enables a Gardener managed Ingress Controller listening on the ingressDomain",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind defines which kind of IngressController to use, for example `nginx`",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig specifies infrastructure specific configuration for the ingressController",
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+						},
+					},
+				},
+				Required: []string{"kind"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -5039,15 +5103,63 @@ func schema_pkg_apis_core_v1alpha1_SeedDNS(ref common.ReferenceCallback) common.
 				Properties: map[string]spec.Schema{
 					"ingressDomain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters.",
+							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. This will be removed in the next API version and replaced by spec.ingress.domain.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
+					"provider": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Provider configures a DNSProvider",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedDNSProvider"),
+						},
+					},
 				},
-				Required: []string{"ingressDomain"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedDNSProvider"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedDNSProvider(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedDNSProvider configures a DNSProvider",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type describes the type of the dns-provider, for example `aws-route53`",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"secretRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.",
+							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
+						},
+					},
+					"domains": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Domains contains information about which domains shall be included/excluded for this provider.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude"),
+						},
+					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude"),
+						},
+					},
+				},
+				Required: []string{"type", "secretRef"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -5469,12 +5581,18 @@ func schema_pkg_apis_core_v1alpha1_SeedSpec(ref common.ReferenceCallback) common
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettings"),
 						},
 					},
+					"ingress": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Ingress configures Ingress specific settings of the Seed cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Ingress"),
+						},
+					},
 				},
 				Required: []string{"dns", "networks", "provider"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -8523,6 +8641,64 @@ func schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref common.Refer
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_Ingress(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Ingress configures the Ingress specific settings of the Seed cluster",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"domain": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"controller": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Controller configures a Gardener managed Ingress Controller listening on the ingressDomain",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.IngressController"),
+						},
+					},
+				},
+				Required: []string{"domain", "controller"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.IngressController"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_IngressController(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "IngressController enables a Gardener managed Ingress Controller listening on the ingressDomain",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind defines which kind of IngressController to use, for example `nginx`",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig specifies infrastructure specific configuration for the ingressController",
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+						},
+					},
+				},
+				Required: []string{"kind"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -10991,15 +11167,63 @@ func schema_pkg_apis_core_v1beta1_SeedDNS(ref common.ReferenceCallback) common.O
 				Properties: map[string]spec.Schema{
 					"ingressDomain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters.",
+							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. This will be removed in the next API version and replaced by spec.ingress.domain.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
+					"provider": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Provider configures a DNSProvider",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProvider"),
+						},
+					},
 				},
-				Required: []string{"ingressDomain"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNSProvider"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_SeedDNSProvider(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedDNSProvider configures a DNSProvider for Seeds",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type describes the type of the dns-provider, for example `aws-route53`",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"secretRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.",
+							Ref:         ref("k8s.io/api/core/v1.SecretReference"),
+						},
+					},
+					"domains": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Domains contains information about which domains shall be included/excluded for this provider.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
+						},
+					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Zones contains information about which hosted zones shall be included/excluded for this provider.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude"),
+						},
+					},
+				},
+				Required: []string{"type", "secretRef"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
@@ -11421,12 +11645,18 @@ func schema_pkg_apis_core_v1beta1_SeedSpec(ref common.ReferenceCallback) common.
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings"),
 						},
 					},
+					"ingress": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Ingress configures Ingress specific settings of the Seed cluster.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress"),
+						},
+					},
 				},
 				Required: []string{"dns", "networks", "provider"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 

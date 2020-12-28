@@ -17,21 +17,22 @@ package helper_test
 import (
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
+	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 var _ = Describe("helper", func() {
@@ -683,6 +684,28 @@ var _ = Describe("helper", func() {
 							gardencorev1beta1.ResourceShoots: resource.MustParse("2"),
 						},
 					},
+				}))
+			})
+
+			It("should return a filled ingress controller providerconfig", func() {
+				shoot.Annotations = map[string]string{
+					v1beta1constants.AnnotationShootUseAsSeed: "true,ingress.controller.kind=foobar,ingress.controller.providerConfig.use-proxy-protocol=\"true\"," +
+						"ingress.controller.providerConfig.server-name-hash-bucket-size=\"257\"",
+				}
+
+				shootedSeed, err := ReadShootedSeed(shoot)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shootedSeed).To(Equal(&ShootedSeed{
+					APIServer: &defaultAPIServer,
+					IngressController: &gardencorev1beta1.IngressController{
+						Kind: "foobar",
+						ProviderConfig: &runtime.RawExtension{
+							Raw: []byte(`{"server-name-hash-bucket-size":"257","use-proxy-protocol":"true"}`),
+						},
+					},
+					Backup:    &gardencorev1beta1.SeedBackup{},
+					Resources: &defaultResources,
 				}))
 			})
 
@@ -1616,7 +1639,6 @@ var _ = Describe("helper", func() {
 			shootSet := s.Union(&s2)
 			Expect(len(shootSet)).To(Equal(0))
 		})
-
 	})
 
 	Describe("#GetPurpose", func() {
@@ -1701,4 +1723,25 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	DescribeTable("#KubernetesDashboardEnabled",
+		func(addons *gardencorev1beta1.Addons, matcher gomegatypes.GomegaMatcher) {
+			Expect(KubernetesDashboardEnabled(addons)).To(matcher)
+		},
+
+		Entry("addons nil", nil, BeFalse()),
+		Entry("kubernetesDashboard nil", &gardencorev1beta1.Addons{}, BeFalse()),
+		Entry("kubernetesDashboard disabled", &gardencorev1beta1.Addons{KubernetesDashboard: &gardencorev1beta1.KubernetesDashboard{Addon: gardencorev1beta1.Addon{Enabled: false}}}, BeFalse()),
+		Entry("kubernetesDashboard enabled", &gardencorev1beta1.Addons{KubernetesDashboard: &gardencorev1beta1.KubernetesDashboard{Addon: gardencorev1beta1.Addon{Enabled: true}}}, BeTrue()),
+	)
+
+	DescribeTable("#NginxIngressEnabled",
+		func(addons *gardencorev1beta1.Addons, matcher gomegatypes.GomegaMatcher) {
+			Expect(NginxIngressEnabled(addons)).To(matcher)
+		},
+
+		Entry("addons nil", nil, BeFalse()),
+		Entry("nginxIngress nil", &gardencorev1beta1.Addons{}, BeFalse()),
+		Entry("nginxIngress disabled", &gardencorev1beta1.Addons{NginxIngress: &gardencorev1beta1.NginxIngress{Addon: gardencorev1beta1.Addon{Enabled: false}}}, BeFalse()),
+		Entry("nginxIngress enabled", &gardencorev1beta1.Addons{NginxIngress: &gardencorev1beta1.NginxIngress{Addon: gardencorev1beta1.Addon{Enabled: true}}}, BeTrue()),
+	)
 })

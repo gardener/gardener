@@ -14,12 +14,19 @@ spec:
       role: monitoring
   ingress:
   - from:
-    - podSelector:
+    - namespaceSelector:
+        matchLabels:
+          role: garden
+      podSelector:
         matchLabels:
           app: nginx-ingress
           component: controller
-      namespaceSelector:
+    - namespaceSelector:
         matchLabels:
           role: kube-system
+      podSelector:
+        matchLabels:
+          app: nginx-ingress
+          component: controller
   policyTypes:
   - Ingress

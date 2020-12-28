@@ -76,4 +76,5 @@ Option | Description
 `featureGates.*={true,false}` | Overwrites the `.featureGates` in the gardenlet configuration (only applicable when the `no-gardenlet` setting is **not** set), e.g. `featureGates.APIServerSNI=true`
 `resources.capacity.*` | Overwrites the `resources.capacity` field in the gardenlet configuration (only applicable when the `no-gardenlet` setting is **not** set), e.g. `resources.capacity.shoots=250`
 `resources.reserved.*` | Overwrites the `resources.reserved` field in the gardenlet configuration (only applicable when the `no-gardenlet` setting is **not** set), e.g. `resources.reserved.foo=42`
-
+`ingress.controller.kind` | Activates and specifies the kind of the managed ingress controller in the seed
+`ingress.controller.providerConfig.*` | Sets provider specific configuration parameters for the managed ingress controller. Each parameter is specified via its path, e.g. `ingress.controller.providerConfig.param1=foo` or `ingress.controller.providerConfig.sublevel1.sublevel2.param3=bar`

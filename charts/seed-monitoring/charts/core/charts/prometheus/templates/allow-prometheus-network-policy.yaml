@@ -78,6 +78,13 @@ spec:
           role: kube-system
     - podSelector:
         matchLabels:
+          app: nginx-ingress
+          component: controller
+      namespaceSelector:
+        matchLabels:
+          role: garden
+    - podSelector:
+        matchLabels:
           app: aggregate-prometheus
           role: monitoring
       namespaceSelector:

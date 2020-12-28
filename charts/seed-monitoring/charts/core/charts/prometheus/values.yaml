@@ -12,6 +12,7 @@ images:
   blackbox-exporter: image-repository:image-tag
 
 ingress:
+  class: nginx
   hosts:
   - hostName: p.seed-1.example.com
     secretName: prometheus-tls

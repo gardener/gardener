@@ -17,10 +17,12 @@ package seed
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -29,12 +31,14 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/botanist/seedsystemcomponents/seedadmission"
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -49,13 +53,19 @@ import (
 	"github.com/gardener/gardener/pkg/version"
 
 	"github.com/Masterminds/semver"
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
@@ -314,6 +324,8 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			common.HvpaControllerImageName,
 			common.DependencyWatchdogImageName,
 			common.KubeStateMetricsImageName,
+			common.NginxIngressControllerSeedImageName,
+			common.IngressDefaultBackendImageName,
 		},
 		imagevector.RuntimeVersion(k8sSeedClient.Version()),
 		imagevector.TargetVersion(k8sSeedClient.Version()),
@@ -687,11 +699,15 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		return err
 	}
 
+	if err := handleDNSProvider(ctx, k8sGardenClient.Client(), k8sSeedClient.Client(), seed.Info.Spec.DNS); err != nil {
+		return err
+	}
+
 	values := kubernetes.Values(map[string]interface{}{
-		"cloudProvider":     seed.Info.Spec.Provider.Type,
 		"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane,
 		"global": map[string]interface{}{
-			"images": chart.ImageMapToValues(images),
+			"ingressClass": getIngressClass(managedIngress(seed)),
+			"images":       chart.ImageMapToValues(images),
 		},
 		"reserveExcessCapacity": seed.Info.Spec.Settings.ExcessCapacityReservation.Enabled,
 		"replicas": map[string]interface{}{
@@ -740,6 +756,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		"dependency-watchdog": map[string]interface{}{
 			"config": strings.Join(dependencyWatchdogConfigurations, "\n"),
 		},
+		"nginx-ingress": computeNginxIngress(seed),
 		"hvpa": map[string]interface{}{
 			"enabled": hvpaEnabled,
 		},
@@ -761,6 +778,24 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	})
 
 	if err := chartApplier.Apply(ctx, filepath.Join(common.ChartPath, chartName), v1beta1constants.GardenNamespace, chartName, values, applierOptions); err != nil {
+		return err
+	}
+
+	// managed nginx-ingress handling
+	if err := handleIngressDNSEntry(ctx, k8sSeedClient, chartApplier, seed); err != nil {
+		return err
+	}
+
+	var ingressClass string
+	if managedIngress(seed) {
+		ingressClass = v1beta1constants.SeedNginxIngressClass
+	} else {
+		ingressClass = v1beta1constants.ShootNginxIngressClass
+		if err := deleteIngressController(ctx, k8sSeedClient.Client()); err != nil {
+			return err
+		}
+	}
+	if err := migrateIngressClassForShootIngresses(ctx, k8sGardenClient.Client(), k8sSeedClient.Client(), seed, ingressClass); err != nil {
 		return err
 	}
 
@@ -855,6 +890,10 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 	return components, nil
 }
 
+func managedIngress(seed *Seed) bool {
+	return seed.Info.Spec.Ingress != nil
+}
+
 // DesiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes
 // (on the seed) in terms of reserve-excess-capacity deployment replicas. Each deployment replica currently
 // corresponds to resources of (request/limits) 2 cores of CPU and 6Gi of RAM.
@@ -875,16 +914,28 @@ func DesiredExcessCapacity() int {
 // Only necessary to renew certificates for Alertmanager, Grafana, Prometheus
 // TODO: (timuthy) remove in future version.
 func (s *Seed) GetIngressFQDNDeprecated(subDomain, shootName, projectName string) string {
+	ingressDomain := s.IngressDomain()
+
 	if shootName == "" {
-		return fmt.Sprintf("%s.%s.%s", subDomain, projectName, s.Info.Spec.DNS.IngressDomain)
+		return fmt.Sprintf("%s.%s.%s", subDomain, projectName, ingressDomain)
 	}
-	return fmt.Sprintf("%s.%s.%s.%s", subDomain, shootName, projectName, s.Info.Spec.DNS.IngressDomain)
+	return fmt.Sprintf("%s.%s.%s.%s", subDomain, shootName, projectName, ingressDomain)
 }
 
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Seed cluster. The
 // end result is '<subDomain>.<shootName>.<projectName>.<seed-ingress-domain>'.
 func (s *Seed) GetIngressFQDN(subDomain string) string {
-	return fmt.Sprintf("%s.%s", subDomain, s.Info.Spec.DNS.IngressDomain)
+	return fmt.Sprintf("%s.%s", subDomain, s.IngressDomain())
+}
+
+// IngressDomain returns the ingress domain for the seed.
+func (s *Seed) IngressDomain() string {
+	if s.Info.Spec.DNS.IngressDomain != nil {
+		return *s.Info.Spec.DNS.IngressDomain
+	} else if s.Info.Spec.Ingress != nil {
+		return s.Info.Spec.Ingress.Domain
+	}
+	return ""
 }
 
 // CheckMinimumK8SVersion checks whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
@@ -968,4 +1019,197 @@ func determineClusterIdentity(ctx context.Context, c client.Client) (string, err
 		return string(gardenNamespace.UID), nil
 	}
 	return clusterIdentity.Data[v1beta1constants.ClusterIdentity], nil
+}
+
+func getIngressClass(seedIngressEnabled bool) string {
+	if seedIngressEnabled {
+		return v1beta1constants.SeedNginxIngressClass
+	}
+	return v1beta1constants.ShootNginxIngressClass
+}
+
+func handleDNSProvider(ctx context.Context, gardenClient, seedClient client.Client, dnsConfig gardencorev1beta1.SeedDNS) error {
+	var (
+		dnsProvider = &dnsv1alpha1.DNSProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: v1beta1constants.GardenNamespace,
+				Name:      "seed",
+			},
+		}
+		providerSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: v1beta1constants.GardenNamespace,
+				Name:      "dnsprovider-seed",
+			},
+		}
+	)
+
+	if dnsConfig.Provider == nil {
+		return kutil.DeleteObjects(ctx, seedClient, dnsProvider, providerSecret)
+	}
+
+	cloudProviderSecret := kutil.Key(dnsConfig.Provider.SecretRef.Namespace, dnsConfig.Provider.SecretRef.Name)
+	if err := copySecretFromGardenerToSeed(ctx, gardenClient, seedClient, cloudProviderSecret, providerSecret); err != nil {
+		return err
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, seedClient, dnsProvider, func() error {
+		dnsProvider.Spec = dnsv1alpha1.DNSProviderSpec{
+			Type: dnsConfig.Provider.Type,
+			SecretRef: &corev1.SecretReference{
+				Namespace: providerSecret.Namespace,
+				Name:      providerSecret.Name,
+			},
+		}
+
+		if dnsConfig.Provider.Domains != nil {
+			dnsProvider.Spec.Domains = &dnsv1alpha1.DNSSelection{
+				Include: dnsConfig.Provider.Domains.Include,
+				Exclude: dnsConfig.Provider.Domains.Exclude,
+			}
+		}
+
+		if dnsConfig.Provider.Zones != nil {
+			dnsProvider.Spec.Zones = &dnsv1alpha1.DNSSelection{
+				Include: dnsConfig.Provider.Zones.Include,
+				Exclude: dnsConfig.Provider.Zones.Exclude,
+			}
+		}
+
+		return nil
+	})
+	return err
+}
+
+func handleIngressDNSEntry(ctx context.Context, c kubernetes.Interface, chartApplier kubernetes.ChartApplier, seed *Seed) error {
+	var (
+		seedLogger = logger.Logger.WithField("seed", seed.Info.Name)
+		values     = &dns.EntryValues{Name: "ingress"}
+	)
+
+	if managedIngress(seed) {
+		loadBalancerAddress, err := kutil.WaitUntilLoadBalancerIsReady(
+			ctx,
+			c,
+			v1beta1constants.GardenNamespace,
+			"nginx-ingress-controller",
+			time.Minute,
+			seedLogger,
+		)
+		if err != nil {
+			return err
+		}
+
+		values.DNSName = seed.GetIngressFQDN("*")
+		values.Targets = []string{loadBalancerAddress}
+	}
+
+	dnsEntry := dns.NewDNSEntry(
+		values,
+		v1beta1constants.GardenNamespace,
+		chartApplier,
+		common.ChartPath,
+		seedLogger,
+		c.Client(),
+		nil,
+	)
+
+	if managedIngress(seed) {
+		return dnsEntry.Deploy(ctx)
+	}
+	return dnsEntry.Destroy(ctx)
+}
+
+const annotationSeedIngressClass = "seed.gardener.cloud/ingress-class"
+
+func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, seedClient client.Client, seed *Seed, newClass string) error {
+	if oldClass, ok := seed.Info.Annotations[annotationSeedIngressClass]; ok && oldClass == newClass {
+		return nil
+	}
+
+	shootNamespaces := &corev1.NamespaceList{}
+	if err := seedClient.List(ctx, shootNamespaces, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}); err != nil {
+		return err
+	}
+
+	for _, ns := range shootNamespaces.Items {
+		if err := switchIngressClass(ctx, seedClient, kutil.Key(ns.Name, "alertmanager"), newClass); err != nil {
+			return err
+		}
+		if err := switchIngressClass(ctx, seedClient, kutil.Key(ns.Name, "prometheus"), newClass); err != nil {
+			return err
+		}
+		if err := switchIngressClass(ctx, seedClient, kutil.Key(ns.Name, "grafana-operators"), newClass); err != nil {
+			return err
+		}
+		if err := switchIngressClass(ctx, seedClient, kutil.Key(ns.Name, "grafana-users"), newClass); err != nil {
+			return err
+		}
+	}
+
+	metav1.SetMetaDataAnnotation(&seed.Info.ObjectMeta, annotationSeedIngressClass, newClass)
+	return gardenClient.Update(ctx, seed.Info)
+}
+
+func switchIngressClass(ctx context.Context, seedClient client.Client, ingressKey types.NamespacedName, newClass string) error {
+	ingress := &extensionsv1beta1.Ingress{}
+	if err := seedClient.Get(ctx, ingressKey, ingress); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	ingress.Annotations["kubernetes.io/ingress.class"] = newClass
+	return seedClient.Update(ctx, ingress)
+}
+
+func copySecretFromGardenerToSeed(ctx context.Context, gardenClient, seedClient client.Client, secretKey types.NamespacedName, targetSecret *corev1.Secret) error {
+	gardenSecret := &corev1.Secret{}
+	if err := gardenClient.Get(ctx, secretKey, gardenSecret); err != nil {
+		return err
+	}
+
+	if gardenSecret == nil {
+		return errors.New("error during seed bootstrap: secret referenced in dns.provider.SecretRef not found")
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, seedClient, targetSecret, func() error {
+		targetSecret.Type = gardenSecret.Type
+		targetSecret.Data = gardenSecret.Data
+		return nil
+	})
+	return err
+}
+
+func computeNginxIngress(seed *Seed) map[string]interface{} {
+	values := map[string]interface{}{
+		"enabled":      managedIngress(seed),
+		"ingressClass": v1beta1constants.SeedNginxIngressClass,
+	}
+
+	if seed.Info.Spec.Ingress != nil && seed.Info.Spec.Ingress.Controller.ProviderConfig != nil {
+		values["config"] = seed.Info.Spec.Ingress.Controller.ProviderConfig
+	}
+
+	return values
+}
+
+func deleteIngressController(ctx context.Context, c client.Client) error {
+	return kutil.DeleteObjects(
+		ctx,
+		c,
+		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress"}},
+		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress"}},
+		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress", Namespace: v1beta1constants.GardenNamespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},
+		&policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},
+		&autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-controller", Namespace: v1beta1constants.GardenNamespace}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-k8s-backend", Namespace: v1beta1constants.GardenNamespace}},
+		&rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress", Namespace: v1beta1constants.GardenNamespace}},
+		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress", Namespace: v1beta1constants.GardenNamespace}},
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-k8s-backend", Namespace: v1beta1constants.GardenNamespace}},
+	)
 }

@@ -1,0 +1,15 @@
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    app: nginx-ingress
+    component: controller
+  name: nginx-ingress-controller
+  namespace: garden
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: nginx-ingress
+      component: controller
+      release: addons

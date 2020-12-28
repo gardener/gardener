@@ -419,7 +419,7 @@ func (q *QuotaValidator) getShootResources(shoot core.Shoot) (corev1.ResourceLis
 		}
 	}
 
-	if shoot.Spec.Addons != nil && shoot.Spec.Addons.NginxIngress != nil && shoot.Spec.Addons.NginxIngress.Addon.Enabled {
+	if helper.NginxIngressEnabled(shoot.Spec.Addons) {
 		countLB++
 	}
 	resources[core.QuotaMetricLoadbalancer] = *resource.NewQuantity(countLB, resource.DecimalSI)
@@ -460,21 +460,7 @@ func lifetimeVerificationNeeded(new, old core.Shoot) bool {
 }
 
 func quotaVerificationNeeded(new, old core.Shoot) bool {
-	// Check for diff on addon nginx-ingress (addon requires to deploy a load balancer)
-	var (
-		oldNginxIngressEnabled bool
-		newNginxIngressEnabled bool
-	)
-
-	if old.Spec.Addons != nil && old.Spec.Addons.NginxIngress != nil {
-		oldNginxIngressEnabled = old.Spec.Addons.NginxIngress.Enabled
-	}
-
-	if new.Spec.Addons != nil && new.Spec.Addons.NginxIngress != nil {
-		newNginxIngressEnabled = new.Spec.Addons.NginxIngress.Enabled
-	}
-
-	if !oldNginxIngressEnabled && newNginxIngressEnabled {
+	if !helper.NginxIngressEnabled(old.Spec.Addons) && helper.NginxIngressEnabled(new.Spec.Addons) {
 		return true
 	}
 

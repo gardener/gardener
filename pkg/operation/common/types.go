@@ -380,6 +380,9 @@ const (
 	// NginxIngressControllerImageName is the name of the NginxIngressController image.
 	NginxIngressControllerImageName = "nginx-ingress-controller"
 
+	// NginxIngressControllerSeedImageName is the name of the NginxIngressController image.
+	NginxIngressControllerSeedImageName = "nginx-ingress-controller-seed"
+
 	// IngressDefaultBackendImageName is the name of the IngressDefaultBackend image.
 	IngressDefaultBackendImageName = "ingress-default-backend"
 
@@ -488,6 +491,9 @@ const (
 
 	// EndUserCrtValidity is the time period a user facing certificate is valid.
 	EndUserCrtValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176
+
+	// ShootDNSIngressName is a constant for the DNS resources used for the shoot ingress addon.
+	ShootDNSIngressName = "ingress"
 )
 
 var (

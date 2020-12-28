@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -46,6 +47,7 @@ import (
 	"github.com/gardener/gardener/pkg/version"
 
 	"github.com/Masterminds/semver"
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
@@ -183,6 +185,10 @@ func (c *defaultSeedRegistrationControl) Reconcile(shootObj *gardencorev1beta1.S
 		seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeedWithName(*shootObj.Spec.SeedName))
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to get seed client: %w", err)
+		}
+
+		if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
+			return reconcile.Result{}, errors.New("cannot register Shoot as Seed if it does not specify a domain")
 		}
 
 		if shootedSeedConfig.NoGardenlet {
@@ -354,15 +360,39 @@ func prepareSeedConfig(ctx context.Context, gardenClient client.Client, seedClie
 		return nil, err
 	}
 
+	var (
+		dns           gardencorev1beta1.SeedDNS
+		ingress       *gardencorev1beta1.Ingress
+		ingressDomain = fmt.Sprintf("%s.%s", common.IngressPrefix, *(shoot.Spec.DNS.Domain))
+	)
+
+	activateIngressController, err := activateSeedIngressController(ctx, seedClient, shoot, shootedSeedConfig.IngressController)
+	if err != nil {
+		return nil, err
+	}
+	if activateIngressController {
+		dnsProvider, err := prepareDNSProvider(ctx, gardenClient, shoot)
+		if err != nil {
+			return nil, err
+		}
+		dns.Provider = dnsProvider
+
+		ingress = &gardencorev1beta1.Ingress{
+			Domain:     ingressDomain,
+			Controller: *shootedSeedConfig.IngressController,
+		}
+	} else {
+		dns.IngressDomain = &ingressDomain
+	}
+
 	return &gardencorev1beta1.SeedSpec{
 		Provider: gardencorev1beta1.SeedProvider{
 			Type:           shoot.Spec.Provider.Type,
 			Region:         shoot.Spec.Region,
 			ProviderConfig: shootedSeedConfig.SeedProviderConfig,
 		},
-		DNS: gardencorev1beta1.SeedDNS{
-			IngressDomain: fmt.Sprintf("%s.%s", common.IngressPrefix, *(shoot.Spec.DNS.Domain)),
-		},
+		DNS:       dns,
+		Ingress:   ingress,
 		SecretRef: secretRef,
 		Networks: gardencorev1beta1.SeedNetworks{
 			Pods:          *shoot.Spec.Networking.Pods,
@@ -391,12 +421,28 @@ func prepareSeedConfig(ctx context.Context, gardenClient client.Client, seedClie
 	}, nil
 }
 
-// registerAsSeed registers a Shoot cluster as a Seed in the Garden cluster.
-func registerAsSeed(ctx context.Context, gardenClient client.Client, seedClient client.Client, shoot *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed) error {
-	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
-		return errors.New("cannot register Shoot as Seed if it does not specify a domain")
+func activateSeedIngressController(ctx context.Context, seedClient client.Client, shoot *gardencorev1beta1.Shoot, ingressController *gardencorev1beta1.IngressController) (bool, error) {
+	if gardencorev1beta1helper.NginxIngressEnabled(shoot.Spec.Addons) {
+		return false, nil
 	}
 
+	if seedIngressEnabled := ingressController != nil; !seedIngressEnabled {
+		return false, nil
+	}
+
+	// If migrating from Shoot Nginx Addon to Seed Ingress Controller wait until DNSEntry pointing to ShootNginxAddon service got deleted before activating Seed Ingress Controller.
+	if err := seedClient.Get(ctx, kutil.Key(shoot.Status.TechnicalID, common.ShootDNSIngressName), &dnsv1alpha1.DNSEntry{}); err != nil {
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, err
+	}
+
+	return false, nil
+}
+
+// registerAsSeed registers a Shoot cluster as a Seed in the Garden cluster.
+func registerAsSeed(ctx context.Context, gardenClient client.Client, seedClient client.Client, shoot *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed) error {
 	var (
 		secretRef = &corev1.SecretReference{
 			Name:      fmt.Sprintf("seed-%s", shoot.Name),
@@ -775,6 +821,103 @@ func checkSeedAssociations(ctx context.Context, c client.Client, seedName string
 	}
 
 	return nil
+}
+
+func prepareDNSProvider(ctx context.Context, gardenClient client.Client, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.SeedDNSProvider, error) {
+	for _, fn := range []func(context.Context, client.Client, *gardencorev1beta1.Shoot) (*gardencorev1beta1.SeedDNSProvider, error){
+		dnsProviderForCustomDomain,
+		dnsProviderForDefaultDomain,
+	} {
+		dnsProvider, err := fn(ctx, gardenClient, shoot)
+		if err != nil {
+			return nil, err
+		}
+		if dnsProvider != nil {
+			return dnsProvider, nil
+		}
+	}
+
+	return nil, fmt.Errorf("configuring dns provider failed - could not determine if the shoot's domain is a custom domain or a default domain")
+}
+
+func dnsProviderForCustomDomain(ctx context.Context, gardenClient client.Client, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.SeedDNSProvider, error) {
+	primaryProvider := gardencorev1beta1helper.FindPrimaryDNSProvider(shoot.Spec.DNS.Providers)
+	if primaryProvider == nil {
+		return nil, nil
+	}
+
+	if primaryProvider.Type == nil {
+		return nil, fmt.Errorf("configuring dns provider failed - primary provider is missing a `type`")
+	}
+	if *primaryProvider.Type == core.DNSUnmanaged {
+		return nil, nil
+	}
+
+	var secretRef corev1.SecretReference
+
+	if primaryProvider.SecretName != nil {
+		secretRef.Name = *primaryProvider.SecretName
+		secretRef.Namespace = shoot.Namespace
+	} else {
+		secretBinding := &gardencorev1beta1.SecretBinding{}
+		if err := gardenClient.Get(ctx, kutil.Key(shoot.Namespace, shoot.Spec.SecretBindingName), secretBinding); err != nil {
+			return nil, err
+		}
+		secretRef.Name = secretBinding.SecretRef.Name
+		secretRef.Namespace = secretBinding.SecretRef.Namespace
+	}
+
+	return &gardencorev1beta1.SeedDNSProvider{
+		Type:      *primaryProvider.Type,
+		Domains:   primaryProvider.Domains,
+		Zones:     primaryProvider.Zones,
+		SecretRef: secretRef,
+	}, nil
+}
+
+func dnsProviderForDefaultDomain(ctx context.Context, gardenClient client.Client, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.SeedDNSProvider, error) {
+	defaultDomainSecrets := &corev1.SecretList{}
+	if err := gardenClient.List(
+		ctx,
+		defaultDomainSecrets,
+		client.InNamespace(v1beta1constants.GardenNamespace),
+		client.MatchingLabels{
+			v1beta1constants.GardenRole: common.GardenRoleDefaultDomain,
+		},
+	); err != nil {
+		return nil, err
+	}
+
+	for _, defaultDomainSecret := range defaultDomainSecrets.Items {
+		provider, domain, includeZones, excludeZones, err := common.GetDomainInfoFromAnnotations(defaultDomainSecret.Annotations)
+		if err != nil {
+			return nil, err
+		}
+
+		if strings.HasSuffix(*shoot.Spec.DNS.Domain, domain) {
+			dnsProvider := &gardencorev1beta1.SeedDNSProvider{
+				Type: provider,
+				SecretRef: corev1.SecretReference{
+					Name:      defaultDomainSecret.Name,
+					Namespace: defaultDomainSecret.Namespace,
+				},
+				Domains: &gardencorev1beta1.DNSIncludeExclude{
+					Include: []string{domain},
+				},
+			}
+
+			if includeZones != nil || excludeZones != nil {
+				dnsProvider.Zones = &gardencorev1beta1.DNSIncludeExclude{
+					Include: includeZones,
+					Exclude: excludeZones,
+				}
+			}
+
+			return dnsProvider, nil
+		}
+	}
+
+	return nil, nil
 }
 
 func mustEnableVPA(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {

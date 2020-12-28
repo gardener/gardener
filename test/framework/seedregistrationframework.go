@@ -32,6 +32,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -311,7 +312,7 @@ func (f *SeedRegistrationFramework) buildSeedObject(secretBinding *gardencorev1b
 		},
 		Spec: gardencorev1beta1.SeedSpec{
 			DNS: gardencorev1beta1.SeedDNS{
-				IngressDomain: fmt.Sprintf("%s.%s", common.IngressPrefix, *refShoot.Spec.DNS.Domain),
+				IngressDomain: pointer.StringPtr(fmt.Sprintf("%s.%s", common.IngressPrefix, *refShoot.Spec.DNS.Domain)),
 			},
 			SecretRef: &corev1.SecretReference{
 				Namespace: f.Config.ShootedSeedNamespace,

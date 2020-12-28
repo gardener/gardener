@@ -23,6 +23,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	netpol "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
@@ -43,18 +44,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	// DNSIngressName is a constant for a DNS resources used for the ingress domain name.
-	DNSIngressName = "ingress"
-	// SecretLabelKeyManagedResource is a key for a label on a secret with the value 'managed-resource'.
-	SecretLabelKeyManagedResource = "managed-resource"
-)
+// SecretLabelKeyManagedResource is a key for a label on a secret with the value 'managed-resource'.
+const SecretLabelKeyManagedResource = "managed-resource"
 
 // GenerateKubernetesDashboardConfig generates the values which are required to render the chart of
 // the kubernetes-dashboard properly.
 func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, error) {
 	var (
-		enabled = b.Shoot.KubernetesDashboardEnabled()
+		enabled = gardencorev1beta1helper.KubernetesDashboardEnabled(b.Shoot.Info.Spec.Addons)
 		values  = map[string]interface{}{}
 	)
 
@@ -71,7 +68,7 @@ func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, 
 
 // EnsureIngressDNSRecord deploys the nginx ingress DNSEntry and DNSOwner resources.
 func (b *Botanist) EnsureIngressDNSRecord(ctx context.Context) error {
-	if b.NeedsExternalDNS() && !b.Shoot.HibernationEnabled && b.Shoot.NginxIngressEnabled() {
+	if b.NeedsExternalDNS() && !b.Shoot.HibernationEnabled && gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.Info.Spec.Addons) {
 		if b.isRestorePhase() {
 			return dnsRestoreDeployer{
 				entry: b.Shoot.Components.Extensions.DNS.NginxEntry,
@@ -112,7 +109,7 @@ func (b *Botanist) MigrateIngressDNSRecord(ctx context.Context) error {
 func (b *Botanist) DefaultNginxIngressDNSEntry(seedClient client.Client) component.DeployWaiter {
 	return component.OpDestroy(dns.NewDNSEntry(
 		&dns.EntryValues{
-			Name: DNSIngressName,
+			Name: common.ShootDNSIngressName,
 			TTL:  *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		},
 		b.Shoot.SeedNamespace,
@@ -128,7 +125,7 @@ func (b *Botanist) DefaultNginxIngressDNSEntry(seedClient client.Client) compone
 func (b *Botanist) DefaultNginxIngressDNSOwner(seedClient client.Client) component.DeployWaiter {
 	return component.OpDestroy(dns.NewDNSOwner(
 		&dns.OwnerValues{
-			Name: DNSIngressName,
+			Name: common.ShootDNSIngressName,
 		},
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),
@@ -139,11 +136,11 @@ func (b *Botanist) DefaultNginxIngressDNSOwner(seedClient client.Client) compone
 
 // SetNginxIngressAddress sets the IP address of the API server's LoadBalancer.
 func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Client) {
-	if b.NeedsExternalDNS() && !b.Shoot.HibernationEnabled && b.Shoot.NginxIngressEnabled() {
-		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSIngressName
+	if b.NeedsExternalDNS() && !b.Shoot.HibernationEnabled && gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.Info.Spec.Addons) {
+		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + common.ShootDNSIngressName
 		b.Shoot.Components.Extensions.DNS.NginxOwner = dns.NewDNSOwner(
 			&dns.OwnerValues{
-				Name:    DNSIngressName,
+				Name:    common.ShootDNSIngressName,
 				Active:  true,
 				OwnerID: ownerID,
 			},
@@ -154,7 +151,7 @@ func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Clie
 		)
 		b.Shoot.Components.Extensions.DNS.NginxEntry = dns.NewDNSEntry(
 			&dns.EntryValues{
-				Name:    DNSIngressName,
+				Name:    common.ShootDNSIngressName,
 				DNSName: b.Shoot.GetIngressFQDN("*"),
 				Targets: []string{address},
 				OwnerID: ownerID,
@@ -174,7 +171,7 @@ func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Clie
 // the nginx-ingress properly.
 func (b *Botanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	var (
-		enabled = b.Shoot.NginxIngressEnabled()
+		enabled = gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.Info.Spec.Addons)
 		values  map[string]interface{}
 	)
 

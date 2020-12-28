@@ -44,8 +44,10 @@ var _ = Describe("Controller", func() {
 	var (
 		gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
 
-		queue *fakeQueue
-		c     *Controller
+		seedQueue          *fakeQueue
+		controllerRegQueue *fakeQueue
+		c                  *Controller
+		obj                *gardencorev1beta1.Seed
 
 		seedName = "seed"
 	)
@@ -55,66 +57,95 @@ var _ = Describe("Controller", func() {
 		seedInformer := gardenCoreInformerFactory.Core().V1beta1().Seeds()
 		seedLister := seedInformer.Lister()
 
-		queue = &fakeQueue{}
+		seedQueue = &fakeQueue{}
+		controllerRegQueue = &fakeQueue{}
 		c = &Controller{
-			seedQueue:  queue,
-			seedLister: seedLister,
+			seedQueue:                       seedQueue,
+			controllerRegistrationSeedQueue: controllerRegQueue,
+			seedLister:                      seedLister,
+		}
+
+		obj = &gardencorev1beta1.Seed{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: seedName,
+			},
+			Spec: gardencorev1beta1.SeedSpec{},
 		}
 	})
 
 	Describe("#seedAdd", func() {
 		It("should do nothing because the object key computation fails", func() {
-			obj := "foo"
+			wrongTypeObj := "foo"
 
-			c.seedAdd(obj)
+			c.seedAdd(wrongTypeObj, true)
 
-			Expect(queue.Len()).To(BeZero())
+			Expect(seedQueue.Len()).To(BeZero())
+			Expect(controllerRegQueue.Len()).To(BeZero())
 		})
 
-		It("should add the object to the queue", func() {
-			obj := &gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seedName,
-				},
-			}
+		It("should add the object to both queues", func() {
+			c.seedAdd(obj, true)
 
-			c.seedAdd(obj)
+			Expect(seedQueue.Len()).To(Equal(1))
+			Expect(seedQueue.items[0]).To(Equal(seedName))
+			Expect(controllerRegQueue.Len()).To(Equal(1))
+			Expect(controllerRegQueue.items[0]).To(Equal(seedName))
+		})
 
-			Expect(queue.Len()).To(Equal(1))
-			Expect(queue.items[0]).To(Equal(seedName))
+		It("should add the object to seed queue only", func() {
+			c.seedAdd(obj, false)
+
+			Expect(seedQueue.Len()).To(Equal(1))
+			Expect(seedQueue.items[0]).To(Equal(seedName))
+			Expect(controllerRegQueue.Len()).To(BeZero())
 		})
 	})
 
 	Describe("#seedUpdate", func() {
 		It("should do nothing because the object key computation fails", func() {
-			obj := "foo"
+			wrongTypeObj := "foo"
 
-			c.seedUpdate(nil, obj)
+			c.seedUpdate(nil, wrongTypeObj)
 
-			Expect(queue.Len()).To(BeZero())
+			Expect(seedQueue.Len()).To(BeZero())
+			Expect(controllerRegQueue.Len()).To(BeZero())
 		})
 
-		It("should add the object to the queue", func() {
-			obj := &gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seedName,
+		It("should always add the object to the seed queue", func() {
+			oldObj := &gardencorev1beta1.Seed{}
+
+			c.seedUpdate(oldObj, obj)
+
+			Expect(seedQueue.Len()).To(Equal(1))
+			Expect(seedQueue.items[0]).To(Equal(seedName))
+			Expect(controllerRegQueue.Len()).To(BeZero())
+		})
+
+		It("should also add the object to controllerRegistrationQueue if DNS provider changed", func() {
+			objWithChangedDNSProvider := obj.DeepCopy()
+			objWithChangedDNSProvider.Spec = gardencorev1beta1.SeedSpec{
+				DNS: gardencorev1beta1.SeedDNS{
+					Provider: &gardencorev1beta1.SeedDNSProvider{},
 				},
 			}
 
-			c.seedUpdate(nil, obj)
+			c.seedUpdate(obj, objWithChangedDNSProvider)
 
-			Expect(queue.Len()).To(Equal(1))
-			Expect(queue.items[0]).To(Equal(seedName))
+			Expect(seedQueue.Len()).To(Equal(1))
+			Expect(seedQueue.items[0]).To(Equal(seedName))
+			Expect(controllerRegQueue.Len()).To(Equal(1))
+			Expect(controllerRegQueue.items[0]).To(Equal(seedName))
 		})
 	})
 
 	Describe("#seedDelete", func() {
 		It("should do nothing because the object key computation fails", func() {
-			obj := "foo"
+			wrongTypeObj := "foo"
 
-			c.seedDelete(obj)
+			c.seedDelete(wrongTypeObj)
 
-			Expect(queue.Len()).To(BeZero())
+			Expect(seedQueue.Len()).To(BeZero())
+			Expect(controllerRegQueue.Len()).To(BeZero())
 		})
 
 		It("should add the object to the queue (tomb stone)", func() {
@@ -124,21 +155,19 @@ var _ = Describe("Controller", func() {
 
 			c.seedDelete(obj)
 
-			Expect(queue.Len()).To(Equal(1))
-			Expect(queue.items[0]).To(Equal(seedName))
+			Expect(seedQueue.Len()).To(Equal(1))
+			Expect(seedQueue.items[0]).To(Equal(seedName))
+			Expect(controllerRegQueue.Len()).To(Equal(1))
+			Expect(controllerRegQueue.items[0]).To(Equal(seedName))
 		})
 
 		It("should add the object to the queue", func() {
-			obj := &gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seedName,
-				},
-			}
-
 			c.seedDelete(obj)
 
-			Expect(queue.Len()).To(Equal(1))
-			Expect(queue.items[0]).To(Equal(seedName))
+			Expect(seedQueue.Len()).To(Equal(1))
+			Expect(seedQueue.items[0]).To(Equal(seedName))
+			Expect(controllerRegQueue.Len()).To(Equal(1))
+			Expect(controllerRegQueue.items[0]).To(Equal(seedName))
 		})
 	})
 
@@ -162,12 +191,6 @@ var _ = Describe("Controller", func() {
 		})
 
 		It("should return the result of the reconciliation (nil)", func() {
-			obj := &gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seedName,
-				},
-			}
-
 			c.seedControl = &fakeSeedControl{}
 			c.seedLister = newFakeSeedLister(c.seedLister, obj, nil, nil)
 
@@ -175,12 +198,6 @@ var _ = Describe("Controller", func() {
 		})
 
 		It("should return the result of the reconciliation (error)", func() {
-			obj := &gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seedName,
-				},
-			}
-
 			c.seedControl = &fakeSeedControl{result: errors.New("")}
 			c.seedLister = newFakeSeedLister(c.seedLister, obj, nil, nil)
 

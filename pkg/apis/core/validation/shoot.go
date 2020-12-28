@@ -87,7 +87,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newShoot.ObjectMeta, &oldShoot.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateShootSpecUpdate(&newShoot.Spec, &oldShoot.Spec, newShoot.DeletionTimestamp != nil, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateShootSpecUpdate(&newShoot.Spec, &oldShoot.Spec, newShoot.ObjectMeta, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateShoot(newShoot)...)
 
 	return allErrs
@@ -139,10 +139,10 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 }
 
 // ValidateShootSpecUpdate validates the specification of a Shoot object.
-func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
+func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
+	if newObjectMeta.DeletionTimestamp != nil && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec, oldSpec, fldPath)...)
 		return allErrs
 	}
@@ -157,6 +157,7 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, deletionTimestamp
 
 	seedGotAssigned := oldSpec.SeedName == nil && newSpec.SeedName != nil
 
+	allErrs = append(allErrs, validateAddonsUpdate(newSpec.Addons, oldSpec.Addons, metav1.HasAnnotation(newObjectMeta, v1beta1constants.AnnotationShootUseAsSeed), fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, seedGotAssigned, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 	allErrs = append(allErrs, validateKubeProxyModeUpdate(newSpec.Kubernetes.KubeProxy, oldSpec.Kubernetes.KubeProxy, newSpec.Kubernetes.Version, fldPath.Child("kubernetes", "kubeProxy"))...)
@@ -243,26 +244,22 @@ func ValidateShootStatusUpdate(newStatus, oldStatus core.ShootStatus) field.Erro
 func validateAddons(addons *core.Addons, kubeAPIServerConfig *core.KubeAPIServerConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if addons == nil {
-		return allErrs
-	}
-
-	if addons.NginxIngress != nil && addons.NginxIngress.Enabled {
+	if helper.NginxIngressEnabled(addons) {
 		if policy := addons.NginxIngress.ExternalTrafficPolicy; policy != nil {
 			if !availableNginxIngressExternalTrafficPolicies.Has(string(*policy)) {
-				allErrs = append(allErrs, field.NotSupported(fldPath.Child("nginx-ingress", "externalTrafficPolicy"), *policy, availableNginxIngressExternalTrafficPolicies.List()))
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("nginxIngress", "externalTrafficPolicy"), *policy, availableNginxIngressExternalTrafficPolicies.List()))
 			}
 		}
 	}
 
-	if addons.KubernetesDashboard != nil && addons.KubernetesDashboard.Enabled {
+	if helper.KubernetesDashboardEnabled(addons) {
 		if authMode := addons.KubernetesDashboard.AuthenticationMode; authMode != nil {
 			if !availableKubernetesDashboardAuthenticationModes.Has(*authMode) {
-				allErrs = append(allErrs, field.NotSupported(fldPath.Child("kubernetes-dashboard", "authenticationMode"), *authMode, availableKubernetesDashboardAuthenticationModes.List()))
+				allErrs = append(allErrs, field.NotSupported(fldPath.Child("kubernetesDashboard", "authenticationMode"), *authMode, availableKubernetesDashboardAuthenticationModes.List()))
 			}
 
 			if *authMode == core.KubernetesDashboardAuthModeBasic && !helper.ShootWantsBasicAuthentication(kubeAPIServerConfig) {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubernetes-dashboard", "authenticationMode"), *authMode, "cannot use basic auth mode when basic auth is not enabled in kube-apiserver configuration"))
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubernetesDashboard", "authenticationMode"), *authMode, "cannot use basic auth mode when basic auth is not enabled in kube-apiserver configuration"))
 			}
 		}
 	}
@@ -318,6 +315,21 @@ func validateKubeProxyModeUpdate(newConfig, oldConfig *core.KubeProxyConfig, ver
 	if ok, _ := versionutils.CheckVersionMeetsConstraint(version, ">= 1.14.1, < 1.16"); ok {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newMode, oldMode, fldPath.Child("mode"))...)
 	}
+	return allErrs
+}
+
+func validateAddonsUpdate(new, old *core.Addons, shootUseAsSeed bool, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if !shootUseAsSeed {
+		return allErrs
+	}
+
+	if !helper.NginxIngressEnabled(old) && helper.NginxIngressEnabled(new) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("nginxIngress", "enabled"),
+			"shoot ingress addon is not supported for shooted seeds - please use managed seed ingress controller"))
+	}
+
 	return allErrs
 }
 

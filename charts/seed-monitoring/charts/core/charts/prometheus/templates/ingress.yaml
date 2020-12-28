@@ -2,7 +2,7 @@ apiVersion: {{ include "ingressversion" . }}
 kind: Ingress
 metadata:
   annotations:
-    kubernetes.io/ingress.class: nginx
+    kubernetes.io/ingress.class: {{ .Values.ingress.class }}
     nginx.ingress.kubernetes.io/auth-realm: Authentication Required
     nginx.ingress.kubernetes.io/auth-secret: {{ .Chart.Name }}-basic-auth
     nginx.ingress.kubernetes.io/auth-type: basic

@@ -320,4 +320,11 @@ const (
 
 	// ClusterIdentity is a constant equal to the name and data key (that stores the identity) of the cluster-identity ConfigMap
 	ClusterIdentity = "cluster-identity"
+
+	// SeedNginxIngressClass defines the ingress class for the seed nginx ingress controller
+	SeedNginxIngressClass = "nginx-gardener"
+	// IngressKindNginx defines nginx as kind as managed Seed ingress
+	IngressKindNginx = "nginx"
+	// ShootNginxIngressClass defines the ingress class for the seed nginx ingress controller
+	ShootNginxIngressClass = "nginx"
 )

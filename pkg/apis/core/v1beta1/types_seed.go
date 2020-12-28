@@ -75,6 +75,9 @@ type SeedSpec struct {
 	// Settings contains certain settings for this seed cluster.
 	// +optional
 	Settings *SeedSettings `json:"settings,omitempty" protobuf:"bytes,8,opt,name=settings"`
+	// Ingress configures Ingress specific settings of the Seed cluster.
+	// +optional
+	Ingress *Ingress `json:"ingress,omitempty" protobuf:"bytes,9,opt,name=ingress"`
 }
 
 // SeedStatus is the status of a Seed.
@@ -126,7 +129,44 @@ type SeedBackup struct {
 type SeedDNS struct {
 	// IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
 	// to construct ingress URLs for system applications running in Shoot clusters.
-	IngressDomain string `json:"ingressDomain" protobuf:"bytes,1,opt,name=ingressDomain"`
+	// This will be removed in the next API version and replaced by spec.ingress.domain.
+	// +optional
+	IngressDomain *string `json:"ingressDomain,omitempty" protobuf:"bytes,1,opt,name=ingressDomain"`
+	// Provider configures a DNSProvider
+	// +optional
+	Provider *SeedDNSProvider `json:"provider,omitempty" protobuf:"bytes,2,opt,name=provider"`
+}
+
+// SeedDNSProvider configures a DNSProvider for Seeds
+type SeedDNSProvider struct {
+	// Type describes the type of the dns-provider, for example `aws-route53`
+	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
+	// SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.
+	SecretRef corev1.SecretReference `json:"secretRef" protobuf:"bytes,2,opt,name=secretRef"`
+	// Domains contains information about which domains shall be included/excluded for this provider.
+	// +optional
+	Domains *DNSIncludeExclude `json:"domains,omitempty" protobuf:"bytes,3,opt,name=domains"`
+	// Zones contains information about which hosted zones shall be included/excluded for this provider.
+	// +optional
+	Zones *DNSIncludeExclude `json:"zones,omitempty" protobuf:"bytes,4,opt,name=zones"`
+}
+
+// Ingress configures the Ingress specific settings of the Seed cluster
+type Ingress struct {
+	// Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used
+	// to construct ingress URLs for system applications running in Shoot clusters.
+	Domain string `json:"domain" protobuf:"bytes,1,opt,name=domain"`
+	// Controller configures a Gardener managed Ingress Controller listening on the ingressDomain
+	Controller IngressController `json:"controller" protobuf:"bytes,2,opt,name=controller"`
+}
+
+// IngressController enables a Gardener managed Ingress Controller listening on the ingressDomain
+type IngressController struct {
+	// Kind defines which kind of IngressController to use, for example `nginx`
+	Kind string `json:"kind" protobuf:"bytes,1,opt,name=kind"`
+	// ProviderConfig specifies infrastructure specific configuration for the ingressController
+	// +optional
+	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 }
 
 // SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.

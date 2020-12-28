@@ -594,5 +594,5 @@ func (o *Operation) ComputeIngressHostDeprecated(prefix string) string {
 // ComputeIngressHost computes the host for a given prefix.
 func (o *Operation) ComputeIngressHost(prefix string) string {
 	shortID := strings.Replace(o.Shoot.Info.Status.TechnicalID, shoot.TechnicalIDPrefix, "", 1)
-	return fmt.Sprintf("%s-%s.%s", prefix, shortID, o.Seed.Info.Spec.DNS.IngressDomain)
+	return fmt.Sprintf("%s-%s.%s", prefix, shortID, o.Seed.IngressDomain())
 }

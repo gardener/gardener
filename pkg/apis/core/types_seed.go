@@ -69,6 +69,8 @@ type SeedSpec struct {
 	Taints []SeedTaint
 	// Volume contains settings for persistentvolumes created in the seed cluster.
 	Volume *SeedVolume
+	// Ingress configures Ingress specific settings of the Seed cluster.
+	Ingress *Ingress
 }
 
 func (s *Seed) GetProviderType() string {
@@ -109,11 +111,43 @@ type SeedBackup struct {
 	SecretRef corev1.SecretReference
 }
 
-// SeedDNS contains DNS-relevant information about this seed cluster.
+// SeedDNS contains the external domain and configuration for the DNS provider
 type SeedDNS struct {
 	// IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
 	// to construct ingress URLs for system applications running in Shoot clusters.
-	IngressDomain string
+	// This will be removed in the next API version and replaced by spec.ingress.domain.
+	IngressDomain *string
+	// Provider configures a DNSProvider
+	Provider *SeedDNSProvider
+}
+
+// SeedDNSProvider configures a DNS provider
+type SeedDNSProvider struct {
+	// Type describes the type of the dns-provider, for example `aws-route53`
+	Type string
+	// SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.
+	SecretRef corev1.SecretReference
+	// Domains contains information about which domains shall be included/excluded for this provider.
+	Domains *DNSIncludeExclude
+	// Zones contains information about which hosted zones shall be included/excluded for this provider.
+	Zones *DNSIncludeExclude
+}
+
+// Ingress configures the Ingress specific settings of the Seed cluster
+type Ingress struct {
+	// Domain specifies the ingress domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
+	// to construct ingress URLs for system applications running in Shoot clusters.
+	Domain string
+	// Controller configures a Gardener managed Ingress Controller listening on the ingressDomain
+	Controller IngressController
+}
+
+// IngressController enables a Gardener managed Ingress Controller listening on the ingressDomain
+type IngressController struct {
+	// Kind defines which kind of IngressController to use, for example `nginx`
+	Kind string
+	// ProviderConfig specifies infrastructure specific configuration for the ingressController
+	ProviderConfig *runtime.RawExtension
 }
 
 // SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.

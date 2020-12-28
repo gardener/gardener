@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package botanist_test
+package kubernetes_test
 
 import (
 	"sort"
 	"time"
 
-	"github.com/gardener/gardener/pkg/operation/botanist"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -61,7 +61,7 @@ var _ = Describe("event", func() {
 				}
 			)
 
-			sort.Sort(botanist.SortableEvents(events))
+			sort.Sort(kutil.SortableEvents(events))
 
 			Expect(events).To(Equal([]corev1.Event{event2, event3, event1}))
 		})
