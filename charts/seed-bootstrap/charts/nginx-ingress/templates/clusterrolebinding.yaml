@@ -3,11 +3,11 @@ kind: ClusterRoleBinding
 metadata:
   labels:
     app: nginx-ingress
-  name: nginx-ingress
+  name: gardener.cloud:seed:nginx-ingress
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: nginx-ingress
+  name: gardener.cloud:seed:nginx-ingress
 subjects:
   - kind: ServiceAccount
     name: nginx-ingress
