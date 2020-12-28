@@ -53,6 +53,8 @@ kind: Service
 metadata:
   name: quic-lb
   namespace: garden
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 spec:
   type: LoadBalancer
   selector:
@@ -71,12 +73,25 @@ EOF
 }
 
 waitForQuicLBServiceToBeReady() {
-  local hostnameOrIP=${1:-ip}
+  while svcIngress=''; do
+    ingress=$(kubectl -n garden get svc quic-lb -o go-template="{{ index .status.loadBalancer.ingress 0 }}" 2> /dev/null)
+    if [[ $ingress == *"hostname"* ]]; then
+      svcIngress="hostname"
+      break
+    fi
 
-  until host "$(kubectl -n garden get svc quic-lb -o go-template="{{ index (index .status.loadBalancer.ingress 0).$hostnameOrIP }}" 2> /dev/null)" 2>&1 > /dev/null; do
+    if [[ $ingress == *"ip"* ]]; then
+      svcIngress="ip"
+      break
+    fi
+
     sleep 2s
   done
-  kubectl -n garden get svc quic-lb -o go-template="{{ index (index .status.loadBalancer.ingress 0).$hostnameOrIP }}"
+
+  until host "$(kubectl -n garden get svc quic-lb -o go-template="{{ index (index .status.loadBalancer.ingress 0).$svcIngress }}")"; do
+    sleep 2s
+  done
+  kubectl -n garden get svc quic-lb -o go-template="{{ index (index .status.loadBalancer.ingress 0).$svcIngress }}"
 }
 
 deleteQuicLBService() {
@@ -231,12 +246,11 @@ if [ "$1" == "-c" ]; then
   deleteQuicLBService
   
   exit 0
-elif [ "$1" == "-h" ] || [ "$1" != "ip" ] && [ "$1" != "hostname" ] && [ "$1" != "" ]; then
+elif [ "$1" == "-h" ]; then
   usage
 fi
 
-HOSTNAME_OR_IP=${1:-ip}
-LABEL="${2:-remote-garden}"
+LABEL="${1:-remote-garden}"
 
 echo "Checking prerequisites..."
 checkPrereqs
@@ -248,7 +262,7 @@ echo "Applying quic LB service..."
 applyQuicLBService && sleep 2s
 
 echo "Waiting for quic LB service to be ready..."
-output=$(waitForQuicLBServiceToBeReady "$HOSTNAME_OR_IP")
+output=$(waitForQuicLBServiceToBeReady)
 loadbalancerHostname=$(echo "$output" | tail -n1)
 echo "LoadBalancer hostname or IP is $loadbalancerHostname"
 
@@ -263,11 +277,40 @@ echo "Applying gardener services..."
 applyGardenerServices
 
 echo "Starting quic clients..."
-docker run -d --name $APISERVER_SERVICE_NAME-quic-client -l "$LABEL" --network host --rm -v "$CERTS_DIR":/certs $QUIC_CLIENT_IMAGE \
+
+# the DNS name 'host.docker.internal' is only available for containers run by docker
+# for desktop on Mac / Windows - otherwise use localhost.
+# Check: desktop on Mac / Windows has not docker0 interface on the host
+# should be run on the actual host (important when running docker over ssh)
+hostname="host.docker.internal"
+if ip addr show docker0 > /dev/null 2>&1; then
+    hostname="localhost"
+fi
+
+docker run \
+  -d \
+  --name $APISERVER_SERVICE_NAME-quic-client \
+  -l "$LABEL" \
+  --network host  \
+  --rm \
+  -v "$CERTS_DIR":/certs \
+  $QUIC_CLIENT_IMAGE \
   --server="$loadbalancerHostname:$APISERVER_LB_PORT" \
-  --upstream="host.docker.internal:$API_SERVER_SECURE_PORT" \
-  --ca-file=/certs/$CA_NAME.crt --cert-file=/certs/$CLIENT_NAME.crt --cert-key=/certs/$CLIENT_NAME.key
-docker run -d --name $ADMISSION_CONTROLLER_SERVICE_NAME-quic-client -l "$LABEL" --network host --rm -v "$CERTS_DIR":/certs $QUIC_CLIENT_IMAGE \
+  --upstream="$hostname:$API_SERVER_SECURE_PORT" \
+  --ca-file=/certs/$CA_NAME.crt \
+  --cert-file=/certs/$CLIENT_NAME.crt  \
+  --cert-key=/certs/$CLIENT_NAME.key
+
+docker run \
+  -d \
+  --name $ADMISSION_CONTROLLER_SERVICE_NAME-quic-client \
+  -l "$LABEL" \
+  --network host  \
+  --rm \
+  -v "$CERTS_DIR":/certs \
+  $QUIC_CLIENT_IMAGE \
   --server="$loadbalancerHostname:$ADMISSION_CONTROLLER_LB_PORT" \
-  --upstream="host.docker.internal:$ADMISSION_CONTROLLER_SECURE_PORT" \
-  --ca-file=/certs/$CA_NAME.crt --cert-file=/certs/$CLIENT_NAME.crt --cert-key=/certs/$CLIENT_NAME.key
+  --upstream="$hostname:$ADMISSION_CONTROLLER_SECURE_PORT" \
+  --ca-file=/certs/$CA_NAME.crt \
+  --cert-file=/certs/$CLIENT_NAME.crt \
+  --cert-key=/certs/$CLIENT_NAME.key

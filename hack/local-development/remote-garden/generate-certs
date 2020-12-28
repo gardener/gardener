@@ -64,5 +64,8 @@ openssl x509 -req -in "$CERTS_DIR/$CLIENT_NAME.csr" -CA "$CERTS_DIR/$CA_NAME.crt
 
 # Clean up after we're done.
 rm "$CERTS_DIR/$SERVER_NAME.csr" "$CERTS_DIR/$CLIENT_NAME.csr"
-rm "$CERTS_DIR/$CA_NAME.srl"
 rm "$CERTS_DIR/$SERVER_NAME.conf" "$CERTS_DIR/$CLIENT_NAME.conf"
+
+if [ -f "$CERTS_DIR/$CA_NAME.srl" ]; then
+    rm "$CERTS_DIR/$CA_NAME.srl"
+fi
