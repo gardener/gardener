@@ -242,22 +242,23 @@ func TaintsAreTolerated(taints []gardencorev1beta1.SeedTaint, tolerations []gard
 }
 
 type ShootedSeed struct {
-	DisableDNS                     *bool
-	DisableCapacityReservation     *bool
-	Protected                      *bool
-	Visible                        *bool
-	MinimumVolumeSize              *string
-	APIServer                      *ShootedSeedAPIServer
-	BlockCIDRs                     []string
-	ShootDefaults                  *gardencorev1beta1.ShootNetworks
-	Backup                         *gardencorev1beta1.SeedBackup
-	SeedProviderConfig             *runtime.RawExtension
-	IngressController              *gardencorev1beta1.IngressController
-	NoGardenlet                    bool
-	UseServiceAccountBootstrapping bool
-	WithSecretRef                  bool
-	FeatureGates                   map[string]bool
-	Resources                      *ShootedSeedResources
+	DisableDNS                      *bool
+	DisableCapacityReservation      *bool
+	Protected                       *bool
+	Visible                         *bool
+	LoadBalancerServicesAnnotations map[string]string
+	MinimumVolumeSize               *string
+	APIServer                       *ShootedSeedAPIServer
+	BlockCIDRs                      []string
+	ShootDefaults                   *gardencorev1beta1.ShootNetworks
+	Backup                          *gardencorev1beta1.SeedBackup
+	SeedProviderConfig              *runtime.RawExtension
+	IngressController               *gardencorev1beta1.IngressController
+	NoGardenlet                     bool
+	UseServiceAccountBootstrapping  bool
+	WithSecretRef                   bool
+	FeatureGates                    map[string]bool
+	Resources                       *ShootedSeedResources
 }
 
 type ShootedSeedAPIServer struct {
@@ -304,7 +305,8 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	}
 
 	shootedSeed := ShootedSeed{
-		FeatureGates: parseShootedSeedFeatureGates(settings),
+		LoadBalancerServicesAnnotations: parseShootedSeedLoadBalancerServicesAnnotations(settings),
+		FeatureGates:                    parseShootedSeedFeatureGates(settings),
 	}
 
 	apiServer, err := parseShootedSeedAPIServer(settings)
@@ -418,15 +420,15 @@ func parseShootedSeedShootDefaults(settings map[string]string) (*gardencorev1bet
 func parseIngressController(settings map[string]string) (*gardencorev1beta1.IngressController, error) {
 	ingressController := &gardencorev1beta1.IngressController{}
 
-	kind, ok1 := settings["ingress.controller.kind"]
-	if !ok1 {
+	kind, ok := settings["ingress.controller.kind"]
+	if !ok {
 		return nil, nil
 	}
 	ingressController.Kind = kind
 
 	parsedProviderConfig, err := parseProviderConfig("ingress.controller.providerConfig.", settings)
 	if err != nil {
-		return nil, fmt.Errorf("parsing Ingress providerConfig failed, %s", err)
+		return nil, fmt.Errorf("parsing Ingress providerConfig failed: %s", err.Error())
 	}
 	ingressController.ProviderConfig = parsedProviderConfig
 
@@ -520,6 +522,24 @@ func parseProviderConfig(prefix string, settings map[string]string) (*runtime.Ra
 	return &runtime.RawExtension{
 		Raw: jsonStr,
 	}, nil
+}
+
+func parseShootedSeedLoadBalancerServicesAnnotations(settings map[string]string) map[string]string {
+	const optionPrefix = "loadBalancerServices.annotations."
+
+	annotations := make(map[string]string)
+	for k, v := range settings {
+		if strings.HasPrefix(k, optionPrefix) {
+			annotationKey := strings.TrimPrefix(k, optionPrefix)
+			annotations[annotationKey] = v
+		}
+	}
+
+	if len(annotations) == 0 {
+		return nil
+	}
+
+	return annotations
 }
 
 func parseShootedSeedAPIServer(settings map[string]string) (*ShootedSeedAPIServer, error) {

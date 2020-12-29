@@ -59,6 +59,7 @@ Option | Description
 `disable-dns` | Set `spec.settings.shootDNS.enabled` in the seed cluster to false  (see [/example/50-seed.yaml](../../example/50-seed.yaml)).
 `protected` | Only shoot clusters in the `garden` namespace can use this seed cluster.
 `unprotected` | Shoot clusters from all namespaces can use this seed cluster (**default**).
+`loadBalancerServices.annotations.*` | Set `spec.settings.loadBalancerServices.annotations` in the seed cluster (see [/example/50-seed.yaml](../../example/50-seed.yaml)), e.g `loadBalancerServices.annotations.service.beta.kubernetes.io/aws-load-balancer-type=nlb`.
 `with-secret-ref` | Creates a secret with the `kubeconfig` of the cluster in the `garden` namespace in the garden cluster and specifies the `.spec.secretRef` in the `Seed` object accordingly.
 `shootDefaults.pods` | Default pod network CIDR for shoot clusters created on this seed cluster.
 `shootDefaults.services` | Default service network CIDR for shoot clusters created on this seed cluster.
