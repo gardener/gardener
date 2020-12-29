@@ -205,22 +205,6 @@ func ProjectNameForNamespace(namespace *corev1.Namespace) string {
 	return namespace.Name
 }
 
-// MergeOwnerReferences merges the newReferences with the list of existing references.
-func MergeOwnerReferences(references []metav1.OwnerReference, newReferences ...metav1.OwnerReference) []metav1.OwnerReference {
-	uids := make(map[types.UID]struct{})
-	for _, reference := range references {
-		uids[reference.UID] = struct{}{}
-	}
-
-	for _, newReference := range newReferences {
-		if _, ok := uids[newReference.UID]; !ok {
-			references = append(references, newReference)
-		}
-	}
-
-	return references
-}
-
 // GardenerDeletionGracePeriod is the default grace period for Gardener's force deletion methods.
 var GardenerDeletionGracePeriod = 5 * time.Minute
 

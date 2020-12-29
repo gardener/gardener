@@ -30,7 +30,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
+	gomegatypes "github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -39,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -287,7 +288,7 @@ var _ = Describe("kubernetes", func() {
 				Entry("b labels in n2", deployments, "n2", labels.SelectorFromSet(labels.Set(bLabels)), []*appsv1.Deployment{n2BDeployment}))
 
 			DescribeTable("#Get",
-				func(source []*appsv1.Deployment, namespace, name string, deploymentMatcher, errMatcher types.GomegaMatcher) {
+				func(source []*appsv1.Deployment, namespace, name string, deploymentMatcher, errMatcher gomegatypes.GomegaMatcher) {
 					lister := NewDeploymentLister(func() ([]*appsv1.Deployment, error) {
 						return source, nil
 					})
@@ -378,7 +379,7 @@ var _ = Describe("kubernetes", func() {
 				Entry("b labels in n2", statefulSets, "n2", labels.SelectorFromSet(labels.Set(bLabels)), []*appsv1.StatefulSet{n2BStatefulSet}))
 
 			DescribeTable("#Get",
-				func(source []*appsv1.StatefulSet, namespace, name string, statefulSetMatcher, errMatcher types.GomegaMatcher) {
+				func(source []*appsv1.StatefulSet, namespace, name string, statefulSetMatcher, errMatcher gomegatypes.GomegaMatcher) {
 					lister := NewStatefulSetLister(func() ([]*appsv1.StatefulSet, error) {
 						return source, nil
 					})
@@ -469,7 +470,7 @@ var _ = Describe("kubernetes", func() {
 				Entry("b labels in n2", daemonSets, "n2", labels.SelectorFromSet(labels.Set(bLabels)), []*appsv1.DaemonSet{n2BDaemonSet}))
 
 			DescribeTable("#Get",
-				func(source []*appsv1.DaemonSet, namespace, name string, daemonSetMatcher, errMatcher types.GomegaMatcher) {
+				func(source []*appsv1.DaemonSet, namespace, name string, daemonSetMatcher, errMatcher gomegatypes.GomegaMatcher) {
 					lister := NewDaemonSetLister(func() ([]*appsv1.DaemonSet, error) {
 						return source, nil
 					})
@@ -560,7 +561,7 @@ var _ = Describe("kubernetes", func() {
 				Entry("b labels in n2", machineDeployments, "n2", labels.SelectorFromSet(labels.Set(bLabels)), []*extensionsv1alpha1.Worker{n2BWorker}))
 
 			DescribeTable("#Get",
-				func(source []*extensionsv1alpha1.Worker, namespace, name string, machineDeploymentMatcher, errMatcher types.GomegaMatcher) {
+				func(source []*extensionsv1alpha1.Worker, namespace, name string, machineDeploymentMatcher, errMatcher gomegatypes.GomegaMatcher) {
 					lister := NewWorkerLister(func() ([]*extensionsv1alpha1.Worker, error) {
 						return source, nil
 					})
@@ -856,7 +857,7 @@ var _ = Describe("kubernetes", func() {
 	})
 
 	DescribeTable("#FeatureGatesToCommandLineParameter",
-		func(fg map[string]bool, matcher types.GomegaMatcher) {
+		func(fg map[string]bool, matcher gomegatypes.GomegaMatcher) {
 			Expect(FeatureGatesToCommandLineParameter(fg)).To(matcher)
 		},
 		Entry("nil map", nil, BeEmpty()),
@@ -887,7 +888,7 @@ var _ = Describe("kubernetes", func() {
 	)
 
 	DescribeTable("#ReconcileServicePorts",
-		func(existingPorts []corev1.ServicePort, matcher types.GomegaMatcher) {
+		func(existingPorts []corev1.ServicePort, matcher gomegatypes.GomegaMatcher) {
 			Expect(ReconcileServicePorts(existingPorts, desiredPorts)).To(matcher)
 		},
 		Entry("existing ports is nil", nil, ConsistOf(port1, port2, port3)),
@@ -994,4 +995,25 @@ var _ = Describe("kubernetes", func() {
 		})
 	})
 
+	Describe("#MergeOwnerReferences", func() {
+		It("should merge the new references into the list of existing references", func() {
+			var (
+				references = []metav1.OwnerReference{
+					{
+						UID: types.UID("1234"),
+					},
+				}
+				newReferences = []metav1.OwnerReference{
+					{
+						UID: types.UID("1234"),
+					},
+					{
+						UID: types.UID("1235"),
+					},
+				}
+			)
+
+			Expect(MergeOwnerReferences(references, newReferences...)).To(ConsistOf(newReferences))
+		})
+	})
 })

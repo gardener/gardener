@@ -244,7 +244,7 @@ func (c *defaultControl) reconcileNamespaceForProject(ctx context.Context, garde
 			return nil, fmt.Errorf("namespace is already in-use by another project")
 		}
 
-		ns.OwnerReferences = common.MergeOwnerReferences(ns.OwnerReferences, *ownerReference)
+		ns.OwnerReferences = kutils.MergeOwnerReferences(ns.OwnerReferences, *ownerReference)
 		ns.Labels = utils.MergeStringMaps(ns.Labels, projectLabels)
 		ns.Annotations = utils.MergeStringMaps(ns.Annotations, projectAnnotations)
 
@@ -323,7 +323,7 @@ func createOrUpdateResourceQuota(ctx context.Context, c client.Client, projectNa
 	}
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, c, projectResourceQuota, func() error {
-		projectResourceQuota.SetOwnerReferences(common.MergeOwnerReferences(projectResourceQuota.GetOwnerReferences(), *ownerReference))
+		projectResourceQuota.SetOwnerReferences(kutils.MergeOwnerReferences(projectResourceQuota.GetOwnerReferences(), *ownerReference))
 		quotas := make(map[corev1.ResourceName]resource.Quantity)
 		for resourceName, quantity := range resourceQuota.Spec.Hard {
 			if val, ok := projectResourceQuota.Spec.Hard[resourceName]; ok {

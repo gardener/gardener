@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -365,4 +366,20 @@ func translateMicroTimestampSince(timestamp metav1.MicroTime) string {
 	}
 
 	return duration.HumanDuration(time.Since(timestamp.Time))
+}
+
+// MergeOwnerReferences merges the newReferences with the list of existing references.
+func MergeOwnerReferences(references []metav1.OwnerReference, newReferences ...metav1.OwnerReference) []metav1.OwnerReference {
+	uids := make(map[types.UID]struct{})
+	for _, reference := range references {
+		uids[reference.UID] = struct{}{}
+	}
+
+	for _, newReference := range newReferences {
+		if _, ok := uids[newReference.UID]; !ok {
+			references = append(references, newReference)
+		}
+	}
+
+	return references
 }
