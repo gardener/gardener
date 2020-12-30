@@ -104,10 +104,10 @@ spec:
           resources:
             limits:
               cpu: 400m
-              memory: 400Mi
+              memory: 2048Mi
             requests:
               cpu: 100m
-              memory: 100Mi
+              memory: 512Mi
       hostNetwork: false
       serviceAccountName: nginx-ingress
       terminationGracePeriodSeconds: 60

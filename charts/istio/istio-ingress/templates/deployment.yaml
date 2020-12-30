@@ -75,10 +75,10 @@ spec:
         resources:
           requests:
             cpu: 100m
-            memory: 512Mi
+            memory: 128Mi
           limits:
-            cpu: 400m
-            memory: 2048Mi
+            cpu: 2000m
+            memory: 1024Mi
         env:
         - name: NODE_NAME
           valueFrom:
