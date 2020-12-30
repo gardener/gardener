@@ -645,6 +645,25 @@ var _ = Describe("helper", func() {
 				}))
 			})
 
+			It("should return a filled load balancer services annotations map", func() {
+				shoot.Annotations = map[string]string{
+					v1beta1constants.AnnotationShootUseAsSeed: "true,loadBalancerServices.annotations.role=apiserver,loadBalancerServices.annotations.service.beta.kubernetes.io/aws-load-balancer-type=nlb",
+				}
+
+				shootedSeed, err := ReadShootedSeed(shoot)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shootedSeed).To(Equal(&ShootedSeed{
+					APIServer: &defaultAPIServer,
+					LoadBalancerServicesAnnotations: map[string]string{
+						"role": "apiserver",
+						"service.beta.kubernetes.io/aws-load-balancer-type": "nlb",
+					},
+					Backup:    &gardencorev1beta1.SeedBackup{},
+					Resources: &defaultResources,
+				}))
+			})
+
 			It("should return a filled feature gates map", func() {
 				shoot.Annotations = map[string]string{
 					v1beta1constants.AnnotationShootUseAsSeed: "true,featureGates.Foo=bar,featureGates.Bar=true,featureGates.Baz=false",

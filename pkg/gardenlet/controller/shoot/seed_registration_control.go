@@ -385,6 +385,13 @@ func prepareSeedConfig(ctx context.Context, gardenClient client.Client, seedClie
 		dns.IngressDomain = &ingressDomain
 	}
 
+	var loadBalancerServices *gardencorev1beta1.SeedSettingLoadBalancerServices
+	if shootedSeedConfig.LoadBalancerServicesAnnotations != nil {
+		loadBalancerServices = &gardencorev1beta1.SeedSettingLoadBalancerServices{
+			Annotations: shootedSeedConfig.LoadBalancerServicesAnnotations,
+		}
+	}
+
 	return &gardencorev1beta1.SeedSpec{
 		Provider: gardencorev1beta1.SeedProvider{
 			Type:           shoot.Spec.Provider.Type,
@@ -411,6 +418,7 @@ func prepareSeedConfig(ctx context.Context, gardenClient client.Client, seedClie
 			ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
 				Enabled: shootedSeedConfig.DisableDNS == nil || !*shootedSeedConfig.DisableDNS,
 			},
+			LoadBalancerServices: loadBalancerServices,
 			VerticalPodAutoscaler: &gardencorev1beta1.SeedSettingVerticalPodAutoscaler{
 				Enabled: vpaEnabled,
 			},
