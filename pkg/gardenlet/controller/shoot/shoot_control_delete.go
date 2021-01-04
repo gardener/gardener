@@ -413,12 +413,12 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		destroyWorker = g.Add(flow.Task{
 			Name:         "Destroying shoot workers",
-			Fn:           flow.TaskFn(botanist.DestroyWorker).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Worker.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(cleanShootNamespaces),
 		})
 		waitUntilWorkerDeleted = g.Add(flow.Task{
 			Name:         "Waiting until shoot worker nodes have been terminated",
-			Fn:           botanist.WaitUntilWorkerDeleted,
+			Fn:           botanist.Shoot.Components.Extensions.Worker.WaitCleanup,
 			Dependencies: flow.NewTaskIDs(destroyWorker),
 		})
 		deleteAllOperatingSystemConfigs = g.Add(flow.Task{

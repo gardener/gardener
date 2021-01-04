@@ -46,7 +46,7 @@ func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 			Kubeconfig: component.Secret{Name: clusterautoscaler.SecretName, Checksum: b.CheckSums[clusterautoscaler.SecretName]},
 		})
 		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetNamespaceUID(b.SeedNamespaceObject.UID)
-		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetMachineDeployments(b.Shoot.MachineDeployments)
+		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetMachineDeployments(b.Shoot.Components.Extensions.Worker.MachineDeployments())
 
 		return b.Shoot.Components.ControlPlane.ClusterAutoscaler.Deploy(ctx)
 	}

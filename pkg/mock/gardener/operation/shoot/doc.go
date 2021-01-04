@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -package component -destination=mocks.go github.com/gardener/gardener/pkg/operation/botanist/component Deployer,Waiter,DeployWaiter,DeployMigrateWaiter
+//go:generate mockgen -package shoot -destination=mocks.go github.com/gardener/gardener/pkg/operation/shoot ExtensionContainerRuntime,ExtensionWorker
 
-package component
+package shoot

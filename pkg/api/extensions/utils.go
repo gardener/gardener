@@ -22,13 +22,15 @@ import (
 // GetShootNamespacedCRsLists returns an empty CR list struct, for each CR used for Shoot managment
 func GetShootNamespacedCRsLists() []runtime.Object {
 	return []runtime.Object{
-		&extensionsv1alpha1.ControlPlaneList{},
+		//The ControlPlane CR is now handled as a shoot component
+		//&extensionsv1alpha1.ControlPlaneList{},
 		&extensionsv1alpha1.ExtensionList{},
 		&extensionsv1alpha1.InfrastructureList{},
 		//The Network CR is now handled as a shoot component
 		//&extensionsv1alpha1.NetworkList{},
 		&extensionsv1alpha1.OperatingSystemConfigList{},
-		&extensionsv1alpha1.WorkerList{},
+		//The Worker CR is now handled as a shoot component
+		//&extensionsv1alpha1.WorkerList{},
 		//The ContainerRuntime CR is now handled as a shoot component
 		//&extensionsv1alpha1.ContainerRuntimeList{},
 	}
