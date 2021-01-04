@@ -277,6 +277,8 @@ func computeRequiredControlPlaneDeployments(
 			return nil, err
 		}
 
+		// TODO: This check can be removed after few releases, as the cluster-autoscaler is now enabled even
+		// during the rolling-update. Related change: https://github.com/gardener/gardener/pull/3332
 		// if worker resource is processing (during maintenance), there might be a rolling update in progress
 		// during rolling updates, the autoscaler deployment is scaled down & therefore not required
 		rollingUpdateMightBeOngoing := false
