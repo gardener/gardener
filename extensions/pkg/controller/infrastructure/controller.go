@@ -105,10 +105,5 @@ func add(mgr manager.Manager, args AddArgs) error {
 	}
 
 	// Add additional watches to the controller besides the standard one.
-	err = args.WatchBuilder.AddToController(ctrl)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return args.WatchBuilder.AddToController(ctrl)
 }

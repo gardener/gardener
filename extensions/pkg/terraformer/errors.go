@@ -24,23 +24,21 @@ import (
 // retrieveTerraformErrors gets a map <logList> whose keys are pod names and whose values are the corresponding logs,
 // and it parses the logs for Terraform errors. If none are found, it will return nil, and otherwise the list of
 // found errors as string slice.
-func retrieveTerraformErrors(logList map[string]string) []string {
+func retrieveTerraformErrors(podName, logs string) []string {
 	var (
-		foundErrors = map[string]string{}
+		foundErrors = map[string]struct{}{}
 		errorList   []string
 	)
 
-	for podName, output := range logList {
-		errorMessage := findTerraformErrors(output)
+	errorMessage := findTerraformErrors(logs)
 
-		// Add the errorMessage to the list of found errors (only if it does not already exist).
-		if _, ok := foundErrors[errorMessage]; !ok && errorMessage != "" {
-			foundErrors[errorMessage] = podName
-		}
+	// Add the errorMessage to the list of found errors (only if it does not already exist).
+	if _, ok := foundErrors[errorMessage]; !ok && errorMessage != "" {
+		foundErrors[errorMessage] = struct{}{}
 	}
 
-	for errorMessage, podName := range foundErrors {
-		errorList = append(errorList, fmt.Sprintf("-> Pod '%s' reported:\n%s", podName, errorMessage))
+	for message := range foundErrors {
+		errorList = append(errorList, fmt.Sprintf("-> Pod '%s' reported:\n%s", podName, message))
 	}
 
 	if len(errorList) == 0 {
