@@ -248,15 +248,6 @@ func (c *defaultControl) reconcileNamespaceForProject(ctx context.Context, garde
 		ns.Labels = utils.MergeStringMaps(ns.Labels, projectLabels)
 		ns.Annotations = utils.MergeStringMaps(ns.Annotations, projectAnnotations)
 
-		// TODO (ialidzhikov): remove the cleanup of deprecated annotation and labels in a future version
-		if metav1.HasAnnotation(ns.ObjectMeta, common.NamespaceProjectDeprecated) {
-			delete(ns.Annotations, common.NamespaceProjectDeprecated)
-		}
-		deprecatedLabels := []string{v1beta1constants.DeprecatedGardenRole, common.ProjectNameDeprecated}
-		for _, deprecatedLabel := range deprecatedLabels {
-			delete(ns.Labels, deprecatedLabel)
-		}
-
 		// If the project is reconciled for the first time then its observed generation is 0. Only in this case we want
 		// to add the "keep-after-project-deletion" annotation to the namespace when we adopt it.
 		if project.Status.ObservedGeneration == 0 {

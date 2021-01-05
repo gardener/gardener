@@ -84,12 +84,9 @@ func (c *defaultControl) releaseNamespace(ctx context.Context, gardenClient kube
 
 	if keepNamespace {
 		delete(namespace.Annotations, common.NamespaceProject)
-		delete(namespace.Annotations, common.NamespaceProjectDeprecated)
 		delete(namespace.Annotations, common.NamespaceKeepAfterProjectDeletion)
 		delete(namespace.Labels, common.ProjectName)
 		delete(namespace.Labels, v1beta1constants.GardenRole)
-		delete(namespace.Labels, common.ProjectNameDeprecated)
-		delete(namespace.Labels, v1beta1constants.DeprecatedGardenRole)
 		for i := len(namespace.OwnerReferences) - 1; i >= 0; i-- {
 			if ownerRef := namespace.OwnerReferences[i]; ownerRef.APIVersion == gardencorev1beta1.SchemeGroupVersion.String() &&
 				ownerRef.Kind == "Project" &&

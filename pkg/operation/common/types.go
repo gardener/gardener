@@ -224,11 +224,6 @@ const (
 	// ProjectName is they key of a label on namespaces whose value holds the project name.
 	ProjectName = "project.gardener.cloud/name"
 
-	// ProjectNameDeprecated is they key of a label on namespaces whose value holds the project name.
-	//
-	// Deprecated: Use `ProjectName` instead.
-	ProjectNameDeprecated = "project.garden.sapcloud.io/name"
-
 	// ProjectSkipStaleCheck is the key of an annotation on a project namespace that marks the associated Project to be
 	// skipped by the stale project controller. If the project has already configured stale timestamps in its status
 	// then they will be reset.
@@ -236,11 +231,6 @@ const (
 
 	// NamespaceProject is they key of an annotation on namespace whose value holds the project uid.
 	NamespaceProject = "namespace.gardener.cloud/project"
-
-	// NamespaceProjectDeprecated is they key of an annotation on namespace whose value holds the project uid.
-	//
-	// Deprecated: Use `NamespaceProject` instead.
-	NamespaceProjectDeprecated = "namespace.garden.sapcloud.io/project"
 
 	// NamespaceKeepAfterProjectDeletion is a constant for an annotation on a `Namespace` resource that states that it
 	// should not be deleted if the corresponding `Project` gets deleted. Please note that all project related labels

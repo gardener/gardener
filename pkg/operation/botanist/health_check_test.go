@@ -46,7 +46,7 @@ var (
 )
 
 func roleOf(obj metav1.Object) string {
-	return obj.GetLabels()[v1beta1constants.DeprecatedGardenRole]
+	return obj.GetLabels()[v1beta1constants.GardenRole]
 }
 
 func constDeploymentLister(deployments []*appsv1.Deployment) kutil.DeploymentLister {
@@ -80,7 +80,7 @@ func constEtcdLister(etcds []*druidv1alpha1.Etcd) kutil.EtcdLister {
 }
 
 func roleLabels(role string) map[string]string {
-	return map[string]string{v1beta1constants.DeprecatedGardenRole: role}
+	return map[string]string{v1beta1constants.GardenRole: role}
 }
 
 func newDeployment(namespace, name, role string, healthy bool) *appsv1.Deployment {
@@ -195,8 +195,8 @@ var _ = Describe("health check", func() {
 		condition = gardencorev1beta1.Condition{
 			Type: gardencorev1beta1.ConditionType("test"),
 		}
-		gcpShoot                    = &gardencorev1beta1.Shoot{}
-		gcpShootThatNeedsAutoscaler = &gardencorev1beta1.Shoot{
+		shoot                    = &gardencorev1beta1.Shoot{}
+		shootThatNeedsAutoscaler = &gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
 				Provider: gardencorev1beta1.Provider{
 					Workers: []gardencorev1beta1.Worker{
@@ -210,7 +210,7 @@ var _ = Describe("health check", func() {
 			},
 		}
 
-		gcpShootWantsVPA = &gardencorev1beta1.Shoot{
+		shootWantsVPA = &gardencorev1beta1.Shoot{
 			Spec: gardencorev1beta1.ShootSpec{
 				Kubernetes: gardencorev1beta1.Kubernetes{
 					VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
@@ -283,7 +283,7 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckControlPlane",
-		func(shoot *gardencorev1beta1.Shoot, cloudProvider string, deployments []*appsv1.Deployment, etcds []*druidv1alpha1.Etcd, workers []*extensionsv1alpha1.Worker, conditionMatcher types.GomegaMatcher) {
+		func(shoot *gardencorev1beta1.Shoot, deployments []*appsv1.Deployment, etcds []*druidv1alpha1.Etcd, workers []*extensionsv1alpha1.Worker, conditionMatcher types.GomegaMatcher) {
 			var (
 				deploymentLister = constDeploymentLister(deployments)
 				etcdLister       = constEtcdLister(etcds)
@@ -296,15 +296,7 @@ var _ = Describe("health check", func() {
 			Expect(exitCondition).To(conditionMatcher)
 		},
 		Entry("all healthy",
-			gcpShoot,
-			"gcp",
-			requiredControlPlaneDeployments,
-			requiredControlPlaneEtcds,
-			nil,
-			BeNil()),
-		Entry("all healthy (AWS)",
-			gcpShoot,
-			"aws",
+			shoot,
 			[]*appsv1.Deployment{
 				gardenerResourceManagerDeployment,
 				kubeAPIServerDeployment,
@@ -315,8 +307,7 @@ var _ = Describe("health check", func() {
 			nil,
 			BeNil()),
 		Entry("all healthy (needs autoscaler)",
-			gcpShootThatNeedsAutoscaler,
-			"gcp",
+			shootThatNeedsAutoscaler,
 			[]*appsv1.Deployment{
 				gardenerResourceManagerDeployment,
 				kubeAPIServerDeployment,
@@ -332,8 +323,7 @@ var _ = Describe("health check", func() {
 			},
 			BeNil()),
 		Entry("all healthy (needs VPA)",
-			gcpShootWantsVPA,
-			"gcp",
+			shootWantsVPA,
 			withVpaDeployments(
 				gardenerResourceManagerDeployment,
 				kubeAPIServerDeployment,
@@ -348,8 +338,7 @@ var _ = Describe("health check", func() {
 			},
 			BeNil()),
 		Entry("missing required deployments",
-			gcpShootWantsVPA,
-			"gcp",
+			shootWantsVPA,
 			[]*appsv1.Deployment{
 				kubeAPIServerDeployment,
 				kubeControllerManagerDeployment,
@@ -359,8 +348,7 @@ var _ = Describe("health check", func() {
 			nil,
 			beConditionWithMissingRequiredDeployment(withVpaDeployments(gardenerResourceManagerDeployment))),
 		Entry("required deployment unhealthy",
-			gcpShoot,
-			"gcp",
+			shoot,
 			[]*appsv1.Deployment{
 				newDeployment(gardenerResourceManagerDeployment.Namespace, gardenerResourceManagerDeployment.Name, roleOf(gardenerResourceManagerDeployment), false),
 				kubeAPIServerDeployment,
@@ -371,8 +359,7 @@ var _ = Describe("health check", func() {
 			nil,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 		Entry("missing required etcd",
-			gcpShoot,
-			"gcp",
+			shoot,
 			requiredControlPlaneDeployments,
 			[]*druidv1alpha1.Etcd{
 				etcdEvents,
@@ -380,8 +367,7 @@ var _ = Describe("health check", func() {
 			nil,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 		Entry("required etcd unready",
-			gcpShoot,
-			"gcp",
+			shoot,
 			requiredControlPlaneDeployments,
 			[]*druidv1alpha1.Etcd{
 				newEtcd(etcdMain.Namespace, etcdMain.Name, roleOf(etcdMain), false, nil),
@@ -390,8 +376,7 @@ var _ = Describe("health check", func() {
 			nil,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 		Entry("required etcd unhealthy with error code message",
-			gcpShoot,
-			"gcp",
+			shoot,
 			requiredControlPlaneDeployments,
 			[]*druidv1alpha1.Etcd{
 				newEtcd(etcdMain.Namespace, etcdMain.Name, roleOf(etcdMain), false, pointer.StringPtr("some error that maps to an error code, e.g. unauthorized")),
@@ -400,8 +385,7 @@ var _ = Describe("health check", func() {
 			nil,
 			beConditionWithStatusAndCodes(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ErrorInfraUnauthorized)),
 		Entry("possibly rolling update ongoing (with autoscaler)",
-			gcpShootThatNeedsAutoscaler,
-			"gcp",
+			shootThatNeedsAutoscaler,
 			[]*appsv1.Deployment{
 				gardenerResourceManagerDeployment,
 				kubeAPIServerDeployment,
