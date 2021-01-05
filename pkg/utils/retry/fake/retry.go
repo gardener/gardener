@@ -41,7 +41,7 @@ func (o *Ops) Until(ctx context.Context, _ time.Duration, f retry.Func) error {
 	for {
 		attempts++
 		if attempts > o.MaxAttempts {
-			return retry.NewRetryError(fmt.Errorf("max attempts reached"), minorErr)
+			return retry.NewError(fmt.Errorf("max attempts reached"), minorErr)
 		}
 
 		done, err := f(ctx)

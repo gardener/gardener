@@ -171,7 +171,7 @@ var _ = Describe("Retry", func() {
 				waitCancelFunc.EXPECT().Do(),
 			)
 
-			Expect(UntilFor(ctx, waitFunc.Do, agg, f.Do)).To(Equal(NewRetryError(ctxErr, minorErr)))
+			Expect(UntilFor(ctx, waitFunc.Do, agg, f.Do)).To(Equal(NewError(ctxErr, minorErr)))
 		})
 
 		It("should always fail with a timeout when both regular and wait context are expired", func() {
@@ -200,7 +200,7 @@ var _ = Describe("Retry", func() {
 				waitCancelFunc.EXPECT().Do(),
 			)
 
-			Expect(UntilFor(ctx, waitFunc.Do, agg, f.Do)).To(Equal(NewRetryError(ctxErr, minorErr)))
+			Expect(UntilFor(ctx, waitFunc.Do, agg, f.Do)).To(Equal(NewError(ctxErr, minorErr)))
 		})
 	})
 
