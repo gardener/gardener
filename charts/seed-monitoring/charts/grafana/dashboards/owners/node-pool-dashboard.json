@@ -46,10 +46,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[$__rate_interval])) by (node) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node) - 1) by (label_worker_garden_sapcloud_io_group)",
+          "expr": "avg(sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[$__rate_interval])) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1) by (label_worker_gardener_cloud_pool)",
           "format": "time_series",
           "intervalFactor": 2,
-          "legendFormat": "{{label_worker_garden_sapcloud_io_group}}",
+          "legendFormat": "{{label_worker_gardener_cloud_pool}}",
           "refId": "A"
         }
       ],
@@ -132,10 +132,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(sum(node_memory_Active_bytes) by (node) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node) - 1) by (label_worker_garden_sapcloud_io_group)",
+          "expr": "avg(sum(node_memory_Active_bytes) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1) by (label_worker_gardener_cloud_pool)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{label_worker_garden_sapcloud_io_group}}",
+          "legendFormat": "{{label_worker_gardener_cloud_pool}}",
           "refId": "A"
         }
       ],
@@ -218,7 +218,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count(sum(kube_node_info) by (node) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node))",
+          "expr": "count(sum(kube_node_info) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "nodes",
@@ -306,10 +306,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(sum(kube_pod_info{type=\"shoot\"}) by (node) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node)) by (label_worker_garden_sapcloud_io_group)",
+          "expr": "avg(sum(kube_pod_info{type=\"shoot\"}) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node)) by (label_worker_gardener_cloud_pool)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{label_worker_garden_sapcloud_io_group}}",
+          "legendFormat": "{{label_worker_gardener_cloud_pool}}",
           "refId": "A"
         }
       ],
@@ -545,7 +545,7 @@
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "decimals": 2,
           "mappingType": 1,
-          "pattern": "label_worker_garden_sapcloud_io_group",
+          "pattern": "label_worker_gardener_cloud_pool",
           "thresholds": [],
           "type": "number",
           "unit": "short"
@@ -553,7 +553,7 @@
       ],
       "targets": [
         {
-          "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[$__rate_interval])) by (node) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node) - 1",
+          "expr": "sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[$__rate_interval])) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -561,21 +561,21 @@
           "refId": "B"
         },
         {
-          "expr": "sum(kube_node_status_allocatable_cpu_cores) by (node) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node) - 1",
+          "expr": "sum(kube_node_status_allocatable_cpu_cores) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "refId": "C"
         },
         {
-          "expr": "(sum(kube_node_status_allocatable_cpu_cores) by (node) - sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[$__rate_interval])) by (node)) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node) - 1",
+          "expr": "(sum(kube_node_status_allocatable_cpu_cores) by (node) - sum(rate(node_cpu_seconds_total{mode!=\"idle\"}[$__rate_interval])) by (node)) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "refId": "D"
         },
         {
-          "expr": "sum(node_memory_Active_bytes) by (node) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node) - 1",
+          "expr": "sum(node_memory_Active_bytes) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -583,21 +583,21 @@
           "refId": "E"
         },
         {
-          "expr": "sum(kube_node_status_allocatable_memory_bytes) by (node) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node) - 1",
+          "expr": "sum(kube_node_status_allocatable_memory_bytes) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "refId": "F"
         },
         {
-          "expr": "(sum(kube_node_status_allocatable_memory_bytes) by (node) - sum(node_memory_Active_bytes) by (node)) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node) - 1",
+          "expr": "(sum(kube_node_status_allocatable_memory_bytes) by (node) - sum(node_memory_Active_bytes) by (node)) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node) - 1",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
           "refId": "G"
         },
         {
-          "expr": "sum(kube_pod_info{type=\"shoot\"}) by (node) + on (node) group_right sum(kube_node_labels{label_worker_garden_sapcloud_io_group=~\"$worker_group\"}) by (label_worker_garden_sapcloud_io_group, node)",
+          "expr": "sum(kube_pod_info{type=\"shoot\"}) by (node) + on (node) group_right sum(kube_node_labels{label_worker_gardener_cloud_pool=~\"$worker_group\"}) by (label_worker_gardener_cloud_pool, node)",
           "format": "table",
           "instant": true,
           "intervalFactor": 1,
@@ -629,14 +629,14 @@
           ]
         },
         "datasource": "prometheus",
-        "definition": "label_values(kube_node_labels, label_worker_garden_sapcloud_io_group)",
+        "definition": "label_values(kube_node_labels, label_worker_gardener_cloud_pool)",
         "hide": 0,
         "includeAll": true,
         "label": "Worker Group",
         "multi": true,
         "name": "worker_group",
         "options": [],
-        "query": "label_values(kube_node_labels, label_worker_garden_sapcloud_io_group)",
+        "query": "label_values(kube_node_labels, label_worker_gardener_cloud_pool)",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
