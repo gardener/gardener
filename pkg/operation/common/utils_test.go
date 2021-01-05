@@ -43,7 +43,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -200,30 +199,6 @@ var _ = Describe("common", func() {
 					))
 				})
 			})
-		})
-	})
-
-	Describe("#MergeOwnerReferences", func() {
-		It("should merge the new references into the list of existing references", func() {
-			var (
-				references = []metav1.OwnerReference{
-					{
-						UID: types.UID("1234"),
-					},
-				}
-				newReferences = []metav1.OwnerReference{
-					{
-						UID: types.UID("1234"),
-					},
-					{
-						UID: types.UID("1235"),
-					},
-				}
-			)
-
-			result := MergeOwnerReferences(references, newReferences...)
-
-			Expect(result).To(ConsistOf(newReferences))
 		})
 	})
 

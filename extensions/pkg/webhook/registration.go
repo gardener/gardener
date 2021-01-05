@@ -19,10 +19,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	"github.com/pkg/errors"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -72,7 +77,20 @@ func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, provi
 			return nil, nil, err
 		}
 
+		var ownerReference *metav1.OwnerReference
+		if len(namespace) > 0 {
+			ns := &corev1.Namespace{}
+			if err := c.Get(ctx, client.ObjectKey{Name: namespace}, ns); err != nil {
+				return nil, nil, err
+			}
+			ownerReference = metav1.NewControllerRef(ns, corev1.SchemeGroupVersion.WithKind("Namespace"))
+			ownerReference.BlockOwnerDeletion = pointer.BoolPtr(false)
+		}
+
 		if _, err := controllerutil.CreateOrUpdate(ctx, c, mutatingWebhookConfigurationSeed, func() error {
+			if ownerReference != nil {
+				mutatingWebhookConfigurationSeed.SetOwnerReferences(kubernetes.MergeOwnerReferences(mutatingWebhookConfigurationSeed.GetOwnerReferences(), *ownerReference))
+			}
 			mutatingWebhookConfigurationSeed.Webhooks = webhooksToRegisterSeed
 			return nil
 		}); err != nil {
