@@ -54,7 +54,7 @@ func WaitUntilEtcdsReady(
 			ctx,
 			etcdList,
 			client.InNamespace(namespace),
-			client.MatchingLabels{v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane},
+			client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane},
 		); err != nil {
 			return retry.SevereError(err)
 		}

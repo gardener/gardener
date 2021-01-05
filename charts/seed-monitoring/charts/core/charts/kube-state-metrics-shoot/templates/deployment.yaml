@@ -5,7 +5,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     gardener.cloud/role: monitoring
-    garden.sapcloud.io/role: monitoring
     component: kube-state-metrics
     type: shoot
 spec:

@@ -221,7 +221,7 @@ const (
 	// ProjectPrefix is the prefix of namespaces representing projects.
 	ProjectPrefix = "garden-"
 
-	// ProjectName is they key of a label on namespaces whose value holds the project name.
+	// ProjectName is the key of a label on namespaces whose value holds the project name.
 	ProjectName = "project.gardener.cloud/name"
 
 	// ProjectSkipStaleCheck is the key of an annotation on a project namespace that marks the associated Project to be
@@ -229,7 +229,7 @@ const (
 	// then they will be reset.
 	ProjectSkipStaleCheck = "project.gardener.cloud/skip-stale-check"
 
-	// NamespaceProject is they key of an annotation on namespace whose value holds the project uid.
+	// NamespaceProject is the key of an annotation on namespace whose value holds the project uid.
 	NamespaceProject = "namespace.gardener.cloud/project"
 
 	// NamespaceKeepAfterProjectDeletion is a constant for an annotation on a `Namespace` resource that states that it
@@ -249,7 +249,7 @@ const (
 	// of referenced quotas.
 	ShootExpirationTimestamp = "shoot.gardener.cloud/expiration-timestamp"
 
-	// ShootNoCleanup is a constant for a label on a resource indicating the the Gardener cleaner should not delete this
+	// ShootNoCleanup is a constant for a label on a resource indicating that the Gardener cleaner should not delete this
 	// resource when cleaning a shoot during the deletion flow.
 	ShootNoCleanup = "shoot.gardener.cloud/no-cleanup"
 

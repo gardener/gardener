@@ -12,7 +12,7 @@ authEnabled: true
 annotations: {}
 
 labels:
-  # deprecated label only for the health check
+  # deprecated label
   garden.sapcloud.io/role: logging
   gardener.cloud/role: logging
   app: loki
