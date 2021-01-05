@@ -340,7 +340,6 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, logger l
 // available by the machine-controller-manager. It polls the status every 5 seconds.
 func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context.Context, logger logr.Logger, cluster *extensionscontroller.Cluster, worker *extensionsv1alpha1.Worker, alreadyExistingMachineDeploymentNames sets.String, alreadyExistingMachineClassNames sets.String, wantedMachineDeployments extensionsworker.MachineDeployments, clusterAutoscalerUsed bool) error {
 	logger.Info("Waiting until wanted machine deployments are available")
-	autoscalerIsScaledDown := false
 	workerStatusUpdatedForRollingUpdate := false
 
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
@@ -425,14 +424,6 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			// numUnavailable == 0 makes sure that every machine joined the cluster (during creation & in the case of a rolling update with maxUnavailability > 0)
 			if numUnavailable == 0 && numUpdated == numberOfAwakeMachines && int(numHealthyDeployments) == len(wantedMachineDeployments) {
 				return retryutils.Ok()
-			}
-
-			// scale down cluster autoscaler during creation or rolling update
-			if clusterAutoscalerUsed && !autoscalerIsScaledDown {
-				if err := a.scaleClusterAutoscaler(ctx, logger, worker, 0); err != nil {
-					return retryutils.SevereError(err)
-				}
-				autoscalerIsScaledDown = true
 			}
 
 			// update worker status with condition that indicates an ongoing rolling update operation
