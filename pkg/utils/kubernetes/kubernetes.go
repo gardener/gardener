@@ -36,6 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // TruncateLabelValue truncates a string at 63 characters so it's suitable for a label value.
@@ -318,7 +319,20 @@ func ReconcileServicePorts(existingPorts []corev1.ServicePort, desiredPorts []co
 }
 
 func buildEventsErrorMessage(events []corev1.Event) string {
-	sort.Sort(SortableEvents(events))
+	sortByLastTimestamp := func(o1, o2 controllerutil.Object) bool {
+		obj1, ok1 := o1.(*corev1.Event)
+		obj2, ok2 := o2.(*corev1.Event)
+
+		if !ok1 || !ok2 {
+			return false
+		}
+
+		return obj1.LastTimestamp.Time.Before(obj2.LastTimestamp.Time)
+	}
+
+	list := &corev1.EventList{Items: events}
+	SortBy(sortByLastTimestamp).Sort(list)
+	events = list.Items
 
 	const eventsLimit = 2
 	if len(events) > eventsLimit {

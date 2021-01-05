@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"testing"
 	"time"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -43,11 +42,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-func TestKubernetes(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Kubernetes Suite")
-}
 
 var _ = Describe("kubernetes", func() {
 	const (
