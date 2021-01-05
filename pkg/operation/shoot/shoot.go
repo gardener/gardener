@@ -20,7 +20,6 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -30,6 +29,7 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/extension"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils"
@@ -170,7 +170,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 		SystemComponents: &SystemComponents{},
 	}
 
-	extensions, err := calculateExtensions(c, shootObject, shoot.SeedNamespace)
+	extensions, err := calculateExtensions(ctx, c, shootObject, shoot.SeedNamespace)
 	if err != nil {
 		return nil, fmt.Errorf("cannot calculate required extensions for shoot %s: %v", shootObject.Name, err)
 	}
@@ -226,9 +226,9 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	return shoot, nil
 }
 
-func calculateExtensions(gardenClient client.Client, shoot *gardencorev1beta1.Shoot, seedNamespace string) (map[string]Extension, error) {
-	var controllerRegistrations = &gardencorev1beta1.ControllerRegistrationList{}
-	if err := gardenClient.List(context.TODO(), controllerRegistrations); err != nil {
+func calculateExtensions(ctx context.Context, gardenClient client.Client, shoot *gardencorev1beta1.Shoot, seedNamespace string) (map[string]extension.Extension, error) {
+	controllerRegistrations := &gardencorev1beta1.ControllerRegistrationList{}
+	if err := gardenClient.List(ctx, controllerRegistrations); err != nil {
 		return nil, err
 	}
 	return MergeExtensions(controllerRegistrations.Items, shoot.Spec.Extensions, seedNamespace)
@@ -424,17 +424,13 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 	return externalDomain, nil
 }
 
-// ExtensionDefaultTimeout is the default timeout and defines how long Gardener should wait
-// for a successful reconciliation of this extension resource.
-const ExtensionDefaultTimeout = 3 * time.Minute
-
 // MergeExtensions merges the given controller registrations with the given extensions, expecting that each type in
 // extensions is also represented in the registration. It ignores all extensions that were explicitly disabled in the
 // shoot spec.
-func MergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, namespace string) (map[string]Extension, error) {
+func MergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, namespace string) (map[string]extension.Extension, error) {
 	var (
-		typeToExtension    = make(map[string]Extension)
-		requiredExtensions = make(map[string]Extension)
+		typeToExtension    = make(map[string]extension.Extension)
+		requiredExtensions = make(map[string]extension.Extension)
 	)
 
 	// Extensions enabled by default for all Shoot clusters.
@@ -444,12 +440,12 @@ func MergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, e
 				continue
 			}
 
-			timeout := ExtensionDefaultTimeout
+			timeout := extension.DefaultTimeout
 			if res.ReconcileTimeout != nil {
 				timeout = res.ReconcileTimeout.Duration
 			}
 
-			typeToExtension[res.Type] = Extension{
+			typeToExtension[res.Type] = extension.Extension{
 				Extension: extensionsv1alpha1.Extension{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      res.Type,

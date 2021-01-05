@@ -17,7 +17,6 @@ package shoot
 import (
 	"context"
 	"net"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -26,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/extension"
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -77,7 +77,7 @@ type Shoot struct {
 	Components *Components
 
 	OperatingSystemConfigsMap map[string]OperatingSystemConfigs
-	Extensions                map[string]Extension
+	Extensions                map[string]extension.Extension
 	InfrastructureStatus      []byte
 
 	ETCDEncryption *etcdencryption.EncryptionConfig
@@ -111,6 +111,7 @@ type Extensions struct {
 	ControlPlane         ExtensionControlPlane
 	ControlPlaneExposure ExtensionControlPlane
 	DNS                  *DNS
+	Extension            extension.Interface
 	Infrastructure       ExtensionInfrastructure
 	Network              component.DeployMigrateWaiter
 	Worker               ExtensionWorker
@@ -196,12 +197,6 @@ type OperatingSystemConfigData struct {
 	Content string
 	Command *string
 	Units   []string
-}
-
-// Extension contains information about the extension api resouce as well as configuration information.
-type Extension struct {
-	extensionsv1alpha1.Extension
-	Timeout time.Duration
 }
 
 // IncompleteDNSConfigError is a custom error type.

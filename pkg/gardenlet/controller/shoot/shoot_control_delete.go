@@ -438,12 +438,12 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		deleteExtensionResources = g.Add(flow.Task{
 			Name:         "Deleting extension resources",
-			Fn:           flow.TaskFn(botanist.DeleteAllExtensionResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, waitUntilManagedResourcesDeleted),
 		})
 		waitUntilExtensionResourcesDeleted = g.Add(flow.Task{
 			Name:         "Waiting until extension resources have been deleted",
-			Fn:           botanist.WaitUntilExtensionResourcesDeleted,
+			Fn:           botanist.Shoot.Components.Extensions.Extension.WaitCleanup,
 			Dependencies: flow.NewTaskIDs(deleteExtensionResources),
 		})
 		deleteContainerRuntimeResources = g.Add(flow.Task{
