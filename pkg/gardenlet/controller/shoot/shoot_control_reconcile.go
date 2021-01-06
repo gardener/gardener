@@ -193,7 +193,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Name: "Deploying backup entry",
 			Fn:   flow.TaskFn(botanist.DeployBackupEntryInGarden).DoIf(allowBackup),
 		})
-		wailtUntilBackupEntryInGardenReconciled = g.Add(flow.Task{
+		waitUntilBackupEntryInGardenReconciled = g.Add(flow.Task{
 			Name:         "Waiting until the backup entry has been reconciled",
 			Fn:           flow.TaskFn(botanist.WaitUntilBackupEntryInGardenReconciled).DoIf(allowBackup),
 			Dependencies: flow.NewTaskIDs(deployBackupEntryInGarden),
@@ -201,7 +201,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
 			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, wailtUntilBackupEntryInGardenReconciled),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilBackupEntryInGardenReconciled),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
