@@ -28,6 +28,7 @@ import (
 	plantvalidator "github.com/gardener/gardener/plugin/pkg/plant"
 	seedvalidator "github.com/gardener/gardener/plugin/pkg/seed/validator"
 	shootdns "github.com/gardener/gardener/plugin/pkg/shoot/dns"
+	shootmanagedseed "github.com/gardener/gardener/plugin/pkg/shoot/managedseed"
 	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
 	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
@@ -44,6 +45,7 @@ var AllOrderedPlugins = []string{
 	extensionvalidation.PluginName,
 	shoottolerationrestriction.PluginName,
 	shootdns.PluginName,
+	shootmanagedseed.PluginName,
 	shootquotavalidator.PluginName,
 	shootvalidator.PluginName,
 	seedvalidator.PluginName,
@@ -74,6 +76,7 @@ func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	shoottolerationrestriction.Register(plugins)
 	shootquotavalidator.Register(plugins)
 	shootdns.Register(plugins)
+	shootmanagedseed.Register(plugins)
 	shootvalidator.Register(plugins)
 	seedvalidator.Register(plugins)
 	controllerregistrationresources.Register(plugins)

@@ -3589,11 +3589,6 @@ func (in *ShootSpec) DeepCopyInto(out *ShootSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.ManagedSeedName != nil {
-		in, out := &in.ManagedSeedName, &out.ManagedSeedName
-		*out = new(string)
-		**out = **in
-	}
 	return
 }
 

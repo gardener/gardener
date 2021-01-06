@@ -16,14 +16,19 @@ package managedseed
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/registry/generic"
+	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 )
 
@@ -60,7 +65,8 @@ func (s Strategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object)
 	oldManagedSeed := old.(*seedmanagement.ManagedSeed)
 	newManagedSeed.Status = oldManagedSeed.Status
 
-	if !apiequality.Semantic.DeepEqual(oldManagedSeed.Spec, newManagedSeed.Spec) {
+	if !apiequality.Semantic.DeepEqual(oldManagedSeed.Spec, newManagedSeed.Spec) ||
+		oldManagedSeed.DeletionTimestamp == nil && newManagedSeed.DeletionTimestamp != nil {
 		newManagedSeed.Generation = oldManagedSeed.Generation + 1
 	}
 }
@@ -88,7 +94,7 @@ func (Strategy) AllowCreateOnUpdate() bool {
 // unconditionally (irrespective of the latest resource version), when
 // there is no resource version specified in the object.
 func (Strategy) AllowUnconditionalUpdate() bool {
-	return true
+	return false
 }
 
 // ValidateUpdate validates the update on the given old and new object.
@@ -120,4 +126,44 @@ func (s StatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.O
 // ValidateUpdate validates the update on the given old and new object.
 func (StatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateManagedSeedStatusUpdate(obj.(*seedmanagement.ManagedSeed), old.(*seedmanagement.ManagedSeed))
+}
+
+// MatchManagedSeed returns a generic matcher for a given label and field selector.
+func MatchManagedSeed(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
+	return storage.SelectionPredicate{
+		Label:       label,
+		Field:       field,
+		GetAttrs:    GetAttrs,
+		IndexFields: []string{seedmanagement.ManagedSeedShootName},
+	}
+}
+
+// GetAttrs returns labels and fields of a given object for filtering purposes.
+func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
+	managedSeed, ok := obj.(*seedmanagement.ManagedSeed)
+	if !ok {
+		return nil, nil, fmt.Errorf("not a ManagedSeed")
+	}
+	return labels.Set(managedSeed.ObjectMeta.Labels), ToSelectableFields(managedSeed), nil
+}
+
+// ToSelectableFields returns a field set that represents the object.
+func ToSelectableFields(managedSeed *seedmanagement.ManagedSeed) fields.Set {
+	// The purpose of allocation with a given number of elements is to reduce
+	// amount of allocations needed to create the fields.Set. If you add any
+	// field here or the number of object-meta related fields changes, this should
+	// be adjusted.
+	shootSpecificFieldsSet := make(fields.Set, 3)
+	shootSpecificFieldsSet[seedmanagement.ManagedSeedShootName] = managedSeed.Spec.Shoot.Name
+	return generic.AddObjectMetaFieldsSet(shootSpecificFieldsSet, &managedSeed.ObjectMeta, true)
+}
+
+// ShootNameTriggerFunc returns spec.shoot.name of the given ManagedSeed.
+func ShootNameTriggerFunc(obj runtime.Object) string {
+	managedSeed, ok := obj.(*seedmanagement.ManagedSeed)
+	if !ok {
+		return ""
+	}
+
+	return managedSeed.Spec.Shoot.Name
 }

@@ -81,7 +81,7 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 	}
 
 	if obj.LeaderElection == nil {
-		obj.LeaderElection = &GardenletLeaderElectionConfiguration{}
+		obj.LeaderElection = &LeaderElectionConfiguration{}
 	}
 
 	if obj.LogLevel == nil {
@@ -142,8 +142,8 @@ func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.
 	}
 }
 
-// SetDefaults_GardenletLeaderElectionConfiguration sets defaults for the leader election of the gardenlet.
-func SetDefaults_GardenletLeaderElectionConfiguration(obj *GardenletLeaderElectionConfiguration) {
+// SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the gardenlet.
+func SetDefaults_LeaderElectionConfiguration(obj *LeaderElectionConfiguration) {
 	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(&obj.LeaderElectionConfiguration)
 
 	obj.ResourceLock = resourcelock.ConfigMapsResourceLock

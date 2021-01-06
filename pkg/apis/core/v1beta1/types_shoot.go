@@ -105,9 +105,6 @@ type ShootSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	Tolerations []Toleration `json:"tolerations,omitempty" patchStrategy:"merge" patchMergeKey:"key" protobuf:"bytes,17,rep,name=tolerations"`
-	// ManagedSeedName is the name of the ManagedSeed resource for this Shoot.
-	// +optional
-	ManagedSeedName *string `json:"managedSeedName,omitempty" protobuf:"bytes,18,opt,name=managedSeedName"`
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.

@@ -705,31 +705,14 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		foundDeployment = false
 	}
 
-	if b.ManagedSeed != nil && b.ManagedSeed.Spec.Shoot != nil {
-		minReplicas, maxReplicas = 3, 3
-		if apiServer := b.ManagedSeed.Spec.Shoot.APIServer; apiServer != nil {
-			if autoscaler := apiServer.Autoscaler; autoscaler != nil {
-				if autoscaler.MaxReplicas != nil {
-					maxReplicas = *autoscaler.MaxReplicas
-				}
-				if autoscaler.MinReplicas != nil {
-					minReplicas = *autoscaler.MinReplicas
-				} else if minReplicas > maxReplicas {
-					minReplicas = maxReplicas
-				}
-			}
-		}
+	if b.ManagedSeed != nil && b.ManagedSeedAPIServer != nil {
+		autoscaler := b.ManagedSeedAPIServer.Autoscaler
+		minReplicas = *autoscaler.MinReplicas
+		maxReplicas = autoscaler.MaxReplicas
 	}
 
-	if b.ManagedSeed != nil && b.ManagedSeed.Spec.Shoot != nil && !hvpaEnabled {
-		var replicas int32 = 3
-		if apiServer := b.ManagedSeed.Spec.Shoot.APIServer; apiServer != nil {
-			if apiServer.Replicas != nil {
-				replicas = *apiServer.Replicas
-			}
-		}
-
-		defaultValues["replicas"] = replicas
+	if b.ManagedSeed != nil && b.ManagedSeedAPIServer != nil && !hvpaEnabled {
+		defaultValues["replicas"] = *b.ManagedSeedAPIServer.Replicas
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"requests": map[string]interface{}{
 				"cpu":    "1750m",

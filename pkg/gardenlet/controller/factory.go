@@ -168,7 +168,6 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		controllerInstallationController = controllerinstallationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace, f.gardenClusterIdentity)
 		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.healthManager, secrets, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
 		shootController                  = shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.identity, f.gardenClusterIdentity, secrets, imageVector, f.recorder)
-		managedSeedController            = managedseedcontroller.NewManagedSeedController(f.clientMap, f.k8sSeedManagementInformers, f.k8sGardenCoreInformers, f.cfg, imageVector, f.recorder)
 	)
 
 	backupBucketController, err := backupbucketcontroller.NewBackupBucketController(ctx, f.clientMap, f.cfg, f.recorder)
@@ -184,6 +183,11 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	federatedSeedController, err := federatedseedcontroller.NewFederatedSeedController(ctx, f.clientMap, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing federated seed controller: %w", err)
+	}
+
+	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, f.clientMap, f.cfg, imageVector, f.recorder)
+	if err != nil {
+		return fmt.Errorf("failed initializing managed seed controller: %w", err)
 	}
 
 	// Initialize the Controller metrics collection.

@@ -25,6 +25,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
+	"k8s.io/apiserver/pkg/storage"
 )
 
 // REST implements a RESTStorage for ManagedSeed.
@@ -56,6 +57,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	store := &genericregistry.Store{
 		NewFunc:                  func() runtime.Object { return &seedmanagement.ManagedSeed{} },
 		NewListFunc:              func() runtime.Object { return &seedmanagement.ManagedSeedList{} },
+		PredicateFunc:            managedseed.MatchManagedSeed,
 		DefaultQualifiedResource: seedmanagement.Resource("managedseeds"),
 		EnableGarbageCollection:  true,
 
@@ -65,7 +67,11 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 
 		TableConvertor: newTableConvertor(),
 	}
-	options := &generic.StoreOptions{RESTOptions: optsGetter}
+	options := &generic.StoreOptions{
+		RESTOptions: optsGetter,
+		AttrFunc:    managedseed.GetAttrs,
+		TriggerFunc: map[string]storage.IndexerFunc{seedmanagement.ManagedSeedShootName: managedseed.ShootNameTriggerFunc},
+	}
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err)
 	}

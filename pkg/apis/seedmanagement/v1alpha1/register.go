@@ -38,7 +38,7 @@ func Resource(resource string) schema.GroupResource {
 
 var (
 	// SchemeBuilder is a new Scheme Builder which registers our API.
-	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes, addDefaultingFuncs)
+	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes, addDefaultingFuncs, addConversionFuncs)
 	localSchemeBuilder = &SchemeBuilder
 	// AddToScheme is a reference to the Scheme Builder's AddToScheme function.
 	AddToScheme = SchemeBuilder.AddToScheme

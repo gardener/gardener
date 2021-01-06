@@ -46,12 +46,13 @@ string
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Standard object metadata.</p>
 Refer to the Kubernetes API documentation for the fields of the
 <code>metadata</code> field.
@@ -67,6 +68,7 @@ ManagedSeedSpec
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Specification of the ManagedSeed.</p>
 <br/>
 <br/>
@@ -81,23 +83,23 @@ Shoot
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>Shoot is the Shoot that will be registered as Seed.</p>
+<p>Shoot references a Shoot that should be registered as Seed.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>seed</code></br>
+<code>seedTemplate</code></br>
 <em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.SeedTemplateSpec">
-SeedTemplateSpec
+<a href="#seedmanagement.gardener.cloud/v1alpha1.SeedTemplate">
+SeedTemplate
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Seed describes the Seed that will be registered.
-Either Seed or Gardenlet must be specified.</p>
+<p>SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed.
+Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster
+and an existing gardenlet reconciling the new Seed is required.</p>
 </td>
 </tr>
 <tr>
@@ -111,7 +113,8 @@ Gardenlet
 </td>
 <td>
 <em>(Optional)</em>
-<p>Gardenlet specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.</p>
+<p>Gardenlet specifies, that the ManagedSeed controller should deploy a gardenlet into the cluster
+with the given deployment parameters and GardenletConfiguration.</p>
 </td>
 </tr>
 </table>
@@ -127,95 +130,8 @@ ManagedSeedStatus
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Most recently observed status of the ManagedSeed.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="seedmanagement.gardener.cloud/v1alpha1.APIServer">APIServer
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.Shoot">Shoot</a>)
-</p>
-<p>
-<p>APIServer specifies certain kube-apiserver parameters of the Shoot that will be registered as Seed.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>replicas</code></br>
-<em>
-int32
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Replicas is the number of kube-apiserver replicas. Defaults to 3.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>autoscaler</code></br>
-<em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.APIServerAutoscaler">
-APIServerAutoscaler
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Autoscaler specifies certain kube-apiserver autoscaler parameters, such as the minimum and maximum number of replicas.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="seedmanagement.gardener.cloud/v1alpha1.APIServerAutoscaler">APIServerAutoscaler
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.APIServer">APIServer</a>)
-</p>
-<p>
-<p>APIServerAutoscaler specifies certain kube-apiserver autoscaler parameters of the Shoot that will be registered as Seed.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>minReplicas</code></br>
-<em>
-int32
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>MinReplicas is the minimum number of kube-apiserver replicas. Defaults to min(3, MaxReplicas).</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>maxReplicas</code></br>
-<em>
-int32
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>MaxReplicas is the maximum number of kube-apiserver replicas. Defaults to 3.</p>
 </td>
 </tr>
 </tbody>
@@ -258,14 +174,14 @@ GardenletDeployment
 <td>
 <em>(Optional)</em>
 <p>Deployment specifies certain gardenlet deployment parameters, such as the number of replicas,
-the image, which bootstrap mechanism to use (bootstrap token / service account), etc.</p>
+the image, etc.</p>
 </td>
 </tr>
 <tr>
 <td>
 <code>config</code></br>
 <em>
-github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1.GardenletConfiguration
+k8s.io/apimachinery/pkg/runtime.RawExtension
 </em>
 </td>
 <td>
@@ -284,36 +200,21 @@ GardenConnectionBootstrap
 </td>
 <td>
 <em>(Optional)</em>
-<p>Bootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, Token.
+<p>GardenConnectionBootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken.
 If specified, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig.
 If not specified, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>seedConnection</code></br>
-<em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.SeedConnection">
-SeedConnection
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SeedConnection is the mechanism for gardenlet connection to the Seed cluster. Must equal ServiceAccount if specified.
-If not specified, the seedClientConnection.kubeconfig field will be used to connect to the Seed cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>mergeParentConfig</code></br>
+<code>disableMergingWithParent</code></br>
 <em>
 bool
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>MergeParentConfig specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet
+<p>DisableMergingWithParent specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet
 should be merged with the specified deployment parameters and GardenletConfiguration. Defaults to false.</p>
 </td>
 </tr>
@@ -327,7 +228,7 @@ should be merged with the specified deployment parameters and GardenletConfigura
 </p>
 <p>
 <p>GardenletDeployment specifies certain gardenlet deployment parameters, such as the number of replicas,
-the image, which bootstrap mechanism to use (bootstrap token / service account), etc.</p>
+the image, etc.</p>
 </p>
 <table>
 <thead>
@@ -391,7 +292,7 @@ Image
 <td>
 <code>resources</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#resourcerequirements-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#resourcerequirements-v1-core">
 Kubernetes core/v1.ResourceRequirements
 </a>
 </em>
@@ -429,7 +330,7 @@ map[string]string
 <td>
 <code>additionalVolumes</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#volume-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#volume-v1-core">
 []Kubernetes core/v1.Volume
 </a>
 </em>
@@ -443,7 +344,7 @@ map[string]string
 <td>
 <code>additionalVolumeMounts</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#volumemount-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#volumemount-v1-core">
 []Kubernetes core/v1.VolumeMount
 </a>
 </em>
@@ -457,7 +358,7 @@ map[string]string
 <td>
 <code>env</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#envvar-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#envvar-v1-core">
 []Kubernetes core/v1.EnvVar
 </a>
 </em>
@@ -476,33 +377,7 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>VPA specifies whether to enable VPA for gardenlet. Defaults to false.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>imageVectorOverwrite</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ImageVectorOverwrite is the gardenlet image vector overwrite.
-More info: <a href="https://github.com/gardener/gardener/blob/master/docs/deployment/image_vector.md">https://github.com/gardener/gardener/blob/master/docs/deployment/image_vector.md</a>.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>componentImageVectorOverwrites</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ComponentImageVectorOverwrites is a list of image vector overwrites for components deployed by gardenlet.
-More info: <a href="https://github.com/gardener/gardener/blob/master/docs/deployment/image_vector.md">https://github.com/gardener/gardener/blob/master/docs/deployment/image_vector.md</a>.</p>
+<p>VPA specifies whether to enable VPA for gardenlet. Defaults to true.</p>
 </td>
 </tr>
 </tbody>
@@ -552,7 +427,7 @@ string
 <td>
 <code>pullPolicy</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#pullpolicy-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#pullpolicy-v1-core">
 Kubernetes core/v1.PullPolicy
 </a>
 </em>
@@ -591,23 +466,23 @@ Shoot
 </em>
 </td>
 <td>
-<em>(Optional)</em>
-<p>Shoot is the Shoot that will be registered as Seed.</p>
+<p>Shoot references a Shoot that should be registered as Seed.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>seed</code></br>
+<code>seedTemplate</code></br>
 <em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.SeedTemplateSpec">
-SeedTemplateSpec
+<a href="#seedmanagement.gardener.cloud/v1alpha1.SeedTemplate">
+SeedTemplate
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Seed describes the Seed that will be registered.
-Either Seed or Gardenlet must be specified.</p>
+<p>SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed.
+Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster
+and an existing gardenlet reconciling the new Seed is required.</p>
 </td>
 </tr>
 <tr>
@@ -621,7 +496,8 @@ Gardenlet
 </td>
 <td>
 <em>(Optional)</em>
-<p>Gardenlet specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.</p>
+<p>Gardenlet specifies, that the ManagedSeed controller should deploy a gardenlet into the cluster
+with the given deployment parameters and GardenletConfiguration.</p>
 </td>
 </tr>
 </tbody>
@@ -645,26 +521,14 @@ Gardenlet
 <tbody>
 <tr>
 <td>
-<code>lastOperation</code></br>
+<code>conditions</code></br>
 <em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation
+[]github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>LastOperation holds information about the last operation on the ManagedSeed.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>lastError</code></br>
-<em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>LastError holds information about the last occurred error during an operation.</p>
+<p>Conditions represents the latest available observations of a ManagedSeed&rsquo;s current state.</p>
 </td>
 </tr>
 <tr>
@@ -681,23 +545,14 @@ ManagedSeed&rsquo;s generation, which is updated on mutation by the API Server.<
 </tr>
 </tbody>
 </table>
-<h3 id="seedmanagement.gardener.cloud/v1alpha1.SeedConnection">SeedConnection
-(<code>string</code> alias)</p></h3>
-<p>
-(<em>Appears on:</em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.Gardenlet">Gardenlet</a>)
-</p>
-<p>
-<p>SeedConnection describes a mechanism for gardenlet connection to the Seed cluster.</p>
-</p>
-<h3 id="seedmanagement.gardener.cloud/v1alpha1.SeedTemplateSpec">SeedTemplateSpec
+<h3 id="seedmanagement.gardener.cloud/v1alpha1.SeedTemplate">SeedTemplate
 </h3>
 <p>
 (<em>Appears on:</em>
 <a href="#seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSpec">ManagedSeedSpec</a>)
 </p>
 <p>
-<p>SeedTemplateSpec describes the data a Seed should have when created from a template.</p>
+<p>SeedTemplate is a template for creating a Seed object, when registering a cluster as a ManagedSeed.</p>
 </p>
 <table>
 <thead>
@@ -711,7 +566,7 @@ ManagedSeed&rsquo;s generation, which is updated on mutation by the API Server.<
 <td>
 <code>metadata</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectmeta-v1-meta">
 Kubernetes meta/v1.ObjectMeta
 </a>
 </em>
@@ -788,7 +643,7 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider
 <td>
 <code>secretRef</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#secretreference-v1-core">
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#secretreference-v1-core">
 Kubernetes core/v1.SecretReference
 </a>
 </em>
@@ -835,6 +690,18 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings
 <p>Settings contains certain settings for this seed cluster.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>ingress</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Ingress configures Ingress specific settings of the Seed cluster.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -847,7 +714,7 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings
 <a href="#seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSpec">ManagedSeedSpec</a>)
 </p>
 <p>
-<p>Shoot identifies the Shoot that will be registered as Seed.</p>
+<p>Shoot identifies the Shoot that should be registered as Seed.</p>
 </p>
 <table>
 <thead>
@@ -868,20 +735,9 @@ string
 <p>Name is the name of the Shoot that will be registered as Seed.</p>
 </td>
 </tr>
-<tr>
-<td>
-<code>apiServer</code></br>
-<em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.APIServer">
-APIServer
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>APIServer specifies certain kube-apiserver parameters of the Shoot that will be registered as Seed.</p>
-</td>
-</tr>
 </tbody>
 </table>
 <hr/>
+<p><em>
+Generated with <a href="https://github.com/ahmetb/gen-crd-api-reference-docs">gen-crd-api-reference-docs</a>
+</em></p>

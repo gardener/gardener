@@ -19,6 +19,7 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -62,6 +63,7 @@ type Operation struct {
 	Shoot                     *shoot.Shoot
 	ShootState                *gardencorev1alpha1.ShootState
 	ManagedSeed               *seedmanagementv1alpha1.ManagedSeed
+	ManagedSeedAPIServer      *gardencorev1beta1helper.ShootedSeedAPIServer
 	ClientMap                 clientmap.ClientMap
 	K8sGardenClient           kubernetes.Interface
 	K8sSeedClient             kubernetes.Interface

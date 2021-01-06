@@ -112,7 +112,7 @@ func worker(queue workqueue.RateLimitingInterface, resourceType string, reconcil
 
 				res, err := reconciler.Reconcile(req)
 				if err != nil {
-					logger.Logger.Debugf("Error reconciling %s %v: %v", resourceType, key, err)
+					logger.Logger.Infof("Error reconciling %s %v: %v", resourceType, key, err)
 					queue.AddRateLimited(key)
 					return false
 				}

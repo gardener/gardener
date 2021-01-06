@@ -22,6 +22,7 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -154,18 +155,15 @@ func BackupEntryFilterFunc(ctx context.Context, c client.Client, seedName string
 	}
 }
 
-// ManagedSeedFilterFunc returns a filtering func for the seeds and the given label selector.
-func ManagedSeedFilterFunc(seedName string, seedLister gardencorelisters.SeedLister, shootLister gardencorelisters.ShootLister, labelSelector *metav1.LabelSelector) func(obj interface{}) bool {
+// ManagedSeedFilterFunc returns a filtering func for ManagedSeeds that checks if the ManagedSeed references a Shoot scheduled on a Seed, for which the gardenlet is responsible..
+func ManagedSeedFilterFunc(ctx context.Context, c client.Client, seedName string, labelSelector *metav1.LabelSelector) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
 		managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
 		if !ok {
 			return false
 		}
-		if managedSeed.Spec.Shoot == nil || managedSeed.Spec.Shoot.Name == "" {
-			return false
-		}
-		shoot, err := shootLister.Shoots(managedSeed.Namespace).Get(managedSeed.Spec.Shoot.Name)
-		if err != nil {
+		shoot := &gardencorev1beta1.Shoot{}
+		if err := c.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
 			return false
 		}
 		if shoot.Spec.SeedName == nil {
@@ -178,8 +176,8 @@ func ManagedSeedFilterFunc(seedName string, seedLister gardencorelisters.SeedLis
 			return *shoot.Status.SeedName == seedName
 		}
 		if shoot.Status.SeedName == nil || *shoot.Spec.SeedName == *shoot.Status.SeedName {
-			return SeedLabelsMatch(seedLister, *shoot.Spec.SeedName, labelSelector)
+			return seedLabelsMatchWithClient(ctx, c, *shoot.Spec.SeedName, labelSelector)
 		}
-		return SeedLabelsMatch(seedLister, *shoot.Status.SeedName, labelSelector)
+		return seedLabelsMatchWithClient(ctx, c, *shoot.Status.SeedName, labelSelector)
 	}
 }

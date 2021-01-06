@@ -17,9 +17,9 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 // +genclient
@@ -29,10 +29,13 @@ import (
 type ManagedSeed struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Specification of the ManagedSeed.
+	// +optional
 	Spec ManagedSeedSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// Most recently observed status of the ManagedSeed.
+	// +optional
 	Status ManagedSeedStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
@@ -50,29 +53,27 @@ type ManagedSeedList struct {
 
 // ManagedSeedSpec is the specification of a ManagedSeed.
 type ManagedSeedSpec struct {
-	// Shoot is the Shoot that will be registered as Seed.
+	// Shoot references a Shoot that should be registered as Seed.
+	Shoot Shoot `json:"shoot" protobuf:"bytes,1,opt,name=shoot"`
+	// SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed.
+	// Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster
+	// and an existing gardenlet reconciling the new Seed is required.
 	// +optional
-	Shoot *Shoot `json:"shoot,omitempty" protobuf:"bytes,1,opt,name=shoot"`
-	// Seed describes the Seed that will be registered.
-	// Either Seed or Gardenlet must be specified.
-	// +optional
-	Seed *SeedTemplateSpec `json:"seed,omitempty" protobuf:"bytes,2,opt,name=seed"`
-	// Gardenlet specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.
+	SeedTemplate *SeedTemplate `json:"seedTemplate,omitempty" protobuf:"bytes,2,opt,name=seedTemplate"`
+	// Gardenlet specifies, that the ManagedSeed controller should deploy a gardenlet into the cluster
+	// with the given deployment parameters and GardenletConfiguration.
 	// +optional
 	Gardenlet *Gardenlet `json:"gardenlet,omitempty" protobuf:"bytes,3,opt,name=gardenlet"`
 }
 
-// Shoot identifies the Shoot that will be registered as Seed.
+// Shoot identifies the Shoot that should be registered as Seed.
 type Shoot struct {
 	// Name is the name of the Shoot that will be registered as Seed.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// APIServer specifies certain kube-apiserver parameters of the Shoot that will be registered as Seed.
-	// +optional
-	APIServer *APIServer `json:"apiServer,omitempty" protobuf:"bytes,2,opt,name=apiServer"`
 }
 
-// SeedTemplateSpec describes the data a Seed should have when created from a template.
-type SeedTemplateSpec struct {
+// SeedTemplate is a template for creating a Seed object, when registering a cluster as a ManagedSeed.
+type SeedTemplate struct {
 	// Standard object metadata.
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
@@ -84,29 +85,25 @@ type SeedTemplateSpec struct {
 // Gardenlet specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.
 type Gardenlet struct {
 	// Deployment specifies certain gardenlet deployment parameters, such as the number of replicas,
-	// the image, which bootstrap mechanism to use (bootstrap token / service account), etc.
+	// the image, etc.
 	// +optional
 	Deployment *GardenletDeployment `json:"deployment,omitempty" protobuf:"bytes,1,opt,name=deployment"`
 	// Config is the GardenletConfiguration used to configure gardenlet.
 	// +optional
-	Config *gardenletconfigv1alpha1.GardenletConfiguration `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`
-	// Bootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, Token.
+	Config *runtime.RawExtension `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`
+	// GardenConnectionBootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken.
 	// If specified, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig.
 	// If not specified, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster.
 	// +optional
 	GardenConnectionBootstrap *GardenConnectionBootstrap `json:"gardenConnectionBootstrap,omitempty" protobuf:"bytes,3,opt,name=gardenConnectionBootstrap"`
-	// SeedConnection is the mechanism for gardenlet connection to the Seed cluster. Must equal ServiceAccount if specified.
-	// If not specified, the seedClientConnection.kubeconfig field will be used to connect to the Seed cluster.
-	// +optional
-	SeedConnection *SeedConnection `json:"seedConnection,omitempty" protobuf:"bytes,4,opt,name=seedConnection"`
-	// MergeParentConfig specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet
+	// DisableMergingWithParent specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet
 	// should be merged with the specified deployment parameters and GardenletConfiguration. Defaults to false.
 	// +optional
-	MergeParentConfig bool `json:"mergeParentConfig,omitempty" protobuf:"varint,5,opt,name=mergeParentConfig"`
+	DisableMergingWithParent *bool `json:"disableMergingWithParent,omitempty" protobuf:"varint,4,opt,name=disableMergingWithParent"`
 }
 
 // GardenletDeployment specifies certain gardenlet deployment parameters, such as the number of replicas,
-// the image, which bootstrap mechanism to use (bootstrap token / service account), etc.
+// the image, etc.
 type GardenletDeployment struct {
 	// ReplicaCount is the number of gardenlet replicas. Defaults to 1.
 	// +optional
@@ -116,7 +113,7 @@ type GardenletDeployment struct {
 	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty" protobuf:"varint,2,opt,name=revisionHistoryLimit"`
 	// ServiceAccountName is the name of the ServiceAccount to use to run gardenlet pods.
 	// +optional
-	ServiceAccountName string `json:"serviceAccountName,omitempty" protobuf:"bytes,3,opt,name=serviceAccountName"`
+	ServiceAccountName *string `json:"serviceAccountName,omitempty" protobuf:"bytes,3,opt,name=serviceAccountName"`
 	// Image is the gardenlet container image.
 	// +optional
 	Image *Image `json:"image,omitempty" protobuf:"bytes,4,opt,name=image"`
@@ -138,79 +135,52 @@ type GardenletDeployment struct {
 	// Env is the list of environment variables to set in the gardenlet container.
 	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty" protobuf:"bytes,10,rep,name=env"`
-	// VPA specifies whether to enable VPA for gardenlet. Defaults to false.
+	// VPA specifies whether to enable VPA for gardenlet. Defaults to true.
 	// +optional
 	VPA *bool `json:"vpa,omitempty" protobuf:"bytes,11,rep,name=vpa"`
-	// ImageVectorOverwrite is the gardenlet image vector overwrite.
-	// More info: https://github.com/gardener/gardener/blob/master/docs/deployment/image_vector.md.
-	// +optional
-	ImageVectorOverwrite string `json:"imageVectorOverwrite,omitempty" protobuf:"bytes,12,rep,name=imageVectorOverwrite"`
-	// ComponentImageVectorOverwrites is a list of image vector overwrites for components deployed by gardenlet.
-	// More info: https://github.com/gardener/gardener/blob/master/docs/deployment/image_vector.md.
-	// +optional
-	ComponentImageVectorOverwrites string `json:"componentImageVectorOverwrites,omitempty" protobuf:"bytes,13,rep,name=componentImageVectorOverwrites"`
 }
 
 // Image specifies container image parameters.
 type Image struct {
 	// Repository is the image repository.
 	// +optional
-	Repository string `json:"repository,omitempty" protobuf:"bytes,1,opt,name=repository"`
+	Repository *string `json:"repository,omitempty" protobuf:"bytes,1,opt,name=repository"`
 	// Tag is the image tag.
 	// +optional
-	Tag string `json:"tag,omitempty" protobuf:"bytes,2,opt,name=tag"`
+	Tag *string `json:"tag,omitempty" protobuf:"bytes,2,opt,name=tag"`
 	// PullPolicy is the image pull policy. One of Always, Never, IfNotPresent.
 	// +optional
-	PullPolicy corev1.PullPolicy `json:"pullPolicy,omitempty" protobuf:"bytes,3,opt,name=pullPolicy"`
+	PullPolicy *corev1.PullPolicy `json:"pullPolicy,omitempty" protobuf:"bytes,3,opt,name=pullPolicy"`
 }
 
 // GardenConnectionBootstrap describes a mechanism for bootstrapping gardenlet connection to the Garden cluster.
 type GardenConnectionBootstrap string
 
 const (
-	// GardenConnectionBootstrapServiceAccount means that a service account should be used for bootstrapping gardenlet connection to the Garden cluster.
+	// GardenConnectionBootstrapServiceAccount means that a temporary service account should be used for bootstrapping gardenlet connection to the Garden cluster.
 	GardenConnectionBootstrapServiceAccount GardenConnectionBootstrap = "ServiceAccount"
 	// GardenConnectionBootstrapToken means that a bootstrap token should be used for bootstrapping gardenlet connection to the Garden cluster.
 	GardenConnectionBootstrapToken GardenConnectionBootstrap = "BootstrapToken"
 )
 
-// SeedConnection describes a mechanism for gardenlet connection to the Seed cluster.
-type SeedConnection string
-
-const (
-	// SeedConnectionServiceAccount means that a service account should be used for gardenlet connection to the Seed cluster.
-	SeedConnectionServiceAccount SeedConnection = "ServiceAccount"
-)
-
-// APIServer specifies certain kube-apiserver parameters of the Shoot that will be registered as Seed.
-type APIServer struct {
-	// Replicas is the number of kube-apiserver replicas. Defaults to 3.
-	// +optional
-	Replicas *int32 `json:"replicas,omitempty" protobuf:"varint,1,opt,name=replicas"`
-	// Autoscaler specifies certain kube-apiserver autoscaler parameters, such as the minimum and maximum number of replicas.
-	// +optional
-	Autoscaler *APIServerAutoscaler `json:"autoscaler,omitempty" protobuf:"bytes,1,opt,name=autoscaler"`
-}
-
-// APIServerAutoscaler specifies certain kube-apiserver autoscaler parameters of the Shoot that will be registered as Seed.
-type APIServerAutoscaler struct {
-	// MinReplicas is the minimum number of kube-apiserver replicas. Defaults to min(3, MaxReplicas).
-	// +optional
-	MinReplicas *int32 `json:"minReplicas,omitempty" protobuf:"varint,1,opt,name=minReplicas"`
-	// MaxReplicas is the maximum number of kube-apiserver replicas. Defaults to 3.
-	// +optional
-	MaxReplicas *int32 `json:"maxReplicas,omitempty" protobuf:"varint,2,opt,name=maxReplicas"`
-}
-
 // ManagedSeedStatus is the status of a ManagedSeed.
 type ManagedSeedStatus struct {
-	// LastOperation holds information about the last operation on the ManagedSeed.
+	// Conditions represents the latest available observations of a ManagedSeed's current state.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
 	// +optional
-	LastOperation *gardencorev1beta1.LastOperation `json:"lastOperation,omitempty" protobuf:"bytes,1,opt,name=lastOperation"`
-	// LastError holds information about the last occurred error during an operation.
-	// +optional
-	LastError *gardencorev1beta1.LastError `json:"lastError,omitempty" protobuf:"bytes,2,opt,name=lastError"`
+	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 	// ObservedGeneration is the most recent generation observed for this ManagedSeed. It corresponds to the
 	// ManagedSeed's generation, which is updated on mutation by the API Server.
-	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,3,opt,name=observedGeneration"`
+	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,2,opt,name=observedGeneration"`
 }
+
+const (
+	// ManagedSeedValid is a condition type for indicating whether the ManagedSeed is valid.
+	ManagedSeedValid gardencorev1beta1.ConditionType = "Valid"
+	// ManagedSeedShootReconciled is a condition type for indicating whether the ManagedSeed's shoot has been reconciled.
+	ManagedSeedShootReconciled gardencorev1beta1.ConditionType = "ShootReconciled"
+	// ManagedSeedSeedRegistered is a condition type for indicating whether the ManagedSeed's seed has been registered,
+	// either directly or by deploying gardenlet into the shoot.
+	ManagedSeedSeedRegistered gardencorev1beta1.ConditionType = "SeedRegistered"
+)

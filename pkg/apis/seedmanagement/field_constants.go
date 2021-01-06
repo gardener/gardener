@@ -12,15 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package v1alpha1 is the v1alpha1 version of the API.
-// +k8s:deepcopy-gen=package,register
-// +k8s:conversion-gen=github.com/gardener/gardener/pkg/apis/seedmanagement
-// +k8s:openapi-gen=true
-// +k8s:defaulter-gen=TypeMeta
-// +k8s:protobuf-gen=package
+package seedmanagement
 
-//go:generate gen-crd-api-reference-docs -api-dir . -config ../../../../hack/api-reference/seedmanagement-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../hack/api-reference/seedmanagement.md
-
-// Package v1alpha1 is a version of the API.
-// +groupName=seedmanagement.gardener.cloud
-package v1alpha1
+// Field path constants that are specific to the internal API
+// representation.
+const (
+	// ManagedSeedShootName is the field selector path for finding
+	// the Shoot of a seedmanagement.gardener.cloud/v1beta1 ManagedSeed.
+	ManagedSeedShootName = "spec.shoot.name"
+)

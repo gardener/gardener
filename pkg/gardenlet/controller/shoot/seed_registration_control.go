@@ -16,6 +16,7 @@ package shoot
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -32,9 +33,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -217,8 +218,8 @@ func deleteManagedSeed(ctx context.Context, c client.Client, shoot *gardencorev1
 
 func getManagedSeedSpec(shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev1beta1helper.ShootedSeed) (*seedmanagementv1alpha1.ManagedSeedSpec, error) {
 	var (
-		seed      *seedmanagementv1alpha1.SeedTemplateSpec
-		gardenlet *seedmanagementv1alpha1.Gardenlet
+		seedTemplate *seedmanagementv1alpha1.SeedTemplate
+		gardenlet    *seedmanagementv1alpha1.Gardenlet
 	)
 
 	// Initialize seed spec
@@ -229,20 +230,36 @@ func getManagedSeedSpec(shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev
 
 	if shootedSeed.NoGardenlet {
 		// Initialize seed template
-		seed = &seedmanagementv1alpha1.SeedTemplateSpec{
+		seedTemplate = &seedmanagementv1alpha1.SeedTemplate{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: shoot.Labels,
 			},
 			Spec: *seedSpec,
 		}
 	} else {
-		// Initialize gardenlet config resources
+		// Initialize gardenlet config
 		var resources *configv1alpha1.ResourcesConfiguration
 		if shootedSeed.Resources != nil {
 			resources = &configv1alpha1.ResourcesConfiguration{
 				Capacity: shootedSeed.Resources.Capacity,
 				Reserved: shootedSeed.Resources.Reserved,
 			}
+		}
+		config := &configv1alpha1.GardenletConfiguration{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+				Kind:       "GardenletConfiguration",
+			},
+			Resources:    resources,
+			FeatureGates: shootedSeed.FeatureGates,
+			SeedConfig: &configv1alpha1.SeedConfig{
+				Seed: gardencorev1beta1.Seed{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: shoot.Labels,
+					},
+					Spec: *seedSpec,
+				},
+			},
 		}
 
 		// Initialize the garden connection bootstrap mechanism
@@ -251,59 +268,26 @@ func getManagedSeedSpec(shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev
 			gardenConnectionBootstrap = seedmanagementv1alpha1.GardenConnectionBootstrapServiceAccount
 		}
 
-		// Initialize the seed connection mechanism
-		seedConnection := seedmanagementv1alpha1.SeedConnectionServiceAccount
+		// Marshal gardenlet config to JSON
+		configJSON, err := json.Marshal(config)
+		if err != nil {
+			return nil, err
+		}
 
 		// Initialize gardenlet configuraton and parameters
 		gardenlet = &seedmanagementv1alpha1.Gardenlet{
-			Config: &configv1alpha1.GardenletConfiguration{
-				Resources:    resources,
-				FeatureGates: shootedSeed.FeatureGates,
-				SeedConfig: &configv1alpha1.SeedConfig{
-					Seed: gardencorev1beta1.Seed{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels: shoot.Labels,
-						},
-						Spec: *seedSpec,
-					},
-				},
-			},
+			Config:                    &runtime.RawExtension{Raw: configJSON},
 			GardenConnectionBootstrap: &gardenConnectionBootstrap,
-			// For backward compatibility with the use-as-seed annotation this should rather be nil,
-			// since the seed registration controller implementation always inherits the seed connection settings
-			// from the parent gardenlet. However, I believe this really only works with "service account" anyway,
-			// and always fails with local dev setups since there is a wrong kubeconfig set in the parent.
-			SeedConnection:    &seedConnection,
-			MergeParentConfig: true,
-		}
-	}
-
-	// Initalize shoot APIServer parameters
-	var apiServer *seedmanagementv1alpha1.APIServer
-	if shootedSeed.APIServer != nil {
-		// Initalize shoot APIServer autoscaler parameters
-		var autoscaler *seedmanagementv1alpha1.APIServerAutoscaler
-		if shootedSeed.APIServer.Autoscaler != nil {
-			autoscaler = &seedmanagementv1alpha1.APIServerAutoscaler{
-				MinReplicas: shootedSeed.APIServer.Autoscaler.MinReplicas,
-				MaxReplicas: pointer.Int32Ptr(shootedSeed.APIServer.Autoscaler.MaxReplicas),
-			}
-		}
-
-		apiServer = &seedmanagementv1alpha1.APIServer{
-			Replicas:   shootedSeed.APIServer.Replicas,
-			Autoscaler: autoscaler,
 		}
 	}
 
 	// Return result
 	return &seedmanagementv1alpha1.ManagedSeedSpec{
-		Shoot: &seedmanagementv1alpha1.Shoot{
-			Name:      shoot.Name,
-			APIServer: apiServer,
+		Shoot: seedmanagementv1alpha1.Shoot{
+			Name: shoot.Name,
 		},
-		Seed:      seed,
-		Gardenlet: gardenlet,
+		SeedTemplate: seedTemplate,
+		Gardenlet:    gardenlet,
 	}, nil
 }
 
@@ -335,6 +319,22 @@ func getSeedSpec(shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev1beta1h
 		}
 	}
 
+	// Initialize settings
+	var loadBalancerServices *gardencorev1beta1.SeedSettingLoadBalancerServices
+	if shootedSeed.LoadBalancerServicesAnnotations != nil {
+		loadBalancerServices = &gardencorev1beta1.SeedSettingLoadBalancerServices{
+			Annotations: shootedSeed.LoadBalancerServicesAnnotations,
+		}
+	}
+
+	// Initialize ingress
+	var ingress *gardencorev1beta1.Ingress
+	if shootedSeed.IngressController != nil {
+		ingress = &gardencorev1beta1.Ingress{
+			Controller: *shootedSeed.IngressController,
+		}
+	}
+
 	// Return result
 	return &gardencorev1beta1.SeedSpec{
 		Backup: shootedSeed.Backup,
@@ -358,6 +358,8 @@ func getSeedSpec(shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev1beta1h
 			ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
 				Enabled: shootedSeed.DisableDNS == nil || !*shootedSeed.DisableDNS,
 			},
+			LoadBalancerServices: loadBalancerServices,
 		},
+		Ingress: ingress,
 	}, nil
 }

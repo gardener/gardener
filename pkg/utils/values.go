@@ -95,3 +95,15 @@ func SetMapToValues(values map[string]interface{}, m map[string]interface{}, key
 	vs[keys[len(keys)-1]] = m
 	return values, nil
 }
+
+// SetStringValueIfEmpty sets the given string value at the given key in the given values map, if such a key does not
+// exist or its value is not a string.
+func SetStringValueIfEmpty(values map[string]interface{}, key, value string) map[string]interface{} {
+	if values == nil {
+		values = make(map[string]interface{})
+	}
+	if _, ok := values[key].(string); !ok {
+		values[key] = value
+	}
+	return values
+}

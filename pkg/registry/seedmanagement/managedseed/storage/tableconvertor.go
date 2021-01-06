@@ -24,6 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/rest"
 
+	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 )
 
@@ -37,8 +39,10 @@ func newTableConvertor() rest.TableConvertor {
 	return &convertor{
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
+			{Name: "Status", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["status"]},
 			{Name: "Shoot", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["shootName"]},
-			{Name: "Seed", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
+			{Name: "Gardenlet", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["gardenlet"]},
+			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
 		},
 	}
 }
@@ -67,16 +71,25 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 		var (
 			managedSeed = obj.(*seedmanagement.ManagedSeed)
 			cells       = []interface{}{}
-			shootName   string
 		)
 
-		if managedSeed.Spec.Shoot != nil {
-			shootName = managedSeed.Spec.Shoot.Name
-		}
+		seedRegisteredCondition := helper.GetCondition(managedSeed.Status.Conditions, seedmanagement.ManagedSeedSeedRegistered)
 
 		cells = append(cells, managedSeed.Name)
-		cells = append(cells, shootName)
-		cells = append(cells, managedSeed.Name)
+		if seedRegisteredCondition == nil || seedRegisteredCondition.Status == core.ConditionUnknown {
+			cells = append(cells, "Unknown")
+		} else if seedRegisteredCondition.Status != core.ConditionTrue {
+			cells = append(cells, "NotReady")
+		} else {
+			cells = append(cells, "Ready")
+		}
+		cells = append(cells, managedSeed.Spec.Shoot.Name)
+		if managedSeed.Spec.Gardenlet != nil {
+			cells = append(cells, "True")
+		} else {
+			cells = append(cells, "False")
+		}
+		cells = append(cells, metatable.ConvertToHumanReadableDateType(managedSeed.CreationTimestamp))
 
 		return cells, nil
 	})

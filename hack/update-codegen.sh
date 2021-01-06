@@ -191,7 +191,6 @@ ${GOPATH}/bin/openapi-gen "$@" \
   --input-dirs=github.com/gardener/gardener/pkg/apis/core/v1beta1 \
   --input-dirs=github.com/gardener/gardener/pkg/apis/settings/v1alpha1 \
   --input-dirs=github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1 \
-  --input-dirs=github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1 \
   --input-dirs=k8s.io/api/core/v1 \
   --input-dirs=k8s.io/api/rbac/v1 \
   --input-dirs=k8s.io/api/autoscaling/v1 \

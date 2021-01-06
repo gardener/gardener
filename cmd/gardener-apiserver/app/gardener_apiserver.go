@@ -204,6 +204,7 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 				coreClient,
 				o.ExternalCoreInformerFactory,
 				o.SeedManagementInformerFactory,
+				seedManagementClient,
 				o.SettingsInformerFactory,
 				o.KubeInformerFactory,
 				kubeClient,

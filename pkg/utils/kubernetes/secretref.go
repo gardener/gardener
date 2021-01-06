@@ -23,27 +23,27 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// GetSecretByRef returns the secret referenced by the given secret reference.
-func GetSecretByRef(ctx context.Context, c client.Client, secretRef corev1.SecretReference) (*corev1.Secret, error) {
+// GetSecretByReference returns the secret referenced by the given secret reference.
+func GetSecretByReference(ctx context.Context, c client.Client, ref *corev1.SecretReference) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
-	if err := c.Get(ctx, Key(secretRef.Namespace, secretRef.Name), secret); err != nil {
+	if err := c.Get(ctx, Key(ref.Namespace, ref.Name), secret); err != nil {
 		return nil, err
 	}
 	return secret, nil
 }
 
-// CreateOrUpdateSecretByRef creates or updates the secret referenced by the given secret reference
+// CreateOrUpdateSecretByReference creates or updates the secret referenced by the given secret reference
 // with the given type, data, and owner references.
-func CreateOrUpdateSecretByRef(ctx context.Context, c client.Client, secretRef corev1.SecretReference, typ corev1.SecretType, data map[string][]byte, ownerRefs []metav1.OwnerReference) error {
+func CreateOrUpdateSecretByReference(ctx context.Context, c client.Client, ref *corev1.SecretReference, secretType corev1.SecretType, data map[string][]byte, ownerRefs []metav1.OwnerReference) error {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretRef.Name,
-			Namespace: secretRef.Namespace,
+			Name:      ref.Name,
+			Namespace: ref.Namespace,
 		},
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, c, secret, func() error {
 		secret.ObjectMeta.OwnerReferences = ownerRefs
-		secret.Type = typ
+		secret.Type = secretType
 		secret.Data = data
 		return nil
 	}); err != nil {
@@ -52,16 +52,13 @@ func CreateOrUpdateSecretByRef(ctx context.Context, c client.Client, secretRef c
 	return nil
 }
 
-// DeleteSecretByRef deletes the secret referenced by the given secret reference.
-func DeleteSecretByRef(ctx context.Context, c client.Client, secretRef corev1.SecretReference) error {
+// DeleteSecretByReference deletes the secret referenced by the given secret reference.
+func DeleteSecretByReference(ctx context.Context, c client.Client, ref *corev1.SecretReference) error {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretRef.Name,
-			Namespace: secretRef.Namespace,
+			Name:      ref.Name,
+			Namespace: ref.Namespace,
 		},
 	}
-	if err := c.Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
-		return err
-	}
-	return nil
+	return client.IgnoreNotFound(c.Delete(ctx, secret))
 }

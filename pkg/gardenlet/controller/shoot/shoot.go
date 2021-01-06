@@ -21,7 +21,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -34,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
@@ -268,7 +268,7 @@ func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
 }
 
 func (c *Controller) getShootQueue(obj interface{}) workqueue.RateLimitingInterface {
-	if shoot, ok := obj.(*gardencorev1beta1.Shoot); ok && shootIsSeed(shoot) {
+	if shoot, ok := obj.(*gardencorev1beta1.Shoot); ok && c.shootIsSeed(context.TODO(), shoot) {
 		return c.shootSeedQueue
 	}
 	return c.shootQueue
@@ -281,7 +281,14 @@ func (c *Controller) newProgressReporter(reporterFn flow.ProgressReporterFn) flo
 	return flow.NewImmediateProgressReporter(reporterFn)
 }
 
-func shootIsSeed(shoot *gardencorev1beta1.Shoot) bool {
-	shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(shoot)
-	return err == nil && shootedSeed != nil
+func (c *Controller) shootIsSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot) bool {
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return false
+	}
+	managedSeed, err := kutil.GetManagedSeed(ctx, gardenClient.GardenSeedManagement(), shoot.Namespace, shoot.Name)
+	if err != nil {
+		return false
+	}
+	return managedSeed != nil
 }

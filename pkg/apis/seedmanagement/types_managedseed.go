@@ -17,9 +17,9 @@ package seedmanagement
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 )
 
 // +genclient
@@ -49,59 +49,56 @@ type ManagedSeedList struct {
 
 // ManagedSeedSpec is the specification of a ManagedSeed.
 type ManagedSeedSpec struct {
-	// Shoot is the Shoot that will be registered as Seed.
-	Shoot *Shoot
-	// Seed describes the Seed that will be registered.
-	// Either Seed or Gardenlet must be specified.
-	Seed *SeedTemplateSpec
-	// Gardenlet specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.
+	// Shoot references a Shoot that should be registered as Seed.
+	Shoot Shoot
+	// SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed.
+	// Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster
+	// and an existing gardenlet reconciling the new Seed is required.
+	SeedTemplate *SeedTemplate
+	// Gardenlet specifies, that the ManagedSeed controller should deploy a gardenlet into the cluster
+	// with the given deployment parameters and GardenletConfiguration.
 	Gardenlet *Gardenlet
 }
 
-// Shoot identifies the Shoot that will be registered as Seed.
+// Shoot identifies the Shoot that should be registered as Seed.
 type Shoot struct {
 	// Name is the name of the Shoot that will be registered as Seed.
 	Name string
-	// APIServer specifies certain kube-apiserver parameters of the Shoot that will be registered as Seed.
-	APIServer *APIServer
 }
 
-// SeedTemplateSpec describes the data a Seed should have when created from a template.
-type SeedTemplateSpec struct {
+// SeedTemplate is a template for creating a Seed object, when registering a cluster as a ManagedSeed.
+type SeedTemplate struct {
 	// Standard object metadata.
 	metav1.ObjectMeta
 	// Specification of the desired behavior of the Seed.
-	Spec gardencorev1beta1.SeedSpec
+	Spec gardencore.SeedSpec
 }
 
 // Gardenlet specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.
 type Gardenlet struct {
 	// Deployment specifies certain gardenlet deployment parameters, such as the number of replicas,
-	// the image, which bootstrap mechanism to use (bootstrap token / service account), etc.
+	// the image, etc.
 	Deployment *GardenletDeployment
 	// Config is the GardenletConfiguration used to configure gardenlet.
-	Config *gardenletconfigv1alpha1.GardenletConfiguration
-	// Bootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, Token.
+	Config *runtime.RawExtension
+	// GardenConnectionBootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken.
 	// If specified, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig.
 	// If not specified, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster.
 	GardenConnectionBootstrap *GardenConnectionBootstrap
-	// SeedConnection is the mechanism for gardenlet connection to the Seed cluster. Must equal ServiceAccount if specified.
-	// If not specified, the seedClientConnection.kubeconfig field will be used to connect to the Seed cluster.
-	SeedConnection *SeedConnection
-	// MergeParentConfig specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet
+	// DisableMergingWithParent specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet
 	// should be merged with the specified deployment parameters and GardenletConfiguration. Defaults to false.
-	MergeParentConfig bool
+	DisableMergingWithParent *bool
 }
 
 // GardenletDeployment specifies certain gardenlet deployment parameters, such as the number of replicas,
-// the image, which bootstrap mechanism to use (bootstrap token / service account), etc.
+// the image, etc.
 type GardenletDeployment struct {
 	// ReplicaCount is the number of gardenlet replicas. Defaults to 1.
 	ReplicaCount *int32
 	// RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 10.
 	RevisionHistoryLimit *int32
 	// ServiceAccountName is the name of the ServiceAccount to use to run gardenlet pods.
-	ServiceAccountName string
+	ServiceAccountName *string
 	// Image is the gardenlet container image.
 	Image *Image
 	// Resources are the compute resources required by the gardenlet container.
@@ -116,67 +113,45 @@ type GardenletDeployment struct {
 	AdditionalVolumeMounts []corev1.VolumeMount
 	// Env is the list of environment variables to set in the gardenlet container.
 	Env []corev1.EnvVar
-	// VPA specifies whether to enable VPA for gardenlet. Defaults to false.
+	// VPA specifies whether to enable VPA for gardenlet. Defaults to true.
 	VPA *bool
-	// ImageVectorOverwrite is the gardenlet image vector overwrite.
-	// More info: https://github.com/gardener/gardener/blob/master/docs/deployment/image_vector.md.
-	ImageVectorOverwrite string
-	// ComponentImageVectorOverwrites is a list of image vector overwrites for components deployed by gardenlet.
-	// More info: https://github.com/gardener/gardener/blob/master/docs/deployment/image_vector.md.
-	ComponentImageVectorOverwrites string
 }
 
 // Image specifies container image parameters.
 type Image struct {
 	// Repository is the image repository.
-	Repository string
+	Repository *string
 	// Tag is the image tag.
-	Tag string
+	Tag *string
 	// PullPolicy is the image pull policy. One of Always, Never, IfNotPresent.
-	PullPolicy corev1.PullPolicy
+	PullPolicy *corev1.PullPolicy
 }
 
 // GardenConnectionBootstrap describes a mechanism for bootstrapping gardenlet connection to the Garden cluster.
 type GardenConnectionBootstrap string
 
 const (
-	// GardenConnectionBootstrapServiceAccount means that a service account should be used for bootstrapping gardenlet connection to the Garden cluster.
+	// GardenConnectionBootstrapServiceAccount means that a temporary service account should be used for bootstrapping gardenlet connection to the Garden cluster.
 	GardenConnectionBootstrapServiceAccount GardenConnectionBootstrap = "ServiceAccount"
 	// GardenConnectionBootstrapToken means that a bootstrap token should be used for bootstrapping gardenlet connection to the Garden cluster.
 	GardenConnectionBootstrapToken GardenConnectionBootstrap = "BootstrapToken"
 )
 
-// SeedConnection describes a mechanism for gardenlet connection to the Seed cluster.
-type SeedConnection string
-
-const (
-	// SeedConnectionServiceAccount means that a service account should be used for gardenlet connection to the Seed cluster.
-	SeedConnectionServiceAccount SeedConnection = "ServiceAccount"
-)
-
-// APIServer specifies certain kube-apiserver parameters of the Shoot that will be registered as Seed.
-type APIServer struct {
-	// Replicas is the number of kube-apiserver replicas. Defaults to 3.
-	Replicas *int32
-	// Autoscaler specifies certain kube-apiserver autoscaler parameters, such as the minimum and maximum number of replicas.
-	Autoscaler *APIServerAutoscaler
-}
-
-// APIServerAutoscaler specifies certain kube-apiserver autoscaler parameters of the Shoot that will be registered as Seed.
-type APIServerAutoscaler struct {
-	// MinReplicas is the minimum number of kube-apiserver replicas. Defaults to min(3, MaxReplicas).
-	MinReplicas *int32
-	// MaxReplicas is the maximum number of kube-apiserver replicas. Defaults to 3.
-	MaxReplicas *int32
-}
-
 // ManagedSeedStatus is the status of a ManagedSeed.
 type ManagedSeedStatus struct {
-	// LastOperation holds information about the last operation on the ManagedSeed.
-	LastOperation *gardencorev1beta1.LastOperation
-	// LastError holds information about the last occurred error during an operation.
-	LastError *gardencorev1beta1.LastError
+	// Conditions represents the latest available observations of a ManagedSeed's current state.
+	Conditions []gardencore.Condition
 	// ObservedGeneration is the most recent generation observed for this ManagedSeed. It corresponds to the
 	// ManagedSeed's generation, which is updated on mutation by the API Server.
 	ObservedGeneration int64
 }
+
+const (
+	// ManagedSeedValid is a condition type for indicating whether the ManagedSeed is valid.
+	ManagedSeedValid gardencore.ConditionType = "Valid"
+	// ManagedSeedShootReconciled is a condition type for indicating whether the ManagedSeed's shoot has been reconciled.
+	ManagedSeedShootReconciled gardencore.ConditionType = "ShootReconciled"
+	// ManagedSeedSeedRegistered is a condition type for indicating whether the ManagedSeed's seed has been registered,
+	// either directly or by deploying gardenlet into the shoot.
+	ManagedSeedSeedRegistered gardencore.ConditionType = "SeedRegistered"
+)

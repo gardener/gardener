@@ -19,7 +19,6 @@ import (
 
 	"k8s.io/client-go/tools/cache"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 )
@@ -29,19 +28,12 @@ func (c *Controller) managedSeedAdd(obj interface{}, immediately bool) {
 	if err != nil {
 		return
 	}
-	namespace, _, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		return
-	}
-	if namespace != v1beta1constants.GardenNamespace {
-		return
-	}
 
 	if immediately {
 		logger.Logger.Debugf("Added ManagedSeed %s without delay to the queue", key)
 		c.managedSeedQueue.AddAfter(key, 1*time.Second)
 	} else {
-		// Spread managedSeedistration of shooted seeds (including gardenlet updates/rollouts) across the configured sync jitter
+		// Spread registration of shooted seeds (including gardenlet updates/rollouts) across the configured sync jitter
 		// period to avoid overloading the gardener-apiserver if all gardenlets in all shooted seeds are (re)starting
 		// roughly at the same time
 		// TODO Disabled for testing

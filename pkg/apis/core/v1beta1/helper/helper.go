@@ -15,25 +15,20 @@
 package helper
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
@@ -290,20 +285,7 @@ func parseInt32(s string) (int32, error) {
 }
 
 func parseShootedSeed(annotation string) (*ShootedSeed, error) {
-	var (
-		flags    = make(map[string]struct{})
-		settings = make(map[string]string)
-	)
-
-	for _, fragment := range strings.Split(annotation, ",") {
-		parts := strings.SplitN(fragment, "=", 2)
-		if len(parts) == 1 {
-			flags[fragment] = struct{}{}
-			continue
-		}
-
-		settings[parts[0]] = parts[1]
-	}
+	flags, settings := getFlagsAndSettings(annotation)
 
 	if _, ok := flags["true"]; !ok {
 		return nil, nil
@@ -388,6 +370,24 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	}
 
 	return &shootedSeed, nil
+}
+
+func getFlagsAndSettings(annotation string) (map[string]struct{}, map[string]string) {
+	var (
+		flags    = make(map[string]struct{})
+		settings = make(map[string]string)
+	)
+
+	for _, fragment := range strings.Split(annotation, ",") {
+		parts := strings.SplitN(fragment, "=", 2)
+		if len(parts) == 1 {
+			flags[fragment] = struct{}{}
+			continue
+		}
+		settings[parts[0]] = parts[1]
+	}
+
+	return flags, settings
 }
 
 func parseShootedSeedBlockCIDRs(settings map[string]string) ([]string, error) {
@@ -774,20 +774,33 @@ func ReadShootedSeed(shoot *gardencorev1beta1.Shoot) (*ShootedSeed, error) {
 	return shootedSeed, nil
 }
 
-// GetManagedSeed gets the ManagedSeed resource for this Shoot. If Spec.ManagedSeedName is nil or a ManagedSeed resource
-// with the specified name is not found, nil is returned.
-func GetManagedSeed(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.ManagedSeed, error) {
-	if shoot.Spec.ManagedSeedName == nil {
+// ReadManagedSeedAPIServer reads the managed seed API server settings from the corresponding annotation.
+func ReadManagedSeedAPIServer(shoot *gardencorev1beta1.Shoot) (*ShootedSeedAPIServer, error) {
+	if shoot.Namespace != v1beta1constants.GardenNamespace || shoot.Annotations == nil {
 		return nil, nil
 	}
-	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := c.Get(ctx, kutil.Key(shoot.Namespace, *shoot.Spec.ManagedSeedName), managedSeed); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, nil
-		}
+
+	val, ok := shoot.Annotations[v1beta1constants.AnnotationManagedSeedAPIServer]
+	if !ok {
+		return nil, nil
+	}
+
+	_, settings := getFlagsAndSettings(val)
+	apiServer, err := parseShootedSeedAPIServer(settings)
+	if err != nil {
 		return nil, err
 	}
-	return managedSeed, nil
+	if apiServer == nil {
+		return nil, nil
+	}
+
+	setDefaults_ShootedSeedAPIServer(apiServer)
+
+	if errs := validateShootedSeedAPIServer(apiServer, nil); len(errs) > 0 {
+		return nil, errs.ToAggregate()
+	}
+
+	return apiServer, nil
 }
 
 // HibernationIsEnabled checks if the given shoot's desired state is hibernated.

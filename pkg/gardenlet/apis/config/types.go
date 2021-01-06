@@ -42,7 +42,7 @@ type GardenletConfiguration struct {
 	// Resources defines the total capacity for seed resources and the amount reserved for use by Gardener.
 	Resources *ResourcesConfiguration
 	// LeaderElection defines the configuration of leader election client.
-	LeaderElection *GardenletLeaderElectionConfiguration
+	LeaderElection *LeaderElectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel *string
 	// KubernetesLogLevel is the log level used for Kubernetes' k8s.io/klog functions.
@@ -268,9 +268,9 @@ type ResourcesConfiguration struct {
 	Reserved corev1.ResourceList
 }
 
-// GardenletLeaderElectionConfiguration defines the configuration of leader election
+// LeaderElectionConfiguration defines the configuration of leader election
 // clients for components that can run with leader election enabled.
-type GardenletLeaderElectionConfiguration struct {
+type LeaderElectionConfiguration struct {
 	componentbaseconfig.LeaderElectionConfiguration
 	// LockObjectNamespace defines the namespace of the lock object.
 	LockObjectNamespace *string

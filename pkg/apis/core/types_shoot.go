@@ -88,8 +88,6 @@ type ShootSpec struct {
 	Resources []NamedResourceReference
 	// Tolerations contains the tolerations for taints on seed clusters.
 	Tolerations []Toleration
-	// ManagedSeedName is the name of the ManagedSeed resource for this Shoot.
-	ManagedSeedName *string
 }
 
 func (s *Shoot) GetProviderType() string {

@@ -16,13 +16,13 @@ package managedseed
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
-	seedmanagementlisters "github.com/gardener/gardener/pkg/client/seedmanagement/listers/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -34,76 +34,64 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// Controller controls Shoots.
+// Controller controls ManagedSeeds.
 type Controller struct {
-	config *config.GardenletConfiguration
+	gardenClient client.Client
+	config       *config.GardenletConfiguration
+	reconciler   reconcile.Reconciler
+	recorder     record.EventRecorder
 
-	reconciler reconcile.Reconciler
-
-	managedSeedLister seedmanagementlisters.ManagedSeedLister
-	managedSeedQueue  workqueue.RateLimitingInterface
-
-	managedSeedSynced cache.InformerSynced
-	seedSynced        cache.InformerSynced
-	shootSynced       cache.InformerSynced
+	managedSeedInformer runtimecache.Informer
+	managedSeedQueue    workqueue.RateLimitingInterface
 
 	numberOfRunningWorkers int
 	workerCh               chan int
 }
 
 // NewManagedSeedController creates a new Gardener controller for ManagedSeeds.
-func NewManagedSeedController(clientMap clientmap.ClientMap, seedManagementInformers seedmanagementinformers.SharedInformerFactory, gardenCoreInformers gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
-	var (
-		seedManagementV1alpha1Informer = seedManagementInformers.Seedmanagement().V1alpha1()
-		gardenCoreV1beta1Informer      = gardenCoreInformers.Core().V1beta1()
-
-		managedSeedInformer = seedManagementV1alpha1Informer.ManagedSeeds()
-		managedSeedLister   = managedSeedInformer.Lister()
-
-		seedInformer = gardenCoreV1beta1Informer.Seeds()
-		seedLister   = seedInformer.Lister()
-
-		shootInformer = gardenCoreV1beta1Informer.Shoots()
-		shootLister   = shootInformer.Lister()
-	)
-
-	controller := &Controller{
-		config: config,
-
-		reconciler: newReconciler(context.TODO(), clientMap, config, imageVector, recorder, logger.Logger),
-
-		managedSeedLister: managedSeedLister,
-		managedSeedQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-managedSeedistration"),
-
-		workerCh: make(chan int),
+func NewManagedSeedController(ctx context.Context, clientMap clientmap.ClientMap, config *config.GardenletConfiguration, imageVector imagevector.ImageVector, recorder record.EventRecorder) (*Controller, error) {
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, fmt.Errorf("could not get garden client: %w", err)
 	}
 
-	managedSeedInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.ManagedSeedFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister, shootLister, config.SeedSelector),
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc: func(obj interface{}) {
-				controller.managedSeedAdd(obj, false)
-			},
-			UpdateFunc: controller.managedSeedUpdate,
-			DeleteFunc: controller.managedSeedDelete,
-		},
-	})
+	managedSeedInformer, err := gardenClient.Cache().GetInformer(ctx, &seedmanagementv1alpha1.ManagedSeed{})
+	if err != nil {
+		return nil, fmt.Errorf("could not get ManagedSeed informer: %w", err)
+	}
 
-	controller.managedSeedSynced = managedSeedInformer.Informer().HasSynced
-	controller.seedSynced = seedInformer.Informer().HasSynced
-	controller.shootSynced = shootInformer.Informer().HasSynced
-
-	return controller
+	return &Controller{
+		gardenClient:        gardenClient.Client(),
+		config:              config,
+		reconciler:          newReconciler(ctx, clientMap, config, imageVector, recorder, logger.Logger),
+		recorder:            recorder,
+		managedSeedInformer: managedSeedInformer,
+		managedSeedQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ManagedSeed"),
+		workerCh:            make(chan int),
+	}, nil
 }
 
-// Run runs the Controller until the given stop channel can be read from.
+// Run runs the Controller until the given context is cancelled.
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.managedSeedSynced, c.seedSynced, c.shootSynced) {
+	c.managedSeedInformer.AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controllerutils.ManagedSeedFilterFunc(ctx, c.gardenClient, confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.config.SeedSelector),
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				c.managedSeedAdd(obj, false)
+			},
+			UpdateFunc: c.managedSeedUpdate,
+			DeleteFunc: c.managedSeedDelete,
+		},
+	})
+
+	if !cache.WaitForCacheSync(ctx.Done(), c.managedSeedInformer.HasSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}

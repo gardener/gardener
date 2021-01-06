@@ -12,15 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package v1alpha1 is the v1alpha1 version of the API.
-// +k8s:deepcopy-gen=package,register
-// +k8s:conversion-gen=github.com/gardener/gardener/pkg/apis/seedmanagement
-// +k8s:openapi-gen=true
-// +k8s:defaulter-gen=TypeMeta
-// +k8s:protobuf-gen=package
-
-//go:generate gen-crd-api-reference-docs -api-dir . -config ../../../../hack/api-reference/seedmanagement-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../hack/api-reference/seedmanagement.md
-
-// Package v1alpha1 is a version of the API.
-// +groupName=seedmanagement.gardener.cloud
 package v1alpha1
+
+import (
+	"fmt"
+
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+
+	"k8s.io/apimachinery/pkg/runtime"
+)
+
+func addConversionFuncs(scheme *runtime.Scheme) error {
+	if err := scheme.AddFieldLabelConversionFunc(
+		SchemeGroupVersion.WithKind("ManagedSeed"),
+		func(label, value string) (string, string, error) {
+			switch label {
+			case "metadata.name", "metadata.namespace", seedmanagement.ManagedSeedShootName:
+				return label, value, nil
+			default:
+				return "", "", fmt.Errorf("field label not supported: %s", label)
+			}
+		},
+	); err != nil {
+		return err
+	}
+
+	return nil
+}

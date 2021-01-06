@@ -22,16 +22,19 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	k8s "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
 )
 
 // CreateRecorder creates a record.EventRecorder that is not limited to a namespace having a specific eventSourceName.
 func CreateRecorder(kubeClient k8s.Interface, eventSourceName string) record.EventRecorder {
-	scheme := scheme.Scheme
+	scheme := runtime.NewScheme()
 
+	utilruntime.Must(kubernetesscheme.AddToScheme(scheme))
 	coreinstall.Install(scheme)
 	seedmanagementinstall.Install(scheme)
 

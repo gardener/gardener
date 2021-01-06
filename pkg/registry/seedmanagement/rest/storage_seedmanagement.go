@@ -18,7 +18,6 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/settings"
 	managedseedstore "github.com/gardener/gardener/pkg/registry/seedmanagement/managedseed/storage"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,7 +38,7 @@ func (p StorageProvider) NewRESTStorage(restOptionsGetter generic.RESTOptionsGet
 
 // GroupName returns the garden group name.
 func (p StorageProvider) GroupName() string {
-	return settings.GroupName
+	return seedmanagement.GroupName
 }
 
 func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGetter) map[string]rest.Storage {
