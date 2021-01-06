@@ -184,8 +184,6 @@ var _ = Describe("#ExtensionInfrastructure", func() {
 		})
 
 		It("should return unexpected errors", func() {
-			waiter.MaxAttempts = 2
-
 			fakeErr := errors.New("fake")
 
 			c.
