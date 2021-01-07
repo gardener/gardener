@@ -30,7 +30,7 @@ func (trs *RawState) Marshal() ([]byte, error) {
 	return json.Marshal(trs.encodeBase64())
 }
 
-// GetRawState returns the conten of terraform state config map
+// GetRawState returns the content of terraform state config map
 func (t *terraformer) GetRawState(ctx context.Context) (*RawState, error) {
 	configMap := &corev1.ConfigMap{}
 	if err := t.client.Get(ctx, kutil.Key(t.namespace, t.stateName), configMap); err != nil {
@@ -72,13 +72,13 @@ func UnmarshalRawState(rawState interface{}) (*RawState, error) {
 
 // buildRawState returns RawState from byte slice
 func buildRawState(terraformRawState []byte) (*RawState, error) {
-	trs := &RawState{}
+	trs := &RawState{
+		Data:     "",
+		Encoding: NoneEncoding,
+	}
 
 	if terraformRawState == nil {
-		return &RawState{
-			Data:     "",
-			Encoding: NoneEncoding,
-		}, nil
+		return trs, nil
 	}
 
 	if err := json.Unmarshal(terraformRawState, trs); err != nil {
