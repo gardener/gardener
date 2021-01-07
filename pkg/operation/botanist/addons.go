@@ -196,11 +196,11 @@ func (b *Botanist) GenerateNginxIngressConfig() (map[string]interface{}, error) 
 
 // DeployManagedResources deploys all the ManagedResource CRDs for the gardener-resource-manager.
 func (b *Botanist) DeployManagedResources(ctx context.Context) error {
-	for name, chartRenderFunc := range map[string]func() (*chartrenderer.RenderedChart, error){
+	for name, chartRenderFunc := range map[string]func(context.Context) (*chartrenderer.RenderedChart, error){
 		common.ManagedResourceShootCoreName: b.generateCoreAddonsChart,
 		common.ManagedResourceAddonsName:    b.generateOptionalAddonsChart,
 	} {
-		renderedChart, err := chartRenderFunc()
+		renderedChart, err := chartRenderFunc(ctx)
 		if err != nil {
 			return fmt.Errorf("error rendering %q chart: %+v", name, err)
 		}
@@ -300,7 +300,7 @@ func (b *Botanist) deleteStaleSecretsMatchLabel(ctx context.Context, labels map[
 
 // generateCoreAddonsChart renders the gardener-resource-manager configuration for the core addons. After that it
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
-func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, error) {
+func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.RenderedChart, error) {
 	var (
 		kasFQDN         = b.outOfClusterAPIServerFQDN()
 		kubeProxySecret = b.Secrets["kube-proxy"]
@@ -498,13 +498,13 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 		values["konnectivity-agent"] = common.GenerateAddonConfig(konnectivityAgent, true)
 
 		// TODO: remove when konnectivity tunnel is the default tunneling method for all shoots.
-		secret, err := common.GetSecretFromSecretRef(context.TODO(), shootClient, &corev1.SecretReference{Namespace: metav1.NamespaceSystem, Name: "vpn-shoot"})
+		secret, err := common.GetSecretFromSecretRef(ctx, shootClient, &corev1.SecretReference{Namespace: metav1.NamespaceSystem, Name: "vpn-shoot"})
 		if err != nil && !apierrors.IsNotFound(err) {
 			return nil, err
 		}
 
 		if secret != nil {
-			if err := b.K8sShootClient.Client().Delete(context.TODO(), secret); err != nil {
+			if err := b.K8sShootClient.Client().Delete(ctx, secret); err != nil {
 				return nil, err
 			}
 		}
@@ -549,7 +549,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 
 // generateOptionalAddonsChart renders the gardener-resource-manager chart for the optional addons. After that it
 // creates a ManagedResource CRD that references the rendered manifests and creates it.
-func (b *Botanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, error) {
+func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrenderer.RenderedChart, error) {
 	global := map[string]interface{}{
 		"vpaEnabled": b.Shoot.WantsVerticalPodAutoscaler,
 	}

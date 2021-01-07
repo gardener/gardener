@@ -276,12 +276,12 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 // cluster which contains a Kubeconfig that can be used to authenticate against the Seed cluster. With it,
 // a Kubernetes client as well as a Chart renderer for the Seed cluster will be initialized and attached to
 // the already existing Operation object.
-func (o *Operation) InitializeSeedClients() error {
+func (o *Operation) InitializeSeedClients(ctx context.Context) error {
 	if o.K8sSeedClient != nil {
 		return nil
 	}
 
-	seedClient, err := o.ClientMap.GetClient(context.TODO(), keys.ForSeed(o.Seed.Info))
+	seedClient, err := o.ClientMap.GetClient(ctx, keys.ForSeed(o.Seed.Info))
 	if err != nil {
 		return fmt.Errorf("failed to get seed client: %w", err)
 	}
@@ -489,7 +489,7 @@ func (o *Operation) SaveGardenerResourcesInShootState(ctx context.Context, resou
 
 // DeleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.
 func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
-	if err := o.InitializeSeedClients(); err != nil {
+	if err := o.InitializeSeedClients(ctx); err != nil {
 		o.Logger.Errorf("Could not initialize a new Kubernetes client for the seed cluster: %s", err.Error())
 		return err
 	}

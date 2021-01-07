@@ -45,7 +45,10 @@ func (s *Secrets) Deploy(
 	cs kubernetes.Interface,
 	gcs gardenerkubernetes.Interface,
 	namespace string,
-) (map[string]*corev1.Secret, error) {
+) (
+	map[string]*corev1.Secret,
+	error,
+) {
 	// Get existing secrets in the namespace
 	existingSecrets, err := getSecrets(ctx, cs, namespace)
 	if err != nil {
@@ -53,7 +56,7 @@ func (s *Secrets) Deploy(
 	}
 
 	// Generate CAs
-	_, cas, err := GenerateCertificateAuthorities(gcs, existingSecrets, s.CertificateSecretConfigs, namespace)
+	_, cas, err := GenerateCertificateAuthorities(ctx, gcs, existingSecrets, s.CertificateSecretConfigs, namespace)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not generate CA secrets in namespace '%s'", namespace)
 	}

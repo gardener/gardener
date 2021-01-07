@@ -46,11 +46,10 @@ const (
 // New takes an operation object <o> and creates a new Botanist object. It checks whether the given Shoot DNS
 // domain is covered by a default domain, and if so, it sets the <DefaultDomainSecret> attribute on the Botanist
 // object.
-func New(o *operation.Operation) (*Botanist, error) {
+func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	var (
 		b   = &Botanist{Operation: o}
 		err error
-		ctx = context.TODO()
 	)
 
 	// Determine all default domain secrets and check whether the used Shoot domain matches a default domain.
@@ -69,7 +68,7 @@ func New(o *operation.Operation) (*Botanist, error) {
 		}
 	}
 
-	if err = b.InitializeSeedClients(); err != nil {
+	if err = b.InitializeSeedClients(ctx); err != nil {
 		return nil, err
 	}
 

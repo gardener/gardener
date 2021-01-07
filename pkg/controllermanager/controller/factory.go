@@ -112,7 +112,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	secrets, err := garden.ReadGardenSecrets(f.k8sInformers, f.k8sGardenCoreInformers)
 	runtime.Must(err)
 
-	runtime.Must(garden.BootstrapCluster(k8sGardenClient, v1beta1constants.GardenNamespace, secrets))
+	runtime.Must(garden.BootstrapCluster(ctx, k8sGardenClient, v1beta1constants.GardenNamespace, secrets))
 	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
 
 	// Initialize the workqueue metrics collection.
