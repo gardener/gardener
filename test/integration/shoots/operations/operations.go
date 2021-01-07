@@ -67,7 +67,7 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 
 	f := framework.NewShootFramework(nil)
 
-	f.Beta().Serial().CIt("Testing if Shoot can be hibernated successfully", func(ctx context.Context) {
+	f.Default().Serial().CIt("Testing if Shoot can be hibernated successfully", func(ctx context.Context) {
 		guestBookTest, err := applications.NewGuestBookTest(f)
 		framework.ExpectNoError(err)
 
