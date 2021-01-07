@@ -96,50 +96,50 @@ type controlPlane struct {
 	providerStatus *runtime.RawExtension
 }
 
-func (i *controlPlane) name() string {
-	if i.values.Purpose == extensionsv1alpha1.Exposure {
-		return i.values.Name + "-exposure"
+func (c *controlPlane) name() string {
+	if c.values.Purpose == extensionsv1alpha1.Exposure {
+		return c.values.Name + "-exposure"
 	}
-	return i.values.Name
+	return c.values.Name
 }
 
 // Deploy uses the seed client to create or update the ControlPlane resource.
-func (i *controlPlane) Deploy(ctx context.Context) error {
-	_, err := i.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
+func (c *controlPlane) Deploy(ctx context.Context) error {
+	_, err := c.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
 	return err
 }
 
-func (i *controlPlane) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
+func (c *controlPlane) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
 	var (
 		controlPlane = &extensionsv1alpha1.ControlPlane{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      i.name(),
-				Namespace: i.values.Namespace,
+				Name:      c.name(),
+				Namespace: c.values.Namespace,
 			},
 		}
 		providerConfig *runtime.RawExtension
 	)
 
-	if cfg := i.values.ProviderConfig; cfg != nil {
+	if cfg := c.values.ProviderConfig; cfg != nil {
 		providerConfig = &runtime.RawExtension{Raw: cfg.Raw}
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, i.client, controlPlane, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, c.client, controlPlane, func() error {
 		metav1.SetMetaDataAnnotation(&controlPlane.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 		metav1.SetMetaDataAnnotation(&controlPlane.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 
 		controlPlane.Spec = extensionsv1alpha1.ControlPlaneSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type:           i.values.Type,
+				Type:           c.values.Type,
 				ProviderConfig: providerConfig,
 			},
-			Region:  i.values.Region,
-			Purpose: &i.values.Purpose,
+			Region:  c.values.Region,
+			Purpose: &c.values.Purpose,
 			SecretRef: corev1.SecretReference{
 				Name:      v1beta1constants.SecretNameCloudProvider,
 				Namespace: controlPlane.Namespace,
 			},
-			InfrastructureProviderStatus: i.values.InfrastructureProviderStatus,
+			InfrastructureProviderStatus: c.values.InfrastructureProviderStatus,
 		}
 
 		return nil
@@ -149,98 +149,98 @@ func (i *controlPlane) deploy(ctx context.Context, operation string) (extensions
 }
 
 // Restore uses the seed client and the ShootState to create the ControlPlane resources and restore their state.
-func (i *controlPlane) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
+func (c *controlPlane) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
 	return common.RestoreExtensionWithDeployFunction(
 		ctx,
 		shootState,
-		i.client,
+		c.client,
 		extensionsv1alpha1.ControlPlaneResource,
-		i.values.Namespace,
-		i.deploy,
+		c.values.Namespace,
+		c.deploy,
 	)
 }
 
 // Migrate migrates the ControlPlane resources.
-func (i *controlPlane) Migrate(ctx context.Context) error {
+func (c *controlPlane) Migrate(ctx context.Context) error {
 	return common.MigrateExtensionCRs(
 		ctx,
-		i.client,
+		c.client,
 		&extensionsv1alpha1.ControlPlaneList{},
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
-		i.values.Namespace,
+		c.values.Namespace,
 	)
 }
 
 // Destroy deletes the ControlPlane resource.
-func (i *controlPlane) Destroy(ctx context.Context) error {
+func (c *controlPlane) Destroy(ctx context.Context) error {
 	return common.DeleteExtensionCR(
 		ctx,
-		i.client,
+		c.client,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
-		i.values.Namespace,
-		i.name(),
+		c.values.Namespace,
+		c.name(),
 	)
 }
 
 // Wait waits until the ControlPlane resource is ready.
-func (i *controlPlane) Wait(ctx context.Context) error {
+func (c *controlPlane) Wait(ctx context.Context) error {
 	return common.WaitUntilExtensionCRReady(
 		ctx,
-		i.client,
-		i.logger,
+		c.client,
+		c.logger,
 		func() runtime.Object { return &extensionsv1alpha1.ControlPlane{} },
 		extensionsv1alpha1.ControlPlaneResource,
-		i.values.Namespace,
-		i.name(),
-		i.waitInterval,
-		i.waitSevereThreshold,
-		i.waitTimeout,
+		c.values.Namespace,
+		c.name(),
+		c.waitInterval,
+		c.waitSevereThreshold,
+		c.waitTimeout,
 		func(obj runtime.Object) error {
 			controlPlane, ok := obj.(*extensionsv1alpha1.ControlPlane)
 			if !ok {
 				return fmt.Errorf("expected extensionsv1alpha1.ControlPlane but got %T", controlPlane)
 			}
 
-			i.providerStatus = controlPlane.Status.ProviderStatus
+			c.providerStatus = controlPlane.Status.ProviderStatus
 			return nil
 		},
 	)
 }
 
 // WaitMigrate waits until the ControlPlane resources are migrated successfully.
-func (i *controlPlane) WaitMigrate(ctx context.Context) error {
+func (c *controlPlane) WaitMigrate(ctx context.Context) error {
 	return common.WaitUntilExtensionCRMigrated(
 		ctx,
-		i.client,
+		c.client,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
-		i.values.Namespace,
-		i.name(),
-		i.waitInterval,
-		i.waitTimeout,
+		c.values.Namespace,
+		c.name(),
+		c.waitInterval,
+		c.waitTimeout,
 	)
 }
 
 // WaitCleanup waits until the ControlPlane resource is deleted.
-func (i *controlPlane) WaitCleanup(ctx context.Context) error {
+func (c *controlPlane) WaitCleanup(ctx context.Context) error {
 	return common.WaitUntilExtensionCRDeleted(
 		ctx,
-		i.client,
-		i.logger,
+		c.client,
+		c.logger,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
 		extensionsv1alpha1.ControlPlaneResource,
-		i.values.Namespace,
-		i.name(),
-		i.waitInterval,
-		i.waitTimeout,
+		c.values.Namespace,
+		c.name(),
+		c.waitInterval,
+		c.waitTimeout,
 	)
 }
 
 // SetInfrastructureProviderStatus sets the infrastructure provider status in the values.
-func (i *controlPlane) SetInfrastructureProviderStatus(status *runtime.RawExtension) {
-	i.values.InfrastructureProviderStatus = status
+func (c *controlPlane) SetInfrastructureProviderStatus(status *runtime.RawExtension) {
+	c.values.InfrastructureProviderStatus = status
 }
 
 // ProviderStatus returns the generated status of the provider.
-func (i *controlPlane) ProviderStatus() *runtime.RawExtension {
-	return i.providerStatus
+func (c *controlPlane) ProviderStatus() *runtime.RawExtension {
+	return c.providerStatus
 }

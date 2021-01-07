@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -60,12 +61,11 @@ type Values struct {
 	Region string
 	// SSHPublicKey is the to-be-used SSH public key of the shoot.
 	SSHPublicKey []byte
-	// IsInRestorePhaseOfControlPlaneMigration indicates if the Shoot is in the restoration
-	// phase of the ControlPlane migration.
-	IsInRestorePhaseOfControlPlaneMigration bool
-	// DeploymentRequested indicates if the Infrastructure deployment was explicitly requested,
-	// i.e., if the Shoot was annotated with the "infrastructure" task.
-	DeploymentRequested bool
+	// AnnotateOperation indicates if the Infrastructure resource shall be annotated with the
+	// respective "gardener.cloud/operation" (forcing a reconciliation or restoration). If this is false
+	// then the Infrastructure object will be created/updated but the extension controller will not
+	// act upon it.
+	AnnotateOperation bool
 }
 
 // New creates a new instance of an ExtensionInfrastructure deployer.
@@ -73,14 +73,17 @@ func New(
 	logger logrus.FieldLogger,
 	client client.Client,
 	values *Values,
+	waitInterval time.Duration,
+	waitSevereThreshold time.Duration,
+	waitTimeout time.Duration,
 ) shoot.ExtensionInfrastructure {
 	return &infrastructure{
 		client:              client,
 		logger:              logger,
 		values:              values,
-		waitInterval:        DefaultInterval,
-		waitSevereThreshold: DefaultSevereThreshold,
-		waitTimeout:         DefaultTimeout,
+		waitInterval:        waitInterval,
+		waitSevereThreshold: waitSevereThreshold,
+		waitTimeout:         waitTimeout,
 	}
 }
 
@@ -98,11 +101,13 @@ type infrastructure struct {
 
 // Deploy uses the seed client to create or update the Infrastructure resource.
 func (i *infrastructure) Deploy(ctx context.Context) error {
+	_, err := i.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
+	return err
+}
+
+func (i *infrastructure) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
 	var (
-		operation        = v1beta1constants.GardenerOperationReconcile
-		restorePhase     = i.values.IsInRestorePhaseOfControlPlaneMigration
-		requestOperation = i.values.DeploymentRequested || restorePhase
-		infrastructure   = &extensionsv1alpha1.Infrastructure{
+		infra = &extensionsv1alpha1.Infrastructure{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      i.values.Name,
 				Namespace: i.values.Namespace,
@@ -117,17 +122,13 @@ func (i *infrastructure) Deploy(ctx context.Context) error {
 		}
 	}
 
-	if restorePhase {
-		operation = v1beta1constants.GardenerOperationWaitForState
-	}
-
-	_, err := controllerutil.CreateOrUpdate(ctx, i.client, infrastructure, func() error {
-		if requestOperation {
-			metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-			metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+	_, err := controllerutil.CreateOrUpdate(ctx, i.client, infra, func() error {
+		if i.values.AnnotateOperation {
+			metav1.SetMetaDataAnnotation(&infra.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+			metav1.SetMetaDataAnnotation(&infra.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 		}
 
-		infrastructure.Spec = extensionsv1alpha1.InfrastructureSpec{
+		infra.Spec = extensionsv1alpha1.InfrastructureSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type:           i.values.Type,
 				ProviderConfig: providerConfig,
@@ -136,12 +137,36 @@ func (i *infrastructure) Deploy(ctx context.Context) error {
 			SSHPublicKey: i.values.SSHPublicKey,
 			SecretRef: corev1.SecretReference{
 				Name:      v1beta1constants.SecretNameCloudProvider,
-				Namespace: infrastructure.Namespace,
+				Namespace: infra.Namespace,
 			},
 		}
 		return nil
 	})
-	return err
+
+	return infra, err
+}
+
+// Restore uses the seed client and the ShootState to create the Infrastructure resources and restore their state.
+func (i *infrastructure) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
+	return common.RestoreExtensionWithDeployFunction(
+		ctx,
+		shootState,
+		i.client,
+		extensionsv1alpha1.InfrastructureResource,
+		i.values.Namespace,
+		i.deploy,
+	)
+}
+
+// Migrate migrates the Infrastructure resources.
+func (i *infrastructure) Migrate(ctx context.Context) error {
+	return common.MigrateExtensionCR(
+		ctx,
+		i.client,
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Infrastructure{} },
+		i.values.Namespace,
+		i.values.Name,
+	)
 }
 
 // Destroy deletes the Infrastructure resource.
@@ -178,6 +203,19 @@ func (i *infrastructure) Wait(ctx context.Context) error {
 			i.nodesCIDR = infrastructure.Status.NodesCIDR
 			return nil
 		},
+	)
+}
+
+// WaitMigrate waits until the Infrastructure resources are migrated successfully.
+func (i *infrastructure) WaitMigrate(ctx context.Context) error {
+	return common.WaitUntilExtensionCRMigrated(
+		ctx,
+		i.client,
+		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Infrastructure{} },
+		i.values.Namespace,
+		i.values.Name,
+		i.waitInterval,
+		i.waitTimeout,
 	)
 }
 

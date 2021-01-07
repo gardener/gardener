@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/containerruntime"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/extension"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/network"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/worker"
 	"github.com/gardener/gardener/pkg/operation/shoot"
@@ -120,6 +121,10 @@ var _ = Describe("control plane migration", func() {
 							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
 							Extension: extension.New(log, fakeClient, &extension.Values{
 								Namespace: testSeedNamespace,
+							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
+							Infrastructure: infrastructure.New(log, fakeClient, &infrastructure.Values{
+								Namespace: testSeedNamespace,
+								Name:      networkName,
 							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
 							Network: network.New(log, fakeClient, &network.Values{
 								Namespace: testSeedNamespace,

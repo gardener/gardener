@@ -19,6 +19,7 @@ import (
 	"errors"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -44,6 +45,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -68,6 +70,7 @@ var _ = Describe("#ExtensionInfrastructure", func() {
 		providerConfig *runtime.RawExtension
 
 		infra        *extensionsv1alpha1.Infrastructure
+		infraSpec    extensionsv1alpha1.InfrastructureSpec
 		values       *infrastructure.Values
 		deployWaiter shoot.ExtensionInfrastructure
 		waiter       *retryfake.Ops
@@ -102,6 +105,18 @@ var _ = Describe("#ExtensionInfrastructure", func() {
 				Namespace: namespace,
 			},
 		}
+		infraSpec = extensionsv1alpha1.InfrastructureSpec{
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				Type:           providerType,
+				ProviderConfig: providerConfig,
+			},
+			Region:       region,
+			SSHPublicKey: sshPublicKey,
+			SecretRef: corev1.SecretReference{
+				Name:      v1beta1constants.SecretNameCloudProvider,
+				Namespace: namespace,
+			},
+		}
 
 		waiter = &retryfake.Ops{MaxAttempts: 1}
 		cleanupFunc = test.WithVars(
@@ -109,7 +124,7 @@ var _ = Describe("#ExtensionInfrastructure", func() {
 			&retry.UntilTimeout, waiter.UntilTimeout,
 		)
 
-		deployWaiter = infrastructure.New(log, c, values)
+		deployWaiter = infrastructure.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 	})
 
 	AfterEach(func() {
@@ -130,18 +145,7 @@ var _ = Describe("#ExtensionInfrastructure", func() {
 				Return(apierrors.NewNotFound(schema.GroupResource{}, name))
 
 			deployWaiter.SetSSHPublicKey(sshPublicKey)
-			infra.Spec = extensionsv1alpha1.InfrastructureSpec{
-				DefaultSpec: extensionsv1alpha1.DefaultSpec{
-					Type:           providerType,
-					ProviderConfig: providerConfig,
-				},
-				Region:       region,
-				SSHPublicKey: sshPublicKey,
-				SecretRef: corev1.SecretReference{
-					Name:      v1beta1constants.SecretNameCloudProvider,
-					Namespace: namespace,
-				},
-			}
+			infra.Spec = infraSpec
 			mutator()
 
 			c.
@@ -155,17 +159,10 @@ var _ = Describe("#ExtensionInfrastructure", func() {
 				values.ProviderConfig = nil
 				infra.Spec.ProviderConfig = nil
 			}),
-			Entry("deployment task", func() {
-				values.DeploymentRequested = true
+			Entry("annotate operation", func() {
+				values.AnnotateOperation = true
 				infra.Annotations = map[string]string{
 					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-					v1beta1constants.GardenerTimestamp: now.UTC().String(),
-				}
-			}),
-			Entry("restoration phase", func() {
-				values.IsInRestorePhaseOfControlPlaneMigration = true
-				infra.Annotations = map[string]string{
-					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationWaitForState,
 					v1beta1constants.GardenerTimestamp: now.UTC().String(),
 				}
 			}),
@@ -439,6 +436,142 @@ var _ = Describe("#ExtensionInfrastructure", func() {
 				Return(fakeErr)
 
 			Expect(deployWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring(fakeErr.Error())))
+		})
+	})
+
+	Describe("#Restore", func() {
+		var (
+			state      = &runtime.RawExtension{Raw: []byte("dummy state")}
+			shootState = &gardencorev1alpha1.ShootState{
+				Spec: gardencorev1alpha1.ShootStateSpec{
+					Extensions: []gardencorev1alpha1.ExtensionResourceState{
+						{
+							Name:  pointer.StringPtr(name),
+							Kind:  extensionsv1alpha1.InfrastructureResource,
+							State: state,
+						},
+					},
+				},
+			}
+		)
+
+		It("should properly restore the infrastructure state if it exists", func() {
+			defer test.WithVars(
+				&infrastructure.TimeNow, mockNow.Do,
+				&common.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			values.SSHPublicKey = sshPublicKey
+			values.AnnotateOperation = true
+
+			obj := infra.DeepCopy()
+			obj.Spec = infraSpec
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().String())
+			expectedWithState := obj.DeepCopy()
+			expectedWithState.Status.State = state
+			expectedWithRestore := expectedWithState.DeepCopy()
+			expectedWithRestore.Annotations["gardener.cloud/operation"] = "restore"
+
+			mc := mockclient.NewMockClient(ctrl)
+			mc.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("Infrastructure"), name))
+			mc.EXPECT().Create(ctx, obj)
+			mc.EXPECT().Status().Return(mc)
+			mc.EXPECT().Update(ctx, expectedWithState)
+			mc.EXPECT().Patch(ctx, expectedWithRestore, client.MergeFrom(expectedWithState))
+
+			Expect(infrastructure.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
+		})
+	})
+
+	Describe("#Migrate", func() {
+		It("should migrate the resources", func() {
+			defer test.WithVars(
+				&common.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			obj := infra.DeepCopy()
+			obj.Annotations = map[string]string{
+				"gardener.cloud/operation": "migrate",
+				"gardener.cloud/timestamp": now.UTC().String(),
+			}
+
+			gomock.InOrder(
+				c.
+					EXPECT().
+					Get(ctx, kutil.Key(infra.Namespace, infra.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, o *extensionsv1alpha1.Infrastructure) error {
+						infra.DeepCopyInto(o)
+						return nil
+					}),
+				c.
+					EXPECT().
+					Patch(ctx, obj, client.MergeFrom(infra)),
+			)
+
+			Expect(deployWaiter.Migrate(ctx)).To(Succeed())
+		})
+
+		It("should not return error if resource does not exist", func() {
+			c.
+				EXPECT().
+				Get(ctx, kutil.Key(infra.Namespace, infra.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
+				Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+			Expect(deployWaiter.Migrate(ctx)).To(Succeed())
+		})
+	})
+
+	Describe("#WaitMigrate", func() {
+		It("should not return error when resource is missing", func() {
+			c.
+				EXPECT().
+				Get(ctx, kutil.Key(infra.Namespace, infra.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
+				Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+			Expect(deployWaiter.WaitMigrate(ctx)).To(Succeed())
+		})
+
+		It("should return error if resource is not yet migrated successfully", func() {
+			obj := infra.DeepCopy()
+			obj.Status.LastError = &gardencorev1beta1.LastError{
+				Description: "Some error",
+			}
+			obj.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateError,
+				Type:  gardencorev1beta1.LastOperationTypeMigrate,
+			}
+
+			c.
+				EXPECT().
+				Get(ctx, kutil.Key(obj.Namespace, obj.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, o *extensionsv1alpha1.Infrastructure) error {
+					obj.DeepCopyInto(o)
+					return nil
+				})
+
+			Expect(deployWaiter.WaitMigrate(ctx)).To(HaveOccurred())
+		})
+
+		It("should not return error if resource gets migrated successfully", func() {
+			obj := infra.DeepCopy()
+			obj.Status.LastError = nil
+			obj.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateSucceeded,
+				Type:  gardencorev1beta1.LastOperationTypeMigrate,
+			}
+
+			c.
+				EXPECT().
+				Get(ctx, kutil.Key(obj.Namespace, obj.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, o *extensionsv1alpha1.Infrastructure) error {
+					obj.DeepCopyInto(o)
+					return nil
+				})
+
+			Expect(deployWaiter.WaitMigrate(ctx)).To(Succeed(), "infrastructure is ready, should not return an error")
 		})
 	})
 })

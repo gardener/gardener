@@ -42,6 +42,7 @@ func (b *Botanist) AnnotateExtensionCRsForMigration(ctx context.Context) (err er
 		b.Shoot.Components.Extensions.ControlPlane.Migrate,
 		b.Shoot.Components.Extensions.ControlPlaneExposure.Migrate,
 		b.Shoot.Components.Extensions.Extension.Migrate,
+		b.Shoot.Components.Extensions.Infrastructure.Migrate,
 		b.Shoot.Components.Extensions.Network.Migrate,
 		b.Shoot.Components.Extensions.Worker.Migrate,
 	)
@@ -82,6 +83,7 @@ func (b *Botanist) WaitForExtensionsOperationMigrateToSucceed(ctx context.Contex
 		b.Shoot.Components.Extensions.ControlPlane.WaitMigrate,
 		b.Shoot.Components.Extensions.ControlPlaneExposure.WaitMigrate,
 		b.Shoot.Components.Extensions.Extension.WaitMigrate,
+		b.Shoot.Components.Extensions.Infrastructure.WaitMigrate,
 		b.Shoot.Components.Extensions.Network.WaitMigrate,
 		b.Shoot.Components.Extensions.Worker.WaitMigrate,
 	)
@@ -107,6 +109,7 @@ func (b *Botanist) DeleteAllExtensionCRs(ctx context.Context) error {
 		b.Shoot.Components.Extensions.ControlPlane.Destroy,
 		b.Shoot.Components.Extensions.ControlPlaneExposure.Destroy,
 		b.Shoot.Components.Extensions.Extension.Destroy,
+		b.Shoot.Components.Extensions.Infrastructure.Destroy,
 		b.Shoot.Components.Extensions.Network.Destroy,
 		b.Shoot.Components.Extensions.Worker.Destroy,
 	)

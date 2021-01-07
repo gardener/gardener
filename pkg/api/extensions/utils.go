@@ -19,14 +19,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// GetShootNamespacedCRsLists returns an empty CR list struct, for each CR used for Shoot managment
+// GetShootNamespacedCRsLists returns an empty CR list struct, for each CR used for Shoot management
 func GetShootNamespacedCRsLists() []runtime.Object {
 	return []runtime.Object{
 		//The ControlPlane CR is now handled as a shoot component
 		//&extensionsv1alpha1.ControlPlaneList{},
 		//The Extension CR is now handled as a shoot component
 		//&extensionsv1alpha1.ExtensionList{},
-		&extensionsv1alpha1.InfrastructureList{},
+		//The Infrastructure CR is now handled as a shoot component
+		//&extensionsv1alpha1.InfrastructureList{},
 		//The Network CR is now handled as a shoot component
 		//&extensionsv1alpha1.NetworkList{},
 		&extensionsv1alpha1.OperatingSystemConfigList{},

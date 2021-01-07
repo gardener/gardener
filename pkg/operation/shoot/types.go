@@ -139,7 +139,7 @@ type DNS struct {
 // ExtensionInfrastructure contains references to an Infrastructure extension deployer and its generated provider
 // status.
 type ExtensionInfrastructure interface {
-	component.DeployWaiter
+	component.DeployMigrateWaiter
 	SetSSHPublicKey([]byte)
 	ProviderStatus() *runtime.RawExtension
 	NodesCIDR() *string

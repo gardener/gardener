@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,14 +18,12 @@ import (
 	"context"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -35,14 +33,16 @@ func (b *Botanist) DefaultInfrastructure(seedClient client.Client) shoot.Extensi
 		b.Logger,
 		seedClient,
 		&infrastructure.Values{
-			Namespace:                               b.Shoot.SeedNamespace,
-			Name:                                    b.Shoot.Info.Name,
-			Type:                                    b.Shoot.Info.Spec.Provider.Type,
-			ProviderConfig:                          b.Shoot.Info.Spec.Provider.InfrastructureConfig,
-			Region:                                  b.Shoot.Info.Spec.Region,
-			IsInRestorePhaseOfControlPlaneMigration: b.isRestorePhase(),
-			DeploymentRequested:                     controllerutils.HasTask(b.Shoot.Info.Annotations, common.ShootTaskDeployInfrastructure),
+			Namespace:         b.Shoot.SeedNamespace,
+			Name:              b.Shoot.Info.Name,
+			Type:              b.Shoot.Info.Spec.Provider.Type,
+			ProviderConfig:    b.Shoot.Info.Spec.Provider.InfrastructureConfig,
+			Region:            b.Shoot.Info.Spec.Region,
+			AnnotateOperation: controllerutils.HasTask(b.Shoot.Info.Annotations, common.ShootTaskDeployInfrastructure) || b.isRestorePhase(),
 		},
+		infrastructure.DefaultInterval,
+		infrastructure.DefaultSevereThreshold,
+		infrastructure.DefaultTimeout,
 	)
 }
 
@@ -51,19 +51,11 @@ func (b *Botanist) DefaultInfrastructure(seedClient client.Client) shoot.Extensi
 func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 	b.Shoot.Components.Extensions.Infrastructure.SetSSHPublicKey(b.Secrets[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys])
 
-	if err := b.Shoot.Components.Extensions.Infrastructure.Deploy(ctx); err != nil {
-		return err
+	if b.isRestorePhase() {
+		return b.Shoot.Components.Extensions.Infrastructure.Restore(ctx, b.ShootState)
 	}
 
-	if b.isRestorePhase() {
-		return b.restoreExtensionObject(ctx, &extensionsv1alpha1.Infrastructure{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      b.Shoot.Info.Name,
-				Namespace: b.Shoot.SeedNamespace,
-			},
-		}, extensionsv1alpha1.InfrastructureResource)
-	}
-	return nil
+	return b.Shoot.Components.Extensions.Infrastructure.Deploy(ctx)
 }
 
 // WaitForInfrastructure waits until the infrastructure reconciliation has finished and extracts the provider status
