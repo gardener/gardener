@@ -33,6 +33,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -132,8 +133,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		timeout          int32 = 2
 		sideEffects            = admissionregistrationv1beta1.SideEffectClassNone
 		scope                  = admissionregistrationv1beta1.NamespacedScope
-
-		updateMode = autoscalingv1beta2.UpdateModeAuto
+		updateMode             = autoscalingv1beta2.UpdateModeAuto
+		minAvailable           = intstr.FromInt(1)
 
 		namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
 			Name:   k.namespace,
@@ -197,6 +198,17 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 						Labels: getLabels(),
 					},
 					Spec: corev1.PodSpec{
+						Affinity: &corev1.Affinity{
+							PodAntiAffinity: &corev1.PodAntiAffinity{
+								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
+									Weight: 100,
+									PodAffinityTerm: corev1.PodAffinityTerm{
+										TopologyKey:   corev1.LabelHostname,
+										LabelSelector: &metav1.LabelSelector{MatchLabels: getLabels()},
+									},
+								}},
+							},
+						},
 						ServiceAccountName: name,
 						Containers: []corev1.Container{
 							{
@@ -329,6 +341,19 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				},
 			},
 		}
+		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: k.namespace,
+				Labels:    getLabels(),
+			},
+			Spec: policyv1beta1.PodDisruptionBudgetSpec{
+				MinAvailable: &minAvailable,
+				Selector: &metav1.LabelSelector{
+					MatchLabels: getLabels(),
+				},
+			},
+		}
 
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	)
@@ -349,6 +374,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		deployment,
 		webhook,
 		vpa,
+		podDisruptionBudget,
 	)
 	if err != nil {
 		return err

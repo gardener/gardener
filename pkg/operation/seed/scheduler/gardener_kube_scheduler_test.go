@@ -26,6 +26,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -339,6 +340,17 @@ var _ = Describe("New", func() {
 								},
 							},
 							Spec: corev1.PodSpec{
+								Affinity: &corev1.Affinity{
+									PodAntiAffinity: &corev1.PodAntiAffinity{
+										PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
+											Weight: 100,
+											PodAffinityTerm: corev1.PodAffinityTerm{
+												TopologyKey:   corev1.LabelHostname,
+												LabelSelector: &metav1.LabelSelector{MatchLabels: expectedLabels},
+											},
+										}},
+									},
+								},
 								ServiceAccountName: "gardener-kube-scheduler",
 								Containers: []corev1.Container{
 									{
@@ -454,6 +466,34 @@ var _ = Describe("New", func() {
 						},
 						UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
 							UpdateMode: &updateMode,
+						},
+					},
+				}
+
+				Expect(managedResourceSecret.Data).To(HaveKey(key))
+				_, _, err := codec.UniversalDecoder().Decode(managedResourceSecret.Data[key], nil, actual)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(actual).To(DeepDerivativeEqual(expected))
+			})
+
+			It("poddisruptionbudget is created", func() {
+				const key = "poddisruptionbudget__test-namespace__gardener-kube-scheduler.yaml"
+				actual := &policyv1beta1.PodDisruptionBudget{}
+				expected := &policyv1beta1.PodDisruptionBudget{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardener-kube-scheduler",
+						Namespace: deployNS,
+						Labels:    expectedLabels,
+					},
+					Spec: policyv1beta1.PodDisruptionBudgetSpec{
+						MinAvailable: &intstr.IntOrString{
+							Type:   intstr.Int,
+							IntVal: int32(1),
+						},
+						MaxUnavailable: nil,
+						Selector: &metav1.LabelSelector{
+							MatchLabels: expectedLabels,
 						},
 					},
 				}
