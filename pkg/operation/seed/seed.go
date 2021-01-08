@@ -43,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed/istio"
+	"github.com/gardener/gardener/pkg/operation/seed/scheduler"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -886,6 +887,22 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 		}
 	}
 	components = append(components, seedadmission.New(c.Client(), namespace, gsacImage.String(), kubernetesVersion))
+
+	// gardener-seed-scheduler
+	schedulerImage := &imagevector.Image{}
+	if imageVector != nil {
+		schedulerImage, err = imageVector.FindImage(common.KubeSchedulerImageName, imagevector.TargetVersion(kubernetesVersion.String()))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	sched, err := scheduler.Bootstrap(c.DirectClient(), namespace, schedulerImage, kubernetesVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	components = append(components, sched)
 
 	return components, nil
 }

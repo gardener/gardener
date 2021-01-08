@@ -174,6 +174,10 @@ install-requirements:
 revendor:
 	@GO111MODULE=on go mod vendor
 	@GO111MODULE=on go mod tidy
+	@GO111MODULE=on cd third_party/kube-scheduler/v18; go mod tidy
+	@GO111MODULE=on cd third_party/kube-scheduler/v19; go mod tidy
+	@GO111MODULE=on cd third_party/kube-scheduler/v20; go mod tidy
+	@GO111MODULE=on cd third_party/kube-scheduler; go mod tidy
 
 .PHONY: clean
 clean:

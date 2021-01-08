@@ -94,6 +94,7 @@ featureGates:
   CachedRuntimeClients: true
   NodeLocalDNS: true
   MountHostCADirectories: false
+  SeedKubeScheduler: false
 seedSelector: {} # selects all seeds, only use for development purposes
 # seedConfig:
 #   metadata:
