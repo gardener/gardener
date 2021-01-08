@@ -234,7 +234,7 @@ Example dashboard configuration
     "control-plane"
   ],
   "version": 1,
-  "editable": "false",
+  "editable": "false"
 }
 ```
 
@@ -262,6 +262,6 @@ Furthermore all dashboards should contain the following time options:
       "2d",
       "10d"
     ]
-  },
+  }
 }
 ```

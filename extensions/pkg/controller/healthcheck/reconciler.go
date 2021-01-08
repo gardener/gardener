@@ -164,7 +164,7 @@ func (r *reconciler) performHealthCheck(ctx context.Context, request reconcile.R
 			return reconcile.Result{}, err
 		}
 
-		var logger logr.InfoLogger
+		var logger logr.Logger
 		if healthCheckResult.Status == gardencorev1beta1.ConditionTrue || healthCheckResult.Status == gardencorev1beta1.ConditionProgressing {
 			logger = r.logger.V(6)
 		} else {
