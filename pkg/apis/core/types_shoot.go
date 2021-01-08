@@ -162,7 +162,7 @@ const (
 // NginxIngress describes configuration values for the nginx-ingress addon.
 type NginxIngress struct {
 	Addon
-	// LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress
+	// LoadBalancerSourceRanges is list of allowed IP sources for NginxIngress
 	LoadBalancerSourceRanges []string
 	// Config contains custom configuration for the nginx-ingress-controller configuration.
 	// See https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/configmap.md#configuration-options

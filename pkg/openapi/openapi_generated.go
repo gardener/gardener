@@ -3903,7 +3903,7 @@ func schema_pkg_apis_core_v1alpha1_NginxIngress(ref common.ReferenceCallback) co
 					},
 					"loadBalancerSourceRanges": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress",
+							Description: "LoadBalancerSourceRanges is list of allowed IP sources for NginxIngress",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -10010,7 +10010,7 @@ func schema_pkg_apis_core_v1beta1_NginxIngress(ref common.ReferenceCallback) com
 					},
 					"loadBalancerSourceRanges": {
 						SchemaProps: spec.SchemaProps{
-							Description: "LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress",
+							Description: "LoadBalancerSourceRanges is list of allowed IP sources for NginxIngress",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

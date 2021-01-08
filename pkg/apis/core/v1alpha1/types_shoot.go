@@ -193,7 +193,7 @@ const (
 // NginxIngress describes configuration values for the nginx-ingress addon.
 type NginxIngress struct {
 	Addon `json:",inline" protobuf:"bytes,4,opt,name=addon"`
-	// LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress
+	// LoadBalancerSourceRanges is list of allowed IP sources for NginxIngress
 	// +optional
 	LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges,omitempty" protobuf:"bytes,1,rep,name=loadBalancerSourceRanges"`
 	// Config contains custom configuration for the nginx-ingress-controller configuration.

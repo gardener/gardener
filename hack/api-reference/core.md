@@ -5962,7 +5962,7 @@ Addon
 </td>
 <td>
 <em>(Optional)</em>
-<p>LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress</p>
+<p>LoadBalancerSourceRanges is list of allowed IP sources for NginxIngress</p>
 </td>
 </tr>
 <tr>
