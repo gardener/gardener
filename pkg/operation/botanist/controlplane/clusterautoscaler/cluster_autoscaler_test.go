@@ -215,10 +215,9 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Name:      deploymentName,
 					Namespace: namespace,
 					Labels: map[string]string{
-						"app":                     "kubernetes",
-						"role":                    "cluster-autoscaler",
-						"gardener.cloud/role":     "controlplane",
-						"garden.sapcloud.io/role": "controlplane",
+						"app":                 "kubernetes",
+						"role":                "cluster-autoscaler",
+						"gardener.cloud/role": "controlplane",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{

@@ -141,10 +141,9 @@ var _ = Describe("KubeScheduler", func() {
 					Name:      deploymentName,
 					Namespace: namespace,
 					Labels: map[string]string{
-						"app":                     "kubernetes",
-						"role":                    "scheduler",
-						"gardener.cloud/role":     "controlplane",
-						"garden.sapcloud.io/role": "controlplane",
+						"app":                 "kubernetes",
+						"role":                "scheduler",
+						"gardener.cloud/role": "controlplane",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{

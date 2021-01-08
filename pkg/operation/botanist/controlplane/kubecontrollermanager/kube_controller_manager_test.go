@@ -355,10 +355,9 @@ var _ = Describe("KubeControllerManager", func() {
 							Name:      v1beta1constants.DeploymentNameKubeControllerManager,
 							Namespace: namespace,
 							Labels: map[string]string{
-								"app":                     "kubernetes",
-								"role":                    "controller-manager",
-								"gardener.cloud/role":     "controlplane",
-								"garden.sapcloud.io/role": "controlplane",
+								"app":                 "kubernetes",
+								"role":                "controller-manager",
+								"gardener.cloud/role": "controlplane",
 							},
 						},
 						Spec: appsv1.DeploymentSpec{

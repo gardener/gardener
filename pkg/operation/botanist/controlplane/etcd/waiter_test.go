@@ -58,7 +58,7 @@ var _ = Describe("Waiter", func() {
 
 	Describe("#WaitUntilEtcdsReady", func() {
 		It("should return an error when the listing fail", func() {
-			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"garden.sapcloud.io/role": "controlplane"}).Return(fakeErr)
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"gardener.cloud/role": "controlplane"}).Return(fakeErr)
 
 			Expect(WaitUntilEtcdsReady(ctx, c, logger.NewFieldLogger(logger.NewNopLogger(), "", ""), namespace, 0, interval, severeThreshold, timeout)).To(MatchError(fakeErr))
 		})
@@ -66,7 +66,7 @@ var _ = Describe("Waiter", func() {
 		It("should return an error when not all required etcds are created", func() {
 			etcdList := &druidv1alpha1.EtcdList{}
 
-			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"garden.sapcloud.io/role": "controlplane"}).DoAndReturn(func(ctx context.Context, obj runtime.Object, opts ...client.ListOption) error {
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"gardener.cloud/role": "controlplane"}).DoAndReturn(func(ctx context.Context, obj runtime.Object, opts ...client.ListOption) error {
 				etcdList.DeepCopyInto(obj.(*druidv1alpha1.EtcdList))
 				return nil
 			}).AnyTimes()
@@ -92,7 +92,7 @@ var _ = Describe("Waiter", func() {
 				},
 			}
 
-			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"garden.sapcloud.io/role": "controlplane"}).DoAndReturn(func(ctx context.Context, obj runtime.Object, opts ...client.ListOption) error {
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"gardener.cloud/role": "controlplane"}).DoAndReturn(func(ctx context.Context, obj runtime.Object, opts ...client.ListOption) error {
 				etcdList.DeepCopyInto(obj.(*druidv1alpha1.EtcdList))
 				return nil
 			}).AnyTimes()
@@ -114,7 +114,7 @@ var _ = Describe("Waiter", func() {
 				}
 			)
 
-			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"garden.sapcloud.io/role": "controlplane"}).DoAndReturn(func(ctx context.Context, obj runtime.Object, opts ...client.ListOption) error {
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"gardener.cloud/role": "controlplane"}).DoAndReturn(func(ctx context.Context, obj runtime.Object, opts ...client.ListOption) error {
 				etcdList.DeepCopyInto(obj.(*druidv1alpha1.EtcdList))
 				return nil
 			}).AnyTimes()
@@ -150,7 +150,7 @@ var _ = Describe("Waiter", func() {
 				},
 			}
 
-			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"garden.sapcloud.io/role": "controlplane"}).DoAndReturn(func(ctx context.Context, obj runtime.Object, opts ...client.ListOption) error {
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"gardener.cloud/role": "controlplane"}).DoAndReturn(func(ctx context.Context, obj runtime.Object, opts ...client.ListOption) error {
 				etcdList.DeepCopyInto(obj.(*druidv1alpha1.EtcdList))
 				return nil
 			}).AnyTimes()

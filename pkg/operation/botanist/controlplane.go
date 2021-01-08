@@ -166,8 +166,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 			"recommender":         recommender,
 			"updater":             updater,
 			"deploymentLabels": map[string]interface{}{
-				v1beta1constants.GardenRole:           v1beta1constants.GardenRoleControlPlane,
-				v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+				v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 			},
 			"clusterType": "shoot",
 		}

@@ -5,7 +5,7 @@ metadata:
   name: gardener-resource-manager
   namespace: {{ .Release.Namespace }}
   labels:
-    garden.sapcloud.io/role: controlplane
+    gardener.cloud/role: controlplane
     app: gardener-resource-manager
 rules:
 - apiGroups:
@@ -54,7 +54,7 @@ metadata:
   name: gardener-resource-manager
   namespace: {{ .Release.Namespace }}
   labels:
-    garden.sapcloud.io/role: controlplane
+    gardener.cloud/role: controlplane
     app: gardener-resource-manager
 roleRef:
   apiGroup: rbac.authorization.k8s.io

@@ -280,9 +280,8 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			v1beta1constants.GardenerTimestamp: TimeNow().UTC().String(),
 		}
 		etcd.Labels = map[string]string{
-			v1beta1constants.LabelRole:            e.role,
-			v1beta1constants.GardenRole:           v1beta1constants.GardenRoleControlPlane,
-			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.LabelRole:  e.role,
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		}
 		etcd.Spec.Replicas = replicas
 		etcd.Spec.PriorityClassName = pointer.StringPtr(v1beta1constants.PriorityClassNameShootControlPlane)

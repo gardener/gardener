@@ -5,7 +5,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     gardener.cloud/role: controlplane
-    garden.sapcloud.io/role: controlplane
     app: kubernetes
     role: apiserver
 {{- if .Values.sni.enabled }}

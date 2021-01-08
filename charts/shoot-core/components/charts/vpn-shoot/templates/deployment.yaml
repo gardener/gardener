@@ -6,8 +6,6 @@ metadata:
   namespace: kube-system
   labels:
     gardener.cloud/role: system-component
-    # TODO (ialidzhikov): remove in a future version
-    garden.sapcloud.io/role: system-component
     app: vpn-shoot
     origin: gardener
 spec:
@@ -33,8 +31,6 @@ spec:
       labels:
         origin: gardener
         gardener.cloud/role: system-component
-        # TODO (ialidzhikov): remove in a future version
-        garden.sapcloud.io/role: system-component
         app: vpn-shoot
         type: tunnel
     spec:

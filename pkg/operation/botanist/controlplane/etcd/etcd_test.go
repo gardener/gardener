@@ -215,9 +215,8 @@ var _ = Describe("Etcd", func() {
 						"gardener.cloud/timestamp": now.String(),
 					},
 					Labels: map[string]string{
-						"gardener.cloud/role":     "controlplane",
-						"garden.sapcloud.io/role": "controlplane",
-						"role":                    testRole,
+						"gardener.cloud/role": "controlplane",
+						"role":                testRole,
 					},
 				},
 				Spec: druidv1alpha1.EtcdSpec{
