@@ -17,11 +17,11 @@ package context
 import (
 	"context"
 
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 )
 
 // GardenContext wraps the actual context and cluster object.
