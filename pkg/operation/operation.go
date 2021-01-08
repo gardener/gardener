@@ -404,24 +404,16 @@ func (o *Operation) CleanShootTaskErrorAndUpdateStatusLabel(ctx context.Context,
 	o.Shoot.Info = updatedShoot
 
 	if len(o.Shoot.Info.Status.LastErrors) == 0 {
-		updatedShoot, err = kutil.TryUpdateShootLabels(
-			ctx,
-			o.K8sGardenClient.GardenCore(),
-			retry.DefaultBackoff,
-			o.Shoot.Info.ObjectMeta,
-			shoot.StatusLabelTransform(
-				shoot.ComputeStatus(
-					o.Shoot.Info.Status.LastOperation,
-					o.Shoot.Info.Status.LastErrors,
-					o.Shoot.Info.Status.Conditions...,
-				),
-			),
-		)
-		if err != nil {
+		oldObj := o.Shoot.Info.DeepCopy()
+		kutil.SetMetaDataLabel(&o.Shoot.Info.ObjectMeta, common.ShootStatus, string(shoot.ComputeStatus(
+			o.Shoot.Info.Status.LastOperation,
+			o.Shoot.Info.Status.LastErrors,
+			o.Shoot.Info.Status.Conditions...,
+		)))
+		if err := o.K8sGardenClient.DirectClient().Patch(ctx, o.Shoot.Info, client.MergeFrom(oldObj)); err != nil {
 			o.Logger.Errorf("Could not update shoot's %s/%s status label after removing an erroneous task: %v", o.Shoot.Info.Namespace, o.Shoot.Info.Name, err)
 			return
 		}
-		o.Shoot.Info = updatedShoot
 	}
 }
 

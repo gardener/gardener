@@ -33,7 +33,7 @@ import (
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
-	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // runReconcileShootFlow reconciles the Shoot cluster's state.
@@ -499,18 +499,17 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 }
 
 func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generation int64, tasksToRemove ...string) error {
-	newShoot, err := kutil.TryUpdateShootAnnotations(ctx, o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			if shoot.Generation == generation {
-				controllerutils.RemoveTasks(shoot.Annotations, tasksToRemove...)
-			}
-			return shoot, nil
-		},
-	)
-	if err != nil {
+	// Check if shoot generation was changed mid-air
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := o.K8sGardenClient.DirectClient().Get(ctx, kutil.Key(o.Shoot.Info.Namespace, o.Shoot.Info.Name), shoot); err != nil {
 		return err
 	}
 
-	o.Shoot.Info = newShoot
-	return nil
+	if shoot.Generation != generation {
+		return nil
+	}
+
+	oldObj := o.Shoot.Info.DeepCopy()
+	controllerutils.RemoveTasks(o.Shoot.Info.Annotations, tasksToRemove...)
+	return o.K8sGardenClient.DirectClient().Patch(ctx, o.Shoot.Info, client.MergeFrom(oldObj))
 }

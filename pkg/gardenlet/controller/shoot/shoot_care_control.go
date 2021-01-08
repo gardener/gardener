@@ -22,6 +22,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/operation/common"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
@@ -374,22 +376,16 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 	}
 
 	// Mark Shoot as healthy/unhealthy
-	if _, err := kutil.TryUpdateShootLabels(
-		ctx,
-		gardenClient.GardenCore(),
-		retry.DefaultBackoff,
-		shoot.ObjectMeta,
-		shootpkg.StatusLabelTransform(
-			shootpkg.ComputeStatus(
-				shoot.Status.LastOperation,
-				shoot.Status.LastErrors,
-				conditionAPIServerAvailable,
-				conditionControlPlaneHealthy,
-				conditionEveryNodeReady,
-				conditionSystemComponentsHealthy,
-			),
-		),
-	); err != nil {
+	oldObj := shoot.DeepCopy()
+	kutil.SetMetaDataLabel(&shoot.ObjectMeta, common.ShootStatus, string(shootpkg.ComputeStatus(
+		shoot.Status.LastOperation,
+		shoot.Status.LastErrors,
+		conditionAPIServerAvailable,
+		conditionControlPlaneHealthy,
+		conditionEveryNodeReady,
+		conditionSystemComponentsHealthy,
+	)))
+	if err := gardenClient.DirectClient().Patch(ctx, shoot, client.MergeFrom(oldObj)); err != nil {
 		botanist.Logger.Errorf("Could not update Shoot health label: %+v", err)
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
