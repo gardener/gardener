@@ -23,15 +23,18 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
+	errorspkg "github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -74,35 +77,58 @@ func (b *Botanist) WaitUntilKubeAPIServerIsDeleted(ctx context.Context) error {
 
 // WaitUntilKubeAPIServerReady waits until the kube-apiserver pod(s) indicate readiness in their statuses.
 func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
+	deployment := &appsv1.Deployment{}
 
-		deploy := &appsv1.Deployment{}
-		if err := b.K8sSeedClient.DirectClient().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploy); err != nil {
+	if err := retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
+		if err := b.K8sSeedClient.DirectClient().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
 			return retry.SevereError(err)
 		}
-		if deploy.Generation != deploy.Status.ObservedGeneration {
+		if deployment.Generation != deployment.Status.ObservedGeneration {
 			return retry.MinorError(fmt.Errorf("kube-apiserver not observed at latest generation (%d/%d)",
-				deploy.Status.ObservedGeneration, deploy.Generation))
+				deployment.Status.ObservedGeneration, deployment.Generation))
 		}
 
 		replicas := int32(0)
-		if deploy.Spec.Replicas != nil {
-			replicas = *deploy.Spec.Replicas
+		if deployment.Spec.Replicas != nil {
+			replicas = *deployment.Spec.Replicas
 		}
-		if replicas != deploy.Status.UpdatedReplicas {
+		if replicas != deployment.Status.UpdatedReplicas {
 			return retry.MinorError(fmt.Errorf("kube-apiserver does not have enough updated replicas (%d/%d)",
-				deploy.Status.UpdatedReplicas, replicas))
+				deployment.Status.UpdatedReplicas, replicas))
 		}
-		if replicas != deploy.Status.Replicas {
+		if replicas != deployment.Status.Replicas {
 			return retry.MinorError(fmt.Errorf("kube-apiserver deployment has outdated replicas"))
 		}
-		if replicas != deploy.Status.AvailableReplicas {
+		if replicas != deployment.Status.AvailableReplicas {
 			return retry.MinorError(fmt.Errorf("kube-apiserver does not have enough available replicas (%d/%d",
-				deploy.Status.AvailableReplicas, replicas))
+				deployment.Status.AvailableReplicas, replicas))
 		}
 
 		return retry.Ok()
-	})
+	}); err != nil {
+		var retryError *retry.Error
+		if !errors.As(err, &retryError) {
+			return err
+		}
+
+		newestPod, err2 := kutil.NewestPodForDeployment(ctx, b.K8sSeedClient.DirectClient(), deployment)
+		if err2 != nil {
+			return errorspkg.Wrapf(err, "failure to find the newest pod for deployment to read the logs: %s", err2.Error())
+		}
+		if newestPod == nil {
+			return err
+		}
+
+		logs, err2 := kutil.MostRecentCompleteLogs(ctx, b.K8sSeedClient.Kubernetes().CoreV1().Pods(newestPod.Namespace), newestPod, "kube-apiserver", pointer.Int64Ptr(10))
+		if err2 != nil {
+			return errorspkg.Wrapf(err, "failure to read the logs: %s", err2.Error())
+		}
+
+		errWithLogs := fmt.Errorf("%s, logs of newest pod:\n%s", err.Error(), logs)
+		return gardencorev1beta1helper.DetermineError(errWithLogs, errWithLogs.Error())
+	}
+
+	return nil
 }
 
 // WaitForKubeControllerManagerToBeActive waits for the kube controller manager of a Shoot cluster has acquired leader election, thus is active.

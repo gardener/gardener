@@ -107,36 +107,37 @@ func MinorOrSevereError(retryCountUntilSevere, threshold int, err error) (bool, 
 	return MinorError(err)
 }
 
-type retryError struct {
+// Error is an error that occurred during a retry operation.
+type Error struct {
 	ctxError error
 	err      error
 }
 
 // Cause implements Causer.
-func (r *retryError) Cause() error {
-	if r.err != nil {
-		return r.err
+func (e *Error) Cause() error {
+	if e.err != nil {
+		return e.err
 	}
-	return r.ctxError
+	return e.ctxError
 }
 
 // Unwrap implements the Unwrap function
 // https://golang.org/pkg/errors/#Unwrap
-func (r *retryError) Unwrap() error {
-	return r.err
+func (e *Error) Unwrap() error {
+	return e.err
 }
 
 // Error implements error.
-func (r *retryError) Error() string {
-	if r.err != nil {
-		return fmt.Sprintf("retry failed with %v, last error: %v", r.ctxError, r.err)
+func (e *Error) Error() string {
+	if e.err != nil {
+		return fmt.Sprintf("retry failed with %v, last error: %v", e.ctxError, e.err)
 	}
-	return fmt.Sprintf("retry failed with %v", r.ctxError)
+	return fmt.Sprintf("retry failed with %v", e.ctxError)
 }
 
-// NewRetryError returns a new error with the given context error and error. The non-context error is optional.
-func NewRetryError(ctxError, err error) error {
-	return &retryError{ctxError, err}
+// NewError returns a new error with the given context error and error. The non-context error is optional.
+func NewError(ctxError, err error) error {
+	return &Error{ctxError, err}
 }
 
 // UntilFor keeps retrying the given Func until it either errors severely or the context expires.
@@ -166,12 +167,12 @@ func UntilFor(ctx context.Context, waitFunc WaitFunc, agg ErrorAggregator, f Fun
 			case <-waitDone:
 				select {
 				case <-ctxDone:
-					return NewRetryError(ctx.Err(), agg.Error())
+					return NewError(ctx.Err(), agg.Error())
 				default:
 					return nil
 				}
 			case <-ctxDone:
-				return NewRetryError(ctx.Err(), agg.Error())
+				return NewError(ctx.Err(), agg.Error())
 			}
 		}(); err != nil {
 			return err

@@ -17,14 +17,18 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"strings"
-	"testing"
 	"time"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
+	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mock "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
+	mockio "github.com/gardener/gardener/pkg/mock/go/io"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -41,13 +45,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/rest"
+	fakerestclient "k8s.io/client-go/rest/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-func TestKubernetes(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Kubernetes Suite")
-}
 
 var _ = Describe("kubernetes", func() {
 	const (
@@ -58,6 +59,9 @@ var _ = Describe("kubernetes", func() {
 	var (
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
+
+		ctx     = context.TODO()
+		fakeErr = fmt.Errorf("fake error")
 	)
 
 	BeforeEach(func() {
@@ -646,8 +650,6 @@ var _ = Describe("kubernetes", func() {
 			)
 
 			It("should wait until the resource is deleted", func() {
-				ctx := context.TODO()
-
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, key, configMap),
 					c.EXPECT().Get(ctx, key, configMap),
@@ -673,8 +675,6 @@ var _ = Describe("kubernetes", func() {
 			})
 
 			It("return an unexpected error", func() {
-				ctx := context.TODO()
-
 				expectedErr := fmt.Errorf("unexpected")
 				c.EXPECT().Get(ctx, key, configMap).Return(expectedErr)
 
@@ -700,8 +700,6 @@ var _ = Describe("kubernetes", func() {
 			})
 
 			It("should wait until the resources are deleted w/ empty list", func() {
-				ctx := context.TODO()
-
 				c.EXPECT().List(ctx, configMapList).Return(nil)
 
 				Expect(WaitUntilResourcesDeleted(ctx, c, configMapList, time.Microsecond)).To(Succeed())
@@ -721,8 +719,6 @@ var _ = Describe("kubernetes", func() {
 			})
 
 			It("return an unexpected error", func() {
-				ctx := context.TODO()
-
 				expectedErr := fmt.Errorf("unexpected")
 				c.EXPECT().List(ctx, configMapList).Return(expectedErr)
 
@@ -745,7 +741,6 @@ var _ = Describe("kubernetes", func() {
 		)
 
 		It("should return an unexpected client error", func() {
-			ctx := context.TODO()
 			expectedErr := fmt.Errorf("unexpected")
 
 			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).Return(expectedErr)
@@ -757,8 +752,6 @@ var _ = Describe("kubernetes", func() {
 		})
 
 		It("should return an error because no ingresses found", func() {
-			ctx := context.TODO()
-
 			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{}))
 
 			_, err := GetLoadBalancerIngress(ctx, c, namespace, name)
@@ -801,8 +794,6 @@ var _ = Describe("kubernetes", func() {
 		})
 
 		It("should return an error if neither ip nor hostname were set", func() {
-			ctx := context.TODO()
-
 			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, service *corev1.Service) error {
 				service.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{}}
 				return nil
@@ -816,7 +807,6 @@ var _ = Describe("kubernetes", func() {
 
 	Describe("#LookupObject", func() {
 		var (
-			ctx       = context.TODO()
 			key       = Key(namespace, name)
 			configMap = &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -920,7 +910,6 @@ var _ = Describe("kubernetes", func() {
 
 		It("should return nil when the Service has .status.loadBalancer.ingress[]", func() {
 			var (
-				ctx = context.TODO()
 				svc = &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "load-balancer",
@@ -954,7 +943,6 @@ var _ = Describe("kubernetes", func() {
 
 		It("should return err when the Service has no .status.loadBalancer.ingress[]", func() {
 			var (
-				ctx = context.TODO()
 				svc = &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "load-balancer",
@@ -1015,5 +1003,275 @@ var _ = Describe("kubernetes", func() {
 
 			Expect(MergeOwnerReferences(references, newReferences...)).To(ConsistOf(newReferences))
 		})
+	})
+
+	DescribeTable("#OwnedBy",
+		func(obj runtime.Object, apiVersion, kind, name string, uid types.UID, matcher gomegatypes.GomegaMatcher) {
+			Expect(OwnedBy(obj, apiVersion, kind, name, uid)).To(matcher)
+		},
+		Entry("no owner references", &corev1.Pod{}, "apiVersion", "kind", "name", types.UID("uid"), BeFalse()),
+		Entry("owner not found", &corev1.Pod{ObjectMeta: metav1.ObjectMeta{OwnerReferences: []metav1.OwnerReference{{APIVersion: "different-apiVersion", Kind: "different-kind", Name: "different-name", UID: types.UID("different-uid")}}}}, "apiVersion", "kind", "name", types.UID("uid"), BeFalse()),
+		Entry("owner found", &corev1.Pod{ObjectMeta: metav1.ObjectMeta{OwnerReferences: []metav1.OwnerReference{{APIVersion: "apiVersion", Kind: "kind", Name: "name", UID: types.UID("uid")}}}}, "apiVersion", "kind", "name", types.UID("uid"), BeTrue()),
+	)
+
+	Describe("#NewestObject", func() {
+		var podList *corev1.PodList
+
+		BeforeEach(func() {
+			podList = &corev1.PodList{}
+		})
+
+		It("should return an error because the provided object is not a List type", func() {
+			obj, err := NewestObject(ctx, c, &corev1.Pod{}, nil)
+			Expect(err).To(MatchError(ContainSubstring("is not a List type")))
+			Expect(obj).To(BeNil())
+		})
+
+		It("should return an error because the List() call failed", func() {
+			c.EXPECT().List(ctx, podList).Return(fakeErr)
+
+			obj, err := NewestObject(ctx, c, podList, nil)
+			Expect(err).To(MatchError(fakeErr))
+			Expect(obj).To(BeNil())
+		})
+
+		It("should return nil because the list does not contain items", func() {
+			c.EXPECT().List(ctx, podList)
+
+			obj, err := NewestObject(ctx, c, podList, nil)
+			Expect(err).To(BeNil())
+			Expect(obj).To(BeNil())
+		})
+
+		var (
+			obj1 = &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "obj1", CreationTimestamp: metav1.Now()}}
+			obj2 = &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "obj2", CreationTimestamp: metav1.Time{Time: time.Now().Add(+time.Hour)}}}
+			obj3 = &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "obj3", CreationTimestamp: metav1.Time{Time: time.Now().Add(-time.Hour)}}}
+		)
+
+		It("should return the newest object w/o filter func", func() {
+			c.EXPECT().List(ctx, podList).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
+				*list = corev1.PodList{Items: []corev1.Pod{*obj1, *obj2, *obj3}}
+				return nil
+			})
+
+			obj, err := NewestObject(ctx, c, podList, nil)
+			Expect(err).To(BeNil())
+			Expect(obj).To(Equal(obj2))
+			Expect(podList.Items).To(Equal([]corev1.Pod{*obj3, *obj1, *obj2}))
+		})
+
+		It("should return the newest object w/ filter func", func() {
+			filterFn := func(o runtime.Object) bool {
+				obj := o.(*corev1.Pod)
+				return obj.Name != "obj2"
+			}
+
+			c.EXPECT().List(ctx, podList).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
+				*list = corev1.PodList{Items: []corev1.Pod{*obj1, *obj2, *obj3}}
+				return nil
+			})
+
+			obj, err := NewestObject(ctx, c, podList, filterFn)
+			Expect(err).To(BeNil())
+			Expect(obj).To(Equal(obj1))
+			Expect(podList.Items).To(Equal([]corev1.Pod{*obj3, *obj1}))
+		})
+	})
+
+	Describe("#NewestPodForDeployment", func() {
+		var (
+			name        = "deployment-name"
+			namespace   = "deployment-namespace"
+			uid         = types.UID("deployment-uid")
+			labels      = map[string]string{"foo": "bar"}
+			listOptions = []interface{}{
+				client.InNamespace(namespace),
+				client.MatchingLabels(labels),
+			}
+
+			deployment = &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					UID:       uid,
+				},
+				Spec: appsv1.DeploymentSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: labels,
+					},
+				},
+			}
+
+			replicaSet1 = &appsv1.ReplicaSet{ObjectMeta: metav1.ObjectMeta{
+				Name:              "replicaset1",
+				UID:               "replicaset1",
+				CreationTimestamp: metav1.Now(),
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       name,
+					UID:        uid,
+				}},
+			}}
+			replicaSet2 = &appsv1.ReplicaSet{ObjectMeta: metav1.ObjectMeta{
+				Name:              "replicaset2",
+				UID:               "replicaset2",
+				CreationTimestamp: metav1.Time{Time: time.Now().Add(+time.Hour)},
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: "apps/v1",
+					Kind:       "Deployment",
+					Name:       "other-deployment",
+					UID:        "other-uid",
+				}},
+			}}
+
+			pod1 = &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+				Name:              "pod1",
+				UID:               "pod1",
+				CreationTimestamp: metav1.Now(),
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: "apps/v1",
+					Kind:       "ReplicaSet",
+					Name:       replicaSet1.Name,
+					UID:        replicaSet1.UID,
+				}},
+			}}
+			pod2 = &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+				Name:              "pod2",
+				UID:               "pod2",
+				CreationTimestamp: metav1.Time{Time: time.Now().Add(+time.Hour)},
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: "apps/v1",
+					Kind:       "ReplicaSet",
+					Name:       replicaSet2.Name,
+					UID:        replicaSet2.UID,
+				}},
+			}}
+		)
+
+		It("should return an error because the newest ReplicaSet determination failed", func() {
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&appsv1.ReplicaSetList{}), listOptions...).Return(fakeErr)
+
+			pod, err := NewestPodForDeployment(ctx, c, deployment)
+			Expect(err).To(MatchError(fakeErr))
+			Expect(pod).To(BeNil())
+		})
+
+		It("should return nil because no replica set found", func() {
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&appsv1.ReplicaSetList{}), listOptions...)
+
+			pod, err := NewestPodForDeployment(ctx, c, deployment)
+			Expect(err).To(BeNil())
+			Expect(pod).To(BeNil())
+		})
+
+		It("should return an error because the newest pod determination failed", func() {
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&appsv1.ReplicaSetList{}), listOptions...).DoAndReturn(func(_ context.Context, list *appsv1.ReplicaSetList, _ ...client.ListOption) error {
+				*list = appsv1.ReplicaSetList{Items: []appsv1.ReplicaSet{*replicaSet1, *replicaSet2}}
+				return nil
+			})
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PodList{}), listOptions...).Return(fakeErr)
+
+			pod, err := NewestPodForDeployment(ctx, c, deployment)
+			Expect(err).To(MatchError(fakeErr))
+			Expect(pod).To(BeNil())
+		})
+
+		It("should return nil because no replica set found", func() {
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&appsv1.ReplicaSetList{}), listOptions...).DoAndReturn(func(_ context.Context, list *appsv1.ReplicaSetList, _ ...client.ListOption) error {
+				*list = appsv1.ReplicaSetList{Items: []appsv1.ReplicaSet{*replicaSet1, *replicaSet2}}
+				return nil
+			})
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PodList{}), listOptions...)
+
+			pod, err := NewestPodForDeployment(ctx, c, deployment)
+			Expect(err).To(BeNil())
+			Expect(pod).To(BeNil())
+		})
+
+		It("should return the newest pod", func() {
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&appsv1.ReplicaSetList{}), listOptions...).DoAndReturn(func(_ context.Context, list *appsv1.ReplicaSetList, _ ...client.ListOption) error {
+				*list = appsv1.ReplicaSetList{Items: []appsv1.ReplicaSet{*replicaSet1, *replicaSet2}}
+				return nil
+			})
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PodList{}), listOptions...).DoAndReturn(func(_ context.Context, list *corev1.PodList, _ ...client.ListOption) error {
+				*list = corev1.PodList{Items: []corev1.Pod{*pod1, *pod2}}
+				return nil
+			})
+
+			pod, err := NewestPodForDeployment(ctx, c, deployment)
+			Expect(err).To(BeNil())
+			Expect(pod).To(Equal(pod1))
+		})
+	})
+
+	Describe("#MostRecentCompleteLogs", func() {
+		var (
+			pods   *mockcorev1.MockPodInterface
+			body   *mockio.MockReadCloser
+			client *http.Client
+
+			pod           *corev1.Pod
+			podName       = "pod"
+			containerName = "container"
+		)
+
+		BeforeEach(func() {
+			pods = mockcorev1.NewMockPodInterface(ctrl)
+			body = mockio.NewMockReadCloser(ctrl)
+			client = fakerestclient.CreateHTTPClient(func(_ *http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusOK, Body: body}, nil
+			})
+
+			pod = &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: podName}}
+		})
+
+		It("should return an error if the log retrieval failed", func() {
+			gomock.InOrder(
+				pods.EXPECT().GetLogs(podName, gomock.AssignableToTypeOf(&corev1.PodLogOptions{})).Return(rest.NewRequestWithClient(&url.URL{}, "", rest.ClientContentConfig{}, client)),
+				body.EXPECT().Read(gomock.Any()).Return(0, fakeErr),
+				body.EXPECT().Close(),
+			)
+
+			actual, err := MostRecentCompleteLogs(ctx, pods, pod, containerName, nil)
+			Expect(err).To(MatchError(fakeErr))
+			Expect(actual).To(BeEmpty())
+		})
+
+		DescribeTable("#OwnedBy",
+			func(containerStatuses []corev1.ContainerStatus, containerName string, previous bool) {
+				var (
+					tailLines int64 = 1337
+					logs            = []byte("logs")
+				)
+
+				pod.Status.ContainerStatuses = containerStatuses
+
+				options := &corev1.PodLogOptions{
+					Container: containerName,
+					TailLines: &tailLines,
+					Previous:  previous,
+				}
+
+				gomock.InOrder(
+					pods.EXPECT().GetLogs(podName, options).Return(rest.NewRequestWithClient(&url.URL{}, "", rest.ClientContentConfig{}, client)),
+					body.EXPECT().Read(gomock.Any()).DoAndReturn(func(data []byte) (int, error) {
+						copy(data, logs)
+						return len(logs), io.EOF
+					}),
+					body.EXPECT().Close(),
+				)
+
+				actual, err := MostRecentCompleteLogs(ctx, pods, pod, containerName, &tailLines)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).To(Equal(string(logs)))
+			},
+
+			Entry("w/o container name, logs of current  container", []corev1.ContainerStatus{{State: corev1.ContainerState{Waiting: &corev1.ContainerStateWaiting{}}}}, "", false),
+			Entry("w/o container name, logs of previous container", []corev1.ContainerStatus{{State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}}}, "", true),
+			Entry("w/  container name, logs of current  container", []corev1.ContainerStatus{{}, {Name: containerName, State: corev1.ContainerState{Waiting: &corev1.ContainerStateWaiting{}}}}, containerName, false),
+			Entry("w/  container name, logs of previous container", []corev1.ContainerStatus{{}, {Name: containerName, State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}}}, containerName, true),
+		)
 	})
 })

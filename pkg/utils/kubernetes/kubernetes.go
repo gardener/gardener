@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/sirupsen/logrus"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -35,7 +36,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // TruncateLabelValue truncates a string at 63 characters so it's suitable for a label value.
@@ -318,7 +321,20 @@ func ReconcileServicePorts(existingPorts []corev1.ServicePort, desiredPorts []co
 }
 
 func buildEventsErrorMessage(events []corev1.Event) string {
-	sort.Sort(SortableEvents(events))
+	sortByLastTimestamp := func(o1, o2 controllerutil.Object) bool {
+		obj1, ok1 := o1.(*corev1.Event)
+		obj2, ok2 := o2.(*corev1.Event)
+
+		if !ok1 || !ok2 {
+			return false
+		}
+
+		return obj1.LastTimestamp.Time.Before(obj2.LastTimestamp.Time)
+	}
+
+	list := &corev1.EventList{Items: events}
+	SortBy(sortByLastTimestamp).Sort(list)
+	events = list.Items
 
 	const eventsLimit = 2
 	if len(events) > eventsLimit {
@@ -382,4 +398,149 @@ func MergeOwnerReferences(references []metav1.OwnerReference, newReferences ...m
 	}
 
 	return references
+}
+
+// OwnedBy checks if the given object's owner reference contains an entry with the provided attributes.
+func OwnedBy(obj runtime.Object, apiVersion, kind, name string, uid types.UID) bool {
+	acc, err := meta.Accessor(obj)
+	if err != nil {
+		return false
+	}
+
+	for _, ownerReference := range acc.GetOwnerReferences() {
+		return ownerReference.APIVersion == apiVersion &&
+			ownerReference.Kind == kind &&
+			ownerReference.Name == name &&
+			ownerReference.UID == uid
+	}
+
+	return false
+}
+
+// NewestObject returns the most recently created object based on the provided list object type. If a filter function
+// is provided then it will be applied for each object right after listing all objects. If no object remains then nil
+// is returned. The Items field in the list object will be populated with the result returned from the server after
+// applying the filter function (if provided).
+func NewestObject(ctx context.Context, c client.Client, listObj runtime.Object, filterFn func(runtime.Object) bool, listOpts ...client.ListOption) (runtime.Object, error) {
+	if !meta.IsListType(listObj) {
+		return nil, fmt.Errorf("provided <listObj> is not a List type")
+	}
+
+	if err := c.List(ctx, listObj, listOpts...); err != nil {
+		return nil, err
+	}
+
+	if filterFn != nil {
+		var items []runtime.Object
+
+		if err := meta.EachListItem(listObj, func(obj runtime.Object) error {
+			if filterFn(obj) {
+				items = append(items, obj)
+			}
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+
+		if err := meta.SetList(listObj, items); err != nil {
+			return nil, err
+		}
+	}
+
+	if meta.LenList(listObj) == 0 {
+		return nil, nil
+	}
+
+	ByCreationTimestamp().Sort(listObj)
+
+	items, err := meta.ExtractList(listObj)
+	if err != nil {
+		return nil, err
+	}
+
+	return items[meta.LenList(listObj)-1], nil
+}
+
+// NewestPodForDeployment returns the most recently created Pod object for the given deployment.
+func NewestPodForDeployment(ctx context.Context, c client.Client, deployment *appsv1.Deployment) (*corev1.Pod, error) {
+	listOpts := []client.ListOption{client.InNamespace(deployment.Namespace)}
+	if deployment.Spec.Selector != nil {
+		listOpts = append(listOpts, client.MatchingLabels(deployment.Spec.Selector.MatchLabels))
+	}
+
+	replicaSet, err := NewestObject(
+		ctx,
+		c,
+		&appsv1.ReplicaSetList{},
+		func(obj runtime.Object) bool {
+			return OwnedBy(obj, appsv1.SchemeGroupVersion.String(), "Deployment", deployment.Name, deployment.UID)
+		},
+		listOpts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if replicaSet == nil {
+		return nil, nil
+	}
+
+	newestReplicaSet, ok := replicaSet.(*appsv1.ReplicaSet)
+	if !ok {
+		return nil, fmt.Errorf("object is not of type *appsv1.ReplicaSet but %T", replicaSet)
+	}
+
+	pod, err := NewestObject(
+		ctx,
+		c,
+		&corev1.PodList{},
+		func(obj runtime.Object) bool {
+			return OwnedBy(obj, appsv1.SchemeGroupVersion.String(), "ReplicaSet", newestReplicaSet.Name, newestReplicaSet.UID)
+		},
+		listOpts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if pod == nil {
+		return nil, nil
+	}
+
+	newestPod, ok := pod.(*corev1.Pod)
+	if !ok {
+		return nil, fmt.Errorf("object is not of type *corev1.Pod but %T", pod)
+	}
+
+	return newestPod, nil
+}
+
+// MostRecentCompleteLogs returns the logs of the pod/container in case it is not running. If the pod/container is
+// running then the logs of the previous pod/container are being returned.
+func MostRecentCompleteLogs(
+	ctx context.Context,
+	podInterface corev1client.PodInterface,
+	pod *corev1.Pod,
+	containerName string,
+	tailLines *int64,
+) (
+	string,
+	error,
+) {
+	previousLogs := false
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerName == "" || containerStatus.Name == containerName {
+			previousLogs = containerStatus.State.Running != nil
+			break
+		}
+	}
+
+	logs, err := kubernetes.GetPodLogs(ctx, podInterface, pod.Name, &corev1.PodLogOptions{
+		Container: containerName,
+		TailLines: tailLines,
+		Previous:  previousLogs,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return string(logs), nil
 }
