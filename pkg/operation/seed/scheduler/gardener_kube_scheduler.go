@@ -92,7 +92,7 @@ func New(
 	}
 
 	if webhookClientConfig == nil {
-		return nil, errors.New("webhookClient is required")
+		return nil, errors.New("webhookClientConfig is required")
 	}
 
 	s := &kubeScheduler{

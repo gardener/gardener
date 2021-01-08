@@ -20,20 +20,20 @@ import (
 )
 
 var (
-	versionConstraintEqual1_18 *semver.Constraints
-	versionConstraintEqual1_19 *semver.Constraints
-	versionConstraintEqual1_20 *semver.Constraints
+	versionConstraintEqual118 *semver.Constraints
+	versionConstraintEqual119 *semver.Constraints
+	versionConstraintEqual120 *semver.Constraints
 )
 
 func init() {
 	var err error
 
-	versionConstraintEqual1_18, err = semver.NewConstraint("1.18.x")
+	versionConstraintEqual118, err = semver.NewConstraint("1.18.x")
 	utilruntime.Must(err)
 
-	versionConstraintEqual1_19, err = semver.NewConstraint("1.19.x")
+	versionConstraintEqual119, err = semver.NewConstraint("1.19.x")
 	utilruntime.Must(err)
 
-	versionConstraintEqual1_20, err = semver.NewConstraint("1.20.x")
+	versionConstraintEqual120, err = semver.NewConstraint("1.20.x")
 	utilruntime.Must(err)
 }

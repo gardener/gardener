@@ -33,7 +33,7 @@ func TestConfigurator(t *testing.T) {
 
 var _ = Describe("NewConfigurator", func() {
 	It("should not return nil", func() {
-		c, err := v20.NewConfigurator("test", &v1beta1.KubeSchedulerConfiguration{})
+		c, err := v20.NewConfigurator("baz", "test", &v1beta1.KubeSchedulerConfiguration{})
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c).NotTo(BeNil())
@@ -44,7 +44,7 @@ var _ = Describe("Config", func() {
 	var output, sha256 string
 
 	JustBeforeEach(func() {
-		c, err := v20.NewConfigurator("test", &v1beta1.KubeSchedulerConfiguration{
+		c, err := v20.NewConfigurator("baz", "test", &v1beta1.KubeSchedulerConfiguration{
 			Profiles: []v1beta1.KubeSchedulerProfile{
 				{
 					SchedulerName: pointer.StringPtr("test"),
@@ -73,7 +73,7 @@ leaderElection:
   leaseDuration: 15s
   renewDeadline: 10s
   resourceLock: leases
-  resourceName: kube-scheduler
+  resourceName: baz
   resourceNamespace: test
   retryPeriod: 2s
 profiles:
@@ -82,6 +82,6 @@ profiles:
 	})
 
 	It("returns correct hash", func() {
-		Expect(sha256).To(Equal("e3a9d797e9b5a7044504026878aac1105a641c97efd6a49aad65db1b070f78a6"))
+		Expect(sha256).To(Equal("634783602497915c897dedad1f4dc3f77d2f67484352f08469b46359658f1377"))
 	})
 })

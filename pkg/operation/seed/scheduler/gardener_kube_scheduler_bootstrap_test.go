@@ -232,7 +232,7 @@ leaderElection:
   leaseDuration: 15s
   renewDeadline: 10s
   resourceLock: leases
-  resourceName: kube-scheduler
+  resourceName: gardener-kube-scheduler
   resourceNamespace: gardener-kube-scheduler
   retryPeriod: 2s
 podInitialBackoffSeconds: null
@@ -260,7 +260,7 @@ leaderElection:
   leaseDuration: 15s
   renewDeadline: 10s
   resourceLock: leases
-  resourceName: kube-scheduler
+  resourceName: gardener-kube-scheduler
   resourceNamespace: gardener-kube-scheduler
   retryPeriod: 2s
 profiles:

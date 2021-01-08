@@ -35,8 +35,8 @@ type v20Configurator struct {
 	codec  serializer.CodecFactory
 }
 
-// NewConfigurator creates a Configurator for Kubernetes version 1.19.
-func NewConfigurator(namespace string, config *schedulerv20v1beta1.KubeSchedulerConfiguration) (configurator.Configurator, error) {
+// NewConfigurator creates a Configurator for Kubernetes version 1.20.
+func NewConfigurator(resourceName, namespace string, config *schedulerv20v1beta1.KubeSchedulerConfiguration) (configurator.Configurator, error) {
 	scheme := runtime.NewScheme()
 
 	if err := schedulerv20v1beta1.AddToScheme(scheme); err != nil {
@@ -48,7 +48,7 @@ func NewConfigurator(namespace string, config *schedulerv20v1beta1.KubeScheduler
 		RenewDeadline:     metav1.Duration{Duration: 10 * time.Second},
 		RetryPeriod:       metav1.Duration{Duration: 2 * time.Second},
 		ResourceLock:      "leases",
-		ResourceName:      "kube-scheduler",
+		ResourceName:      resourceName,
 		LeaderElect:       pointer.BoolPtr(true),
 		ResourceNamespace: namespace,
 	}

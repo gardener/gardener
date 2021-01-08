@@ -46,6 +46,11 @@ func Bootstrap(
 	component.DeployWaiter,
 	error,
 ) {
+	const (
+		namespace    = "gardener-kube-scheduler"
+		resourceName = namespace
+	)
+
 	if c == nil {
 		return nil, errors.New("client is required")
 	}
@@ -55,14 +60,13 @@ func Bootstrap(
 	}
 
 	if len(seedAdmissionControllerNamespace) == 0 {
-		return nil, errors.New("image is required")
+		return nil, errors.New("seedAdmissionControllerNamespace is required")
 	}
 
 	if seedVersion == nil {
 		return nil, errors.New("seedVersion is required")
 	}
 
-	const namespace = "gardener-kube-scheduler"
 	var (
 		config           = configurator.NoOp()
 		err              error
@@ -70,8 +74,8 @@ func Bootstrap(
 	)
 
 	switch {
-	case versionConstraintEqual1_18.Check(seedVersion):
-		config, err = schedulerconfigv18.NewConfigurator(namespace, &schedulerconfigv18v1alpha2.KubeSchedulerConfiguration{
+	case versionConstraintEqual118.Check(seedVersion):
+		config, err = schedulerconfigv18.NewConfigurator(resourceName, namespace, &schedulerconfigv18v1alpha2.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv18v1alpha2.KubeSchedulerProfile{{
 				SchedulerName: pointer.StringPtr(seedadmissionpkg.GardenerShootControlPlaneSchedulerName),
 				Plugins: &schedulerconfigv18v1alpha2.Plugins{
@@ -87,8 +91,8 @@ func Bootstrap(
 				},
 			}},
 		})
-	case versionConstraintEqual1_19.Check(seedVersion):
-		config, err = schedulerconfigv19.NewConfigurator(namespace, &schedulerconfigv19v1beta1.KubeSchedulerConfiguration{
+	case versionConstraintEqual119.Check(seedVersion):
+		config, err = schedulerconfigv19.NewConfigurator(resourceName, namespace, &schedulerconfigv19v1beta1.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv19v1beta1.KubeSchedulerProfile{{
 				SchedulerName: pointer.StringPtr(seedadmissionpkg.GardenerShootControlPlaneSchedulerName),
 				Plugins: &schedulerconfigv19v1beta1.Plugins{
@@ -104,8 +108,8 @@ func Bootstrap(
 				},
 			}},
 		})
-	case versionConstraintEqual1_20.Check(seedVersion):
-		config, err = schedulerconfigv20.NewConfigurator(namespace, &schedulerconfigv20v1beta1.KubeSchedulerConfiguration{
+	case versionConstraintEqual120.Check(seedVersion):
+		config, err = schedulerconfigv20.NewConfigurator(resourceName, namespace, &schedulerconfigv20v1beta1.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv20v1beta1.KubeSchedulerProfile{{
 				SchedulerName: pointer.StringPtr(seedadmissionpkg.GardenerShootControlPlaneSchedulerName),
 				Plugins: &schedulerconfigv20v1beta1.Plugins{

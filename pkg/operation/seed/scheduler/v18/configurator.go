@@ -36,7 +36,7 @@ type v18Configurator struct {
 }
 
 // NewConfigurator creates a Configurator for Kubernetes version 1.18.
-func NewConfigurator(namespace string, config *schedulerv18v1alpha2.KubeSchedulerConfiguration) (configurator.Configurator, error) {
+func NewConfigurator(resourceName, namespace string, config *schedulerv18v1alpha2.KubeSchedulerConfiguration) (configurator.Configurator, error) {
 	scheme := runtime.NewScheme()
 
 	if err := schedulerv18v1alpha2.AddToScheme(scheme); err != nil {
@@ -48,7 +48,7 @@ func NewConfigurator(namespace string, config *schedulerv18v1alpha2.KubeSchedule
 		RenewDeadline:     metav1.Duration{Duration: 10 * time.Second},
 		RetryPeriod:       metav1.Duration{Duration: 2 * time.Second},
 		ResourceLock:      "leases",
-		ResourceName:      "kube-scheduler",
+		ResourceName:      resourceName,
 		LeaderElect:       pointer.BoolPtr(true),
 		ResourceNamespace: namespace,
 	}
