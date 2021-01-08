@@ -191,8 +191,8 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 
 // deployCertificates deploys CA and TLS certificates inside the garden namespace
 // It takes a map[string]*corev1.Secret object which contains secrets that have already been deployed inside that namespace to avoid duplication errors.
-func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret) (map[string]*corev1.Secret, error) {
-	_, certificateAuthorities, err := secretsutils.GenerateCertificateAuthorities(k8sSeedClient, existingSecretsMap, wantedCertificateAuthorities, v1beta1constants.GardenNamespace)
+func deployCertificates(ctx context.Context, seed *Seed, k8sSeedClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret) (map[string]*corev1.Secret, error) {
+	_, certificateAuthorities, err := secretsutils.GenerateCertificateAuthorities(ctx, k8sSeedClient, existingSecretsMap, wantedCertificateAuthorities, v1beta1constants.GardenNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -211,14 +211,14 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 	for name, secret := range existingSecretsMap {
 		_, ok := secret.Labels[renewedLabel]
 		if browserCerts.Has(name) && !ok {
-			if err := k8sSeedClient.Client().Delete(context.TODO(), secret); client.IgnoreNotFound(err) != nil {
+			if err := k8sSeedClient.Client().Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
 				return nil, err
 			}
 			delete(existingSecretsMap, name)
 		}
 	}
 
-	secrets, err := secretsutils.GenerateClusterSecrets(context.TODO(), k8sSeedClient, existingSecretsMap, wantedSecretsList, v1beta1constants.GardenNamespace)
+	secrets, err := secretsutils.GenerateClusterSecrets(ctx, k8sSeedClient, existingSecretsMap, wantedSecretsList, v1beta1constants.GardenNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +233,7 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 			}
 			secret.Labels[renewedLabel] = "true"
 
-			if err := k8sSeedClient.Client().Update(context.TODO(), secret); err != nil {
+			if err := k8sSeedClient.Client().Update(ctx, secret); err != nil {
 				return nil, err
 			}
 		}
@@ -488,7 +488,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		existingSecretsMap[secret.ObjectMeta.Name] = &secretObj
 	}
 
-	deployedSecretsMap, err := deployCertificates(seed, k8sSeedClient, existingSecretsMap)
+	deployedSecretsMap, err := deployCertificates(ctx, seed, k8sSeedClient, existingSecretsMap)
 	if err != nil {
 		return err
 	}

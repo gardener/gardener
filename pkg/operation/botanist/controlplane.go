@@ -698,7 +698,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 
 	foundDeployment := true
 	deployment := &appsv1.Deployment{}
-	if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil && !apierrors.IsNotFound(err) {
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	} else if apierrors.IsNotFound(err) {
 		foundDeployment = false
@@ -794,7 +794,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			}
 
 			if signingKeySecret := serviceAccountConfig.SigningKeySecret; signingKeySecret != nil {
-				signingKey, err := common.GetServiceAccountSigningKeySecret(context.TODO(), b.K8sGardenClient.Client(), b.Shoot.Info.Namespace, signingKeySecret.Name)
+				signingKey, err := common.GetServiceAccountSigningKeySecret(ctx, b.K8sGardenClient.Client(), b.Shoot.Info.Namespace, signingKeySecret.Name)
 				if err != nil {
 					return err
 				}
@@ -827,7 +827,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			apiServerConfig.AuditConfig.AuditPolicy != nil &&
 			apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil {
 
-			auditPolicy, err := b.getAuditPolicy(apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, b.Shoot.Info.Namespace)
+			auditPolicy, err := b.getAuditPolicy(ctx, apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, b.Shoot.Info.Namespace)
 			if err != nil {
 				// Ignore missing audit configuration on shoot deletion to prevent failing redeployments of the
 				// kube-apiserver in case the end-user deleted the configmap before/simultaneously to the shoot
@@ -919,9 +919,9 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, kubernetes.Values(values))
 }
 
-func (b *Botanist) getAuditPolicy(name, namespace string) (string, error) {
+func (b *Botanist) getAuditPolicy(ctx context.Context, name, namespace string) (string, error) {
 	auditPolicyCm := &corev1.ConfigMap{}
-	if err := b.K8sGardenClient.Client().Get(context.TODO(), kutil.Key(namespace, name), auditPolicyCm); err != nil {
+	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(namespace, name), auditPolicyCm); err != nil {
 		return "", err
 	}
 	auditPolicy, ok := auditPolicyCm.Data[auditPolicyConfigMapDataKey]

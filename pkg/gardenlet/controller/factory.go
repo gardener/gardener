@@ -133,7 +133,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	if secret, ok := secrets[common.GardenRoleInternalDomain]; ok {
 		shootList, err := f.k8sGardenCoreInformers.Core().V1beta1().Shoots().Lister().List(labels.Everything())
 		runtime.Must(err)
-		runtime.Must(garden.VerifyInternalDomainSecret(k8sGardenClient, len(shootList), secret))
+		runtime.Must(garden.VerifyInternalDomainSecret(ctx, k8sGardenClient, len(shootList), secret))
 	}
 
 	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(common.ChartPath, DefaultImageVector))

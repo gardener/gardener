@@ -272,7 +272,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
-	botanist, err := botanistpkg.New(operation)
+	botanist, err := botanistpkg.New(ctx, operation)
 	if err != nil {
 		shootLogger.Errorf("Failed to create a botanist object to perform the care operations: %s", err.Error())
 
