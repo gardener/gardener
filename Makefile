@@ -78,7 +78,7 @@ remote-garden-up:
 	@./hack/local-development/remote-garden/run-gardener-etcd $(REMOTE_GARDEN_LABEL)
 
 	# Open tunnels for accessing local gardener components from the remote cluster
-	@./hack/local-development/remote-garden/open-gardener-tunnels ip $(REMOTE_GARDEN_LABEL)
+	@./hack/local-development/remote-garden/open-gardener-tunnels $(REMOTE_GARDEN_LABEL)
 
 	# Now, run `make dev-setup` to setup config and certificates files for gardener's components and to register the gardener-apiserver.
 	# Finally, run `make start-apiserver,start-controller-manager,start-scheduler,start-gardenlet` to start the gardener components as usual.
