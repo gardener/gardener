@@ -54,7 +54,7 @@ var (
 	quotaExceededRegexp          = regexp.MustCompile(`(?i)(LimitExceeded|Quota|Throttling|Too many requests)`)
 	insufficientPrivilegesRegexp = regexp.MustCompile(`(?i)(AccessDenied|OperationNotAllowed|Error 403)`)
 	dependenciesRegexp           = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict|inactive billing state|ReadOnlyDisabledSubscription|is already being used|InUseSubnetCannotBeDeleted|VnetInUse|InUseRouteTableCannotBeDeleted|timeout while waiting for state to become|InvalidCidrBlock|already busy for|InsufficientFreeAddressesInSubnet|InternalServerError|RetryableError|Future#WaitForCompletion: context has been cancelled|internalerror|internal server error|A resource with the ID|VnetAddressSpaceCannotChangeDueToPeerings)`)
-	resourcesDepletedRegexp      = regexp.MustCompile(`(?i)(not available in the current hardware cluster|InsufficientInstanceCapacity|SkuNotAvailable|ZonalAllocationFailed)`)
+	resourcesDepletedRegexp      = regexp.MustCompile(`(?i)(not available in the current hardware cluster|InsufficientInstanceCapacity|SkuNotAvailable|ZonalAllocationFailed|out of stock)`)
 	configurationProblemRegexp   = regexp.MustCompile(`(?i)(AzureBastionSubnet|not supported in your requested Availability Zone|InvalidParameter|InvalidParameterValue|not found|notFound|NetcfgInvalidSubnet|InvalidSubnet|Invalid value|KubeletHasInsufficientMemory|KubeletHasDiskPressure|KubeletHasInsufficientPID|violates constraint|no attached internet gateway found|Your query returned no results|PrivateEndpointNetworkPoliciesCannotBeEnabledOnPrivateEndpointSubnet|invalid VPC attributes|PrivateLinkServiceNetworkPoliciesCannotBeEnabledOnPrivateLinkServiceSubnet)`)
 )
 
