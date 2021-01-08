@@ -146,23 +146,24 @@ More information: [Example Gardenlet Component Configuration](../../example/20-c
 
 ## Heartbeats
 
-Similar to how Kubernetes is meanwhile using `Lease` objects for node heart beats 
+Similar to how Kubernetes uses `Lease` objects for node heart beats 
 (see [KEP](https://github.com/kubernetes/enhancements/blob/master/keps/sig-node/0009-node-heartbeat.md)), 
 the gardenlet is using `Lease` objects for heart beats of the seed cluster.
-Every two seconds, the gardenlet is checking its connectivity 
-to the seed cluster and then it renews its lease.
-The status is reported in the `GardenletReady` condition in its `Seed` object list.
+Every two seconds, the gardenlet checks that the seed cluster's `/healthz` 
+endpoint returns HTTP status code 200. 
+If that is the case, the gardenlet renews the lease in the Garden cluster in the `gardener-system-seed-lease` namespace and updates 
+the `GardenletReady` condition in the `status.conditions` field of the `Seed` resource(s).
+
 Similarly to the `node-lifecycle-controller` inside the `kube-controller-manager`, 
 the `gardener-controller-manager` features a `seed-lifecycle-controller` that sets
-the `GardenletReady` condition to `Unknown` in case the gardenlet stops 
-sending its heartbeat signals.
+the `GardenletReady` condition to `Unknown` in case the gardenlet fails to renew the lease.
 As a consequence, the `gardener-scheduler` doesn’t consider this seed cluster for newly created shoot clusters anymore.
 
 ### `/healthz` Endpoint
 
 The gardenlet includes an HTTPS server that serves a `/healthz` endpoint. 
 It’s used as a liveness probe in the `Deployment` of the gardenlet.
-If the gardenlet fails trying to renew its lease, 
+If the gardenlet fails to renew its lease
 then the endpoint returns `500 Internal Server Error`, otherwise it returns `200 OK`.
 
 > ⚠️<br> In case the gardenlet is managing multiple seeds 
@@ -170,6 +171,14 @@ then the endpoint returns `500 Internal Server Error`, otherwise it returns `200
 > reports `500 Internal Server Error` if there is at least one seed 
 > for which it couldn’t renew its lease. Only if it can renew the lease 
 > for all seeds it reports `200 OK`.
+
+Please note, that the `/healthz` only indicates whether the gardenlet 
+could successfully probe the Seed's API server and renew the lease with 
+the Garden cluster.
+It does *not* show that the Gardener extension API server (with the Gardener resource groups)
+is available. 
+However, the Gardenlet is designed to withstand such connection outages and
+retries until the connection is reestablished.
 
 ## Shooted Seeds
 
