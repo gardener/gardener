@@ -400,7 +400,7 @@ func MergeOwnerReferences(references []metav1.OwnerReference, newReferences ...m
 	return references
 }
 
-// OwnedBy checks if the given object's owner reference contain an entry with the provided attributes.
+// OwnedBy checks if the given object's owner reference contains an entry with the provided attributes.
 func OwnedBy(obj runtime.Object, apiVersion, kind, name string, uid types.UID) bool {
 	acc, err := meta.Accessor(obj)
 	if err != nil {
