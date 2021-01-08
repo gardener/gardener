@@ -419,7 +419,8 @@ func OwnedBy(obj runtime.Object, apiVersion, kind, name string, uid types.UID) b
 
 // NewestObject returns the most recently created object based on the provided list object type. If a filter function
 // is provided then it will be applied for each object right after listing all objects. If no object remains then nil
-// is returned.
+// is returned. The Items field in the list object will be populated with the result returned from the server after
+// applying the filter function (if provided).
 func NewestObject(ctx context.Context, c client.Client, listObj runtime.Object, filterFn func(runtime.Object) bool, listOpts ...client.ListOption) (runtime.Object, error) {
 	if !meta.IsListType(listObj) {
 		return nil, fmt.Errorf("provided <listObj> is not a List type")
