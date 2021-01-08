@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	genericmutator "github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
+	context0 "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
 )
@@ -37,7 +37,7 @@ func (m *MockEnsurer) EXPECT() *MockEnsurerMockRecorder {
 }
 
 // EnsureCloudProviderSecret mocks base method.
-func (m *MockEnsurer) EnsureCloudProviderSecret(arg0 context.Context, arg1 genericmutator.EnsurerContext, arg2, arg3 *v1.Secret) error {
+func (m *MockEnsurer) EnsureCloudProviderSecret(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v1.Secret) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureCloudProviderSecret", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)

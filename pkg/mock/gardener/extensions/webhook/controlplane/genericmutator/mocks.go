@@ -10,7 +10,7 @@ import (
 
 	unit "github.com/coreos/go-systemd/v22/unit"
 	v1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	genericmutator "github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
+	context0 "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	v1alpha10 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/apps/v1"
@@ -42,7 +42,7 @@ func (m *MockEnsurer) EXPECT() *MockEnsurerMockRecorder {
 }
 
 // EnsureAdditionalFiles mocks base method.
-func (m *MockEnsurer) EnsureAdditionalFiles(arg0 context.Context, arg1 genericmutator.EnsurerContext, arg2, arg3 *[]v1alpha10.File) error {
+func (m *MockEnsurer) EnsureAdditionalFiles(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *[]v1alpha10.File) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureAdditionalFiles", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -56,7 +56,7 @@ func (mr *MockEnsurerMockRecorder) EnsureAdditionalFiles(arg0, arg1, arg2, arg3 
 }
 
 // EnsureAdditionalUnits mocks base method.
-func (m *MockEnsurer) EnsureAdditionalUnits(arg0 context.Context, arg1 genericmutator.EnsurerContext, arg2, arg3 *[]v1alpha10.Unit) error {
+func (m *MockEnsurer) EnsureAdditionalUnits(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *[]v1alpha10.Unit) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureAdditionalUnits", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -70,7 +70,7 @@ func (mr *MockEnsurerMockRecorder) EnsureAdditionalUnits(arg0, arg1, arg2, arg3 
 }
 
 // EnsureETCD mocks base method.
-func (m *MockEnsurer) EnsureETCD(arg0 context.Context, arg1 genericmutator.EnsurerContext, arg2, arg3 *v1alpha1.Etcd) error {
+func (m *MockEnsurer) EnsureETCD(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v1alpha1.Etcd) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureETCD", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -84,7 +84,7 @@ func (mr *MockEnsurerMockRecorder) EnsureETCD(arg0, arg1, arg2, arg3 interface{}
 }
 
 // EnsureKubeAPIServerDeployment mocks base method.
-func (m *MockEnsurer) EnsureKubeAPIServerDeployment(arg0 context.Context, arg1 genericmutator.EnsurerContext, arg2, arg3 *v1.Deployment) error {
+func (m *MockEnsurer) EnsureKubeAPIServerDeployment(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v1.Deployment) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureKubeAPIServerDeployment", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -98,7 +98,7 @@ func (mr *MockEnsurerMockRecorder) EnsureKubeAPIServerDeployment(arg0, arg1, arg
 }
 
 // EnsureKubeAPIServerService mocks base method.
-func (m *MockEnsurer) EnsureKubeAPIServerService(arg0 context.Context, arg1 genericmutator.EnsurerContext, arg2, arg3 *v10.Service) error {
+func (m *MockEnsurer) EnsureKubeAPIServerService(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v10.Service) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureKubeAPIServerService", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -112,7 +112,7 @@ func (mr *MockEnsurerMockRecorder) EnsureKubeAPIServerService(arg0, arg1, arg2, 
 }
 
 // EnsureKubeControllerManagerDeployment mocks base method.
-func (m *MockEnsurer) EnsureKubeControllerManagerDeployment(arg0 context.Context, arg1 genericmutator.EnsurerContext, arg2, arg3 *v1.Deployment) error {
+func (m *MockEnsurer) EnsureKubeControllerManagerDeployment(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v1.Deployment) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureKubeControllerManagerDeployment", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -126,7 +126,7 @@ func (mr *MockEnsurerMockRecorder) EnsureKubeControllerManagerDeployment(arg0, a
 }
 
 // EnsureKubeSchedulerDeployment mocks base method.
-func (m *MockEnsurer) EnsureKubeSchedulerDeployment(arg0 context.Context, arg1 genericmutator.EnsurerContext, arg2, arg3 *v1.Deployment) error {
+func (m *MockEnsurer) EnsureKubeSchedulerDeployment(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v1.Deployment) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureKubeSchedulerDeployment", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -140,7 +140,7 @@ func (mr *MockEnsurerMockRecorder) EnsureKubeSchedulerDeployment(arg0, arg1, arg
 }
 
 // EnsureKubeletCloudProviderConfig mocks base method.
-func (m *MockEnsurer) EnsureKubeletCloudProviderConfig(arg0 context.Context, arg1 genericmutator.EnsurerContext, arg2 *string, arg3 string) error {
+func (m *MockEnsurer) EnsureKubeletCloudProviderConfig(arg0 context.Context, arg1 context0.GardenContext, arg2 *string, arg3 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureKubeletCloudProviderConfig", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -154,7 +154,7 @@ func (mr *MockEnsurerMockRecorder) EnsureKubeletCloudProviderConfig(arg0, arg1, 
 }
 
 // EnsureKubeletConfiguration mocks base method.
-func (m *MockEnsurer) EnsureKubeletConfiguration(arg0 context.Context, arg1 genericmutator.EnsurerContext, arg2, arg3 *v1beta1.KubeletConfiguration) error {
+func (m *MockEnsurer) EnsureKubeletConfiguration(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v1beta1.KubeletConfiguration) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureKubeletConfiguration", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -168,7 +168,7 @@ func (mr *MockEnsurerMockRecorder) EnsureKubeletConfiguration(arg0, arg1, arg2, 
 }
 
 // EnsureKubeletServiceUnitOptions mocks base method.
-func (m *MockEnsurer) EnsureKubeletServiceUnitOptions(arg0 context.Context, arg1 genericmutator.EnsurerContext, arg2, arg3 []*unit.UnitOption) ([]*unit.UnitOption, error) {
+func (m *MockEnsurer) EnsureKubeletServiceUnitOptions(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 []*unit.UnitOption) ([]*unit.UnitOption, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureKubeletServiceUnitOptions", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]*unit.UnitOption)
@@ -183,7 +183,7 @@ func (mr *MockEnsurerMockRecorder) EnsureKubeletServiceUnitOptions(arg0, arg1, a
 }
 
 // EnsureKubernetesGeneralConfiguration mocks base method.
-func (m *MockEnsurer) EnsureKubernetesGeneralConfiguration(arg0 context.Context, arg1 genericmutator.EnsurerContext, arg2, arg3 *string) error {
+func (m *MockEnsurer) EnsureKubernetesGeneralConfiguration(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnsureKubernetesGeneralConfiguration", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -197,7 +197,7 @@ func (mr *MockEnsurerMockRecorder) EnsureKubernetesGeneralConfiguration(arg0, ar
 }
 
 // ShouldProvisionKubeletCloudProviderConfig mocks base method.
-func (m *MockEnsurer) ShouldProvisionKubeletCloudProviderConfig(arg0 context.Context, arg1 genericmutator.EnsurerContext) bool {
+func (m *MockEnsurer) ShouldProvisionKubeletCloudProviderConfig(arg0 context.Context, arg1 context0.GardenContext) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ShouldProvisionKubeletCloudProviderConfig", arg0, arg1)
 	ret0, _ := ret[0].(bool)

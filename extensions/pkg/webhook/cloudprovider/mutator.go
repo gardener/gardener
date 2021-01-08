@@ -19,8 +19,9 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
-	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"
+	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -32,7 +33,7 @@ import (
 
 // Ensurer ensures that the cloudprovider secret conforms to the provider requirements.
 type Ensurer interface {
-	EnsureCloudProviderSecret(ctx context.Context, etcx genericmutator.EnsurerContext, new, old *corev1.Secret) error
+	EnsureCloudProviderSecret(ctx context.Context, gctx gcontext.GardenContext, new, old *corev1.Secret) error
 }
 
 // NewMutator creates a new cloudprovider mutator.
@@ -97,7 +98,7 @@ func (m *mutator) Mutate(ctx context.Context, new, old runtime.Object) error {
 	if !ok {
 		return fmt.Errorf("could not cast runtime object to %q", "metav1.Object")
 	}
-	etcx := genericmutator.NewEnsurerContext(m.client, o)
+	etcx := gcontext.NewGardenContext(m.client, o)
 	webhook.LogMutation(m.logger, newSecret.Kind, newSecret.Namespace, newSecret.Name)
 	return m.ensurer.EnsureCloudProviderSecret(ctx, etcx, newSecret, oldSecret)
 }

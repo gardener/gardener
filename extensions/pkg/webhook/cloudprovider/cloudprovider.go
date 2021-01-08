@@ -18,6 +18,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -27,6 +28,7 @@ import (
 )
 
 const (
+	// WebhookName is the name of the webhook.
 	WebhookName = "cloudprovider"
 )
 
