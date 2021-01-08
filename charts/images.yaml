@@ -191,7 +191,7 @@ images:
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
-  tag: "0.8.0"
+  tag: "0.9.0"
 
 # Miscellaenous
 - name: busybox
