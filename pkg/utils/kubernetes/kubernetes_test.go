@@ -1058,6 +1058,7 @@ var _ = Describe("kubernetes", func() {
 			obj, err := NewestObject(ctx, c, podList, nil)
 			Expect(err).To(BeNil())
 			Expect(obj).To(Equal(obj2))
+			Expect(podList.Items).To(Equal([]corev1.Pod{*obj3, *obj1, *obj2}))
 		})
 
 		It("should return the newest object w/ filter func", func() {
@@ -1074,6 +1075,7 @@ var _ = Describe("kubernetes", func() {
 			obj, err := NewestObject(ctx, c, podList, filterFn)
 			Expect(err).To(BeNil())
 			Expect(obj).To(Equal(obj1))
+			Expect(podList.Items).To(Equal([]corev1.Pod{*obj3, *obj1}))
 		})
 	})
 
