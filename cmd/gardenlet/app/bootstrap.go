@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
@@ -65,9 +66,9 @@ func bootstrapKubeconfig(
 		return nil, "", "", nil
 	}
 
-	bootstrapClient, bootstrapRestConfig, err := bootstrap.CreateBootstrapClientFromKubeconfig(bootstrapKubeconfig)
+	clientSet, err := kubernetes.NewClientFromBytes(bootstrapKubeconfig)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("unable to create bootstrap client from bootstrap kubeconfig: %v", err)
+		return nil, "", "", fmt.Errorf("unable to bootstrap client from bootstrap kubeconfig: %w", err)
 	}
 
 	bootstrapTargetCluster := bootstraputil.GetTargetClusterName(config.SeedClientConnection)
@@ -75,5 +76,5 @@ func bootstrapKubeconfig(
 
 	logger.Info("Using provided bootstrap kubeconfig to request signed certificate.")
 
-	return bootstrap.RequestBootstrapKubeconfig(ctx, logger, seedClient, bootstrapClient, bootstrapRestConfig, config.GardenClientConnection, seedName, bootstrapTargetCluster)
+	return bootstrap.RequestBootstrapKubeconfig(ctx, logger, seedClient, clientSet.Kubernetes(), clientSet.RESTConfig(), config.GardenClientConnection, seedName, bootstrapTargetCluster)
 }

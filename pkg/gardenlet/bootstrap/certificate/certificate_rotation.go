@@ -206,10 +206,9 @@ func rotateCertificate(ctx context.Context, logger logrus.FieldLogger, clientMap
 	if err != nil {
 		return err
 	}
-	gardenCertClient := gardenClient.Kubernetes().CertificatesV1beta1()
 
 	// request new client certificate
-	certData, privateKeyData, _, err := RequestCertificate(ctx, logger, gardenCertClient, certificateSubject, dnsSANs, ipSANs)
+	certData, privateKeyData, _, err := RequestCertificate(ctx, logger, gardenClient.Kubernetes(), certificateSubject, dnsSANs, ipSANs)
 	if err != nil {
 		return err
 	}

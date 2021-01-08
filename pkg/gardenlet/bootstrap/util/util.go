@@ -22,11 +22,12 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	certificatesv1 "k8s.io/api/certificates/v1"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -90,7 +91,7 @@ func MarshalKubeconfigWithToken(config *rest.Config, token string) ([]byte, erro
 // regenerate every loop and we include usages which are not contained in the
 // CSR. This needs to be kept up to date as we add new fields to the node
 // certificates and with ensureCompatible.
-func DigestedName(publicKey interface{}, subject *pkix.Name, usages []certificatesv1beta1.KeyUsage) (string, error) {
+func DigestedName(publicKey interface{}, subject *pkix.Name, usages []certificatesv1.KeyUsage) (string, error) {
 	hash := sha512.New512_256()
 
 	// Here we make sure two different inputs can't write the same stream

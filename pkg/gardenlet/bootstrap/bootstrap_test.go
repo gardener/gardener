@@ -16,20 +16,12 @@ package bootstrap_test
 
 import (
 	"context"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap"
-	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	"github.com/gardener/gardener/pkg/logger"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -42,23 +34,35 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap"
+	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	"github.com/gardener/gardener/pkg/logger"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Bootstrap", func() {
 	var (
 		ctrl       *gomock.Controller
 		c          *mockclient.MockClient
-		ctx        = context.TODO()
+		ctx        context.Context
+		ctxCancel  context.CancelFunc
 		testLogger = logger.NewNopLogger()
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
+		ctx, ctxCancel = context.WithTimeout(context.Background(), 1*time.Minute)
 	})
 
 	AfterEach(func() {
 		ctrl.Finish()
+		ctxCancel()
 	})
 
 	Describe("#RequestBootstrapKubeconfig", func() {
@@ -70,28 +74,28 @@ var _ = Describe("Bootstrap", func() {
 
 			gardenClientConnection *config.GardenClientConnection
 
-			approvedCSR = certificatesv1beta1.CertificateSigningRequest{
+			approvedCSR = certificatesv1.CertificateSigningRequest{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "watched-csr",
 				},
-				Status: certificatesv1beta1.CertificateSigningRequestStatus{
-					Conditions: []certificatesv1beta1.CertificateSigningRequestCondition{
+				Status: certificatesv1.CertificateSigningRequestStatus{
+					Conditions: []certificatesv1.CertificateSigningRequestCondition{
 						{
-							Type: certificatesv1beta1.CertificateApproved,
+							Type: certificatesv1.CertificateApproved,
 						},
 					},
 					Certificate: []byte("my-cert"),
 				},
 			}
 
-			deniedCSR = certificatesv1beta1.CertificateSigningRequest{
+			deniedCSR = certificatesv1.CertificateSigningRequest{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "watched-csr",
 				},
-				Status: certificatesv1beta1.CertificateSigningRequestStatus{
-					Conditions: []certificatesv1beta1.CertificateSigningRequestCondition{
+				Status: certificatesv1.CertificateSigningRequestStatus{
+					Conditions: []certificatesv1.CertificateSigningRequestCondition{
 						{
-							Type: certificatesv1beta1.CertificateDenied,
+							Type: certificatesv1.CertificateDenied,
 						},
 					},
 				},
@@ -130,11 +134,11 @@ var _ = Describe("Bootstrap", func() {
 		})
 
 		It("should not return an error", func() {
-			bootstrapClient := fake.NewSimpleClientset(&approvedCSR).CertificatesV1beta1()
+			bootstrapClient := fake.NewSimpleClientset(&approvedCSR)
 
 			c.EXPECT().Get(ctx, kutil.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
 
-			c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj runtime.Object, _ ...client.UpdateOption) error {
+			c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) error {
 				secret, ok := obj.(*corev1.Secret)
 				Expect(ok).To(BeTrue())
 				Expect(secret.Name).To(Equal(gardenClientConnection.KubeconfigSecret.Name))
@@ -159,7 +163,7 @@ var _ = Describe("Bootstrap", func() {
 		})
 
 		It("should return an error - the CSR got denied", func() {
-			bootstrapClient := fake.NewSimpleClientset(&deniedCSR).CertificatesV1beta1()
+			bootstrapClient := fake.NewSimpleClientset(&deniedCSR)
 
 			_, _, _, err := RequestBootstrapKubeconfig(ctx, testLogger, seedClient, bootstrapClient, bootstrapClientConfig, gardenClientConnection, seedName, "my-cluster")
 			Expect(err).To(HaveOccurred())
@@ -174,7 +178,7 @@ var _ = Describe("Bootstrap", func() {
 
 		It("should return an error because the CSR was not found", func() {
 			c.EXPECT().
-				Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1beta1.CertificateSigningRequest{})).
+				Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
 				Return(apierrors.NewNotFound(schema.GroupResource{Resource: "CertificateSigningRequests"}, csrName))
 
 			Expect(DeleteBootstrapAuth(ctx, c, csrName, "")).NotTo(Succeed())
@@ -182,7 +186,7 @@ var _ = Describe("Bootstrap", func() {
 
 		It("should delete nothing because the username in the CSR does not match a known pattern", func() {
 			c.EXPECT().
-				Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1beta1.CertificateSigningRequest{})).
+				Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
 				Return(nil)
 
 			Expect(DeleteBootstrapAuth(ctx, c, csrName, "")).To(Succeed())
@@ -198,8 +202,8 @@ var _ = Describe("Bootstrap", func() {
 
 			gomock.InOrder(
 				c.EXPECT().
-					Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1beta1.CertificateSigningRequest{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1beta1.CertificateSigningRequest) error {
+					Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1.CertificateSigningRequest) error {
 						csr.Spec.Username = bootstrapTokenUserName
 						return nil
 					}),
@@ -224,8 +228,8 @@ var _ = Describe("Bootstrap", func() {
 
 			gomock.InOrder(
 				c.EXPECT().
-					Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1beta1.CertificateSigningRequest{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1beta1.CertificateSigningRequest) error {
+					Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1.CertificateSigningRequest) error {
 						csr.Spec.Username = serviceAccountUserName
 						return nil
 					}),
