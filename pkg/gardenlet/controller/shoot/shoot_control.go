@@ -468,14 +468,16 @@ func (c *Controller) reconcileShoot(logger *logrus.Entry, shoot *gardencorev1bet
 
 	// write UID to status when operation was created successfully once
 	if len(o.Shoot.Info.Status.UID) == 0 {
-		if _, err := kutil.TryUpdateShootStatus(ctx, gardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+		newShoot, err := kutil.TryUpdateShootStatus(ctx, gardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 			func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
 				shoot.Status.UID = shoot.UID
 				return shoot, nil
 			},
-		); err != nil {
+		)
+		if err != nil {
 			return reconcile.Result{}, err
 		}
+		o.Shoot.Info = newShoot
 	}
 
 	// At this point the reconciliation is allowed, hence, check if the seed is up-to-date, then sync the Cluster resource
