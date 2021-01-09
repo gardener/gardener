@@ -16,7 +16,6 @@ package secrets_test
 
 import (
 	"github.com/gardener/gardener/pkg/operation/common"
-	"golang.org/x/crypto/bcrypt"
 
 	. "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/onsi/ginkgo"
@@ -26,7 +25,7 @@ import (
 
 var _ = Describe("Basic Auth Secrets", func() {
 	Describe("Basic Auth Configuration", func() {
-		compareCurrentAndExpectedBasicAuth := func(current DataInterface, expected *BasicAuth, comparePasswords, hasBcryptPasswordHash bool) {
+		compareCurrentAndExpectedBasicAuth := func(current DataInterface, expected *BasicAuth, comparePasswords bool) {
 			basicAuth, ok := current.(*BasicAuth)
 			Expect(ok).To(BeTrue())
 
@@ -38,13 +37,6 @@ var _ = Describe("Basic Auth Secrets", func() {
 				Expect(basicAuth.Password).To(Equal(expected.Password))
 			} else {
 				Expect(basicAuth.Password).NotTo(Equal(""))
-			}
-
-			if hasBcryptPasswordHash {
-				err := bcrypt.CompareHashAndPassword([]byte(basicAuth.BcryptPasswordHash), []byte(basicAuth.Password))
-				Expect(err).NotTo(HaveOccurred())
-			} else {
-				Expect(basicAuth.BcryptPasswordHash).To(Equal(""))
 			}
 		}
 
@@ -67,11 +59,10 @@ var _ = Describe("Basic Auth Secrets", func() {
 			}
 
 			expectedBasicAuthObject = &BasicAuth{
-				Name:               common.BasicAuthSecretName,
-				Format:             BasicAuthFormatCSV,
-				Username:           "admin",
-				Password:           "foo",
-				BcryptPasswordHash: "",
+				Name:     common.BasicAuthSecretName,
+				Format:   BasicAuthFormatCSV,
+				Username: "admin",
+				Password: "foo",
 			}
 		})
 
@@ -79,13 +70,7 @@ var _ = Describe("Basic Auth Secrets", func() {
 			It("should properly generate Basic Auth Object", func() {
 				obj, err := basicAuthConfiguration.Generate()
 				Expect(err).NotTo(HaveOccurred())
-				compareCurrentAndExpectedBasicAuth(obj, expectedBasicAuthObject, false, false)
-			})
-			It("should properly generate Basic Auth Object with Bcrypt hashed password if specified in config", func() {
-				basicAuthConfiguration.BcryptPasswordHashRequest = true
-				obj, err := basicAuthConfiguration.Generate()
-				Expect(err).NotTo(HaveOccurred())
-				compareCurrentAndExpectedBasicAuth(obj, expectedBasicAuthObject, false, true)
+				compareCurrentAndExpectedBasicAuth(obj, expectedBasicAuthObject, false)
 			})
 		})
 
@@ -108,7 +93,7 @@ var _ = Describe("Basic Auth Secrets", func() {
 				obj, err := basicAuthConfiguration.GenerateFromInfoData(basicAuthInfoData)
 				Expect(err).NotTo(HaveOccurred())
 
-				compareCurrentAndExpectedBasicAuth(obj, expectedBasicAuthObject, false, false)
+				compareCurrentAndExpectedBasicAuth(obj, expectedBasicAuthObject, false)
 			})
 		})
 

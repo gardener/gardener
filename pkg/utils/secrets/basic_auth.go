@@ -21,8 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/infodata"
 	"k8s.io/apiserver/pkg/authentication/user"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 type formatType string
@@ -40,8 +38,6 @@ const (
 	DataKeyUserName = "username"
 	// DataKeyPassword is the key in a secret data holding the password.
 	DataKeyPassword = "password"
-	// DataKeyPasswordBcryptHash is the key in a secret data holding the bcrypt hash of the password.
-	DataKeyPasswordBcryptHash = "bcryptPasswordHash"
 )
 
 // BasicAuthSecretConfig contains the specification for a to-be-generated basic authentication secret.
@@ -49,9 +45,8 @@ type BasicAuthSecretConfig struct {
 	Name   string
 	Format formatType
 
-	Username                  string
-	PasswordLength            int
-	BcryptPasswordHashRequest bool
+	Username       string
+	PasswordLength int
 }
 
 // BasicAuth contains the username, the password, optionally hash of the password and the format for serializing the basic authentication
@@ -59,9 +54,8 @@ type BasicAuth struct {
 	Name   string
 	Format formatType
 
-	Username           string
-	Password           string
-	BcryptPasswordHash string
+	Username string
+	Password string
 }
 
 // GetName returns the name of the secret.
@@ -134,15 +128,6 @@ func (s *BasicAuthSecretConfig) generateWithPassword(password string) (*BasicAut
 		Password: password,
 	}
 
-	if s.BcryptPasswordHashRequest {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 16)
-		if err != nil {
-			return nil, err
-		}
-
-		basicAuth.BcryptPasswordHash = string(hashedPassword)
-	}
-
 	return basicAuth, nil
 }
 
@@ -154,10 +139,6 @@ func (b *BasicAuth) SecretData() map[string][]byte {
 	case BasicAuthFormatNormal:
 		data[DataKeyUserName] = []byte(b.Username)
 		data[DataKeyPassword] = []byte(b.Password)
-
-		if b.BcryptPasswordHash != "" {
-			data[DataKeyPasswordBcryptHash] = []byte(b.BcryptPasswordHash)
-		}
 
 		fallthrough
 
