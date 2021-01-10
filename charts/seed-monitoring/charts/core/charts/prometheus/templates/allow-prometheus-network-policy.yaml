@@ -39,14 +39,13 @@ spec:
         matchLabels:
           component: alertmanager
           role: monitoring
-          garden.sapcloud.io/role: monitoring
       namespaceSelector:
         matchLabels:
           role: garden
     - podSelector:
         matchLabels:
           app: vpa-exporter
-          garden.sapcloud.io/role: vpa
+          gardener.cloud/role: vpa
       namespaceSelector:
         matchLabels:
           role: garden
