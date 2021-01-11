@@ -121,7 +121,7 @@ type projectInUseChecker struct {
 }
 
 func (c *defaultStaleControl) ReconcileStaleProject(obj *gardencorev1beta1.Project, nowFunc func() metav1.Time) error {
-	if obj.Spec.Namespace == nil {
+	if obj.DeletionTimestamp != nil || obj.Spec.Namespace == nil {
 		return nil
 	}
 
