@@ -204,7 +204,7 @@ metadata:
   name: metrics-server
   namespace: kube-system
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   selector:
     matchLabels:
       k8s-app: metrics-server
@@ -294,7 +294,7 @@ metadata:
   name: metrics-server
   namespace: kube-system
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   selector:
     matchLabels:
       k8s-app: metrics-server

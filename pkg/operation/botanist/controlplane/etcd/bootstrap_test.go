@@ -216,7 +216,7 @@ metadata:
   namespace: ` + namespace + `
 spec:
   replicas: 1
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   selector:
     matchLabels:
       gardener.cloud/role: etcd-druid
@@ -258,7 +258,7 @@ metadata:
   namespace: ` + namespace + `
 spec:
   replicas: 1
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   selector:
     matchLabels:
       gardener.cloud/role: etcd-druid

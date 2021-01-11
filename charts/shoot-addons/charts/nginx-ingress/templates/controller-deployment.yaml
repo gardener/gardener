@@ -13,7 +13,7 @@ metadata:
   name: {{ template "nginx-ingress.controller.fullname" . }}
   namespace: kube-system
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   replicas: {{ .Values.controller.replicaCount }}
   selector:
     matchLabels:

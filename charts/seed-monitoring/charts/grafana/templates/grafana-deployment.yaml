@@ -9,7 +9,7 @@ metadata:
     component: grafana
     role: {{ .Values.role }}
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:

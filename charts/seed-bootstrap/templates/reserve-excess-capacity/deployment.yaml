@@ -8,7 +8,7 @@ metadata:
     app: kubernetes
     role: reserve-excess-capacity
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   replicas: {{ index .Values.replicas "reserve-excess-capacity" }}
   selector:
     matchLabels:

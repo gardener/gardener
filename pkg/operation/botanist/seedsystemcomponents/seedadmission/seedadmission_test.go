@@ -112,7 +112,7 @@ metadata:
   namespace: shoot--foo--bar
 spec:
   replicas: 3
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   selector:
     matchLabels:
       app: gardener

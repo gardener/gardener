@@ -209,7 +209,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             pointer.Int32Ptr(1),
-				RevisionHistoryLimit: pointer.Int32Ptr(0),
+				RevisionHistoryLimit: pointer.Int32Ptr(1),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: labels(),
 				},

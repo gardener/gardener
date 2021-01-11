@@ -8,7 +8,7 @@ metadata:
   namespace: garden
 spec:
   replicas: 3
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   selector:
     matchLabels:
       app: nginx-ingress

@@ -736,7 +736,7 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 					"tag":        tag,
 				},
 				"podAnnotations":                 gardenletAnnotations(shoot),
-				"revisionHistoryLimit":           0,
+				"revisionHistoryLimit":           1,
 				"vpa":                            true,
 				"imageVectorOverwrite":           imageVectorOverwrite,
 				"componentImageVectorOverwrites": componentImageVectorOverwrites,
