@@ -43,13 +43,12 @@ spec:
           command:
             - /proxy-agent
           args:
-            - --log-file=/var/log/konnectivity-agent/info.log
-            - --logtostderr=false
-            - --log-file-max-size=12
+            - --logtostderr=true
             - --ca-cert=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
             - --proxy-server-host={{ .Values.proxyHost }}
             - --proxy-server-port=8132
             - --service-account-token-path=/var/run/secrets/tokens/konnectivity-agent-token
+            - --v=2
           resources:
             requests:
               cpu: 100m
@@ -70,14 +69,9 @@ spec:
             initialDelaySeconds: 15
             timeoutSeconds: 15
           volumeMounts:
-            - name: konnectivity-agent-log
-              mountPath: /var/log/konnectivity-agent
-              readOnly: false
             - mountPath: /var/run/secrets/tokens
               name: konnectivity-agent-token
       volumes:
-        - name: konnectivity-agent-log
-          emptyDir: {}
         - name: konnectivity-agent-token
           projected:
             sources:

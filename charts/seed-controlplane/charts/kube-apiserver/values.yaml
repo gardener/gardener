@@ -5,7 +5,6 @@ securePort: 443
 konnectivityTunnel:
   enabled: true
   serverPort: 0
-  serverCount: 2
   agentPort: 8132
   adminPort: 8133
   healthPort: 8134
