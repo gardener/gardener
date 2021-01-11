@@ -54,9 +54,7 @@ require (
 	k8s.io/klog v1.0.0
 	k8s.io/kube-aggregator v0.18.10
 	k8s.io/kube-openapi v0.0.0-20200410145947-bcb3869e6f29 // release-1.18
-	k8s.io/kube-scheduler/v18 v18.0.0
-	k8s.io/kube-scheduler/v19 v19.0.0
-	k8s.io/kube-scheduler/v20 v20.0.0
+	k8s.io/kube-scheduler v0.18.10
 	k8s.io/kubelet v0.18.10
 	k8s.io/metrics v0.18.10
 	k8s.io/utils v0.0.0-20200619165400-6e3d28b6ed19
@@ -79,9 +77,6 @@ replace (
 	k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.18.10
 	k8s.io/kube-openapi => github.com/gardener/kube-openapi v0.0.0-20200831104310-b5db060350c7
-	k8s.io/kube-scheduler/v18 => ./third_party/kube-scheduler/v18 // update those modules as well when updating kubernetes version
-	k8s.io/kube-scheduler/v19 => ./third_party/kube-scheduler/v19 // update those modules as well when updating kubernetes version
-	k8s.io/kube-scheduler/v20 => ./third_party/kube-scheduler/v20 // update those modules as well when updating kubernetes version
 	sigs.k8s.io/controller-runtime => github.com/gardener/controller-runtime v0.6.3-gardener.1
 	sigs.k8s.io/structured-merge-diff/v3 => sigs.k8s.io/structured-merge-diff/v3 v3.0.1-0.20201124164700-f5fd4ea1e4c9
 )

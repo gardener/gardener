@@ -25,9 +25,9 @@ import (
 	schedulerconfigv20 "github.com/gardener/gardener/pkg/operation/seed/scheduler/v20"
 	seedadmissionpkg "github.com/gardener/gardener/pkg/seedadmission"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	schedulerconfigv18v1alpha2 "k8s.io/kube-scheduler/v18/v1alpha2"
-	schedulerconfigv19v1beta1 "k8s.io/kube-scheduler/v19/v1beta1"
-	schedulerconfigv20v1beta1 "k8s.io/kube-scheduler/v20/v1beta1"
+	schedulerconfigv18v1alpha2 "github.com/gardener/gardener/third_party/kube-scheduler/v18/v1alpha2"
+	schedulerconfigv19v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v19/v1beta1"
+	schedulerconfigv20v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v20/v1beta1"
 
 	"github.com/Masterminds/semver"
 	"github.com/pkg/errors"

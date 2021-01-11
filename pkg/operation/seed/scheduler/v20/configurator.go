@@ -21,7 +21,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation/seed/scheduler/configurator"
 	"github.com/gardener/gardener/pkg/utils"
-	schedulerv20v1beta1 "k8s.io/kube-scheduler/v20/v1beta1"
+	schedulerv20v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v20/v1beta1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

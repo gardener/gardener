@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	v18 "github.com/gardener/gardener/pkg/operation/seed/scheduler/v18"
-	"k8s.io/kube-scheduler/v18/v1alpha2"
+	"github.com/gardener/gardener/third_party/kube-scheduler/v18/v1alpha2"
 
 	"k8s.io/utils/pointer"
 
