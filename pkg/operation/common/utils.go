@@ -701,27 +701,6 @@ func GetSecretFromSecretRef(ctx context.Context, c client.Client, secretRef *cor
 	return secret, nil
 }
 
-// GetConfirmationDeletionAnnotation fetches the value for ConfirmationDeletion annotation.
-// If not present, it fallbacks to ConfirmationDeletionDeprecated.
-func GetConfirmationDeletionAnnotation(annotations map[string]string) (string, bool) {
-	return getDeprecatedAnnotation(annotations, ConfirmationDeletion, ConfirmationDeletionDeprecated)
-}
-
-// GetShootOperationAnnotation fetches the value for v1beta1constants.GardenerOperation annotation.
-// If not present, it fallbacks to ShootOperationDeprecated.
-func GetShootOperationAnnotation(annotations map[string]string) (string, bool) {
-	return getDeprecatedAnnotation(annotations, v1beta1constants.GardenerOperation, ShootOperationDeprecated)
-}
-
-func getDeprecatedAnnotation(annotations map[string]string, annotationKey, deprecatedAnnotationKey string) (string, bool) {
-	val, ok := annotations[annotationKey]
-	if !ok {
-		val, ok = annotations[deprecatedAnnotationKey]
-	}
-
-	return val, ok
-}
-
 // CheckIfDeletionIsConfirmed returns whether the deletion of an object is confirmed or not.
 func CheckIfDeletionIsConfirmed(obj metav1.Object) error {
 	annotations := obj.GetAnnotations()
@@ -729,8 +708,8 @@ func CheckIfDeletionIsConfirmed(obj metav1.Object) error {
 		return annotationRequiredError()
 	}
 
-	value, _ := GetConfirmationDeletionAnnotation(annotations)
-	if true, err := strconv.ParseBool(value); err != nil || !true {
+	value := annotations[ConfirmationDeletion]
+	if confirmed, err := strconv.ParseBool(value); err != nil || !confirmed {
 		return annotationRequiredError()
 	}
 	return nil

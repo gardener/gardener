@@ -474,56 +474,28 @@ var _ = Describe("common", func() {
 			Expect(CheckIfDeletionIsConfirmed(obj)).To(HaveOccurred())
 		})
 
-		Context("deprecated annotation", func() {
-			It("should prevent the deletion due annotation value != true", func() {
-				obj := &corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							ConfirmationDeletionDeprecated: "false",
-						},
+		It("should prevent the deletion due annotation value != true", func() {
+			obj := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						ConfirmationDeletion: "false",
 					},
-				}
+				},
+			}
 
-				Expect(CheckIfDeletionIsConfirmed(obj)).To(HaveOccurred())
-			})
-
-			It("should allow the deletion due annotation value == true", func() {
-				obj := &corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							ConfirmationDeletionDeprecated: "true",
-						},
-					},
-				}
-
-				Expect(CheckIfDeletionIsConfirmed(obj)).To(Succeed())
-			})
+			Expect(CheckIfDeletionIsConfirmed(obj)).To(HaveOccurred())
 		})
 
-		Context("non-deprecated annotation", func() {
-			It("should prevent the deletion due annotation value != true", func() {
-				obj := &corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							ConfirmationDeletion: "false",
-						},
+		It("should allow the deletion due annotation value == true", func() {
+			obj := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						ConfirmationDeletion: "true",
 					},
-				}
+				},
+			}
 
-				Expect(CheckIfDeletionIsConfirmed(obj)).To(HaveOccurred())
-			})
-
-			It("should allow the deletion due annotation value == true", func() {
-				obj := &corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							ConfirmationDeletion: "true",
-						},
-					},
-				}
-
-				Expect(CheckIfDeletionIsConfirmed(obj)).To(Succeed())
-			})
+			Expect(CheckIfDeletionIsConfirmed(obj)).To(Succeed())
 		})
 	})
 

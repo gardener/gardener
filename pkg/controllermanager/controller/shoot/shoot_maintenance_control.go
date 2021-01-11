@@ -301,7 +301,7 @@ func mustMaintainNow(shoot *gardencorev1beta1.Shoot) bool {
 }
 
 func hasMaintainNowAnnotation(shoot *gardencorev1beta1.Shoot) bool {
-	operation, ok := common.GetShootOperationAnnotation(shoot.Annotations)
+	operation, ok := shoot.Annotations[v1beta1constants.GardenerOperation]
 	return ok && operation == common.ShootOperationMaintain
 }
 

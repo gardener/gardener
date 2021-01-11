@@ -812,19 +812,15 @@ var _ = Describe("validator", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			DescribeTable("should allow adding the deletion confirmation",
-				func(annotation string) {
-					shoot.Annotations = make(map[string]string)
-					shoot.Annotations[annotation] = "true"
+			It("should allow adding the deletion confirmation", func() {
+				shoot.Annotations = make(map[string]string)
+				shoot.Annotations[common.ConfirmationDeletion] = "true"
 
-					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
-					err := admissionHandler.Admit(context.TODO(), attrs, nil)
-					Expect(err).ToNot(HaveOccurred())
-				},
-				Entry("deletion confirmation annotation", common.ConfirmationDeletion),
-				Entry("deprecated deletion confirmation annotation", common.ConfirmationDeletionDeprecated),
-			)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
 
 			It("should reject modifying the shoot spec when seed is marked for deletion", func() {
 				shoot.Spec.Region = "other-region"

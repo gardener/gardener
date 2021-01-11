@@ -85,12 +85,12 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 		switch lastOperation.State {
 		case core.LastOperationStateFailed:
 			// The shoot state is failed and the retry annotation is set.
-			if val, ok := common.GetShootOperationAnnotation(newShoot.Annotations); ok && val == common.ShootOperationRetry {
+			if val, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok && val == common.ShootOperationRetry {
 				mustIncrease = true
 			}
 		default:
 			// The shoot state is not failed and the reconcile or rotate-credentials annotation is set.
-			if val, ok := common.GetShootOperationAnnotation(newShoot.Annotations); ok {
+			if val, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok {
 				if val == common.ShootOperationReconcile {
 					mustIncrease = true
 				}
@@ -104,7 +104,6 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 
 		if mustIncrease {
 			delete(newShoot.Annotations, v1beta1constants.GardenerOperation)
-			delete(newShoot.Annotations, common.ShootOperationDeprecated)
 			return true
 		}
 	}
