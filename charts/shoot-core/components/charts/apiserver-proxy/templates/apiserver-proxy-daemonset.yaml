@@ -83,6 +83,8 @@ spec:
         imagePullPolicy: IfNotPresent
         command:
         - envoy
+        - --concurrency
+        - "2"
         - -c
         - /etc/apiserver-proxy/envoy.yaml
         securityContext:
