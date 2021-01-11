@@ -66,7 +66,7 @@ type TolerationRestriction struct {
 	readyFunc     admission.ReadyFunc
 
 	defaults  []core.Toleration
-	whitelist []core.Toleration
+	allowlist []core.Toleration
 }
 
 var (
@@ -80,7 +80,7 @@ func New(config *shoottolerationrestriction.Configuration) (*TolerationRestricti
 	return &TolerationRestriction{
 		Handler:   admission.NewHandler(admission.Create, admission.Update),
 		defaults:  config.Defaults,
-		whitelist: config.Whitelist,
+		allowlist: config.Whitelist,
 	}, nil
 }
 
@@ -180,7 +180,7 @@ func (t *TolerationRestriction) admitShoot(shoot *core.Shoot) error {
 	return nil
 }
 
-// Validate makes admissions decisions based on the project tolerations whitelist or global tolerations whitelist.
+// Validate makes admissions decisions based on the allowed project tolerations or globally allowed tolerations.
 func (t *TolerationRestriction) Validate(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
 	if err := t.waitUntilReady(a); err != nil {
 		return fmt.Errorf("err while waiting for ready %v", err)
@@ -221,13 +221,13 @@ func (t *TolerationRestriction) validateShoot(shoot, oldShoot *core.Shoot) error
 		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
 	}
 
-	whitelist := t.whitelist
+	allowlist := t.allowlist
 	if project.Spec.Tolerations != nil {
-		whitelist = append(whitelist, project.Spec.Tolerations.Whitelist...)
+		allowlist = append(allowlist, project.Spec.Tolerations.Whitelist...)
 	}
 
-	if errList := corevalidation.ValidateTolerationsAgainstWhitelist(tolerationsToValidate, whitelist, field.NewPath("spec", "tolerations")); len(errList) > 0 {
-		return fmt.Errorf("error while validating tolerations against whitelist: %+v", errList)
+	if errList := corevalidation.ValidateTolerationsAgainstAllowlist(tolerationsToValidate, allowlist, field.NewPath("spec", "tolerations")); len(errList) > 0 {
+		return fmt.Errorf("error while validating tolerations against allowlist: %+v", errList)
 	}
 	return nil
 }

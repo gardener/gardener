@@ -63,7 +63,7 @@ type ProjectSpec struct {
 	// Namespace is the name of the namespace that has been created for the Project object.
 	// A nil value means that Gardener will determine the name of the namespace.
 	Namespace *string
-	// Tolerations contains the default tolerations and a whitelist for taints on seed clusters.
+	// Tolerations contains the default tolerations and a list for allowed taints on seed clusters.
 	Tolerations *ProjectTolerations
 }
 

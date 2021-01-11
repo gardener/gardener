@@ -1288,7 +1288,7 @@ message Networking {
 message NginxIngress {
   optional Addon addon = 4;
 
-  // LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress
+  // LoadBalancerSourceRanges is list of allowed IP sources for NginxIngress
   // +optional
   repeated string loadBalancerSourceRanges = 1;
 

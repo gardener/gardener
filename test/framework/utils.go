@@ -158,26 +158,26 @@ func ParseFileAsWorkers(filepath string) ([]gardencorev1beta1.Worker, error) {
 }
 
 // TextValidation is a map of regular expression to description
-// that is used to validate texts based on white- or blacklisted regexps.
+// that is used to validate texts based on allowed or denied regexps.
 type TextValidation map[string]string
 
-// ValidateAsWhitelist validates that all whitelisted regular expressions
+// ValidateAsAllowlist validates that all allowed regular expressions
 // are in the given text.
-func (v *TextValidation) ValidateAsWhitelist(text []byte) error {
+func (v *TextValidation) ValidateAsAllowlist(text []byte) error {
 	return v.validate(text, func(matches [][]byte) error {
 		if len(matches) == 0 {
-			return errors.New("whitelisted RegExp not found")
+			return errors.New("allowed RegExp not found")
 		}
 		return nil
 	})
 }
 
-// ValidateAsBlacklist validates that no blacklisted regular expressions
+// ValidateAsDenylist validates that no denied regular expressions
 // are in the given text.
-func (v *TextValidation) ValidateAsBlacklist(text []byte) error {
+func (v *TextValidation) ValidateAsDenylist(text []byte) error {
 	return v.validate(text, func(matches [][]byte) error {
 		if len(matches) != 0 {
-			return errors.New("blacklisted RegExp found")
+			return errors.New("denied RegExp found")
 		}
 		return nil
 	})

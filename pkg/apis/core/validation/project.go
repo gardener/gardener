@@ -119,7 +119,7 @@ func ValidateProjectSpec(projectSpec *core.ProjectSpec, fldPath *field.Path) fie
 	if projectSpec.Tolerations != nil {
 		allErrs = append(allErrs, ValidateTolerations(projectSpec.Tolerations.Defaults, fldPath.Child("tolerations", "defaults"))...)
 		allErrs = append(allErrs, ValidateTolerations(projectSpec.Tolerations.Whitelist, fldPath.Child("tolerations", "whitelist"))...)
-		allErrs = append(allErrs, ValidateTolerationsAgainstWhitelist(projectSpec.Tolerations.Defaults, projectSpec.Tolerations.Whitelist, fldPath.Child("tolerations", "defaults"))...)
+		allErrs = append(allErrs, ValidateTolerationsAgainstAllowlist(projectSpec.Tolerations.Defaults, projectSpec.Tolerations.Whitelist, fldPath.Child("tolerations", "defaults"))...)
 	}
 
 	return allErrs
@@ -228,21 +228,21 @@ func ValidateTolerations(tolerations []core.Toleration, fldPath *field.Path) fie
 	return allErrs
 }
 
-// ValidateTolerationsAgainstWhitelist validates the given tolerations against the given whitelist.
-func ValidateTolerationsAgainstWhitelist(tolerations, whitelist []core.Toleration, fldPath *field.Path) field.ErrorList {
+// ValidateTolerationsAgainstAllowlist validates the given tolerations against the given allowlist.
+func ValidateTolerationsAgainstAllowlist(tolerations, allowlist []core.Toleration, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs            field.ErrorList
 		allowedTolerations = sets.NewString()
 	)
 
-	for _, toleration := range whitelist {
+	for _, toleration := range allowlist {
 		allowedTolerations.Insert(utils.IDForKeyWithOptionalValue(toleration.Key, toleration.Value))
 	}
 
 	for i, toleration := range tolerations {
 		id := utils.IDForKeyWithOptionalValue(toleration.Key, toleration.Value)
 		if !allowedTolerations.Has(utils.IDForKeyWithOptionalValue(toleration.Key, nil)) && !allowedTolerations.Has(id) {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i), fmt.Sprintf("whitelist only allows using these tolerations: %+v", allowedTolerations.UnsortedList())))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Index(i), fmt.Sprintf("only the following tolerations are allowed: %+v", allowedTolerations.UnsortedList())))
 		}
 	}
 

@@ -82,7 +82,7 @@ var _ = ginkgo.Describe("Operating system testing", func() {
 			ginkgo.By("Expect no segfault")
 
 			journalctlValidation := framework.TextValidation{"segfault": "expect no systemctl segfault"}
-			err = journalctlValidation.ValidateAsBlacklist(response)
+			err = journalctlValidation.ValidateAsDenylist(response)
 			framework.ExpectNoError(err)
 
 			ginkgo.By("Expect systemctl to respond")
