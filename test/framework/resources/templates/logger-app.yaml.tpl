@@ -51,3 +51,7 @@ spec:
 {{ else }}
           value: 0s
 {{- end }}
+      securityContext:
+        fsGroup: 65532
+        runAsUser: 65532
+        runAsNonRoot: true

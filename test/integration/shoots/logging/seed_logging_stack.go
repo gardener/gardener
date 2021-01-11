@@ -164,6 +164,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBitPriorityClass))
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBitClusterRole))
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBitClusterRoleBinding))
+		framework.ExpectNoError(f.RenderAndDeployTemplate(ctx, f.ShootClient, "fluent-bit-psp-clusterrolebinding.yaml", nil))
 
 		ginkgo.By("Deploy the fluent-bit DaemonSet")
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBitConfMap))
