@@ -9,6 +9,7 @@ PATH_CLOUDCONFIG_DOWNLOADER_SERVER="$DIR_CLOUDCONFIG_DOWNLOADER/credentials/serv
 PATH_CLOUDCONFIG_DOWNLOADER_CA_CERT="$DIR_CLOUDCONFIG_DOWNLOADER/credentials/ca.crt"
 PATH_CLOUDCONFIG="{{ .configFilePath }}"
 PATH_CLOUDCONFIG_OLD="${PATH_CLOUDCONFIG}.old"
+PATH_CHECKSUM="$DIR_CLOUDCONFIG_DOWNLOADER/downloaded_checksum"
 
 mkdir -p "$DIR_CLOUDCONFIG" "$DIR_KUBELET"
 
@@ -104,4 +105,12 @@ if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null; then
 fi
 
 rm "$PATH_CLOUDCONFIG"
+
+# Update checksum/cloud-config-data annotation on Node object if possible
+if [[ -f "$PATH_CHECKSUM" ]] && [[ -f "$DIR_KUBELET/kubeconfig-real" ]]; then
+  {{`NODE="$(/opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" get no -o go-template="{{ range \$i, \$item := .items }}{{ range \$j, \$address := \$item.status.addresses }}{{ if and (eq \$address.type \"Hostname\") (eq \$address.address \"$(hostname)\") }}{{ \$item.metadata.name }}{{ end }}{{ end }}{{ end }}")"`}}
+  if [[ ! -z "$NODE" ]]; then
+    /opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" annotate node "$NODE" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
+  fi
+fi
 {{- end}}
