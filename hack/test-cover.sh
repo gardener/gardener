@@ -19,7 +19,7 @@ source "$(dirname $0)/setup-envtest.sh"
 
 echo "> Test Cover"
 
-GO111MODULE=on ginkgo -cover -race -mod=vendor $@
+GO111MODULE=on ginkgo -cover -timeout=2m -race -mod=vendor $@
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 COVERPROFILE="$REPO_ROOT/test.coverprofile"
