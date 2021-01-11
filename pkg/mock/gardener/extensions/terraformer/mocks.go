@@ -266,6 +266,20 @@ func (mr *MockTerraformerMockRecorder) SetLogLevel(arg0 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLogLevel", reflect.TypeOf((*MockTerraformer)(nil).SetLogLevel), arg0)
 }
 
+// SetOwnerRef mocks base method.
+func (m *MockTerraformer) SetOwnerRef(arg0 *v10.OwnerReference) terraformer.Terraformer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetOwnerRef", arg0)
+	ret0, _ := ret[0].(terraformer.Terraformer)
+	return ret0
+}
+
+// SetOwnerRef indicates an expected call of SetOwnerRef.
+func (mr *MockTerraformerMockRecorder) SetOwnerRef(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOwnerRef", reflect.TypeOf((*MockTerraformer)(nil).SetOwnerRef), arg0)
+}
+
 // SetTerminationGracePeriodSeconds mocks base method.
 func (m *MockTerraformer) SetTerminationGracePeriodSeconds(arg0 int64) terraformer.Terraformer {
 	m.ctrl.T.Helper()
@@ -332,17 +346,17 @@ func (m *MockInitializer) EXPECT() *MockInitializerMockRecorder {
 }
 
 // Initialize mocks base method.
-func (m *MockInitializer) Initialize(arg0 context.Context, arg1 *terraformer.InitializerConfig) error {
+func (m *MockInitializer) Initialize(arg0 context.Context, arg1 *terraformer.InitializerConfig, arg2 *v10.OwnerReference) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Initialize", arg0, arg1)
+	ret := m.ctrl.Call(m, "Initialize", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Initialize indicates an expected call of Initialize.
-func (mr *MockInitializerMockRecorder) Initialize(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockInitializerMockRecorder) Initialize(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Initialize", reflect.TypeOf((*MockInitializer)(nil).Initialize), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Initialize", reflect.TypeOf((*MockInitializer)(nil).Initialize), arg0, arg1, arg2)
 }
 
 // MockFactory is a mock of Factory interface.
@@ -369,17 +383,17 @@ func (m *MockFactory) EXPECT() *MockFactoryMockRecorder {
 }
 
 // DefaultInitializer mocks base method.
-func (m *MockFactory) DefaultInitializer(arg0 client.Client, arg1, arg2 string, arg3 []byte, arg4 terraformer.StateConfigMapInitializer, arg5 *v10.OwnerReference) terraformer.Initializer {
+func (m *MockFactory) DefaultInitializer(arg0 client.Client, arg1, arg2 string, arg3 []byte, arg4 terraformer.StateConfigMapInitializer) terraformer.Initializer {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DefaultInitializer", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret := m.ctrl.Call(m, "DefaultInitializer", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(terraformer.Initializer)
 	return ret0
 }
 
 // DefaultInitializer indicates an expected call of DefaultInitializer.
-func (mr *MockFactoryMockRecorder) DefaultInitializer(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
+func (mr *MockFactoryMockRecorder) DefaultInitializer(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultInitializer", reflect.TypeOf((*MockFactory)(nil).DefaultInitializer), arg0, arg1, arg2, arg3, arg4, arg5)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultInitializer", reflect.TypeOf((*MockFactory)(nil).DefaultInitializer), arg0, arg1, arg2, arg3, arg4)
 }
 
 // New mocks base method.

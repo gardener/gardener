@@ -31,6 +31,7 @@ import (
 // * purpose is a one-word description depicting what the Terraformer does (e.g. 'infrastructure').
 // * namespace is the namespace in which the Terraformer will act.
 // * image is the Docker image name of the Terraformer image.
+// * ownerRef is the resource that owns the secrets and configmaps used by Terraformer
 // * configName is the name of the ConfigMap containing the main Terraform file ('main.tf').
 // * variablesName is the name of the Secret containing the Terraform variables ('terraform.tfvars').
 // * stateName is the name of the ConfigMap containing the Terraform state ('terraform.tfstate').
@@ -55,6 +56,7 @@ type terraformer struct {
 	name      string
 	namespace string
 	image     string
+	ownerRef  *metav1.OwnerReference
 
 	configName           string
 	variablesName        string
@@ -102,6 +104,7 @@ type Terraformer interface {
 	SetTerminationGracePeriodSeconds(int64) Terraformer
 	SetDeadlineCleaning(time.Duration) Terraformer
 	SetDeadlinePod(time.Duration) Terraformer
+	SetOwnerRef(*metav1.OwnerReference) Terraformer
 	InitializeWith(ctx context.Context, initializer Initializer) Terraformer
 	Apply(ctx context.Context) error
 	Destroy(ctx context.Context) error
@@ -118,14 +121,14 @@ type Terraformer interface {
 
 // Initializer can initialize a Terraformer.
 type Initializer interface {
-	Initialize(ctx context.Context, config *InitializerConfig) error
+	Initialize(ctx context.Context, config *InitializerConfig, ownerRef *metav1.OwnerReference) error
 }
 
 // Factory is a factory that can produce Terraformer and Initializer.
 type Factory interface {
 	NewForConfig(logger logr.Logger, config *rest.Config, purpose, namespace, name, image string) (Terraformer, error)
 	New(logger logr.Logger, client client.Client, coreV1Client corev1client.CoreV1Interface, purpose, namespace, name, image string) Terraformer
-	DefaultInitializer(c client.Client, main, variables string, tfVars []byte, stateInitializer StateConfigMapInitializer, ownerRef *metav1.OwnerReference) Initializer
+	DefaultInitializer(c client.Client, main, variables string, tfVars []byte, stateInitializer StateConfigMapInitializer) Initializer
 }
 
 // StateConfigMapInitializer initialize terraformer state ConfigMap

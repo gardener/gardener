@@ -369,13 +369,17 @@ var _ = Describe("terraformer", func() {
 					variablesNotFound = apierrors.NewNotFound(secretGroupResource, variablesName)
 
 					runInitializer = func(ctx context.Context, initializeState bool) error {
-						return DefaultInitializer(c, mainName, variablesName, tfVars, StateConfigMapInitializerFunc(CreateState), nil).Initialize(ctx, &InitializerConfig{
-							Namespace:         namespace,
-							ConfigurationName: configurationName,
-							VariablesName:     variablesName,
-							StateName:         stateName,
-							InitializeState:   initializeState,
-						})
+						return DefaultInitializer(c, mainName, variablesName, tfVars, StateConfigMapInitializerFunc(CreateState)).Initialize(
+							ctx,
+							&InitializerConfig{
+								Namespace:         namespace,
+								ConfigurationName: configurationName,
+								VariablesName:     variablesName,
+								StateName:         stateName,
+								InitializeState:   initializeState,
+							},
+							nil,
+						)
 					}
 				})
 
@@ -433,13 +437,17 @@ var _ = Describe("terraformer", func() {
 					stateNotFound = apierrors.NewNotFound(configMapGroupResource, stateName)
 
 					runInitializer = func(ctx context.Context, initializeState bool) error {
-						return DefaultInitializer(c, mainName, variablesName, tfVars, &CreateOrUpdateState{State: &state}, nil).Initialize(ctx, &InitializerConfig{
-							Namespace:         namespace,
-							ConfigurationName: configurationName,
-							VariablesName:     variablesName,
-							StateName:         stateName,
-							InitializeState:   initializeState,
-						})
+						return DefaultInitializer(c, mainName, variablesName, tfVars, &CreateOrUpdateState{State: &state}).Initialize(
+							ctx,
+							&InitializerConfig{
+								Namespace:         namespace,
+								ConfigurationName: configurationName,
+								VariablesName:     variablesName,
+								StateName:         stateName,
+								InitializeState:   initializeState,
+							},
+							nil,
+						)
 					}
 				})
 
