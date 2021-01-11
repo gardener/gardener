@@ -20,13 +20,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-
-	"github.com/gardener/gardener/pkg/utils/retry"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -34,13 +30,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/sirupsen/logrus"
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 func requiredConditionMissing(conditionType string) error {

@@ -33,7 +33,10 @@ import (
 
 var _ kubernetes.Interface = &ClientSet{}
 
+// ClientSet contains information to provide a fake implementation for tests.
 type ClientSet struct {
+	CheckForwardPodPortFn
+
 	applier         kubernetes.Applier
 	chartRenderer   chartrenderer.Interface
 	chartApplier    kubernetes.ChartApplier
@@ -151,7 +154,10 @@ func (c *ClientSet) ForwardPodPort(string, string, int, int) (chan struct{}, err
 	return nil, nil
 }
 
+// CheckForwardPodPortFn is a type alias for a function checking port forwarding for pods.
+type CheckForwardPodPortFn func(string, string, int, int) error
+
 // CheckForwardPodPort does nothing as the fake ClientSet does not support it.
-func (c *ClientSet) CheckForwardPodPort(string, string, int, int) error {
-	return nil
+func (f CheckForwardPodPortFn) CheckForwardPodPort(namespace, name string, src, dst int) error {
+	return f(namespace, name, src, dst)
 }
