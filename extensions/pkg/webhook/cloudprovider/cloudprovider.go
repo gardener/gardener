@@ -55,11 +55,8 @@ func New(mgr manager.Manager, args Args) (*webhook.Webhook, error) {
 	namespaceSelector := buildSelector(args.Provider)
 	logger.Info("Creating webhook")
 
-	var (
-		name = WebhookName
-	)
 	return &extensionswebhook.Webhook{
-		Name:     name,
+		Name:     WebhookName,
 		Target:   extensionswebhook.TargetSeed,
 		Provider: args.Provider,
 		Types:    types,
