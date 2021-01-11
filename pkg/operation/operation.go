@@ -410,7 +410,7 @@ func (o *Operation) CleanShootTaskErrorAndUpdateStatusLabel(ctx context.Context,
 			o.Shoot.Info.Status.LastErrors,
 			o.Shoot.Info.Status.Conditions...,
 		)))
-		if err := o.K8sGardenClient.DirectClient().Patch(ctx, o.Shoot.Info, client.MergeFrom(oldObj)); err != nil {
+		if err := o.K8sGardenClient.Client().Patch(ctx, o.Shoot.Info, client.MergeFrom(oldObj)); err != nil {
 			o.Logger.Errorf("Could not update shoot's %s/%s status label after removing an erroneous task: %v", o.Shoot.Info.Namespace, o.Shoot.Info.Name, err)
 			return
 		}

@@ -332,7 +332,7 @@ func (c *Controller) finalizeShootPrepareForMigration(ctx context.Context, garde
 
 	oldObj := o.Shoot.Info.DeepCopy()
 	controllerutils.RemoveAllTasks(o.Shoot.Info.Annotations)
-	if err := gardenClient.DirectClient().Patch(ctx, o.Shoot.Info, client.MergeFrom(oldObj)); err != nil {
+	if err := gardenClient.Client().Patch(ctx, o.Shoot.Info, client.MergeFrom(oldObj)); err != nil {
 		return reconcile.Result{}, err
 	}
 

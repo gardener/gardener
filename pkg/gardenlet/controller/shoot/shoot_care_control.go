@@ -385,7 +385,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		conditionEveryNodeReady,
 		conditionSystemComponentsHealthy,
 	)))
-	if err := gardenClient.DirectClient().Patch(ctx, shoot, client.MergeFrom(oldObj)); err != nil {
+	if err := gardenClient.Client().Patch(ctx, shoot, client.MergeFrom(oldObj)); err != nil {
 		botanist.Logger.Errorf("Could not update Shoot health label: %+v", err)
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}

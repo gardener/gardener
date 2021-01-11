@@ -696,7 +696,7 @@ func (c *Controller) updateShootStatusOperationError(ctx context.Context, garden
 
 	oldObj := newShoot.DeepCopy()
 	kutil.SetMetaDataLabel(&newShoot.ObjectMeta, common.ShootStatus, string(shootpkg.StatusUnhealthy))
-	if err := gardenClient.DirectClient().Patch(ctx, newShoot, client.MergeFrom(oldObj)); err != nil {
+	if err := gardenClient.Client().Patch(ctx, newShoot, client.MergeFrom(oldObj)); err != nil {
 		return nil, err
 	}
 

@@ -220,7 +220,7 @@ func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResource
 
 	oldObj := b.Shoot.Info.DeepCopy()
 	delete(b.Shoot.Info.Annotations, v1beta1constants.GardenerOperation)
-	return b.K8sGardenClient.DirectClient().Patch(ctx, b.Shoot.Info, client.MergeFrom(oldObj))
+	return b.K8sGardenClient.Client().Patch(ctx, b.Shoot.Info, client.MergeFrom(oldObj))
 }
 
 func (b *Botanist) deleteBasicAuthDependantSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {

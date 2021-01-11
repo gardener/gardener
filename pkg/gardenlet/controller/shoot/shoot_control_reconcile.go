@@ -511,5 +511,5 @@ func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generatio
 
 	oldObj := o.Shoot.Info.DeepCopy()
 	controllerutils.RemoveTasks(o.Shoot.Info.Annotations, tasksToRemove...)
-	return o.K8sGardenClient.DirectClient().Patch(ctx, o.Shoot.Info, client.MergeFrom(oldObj))
+	return o.K8sGardenClient.Client().Patch(ctx, o.Shoot.Info, client.MergeFrom(oldObj))
 }
