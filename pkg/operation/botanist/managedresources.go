@@ -20,11 +20,10 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/operation/common"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
-	k8sretry "k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -71,29 +70,19 @@ func (b *Botanist) waitUntilManagedResourceAreDeleted(ctx context.Context, listO
 	})
 }
 
-// KeepManagedResourcesObjects sets ManagedResource.Spec.KeepObjects to true.
-func (b *Botanist) KeepManagedResourcesObjects(ctx context.Context) error {
+// KeepObjectsForAllManagedResources sets ManagedResource.Spec.KeepObjects to true.
+func (b *Botanist) KeepObjectsForAllManagedResources(ctx context.Context) error {
 	managedResources := &resourcesv1alpha1.ManagedResourceList{}
-	if err := b.K8sSeedClient.Client().List(ctx,
-		managedResources,
-		client.InNamespace(b.Shoot.SeedNamespace),
-	); err != nil {
+	if err := b.K8sSeedClient.Client().List(ctx, managedResources, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
 		return fmt.Errorf("failed to list all managed resource, %v", err)
 	}
 
-	if len(managedResources.Items) == 0 {
-		return nil
-	}
-
 	for _, resource := range managedResources.Items {
-		if err := kutil.TryUpdate(ctx, k8sretry.DefaultBackoff, b.K8sSeedClient.DirectClient(), &resource, func() error {
-			keepObj := true
-			resource.Spec.KeepObjects = &keepObj
-			return nil
-		}); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("failed to update managed resource %q, %v", resource.GetName(), err)
+		if err := managedresources.KeepManagedResourceObjects(ctx, b.K8sSeedClient.DirectClient(), resource.Namespace, resource.Name, true); err != nil {
+			return err
 		}
 	}
+
 	return nil
 }
 

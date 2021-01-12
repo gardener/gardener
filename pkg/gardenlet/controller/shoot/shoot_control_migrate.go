@@ -230,7 +230,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		})
 		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
 			Name:         "Configuring Managed Resources objects to be kept in the Shoot",
-			Fn:           flow.TaskFn(botanist.KeepManagedResourcesObjects).DoIf(cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.KeepObjectsForAllManagedResources).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deleteAllExtensionCRs),
 		})
 		deleteAllManagedResourcesFromShootNamespace = g.Add(flow.Task{
