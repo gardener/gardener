@@ -19,19 +19,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	"github.com/gardener/gardener/pkg/apis/core"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardenlogger "github.com/gardener/gardener/pkg/logger"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation/common"
-	. "github.com/gardener/gardener/pkg/seedadmission"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"net/http"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	admissionv1 "k8s.io/api/admission/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -40,6 +32,17 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/gardener/gardener/pkg/apis/core"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenlogger "github.com/gardener/gardener/pkg/logger"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/operation/common"
+	. "github.com/gardener/gardener/pkg/seedadmission"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Extension CRDs", func() {
@@ -47,17 +50,29 @@ var _ = Describe("Extension CRDs", func() {
 		var (
 			ctx     = context.Background()
 			logger  = gardenlogger.NewNopLogger()
-			request *admissionv1.AdmissionRequest
+			request admission.Request
+			decoder *admission.Decoder
 
 			ctrl *gomock.Controller
 			c    *mockclient.MockClient
+
+			validator admission.Handler
 		)
 
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			c = mockclient.NewMockClient(ctrl)
 
-			request = &admissionv1.AdmissionRequest{}
+			request = admission.Request{}
+			request.Operation = admissionv1.Delete
+
+			var err error
+			decoder, err = admission.NewDecoder(kubernetes.SeedScheme)
+			Expect(err).NotTo(HaveOccurred())
+
+			validator = NewExtensionDeletionProtection(logger)
+			Expect(inject.ClientInto(c, validator)).To(BeTrue())
+			Expect(admission.InjectDecoderInto(decoder, validator)).To(BeTrue())
 		})
 
 		AfterEach(func() {
@@ -88,9 +103,30 @@ var _ = Describe("Extension CRDs", func() {
 			deletionConfirmedAnnotations = map[string]string{common.ConfirmationDeletion: "true"}
 		)
 
-		It("should ignore types other than CRDs + extension resources", func() {
-			request.Resource = fooResource
-			Expect(ValidateExtensionDeletion(ctx, nil, logger, request)).To(Succeed())
+		testDeletionUnconfirmed := func(ctx context.Context, request admission.Request, resource metav1.GroupVersionResource) {
+			request.Resource = resource
+			expectDenied(validator.Handle(ctx, request), ContainSubstring("annotation to delete"), resourceToId(resource))
+		}
+
+		testDeletionConfirmed := func(ctx context.Context, request admission.Request, resource metav1.GroupVersionResource) {
+			request.Resource = resource
+			expectAllowed(validator.Handle(ctx, request), Equal(""), resourceToId(resource))
+		}
+
+		Context("ignored requests", func() {
+			It("should ignore other operations than DELETE", func() {
+				request.Operation = admissionv1.Create
+				expectAllowed(validator.Handle(ctx, request), ContainSubstring("not DELETE"))
+				request.Operation = admissionv1.Update
+				expectAllowed(validator.Handle(ctx, request), ContainSubstring("not DELETE"))
+				request.Operation = admissionv1.Connect
+				expectAllowed(validator.Handle(ctx, request), ContainSubstring("not DELETE"))
+			})
+
+			It("should ignore types other than CRDs + extension resources", func() {
+				request.Resource = fooResource
+				expectAllowed(validator.Handle(ctx, request), ContainSubstring("resource is not deletion-protected"))
+			})
 		})
 
 		Context("old object is set", func() {
@@ -104,10 +140,7 @@ var _ = Describe("Extension CRDs", func() {
 				for _, resource := range resources {
 					request.Resource = resource
 					request.OldObject = runtime.RawExtension{Raw: []byte("foo")}
-
-					err := ValidateExtensionDeletion(ctx, nil, logger, request)
-					Expect(err).To(HaveOccurred(), resourceToId(resource))
-					Expect(err.Error()).To(ContainSubstring("invalid character"), resourceToId(resource))
+					expectErrored(validator.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), ContainSubstring("invalid character"), resourceToId(resource))
 				}
 			})
 
@@ -120,7 +153,7 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range crdResources {
 						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, nil)
 						request.OldObject = runtime.RawExtension{Raw: objJSON}
-						testDeletionConfirmed(ctx, nil, logger, request, resource)
+						testDeletionConfirmed(ctx, request, resource)
 					}
 				})
 
@@ -128,7 +161,7 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range crdResources {
 						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, deletionUnprotectedLabels, nil)
 						request.OldObject = runtime.RawExtension{Raw: objJSON}
-						testDeletionConfirmed(ctx, nil, logger, request, resource)
+						testDeletionConfirmed(ctx, request, resource)
 					}
 				})
 
@@ -136,7 +169,7 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range crdResources {
 						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, deletionProtectedLabels, nil)
 						request.OldObject = runtime.RawExtension{Raw: objJSON}
-						testDeletionUnconfirmed(ctx, nil, logger, request, resource)
+						testDeletionUnconfirmed(ctx, request, resource)
 					}
 				})
 
@@ -144,7 +177,7 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range crdResources {
 						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, deletionProtectedLabels, deletionConfirmedAnnotations)
 						request.OldObject = runtime.RawExtension{Raw: objJSON}
-						testDeletionConfirmed(ctx, nil, logger, request, resource)
+						testDeletionConfirmed(ctx, request, resource)
 					}
 				})
 			})
@@ -154,7 +187,7 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range otherResources {
 						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, nil)
 						request.OldObject = runtime.RawExtension{Raw: objJSON}
-						testDeletionUnconfirmed(ctx, nil, logger, request, resource)
+						testDeletionUnconfirmed(ctx, request, resource)
 					}
 				})
 
@@ -162,7 +195,7 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range otherResources {
 						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, deletionConfirmedAnnotations)
 						request.OldObject = runtime.RawExtension{Raw: objJSON}
-						testDeletionConfirmed(ctx, nil, logger, request, resource)
+						testDeletionConfirmed(ctx, request, resource)
 					}
 				})
 			})
@@ -180,9 +213,7 @@ var _ = Describe("Extension CRDs", func() {
 					request.Resource = resource
 					request.Object = runtime.RawExtension{Raw: []byte("foo")}
 
-					err := ValidateExtensionDeletion(ctx, nil, logger, request)
-					Expect(err).To(HaveOccurred(), resourceToId(resource))
-					Expect(err.Error()).To(ContainSubstring("invalid character"), resourceToId(resource))
+					expectErrored(validator.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), ContainSubstring("invalid character"), resourceToId(resource))
 				}
 			})
 
@@ -195,7 +226,7 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range crdResources {
 						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, nil)
 						request.Object = runtime.RawExtension{Raw: objJSON}
-						testDeletionConfirmed(ctx, nil, logger, request, resource)
+						testDeletionConfirmed(ctx, request, resource)
 					}
 				})
 
@@ -203,7 +234,7 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range crdResources {
 						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, deletionUnprotectedLabels, nil)
 						request.Object = runtime.RawExtension{Raw: objJSON}
-						testDeletionConfirmed(ctx, nil, logger, request, resource)
+						testDeletionConfirmed(ctx, request, resource)
 					}
 				})
 
@@ -211,7 +242,7 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range crdResources {
 						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, deletionProtectedLabels, nil)
 						request.Object = runtime.RawExtension{Raw: objJSON}
-						testDeletionUnconfirmed(ctx, nil, logger, request, resource)
+						testDeletionUnconfirmed(ctx, request, resource)
 					}
 				})
 
@@ -219,7 +250,7 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range crdResources {
 						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, deletionProtectedLabels, deletionConfirmedAnnotations)
 						request.Object = runtime.RawExtension{Raw: objJSON}
-						testDeletionConfirmed(ctx, nil, logger, request, resource)
+						testDeletionConfirmed(ctx, request, resource)
 					}
 				})
 			})
@@ -229,7 +260,7 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range otherResources {
 						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, nil)
 						request.Object = runtime.RawExtension{Raw: objJSON}
-						testDeletionUnconfirmed(ctx, nil, logger, request, resource)
+						testDeletionUnconfirmed(ctx, request, resource)
 					}
 				})
 
@@ -237,7 +268,7 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range otherResources {
 						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, deletionConfirmedAnnotations)
 						request.Object = runtime.RawExtension{Raw: objJSON}
-						testDeletionConfirmed(ctx, nil, logger, request, resource)
+						testDeletionConfirmed(ctx, request, resource)
 					}
 				})
 			})
@@ -253,27 +284,25 @@ var _ = Describe("Extension CRDs", func() {
 			It("should return an error because the GET call failed", func() {
 				for _, resource := range resources {
 					fakeErr := errors.New("fake")
-					prepareRequestAndObjectWithResource(request, obj, resource)
+					prepareRequestAndObjectWithResource(&request, obj, resource)
 					request.Resource = resource
 					request.Name = "foo"
 
-					c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), gomock.AssignableToTypeOf(&unstructured.Unstructured{})).Return(fakeErr)
+					c.EXPECT().Get(gomock.Any(), gomock.AssignableToTypeOf(client.ObjectKey{}), gomock.AssignableToTypeOf(&unstructured.Unstructured{})).Return(fakeErr)
 
-					err := ValidateExtensionDeletion(ctx, c, logger, request)
-					Expect(err).To(HaveOccurred(), resourceToId(resource))
-					Expect(err).To(Equal(err))
+					expectErrored(validator.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), Equal(fakeErr.Error()), resourceToId(resource))
 				}
 			})
 
 			It("should return no error because the GET call returned 'not found'", func() {
 				for _, resource := range resources {
-					prepareRequestAndObjectWithResource(request, obj, resource)
+					prepareRequestAndObjectWithResource(&request, obj, resource)
 					request.Resource = resource
 					request.Name = "foo"
 
-					c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), gomock.AssignableToTypeOf(&unstructured.Unstructured{})).Return(apierrors.NewNotFound(core.Resource(resource.Resource), "name"))
+					c.EXPECT().Get(gomock.Any(), gomock.AssignableToTypeOf(client.ObjectKey{}), gomock.AssignableToTypeOf(&unstructured.Unstructured{})).Return(apierrors.NewNotFound(core.Resource(resource.Resource), "name"))
 
-					Expect(ValidateExtensionDeletion(ctx, c, logger, request)).To(Succeed(), resourceToId(resource))
+					expectAllowed(validator.Handle(ctx, request), ContainSubstring("object was not found"), resourceToId(resource))
 				}
 			})
 
@@ -285,53 +314,53 @@ var _ = Describe("Extension CRDs", func() {
 
 				It("should admit the deletion because CRD has no protection label", func() {
 					for _, resource := range crdResources {
-						prepareRequestAndObjectWithResource(request, obj, resource)
+						prepareRequestAndObjectWithResource(&request, obj, resource)
 
-						c.EXPECT().Get(ctx, kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
+						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
 							prepareObjectWithLabelsAnnotations(o, resource, nil, nil)
 							return nil
 						})
 
-						testDeletionConfirmed(ctx, c, logger, request, resource)
+						testDeletionConfirmed(ctx, request, resource)
 					}
 				})
 
 				It("should admit the deletion because CRD's protection label is not true", func() {
 					for _, resource := range crdResources {
-						prepareRequestAndObjectWithResource(request, obj, resource)
+						prepareRequestAndObjectWithResource(&request, obj, resource)
 
-						c.EXPECT().Get(ctx, kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
+						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
 							prepareObjectWithLabelsAnnotations(o, resource, deletionUnprotectedLabels, nil)
 							return nil
 						})
 
-						testDeletionConfirmed(ctx, c, logger, request, resource)
+						testDeletionConfirmed(ctx, request, resource)
 					}
 				})
 
 				It("should prevent the deletion because CRD's protection label is true but deletion is not confirmed", func() {
 					for _, resource := range crdResources {
-						prepareRequestAndObjectWithResource(request, obj, resource)
+						prepareRequestAndObjectWithResource(&request, obj, resource)
 
-						c.EXPECT().Get(ctx, kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
+						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
 							prepareObjectWithLabelsAnnotations(o, resource, deletionProtectedLabels, nil)
 							return nil
 						})
 
-						testDeletionUnconfirmed(ctx, c, logger, request, resource)
+						testDeletionUnconfirmed(ctx, request, resource)
 					}
 				})
 
 				It("should admit the deletion because CRD's protection label is true and deletion is confirmed", func() {
 					for _, resource := range crdResources {
-						prepareRequestAndObjectWithResource(request, obj, resource)
+						prepareRequestAndObjectWithResource(&request, obj, resource)
 
-						c.EXPECT().Get(ctx, kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
+						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
 							prepareObjectWithLabelsAnnotations(o, resource, deletionProtectedLabels, deletionConfirmedAnnotations)
 							return nil
 						})
 
-						testDeletionConfirmed(ctx, c, logger, request, resource)
+						testDeletionConfirmed(ctx, request, resource)
 					}
 				})
 			})
@@ -344,27 +373,27 @@ var _ = Describe("Extension CRDs", func() {
 
 				It("should prevent the deletion because deletion is not confirmed", func() {
 					for _, resource := range otherResources {
-						prepareRequestAndObjectWithResource(request, obj, resource)
+						prepareRequestAndObjectWithResource(&request, obj, resource)
 
-						c.EXPECT().Get(ctx, kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
+						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
 							prepareObjectWithLabelsAnnotations(o, resource, nil, nil)
 							return nil
 						})
 
-						testDeletionUnconfirmed(ctx, c, logger, request, resource)
+						testDeletionUnconfirmed(ctx, request, resource)
 					}
 				})
 
 				It("should admit the deletion because deletion is confirmed", func() {
 					for _, resource := range otherResources {
-						prepareRequestAndObjectWithResource(request, obj, resource)
+						prepareRequestAndObjectWithResource(&request, obj, resource)
 
-						c.EXPECT().Get(ctx, kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
+						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
 							prepareObjectWithLabelsAnnotations(o, resource, nil, deletionConfirmedAnnotations)
 							return nil
 						})
 
-						testDeletionConfirmed(ctx, c, logger, request, resource)
+						testDeletionConfirmed(ctx, request, resource)
 					}
 				})
 			})
@@ -381,27 +410,25 @@ var _ = Describe("Extension CRDs", func() {
 			It("should return an error because the LIST call failed", func() {
 				for _, resource := range resources {
 					fakeErr := errors.New("fake")
-					prepareRequestAndObjectWithResource(request, obj, resource)
+					prepareRequestAndObjectWithResource(&request, obj, resource)
 					request.Resource = resource
 					obj.SetKind("List")
 
-					c.EXPECT().List(ctx, obj, client.InNamespace(request.Namespace)).Return(fakeErr)
+					c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).Return(fakeErr)
 
-					err := ValidateExtensionDeletion(ctx, c, logger, request)
-					Expect(err).To(HaveOccurred(), resourceToId(resource))
-					Expect(err).To(Equal(err))
+					expectErrored(validator.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), Equal(fakeErr.Error()), resourceToId(resource))
 				}
 			})
 
 			It("should return no error because the LIST call returned 'not found'", func() {
 				for _, resource := range resources {
-					prepareRequestAndObjectWithResource(request, obj, resource)
+					prepareRequestAndObjectWithResource(&request, obj, resource)
 					request.Resource = resource
 					obj.SetKind("List")
 
-					c.EXPECT().List(ctx, obj, client.InNamespace(request.Namespace)).Return(apierrors.NewNotFound(core.Resource(resource.Resource), "name"))
+					c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).Return(apierrors.NewNotFound(core.Resource(resource.Resource), "name"))
 
-					Expect(ValidateExtensionDeletion(ctx, c, logger, request)).To(Succeed(), resourceToId(resource))
+					expectAllowed(validator.Handle(ctx, request), ContainSubstring("object was not found"), resourceToId(resource))
 				}
 			})
 
@@ -412,57 +439,57 @@ var _ = Describe("Extension CRDs", func() {
 
 				It("should admit the deletion because CRD has no protection label", func() {
 					for _, resource := range crdResources {
-						prepareRequestAndObjectWithResource(request, obj, resource)
+						prepareRequestAndObjectWithResource(&request, obj, resource)
 						obj.SetKind(obj.GetKind() + "List")
 
-						c.EXPECT().List(ctx, obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
+						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
 							prepareObjectWithLabelsAnnotations(o, resource, nil, nil)
 							return nil
 						})
 
-						testDeletionConfirmed(ctx, c, logger, request, resource)
+						testDeletionConfirmed(ctx, request, resource)
 					}
 				})
 
 				It("should admit the deletion because CRD's protection label is not true", func() {
 					for _, resource := range crdResources {
-						prepareRequestAndObjectWithResource(request, obj, resource)
+						prepareRequestAndObjectWithResource(&request, obj, resource)
 						obj.SetKind(obj.GetKind() + "List")
 
-						c.EXPECT().List(ctx, obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
+						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
 							prepareObjectWithLabelsAnnotations(o, resource, deletionUnprotectedLabels, nil)
 							return nil
 						})
 
-						testDeletionConfirmed(ctx, c, logger, request, resource)
+						testDeletionConfirmed(ctx, request, resource)
 					}
 				})
 
 				It("should prevent the deletion because CRD's protection label is true but deletion is not confirmed", func() {
 					for _, resource := range crdResources {
-						prepareRequestAndObjectWithResource(request, obj, resource)
+						prepareRequestAndObjectWithResource(&request, obj, resource)
 						obj.SetKind(obj.GetKind() + "List")
 
-						c.EXPECT().List(ctx, obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
+						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
 							prepareObjectWithLabelsAnnotations(o, resource, deletionProtectedLabels, nil)
 							return nil
 						})
 
-						testDeletionUnconfirmed(ctx, c, logger, request, resource)
+						testDeletionUnconfirmed(ctx, request, resource)
 					}
 				})
 
 				It("should admit the deletion because CRD's protection label is true and deletion is confirmed", func() {
 					for _, resource := range crdResources {
-						prepareRequestAndObjectWithResource(request, obj, resource)
+						prepareRequestAndObjectWithResource(&request, obj, resource)
 						obj.SetKind(obj.GetKind() + "List")
 
-						c.EXPECT().List(ctx, obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
+						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
 							prepareObjectWithLabelsAnnotations(o, resource, deletionProtectedLabels, deletionConfirmedAnnotations)
 							return nil
 						})
 
-						testDeletionConfirmed(ctx, c, logger, request, resource)
+						testDeletionConfirmed(ctx, request, resource)
 					}
 				})
 			})
@@ -474,29 +501,29 @@ var _ = Describe("Extension CRDs", func() {
 
 				It("should prevent the deletion because deletion is not confirmed", func() {
 					for _, resource := range otherResources {
-						prepareRequestAndObjectWithResource(request, obj, resource)
+						prepareRequestAndObjectWithResource(&request, obj, resource)
 						obj.SetKind(obj.GetKind() + "List")
 
-						c.EXPECT().List(ctx, obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
+						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
 							prepareObjectWithLabelsAnnotations(o, resource, nil, nil)
 							return nil
 						})
 
-						testDeletionUnconfirmed(ctx, c, logger, request, resource)
+						testDeletionUnconfirmed(ctx, request, resource)
 					}
 				})
 
 				It("should admit the deletion because deletion is confirmed", func() {
 					for _, resource := range otherResources {
-						prepareRequestAndObjectWithResource(request, obj, resource)
+						prepareRequestAndObjectWithResource(&request, obj, resource)
 						obj.SetKind(obj.GetKind() + "List")
 
-						c.EXPECT().List(ctx, obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
+						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
 							prepareObjectWithLabelsAnnotations(o, resource, nil, deletionConfirmedAnnotations)
 							return nil
 						})
 
-						testDeletionConfirmed(ctx, c, logger, request, resource)
+						testDeletionConfirmed(ctx, request, resource)
 					}
 				})
 			})
@@ -513,7 +540,7 @@ type unstructuredInterface interface {
 	SetKind(string)
 }
 
-func prepareRequestAndObjectWithResource(request *admissionv1.AdmissionRequest, obj unstructuredInterface, resource metav1.GroupVersionResource) {
+func prepareRequestAndObjectWithResource(request *admission.Request, obj unstructuredInterface, resource metav1.GroupVersionResource) {
 	request.Kind.Group = resource.Group
 	request.Kind.Version = resource.Version
 	obj.SetAPIVersion(request.Kind.Group + "/" + request.Kind.Version)
@@ -544,28 +571,4 @@ func getObjectJSONWithLabelsAnnotations(obj *unstructured.Unstructured, resource
 	Expect(err).NotTo(HaveOccurred())
 
 	return objJSON
-}
-
-func testDeletionUnconfirmed(
-	ctx context.Context,
-	c *mockclient.MockClient,
-	logger *logrus.Logger,
-	request *admissionv1.AdmissionRequest,
-	resource metav1.GroupVersionResource,
-) {
-	request.Resource = resource
-	err := ValidateExtensionDeletion(ctx, c, logger, request)
-	Expect(err).To(HaveOccurred(), resourceToId(resource))
-	Expect(err.Error()).To(ContainSubstring("annotation to delete"), resourceToId(resource))
-}
-
-func testDeletionConfirmed(
-	ctx context.Context,
-	c *mockclient.MockClient,
-	logger *logrus.Logger,
-	request *admissionv1.AdmissionRequest,
-	resource metav1.GroupVersionResource,
-) {
-	request.Resource = resource
-	Expect(ValidateExtensionDeletion(ctx, c, logger, request)).To(Succeed(), resourceToId(resource))
 }

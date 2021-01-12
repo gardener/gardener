@@ -23,13 +23,14 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -37,7 +38,8 @@ import (
 var _ = Describe("Utils", func() {
 	var (
 		ctx     = context.Background()
-		request *admissionv1.AdmissionRequest
+		request admission.Request
+		decoder *admission.Decoder
 
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
@@ -47,7 +49,11 @@ var _ = Describe("Utils", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 
-		request = &admissionv1.AdmissionRequest{}
+		request = admission.Request{}
+
+		var err error
+		decoder, err = admission.NewDecoder(kubernetes.SeedScheme)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterEach(func() {
@@ -55,7 +61,6 @@ var _ = Describe("Utils", func() {
 	})
 
 	Describe("#getRequestObject", func() {
-
 		resource := metav1.GroupVersionResource{Group: corev1.SchemeGroupVersion.Group, Version: corev1.SchemeGroupVersion.Version, Resource: "pods"}
 
 		Context("Old object is set", func() {
@@ -70,7 +75,7 @@ var _ = Describe("Utils", func() {
 			It("should return an error because the old object cannot be decoded", func() {
 				request.OldObject = runtime.RawExtension{Raw: []byte("foo")}
 
-				_, err := getRequestObject(ctx, c, request)
+				_, err := getRequestObject(ctx, c, decoder, request)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("invalid character"))
@@ -82,7 +87,7 @@ var _ = Describe("Utils", func() {
 
 				request.OldObject = runtime.RawExtension{Raw: objJSON}
 
-				result, err := getRequestObject(ctx, c, request)
+				result, err := getRequestObject(ctx, c, decoder, request)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal(resource.Resource))
 			})
@@ -100,7 +105,7 @@ var _ = Describe("Utils", func() {
 			It("should return an error because the new object cannot be decoded", func() {
 				request.Object = runtime.RawExtension{Raw: []byte("foo")}
 
-				_, err := getRequestObject(ctx, c, request)
+				_, err := getRequestObject(ctx, c, decoder, request)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("invalid character"))
@@ -112,7 +117,7 @@ var _ = Describe("Utils", func() {
 
 				request.Object = runtime.RawExtension{Raw: objJSON}
 
-				result, err := getRequestObject(ctx, c, request)
+				result, err := getRequestObject(ctx, c, decoder, request)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal(resource.Resource))
 			})
@@ -137,7 +142,7 @@ var _ = Describe("Utils", func() {
 
 				c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), gomock.AssignableToTypeOf(&unstructured.Unstructured{})).Return(fakeErr)
 
-				_, err := getRequestObject(ctx, c, request)
+				_, err := getRequestObject(ctx, c, decoder, request)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(err))
 			})
@@ -152,7 +157,7 @@ var _ = Describe("Utils", func() {
 					ob.SetKind(resource.Resource)
 					return nil
 				})
-				result, err := getRequestObject(ctx, c, request)
+				result, err := getRequestObject(ctx, c, decoder, request)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal(resource.Resource))
 			})
@@ -176,7 +181,7 @@ var _ = Describe("Utils", func() {
 
 				c.EXPECT().List(ctx, obj, client.InNamespace(request.Namespace)).Return(fakeErr)
 
-				_, err := getRequestObject(ctx, c, request)
+				_, err := getRequestObject(ctx, c, decoder, request)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(err))
 			})
@@ -191,7 +196,7 @@ var _ = Describe("Utils", func() {
 					ob.SetKind(request.Kind.Kind + "List")
 					return nil
 				})
-				result, err := getRequestObject(ctx, c, request)
+				result, err := getRequestObject(ctx, c, decoder, request)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal("List"))
 			})
