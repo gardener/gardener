@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	netpol "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -398,7 +399,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		}
 
 		// Konnectivity agent related values
-		konnectivityAgent, err := b.InjectShootShootImages(konnectivityAgentConfig, common.KonnectivityAgentImageName)
+		konnectivityAgent, err := b.InjectShootShootImages(konnectivityAgentConfig, konnectivity.AgentImageName)
 		if err != nil {
 			return nil, err
 		}

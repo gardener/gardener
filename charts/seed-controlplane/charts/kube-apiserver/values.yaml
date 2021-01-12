@@ -3,7 +3,7 @@ kubernetesVersion: 1.11.2
 priorityClassName: foo
 securePort: 443
 konnectivityTunnel:
-  enabled: true
+  enabled: false
   serverPort: 0
   agentPort: 8132
   adminPort: 8133

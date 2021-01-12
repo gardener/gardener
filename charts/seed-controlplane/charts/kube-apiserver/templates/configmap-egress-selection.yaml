@@ -14,8 +14,17 @@ data:
       connection:
         proxyProtocol: HTTPConnect
         transport:
+          {{- if .Values.sni.enabled }}
+          tcp:
+            url: https://konnectivity-server:9443
+            tlsConfig:
+              caBundle: /srv/kubernetes/ca/ca.crt
+              clientCert: /etc/srv/kubernetes/konnectivity-server-client-tls/tls.crt
+              clientKey: /etc/srv/kubernetes/konnectivity-server-client-tls/tls.key
+          {{- else }}
           uds:
             udsName: /etc/srv/kubernetes/konnectivity-server/konnectivity-server.socket
+          {{- end }}
     - name: {{ if semverCompare "< 1.20" .Values.kubernetesVersion }}master{{ else }}controlplane{{ end }}
       connection:
         proxyProtocol: Direct

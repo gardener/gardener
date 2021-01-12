@@ -167,9 +167,6 @@ const (
 	// KubeControllerManagerServerName is the name of the kube-controller-manager server.
 	KubeControllerManagerServerName = "kube-controller-manager-server"
 
-	// KonnectivityServerCertName is the name of the api-proxy konnectivity-server
-	KonnectivityServerCertName = "konnectivity-server"
-
 	// CoreDNSDeploymentName is the name of the coredns deployment.
 	CoreDNSDeploymentName = "coredns"
 
@@ -332,18 +329,6 @@ const (
 
 	// VPNSeedImageName is the name of the VPNSeed image.
 	VPNSeedImageName = "vpn-seed"
-
-	// KonnectivityServerImageName is the name of the konnectivity server image.
-	KonnectivityServerImageName = "konnectivity-server"
-
-	// KonnectivityServerUserName is the user name of the konnectivity server used for the token
-	KonnectivityServerUserName = "system:konnectivity-server"
-
-	// KonnectivityServerKubeconfig is the name of the konnectivity-server kubeconfig
-	KonnectivityServerKubeconfig = "konnectivity-server-kubeconfig"
-
-	// KonnectivityAgentImageName is the name of the konnectivity agent image.
-	KonnectivityAgentImageName = "konnectivity-agent"
 
 	// NodeExporterImageName is the name of the NodeExporter image.
 	NodeExporterImageName = "node-exporter"

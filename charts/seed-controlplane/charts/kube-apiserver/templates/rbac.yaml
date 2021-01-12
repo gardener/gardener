@@ -1,4 +1,4 @@
-{{- if .Values.konnectivityTunnel.enabled }}
+{{- if and .Values.konnectivityTunnel.enabled (not .Values.sni.enabled) }}
 apiVersion: {{ include "rbacversion" . }}
 kind: Role
 metadata:

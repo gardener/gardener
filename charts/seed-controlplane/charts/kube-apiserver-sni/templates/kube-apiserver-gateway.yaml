@@ -18,13 +18,3 @@ spec:
       protocol: TLS
     tls:
       mode: PASSTHROUGH
-{{- if .Values.enableKonnectivityTunnel }}
-  - hosts:
-{{ toYaml .Values.hosts | indent 4 }}
-    port:
-      number: 8132
-      name: tls-tunnel
-      protocol: TLS
-    tls:
-      mode: PASSTHROUGH
-{{- end }}

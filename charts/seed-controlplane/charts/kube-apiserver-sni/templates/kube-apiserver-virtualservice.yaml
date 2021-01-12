@@ -23,14 +23,3 @@ spec:
         host: {{ .Values.name }}.{{ .Release.Namespace }}.svc.cluster.local
         port:
           number: 443
-{{- if .Values.enableKonnectivityTunnel }}
-  - match:
-    - port: 8132
-      sniHosts:
-{{ toYaml .Values.hosts | indent 6 }}
-    route:
-    - destination:
-        host: {{ .Values.name }}.{{ .Release.Namespace }}.svc.cluster.local
-        port:
-          number: 8132
-{{- end }}
