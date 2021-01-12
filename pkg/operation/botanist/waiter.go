@@ -16,12 +16,10 @@ package botanist
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -262,29 +260,6 @@ func (b *Botanist) WaitUntilEndpointsDoNotContainPodIPs(ctx context.Context) err
 		}
 
 		return retry.Ok()
-	})
-}
-
-// WaitUntilBackupEntryInGardenReconciled waits until the backup entry within the garden cluster has
-// been reconciled.
-func (b *Botanist) WaitUntilBackupEntryInGardenReconciled(ctx context.Context) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 600*time.Second, func(ctx context.Context) (done bool, err error) {
-		be := &gardencorev1beta1.BackupEntry{}
-		if err := b.K8sGardenClient.DirectClient().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, common.GenerateBackupEntryName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)), be); err != nil {
-			return retry.SevereError(err)
-		}
-		if be.Status.LastOperation != nil {
-			if be.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
-				b.Logger.Info("Backup entry has been successfully reconciled.")
-				return retry.Ok()
-			}
-			if be.Status.LastOperation.State == gardencorev1beta1.LastOperationStateError {
-				b.Logger.Info("Backup entry has been reconciled with error.")
-				return retry.SevereError(errors.New(be.Status.LastError.Description))
-			}
-		}
-		b.Logger.Info("Waiting until the backup entry has been reconciled in the Garden cluster...")
-		return retry.MinorError(fmt.Errorf("backup entry %q has not yet been reconciled", be.Name))
 	})
 }
 
