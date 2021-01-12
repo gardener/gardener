@@ -47,12 +47,6 @@ const (
 	// allow deleting the resource (if the annotation is not set any DELETE request will be denied).
 	ConfirmationDeletion = "confirmation.gardener.cloud/deletion"
 
-	// ConfirmationDeletionDeprecated is an annotation on a Shoot resource whose value must be set to "true" in order to
-	// allow deleting the Shoot (if the annotation is not set any DELETE request will be denied).
-	//
-	// Deprecated: Use `ConfirmationDeletion` instead.
-	ConfirmationDeletionDeprecated = "confirmation.garden.sapcloud.io/deletion"
-
 	// ControllerManagerInternalConfigMapName is the name of the internal config map in which the Gardener controller
 	// manager stores its configuration.
 	ControllerManagerInternalConfigMapName = "gardener-controller-manager-internal-config"
@@ -255,11 +249,6 @@ const (
 
 	// ShootStatus is a constant for a label on a Shoot resource indicating that the Shoot's health.
 	ShootStatus = "shoot.gardener.cloud/status"
-
-	// ShootOperationDeprecated is a constant for an annotation on a Shoot in a failed state indicating that an operation shall be performed.
-	//
-	// Deprecated: Use `v1beta1constants.GardenerOperation` instead.
-	ShootOperationDeprecated = "shoot.garden.sapcloud.io/operation"
 
 	// ShootOperationMaintain is a constant for an annotation on a Shoot indicating that the Shoot maintenance shall be executed as soon as
 	// possible.
