@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"time"
