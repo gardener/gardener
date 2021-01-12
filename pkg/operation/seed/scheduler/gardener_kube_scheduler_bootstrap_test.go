@@ -76,10 +76,6 @@ var _ = Describe("Bootstrap", func() {
 			sched, err = Bootstrap(c, "", image, &semver.Version{})
 		})
 
-		It("when image is nil", func() {
-			sched, err = Bootstrap(c, "foo", nil, &semver.Version{})
-		})
-
 		It("when seed version is nil", func() {
 			sched, err = Bootstrap(c, "foo", image, nil)
 		})

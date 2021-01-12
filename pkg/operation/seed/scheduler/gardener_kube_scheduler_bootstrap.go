@@ -50,10 +50,6 @@ func Bootstrap(
 		return nil, errors.New("client is required")
 	}
 
-	if image == nil {
-		return nil, errors.New("image is required")
-	}
-
 	if len(seedAdmissionControllerNamespace) == 0 {
 		return nil, errors.New("seedAdmissionControllerNamespace is required")
 	}
@@ -131,7 +127,7 @@ func Bootstrap(
 	scheduler, err := New(
 		c,
 		Name,
-		image.String(),
+		image,
 		config,
 		&admissionregistrationv1beta1.WebhookClientConfig{
 			Service: &admissionregistrationv1beta1.ServiceReference{
