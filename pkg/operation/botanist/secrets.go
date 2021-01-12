@@ -28,12 +28,10 @@ import (
 	"github.com/gardener/gardener/pkg/operation/shootsecrets"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -219,11 +217,10 @@ func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResource
 		}
 		gardenerResourceDataList.Delete(secretName)
 	}
-	_, err := kutil.TryUpdateShootAnnotations(ctx, b.K8sGardenClient.GardenCore(), retry.DefaultRetry, b.Shoot.Info.ObjectMeta, func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
-		return shoot, nil
-	})
-	return err
+
+	oldObj := b.Shoot.Info.DeepCopy()
+	delete(b.Shoot.Info.Annotations, v1beta1constants.GardenerOperation)
+	return b.K8sGardenClient.Client().Patch(ctx, b.Shoot.Info, client.MergeFrom(oldObj))
 }
 
 func (b *Botanist) deleteBasicAuthDependantSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
