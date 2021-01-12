@@ -106,11 +106,26 @@ fi
 
 rm "$PATH_CLOUDCONFIG"
 
-# Update checksum/cloud-config-data annotation on Node object if possible
-if [[ -f "$PATH_CHECKSUM" ]] && [[ -f "$DIR_KUBELET/kubeconfig-real" ]]; then
-  {{`NODE="$(/opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" get no -o go-template="{{ range \$i, \$item := .items }}{{ range \$j, \$address := \$item.status.addresses }}{{ if and (eq \$address.type \"Hostname\") (eq \$address.address \"$(hostname)\") }}{{ \$item.metadata.name }}{{ end }}{{ end }}{{ end }}")"`}}
+ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-services"
+
+# Try to find Node object for this machine
+if [[ -f "$DIR_KUBELET/kubeconfig-real" ]]; then
+  {{`NODE="$(/opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" get node -o go-template="{{ range \$i, \$item := .items }}{{ range \$j, \$address := \$item.status.addresses }}{{ if and (eq \$address.type \"Hostname\") (eq \$address.address \"$(hostname)\") }}{{ \$item.metadata.name }}{{ if (index \$item.metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\") }} {{ index \$item.metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}{{ end }}{{ end }}{{ end }}")"`}}
+
   if [[ ! -z "$NODE" ]]; then
-    /opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" annotate node "$NODE" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
+    NODENAME="$(echo "$NODE" | awk '{print $1}')"
+    SYSTEMD_SERVICES_TO_RESTART="$(echo "$NODE" | awk '{print $2}')"
   fi
+
+  # Update checksum/cloud-config-data annotation on Node object if possible
+  if [[ ! -z "$NODENAME" ]] && [[ -f "$PATH_CHECKSUM" ]]; then
+    /opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" annotate node "$NODENAME" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
+  fi
+
+  # Restart systemd services if requested
+  for service in $(echo "$SYSTEMD_SERVICES_TO_RESTART" | sed "s/,/ /g"); do
+    echo "Restarting systemd service $service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
+    systemctl restart "$service"
+  done && /opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
 fi
 {{- end}}
