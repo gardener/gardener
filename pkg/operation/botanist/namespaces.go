@@ -16,15 +16,19 @@ package botanist
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/namespaces"
+	"github.com/gardener/gardener/pkg/utils/retry"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -80,6 +84,25 @@ func (b *Botanist) DeleteSeedNamespace(ctx context.Context) error {
 	}
 
 	return err
+}
+
+// WaitUntilSeedNamespaceDeleted waits until the namespace of the Shoot cluster within the Seed cluster is deleted.
+func (b *Botanist) WaitUntilSeedNamespaceDeleted(ctx context.Context) error {
+	return b.waitUntilNamespaceDeleted(ctx, b.Shoot.SeedNamespace)
+}
+
+// WaitUntilNamespaceDeleted waits until the <namespace> within the Seed cluster is deleted.
+func (b *Botanist) waitUntilNamespaceDeleted(ctx context.Context, namespace string) error {
+	return retry.UntilTimeout(ctx, 5*time.Second, 900*time.Second, func(ctx context.Context) (done bool, err error) {
+		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: namespace}, &corev1.Namespace{}); err != nil {
+			if apierrors.IsNotFound(err) {
+				return retry.Ok()
+			}
+			return retry.SevereError(err)
+		}
+		b.Logger.Infof("Waiting until the namespace '%s' has been cleaned up and deleted in the Seed cluster...", namespace)
+		return retry.MinorError(fmt.Errorf("namespace %q is not yet cleaned up", namespace))
+	})
 }
 
 // DefaultShootNamespaces returns a deployer for the shoot namespaces.
