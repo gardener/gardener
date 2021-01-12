@@ -46,6 +46,8 @@ dev-setup-register-gardener:
 local-garden-up:
 	# Remove old containers and create the docker user network
 	@-./hack/local-development/local-garden/cleanup
+	# create dev folder with user permissions, otherwise docker will cause a root folder
+	@mkdir -p dev
 	@-docker network create gardener-dev --label $(LOCAL_GARDEN_LABEL)
 
 	# Start the nodeless kubernetes environment
