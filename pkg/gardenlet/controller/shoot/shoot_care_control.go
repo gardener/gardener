@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
@@ -307,6 +308,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 	}
 
 	initializeShootClients := shootClientInitializer(ctx, botanist)
+	staleExtensionHealthCheckThreshold := confighelper.StaleExtensionHealthChecksThreshold(c.config.Controllers.ShootCare.StaleExtensionHealthChecks)
 
 	_ = flow.Parallel(
 		// Trigger health check
@@ -316,7 +318,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 				clusterShoot,
 				initializeShootClients,
 				c.conditionThresholdsToProgressingMapping(),
-				c.config.Controllers.ShootCare.StaleExtensionHealthCheckThreshold,
+				staleExtensionHealthCheckThreshold,
 				botanist.Shoot.GardenerVersion,
 				conditionAPIServerAvailable,
 				conditionControlPlaneHealthy,

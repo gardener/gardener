@@ -266,6 +266,19 @@ func SetDefaults_ShootCareControllerConfiguration(obj *ShootCareControllerConfig
 		v := metav1.Duration{Duration: time.Minute}
 		obj.SyncPeriod = &v
 	}
+
+	if obj.StaleExtensionHealthChecks == nil {
+		v := StaleExtensionHealthChecks{Enabled: true}
+		obj.StaleExtensionHealthChecks = &v
+	}
+}
+
+// SetDefaults_StaleExtensionHealthChecks sets defaults for the stale extension health checks.
+func SetDefaults_StaleExtensionHealthChecks(obj *StaleExtensionHealthChecks) {
+	if obj.Threshold == nil {
+		v := metav1.Duration{Duration: 5 * time.Minute}
+		obj.Threshold = &v
+	}
 }
 
 // SetDefaults_ShootStateSyncControllerConfiguration sets defaults for the shoot state controller.

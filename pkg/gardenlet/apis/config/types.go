@@ -217,14 +217,21 @@ type ShootCareControllerConfiguration struct {
 	// often the health check of Shoot clusters is performed (only if no operation is
 	// already running on them).
 	SyncPeriod *metav1.Duration
-	// StaleExtensionHealthCheckThreshold configures the threshold when Gardener considers a Health check report of an
-	// Extension CRD as outdated.
-	// The StaleExtensionHealthCheckThreshold should have some leeway in case a Gardener extension is temporarily unavailable.
-	// If not set, Gardener does not verify for outdated health check reports. This is for backwards-compatibility reasons
-	// and will become default in a future version.
-	StaleExtensionHealthCheckThreshold *metav1.Duration
+	// StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.
+	StaleExtensionHealthChecks *StaleExtensionHealthChecks
 	// ConditionThresholds defines the condition threshold per condition type.
 	ConditionThresholds []ConditionThreshold
+}
+
+// StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.
+type StaleExtensionHealthChecks struct {
+	// Enabled specifies whether the check for stale extensions health checks is enabled.
+	// Defaults to true.
+	Enabled bool
+	// Threshold configures the threshold when gardenlet considers a health check report of an extension CRD as outdated.
+	// The threshold should have some leeway in case a Gardener extension is temporarily unavailable.
+	// Defaults to 5m.
+	Threshold *metav1.Duration
 }
 
 // ShootedSeedRegistrationControllerConfiguration defines the configuration of the shooted seed registration controller.
