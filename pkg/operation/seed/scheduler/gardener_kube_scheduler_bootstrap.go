@@ -46,11 +46,6 @@ func Bootstrap(
 	component.DeployWaiter,
 	error,
 ) {
-	const (
-		namespace    = "gardener-kube-scheduler"
-		resourceName = namespace
-	)
-
 	if c == nil {
 		return nil, errors.New("client is required")
 	}
@@ -75,7 +70,7 @@ func Bootstrap(
 
 	switch {
 	case versionConstraintEqual118.Check(seedVersion):
-		config, err = schedulerconfigv18.NewConfigurator(resourceName, namespace, &schedulerconfigv18v1alpha2.KubeSchedulerConfiguration{
+		config, err = schedulerconfigv18.NewConfigurator(Name, Name, &schedulerconfigv18v1alpha2.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv18v1alpha2.KubeSchedulerProfile{{
 				SchedulerName: pointer.StringPtr(seedadmissionpkg.GardenerShootControlPlaneSchedulerName),
 				Plugins: &schedulerconfigv18v1alpha2.Plugins{
@@ -92,7 +87,7 @@ func Bootstrap(
 			}},
 		})
 	case versionConstraintEqual119.Check(seedVersion):
-		config, err = schedulerconfigv19.NewConfigurator(resourceName, namespace, &schedulerconfigv19v1beta1.KubeSchedulerConfiguration{
+		config, err = schedulerconfigv19.NewConfigurator(Name, Name, &schedulerconfigv19v1beta1.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv19v1beta1.KubeSchedulerProfile{{
 				SchedulerName: pointer.StringPtr(seedadmissionpkg.GardenerShootControlPlaneSchedulerName),
 				Plugins: &schedulerconfigv19v1beta1.Plugins{
@@ -109,7 +104,7 @@ func Bootstrap(
 			}},
 		})
 	case versionConstraintEqual120.Check(seedVersion):
-		config, err = schedulerconfigv20.NewConfigurator(resourceName, namespace, &schedulerconfigv20v1beta1.KubeSchedulerConfiguration{
+		config, err = schedulerconfigv20.NewConfigurator(Name, Name, &schedulerconfigv20v1beta1.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv20v1beta1.KubeSchedulerProfile{{
 				SchedulerName: pointer.StringPtr(seedadmissionpkg.GardenerShootControlPlaneSchedulerName),
 				Plugins: &schedulerconfigv20v1beta1.Plugins{
@@ -135,7 +130,7 @@ func Bootstrap(
 
 	scheduler, err := New(
 		c,
-		namespace,
+		Name,
 		image.String(),
 		config,
 		&admissionregistrationv1beta1.WebhookClientConfig{

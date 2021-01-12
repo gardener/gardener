@@ -25,6 +25,11 @@ var (
 	versionConstraintEqual120 *semver.Constraints
 )
 
+const (
+	// Name is the name of kubernetes resources associated with gardener-kube-scheduler.
+	Name = "gardener-kube-scheduler"
+)
+
 func init() {
 	var err error
 
