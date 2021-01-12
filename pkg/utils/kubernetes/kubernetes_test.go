@@ -583,147 +583,93 @@ var _ = Describe("kubernetes", func() {
 		})
 	})
 
-	Context("NodeLister", func() {
+	Describe("#WaitUntilResourceDeleted", func() {
 		var (
-			aLabels = map[string]string{"label": "a"}
-			bLabels = map[string]string{"label": "b"}
-
-			n1ANode = &corev1.Node{
+			namespace = "bar"
+			name      = "foo"
+			key       = Key(namespace, name)
+			configMap = &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "n1",
-					Name:      "a",
-					Labels:    aLabels,
+					Namespace: namespace,
+					Name:      name,
 				},
 			}
-			n1BNode = &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "n1",
-					Name:      "b",
-					Labels:    bLabels,
-				},
-			}
-			n2ANode = &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "n2",
-					Name:      "a",
-					Labels:    aLabels,
-				},
-			}
-			n2BNode = &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "n2",
-					Name:      "b",
-					Labels:    bLabels,
-				},
-			}
-
-			nodes = []*corev1.Node{n1ANode, n1BNode, n2ANode, n2BNode}
 		)
 
-		DescribeTable("#List",
-			func(source []*corev1.Node, selector labels.Selector, expected []*corev1.Node) {
-				lister := NewNodeLister(func() ([]*corev1.Node, error) {
-					return source, nil
-				})
-
-				actual, err := lister.List(selector)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(actual).To(Equal(expected))
-			},
-			Entry("everything", nodes, labels.Everything(), nodes),
-			Entry("nothing", nodes, labels.Nothing(), nil),
-			Entry("a labels", nodes, labels.SelectorFromSet(labels.Set(aLabels)), []*corev1.Node{n1ANode, n2ANode}),
-			Entry("b labels", nodes, labels.SelectorFromSet(labels.Set(bLabels)), []*corev1.Node{n1BNode, n2BNode}),
-		)
-
-		Describe("#WaitUntilResourceDeleted", func() {
-			var (
-				namespace = "bar"
-				name      = "foo"
-				key       = Key(namespace, name)
-				configMap = &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: namespace,
-						Name:      name,
-					},
-				}
+		It("should wait until the resource is deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, key, configMap),
+				c.EXPECT().Get(ctx, key, configMap),
+				c.EXPECT().Get(ctx, key, configMap).Return(apierrors.NewNotFound(schema.GroupResource{}, name)),
 			)
 
-			It("should wait until the resource is deleted", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, key, configMap),
-					c.EXPECT().Get(ctx, key, configMap),
-					c.EXPECT().Get(ctx, key, configMap).Return(apierrors.NewNotFound(schema.GroupResource{}, name)),
-				)
-
-				Expect(WaitUntilResourceDeleted(ctx, c, configMap, time.Microsecond)).To(Succeed())
-			})
-
-			It("should timeout", func() {
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
-
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, key, configMap),
-					c.EXPECT().Get(ctx, key, configMap).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ runtime.Object) error {
-						cancel()
-						return nil
-					}),
-				)
-
-				Expect(WaitUntilResourceDeleted(ctx, c, configMap, time.Microsecond)).To(HaveOccurred())
-			})
-
-			It("return an unexpected error", func() {
-				expectedErr := fmt.Errorf("unexpected")
-				c.EXPECT().Get(ctx, key, configMap).Return(expectedErr)
-
-				err := WaitUntilResourceDeleted(ctx, c, configMap, time.Microsecond)
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(BeIdenticalTo(expectedErr))
-			})
+			Expect(WaitUntilResourceDeleted(ctx, c, configMap, time.Microsecond)).To(Succeed())
 		})
 
-		Describe("#WaitUntilResourcesDeleted", func() {
-			var (
-				configMap = corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: namespace,
-						Name:      name,
-					},
-				}
-				configMapList *corev1.ConfigMapList
+		It("should timeout", func() {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, key, configMap),
+				c.EXPECT().Get(ctx, key, configMap).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ runtime.Object) error {
+					cancel()
+					return nil
+				}),
 			)
 
-			BeforeEach(func() {
-				configMapList = &corev1.ConfigMapList{}
+			Expect(WaitUntilResourceDeleted(ctx, c, configMap, time.Microsecond)).To(HaveOccurred())
+		})
+
+		It("return an unexpected error", func() {
+			expectedErr := fmt.Errorf("unexpected")
+			c.EXPECT().Get(ctx, key, configMap).Return(expectedErr)
+
+			err := WaitUntilResourceDeleted(ctx, c, configMap, time.Microsecond)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeIdenticalTo(expectedErr))
+		})
+	})
+
+	Describe("#WaitUntilResourcesDeleted", func() {
+		var (
+			configMap = corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      name,
+				},
+			}
+			configMapList *corev1.ConfigMapList
+		)
+
+		BeforeEach(func() {
+			configMapList = &corev1.ConfigMapList{}
+		})
+
+		It("should wait until the resources are deleted w/ empty list", func() {
+			c.EXPECT().List(ctx, configMapList).Return(nil)
+
+			Expect(WaitUntilResourcesDeleted(ctx, c, configMapList, time.Microsecond)).To(Succeed())
+		})
+
+		It("should timeout w/ remaining elements", func() {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			c.EXPECT().List(ctx, configMapList).DoAndReturn(func(_ context.Context, _ runtime.Object, _ ...client.ListOption) error {
+				cancel()
+				configMapList.Items = append(configMapList.Items, configMap)
+				return nil
 			})
 
-			It("should wait until the resources are deleted w/ empty list", func() {
-				c.EXPECT().List(ctx, configMapList).Return(nil)
+			Expect(WaitUntilResourcesDeleted(ctx, c, configMapList, time.Microsecond)).To(HaveOccurred())
+		})
 
-				Expect(WaitUntilResourcesDeleted(ctx, c, configMapList, time.Microsecond)).To(Succeed())
-			})
+		It("return an unexpected error", func() {
+			expectedErr := fmt.Errorf("unexpected")
+			c.EXPECT().List(ctx, configMapList).Return(expectedErr)
 
-			It("should timeout w/ remaining elements", func() {
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
-
-				c.EXPECT().List(ctx, configMapList).DoAndReturn(func(_ context.Context, _ runtime.Object, _ ...client.ListOption) error {
-					cancel()
-					configMapList.Items = append(configMapList.Items, configMap)
-					return nil
-				})
-
-				Expect(WaitUntilResourcesDeleted(ctx, c, configMapList, time.Microsecond)).To(HaveOccurred())
-			})
-
-			It("return an unexpected error", func() {
-				expectedErr := fmt.Errorf("unexpected")
-				c.EXPECT().List(ctx, configMapList).Return(expectedErr)
-
-				Expect(WaitUntilResourcesDeleted(ctx, c, configMapList, time.Microsecond)).To(BeIdenticalTo(expectedErr))
-			})
+			Expect(WaitUntilResourcesDeleted(ctx, c, configMapList, time.Microsecond)).To(BeIdenticalTo(expectedErr))
 		})
 	})
 

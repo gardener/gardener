@@ -174,9 +174,9 @@ func (b *HealthChecker) checkStatefulSets(condition gardencorev1beta1.Condition,
 	return nil
 }
 
-func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, objects []*corev1.Node, workerGroupName string) *gardencorev1beta1.Condition {
-	for _, object := range objects {
-		if err := health.CheckNode(object); err != nil {
+func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodes []corev1.Node, workerGroupName string) *gardencorev1beta1.Condition {
+	for _, object := range nodes {
+		if err := health.CheckNode(&object); err != nil {
 			var (
 				message = fmt.Sprintf("Node '%s' in worker group '%s' is unhealthy: %v", object.Name, workerGroupName, err)
 				codes   = gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, ""))
@@ -393,32 +393,43 @@ func (b *Botanist) checkAPIServerAvailability(ctx context.Context, checker *Heal
 	}, b.Logger)
 }
 
-// CheckClusterNodes checks whether cluster nodes in the given listers are healthy and within the desired range.
-// Additional checks are executed in the provider extension
+// CheckClusterNodes checks whether cluster nodes are healthy and within the desired range. Additional checks may be
+// executed in the provider extension.
 func (b *HealthChecker) CheckClusterNodes(
+	ctx context.Context,
+	shootClient client.Client,
 	workers []gardencorev1beta1.Worker,
 	condition gardencorev1beta1.Condition,
-	nodeLister kutil.NodeLister,
-) (*gardencorev1beta1.Condition, error) {
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
+	workerPoolToNodes, err := WorkerPoolToNodesMap(ctx, shootClient)
+	if err != nil {
+		return nil, err
+	}
+
+	workerPoolToSecretChecksum, err := WorkerPoolToCloudConfigSecretChecksumMap(ctx, shootClient)
+	if err != nil {
+		return nil, err
+	}
 
 	for _, worker := range workers {
-		requirement, err := labels.NewRequirement(v1beta1constants.LabelWorkerPool, selection.Equals, []string{worker.Name})
-		if err != nil {
-			return nil, err
-		}
-		nodeList, err := nodeLister.List(labels.NewSelector().Add(*requirement))
-		if err != nil {
-			return nil, err
-		}
+		nodes := workerPoolToNodes[worker.Name]
 
-		if exitCondition := b.checkNodes(condition, nodeList, worker.Name); exitCondition != nil {
+		if exitCondition := b.checkNodes(condition, nodes, worker.Name); exitCondition != nil {
 			return exitCondition, nil
 		}
 
-		if len(nodeList) < int(worker.Minimum) {
-			c := b.FailedCondition(condition, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool '%s' to meet minimum desired machine count. (%d/%d).", worker.Name, len(nodeList), worker.Minimum))
+		if len(nodes) < int(worker.Minimum) {
+			c := b.FailedCondition(condition, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool '%s' to meet minimum desired machine count. (%d/%d).", worker.Name, len(nodes), worker.Minimum))
 			return &c, nil
 		}
+	}
+
+	if err := CloudConfigUpdatedForAllWorkerPools(workers, workerPoolToNodes, workerPoolToSecretChecksum); err != nil {
+		c := b.FailedCondition(condition, "CloudConfigOutdated", err.Error())
+		return &c, nil
 	}
 
 	return nil, nil
@@ -615,13 +626,14 @@ func (b *Botanist) checkSystemComponents(
 // checkClusterNodes checks whether every node registered at the Shoot cluster is in "Ready" state, that
 // as many nodes are registered as desired, and that every machine is running.
 func (b *Botanist) checkClusterNodes(
+	ctx context.Context,
+	shootClient client.Client,
 	effectiveShoot *gardencorev1beta1.Shoot,
 	checker *HealthChecker,
 	condition gardencorev1beta1.Condition,
-	shootNodeLister kutil.NodeLister,
 	extensionConditions []ExtensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := checker.CheckClusterNodes(effectiveShoot.Spec.Provider.Workers, condition, shootNodeLister); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckClusterNodes(ctx, shootClient, effectiveShoot.Spec.Provider.Workers, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
@@ -702,32 +714,6 @@ func makeEtcdLister(ctx context.Context, c client.Client, namespace string) kuti
 	)
 
 	return kutil.NewEtcdLister(func() ([]*druidv1alpha1.Etcd, error) {
-		once.Do(onceBody)
-		return items, err
-	})
-}
-
-func makeNodeLister(ctx context.Context, c client.Client) kutil.NodeLister {
-	var (
-		once  sync.Once
-		items []*corev1.Node
-		err   error
-
-		onceBody = func() {
-			list := &corev1.NodeList{}
-			err = c.List(ctx, list)
-			if err != nil {
-				return
-			}
-
-			for _, item := range list.Items {
-				it := item
-				items = append(items, &it)
-			}
-		}
-	)
-
-	return kutil.NewNodeLister(func() ([]*corev1.Node, error) {
 		once.Do(onceBody)
 		return items, err
 	})
@@ -832,7 +818,7 @@ func (b *Botanist) healthChecks(
 		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
 		return nil
 	}, func(ctx context.Context) error {
-		newNodes, err := b.checkClusterNodes(effectiveShoot, checker, nodes, makeNodeLister(ctx, b.K8sShootClient.Client()), extensionConditionsEveryNodeReady)
+		newNodes, err := b.checkClusterNodes(ctx, b.K8sShootClient.Client(), effectiveShoot, checker, nodes, extensionConditionsEveryNodeReady)
 		nodes = newConditionOrError(nodes, newNodes, err)
 		return nil
 	}, func(ctx context.Context) error {
