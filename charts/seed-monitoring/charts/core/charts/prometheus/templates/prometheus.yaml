@@ -53,6 +53,7 @@ spec:
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
       labels:
+        gardener.cloud/role: monitoring
         garden.sapcloud.io/role: monitoring
         app: prometheus
         role: monitoring

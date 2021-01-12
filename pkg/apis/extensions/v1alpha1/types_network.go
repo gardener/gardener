@@ -37,13 +37,13 @@ type Network struct {
 }
 
 // GetExtensionSpec implements Object.
-func (i *Network) GetExtensionSpec() Spec {
-	return &i.Spec
+func (n *Network) GetExtensionSpec() Spec {
+	return &n.Spec
 }
 
 // GetExtensionStatus implements Object.
-func (i *Network) GetExtensionStatus() Status {
-	return &i.Status
+func (n *Network) GetExtensionStatus() Status {
+	return &n.Status
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

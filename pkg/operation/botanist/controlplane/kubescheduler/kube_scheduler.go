@@ -178,6 +178,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 					"checksum/secret-" + k.secrets.Server.Name:     k.secrets.Server.Checksum,
 				},
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+					v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
 					v1beta1constants.DeprecatedGardenRole:               v1beta1constants.GardenRoleControlPlane,
 					v1beta1constants.LabelPodMaintenanceRestart:         "true",
 					v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,

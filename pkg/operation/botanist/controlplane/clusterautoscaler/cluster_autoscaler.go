@@ -177,6 +177,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 					"checksum/secret-" + c.secrets.Kubeconfig.Name: c.secrets.Kubeconfig.Checksum,
 				},
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+					v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
 					v1beta1constants.DeprecatedGardenRole:               v1beta1constants.GardenRoleControlPlane,
 					v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
 					v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,

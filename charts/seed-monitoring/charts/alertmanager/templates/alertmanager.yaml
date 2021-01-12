@@ -55,6 +55,7 @@ spec:
   template:
     metadata:
       labels:
+        gardener.cloud/role: monitoring
         garden.sapcloud.io/role: monitoring
         component: alertmanager
         role: monitoring

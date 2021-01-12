@@ -30,7 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// EncryptionKey holds the the key and its name used to encrypt resources in ETCD.
+// EncryptionKey holds the key and its name used to encrypt resources in ETCD.
 type EncryptionKey struct {
 	Key  string
 	Name string

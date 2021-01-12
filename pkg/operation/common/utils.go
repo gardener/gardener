@@ -773,6 +773,10 @@ func DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx context.Context, c client
 			if err := c.Delete(ctx, deployment); client.IgnoreNotFound(err) != nil {
 				return err
 			}
+
+			if err := kutil.WaitUntilResourceDeleted(ctx, c, deployment, 2*time.Second); err != nil {
+				return err
+			}
 		}
 	}
 
