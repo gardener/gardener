@@ -4,7 +4,7 @@
   content:
     inline:
       encoding: b64
-      data: {{ ( required "kubernetes.worker.caCert is required" .Values.worker.kubelet.caCert ) | b64enc }}
+      data: {{ ( required "worker.kubelet.caCert is required" .Values.worker.kubelet.caCert ) | b64enc }}
 - path: /var/lib/kubelet/config/kubelet
   permissions: 0644
   content:

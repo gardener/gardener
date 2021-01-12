@@ -373,7 +373,7 @@ func (b *Botanist) DeployControlPlane(ctx context.Context) error {
 	return b.deployOrRestoreControlPlane(ctx, b.Shoot.Components.Extensions.ControlPlane)
 }
 
-// DeployControlPlane deploys or restores the ControlPlane custom resource (purpose exposure).
+// DeployControlPlaneExposure deploys or restores the ControlPlane custom resource (purpose exposure).
 func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
 	return b.deployOrRestoreControlPlane(ctx, b.Shoot.Components.Extensions.ControlPlaneExposure)
 }

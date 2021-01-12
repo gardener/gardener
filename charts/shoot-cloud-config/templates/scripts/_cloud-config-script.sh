@@ -95,7 +95,7 @@ if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null; then
     echo "Successfully applied new cloud config version"
     systemctl daemon-reload
 {{- range $name := (required ".worker.units is required" .worker.units) }}
-{{- if and (ne $name "docker.service") (ne $name "var-lib.mount") }}
+{{- if and (ne $name "docker.service") (ne $name "var-lib.mount") (ne $name "cloud-config-downloader.service") }}
     systemctl enable {{ $name }} && systemctl restart --no-block {{ $name }}
 {{- end }}
 {{- end }}
