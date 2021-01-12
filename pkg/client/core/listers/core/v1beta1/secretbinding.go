@@ -26,8 +26,10 @@ import (
 )
 
 // SecretBindingLister helps list SecretBindings.
+// All objects returned here must be treated as read-only.
 type SecretBindingLister interface {
 	// List lists all SecretBindings in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.SecretBinding, err error)
 	// SecretBindings returns an object that can list and get SecretBindings.
 	SecretBindings(namespace string) SecretBindingNamespaceLister
@@ -58,10 +60,13 @@ func (s *secretBindingLister) SecretBindings(namespace string) SecretBindingName
 }
 
 // SecretBindingNamespaceLister helps list and get SecretBindings.
+// All objects returned here must be treated as read-only.
 type SecretBindingNamespaceLister interface {
 	// List lists all SecretBindings in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.SecretBinding, err error)
 	// Get retrieves the SecretBinding from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.SecretBinding, error)
 	SecretBindingNamespaceListerExpansion
 }

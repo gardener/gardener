@@ -26,10 +26,13 @@ import (
 )
 
 // ControllerInstallationLister helps list ControllerInstallations.
+// All objects returned here must be treated as read-only.
 type ControllerInstallationLister interface {
 	// List lists all ControllerInstallations in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*core.ControllerInstallation, err error)
 	// Get retrieves the ControllerInstallation from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*core.ControllerInstallation, error)
 	ControllerInstallationListerExpansion
 }

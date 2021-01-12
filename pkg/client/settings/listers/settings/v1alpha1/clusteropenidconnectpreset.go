@@ -26,10 +26,13 @@ import (
 )
 
 // ClusterOpenIDConnectPresetLister helps list ClusterOpenIDConnectPresets.
+// All objects returned here must be treated as read-only.
 type ClusterOpenIDConnectPresetLister interface {
 	// List lists all ClusterOpenIDConnectPresets in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ClusterOpenIDConnectPreset, err error)
 	// Get retrieves the ClusterOpenIDConnectPreset from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.ClusterOpenIDConnectPreset, error)
 	ClusterOpenIDConnectPresetListerExpansion
 }

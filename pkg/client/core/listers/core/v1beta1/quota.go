@@ -26,8 +26,10 @@ import (
 )
 
 // QuotaLister helps list Quotas.
+// All objects returned here must be treated as read-only.
 type QuotaLister interface {
 	// List lists all Quotas in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.Quota, err error)
 	// Quotas returns an object that can list and get Quotas.
 	Quotas(namespace string) QuotaNamespaceLister
@@ -58,10 +60,13 @@ func (s *quotaLister) Quotas(namespace string) QuotaNamespaceLister {
 }
 
 // QuotaNamespaceLister helps list and get Quotas.
+// All objects returned here must be treated as read-only.
 type QuotaNamespaceLister interface {
 	// List lists all Quotas in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.Quota, err error)
 	// Get retrieves the Quota from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.Quota, error)
 	QuotaNamespaceListerExpansion
 }
