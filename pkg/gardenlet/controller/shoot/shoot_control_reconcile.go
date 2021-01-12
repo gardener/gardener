@@ -366,6 +366,11 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deployManagedResources, waitUntilNetworkIsReady, waitUntilWorkerReady, vpnLBReady),
 		})
 		_ = g.Add(flow.Task{
+			Name:         "Waiting until all shoot worker nodes have updated the cloud config user data",
+			Fn:           botanist.WaitUntilCloudConfigUpdatedForAllWorkerPools,
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, waitUntilTunnelConnectionExists),
+		})
+		_ = g.Add(flow.Task{
 			Name: "Finishing Kubernetes API server service SNI transition",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.DeployKubeAPIService(ctx, sniPhase.Done())

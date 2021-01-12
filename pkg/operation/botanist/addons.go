@@ -213,14 +213,17 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 	return b.deployCloudConfigExecutionManagedResource(ctx)
 }
 
+// CloudConfigExecutionManagedResourceName is a constant for the name of a ManagedResource in the seed cluster in the
+// shoot namespace which contains the cloud config user data exeuction script.
+const CloudConfigExecutionManagedResourceName = "shoot-cloud-config-execution"
+
 // deployCloudConfigExecutionManagedResource creates the cloud config managed resource that contains:
 // 1. A secret containing the dedicated cloud config execution script for each worker group
 // 2. A secret containing some shared RBAC policies for downloading the cloud config execution script
 func (b *Botanist) deployCloudConfigExecutionManagedResource(ctx context.Context) error {
 	var (
-		managedResourceName = "shoot-cloud-config-execution"
-		secretLabels        = map[string]string{
-			SecretLabelKeyManagedResource: managedResourceName,
+		secretLabels = map[string]string{
+			SecretLabelKeyManagedResource: CloudConfigExecutionManagedResourceName,
 		}
 		wantedSecretNames = sets.NewString()
 	)
@@ -240,7 +243,7 @@ func (b *Botanist) deployCloudConfigExecutionManagedResource(ctx context.Context
 		cloudConfigCharts[name] = b.getGenerateCloudConfigExecutionChartFunc(name, worker, bootstrapTokenSecret)
 	}
 
-	cloudConfigManagedResource := common.NewManagedResourceForShoot(b.K8sSeedClient.Client(), managedResourceName, b.Shoot.SeedNamespace, false)
+	cloudConfigManagedResource := common.NewManagedResourceForShoot(b.K8sSeedClient.Client(), CloudConfigExecutionManagedResourceName, b.Shoot.SeedNamespace, false)
 
 	// reconcile secrets and reference them to the ManagedResource
 	fns := make([]flow.TaskFn, 0, len(cloudConfigCharts))
@@ -257,7 +260,7 @@ func (b *Botanist) deployCloudConfigExecutionManagedResource(ctx context.Context
 		fns = append(fns, func(ctx context.Context) error {
 			return secret.
 				WithKeyValues(renderedChart.AsSecretData()).
-				WithLabels(map[string]string{SecretLabelKeyManagedResource: managedResourceName}).
+				WithLabels(map[string]string{SecretLabelKeyManagedResource: CloudConfigExecutionManagedResourceName}).
 				Reconcile(ctx)
 		})
 	}

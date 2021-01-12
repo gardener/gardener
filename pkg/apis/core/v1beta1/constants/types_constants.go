@@ -152,6 +152,8 @@ const (
 	GardenRoleMonitoring = "monitoring"
 	// GardenRoleOptionalAddon is the value of the GardenRole key indicating type 'optional-addon'.
 	GardenRoleOptionalAddon = "optional-addon"
+	// GardenRoleCloudConfig is the value of the GardenRole key indicating type 'cloud-config'.
+	GardenRoleCloudConfig = "cloud-config"
 	// GardenRoleKubeconfig is the value of the GardenRole key indicating type 'kubeconfig'.
 	GardenRoleKubeconfig = "kubeconfig"
 	// GardenRoleSSHKeyPair is the value of the GardenRole key indicating type 'ssh-keypair'.
