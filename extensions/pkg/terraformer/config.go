@@ -62,6 +62,12 @@ func (t *terraformer) SetDeadlinePod(d time.Duration) Terraformer {
 	return t
 }
 
+// SetOwnerRef configures the resource that will be used as owner of the secrets and configmaps
+func (t *terraformer) SetOwnerRef(owner *metav1.OwnerReference) Terraformer {
+	t.ownerRef = owner
+	return t
+}
+
 // UseV2 configures if it should use flags compatible with terraformer@v2.
 func (t *terraformer) UseV2(v2 bool) Terraformer {
 	t.useV2 = v2
@@ -104,7 +110,7 @@ func (t *terraformer) initializerConfig(ctx context.Context) *InitializerConfig 
 // Initializer to correctly create all the resources as specified in the given InitializerConfig.
 // A default implementation can be found in DefaultInitializer.
 func (t *terraformer) InitializeWith(ctx context.Context, initializer Initializer) Terraformer {
-	if err := initializer.Initialize(ctx, t.initializerConfig(ctx)); err != nil {
+	if err := initializer.Initialize(ctx, t.initializerConfig(ctx), t.ownerRef); err != nil {
 		t.logger.Error(err, "Could not create Terraformer ConfigMaps/Secrets")
 		return t
 	}
@@ -112,14 +118,22 @@ func (t *terraformer) InitializeWith(ctx context.Context, initializer Initialize
 	return t
 }
 
-func createOrUpdateConfigMap(ctx context.Context, c client.Client, namespace, name string, values map[string]string) (*corev1.ConfigMap, error) {
-	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
+func createOrUpdateConfigMap(ctx context.Context, c client.Client, namespace, name string, values map[string]string, ownerRef *metav1.OwnerReference) (*corev1.ConfigMap, error) {
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+	}
 	_, err := controllerutil.CreateOrUpdate(ctx, c, configMap, func() error {
 		if configMap.Data == nil {
 			configMap.Data = make(map[string]string)
 		}
 		for key, value := range values {
 			configMap.Data[key] = value
+		}
+		if ownerRef != nil {
+			configMap.SetOwnerReferences(kutil.MergeOwnerReferences(configMap.OwnerReferences, *ownerRef))
 		}
 		return nil
 	})
@@ -128,48 +142,64 @@ func createOrUpdateConfigMap(ctx context.Context, c client.Client, namespace, na
 
 // CreateOrUpdateConfigurationConfigMap creates or updates the Terraform configuration ConfigMap
 // with the given main and variables content.
-func CreateOrUpdateConfigurationConfigMap(ctx context.Context, c client.Client, namespace, name, main, variables string) (*corev1.ConfigMap, error) {
-	return createOrUpdateConfigMap(ctx, c, namespace, name, map[string]string{
-		MainKey:      main,
-		VariablesKey: variables,
-	})
+func CreateOrUpdateConfigurationConfigMap(ctx context.Context, c client.Client, namespace, name, main, variables string, ownerRef *metav1.OwnerReference) (*corev1.ConfigMap, error) {
+	return createOrUpdateConfigMap(
+		ctx,
+		c,
+		namespace,
+		name,
+		map[string]string{
+			MainKey:      main,
+			VariablesKey: variables,
+		},
+		ownerRef,
+	)
 }
 
 // CreateOrUpdateTFVarsSecret creates or updates the Terraformer variables Secret with the given tfvars.
-func CreateOrUpdateTFVarsSecret(ctx context.Context, c client.Client, namespace, name string, tfvars []byte) (*corev1.Secret, error) {
-	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
+func CreateOrUpdateTFVarsSecret(ctx context.Context, c client.Client, namespace, name string, tfvars []byte, ownerRef *metav1.OwnerReference) (*corev1.Secret, error) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+	}
+
 	_, err := controllerutil.CreateOrUpdate(ctx, c, secret, func() error {
 		if secret.Data == nil {
 			secret.Data = make(map[string][]byte)
 		}
 		secret.Data[TFVarsKey] = tfvars
+		if ownerRef != nil {
+			secret.SetOwnerReferences(kutil.MergeOwnerReferences(secret.OwnerReferences, *ownerRef))
+		}
 		return nil
 	})
 	return secret, err
 }
 
 // initializerFunc implements Initializer.
-type initializerFunc func(ctx context.Context, config *InitializerConfig) error
+type initializerFunc func(ctx context.Context, config *InitializerConfig, ownerRef *metav1.OwnerReference) error
 
 // Initialize implements Initializer.
-func (f initializerFunc) Initialize(ctx context.Context, config *InitializerConfig) error {
-	return f(ctx, config)
+func (f initializerFunc) Initialize(ctx context.Context, config *InitializerConfig, ownerRef *metav1.OwnerReference) error {
+	return f(ctx, config, ownerRef)
 }
 
 // DefaultInitializer is an Initializer that initializes the configuration, variables and state resources
 // based on the given main, variables and tfvars content and on the given InitializerConfig.
 func DefaultInitializer(c client.Client, main, variables string, tfvars []byte, stateInitializer StateConfigMapInitializer) Initializer {
-	return initializerFunc(func(ctx context.Context, config *InitializerConfig) error {
-		if _, err := CreateOrUpdateConfigurationConfigMap(ctx, c, config.Namespace, config.ConfigurationName, main, variables); err != nil {
+	return initializerFunc(func(ctx context.Context, config *InitializerConfig, ownerRef *metav1.OwnerReference) error {
+		if _, err := CreateOrUpdateConfigurationConfigMap(ctx, c, config.Namespace, config.ConfigurationName, main, variables, ownerRef); err != nil {
 			return err
 		}
 
-		if _, err := CreateOrUpdateTFVarsSecret(ctx, c, config.Namespace, config.VariablesName, tfvars); err != nil {
+		if _, err := CreateOrUpdateTFVarsSecret(ctx, c, config.Namespace, config.VariablesName, tfvars, ownerRef); err != nil {
 			return err
 		}
 
 		if config.InitializeState {
-			if err := stateInitializer.Initialize(ctx, c, config.Namespace, config.StateName); err != nil {
+			if err := stateInitializer.Initialize(ctx, c, config.Namespace, config.StateName, ownerRef); err != nil {
 				return err
 			}
 		}

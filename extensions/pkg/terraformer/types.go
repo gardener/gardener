@@ -20,6 +20,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,6 +31,7 @@ import (
 // * purpose is a one-word description depicting what the Terraformer does (e.g. 'infrastructure').
 // * namespace is the namespace in which the Terraformer will act.
 // * image is the Docker image name of the Terraformer image.
+// * ownerRef is the resource that owns the secrets and configmaps used by Terraformer
 // * configName is the name of the ConfigMap containing the main Terraform file ('main.tf').
 // * variablesName is the name of the Secret containing the Terraform variables ('terraform.tfvars').
 // * stateName is the name of the ConfigMap containing the Terraform state ('terraform.tfstate').
@@ -54,6 +56,7 @@ type terraformer struct {
 	name      string
 	namespace string
 	image     string
+	ownerRef  *metav1.OwnerReference
 
 	configName           string
 	variablesName        string
@@ -101,6 +104,7 @@ type Terraformer interface {
 	SetTerminationGracePeriodSeconds(int64) Terraformer
 	SetDeadlineCleaning(time.Duration) Terraformer
 	SetDeadlinePod(time.Duration) Terraformer
+	SetOwnerRef(*metav1.OwnerReference) Terraformer
 	InitializeWith(ctx context.Context, initializer Initializer) Terraformer
 	Apply(ctx context.Context) error
 	Destroy(ctx context.Context) error
@@ -117,7 +121,7 @@ type Terraformer interface {
 
 // Initializer can initialize a Terraformer.
 type Initializer interface {
-	Initialize(ctx context.Context, config *InitializerConfig) error
+	Initialize(ctx context.Context, config *InitializerConfig, ownerRef *metav1.OwnerReference) error
 }
 
 // Factory is a factory that can produce Terraformer and Initializer.
@@ -129,11 +133,11 @@ type Factory interface {
 
 // StateConfigMapInitializer initialize terraformer state ConfigMap
 type StateConfigMapInitializer interface {
-	Initialize(ctx context.Context, c client.Client, namespace, name string) error
+	Initialize(ctx context.Context, c client.Client, namespace, name string, ownerRef *metav1.OwnerReference) error
 }
 
 // StateConfigMapInitializerFunc implements StateConfigMapInitializer
-type StateConfigMapInitializerFunc func(ctx context.Context, c client.Client, namespace, name string) error
+type StateConfigMapInitializerFunc func(ctx context.Context, c client.Client, namespace, name string, ownerRef *metav1.OwnerReference) error
 
 // CreateOrUpdateState implements StateConfigMapInitializer.
 // It use it field state for creating or updating the state ConfigMap

@@ -164,18 +164,22 @@ func sniffJSONStateVersion(stateConfigMap []byte) (uint64, error) {
 }
 
 // Initialize implements StateConfigMapInitializer
-func (f StateConfigMapInitializerFunc) Initialize(ctx context.Context, c client.Client, namespace, name string) error {
-	return f(ctx, c, namespace, name)
+func (f StateConfigMapInitializerFunc) Initialize(ctx context.Context, c client.Client, namespace, name string, ownerRef *metav1.OwnerReference) error {
+	return f(ctx, c, namespace, name, ownerRef)
 }
 
 // CreateState create terraform state config map and use empty state.
-// It does not create or update state ConfigMap if already exists.
-func CreateState(ctx context.Context, c client.Client, namespace, name string) error {
+// It does not create or update state ConfigMap if already exists,
+func CreateState(ctx context.Context, c client.Client, namespace, name string, ownerRef *metav1.OwnerReference) error {
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
 		Data: map[string]string{
 			StateKey: "",
 		},
+	}
+
+	if ownerRef != nil {
+		configMap.SetOwnerReferences(kutil.MergeOwnerReferences(configMap.OwnerReferences, *ownerRef))
 	}
 
 	if err := c.Create(ctx, configMap); err != nil && !apierrors.IsAlreadyExists(err) {
@@ -186,7 +190,7 @@ func CreateState(ctx context.Context, c client.Client, namespace, name string) e
 }
 
 // Initialize implements StateConfigMapInitializer
-func (cus CreateOrUpdateState) Initialize(ctx context.Context, c client.Client, namespace, name string) error {
+func (cus CreateOrUpdateState) Initialize(ctx context.Context, c client.Client, namespace, name string, ownerRef *metav1.OwnerReference) error {
 	if cus.State == nil {
 		return fmt.Errorf("missing state when creating or updating terraform state ConfigMap %s/%s", namespace, name)
 	}
@@ -197,6 +201,10 @@ func (cus CreateOrUpdateState) Initialize(ctx context.Context, c client.Client, 
 			configMap.Data = make(map[string]string)
 		}
 		configMap.Data[StateKey] = *cus.State
+
+		if ownerRef != nil {
+			configMap.SetOwnerReferences(kutil.MergeOwnerReferences(configMap.OwnerReferences, *ownerRef))
+		}
 		return nil
 	})
 

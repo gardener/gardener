@@ -27,7 +27,7 @@ providerName=${2:-}
 [[ -z $providerName ]] && echo "Please specify the provider name (aws,gcp,azure,..etc.)!" && exit 1
 
 tmpService=$(mktemp)
-kubectl get svc gardener-extension-provider-$providerName -o yaml --export > $tmpService
+kubectl get svc gardener-extension-provider-$providerName -o yaml > $tmpService
 
     cat <<EOF | kubectl apply -f -
 ---
@@ -238,8 +238,8 @@ usage(){
   echo ""
 
   echo "========================================================USAGE======================================================================"
-  echo "> ./hack/hook-me.sh <extension namespace e.g. extension-provider-aws-fpr6w> <provider e.g., aws>  <webhookserver port e.g., 8443>"
-  echo "> \`make EXTENSION_NAMESPACE=<extension namespace e.g. extension-provider-aws-fpr6w> start\`"
+  echo "> ./hack/hook-me.sh <provider e.g., aws> <extension namespace e.g. extension-provider-aws-fpr6w> <webhookserver port e.g., 8443>"
+  echo "> \`make EXTENSION_NAMESPACE=<extension namespace e.g. extension-provider-aws-fpr6w> WEBHOOK_CONFIG_MODE=service start\`"
   echo "=================================================================================================================================="
 
   echo ""
@@ -294,7 +294,7 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
             createOrUpdateWebhookSVC $namespace $providerName
 
             echo "[STEP 7] Initializing the inlets client";
-            echo "[Info] Inlets initialized, you are ready to go ahead and run \"make EXTENSION_NAMESPACE=$namespace start\""
+            echo "[Info] Inlets initialized, you are ready to go ahead and run \"make EXTENSION_NAMESPACE=$namespace WEBHOOK_CONFIG_MODE=service start\""
             echo "[Info] It will take about 5 seconds for the connection to succeeed!"
 
             inlets client --remote ws://$loadbalancerIPOrHostName:8000 --upstream https://localhost:$webhookServerPort --token=21d809ed61915c9177fbceeaa87e307e766be5f2

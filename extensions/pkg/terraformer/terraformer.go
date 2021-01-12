@@ -187,6 +187,12 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 	}
 
 	if !skipApplyOrDestroyPod {
+		// TODO: remove after several releases
+		// ensure ownerRef for already existing state configmaps
+		if err := t.ensureStateHasOwnerRef(ctx); err != nil {
+			return fmt.Errorf("failed to ensure owner reference for the state configmap: %w", err)
+		}
+
 		// Create Terraform Pod which executes the provided command
 		generateName := t.computePodGenerateName(command)
 
@@ -295,6 +301,25 @@ func (t *terraformer) createOrUpdateTerraformerAuth(ctx context.Context) error {
 		return err
 	}
 	return t.createOrUpdateRoleBinding(ctx)
+}
+
+func (t *terraformer) ensureStateHasOwnerRef(ctx context.Context) error {
+	if t.ownerRef == nil {
+		return nil
+	}
+
+	configMap := &corev1.ConfigMap{}
+	if err := t.client.Get(ctx, kutils.Key(t.namespace, t.stateName), configMap); err != nil {
+		return err
+	}
+
+	oldConfigMap := configMap.DeepCopy()
+	configMap.SetOwnerReferences(kutils.MergeOwnerReferences(configMap.OwnerReferences, *t.ownerRef))
+
+	return t.client.Patch(ctx, configMap, client.MergeFromWithOptions(
+		oldConfigMap,
+		client.MergeFromWithOptimisticLock{},
+	))
 }
 
 func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, command string) (*corev1.Pod, error) {

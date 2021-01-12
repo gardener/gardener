@@ -9,7 +9,7 @@ ARG EFFECTIVE_VERSION
 RUN make install EFFECTIVE_VERSION=$EFFECTIVE_VERSION
 
 ############# base
-FROM eu.gcr.io/gardener-project/3rd/alpine:3.12.1 AS base
+FROM eu.gcr.io/gardener-project/3rd/alpine:3.12.3 AS base
 
 #############      apiserver     #############
 FROM base AS apiserver
