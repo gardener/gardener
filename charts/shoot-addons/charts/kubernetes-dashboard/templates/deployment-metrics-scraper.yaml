@@ -10,7 +10,7 @@ metadata:
     origin: gardener
     k8s-app: dashboard-metrics-scraper
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   replicas: 1
   selector:
     matchLabels:

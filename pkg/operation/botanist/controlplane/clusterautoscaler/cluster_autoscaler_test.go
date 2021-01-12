@@ -222,7 +222,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				},
 				Spec: appsv1.DeploymentSpec{
 					Replicas:             &replicas,
-					RevisionHistoryLimit: pointer.Int32Ptr(0),
+					RevisionHistoryLimit: pointer.Int32Ptr(1),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app":  "kubernetes",

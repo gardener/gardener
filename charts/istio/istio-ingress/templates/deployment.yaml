@@ -6,7 +6,7 @@ metadata:
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   selector:
     matchLabels:
 {{ .Values.labels | toYaml | indent 6 }}

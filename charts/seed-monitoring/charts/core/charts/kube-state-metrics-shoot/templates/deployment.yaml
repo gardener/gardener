@@ -8,7 +8,7 @@ metadata:
     component: kube-state-metrics
     type: shoot
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:

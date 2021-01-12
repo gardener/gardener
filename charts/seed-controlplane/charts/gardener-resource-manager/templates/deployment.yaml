@@ -8,7 +8,7 @@ metadata:
     gardener.cloud/role: controlplane
     app: gardener-resource-manager
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:

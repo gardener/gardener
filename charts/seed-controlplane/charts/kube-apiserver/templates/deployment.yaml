@@ -12,7 +12,7 @@ metadata:
 {{- end }}
 spec:
   minReadySeconds: 30
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:

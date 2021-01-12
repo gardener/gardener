@@ -330,7 +330,7 @@ var _ = Describe("New", func() {
 					},
 					Spec: appsv1.DeploymentSpec{
 						Replicas:             pointer.Int32Ptr(2),
-						RevisionHistoryLimit: pointer.Int32Ptr(0),
+						RevisionHistoryLimit: pointer.Int32Ptr(1),
 						Selector:             &metav1.LabelSelector{MatchLabels: expectedLabels},
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{

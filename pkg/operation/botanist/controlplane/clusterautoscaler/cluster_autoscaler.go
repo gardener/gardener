@@ -169,7 +169,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		})
 		deployment.Spec.Replicas = &c.replicas
-		deployment.Spec.RevisionHistoryLimit = pointer.Int32Ptr(0)
+		deployment.Spec.RevisionHistoryLimit = pointer.Int32Ptr(1)
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{

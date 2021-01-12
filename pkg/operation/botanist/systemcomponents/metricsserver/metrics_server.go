@@ -265,7 +265,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 				}),
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: pointer.Int32Ptr(0),
+				RevisionHistoryLimit: pointer.Int32Ptr(1),
 				Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 				Strategy: appsv1.DeploymentStrategy{
 					RollingUpdate: &appsv1.RollingUpdateDeployment{

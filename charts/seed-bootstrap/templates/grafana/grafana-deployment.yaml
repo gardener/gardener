@@ -8,7 +8,7 @@ metadata:
     role: monitoring
     component: grafana
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   replicas: 1
   selector:
     matchLabels:

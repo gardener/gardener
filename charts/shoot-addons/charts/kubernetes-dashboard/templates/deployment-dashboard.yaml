@@ -8,7 +8,7 @@ metadata:
     origin: gardener
     k8s-app: kubernetes-dashboard
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   replicas: 1
   selector:
     matchLabels:

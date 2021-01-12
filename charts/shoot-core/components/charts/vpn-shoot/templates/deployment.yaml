@@ -9,7 +9,7 @@ metadata:
     app: vpn-shoot
     origin: gardener
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   replicas: 1
   strategy:
     rollingUpdate:

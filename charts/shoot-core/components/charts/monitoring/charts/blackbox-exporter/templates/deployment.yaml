@@ -8,7 +8,7 @@ metadata:
     component: blackbox-exporter
     origin: gardener
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   replicas: 1
   selector:
     matchLabels:
