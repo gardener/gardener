@@ -92,6 +92,9 @@ remote-garden-down:
 	# Remove docker containers and networks
 	@-./hack/local-development/remote-garden/cleanup $(REMOTE_GARDEN_LABEL)
 
+.PHONY: start-all-servers
+start-all-servers: start-apiserver start-controller-manager start-scheduler start-gardenlet
+
 .PHONY: start-apiserver
 start-apiserver:
 	@./hack/local-development/start-apiserver
