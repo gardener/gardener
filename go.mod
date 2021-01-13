@@ -56,7 +56,7 @@ require (
 	k8s.io/helm v2.16.1+incompatible
 	k8s.io/klog v1.0.0
 	k8s.io/kube-aggregator v0.19.6
-	k8s.io/kube-openapi v0.0.0-20201221124747-75e88872edcf // k8s-1.19
+	k8s.io/kube-openapi v0.0.0-20201221124747-75e88872edcf // keep this value in sync with k8s.io/apiserver
 	k8s.io/kube-scheduler v0.19.6
 	k8s.io/kubelet v0.19.6
 	k8s.io/metrics v0.19.6

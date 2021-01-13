@@ -261,8 +261,8 @@ func newClientSet(conf *Config) (Interface, error) {
 	}
 
 	var runtimeClient client.Client
-	if UseCachedRuntimeClients && !conf.disableCached {
-		runtimeClient, err = newRuntimeClientWithCache(conf.restConfig, conf.clientOptions, runtimeCache, conf.disableCacheFor...)
+	if UseCachedRuntimeClients && !conf.disableCache {
+		runtimeClient, err = newRuntimeClientWithCache(conf.restConfig, conf.clientOptions, runtimeCache, conf.uncachedObjects...)
 		if err != nil {
 			return nil, err
 		}

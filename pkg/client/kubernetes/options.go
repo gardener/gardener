@@ -28,8 +28,8 @@ type Config struct {
 	clientOptions   client.Options
 	restConfig      *rest.Config
 	cacheResync     *time.Duration
-	disableCached   bool
-	disableCacheFor []client.Object
+	disableCache    bool
+	uncachedObjects []client.Object
 }
 
 // NewConfig returns a new Config with an empty REST config to allow testing ConfigFuncs without exporting
@@ -87,7 +87,7 @@ func WithCacheResyncPeriod(resync time.Duration) ConfigFunc {
 // DirectClient().
 func WithDisabledCachedClient() ConfigFunc {
 	return func(config *Config) error {
-		config.disableCached = true
+		config.disableCache = true
 		return nil
 	}
 }
@@ -95,7 +95,7 @@ func WithDisabledCachedClient() ConfigFunc {
 // WithUncached disables the cached client for the specified objects' GroupKinds.
 func WithUncached(objs ...client.Object) ConfigFunc {
 	return func(config *Config) error {
-		config.disableCacheFor = append(config.disableCacheFor, objs...)
+		config.uncachedObjects = append(config.uncachedObjects, objs...)
 		return nil
 	}
 }
