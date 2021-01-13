@@ -2,6 +2,7 @@ apiVersion: {{ include "rbacversion" . }}
 kind: RoleBinding
 metadata:
   name: istiod
+  namespace: {{ .Release.Namespace }}
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
 roleRef:
