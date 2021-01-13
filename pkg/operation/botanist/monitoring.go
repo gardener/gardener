@@ -121,11 +121,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 
 	hosts := []map[string]interface{}{
-		// TODO: timuthy - remove in the future. Old Prometheus host is retained for migration reasons.
-		{
-			"hostName":   b.ComputePrometheusHostDeprecated(),
-			"secretName": common.PrometheusTLS,
-		},
 		{
 			"hostName":   b.ComputePrometheusHost(),
 			"secretName": prometheusTLSOverride,
@@ -273,11 +268,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		}
 
 		hosts := []map[string]interface{}{
-			// TODO: timuthy - remove in the future. Old Prometheus host is retained for migration reasons.
-			{
-				"hostName":   b.ComputeAlertManagerHostDeprecated(),
-				"secretName": common.AlertManagerTLS,
-			},
 			{
 				"hostName":   b.ComputeAlertManagerHost(),
 				"secretName": alertManagerTLSOverride,
@@ -400,10 +390,6 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 	}
 
 	hosts := []map[string]interface{}{
-		{
-			"hostName":   b.ComputeIngressHostDeprecated(subDomain),
-			"secretName": common.GrafanaTLS,
-		},
 		{
 			"hostName":   b.ComputeIngressHost(subDomain),
 			"secretName": grafanaTLSOverride,
