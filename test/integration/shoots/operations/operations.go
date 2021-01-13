@@ -108,7 +108,7 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 		framework.ExpectNoError(err)
 	}, reconcileTimeout)
 
-	f.Beta().Serial().CIt("should rotate the kubeconfig for a shoot cluster", func(ctx context.Context) {
+	f.Beta().Disruptive().CIt("should rotate the kubeconfig for a shoot cluster", func(ctx context.Context) {
 		ginkgo.By("rotate kubeconfig")
 		var (
 			secretName = f.Shoot.Name + ".kubeconfig"

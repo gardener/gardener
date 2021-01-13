@@ -1,14 +1,14 @@
 kind: TestDefinition
 metadata:
-  name: shoot-release-serial-test-suite
+  name: shoot-beta-disruptive-test-suite
 spec:
   owner: gardener-oq@listserv.sap.com
-  description: shoot test suites that includes all serial release tests
+  description: shoot test suites that includes all disruptive beta tests
 
   activeDeadlineSeconds: 7200
-  labels: ["shoot", "release"]
+  labels: ["shoot", "beta"]
   behavior:
-  - serial
+  - disruptive
 
   command: [bash, -c]
   args:
@@ -20,7 +20,7 @@ spec:
       -shoot-name=$SHOOT_NAME
       -project-namespace=$PROJECT_NAMESPACE
       -fenced=$FENCED
-      -ginkgo.focus="\[RELEASE\].*\[SERIAL\]"
-      -ginkgo.skip="\[DISRUPTIVE\]"
+      -ginkgo.focus="\[BETA\].*\[DISRUPTIVE\]"
+      -ginkgo.skip="\[SERIAL\]"
 
   image: golang:1.15.3
