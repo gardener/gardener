@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed/scheduler/configurator"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
@@ -64,7 +65,7 @@ const (
 func New(
 	client client.Client,
 	namespace string,
-	image string,
+	image *imagevector.Image,
 	config configurator.Configurator,
 	webhookClientConfig *admissionregistrationv1beta1.WebhookClientConfig,
 ) (
@@ -83,18 +84,6 @@ func New(
 		return nil, errors.New("namespace cannot be 'garden'")
 	}
 
-	if len(image) == 0 {
-		return nil, errors.New("image is required")
-	}
-
-	if config == nil {
-		return nil, errors.New("config is required")
-	}
-
-	if webhookClientConfig == nil {
-		return nil, errors.New("webhookClientConfig is required")
-	}
-
 	s := &kubeScheduler{
 		client:    client,
 		namespace: namespace,
@@ -110,15 +99,27 @@ func New(
 type kubeScheduler struct {
 	client              client.Client
 	namespace           string
-	image               string
+	image               *imagevector.Image
 	config              configurator.Configurator
 	webhookClientConfig *admissionregistrationv1beta1.WebhookClientConfig
 }
 
 func (k *kubeScheduler) Deploy(ctx context.Context) error {
+	if k.config == nil {
+		return errors.New("config is required")
+	}
+
 	componentConfigYAML, componentConfigChecksum, err := k.config.Config()
 	if err != nil {
 		return errors.Wrap(err, "generate component config failed")
+	}
+
+	if k.image == nil || len(k.image.String()) == 0 {
+		return errors.New("image is required")
+	}
+
+	if k.webhookClientConfig == nil {
+		return errors.New("webhookClientConfig is required")
 	}
 
 	const (
@@ -213,7 +214,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 						Containers: []corev1.Container{
 							{
 								Name:            containerName,
-								Image:           k.image,
+								Image:           k.image.String(),
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Command:         k.command(port),
 								LivenessProbe: &corev1.Probe{
