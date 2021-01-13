@@ -94,42 +94,40 @@ func requestFromKey(key interface{}) (reconcile.Request, error) {
 
 // worker runs a worker thread that just dequeues items, processes them, and marks them done.
 // It enforces that the reconciler is never invoked concurrently with the same key.
-func worker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler reconcile.Reconciler) func() {
-	return func() {
-		exit := false
-		for !exit {
-			exit = func() bool {
-				key, quit := queue.Get()
-				if quit {
-					return true
-				}
-				defer queue.Done(key)
+func worker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler reconcile.Reconciler) {
+	exit := false
+	for !exit {
+		exit = func() bool {
+			key, quit := queue.Get()
+			if quit {
+				return true
+			}
+			defer queue.Done(key)
 
-				req, err := requestFromKey(key)
-				if err != nil {
-					logger.Logger.WithError(err).Error("Cannot obtain request from key")
-					queue.Forget(key)
-					return false
-				}
-
-				res, err := reconciler.Reconcile(ctx, req)
-				if err != nil {
-					logger.Logger.Infof("Error syncing %s %v: %v", resourceType, key, err)
-					queue.AddRateLimited(key)
-					return false
-				}
-
-				if res.RequeueAfter > 0 {
-					queue.AddAfter(key, res.RequeueAfter)
-					return false
-				}
-				if res.Requeue {
-					queue.AddRateLimited(key)
-					return false
-				}
+			req, err := requestFromKey(key)
+			if err != nil {
+				logger.Logger.WithError(err).Error("Cannot obtain request from key")
 				queue.Forget(key)
 				return false
-			}()
-		}
+			}
+
+			res, err := reconciler.Reconcile(ctx, req)
+			if err != nil {
+				logger.Logger.Infof("Error syncing %s %v: %v", resourceType, key, err)
+				queue.AddRateLimited(key)
+				return false
+			}
+
+			if res.RequeueAfter > 0 {
+				queue.AddAfter(key, res.RequeueAfter)
+				return false
+			}
+			if res.Requeue {
+				queue.AddRateLimited(key)
+				return false
+			}
+			queue.Forget(key)
+			return false
+		}()
 	}
 }
