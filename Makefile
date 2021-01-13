@@ -167,12 +167,17 @@ docker-push:
 #####################################################################
 
 .PHONY: install-requirements
-install-requirements:
+install-requirements: vendor-requirements install-extra-requirements
+	@true
+
+.PHONY: vendor-requirements
+vendor-requirements:
 	@go install -mod=vendor github.com/onsi/ginkgo/ginkgo
 	@go install -mod=vendor github.com/ahmetb/gen-crd-api-reference-docs
 	@go install -mod=vendor github.com/golang/mock/mockgen
 	@go install -mod=vendor sigs.k8s.io/controller-tools/cmd/controller-gen
 	@GO111MODULE=off go get github.com/prometheus/prometheus/cmd/promtool
+install-extra-requirements:
 	@./hack/install-requirements.sh
 
 .PHONY: revendor
