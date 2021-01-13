@@ -49,7 +49,7 @@ func NewDirectClient(config *rest.Config, options client.Options) (client.Client
 
 // NewRuntimeClientWithCache creates a new client.client with the given config and options.
 // The client uses a new cache, which will be started immediately using the given context.
-func NewRuntimeClientWithCache(config *rest.Config, options client.Options, ctx context.Context, uncachedObjects ...client.Object) (client.Client, error) {
+func NewRuntimeClientWithCache(ctx context.Context, config *rest.Config, options client.Options, uncachedObjects ...client.Object) (client.Client, error) {
 	if err := setClientOptionsDefaults(config, &options); err != nil {
 		return nil, err
 	}
