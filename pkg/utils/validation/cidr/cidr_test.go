@@ -28,167 +28,332 @@ import (
 )
 
 var _ = Describe("cidr", func() {
+	Describe("#cidr IPv4", func() {
+		var (
+			invalidGardenCIDR = "invalid_cidr"
+			validGardenCIDR   = "10.0.0.0/8"
+			path              = field.NewPath("foo")
+		)
 
-	var (
-		invalidGardenCIDR = "invalid_cidr"
-		validGardenCIDR   = "10.0.0.0/8"
-		path              = field.NewPath("foo")
-	)
+		Context("NewCIDR", func() {
+			It("should return a non-nil value", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
 
-	Context("NewCIDR", func() {
-		It("should return a non-nil value", func() {
-			cdr := NewCIDR(validGardenCIDR, path)
+				Expect(cdr).ToNot(BeNil())
+			})
 
-			Expect(cdr).ToNot(BeNil())
 		})
 
+		Context("GetCIDR", func() {
+			It("should return a correct address", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+
+				Expect(cdr.GetCIDR()).To(Equal(validGardenCIDR))
+			})
+		})
+
+		Context("GetIPNet", func() {
+			It("should return a correct IPNet", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+
+				_, expected, _ := net.ParseCIDR(validGardenCIDR)
+
+				actual := cdr.GetIPNet()
+
+				Expect(actual).ToNot(BeNil())
+				Expect(actual).To(Equal(expected))
+			})
+
+			It("should return an empty IPNet", func() {
+				cdr := NewCIDR(invalidGardenCIDR, path)
+
+				Expect(cdr.GetIPNet()).To(BeNil())
+			})
+		})
+
+		Context("GetFieldPath", func() {
+			It("should return a correct FieldPath", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+
+				actual := cdr.GetFieldPath()
+
+				Expect(actual).ToNot(BeNil())
+				Expect(actual).To(Equal(path))
+			})
+
+			It("should return a nil FieldPath", func() {
+				cdr := NewCIDR(validGardenCIDR, nil)
+
+				Expect(cdr.GetFieldPath()).To(BeNil())
+			})
+		})
+
+		Context("Parse", func() {
+			It("should return a correct FieldPath", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+
+				Expect(cdr.Parse()).To(BeTrue())
+			})
+
+			It("should return a nil FieldPath", func() {
+				cdr := NewCIDR(invalidGardenCIDR, path)
+
+				Expect(cdr.Parse()).To(BeFalse())
+			})
+		})
+
+		Context("ValidateNotSubset", func() {
+			It("should not be a subset", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+				other := NewCIDR(string("2.2.2.2/32"), path)
+
+				Expect(cdr.ValidateNotSubset(other)).To(BeEmpty())
+			})
+
+			It("should ignore nil values", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+
+				Expect(cdr.ValidateNotSubset(nil)).To(BeEmpty())
+			})
+
+			It("should ignore when parse error", func() {
+				cdr := NewCIDR(invalidGardenCIDR, path)
+				other := NewCIDR(string("2.2.2.2/32"), path)
+
+				Expect(cdr.ValidateNotSubset(other)).To(BeEmpty())
+			})
+
+			It("should return a nil FieldPath", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+				badCIDR := string("10.0.0.1/32")
+				badPath := field.NewPath("bad")
+				other := NewCIDR(badCIDR, badPath)
+
+				Expect(cdr.ValidateNotSubset(other)).To(ConsistOfFields(Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(badPath.String()),
+					"BadValue": Equal(badCIDR),
+					"Detail":   Equal(`must not be a subset of "foo" ("10.0.0.0/8")`),
+				}))
+			})
+		})
+
+		Context("ValidateParse", func() {
+			It("should parse without errors", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+
+				Expect(cdr.ValidateParse()).To(BeEmpty())
+			})
+
+			It("should return a nil FieldPath", func() {
+				cdr := NewCIDR(invalidGardenCIDR, path)
+
+				Expect(cdr.ValidateParse()).To(ConsistOfFields(Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(path.String()),
+					"BadValue": Equal(invalidGardenCIDR),
+					"Detail":   Equal(`invalid CIDR address: invalid_cidr`),
+				}))
+			})
+		})
+
+		Context("ValidateSubset", func() {
+			It("should be a subset", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+				other := NewCIDR(string("10.0.0.1/32"), field.NewPath("other"))
+
+				Expect(cdr.ValidateSubset(other)).To(BeEmpty())
+			})
+
+			It("should ignore nil values", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+
+				Expect(cdr.ValidateSubset(nil)).To(BeEmpty())
+			})
+
+			It("should ignore parse errors", func() {
+				cdr := NewCIDR(invalidGardenCIDR, path)
+				other := NewCIDR(string("10.0.0.1/32"), field.NewPath("other"))
+
+				Expect(cdr.ValidateSubset(other)).To(BeEmpty())
+			})
+
+			It("should not be a subset", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+				other := NewCIDR(string("10.0.0.1/32"), field.NewPath("bad"))
+
+				Expect(other.ValidateSubset(cdr)).To(ConsistOfFields(Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(path.String()),
+					"BadValue": Equal(validGardenCIDR),
+					"Detail":   Equal(`must be a subset of "bad" ("10.0.0.1/32")`),
+				}))
+			})
+
+		})
 	})
+	Describe("#cidr IPv6", func() {
+		var (
+			invalidGardenCIDR = "invalid_cidr"
+			validGardenCIDR   = "2001:0db8:85a3::/104"
+			path              = field.NewPath("foo")
+		)
 
-	Context("GetCIDR", func() {
-		It("should return a correct address", func() {
-			cdr := NewCIDR(validGardenCIDR, path)
+		Context("NewCIDR", func() {
+			It("should return a non-nil value", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
 
-			Expect(cdr.GetCIDR()).To(Equal(validGardenCIDR))
-		})
-	})
+				Expect(cdr).ToNot(BeNil())
+			})
 
-	Context("GetIPNet", func() {
-		It("should return a correct IPNet", func() {
-			cdr := NewCIDR(validGardenCIDR, path)
-
-			_, expected, _ := net.ParseCIDR(validGardenCIDR)
-
-			actual := cdr.GetIPNet()
-
-			Expect(actual).ToNot(BeNil())
-			Expect(actual).To(Equal(expected))
 		})
 
-		It("should return an empty IPNet", func() {
-			cdr := NewCIDR(invalidGardenCIDR, path)
+		Context("GetCIDR", func() {
+			It("should return a correct address", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
 
-			Expect(cdr.GetIPNet()).To(BeNil())
-		})
-	})
-
-	Context("GetFieldPath", func() {
-		It("should return a correct FieldPath", func() {
-			cdr := NewCIDR(validGardenCIDR, path)
-
-			actual := cdr.GetFieldPath()
-
-			Expect(actual).ToNot(BeNil())
-			Expect(actual).To(Equal(path))
+				Expect(cdr.GetCIDR()).To(Equal(validGardenCIDR))
+			})
 		})
 
-		It("should return a nil FieldPath", func() {
-			cdr := NewCIDR(validGardenCIDR, nil)
+		Context("GetIPNet", func() {
+			It("should return a correct IPNet", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
 
-			Expect(cdr.GetFieldPath()).To(BeNil())
-		})
-	})
+				_, expected, _ := net.ParseCIDR(validGardenCIDR)
 
-	Context("Parse", func() {
-		It("should return a correct FieldPath", func() {
-			cdr := NewCIDR(validGardenCIDR, path)
+				actual := cdr.GetIPNet()
 
-			Expect(cdr.Parse()).To(BeTrue())
-		})
+				Expect(actual).ToNot(BeNil())
+				Expect(actual).To(Equal(expected))
+			})
 
-		It("should return a nil FieldPath", func() {
-			cdr := NewCIDR(invalidGardenCIDR, path)
+			It("should return an empty IPNet", func() {
+				cdr := NewCIDR(invalidGardenCIDR, path)
 
-			Expect(cdr.Parse()).To(BeFalse())
-		})
-	})
-
-	Context("ValidateNotSubset", func() {
-		It("should not be a subset", func() {
-			cdr := NewCIDR(validGardenCIDR, path)
-			other := NewCIDR(string("2.2.2.2/32"), path)
-
-			Expect(cdr.ValidateNotSubset(other)).To(BeEmpty())
+				Expect(cdr.GetIPNet()).To(BeNil())
+			})
 		})
 
-		It("should ignore nil values", func() {
-			cdr := NewCIDR(validGardenCIDR, path)
+		Context("GetFieldPath", func() {
+			It("should return a correct FieldPath", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
 
-			Expect(cdr.ValidateNotSubset(nil)).To(BeEmpty())
+				actual := cdr.GetFieldPath()
+
+				Expect(actual).ToNot(BeNil())
+				Expect(actual).To(Equal(path))
+			})
+
+			It("should return a nil FieldPath", func() {
+				cdr := NewCIDR(validGardenCIDR, nil)
+
+				Expect(cdr.GetFieldPath()).To(BeNil())
+			})
 		})
 
-		It("should ignore when parse error", func() {
-			cdr := NewCIDR(invalidGardenCIDR, path)
-			other := NewCIDR(string("2.2.2.2/32"), path)
+		Context("Parse", func() {
+			It("should return a correct FieldPath", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
 
-			Expect(cdr.ValidateNotSubset(other)).To(BeEmpty())
+				Expect(cdr.Parse()).To(BeTrue())
+			})
+
+			It("should return a nil FieldPath", func() {
+				cdr := NewCIDR(invalidGardenCIDR, path)
+
+				Expect(cdr.Parse()).To(BeFalse())
+			})
 		})
 
-		It("should return a nil FieldPath", func() {
-			cdr := NewCIDR(validGardenCIDR, path)
-			badCIDR := string("10.0.0.1/32")
-			badPath := field.NewPath("bad")
-			other := NewCIDR(badCIDR, badPath)
+		Context("ValidateNotSubset", func() {
+			It("should not be a subset", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+				other := NewCIDR(string("3001:0db8:85a3::1/128"), path)
 
-			Expect(cdr.ValidateNotSubset(other)).To(ConsistOfFields(Fields{
-				"Type":     Equal(field.ErrorTypeInvalid),
-				"Field":    Equal(badPath.String()),
-				"BadValue": Equal(badCIDR),
-				"Detail":   Equal(`must not be a subset of "foo" ("10.0.0.0/8")`),
-			}))
-		})
-	})
+				Expect(cdr.ValidateNotSubset(other)).To(BeEmpty())
+			})
 
-	Context("ValidateParse", func() {
-		It("should parse without errors", func() {
-			cdr := NewCIDR(validGardenCIDR, path)
+			It("should ignore nil values", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
 
-			Expect(cdr.ValidateParse()).To(BeEmpty())
-		})
+				Expect(cdr.ValidateNotSubset(nil)).To(BeEmpty())
+			})
 
-		It("should return a nil FieldPath", func() {
-			cdr := NewCIDR(invalidGardenCIDR, path)
+			It("should ignore when parse error", func() {
+				cdr := NewCIDR(invalidGardenCIDR, path)
+				other := NewCIDR(string("3001:0db8:85a3::1/128"), path)
 
-			Expect(cdr.ValidateParse()).To(ConsistOfFields(Fields{
-				"Type":     Equal(field.ErrorTypeInvalid),
-				"Field":    Equal(path.String()),
-				"BadValue": Equal(invalidGardenCIDR),
-				"Detail":   Equal(`invalid CIDR address: invalid_cidr`),
-			}))
-		})
-	})
+				Expect(cdr.ValidateNotSubset(other)).To(BeEmpty())
+			})
 
-	Context("ValidateSubset", func() {
-		It("should be a subset", func() {
-			cdr := NewCIDR(validGardenCIDR, path)
-			other := NewCIDR(string("10.0.0.1/32"), field.NewPath("other"))
+			It("should return a nil FieldPath", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+				badCIDR := string("2001:0db8:85a3::1/128")
+				badPath := field.NewPath("bad")
+				other := NewCIDR(badCIDR, badPath)
 
-			Expect(cdr.ValidateSubset(other)).To(BeEmpty())
+				Expect(cdr.ValidateNotSubset(other)).To(ConsistOfFields(Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(badPath.String()),
+					"BadValue": Equal(badCIDR),
+					"Detail":   Equal(`must not be a subset of "foo" ("2001:0db8:85a3::/104")`),
+				}))
+			})
 		})
 
-		It("should ignore nil values", func() {
-			cdr := NewCIDR(validGardenCIDR, path)
+		Context("ValidateParse", func() {
+			It("should parse without errors", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
 
-			Expect(cdr.ValidateSubset(nil)).To(BeEmpty())
+				Expect(cdr.ValidateParse()).To(BeEmpty())
+			})
+
+			It("should return a nil FieldPath", func() {
+				cdr := NewCIDR(invalidGardenCIDR, path)
+
+				Expect(cdr.ValidateParse()).To(ConsistOfFields(Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(path.String()),
+					"BadValue": Equal(invalidGardenCIDR),
+					"Detail":   Equal(`invalid CIDR address: invalid_cidr`),
+				}))
+			})
 		})
 
-		It("should ignore parse errors", func() {
-			cdr := NewCIDR(invalidGardenCIDR, path)
-			other := NewCIDR(string("10.0.0.1/32"), field.NewPath("other"))
+		Context("ValidateSubset", func() {
+			It("should be a subset", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+				other := NewCIDR(string("2001:0db8:85a3::1/128"), field.NewPath("other"))
 
-			Expect(cdr.ValidateSubset(other)).To(BeEmpty())
+				Expect(cdr.ValidateSubset(other)).To(BeEmpty())
+			})
+
+			It("should ignore nil values", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+
+				Expect(cdr.ValidateSubset(nil)).To(BeEmpty())
+			})
+
+			It("should ignore parse errors", func() {
+				cdr := NewCIDR(invalidGardenCIDR, path)
+				other := NewCIDR(string("2001:0db8:85a3::1/128"), field.NewPath("other"))
+
+				Expect(cdr.ValidateSubset(other)).To(BeEmpty())
+			})
+
+			It("should not be a subset", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+				other := NewCIDR(string("2001:0db8:85a3::1/128"), field.NewPath("bad"))
+
+				Expect(other.ValidateSubset(cdr)).To(ConsistOfFields(Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(path.String()),
+					"BadValue": Equal(validGardenCIDR),
+					"Detail":   Equal(`must be a subset of "bad" ("2001:0db8:85a3::1/128")`),
+				}))
+			})
+
 		})
-
-		It("should not be a subset", func() {
-			cdr := NewCIDR(validGardenCIDR, path)
-			other := NewCIDR(string("10.0.0.1/32"), field.NewPath("bad"))
-
-			Expect(other.ValidateSubset(cdr)).To(ConsistOfFields(Fields{
-				"Type":     Equal(field.ErrorTypeInvalid),
-				"Field":    Equal(path.String()),
-				"BadValue": Equal(validGardenCIDR),
-				"Detail":   Equal(`must be a subset of "bad" ("10.0.0.1/32")`),
-			}))
-		})
-
 	})
 })
