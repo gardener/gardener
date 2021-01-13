@@ -15,6 +15,8 @@
 package helper_test
 
 import (
+	"time"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
@@ -41,6 +43,30 @@ var _ = Describe("helper", func() {
 				},
 			}
 			Expect(SeedNameFromSeedConfig(config)).To(Equal(seedName))
+		})
+	})
+
+	Describe("#StaleExtensionHealthChecksThreshold", func() {
+		It("should return nil when the config is nil", func() {
+			Expect(StaleExtensionHealthChecksThreshold(nil)).To(BeNil())
+		})
+
+		It("should return nil when the check is not enabled", func() {
+			threshold := &metav1.Duration{Duration: time.Minute}
+			c := &config.StaleExtensionHealthChecks{
+				Enabled:   false,
+				Threshold: threshold,
+			}
+			Expect(StaleExtensionHealthChecksThreshold(c)).To(BeNil())
+		})
+
+		It("should return the threshold", func() {
+			threshold := &metav1.Duration{Duration: time.Minute}
+			c := &config.StaleExtensionHealthChecks{
+				Enabled:   true,
+				Threshold: threshold,
+			}
+			Expect(StaleExtensionHealthChecksThreshold(c)).To(Equal(threshold))
 		})
 	})
 })

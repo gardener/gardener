@@ -16,6 +16,8 @@ package helper
 
 import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // SeedNameFromSeedConfig returns an empty string if the given seed config is nil, or the
@@ -25,4 +27,14 @@ func SeedNameFromSeedConfig(seedConfig *config.SeedConfig) string {
 		return ""
 	}
 	return seedConfig.Seed.Name
+}
+
+// StaleExtensionHealthChecksThreshold returns nil if the given config is nil or the check
+// for stale health checks is not enabled. Otherwise it returns the threshold from the given config.
+func StaleExtensionHealthChecksThreshold(c *config.StaleExtensionHealthChecks) *metav1.Duration {
+	if c != nil && c.Enabled {
+		return c.Threshold
+	}
+
+	return nil
 }
