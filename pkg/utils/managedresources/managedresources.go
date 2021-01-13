@@ -137,6 +137,7 @@ func KeepManagedResourceObjects(ctx context.Context, c client.Client, namespace,
 			Namespace: namespace,
 		},
 	}
+
 	if err := kutil.TryUpdate(ctx, k8sretry.DefaultBackoff, c, resource, func() error {
 		resource.Spec.KeepObjects = &keepObjects
 		return nil
