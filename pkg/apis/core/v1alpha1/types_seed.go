@@ -125,7 +125,7 @@ type SeedBackup struct {
 // SeedDNS contains DNS-relevant information about this seed cluster.
 type SeedDNS struct {
 	// IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-	// to construct ingress URLs for system applications running in Shoot clusters.
+	// to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.
 	// This will be removed in the next API version and replaced by spec.ingress.domain.
 	// +optional
 	IngressDomain *string `json:"ingressDomain,omitempty" protobuf:"bytes,1,opt,name=ingressDomain"`
@@ -151,7 +151,7 @@ type SeedDNSProvider struct {
 // Ingress configures the Ingress specific settings of the Seed cluster.
 type Ingress struct {
 	// Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-	// to construct ingress URLs for system applications running in Shoot clusters.
+	// to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.
 	Domain string `json:"domain" protobuf:"bytes,1,opt,name=domain"`
 	// Controller configures a Gardener managed Ingress Controller listening on the ingressDomain
 	Controller IngressController `json:"controller" protobuf:"bytes,2,opt,name=controller"`

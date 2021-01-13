@@ -3082,7 +3082,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>Domain is the external available domain of the Shoot cluster. This domain will be written into the
-kubeconfig that is handed out to end-users.</p>
+kubeconfig that is handed out to end-users. Once set it is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -3771,7 +3771,7 @@ string
 </td>
 <td>
 <p>Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-to construct ingress URLs for system applications running in Shoot clusters.</p>
+to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.</p>
 </td>
 </tr>
 <tr>
@@ -6955,7 +6955,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-to construct ingress URLs for system applications running in Shoot clusters.
+to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.
 This will be removed in the next API version and replaced by spec.ingress.domain.</p>
 </td>
 </tr>
