@@ -242,8 +242,8 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 func (w *worker) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
 	return common.RestoreExtensionWithDeployFunction(
 		ctx,
-		shootState,
 		w.client,
+		shootState,
 		extensionsv1alpha1.WorkerResource,
 		w.values.Namespace,
 		w.deploy,

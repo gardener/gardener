@@ -343,8 +343,8 @@ func WaitUntilExtensionCRDeleted(
 // It then restores the state of the extension resource from the ShootState, creates any required state resources and sets the operation annotation to restore.
 func RestoreExtensionWithDeployFunction(
 	ctx context.Context,
-	shootState *gardencorev1alpha1.ShootState,
 	c client.Client,
+	shootState *gardencorev1alpha1.ShootState,
 	resourceKind string,
 	namespace string,
 	deployFunc func(ctx context.Context, operationAnnotation string) (extensionsv1alpha1.Object, error),

@@ -394,8 +394,8 @@ var _ = Describe("extensions", func() {
 
 				err := RestoreExtensionWithDeployFunction(
 					ctx,
-					shootState,
 					c,
+					shootState,
 					extensionsv1alpha1.WorkerResource,
 					namespace,
 					func(ctx context.Context, operationAnnotation string) (extensionsv1alpha1.Object, error) {
@@ -421,8 +421,8 @@ var _ = Describe("extensions", func() {
 				expected.Name = "worker2"
 				err := RestoreExtensionWithDeployFunction(
 					ctx,
-					shootState,
 					c,
+					shootState,
 					extensionsv1alpha1.WorkerResource,
 					namespace,
 					func(ctx context.Context, operationAnnotation string) (extensionsv1alpha1.Object, error) {

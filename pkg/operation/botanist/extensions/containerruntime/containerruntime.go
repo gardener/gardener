@@ -49,11 +49,13 @@ var TimeNow = time.Now
 
 // Values contains the values used to create a ContainerRuntime resources.
 type Values struct {
+	// Namespace is the namespace for the ContainerRuntime resource.
 	Namespace string
-	Workers   []gardencorev1beta1.Worker
+	// Workers is the list of worker pools.
+	Workers []gardencorev1beta1.Worker
 }
 
-type containerruntime struct {
+type containerRuntime struct {
 	values              *Values
 	client              client.Client
 	logger              logrus.FieldLogger
@@ -71,7 +73,7 @@ func New(
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
 ) shoot.ExtensionContainerRuntime {
-	return &containerruntime{
+	return &containerRuntime{
 		values:              values,
 		client:              client,
 		logger:              logger,
@@ -82,9 +84,9 @@ func New(
 }
 
 // Deploy uses the seed client to create or update the ContainerRuntime resources.
-func (d *containerruntime) Deploy(ctx context.Context) error {
-	fns := d.forEachContainerRuntime(func(ctx context.Context, workerName string, cr gardencorev1beta1.ContainerRuntime) error {
-		rd := resourceDeployer{d.values.Namespace, workerName, cr, d.client}
+func (c *containerRuntime) Deploy(ctx context.Context) error {
+	fns := c.forEachContainerRuntime(func(ctx context.Context, workerName string, cr gardencorev1beta1.ContainerRuntime) error {
+		rd := resourceDeployer{c.values.Namespace, workerName, cr, c.client}
 		_, err := rd.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
 		return err
 	})
@@ -93,24 +95,24 @@ func (d *containerruntime) Deploy(ctx context.Context) error {
 }
 
 // Destroy deletes the ContainerRuntime resources.
-func (d *containerruntime) Destroy(ctx context.Context) error {
-	return d.deleteContainerRuntimeResources(ctx, sets.NewString())
+func (c *containerRuntime) Destroy(ctx context.Context) error {
+	return c.deleteContainerRuntimeResources(ctx, sets.NewString())
 }
 
 // Wait waits until the ContainerRuntime resources are ready.
-func (d *containerruntime) Wait(ctx context.Context) error {
-	fns := d.forEachContainerRuntime(func(ctx context.Context, workerName string, cr gardencorev1beta1.ContainerRuntime) error {
+func (c *containerRuntime) Wait(ctx context.Context) error {
+	fns := c.forEachContainerRuntime(func(ctx context.Context, workerName string, cr gardencorev1beta1.ContainerRuntime) error {
 		return common.WaitUntilExtensionCRReady(
 			ctx,
-			d.client,
-			d.logger,
+			c.client,
+			c.logger,
 			func() client.Object { return &extensionsv1alpha1.ContainerRuntime{} },
 			extensionsv1alpha1.ContainerRuntimeResource,
-			d.values.Namespace,
+			c.values.Namespace,
 			getContainerRuntimeKey(cr.Type, workerName),
-			d.waitInterval,
-			d.waitSevereThreshold,
-			d.waitTimeout,
+			c.waitInterval,
+			c.waitSevereThreshold,
+			c.waitTimeout,
 			nil,
 		)
 	})
@@ -119,59 +121,59 @@ func (d *containerruntime) Wait(ctx context.Context) error {
 }
 
 // WaitCleanup waits until the ContainerRuntime resources are cleaned up.
-func (d *containerruntime) WaitCleanup(ctx context.Context) error {
+func (c *containerRuntime) WaitCleanup(ctx context.Context) error {
 	return common.WaitUntilExtensionCRsDeleted(
 		ctx,
-		d.client,
-		d.logger,
+		c.client,
+		c.logger,
 		&extensionsv1alpha1.ContainerRuntimeList{},
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ContainerRuntime{} },
 		extensionsv1alpha1.ContainerRuntimeResource,
-		d.values.Namespace,
-		d.waitInterval,
-		d.waitTimeout,
+		c.values.Namespace,
+		c.waitInterval,
+		c.waitTimeout,
 		nil,
 	)
 }
 
 // Restore uses the seed client and the ShootState to create the ContainerRuntime resources and restore their state.
-func (d *containerruntime) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
-	fns := d.forEachContainerRuntime(func(ctx context.Context, workerName string, cr gardencorev1beta1.ContainerRuntime) error {
-		rd := resourceDeployer{d.values.Namespace, workerName, cr, d.client}
-		return common.RestoreExtensionWithDeployFunction(ctx, shootState, d.client, extensionsv1alpha1.ContainerRuntimeResource, d.values.Namespace, rd.deploy)
+func (c *containerRuntime) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
+	fns := c.forEachContainerRuntime(func(ctx context.Context, workerName string, cr gardencorev1beta1.ContainerRuntime) error {
+		rd := resourceDeployer{c.values.Namespace, workerName, cr, c.client}
+		return common.RestoreExtensionWithDeployFunction(ctx, c.client, shootState, extensionsv1alpha1.ContainerRuntimeResource, c.values.Namespace, rd.deploy)
 	})
 
 	return flow.Parallel(fns...)(ctx)
 }
 
 // Migrate migrates the ContainerRuntime resources.
-func (d *containerruntime) Migrate(ctx context.Context) error {
+func (c *containerRuntime) Migrate(ctx context.Context) error {
 	return common.MigrateExtensionCRs(
 		ctx,
-		d.client,
+		c.client,
 		&extensionsv1alpha1.ContainerRuntimeList{},
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ContainerRuntime{} },
-		d.values.Namespace,
+		c.values.Namespace,
 	)
 }
 
 // WaitMigrate waits until the ContainerRuntime resources are migrated successfully.
-func (d *containerruntime) WaitMigrate(ctx context.Context) error {
+func (c *containerRuntime) WaitMigrate(ctx context.Context) error {
 	return common.WaitUntilExtensionCRsMigrated(
 		ctx,
-		d.client,
+		c.client,
 		&extensionsv1alpha1.ContainerRuntimeList{},
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ContainerRuntime{} },
-		d.values.Namespace,
-		d.waitInterval,
-		d.waitTimeout,
+		c.values.Namespace,
+		c.waitInterval,
+		c.waitTimeout,
 	)
 }
 
 // DeleteStaleResources deletes unused container runtime resources from the shoot namespace in the seed.
-func (d *containerruntime) DeleteStaleResources(ctx context.Context) error {
+func (c *containerRuntime) DeleteStaleResources(ctx context.Context) error {
 	wantedContainerRuntimeTypes := sets.NewString()
-	for _, worker := range d.values.Workers {
+	for _, worker := range c.values.Workers {
 		if worker.CRI != nil {
 			for _, containerRuntime := range worker.CRI.ContainerRuntimes {
 				key := getContainerRuntimeKey(containerRuntime.Type, worker.Name)
@@ -179,16 +181,16 @@ func (d *containerruntime) DeleteStaleResources(ctx context.Context) error {
 			}
 		}
 	}
-	return d.deleteContainerRuntimeResources(ctx, wantedContainerRuntimeTypes)
+	return c.deleteContainerRuntimeResources(ctx, wantedContainerRuntimeTypes)
 }
 
-func (d *containerruntime) deleteContainerRuntimeResources(ctx context.Context, wantedContainerRuntimeTypes sets.String) error {
+func (c *containerRuntime) deleteContainerRuntimeResources(ctx context.Context, wantedContainerRuntimeTypes sets.String) error {
 	return common.DeleteExtensionCRs(
 		ctx,
-		d.client,
+		c.client,
 		&extensionsv1alpha1.ContainerRuntimeList{},
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ContainerRuntime{} },
-		d.values.Namespace,
+		c.values.Namespace,
 		func(obj extensionsv1alpha1.Object) bool {
 			cr, ok := obj.(*extensionsv1alpha1.ContainerRuntime)
 			if !ok {
@@ -199,9 +201,9 @@ func (d *containerruntime) deleteContainerRuntimeResources(ctx context.Context, 
 	)
 }
 
-func (d *containerruntime) forEachContainerRuntime(fn func(ctx context.Context, workerName string, cr gardencorev1beta1.ContainerRuntime) error) []flow.TaskFn {
+func (c *containerRuntime) forEachContainerRuntime(fn func(ctx context.Context, workerName string, cr gardencorev1beta1.ContainerRuntime) error) []flow.TaskFn {
 	var fns []flow.TaskFn
-	for _, worker := range d.values.Workers {
+	for _, worker := range c.values.Workers {
 		if worker.CRI == nil {
 			continue
 		}
