@@ -32,6 +32,7 @@ import (
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -45,7 +46,6 @@ import (
 )
 
 const (
-	name                                  = "gardener-kube-scheduler"
 	containerName                         = "kube-scheduler"
 	portNameMetrics                       = "metrics"
 	dataKeyComponentConfig                = "config.yaml"
@@ -152,7 +152,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      name,
+				Name:      Name,
 				Namespace: k.namespace,
 			}},
 		}
@@ -168,13 +168,13 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      name,
+				Name:      Name,
 				Namespace: k.namespace,
 			}},
 		}
 		configMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      Name,
 				Namespace: k.namespace,
 				Labels:    getLabels(),
 			},
@@ -182,7 +182,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		}
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      Name,
 				Namespace: k.namespace,
 				Labels:    getLabels(),
 			},
@@ -209,7 +209,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 								}},
 							},
 						},
-						ServiceAccountName: name,
+						ServiceAccountName: Name,
 						Containers: []corev1.Container{
 							{
 								Name:            containerName,
@@ -272,7 +272,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			},
 		}
 		serviceAccount = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      Name,
 			Namespace: k.namespace,
 			Labels:    getLabels(),
 		}}
@@ -289,7 +289,41 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      name,
+				Name:      Name,
+				Namespace: k.namespace,
+			}},
+		}
+		leaseRole = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      Name,
+				Namespace: k.namespace,
+				Labels:    getLabels(),
+			},
+			Rules: []rbacv1.PolicyRule{{
+				Verbs:     []string{"create"},
+				Resources: []string{"leases"},
+				APIGroups: []string{coordinationv1.SchemeGroupVersion.Group},
+			}, {
+				Verbs:         []string{"get", "update"},
+				Resources:     []string{"leases"},
+				APIGroups:     []string{coordinationv1.SchemeGroupVersion.Group},
+				ResourceNames: []string{Name},
+			}},
+		}
+		leaseRoleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      Name,
+				Namespace: k.namespace,
+				Labels:    getLabels(),
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      Name,
 				Namespace: k.namespace,
 			}},
 		}
@@ -326,7 +360,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		}
 		vpa = &autoscalingv1beta2.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      Name,
 				Namespace: k.namespace,
 				Labels:    getLabels(),
 			},
@@ -343,7 +377,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		}
 		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      Name,
 				Namespace: k.namespace,
 				Labels:    getLabels(),
 			},
@@ -370,6 +404,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		volumeSchedulerClusterRoleBinding,
 		roleBinding,
 		serviceAccount,
+		leaseRole,
+		leaseRoleBinding,
 		configMap,
 		deployment,
 		webhook,

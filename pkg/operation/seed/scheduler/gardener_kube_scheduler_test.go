@@ -198,6 +198,63 @@ var _ = Describe("New", func() {
 				Expect(actual).To(DeepDerivativeEqual(expected))
 			})
 
+			It("lease rolebinding is created", func() {
+				const key = "rolebinding__test-namespace__gardener-kube-scheduler.yaml"
+				actual := &rbacv1.RoleBinding{}
+				expected := &rbacv1.RoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardener-kube-scheduler",
+						Namespace: deployNS,
+						Labels:    expectedLabels,
+					},
+					RoleRef: rbacv1.RoleRef{
+						APIGroup: rbacv1.SchemeGroupVersion.Group,
+						Kind:     "Role",
+						Name:     "gardener-kube-scheduler",
+					},
+					Subjects: []rbacv1.Subject{{
+						APIGroup:  corev1.SchemeGroupVersion.Group,
+						Kind:      "ServiceAccount",
+						Name:      "gardener-kube-scheduler",
+						Namespace: deployNS,
+					}},
+				}
+
+				Expect(managedResourceSecret.Data).To(HaveKey(key))
+				_, _, err := codec.UniversalDecoder().Decode(managedResourceSecret.Data[key], nil, actual)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(actual).To(DeepDerivativeEqual(expected))
+			})
+
+			It("lease role is created", func() {
+				const key = "role__test-namespace__gardener-kube-scheduler.yaml"
+				actual := &rbacv1.Role{}
+				expected := &rbacv1.Role{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardener-kube-scheduler",
+						Namespace: deployNS,
+						Labels:    expectedLabels,
+					},
+					Rules: []rbacv1.PolicyRule{{
+						Verbs:     []string{"create"},
+						APIGroups: []string{"coordination.k8s.io"},
+						Resources: []string{"leases"},
+					}, {
+						Verbs:         []string{"get", "update"},
+						APIGroups:     []string{"coordination.k8s.io"},
+						Resources:     []string{"leases"},
+						ResourceNames: []string{"gardener-kube-scheduler"},
+					}},
+				}
+
+				Expect(managedResourceSecret.Data).To(HaveKey(key))
+				_, _, err := codec.UniversalDecoder().Decode(managedResourceSecret.Data[key], nil, actual)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(actual).To(DeepDerivativeEqual(expected))
+			})
+
 			It("volume-scheduler clusterrolebinding is created", func() {
 				const key = "clusterrolebinding____gardener.cloud_volume-scheduler.yaml"
 				actual := &rbacv1.ClusterRoleBinding{}
