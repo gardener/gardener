@@ -17,10 +17,10 @@ limitations under the License.
 package v1alpha2
 
 import (
+	v1 "github.com/gardener/gardener/third_party/kube-scheduler/v18/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	v1 "k8s.io/kube-scheduler/config/v1"
 )
 
 const (
@@ -96,7 +96,7 @@ type KubeSchedulerConfiguration struct {
 	// Extenders are the list of scheduler extenders, each holding the values of how to communicate
 	// with the extender. These extenders are shared by all scheduler profiles.
 	// +listType=set
-	Extenders []v1.LegacyExtender `json:"extenders"`
+	Extenders []v1.Extender `json:"extenders"`
 }
 
 // KubeSchedulerProfile is a scheduling profile.
