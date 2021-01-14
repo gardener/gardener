@@ -326,3 +326,12 @@ func (i *Image) String() string {
 
 	return i.Repository + delimiter + *i.Tag
 }
+
+// ImageMapToValues transforms the given image name to image mapping into chart Values.
+func ImageMapToValues(m map[string]*Image) map[string]interface{} {
+	out := make(map[string]interface{}, len(m))
+	for k, v := range m {
+		out[k] = v.String()
+	}
+	return out
+}

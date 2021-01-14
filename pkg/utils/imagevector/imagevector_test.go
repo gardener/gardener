@@ -396,6 +396,38 @@ images:
 			})
 		})
 	})
+
+	Describe("#ImageMapToValues", func() {
+		It("should return the expected map", func() {
+			var (
+				image1Key        = "foo"
+				image1Name       = "baz"
+				image1Repository = "baz"
+				image1Tag        = "barbaz"
+
+				image2Key        = "bar"
+				image2Name       = "baz"
+				image2Repository = "foo"
+
+				imageMap = map[string]*Image{
+					image1Key: {
+						Name:       image1Name,
+						Repository: image1Repository,
+						Tag:        &image1Tag,
+					},
+					image2Key: {
+						Name:       image2Name,
+						Repository: image2Repository,
+					},
+				}
+			)
+
+			Expect(ImageMapToValues(imageMap)).To(Equal(map[string]interface{}{
+				image1Key: image1Name + ":" + image1Tag,
+				image2Key: image2Repository,
+			}))
+		})
+	})
 })
 
 func withTempFile(pattern string, data []byte) (*os.File, func()) {

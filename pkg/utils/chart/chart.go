@@ -171,24 +171,6 @@ func objectKey(namespace, name string) client.ObjectKey {
 	return client.ObjectKey{Namespace: namespace, Name: name}
 }
 
-// CopyValues creates a shallow copy of the given Values.
-func CopyValues(values map[string]interface{}) map[string]interface{} {
-	copiedValues := make(map[string]interface{}, len(values))
-	for k, v := range values {
-		copiedValues[k] = v
-	}
-	return copiedValues
-}
-
-// ImageMapToValues transforms the given image name to image mapping into chart Values.
-func ImageMapToValues(m map[string]*imagevector.Image) map[string]interface{} {
-	out := make(map[string]interface{}, len(m))
-	for k, v := range m {
-		out[k] = v.String()
-	}
-	return out
-}
-
 // InjectImages finds the images with the given names and opts, makes a shallow copy of the given
 // Values and injects a name to image string mapping at the `images` key of that map and returns it.
 func InjectImages(values map[string]interface{}, v imagevector.ImageVector, names []string, opts ...imagevector.FindOptionFunc) (map[string]interface{}, error) {
@@ -197,7 +179,7 @@ func InjectImages(values map[string]interface{}, v imagevector.ImageVector, name
 		return nil, err
 	}
 
-	values = CopyValues(values)
-	values["images"] = ImageMapToValues(images)
+	values = utils.ShallowCopyMapStringInterface(values)
+	values["images"] = imagevector.ImageMapToValues(images)
 	return values, nil
 }
