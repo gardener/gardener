@@ -88,9 +88,6 @@ func requestCertificate(ctx context.Context, logger logrus.FieldLogger, client k
 
 	logger.Info("Creating certificate signing request...")
 
-	// TODO (timebertt): figure out correct signerName for gardenlet CSRs
-	// kubernetes.io/legacy-unknown is disallowed when creating new CSR objects in certificates/v1,
-	// ref https://github.com/kubernetes/enhancements/tree/master/keps/sig-auth/1513-certificate-signing-request#api-changes-between-v1beta1-and-v1
 	reqName, reqUID, err := csr.RequestCertificate(client, csrData, name, certificatesv1.KubeAPIServerClientSignerName, usages, privateKey)
 	if err != nil {
 		return nil, "", err

@@ -23,8 +23,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 	certificatesv1 "k8s.io/api/certificates/v1"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
@@ -77,26 +79,40 @@ func RequestBootstrapKubeconfig(ctx context.Context, logger logrus.FieldLogger, 
 // (either a bootstrap token or a service account token was used). If the latter is true then it
 // also deletes the corresponding ClusterRoleBinding.
 func DeleteBootstrapAuth(ctx context.Context, c client.Client, csrName, seedName string) error {
+	var username string
+
+	// try certificates v1 API first
 	csr := &certificatesv1.CertificateSigningRequest{}
-	if err := c.Get(ctx, kutil.Key(csrName), csr); err != nil {
-		return err
+	if err := c.Get(ctx, kutil.Key(csrName), csr); err == nil {
+		username = csr.Spec.Username
+	} else {
+		if !meta.IsNoMatchError(err) {
+			return err
+		}
+
+		// certificates v1 API not found, fall back to v1beta1
+		csrv1beta1 := &certificatesv1beta1.CertificateSigningRequest{}
+		if err := c.Get(ctx, kutil.Key(csrName), csrv1beta1); err != nil {
+			return err
+		}
+		username = csrv1beta1.Spec.Username
 	}
 
 	var resourcesToDelete []client.Object
 
 	switch {
-	case strings.HasPrefix(csr.Spec.Username, bootstraptokenapi.BootstrapUserPrefix):
+	case strings.HasPrefix(username, bootstraptokenapi.BootstrapUserPrefix):
 		resourcesToDelete = append(resourcesToDelete,
 			&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("bootstrap-token-%s", strings.TrimPrefix(csr.Spec.Username, "system:bootstrap:")),
+					Name:      fmt.Sprintf("bootstrap-token-%s", strings.TrimPrefix(username, "system:bootstrap:")),
 					Namespace: metav1.NamespaceSystem,
 				},
 			},
 		)
 
-	case strings.HasPrefix(csr.Spec.Username, serviceaccount.ServiceAccountUsernamePrefix):
-		namespace, name, err := serviceaccount.SplitUsername(csr.Spec.Username)
+	case strings.HasPrefix(username, serviceaccount.ServiceAccountUsernamePrefix):
+		namespace, name, err := serviceaccount.SplitUsername(username)
 		if err != nil {
 			return err
 		}
