@@ -695,10 +695,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		return err
 	}
 
-	if err := handleDNSProvider(ctx, k8sGardenClient.Client(), k8sSeedClient.Client(), seed.Info.Spec.DNS); err != nil {
-		return err
-	}
-
 	values := kubernetes.Values(map[string]interface{}{
 		"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane,
 		"global": map[string]interface{}{
@@ -774,6 +770,10 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	})
 
 	if err := chartApplier.Apply(ctx, filepath.Join(common.ChartPath, chartName), v1beta1constants.GardenNamespace, chartName, values, applierOptions); err != nil {
+		return err
+	}
+
+	if err := handleDNSProvider(ctx, k8sGardenClient.Client(), k8sSeedClient.Client(), seed.Info.Spec.DNS); err != nil {
 		return err
 	}
 
