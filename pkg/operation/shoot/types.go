@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/extensions/backupentry"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/extension"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -55,10 +56,9 @@ type Shoot struct {
 	Secret       *corev1.Secret
 	CloudProfile *gardencorev1beta1.CloudProfile
 
-	SeedNamespace               string
-	KubernetesMajorMinorVersion string
-	KubernetesVersion           *semver.Version
-	GardenerVersion             *semver.Version
+	SeedNamespace     string
+	KubernetesVersion *semver.Version
+	GardenerVersion   *semver.Version
 
 	DisableDNS            bool
 	InternalClusterDomain string
@@ -77,9 +77,8 @@ type Shoot struct {
 
 	Components *Components
 
-	OperatingSystemConfigsMap map[string]OperatingSystemConfigs
-	Extensions                map[string]extension.Extension
-	InfrastructureStatus      []byte
+	Extensions           map[string]extension.Extension
+	InfrastructureStatus []byte
 
 	ETCDEncryption *etcdencryption.EncryptionConfig
 
@@ -109,15 +108,16 @@ type ControlPlane struct {
 
 // Extensions contains references to extension resources.
 type Extensions struct {
-	BackupEntry          extensionsbackupentry.BackupEntry
-	ContainerRuntime     ExtensionContainerRuntime
-	ControlPlane         ExtensionControlPlane
-	ControlPlaneExposure ExtensionControlPlane
-	DNS                  *DNS
-	Extension            extension.Interface
-	Infrastructure       ExtensionInfrastructure
-	Network              component.DeployMigrateWaiter
-	Worker               ExtensionWorker
+	BackupEntry           extensionsbackupentry.BackupEntry
+	ContainerRuntime      ExtensionContainerRuntime
+	ControlPlane          ExtensionControlPlane
+	ControlPlaneExposure  ExtensionControlPlane
+	DNS                   *DNS
+	Extension             extension.Interface
+	Infrastructure        ExtensionInfrastructure
+	Network               component.DeployMigrateWaiter
+	OperatingSystemConfig operatingsystemconfig.Interface
+	Worker                ExtensionWorker
 }
 
 // SystemComponents contains references to system components.
@@ -166,7 +166,7 @@ type ExtensionWorker interface {
 	component.DeployMigrateWaiter
 	SetSSHPublicKey([]byte)
 	SetInfrastructureProviderStatus(*runtime.RawExtension)
-	SetOperatingSystemConfigMaps(map[string]OperatingSystemConfigs)
+	SetWorkerNameToOperatingSystemConfigsMap(map[string]*operatingsystemconfig.OperatingSystemConfigs)
 	MachineDeployments() []extensionsv1alpha1.MachineDeployment
 }
 
@@ -180,26 +180,6 @@ type Networks struct {
 	APIServer net.IP
 	// CoreDNS is the ClusterIP of kube-system/coredns Service
 	CoreDNS net.IP
-}
-
-// OperatingSystemConfigs contains operating system configs for the downloader script as well as for the original cloud config.
-type OperatingSystemConfigs struct {
-	Downloader OperatingSystemConfig
-	Original   OperatingSystemConfig
-}
-
-// OperatingSystemConfig contains the operating system config's name and data.
-type OperatingSystemConfig struct {
-	Name string
-	Data OperatingSystemConfigData
-}
-
-// OperatingSystemConfigData contains the actual content, a command to load it and all units that
-// shall be considered for restart on change.
-type OperatingSystemConfigData struct {
-	Content string
-	Command *string
-	Units   []string
 }
 
 // IncompleteDNSConfigError is a custom error type.

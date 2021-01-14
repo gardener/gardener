@@ -300,10 +300,25 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.SyncShootCredentialsToGarden).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, initializeShootClients, deployKubeControllerManager),
 		})
-		computeShootOSConfig = g.Add(flow.Task{
-			Name:         "Computing operating system specific configuration for shoot workers",
-			Fn:           flow.TaskFn(botanist.ComputeShootOperatingSystemConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, initializeShootClients, waitUntilInfrastructureReady),
+		deployOperatingSystemConfig = g.Add(flow.Task{
+			Name:         "Deploying operating system specific configuration for shoot workers",
+			Fn:           flow.TaskFn(botanist.DeployOperatingSystemConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilInfrastructureReady),
+		})
+		waitUntilOperatingSystemConfigReady = g.Add(flow.Task{
+			Name:         "Waiting until operating system configurations for worker nodes have been reconciled",
+			Fn:           botanist.Shoot.Components.Extensions.OperatingSystemConfig.Wait,
+			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfig),
+		})
+		deleteStaleOperatingSystemConfigResources = g.Add(flow.Task{
+			Name:         "Delete stale operating system config resources",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.OperatingSystemConfig.DeleteStaleResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployOperatingSystemConfig),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until stale operating system config resources are deleted",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.OperatingSystemConfig.WaitCleanup).SkipIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deleteStaleOperatingSystemConfigResources),
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying gardener-resource-manager",
@@ -313,7 +328,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deployNetwork = g.Add(flow.Task{
 			Name:         "Deploying shoot network plugin",
 			Fn:           flow.TaskFn(botanist.DeployNetwork).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployReferencedResources, deployGardenerResourceManager, computeShootOSConfig),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources, deployGardenerResourceManager, waitUntilOperatingSystemConfigReady),
 		})
 		waitUntilNetworkIsReady = g.Add(flow.Task{
 			Name:         "Waiting until shoot network plugin has been reconciled",
@@ -323,22 +338,22 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		_ = g.Add(flow.Task{
 			Name:         "Deploying shoot namespaces system component",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.SystemComponents.Namespaces.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity, computeShootOSConfig),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity, waitUntilOperatingSystemConfigReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying metrics-server system component",
 			Fn:           flow.TaskFn(botanist.DeployMetricsServer).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity, computeShootOSConfig),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity, waitUntilOperatingSystemConfigReady),
 		})
 		deployManagedResources = g.Add(flow.Task{
 			Name:         "Deploying managed resources",
 			Fn:           flow.TaskFn(botanist.DeployManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity, computeShootOSConfig),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity, waitUntilOperatingSystemConfigReady),
 		})
 		deployWorker = g.Add(flow.Task{
 			Name:         "Configuring shoot worker pools",
 			Fn:           flow.TaskFn(botanist.DeployWorker).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, deployReferencedResources, waitUntilInfrastructureReady, initializeShootClients, computeShootOSConfig, waitUntilNetworkIsReady),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, deployReferencedResources, waitUntilInfrastructureReady, initializeShootClients, waitUntilOperatingSystemConfigReady, waitUntilNetworkIsReady),
 		})
 		waitUntilWorkerReady = g.Add(flow.Task{
 			Name:         "Waiting until shoot worker nodes have been reconciled",

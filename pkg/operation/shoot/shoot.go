@@ -36,16 +36,25 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+var versionConstraintK8sGreaterEqual118 *semver.Constraints
+
+func init() {
+	var err error
+
+	versionConstraintK8sGreaterEqual118, err = semver.NewConstraint(">= 1.18")
+	utilruntime.Must(err)
+}
 
 // NewBuilder returns a new Builder.
 func NewBuilder() *Builder {
@@ -170,7 +179,6 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	shoot.Secret = secret
 
 	shoot.DisableDNS = b.disableDNS
-	shoot.OperatingSystemConfigsMap = make(map[string]OperatingSystemConfigs, len(shoot.GetWorkerNames()))
 	shoot.HibernationEnabled = gardencorev1beta1helper.HibernationIsEnabled(shootObject)
 	shoot.SeedNamespace = ComputeTechnicalID(b.projectName, shootObject)
 	shoot.InternalClusterDomain = ConstructInternalClusterDomain(shootObject.Name, b.projectName, b.internalDomain)
@@ -204,7 +212,6 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	if err != nil {
 		return nil, err
 	}
-	shoot.KubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
 	shoot.KubernetesVersion = kubernetesVersion
 
 	gardenerVersion, err := semver.NewVersion(shootObject.Status.Gardener.Version)
@@ -213,11 +220,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	}
 	shoot.GardenerVersion = gardenerVersion
 
-	kubernetesVersionGeq118, err := versionutils.CheckVersionMeetsConstraint(shoot.KubernetesMajorMinorVersion, ">= 1.18")
-	if err != nil {
-		return nil, err
-	}
-
+	kubernetesVersionGeq118 := versionConstraintK8sGreaterEqual118.Check(kubernetesVersion)
 	shoot.KonnectivityTunnelEnabled = gardenletfeatures.FeatureGate.Enabled(features.KonnectivityTunnel) && kubernetesVersionGeq118
 	if konnectivityTunnelEnabled, err := strconv.ParseBool(shoot.Info.Annotations[v1beta1constants.AnnotationShootKonnectivityTunnel]); err == nil && kubernetesVersionGeq118 {
 		shoot.KonnectivityTunnelEnabled = konnectivityTunnelEnabled
@@ -294,13 +297,6 @@ func (s *Shoot) GetNodeNetwork() *string {
 		return val
 	}
 	return nil
-}
-
-// ComputeCloudConfigSecretName computes the name for a secret which contains the original cloud config for
-// the worker group with the given <workerName>. It is build by the cloud config secret prefix, the worker
-// name itself and a hash of the minor Kubernetes version of the Shoot cluster.
-func (s *Shoot) ComputeCloudConfigSecretName(workerName string) string {
-	return fmt.Sprintf("%s-%s-%s", common.CloudConfigPrefix, workerName, utils.ComputeSHA256Hex([]byte(s.KubernetesMajorMinorVersion))[:5])
 }
 
 // GetReplicas returns the given <wokenUp> number if the shoot is not hibernated, or zero otherwise.

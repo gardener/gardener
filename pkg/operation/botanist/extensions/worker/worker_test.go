@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/worker"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
@@ -131,19 +132,15 @@ var _ = Describe("Worker", func() {
 			KubernetesVersion:            kubernetesVersionLess115,
 			SSHPublicKey:                 sshPublicKey,
 			InfrastructureProviderStatus: infrastructureProviderStatus,
-			OperatingSystemConfigsMap: map[string]shoot.OperatingSystemConfigs{
+			WorkerNameToOperatingSystemConfigsMap: map[string]*operatingsystemconfig.OperatingSystemConfigs{
 				worker1Name: {
-					Downloader: shoot.OperatingSystemConfig{
-						Data: shoot.OperatingSystemConfigData{
-							Content: string(worker1UserData),
-						},
+					Downloader: operatingsystemconfig.Data{
+						Content: string(worker1UserData),
 					},
 				},
 				worker2Name: {
-					Downloader: shoot.OperatingSystemConfig{
-						Data: shoot.OperatingSystemConfigData{
-							Content: string(worker2UserData),
-						},
+					Downloader: operatingsystemconfig.Data{
+						Content: string(worker2UserData),
 					},
 				},
 			},

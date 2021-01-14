@@ -59,7 +59,7 @@ func (b *Botanist) DefaultWorker(seedClient client.Client) shoot.ExtensionWorker
 func (b *Botanist) DeployWorker(ctx context.Context) error {
 	b.Shoot.Components.Extensions.Worker.SetSSHPublicKey(b.Secrets[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys])
 	b.Shoot.Components.Extensions.Worker.SetInfrastructureProviderStatus(&runtime.RawExtension{Raw: b.Shoot.InfrastructureStatus})
-	b.Shoot.Components.Extensions.Worker.SetOperatingSystemConfigMaps(b.Shoot.OperatingSystemConfigsMap)
+	b.Shoot.Components.Extensions.Worker.SetWorkerNameToOperatingSystemConfigsMap(b.Shoot.Components.Extensions.OperatingSystemConfig.WorkerNameToOperatingSystemConfigsMap())
 
 	if b.isRestorePhase() {
 		return b.Shoot.Components.Extensions.Worker.Restore(ctx, b.ShootState)

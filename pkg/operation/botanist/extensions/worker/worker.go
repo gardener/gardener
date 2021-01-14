@@ -24,6 +24,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
@@ -71,8 +72,8 @@ type Values struct {
 	// InfrastructureProviderStatus is the provider status of the Infrastructure resource which might be relevant for
 	// the Worker reconciliation.
 	InfrastructureProviderStatus *runtime.RawExtension
-	// OperatingSystemConfigsMap contains the operating system configurations for the worker pools.
-	OperatingSystemConfigsMap map[string]shoot.OperatingSystemConfigs
+	// WorkerNameToOperatingSystemConfigsMap contains the operating system configurations for the worker pools.
+	WorkerNameToOperatingSystemConfigsMap map[string]*operatingsystemconfig.OperatingSystemConfigs
 }
 
 // New creates a new instance of a Worker deployer.
@@ -186,8 +187,8 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 		}
 
 		var userData []byte
-		if val, ok := w.values.OperatingSystemConfigsMap[workerPool.Name]; ok {
-			userData = []byte(val.Downloader.Data.Content)
+		if val, ok := w.values.WorkerNameToOperatingSystemConfigsMap[workerPool.Name]; ok {
+			userData = []byte(val.Downloader.Content)
 		}
 
 		pools = append(pools, extensionsv1alpha1.WorkerPool{
@@ -336,8 +337,8 @@ func (w *worker) SetInfrastructureProviderStatus(status *runtime.RawExtension) {
 }
 
 // SetOperatingSystemConfigMaps sets the operating system config maps in the values.
-func (w *worker) SetOperatingSystemConfigMaps(maps map[string]shoot.OperatingSystemConfigs) {
-	w.values.OperatingSystemConfigsMap = maps
+func (w *worker) SetWorkerNameToOperatingSystemConfigsMap(maps map[string]*operatingsystemconfig.OperatingSystemConfigs) {
+	w.values.WorkerNameToOperatingSystemConfigsMap = maps
 }
 
 // MachineDeployments returns the generated machine deployments of the Worker.

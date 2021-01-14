@@ -422,8 +422,13 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		deleteAllOperatingSystemConfigs = g.Add(flow.Task{
 			Name:         "Deleting operating system config resources",
-			Fn:           flow.TaskFn(botanist.DeleteAllOperatingSystemConfigs).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.OperatingSystemConfig.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerDeleted),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until all operating system config resources are deleted",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.OperatingSystemConfig.WaitCleanup).SkipIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deleteAllOperatingSystemConfigs),
 		})
 		deleteManagedResources = g.Add(flow.Task{
 			Name:         "Deleting managed resources",

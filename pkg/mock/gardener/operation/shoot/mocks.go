@@ -10,7 +10,7 @@ import (
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha10 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	shoot "github.com/gardener/gardener/pkg/operation/shoot"
+	operatingsystemconfig "github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig"
 	gomock "github.com/golang/mock/gomock"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -255,18 +255,6 @@ func (mr *MockExtensionWorkerMockRecorder) SetInfrastructureProviderStatus(arg0 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetInfrastructureProviderStatus", reflect.TypeOf((*MockExtensionWorker)(nil).SetInfrastructureProviderStatus), arg0)
 }
 
-// SetOperatingSystemConfigMaps mocks base method.
-func (m *MockExtensionWorker) SetOperatingSystemConfigMaps(arg0 map[string]shoot.OperatingSystemConfigs) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetOperatingSystemConfigMaps", arg0)
-}
-
-// SetOperatingSystemConfigMaps indicates an expected call of SetOperatingSystemConfigMaps.
-func (mr *MockExtensionWorkerMockRecorder) SetOperatingSystemConfigMaps(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOperatingSystemConfigMaps", reflect.TypeOf((*MockExtensionWorker)(nil).SetOperatingSystemConfigMaps), arg0)
-}
-
 // SetSSHPublicKey mocks base method.
 func (m *MockExtensionWorker) SetSSHPublicKey(arg0 []byte) {
 	m.ctrl.T.Helper()
@@ -277,6 +265,18 @@ func (m *MockExtensionWorker) SetSSHPublicKey(arg0 []byte) {
 func (mr *MockExtensionWorkerMockRecorder) SetSSHPublicKey(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSSHPublicKey", reflect.TypeOf((*MockExtensionWorker)(nil).SetSSHPublicKey), arg0)
+}
+
+// SetWorkerNameToOperatingSystemConfigsMap mocks base method.
+func (m *MockExtensionWorker) SetWorkerNameToOperatingSystemConfigsMap(arg0 map[string]*operatingsystemconfig.OperatingSystemConfigs) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetWorkerNameToOperatingSystemConfigsMap", arg0)
+}
+
+// SetWorkerNameToOperatingSystemConfigsMap indicates an expected call of SetWorkerNameToOperatingSystemConfigsMap.
+func (mr *MockExtensionWorkerMockRecorder) SetWorkerNameToOperatingSystemConfigsMap(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWorkerNameToOperatingSystemConfigsMap", reflect.TypeOf((*MockExtensionWorker)(nil).SetWorkerNameToOperatingSystemConfigsMap), arg0)
 }
 
 // Wait mocks base method.

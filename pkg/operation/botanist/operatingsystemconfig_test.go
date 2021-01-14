@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,95 +16,132 @@ package botanist_test
 
 import (
 	"context"
-	"time"
+	"fmt"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mock "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/shoot"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/operation/botanist"
+	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/mock"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("operatingsystemconfig", func() {
 	var (
-		ctrl                 *gomock.Controller
-		k8sSeedClient        *mock.MockInterface
-		k8sSeedRuntimeClient *mockclient.MockClient
+		ctrl                  *gomock.Controller
+		operatingSystemConfig *mockoperatingsystemconfig.MockInterface
+		botanist              *Botanist
+
+		ctx        = context.TODO()
+		fakeErr    = fmt.Errorf("fake")
+		shootState = &gardencorev1alpha1.ShootState{}
+
+		ca             = []byte("ca")
+		caKubelet      = []byte("ca-kubelet")
+		caCloudProfile = "ca-cloud-profile"
+		sshPublicKey   = []byte("ssh-public-key")
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-
-		k8sSeedClient = mock.NewMockInterface(ctrl)
-		k8sSeedRuntimeClient = mockclient.NewMockClient(ctrl)
+		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
+		botanist = &Botanist{Operation: &operation.Operation{
+			Secrets: map[string]*corev1.Secret{
+				"ca":          {Data: map[string][]byte{"ca.crt": ca}},
+				"ca-kubelet":  {Data: map[string][]byte{"ca.crt": caKubelet}},
+				"ssh-keypair": {Data: map[string][]byte{"id_rsa.pub": sshPublicKey}},
+			},
+			Shoot: &shootpkg.Shoot{
+				CloudProfile: &gardencorev1beta1.CloudProfile{},
+				Components: &shootpkg.Components{
+					Extensions: &shootpkg.Extensions{
+						OperatingSystemConfig: operatingSystemConfig,
+					},
+				},
+			},
+			ShootState: shootState,
+		}}
 	})
 
 	AfterEach(func() {
 		ctrl.Finish()
 	})
 
-	Describe("#DeleteStaleOperatingSystemConfigs()", func() {
-		It("should cleanup unused operating system configs", func() {
-			var (
-				ctx              = context.TODO()
-				now              time.Time
-				mockNow          = mocktime.NewMockNow(ctrl)
-				newDownloaderOsc = extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-new-worker-9f0e7-downloader"}}
-				newOriginalOsc   = extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-new-worker-9f0e7-original"}}
-				oldDownloaderOsc = extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-old-worker-9f0e7-downloader"}}
-				oldOriginalOsc   = extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-old-worker-9f0e7-original"}}
-			)
+	Describe("#DeployOperatingSystemConfig", func() {
+		BeforeEach(func() {
+			operatingSystemConfig.EXPECT().SetKubeletCACertificate(string(caKubelet))
+			operatingSystemConfig.EXPECT().SetSSHPublicKey(string(sshPublicKey))
+		})
 
-			k8sSeedClient.EXPECT().Client().Return(k8sSeedRuntimeClient)
-			k8sSeedRuntimeClient.EXPECT().List(ctx, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, list *extensionsv1alpha1.OperatingSystemConfigList, _ ...client.ListOption) error {
-				list.Items = []extensionsv1alpha1.OperatingSystemConfig{newDownloaderOsc, newOriginalOsc, oldDownloaderOsc, oldOriginalOsc}
-				return nil
+		Context("deploy", func() {
+			It("should deploy successfully (no CA)", func() {
+				botanist.Secrets["ca"].Data["ca.crt"] = nil
+				operatingSystemConfig.EXPECT().SetCABundle(nil)
+
+				operatingSystemConfig.EXPECT().Deploy(ctx)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
 			})
 
-			defer test.WithVars(
-				&common.TimeNow, mockNow.Do,
-			)()
+			It("should deploy successfully (only cluster CA)", func() {
+				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr("\n" + string(ca)))
 
-			// Expect that the old OperatingSystemConfigs will be cleaned up
-			oldDownloaderOscCopy := oldDownloaderOsc.DeepCopy()
-			oldDownloaderOscCopy.Annotations = map[string]string{common.ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
-			oldOriginalOscCopy := oldOriginalOsc.DeepCopy()
-			oldOriginalOscCopy.Annotations = map[string]string{common.ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
+				operatingSystemConfig.EXPECT().Deploy(ctx)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
+			})
 
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			It("should deploy successfully (only CloudProfile CA)", func() {
+				botanist.Shoot.CloudProfile.Spec.CABundle = &caCloudProfile
+				botanist.Secrets["ca"].Data["ca.crt"] = nil
+				operatingSystemConfig.EXPECT().SetCABundle(&caCloudProfile)
 
-			k8sSeedRuntimeClient.EXPECT().Get(ctx, kutil.Key(oldOriginalOsc.Namespace, oldOriginalOsc.Name), &oldOriginalOsc)
-			k8sSeedRuntimeClient.EXPECT().Update(ctx, oldOriginalOscCopy)
-			k8sSeedRuntimeClient.EXPECT().Delete(ctx, oldOriginalOscCopy)
+				operatingSystemConfig.EXPECT().Deploy(ctx)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
+			})
 
-			k8sSeedRuntimeClient.EXPECT().Get(ctx, kutil.Key(oldDownloaderOsc.Namespace, oldDownloaderOsc.Name), &oldDownloaderOsc)
-			k8sSeedRuntimeClient.EXPECT().Update(ctx, oldDownloaderOscCopy)
-			k8sSeedRuntimeClient.EXPECT().Delete(ctx, oldDownloaderOscCopy)
+			It("should deploy successfully (both cluster and CloudProfile CA)", func() {
+				botanist.Shoot.CloudProfile.Spec.CABundle = &caCloudProfile
+				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr(caCloudProfile + "\n" + string(ca)))
 
-			op := &operation.Operation{
-				K8sSeedClient: k8sSeedClient,
-				Shoot: &shoot.Shoot{
-					SeedNamespace: "shoot--foo--bar",
-				},
-			}
-			botanist := botanist.Botanist{Operation: op}
+				operatingSystemConfig.EXPECT().Deploy(ctx)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
+			})
 
-			err := botanist.DeleteStaleOperatingSystemConfigs(ctx, sets.NewString(newDownloaderOsc.Name, newOriginalOsc.Name))
+			It("should return the error during deployment", func() {
+				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr("\n" + string(ca)))
 
-			Expect(err).NotTo(HaveOccurred())
+				operatingSystemConfig.EXPECT().Deploy(ctx).Return(fakeErr)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(MatchError(fakeErr))
+			})
+		})
+
+		Context("restore", func() {
+			BeforeEach(func() {
+				botanist.Shoot.Info = &gardencorev1beta1.Shoot{
+					Status: gardencorev1beta1.ShootStatus{
+						LastOperation: &gardencorev1beta1.LastOperation{
+							Type: gardencorev1beta1.LastOperationTypeRestore,
+						},
+					},
+				}
+
+				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr("\n" + string(ca)))
+			})
+
+			It("should restore successfully", func() {
+				operatingSystemConfig.EXPECT().Restore(ctx, shootState)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
+			})
+
+			It("should return the error during restoration", func() {
+				operatingSystemConfig.EXPECT().Restore(ctx, shootState).Return(fakeErr)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(MatchError(fakeErr))
+			})
 		})
 	})
 })
