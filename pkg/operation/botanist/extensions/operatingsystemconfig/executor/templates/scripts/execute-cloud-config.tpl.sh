@@ -1,17 +1,12 @@
-{{- define "shoot-cloud-config.execution-script" -}}
 #!/bin/bash -eu
 
-DIR_KUBELET="/var/lib/kubelet"
-DIR_CLOUDCONFIG_DOWNLOADER="/var/lib/cloud-config-downloader"
-DIR_CLOUDCONFIG="$DIR_CLOUDCONFIG_DOWNLOADER/downloads"
-
-PATH_CLOUDCONFIG_DOWNLOADER_SERVER="$DIR_CLOUDCONFIG_DOWNLOADER/credentials/server"
-PATH_CLOUDCONFIG_DOWNLOADER_CA_CERT="$DIR_CLOUDCONFIG_DOWNLOADER/credentials/ca.crt"
-PATH_CLOUDCONFIG="{{ .configFilePath }}"
+PATH_CLOUDCONFIG_DOWNLOADER_SERVER="{{ .pathCredentialsServer }}"
+PATH_CLOUDCONFIG_DOWNLOADER_CA_CERT="{{ .pathCredentialsCACert }}"
+PATH_CLOUDCONFIG="{{ .pathDownloadedCloudConfig }}"
 PATH_CLOUDCONFIG_OLD="${PATH_CLOUDCONFIG}.old"
-PATH_CHECKSUM="$DIR_CLOUDCONFIG_DOWNLOADER/downloaded_checksum"
+PATH_CHECKSUM="{{ .pathDownloadedChecksum }}"
 
-mkdir -p "$DIR_CLOUDCONFIG" "$DIR_KUBELET"
+mkdir -p "{{ .pathDownloadsDirectory }}" "{{ .pathKubeletDirectory }}"
 
 function docker-preload() {
   name="$1"
@@ -25,13 +20,13 @@ function docker-preload() {
   fi
 }
 
-{{- if .worker.kubeletDataVolume }}
+{{ if .kubeletDataVolume -}}
 function format-data-device() {
   LABEL=KUBEDEV
   if ! blkid --label $LABEL >/dev/null; then
     DEVICES=$(lsblk -dbsnP -o NAME,PARTTYPE,FSTYPE,SIZE)
-    MATCHING_DEVICES=$(echo "$DEVICES" | grep 'PARTTYPE="".*FSTYPE="".*SIZE="{{.worker.kubeletDataVolume.size}}"')
-    echo "Matching kubelet data device by size : {{.worker.kubeletDataVolume.size}}"
+    MATCHING_DEVICES=$(echo "$DEVICES" | grep 'PARTTYPE="".*FSTYPE="".*SIZE="{{ .kubeletDataVolume.size }}"')
+    echo "Matching kubelet data device by size : {{ .kubeletDataVolume.size }}"
     TARGET_DEVICE_NAME=$(echo "$MATCHING_DEVICES" | head -n1 | cut -f2 -d\")
     echo "detected kubelet data device $TARGET_DEVICE_NAME"
     mkfs.ext4 -L $LABEL -O quota -E lazy_itable_init=0,lazy_journal_init=0,quotatype=usrquota:grpquota:prjquota  /dev/$TARGET_DEVICE_NAME
@@ -48,22 +43,22 @@ function format-data-device() {
 }
 
 format-data-device
-{{- end}}
+{{- end }}
 
-{{ range $name, $image := (required ".images is required" .images) -}}
+{{ range $name, $image := .images -}}
 docker-preload "{{ $name }}" "{{ $image }}"
 {{ end }}
 
 cat << 'EOF' | base64 -d > "$PATH_CLOUDCONFIG"
-{{ .worker.cloudConfig | b64enc }}
+{{ .cloudConfigUserData }}
 EOF
 
 if [ ! -f "$PATH_CLOUDCONFIG_OLD" ]; then
   touch "$PATH_CLOUDCONFIG_OLD"
 fi
 
-if [[ ! -f "$DIR_KUBELET/kubeconfig-real" ]] || [[ ! -f "$DIR_KUBELET/pki/kubelet-client-current.pem" ]]; then
-  cat <<EOF > "$DIR_KUBELET/kubeconfig-bootstrap"
+if [[ ! -f "{{ .pathKubeletKubeconfigReal }}" ]] || [[ ! -f "{{ .pathKubeletDirectory }}/pki/kubelet-client-current.pem" ]]; then
+  cat <<EOF > "{{ .pathKubeletKubeconfigBootstrap }}"
 ---
 apiVersion: v1
 kind: Config
@@ -82,20 +77,20 @@ users:
 - name: kubelet-bootstrap
   user:
     as-user-extra: {}
-    token: {{ required ".bootstrapToken is required" .bootstrapToken }}
+    token: {{ .bootstrapToken }}
 EOF
 
 else
-  rm -f "$DIR_KUBELET/kubeconfig-bootstrap"
+  rm -f "{{ .pathKubeletKubeconfigBootstrap }}"
 fi
 
 if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null; then
   echo "Seen newer cloud config version"
-  if {{ .worker.command }}; then
+  if {{ .reloadConfigCommand }}; then
     echo "Successfully applied new cloud config version"
     systemctl daemon-reload
-{{- range $name := (required ".worker.units is required" .worker.units) }}
-{{- if and (ne $name "docker.service") (ne $name "var-lib.mount") (ne $name "cloud-config-downloader.service") }}
+{{- range $name := .units }}
+{{- if and (ne $name $.unitNameDocker) (ne $name $.unitNameVarLibMount) (ne $name $.unitNameCloudConfigDownloader) }}
     systemctl enable {{ $name }} && systemctl restart --no-block {{ $name }}
 {{- end }}
 {{- end }}
@@ -109,8 +104,8 @@ rm "$PATH_CLOUDCONFIG"
 ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-services"
 
 # Try to find Node object for this machine
-if [[ -f "$DIR_KUBELET/kubeconfig-real" ]]; then
-  {{`NODE="$(/opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" get node -l "kubernetes.io/hostname=$(hostname)" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ if (index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\") }} {{ index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}{{ end }}")"`}}
+if [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
+  {{`NODE="$(/opt/bin/kubectl --kubeconfig="`}}{{ .pathKubeletKubeconfigReal }}{{`" get node -l "kubernetes.io/hostname=$(hostname)" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ if (index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\") }} {{ index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}{{ end }}")"`}}
 
   if [[ ! -z "$NODE" ]]; then
     NODENAME="$(echo "$NODE" | awk '{print $1}')"
@@ -119,7 +114,7 @@ if [[ -f "$DIR_KUBELET/kubeconfig-real" ]]; then
 
   # Update checksum/cloud-config-data annotation on Node object if possible
   if [[ ! -z "$NODENAME" ]] && [[ -f "$PATH_CHECKSUM" ]]; then
-    /opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" annotate node "$NODENAME" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
+    /opt/bin/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
   fi
 
   # Restart systemd services if requested
@@ -127,6 +122,5 @@ if [[ -f "$DIR_KUBELET/kubeconfig-real" ]]; then
     echo "Restarting systemd service $service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
     systemctl restart "$service" || true
   done
-  /opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
+  /opt/bin/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
 fi
-{{- end}}
