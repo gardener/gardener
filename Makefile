@@ -137,6 +137,7 @@ install-requirements:
 	@go install -mod=vendor github.com/golang/mock/mockgen
 	@go install -mod=vendor sigs.k8s.io/controller-tools/cmd/controller-gen
 	@GO111MODULE=off go get github.com/prometheus/prometheus/cmd/promtool
+	@GO111MODULE=off go get github.com/go-bindata/go-bindata/...
 	@./hack/install-requirements.sh
 
 .PHONY: revendor
