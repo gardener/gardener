@@ -35,7 +35,7 @@ func IsSecretInUseByShoot(ctx context.Context, c client.Client, secret *corev1.S
 	}
 
 	for _, secretBinding := range secretBindings.Items {
-		// Filter out the the SecretBindings that do not reference the given secret
+		// Filter out the SecretBindings that do not reference the given secret
 		if secretBinding.SecretRef.Name != secret.Name {
 			continue
 		}

@@ -114,7 +114,7 @@ var _ = Describe("Etcd", func() {
 					"gardener.cloud/description": "Allows Ingress to etcd pods from the Shoot's Kubernetes API Server.",
 				},
 				Labels: map[string]string{
-					"garden.sapcloud.io/role": "controlplane",
+					"gardener.cloud/role": "controlplane",
 				},
 			},
 			Spec: networkingv1.NetworkPolicySpec{

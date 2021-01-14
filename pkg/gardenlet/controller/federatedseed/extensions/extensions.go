@@ -118,7 +118,7 @@ func (s *Controller) createControllerInstallationWorkers(ctx context.Context, co
 		// Execute control function once outside of the worker to initialize the `kindToRequiredTypes` map once.
 		// This is necessary for Kinds which are registered but no extension object exists in the seed yet (e.g. disabled backups).
 		// In this case no event is triggered and the control function would never be executed.
-		// Eventually, the Kind would never be part of the `kindToRequiredTypes` map and no decision if the the ControllerInstallation is required could be taken.
+		// Eventually, the Kind would never be part of the `kindToRequiredTypes` map and no decision if the ControllerInstallation is required could be taken.
 		if _, err := controlFn(reconcile.Request{}); err != nil {
 			s.log.Errorf("Error during initial run of extension reconciliation: %v", err)
 		}

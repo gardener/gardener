@@ -223,7 +223,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from the Shoot's Kubernetes API Server.",
 		}
 		networkPolicy.Labels = map[string]string{
-			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		}
 		networkPolicy.Spec.PodSelector = metav1.LabelSelector{
 			MatchLabels: map[string]string{

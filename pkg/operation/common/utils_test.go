@@ -793,11 +793,18 @@ var _ = Describe("common", func() {
 			deploy1.Spec.Selector = labelSelector
 			deploy2.Spec.Selector = labelSelector
 
-			c.EXPECT().Get(ctx, key1, gomock.AssignableToTypeOf(&appsv1.Deployment{})).SetArg(2, *deploy1)
-			c.EXPECT().Get(ctx, key2, gomock.AssignableToTypeOf(&appsv1.Deployment{})).SetArg(2, *deploy2)
-
-			c.EXPECT().Delete(ctx, deploy1)
-			c.EXPECT().Delete(ctx, deploy2)
+			gomock.InOrder(
+				// deploy1
+				c.EXPECT().Get(ctx, key1, gomock.AssignableToTypeOf(&appsv1.Deployment{})).SetArg(2, *deploy1),
+				c.EXPECT().Delete(ctx, deploy1),
+				c.EXPECT().Get(ctx, key1, gomock.AssignableToTypeOf(&appsv1.Deployment{})).SetArg(2, *deploy1).
+					Return(apierrors.NewNotFound(appsv1.Resource("Deployment"), deploy1.Name)),
+				// deploy2
+				c.EXPECT().Get(ctx, key2, gomock.AssignableToTypeOf(&appsv1.Deployment{})).SetArg(2, *deploy2),
+				c.EXPECT().Delete(ctx, deploy2),
+				c.EXPECT().Get(ctx, key2, gomock.AssignableToTypeOf(&appsv1.Deployment{})).SetArg(2, *deploy2).
+					Return(apierrors.NewNotFound(appsv1.Resource("Deployment"), deploy2.Name)),
+			)
 
 			err := DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx, c, []client.ObjectKey{key1, key2})
 			Expect(err).NotTo(HaveOccurred())

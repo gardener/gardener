@@ -411,6 +411,14 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 		return err
 	}
 
+	// TODO (ialidzhikov): remove in a future version
+	deploymentKeys := []client.ObjectKey{
+		kutil.Key(b.Shoot.SeedNamespace, name),
+	}
+	if err := common.DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx, b.K8sSeedClient.Client(), deploymentKeys); err != nil {
+		return err
+	}
+
 	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), b.Shoot.SeedNamespace, name, kubernetes.Values(values))
 }
 

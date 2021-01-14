@@ -92,7 +92,7 @@ type Result struct {
 	// FailedChecks is the amount of health checks that could not be performed (e.g client could not reach Api Server)
 	// Results in a condition with with type "Unknown" with reason "ConditionCheckError" for this healthConditionType
 	FailedChecks int
-	// Codes is an optional list of error codes that were produced by the the health checks.
+	// Codes is an optional list of error codes that were produced by the health checks.
 	Codes []gardencorev1beta1.ErrorCode
 	// ProgressingThreshold is the threshold duration after which a health check that reported the `Progressing` status
 	// shall be transitioned to `False`

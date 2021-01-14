@@ -110,7 +110,7 @@ metadata:
   name: shoot--foo--bar-cpu-worker-z1-3db65
   namespace: shoot--foo--bar
   labels:
-    garden.sapcloud.io/purpose: machineclass
+    gardener.cloud/purpose: machineclass
 type: Opaque
 data:
   providerAccessKeyId: eW91ci1hd3MtYWNjZXNzLWtleS1pZAo=
@@ -178,7 +178,7 @@ metadata:
   name: shoot--foo--bar-cpu-worker-z2-5z6as
   namespace: shoot--foo--bar
   labels:
-    garden.sapcloud.io/purpose: machineclass
+    gardener.cloud/purpose: machineclass
 type: Opaque
 data:
   providerAccessKeyId: eW91ci1hd3MtYWNjZXNzLWtleS1pZAo=
