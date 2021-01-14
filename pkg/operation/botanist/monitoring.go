@@ -99,6 +99,9 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
+	// Need stable order before passing the dashboards to Grafana config to avoid unnecessary changes
+	kutil.ByName().Sort(existingConfigMaps)
+
 	// Read extension monitoring configurations
 	for _, cm := range existingConfigMaps.Items {
 		alertingRules.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapAlertingRules]))
