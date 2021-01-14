@@ -21,9 +21,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/gardener/gardener/cmd/gardener-seed-admission-controller/app"
+	"github.com/gardener/gardener/cmd/utils"
 )
 
 func main() {
+	utils.DeduplicateWarnings()
+
 	ctx := signals.SetupSignalHandler()
 	if err := app.NewCommandStartGardenerSeedAdmissionController().ExecuteContext(ctx); err != nil {
 		fmt.Println(err)

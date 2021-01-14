@@ -21,10 +21,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/gardener/gardener/cmd/gardener-controller-manager/app"
+	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/controllermanager/features"
 )
 
 func main() {
+	utils.DeduplicateWarnings()
 	features.RegisterFeatureGates()
 
 	ctx := signals.SetupSignalHandler()

@@ -19,11 +19,14 @@ import (
 	"os"
 
 	"github.com/gardener/gardener/cmd/gardener-admission-controller/app"
+	"github.com/gardener/gardener/cmd/utils"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
 func main() {
+	utils.DeduplicateWarnings()
+
 	ctx := signals.SetupSignalHandler()
 	if err := app.NewCommandStartGardenerAdmissionController().ExecuteContext(ctx); err != nil {
 		fmt.Println(err)
