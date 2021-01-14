@@ -97,7 +97,7 @@
         BatchSize 30720
         Labels {test="fluent-bit-go"}
         LineFormat json
-        ReplaceOutOfOrderTS true
+        SortByTimestamp true
         DropSingleKey false
         AutoKubernetesLabels false
         LabelSelector gardener.cloud/role:shoot
@@ -119,6 +119,8 @@
         FallbackToTagWhenMetadataIsMissing true
         TagKey tag
         DropLogEntryWithoutK8sMetadata true
+        ControllerSyncTimeout 120
+        NumberOfBatchIDs 5
         TenantID operator
     
     [Output]
@@ -130,7 +132,7 @@
         BatchSize 30720
         Labels {test="fluent-bit-go", lang="Golang"}
         LineFormat json
-        ReplaceOutOfOrderTS true
+        SortByTimestamp true
         DropSingleKey false
         AutoKubernetesLabels true
         LabelSelector gardener.cloud/role:shoot
@@ -152,6 +154,8 @@
         FallbackToTagWhenMetadataIsMissing true
         TagKey tag
         DropLogEntryWithoutK8sMetadata true
+        ControllerSyncTimeout 120
+        NumberOfBatchIDs 5
         TenantID user
 
     [Output]
@@ -163,7 +167,7 @@
         BatchSize 30720
         Labels {test="fluent-bit-go"}
         LineFormat json
-        ReplaceOutOfOrderTS true
+        SortByTimestamp true
         DropSingleKey false
         RemoveKeys kubernetes,stream,hostname,unit
         LabelMapPath /fluent-bit/etc/systemd_label_map.json
@@ -176,5 +180,6 @@
         QueueSegmentSize 300
         QueueSync normal
         QueueName gardener-journald
+        NumberOfBatchIDs 5
 {{ end }}
 {{- end }}
