@@ -22,8 +22,9 @@ if ! SECRET="$(wget \
   exit 1
 fi
 
-SCRIPT="$(echo "$SECRET" | sed -rn 's/  script: (.*)/\1/p')"
 CHECKSUM="$(echo "$SECRET" | sed -rn 's/    checksum\/data-script: (.*)/\1/p' | sed -e 's/^"//' -e 's/"$//')"
+echo "$CHECKSUM" > "$DIR_CLOUDCONFIG_DOWNLOADER/downloaded_checksum"
 
-echo "$SCRIPT" | base64 -d | bash && echo "$CHECKSUM" > "$DIR_CLOUDCONFIG_DOWNLOADER/downloaded_checksum"
+SCRIPT="$(echo "$SECRET" | sed -rn 's/  script: (.*)/\1/p')"
+echo "$SCRIPT" | base64 -d | bash
 {{- end }}

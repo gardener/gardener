@@ -110,7 +110,7 @@ ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-servi
 
 # Try to find Node object for this machine
 if [[ -f "$DIR_KUBELET/kubeconfig-real" ]]; then
-  {{`NODE="$(/opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" get node -o go-template="{{ range \$i, \$item := .items }}{{ range \$j, \$address := \$item.status.addresses }}{{ if and (eq \$address.type \"Hostname\") (eq \$address.address \"$(hostname)\") }}{{ \$item.metadata.name }}{{ if (index \$item.metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\") }} {{ index \$item.metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}{{ end }}{{ end }}{{ end }}")"`}}
+  {{`NODE="$(/opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" get node -l "kubernetes.io/hostname=$(hostname)" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ if (index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\") }} {{ index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}")"`}}
 
   if [[ ! -z "$NODE" ]]; then
     NODENAME="$(echo "$NODE" | awk '{print $1}')"
@@ -125,7 +125,8 @@ if [[ -f "$DIR_KUBELET/kubeconfig-real" ]]; then
   # Restart systemd services if requested
   for service in $(echo "$SYSTEMD_SERVICES_TO_RESTART" | sed "s/,/ /g"); do
     echo "Restarting systemd service $service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
-    systemctl restart "$service"
-  done && /opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
+    systemctl restart "$service" || true
+  done
+  /opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
 fi
 {{- end}}
