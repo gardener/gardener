@@ -83,4 +83,5 @@ replace (
 	k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.19.6
 	k8s.io/kube-openapi => github.com/gardener/kube-openapi v0.0.0-20201221124747-75e88872edcf // k8s-1.19
+	sigs.k8s.io/structured-merge-diff/v4 => github.com/gardener/structured-merge-diff/v4 v4.0.2-0.20210114123732-dc8c8e7e22b6
 )
