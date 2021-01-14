@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
-	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/worker"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -58,7 +57,7 @@ var _ = Describe("Worker Reconcile", func() {
 		wantErr bool
 	}
 
-	// Ummutable throuth the function calls
+	// Immutable through the function calls
 	arguments := args{
 		request: reconcile.Request{
 			NamespacedName: types.NamespacedName{
@@ -393,28 +392,28 @@ func newFakeActuator(reconcile, delete, restore, migrate bool) worker.Actuator {
 	}
 }
 
-func (a *fakeActuator) Reconcile(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
+func (a *fakeActuator) Reconcile(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	if a.reconcile {
 		return nil
 	}
 	return fmt.Errorf("Wrong function call: actuator Reconcile")
 }
 
-func (a *fakeActuator) Delete(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
+func (a *fakeActuator) Delete(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	if a.delete {
 		return nil
 	}
 	return fmt.Errorf("Wrong function call: actuator Delete")
 }
 
-func (a *fakeActuator) Restore(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
+func (a *fakeActuator) Restore(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	if a.restore {
 		return nil
 	}
 	return fmt.Errorf("Wrong function call: actuator Restore")
 }
 
-func (a *fakeActuator) Migrate(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
+func (a *fakeActuator) Migrate(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	if a.migrate {
 		return nil
 	}
