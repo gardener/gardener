@@ -117,24 +117,24 @@ var _ = Describe("Predicate", func() {
 		)
 
 		BeforeEach(func() {
-			configMpa := &corev1.ConfigMap{
+			configMap := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
 				},
 			}
 
 			createEvent = event.CreateEvent{
-				Object: configMpa,
+				Object: configMap,
 			}
 			updateEvent = event.UpdateEvent{
-				ObjectOld: configMpa,
-				ObjectNew: configMpa,
+				ObjectOld: configMap,
+				ObjectNew: configMap,
 			}
 			deleteEvent = event.DeleteEvent{
-				Object: configMpa,
+				Object: configMap,
 			}
 			genericEvent = event.GenericEvent{
-				Object: configMpa,
+				Object: configMap,
 			}
 		})
 
