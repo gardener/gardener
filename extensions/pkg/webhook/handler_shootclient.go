@@ -16,22 +16,16 @@ package webhook
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	admissionv1 "k8s.io/api/admission/v1"
-	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
@@ -41,35 +35,24 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
-var (
-	admissionScheme  *runtime.Scheme
-	admissionDecoder runtime.Decoder
-)
-
-func init() {
-	admissionScheme = runtime.NewScheme()
-	schemeBuilder := runtime.NewSchemeBuilder(
-		admissionv1.AddToScheme,
-		admissionv1beta1.AddToScheme,
-	)
-	utilruntime.Must(schemeBuilder.AddToScheme(admissionScheme))
-
-	admissionDecoder = serializer.NewCodecFactory(admissionScheme).UniversalDecoder(admissionv1.SchemeGroupVersion)
-}
-
 // NewHandlerWithShootClient creates a new handler for the given types, using the given mutator, and logger.
-func NewHandlerWithShootClient(mgr manager.Manager, types []client.Object, mutator MutatorWithShootClient, logger logr.Logger) (*handlerShootClient, error) {
+func NewHandlerWithShootClient(mgr manager.Manager, types []client.Object, mutator MutatorWithShootClient, logger logr.Logger) (http.Handler, error) {
 	// Build a map of the given types keyed by their GVKs
 	typesMap, err := buildTypesMap(mgr.GetScheme(), types)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create and return a handler
-	return &handlerShootClient{
-		typesMap: typesMap,
-		mutator:  mutator,
-		logger:   logger.WithName("handlerShootClient"),
+	// inject RemoteAddr into admission http.Handler, we need it to identify which API server called the webhook server
+	// in order to create a client for that shoot cluster.
+	return remoteAddrInjectingHandler{
+		Handler: &admission.Webhook{
+			Handler: &handlerShootClient{
+				typesMap: typesMap,
+				mutator:  mutator,
+				logger:   logger.WithName("handlerShootClient"),
+			},
+		},
 	}, nil
 }
 
@@ -98,11 +81,25 @@ func (h *handlerShootClient) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (h *handlerShootClient) HandleWithRequest(ctx context.Context, req admission.Request, r *http.Request) admission.Response {
+func (h *handlerShootClient) Handle(ctx context.Context, req admission.Request) admission.Response {
 	var mut MutateFunc = func(ctx context.Context, new, old client.Object) error {
-		ipPort := strings.Split(r.RemoteAddr, ":")
+		// TODO: replace this logic with a proper authentication mechanism
+		// see https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#authenticate-apiservers
+		// API servers should authenticate against webhooks servers using TLS client certs, from which the webhook
+		// can identify from which shoot cluster the webhook call is coming
+		remoteAddrValue := ctx.Value(remoteAddrContextKey)
+		if remoteAddrValue == nil {
+			return fmt.Errorf("didn't receive remote address")
+		}
+
+		remoteAddr, ok := remoteAddrValue.(string)
+		if !ok {
+			return fmt.Errorf("remote address expected to be string, got %T", remoteAddrValue)
+		}
+
+		ipPort := strings.Split(remoteAddr, ":")
 		if len(ipPort) < 1 {
-			return fmt.Errorf("remote address not parseable: %s", r.RemoteAddr)
+			return fmt.Errorf("remote address not parseable: %s", remoteAddr)
 		}
 		ip := ipPort[0]
 
@@ -141,60 +138,4 @@ func (h *handlerShootClient) HandleWithRequest(ctx context.Context, req admissio
 	}
 
 	return handle(ctx, req, mut, t, h.decoder, h.logger)
-}
-
-// ServeHTTP is a handler for serving an HTTP endpoint that is used for shoot webhooks.
-func (h *handlerShootClient) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var body []byte
-	var err error
-
-	var reviewResponse admission.Response
-	if r.Body != nil {
-		if body, err = ioutil.ReadAll(r.Body); err != nil {
-			h.logger.Error(err, "unable to read the body from the incoming request")
-			reviewResponse = admission.Errored(http.StatusBadRequest, err)
-			h.writeResponse(w, reviewResponse)
-			return
-		}
-	} else {
-		err = errors.New("request body is empty")
-		h.logger.Error(err, "bad request")
-		reviewResponse = admission.Errored(http.StatusBadRequest, err)
-		h.writeResponse(w, reviewResponse)
-		return
-	}
-
-	// verify the content type is accurate
-	contentType := r.Header.Get("Content-Type")
-	if contentType != "application/json" {
-		err = fmt.Errorf("contentType=%s, expected application/json", contentType)
-		h.logger.Error(err, "unable to process a request with an unknown content type", "content type", contentType)
-		reviewResponse = admission.Errored(http.StatusBadRequest, err)
-		h.writeResponse(w, reviewResponse)
-		return
-	}
-
-	req := admission.Request{}
-	ar := admissionv1.AdmissionReview{
-		// avoid an extra copy
-		Request: &req.AdmissionRequest,
-	}
-	if err := runtime.DecodeInto(admissionDecoder, body, &ar); err != nil {
-		h.logger.Error(err, "unable to decode the request")
-		reviewResponse = admission.Errored(http.StatusBadRequest, err)
-		h.writeResponse(w, reviewResponse)
-		return
-	}
-
-	reviewResponse = h.HandleWithRequest(context.Background(), req, r)
-	h.writeResponse(w, reviewResponse)
-}
-
-func (h *handlerShootClient) writeResponse(w io.Writer, response admission.Response) {
-	if err := json.NewEncoder(w).Encode(admissionv1.AdmissionReview{
-		Response: &response.AdmissionResponse,
-	}); err != nil {
-		h.logger.Error(err, "unable to encode the response")
-		h.writeResponse(w, admission.Errored(http.StatusInternalServerError, err))
-	}
 }

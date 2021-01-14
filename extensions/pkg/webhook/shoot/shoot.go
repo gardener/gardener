@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
@@ -78,10 +77,6 @@ func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	case args.MutatorWithShootClient != nil:
 		handler, err := extensionswebhook.NewHandlerWithShootClient(mgr, args.Types, args.MutatorWithShootClient, logger)
 		if err != nil {
-			return nil, err
-		}
-
-		if _, err := inject.SchemeInto(mgr.GetScheme(), handler); err != nil {
 			return nil, err
 		}
 
