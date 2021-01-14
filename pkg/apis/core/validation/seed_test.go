@@ -352,6 +352,8 @@ var _ = Describe("Seed Validation Tests", func() {
 			otherRegion := "other-region"
 			newSeed.Spec.Backup.Provider = "other-provider"
 			newSeed.Spec.Backup.Region = &otherRegion
+			otherDomain := "other-domain"
+			newSeed.Spec.DNS.IngressDomain = &otherDomain
 
 			errorList := ValidateSeedUpdate(newSeed, seed)
 
@@ -374,6 +376,10 @@ var _ = Describe("Seed Validation Tests", func() {
 			}, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.backup.provider"),
+				"Detail": Equal(`field is immutable`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.dns.ingressDomain"),
 				"Detail": Equal(`field is immutable`),
 			}))
 		})
@@ -467,6 +473,49 @@ var _ = Describe("Seed Validation Tests", func() {
 						Namespace: "bar",
 					},
 				}
+			})
+
+			It("should fail if immutable spec.ingress.domain gets changed", func() {
+				newSeed := prepareSeedForUpdate(seed)
+				newSeed.Spec.Ingress.Domain = "other-domain"
+
+				errorList := ValidateSeedUpdate(newSeed, seed)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.ingress.domain"),
+					"Detail": Equal(`field is immutable`),
+				}))
+			})
+
+			It("should fail if ingress domain changed when migrating from dns.ingressDomain to ingress.domain", func() {
+				newSeed := prepareSeedForUpdate(seed)
+				otherDomain := "other-domain"
+				seed.Spec.Ingress = nil
+				seed.Spec.DNS.IngressDomain = &otherDomain
+
+				errorList := ValidateSeedUpdate(newSeed, seed)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.ingress.domain"),
+					"Detail": Equal(`field is immutable`),
+				}))
+			})
+
+			It("should fail if ingress domain changed when migrating from ingress.domain to dns.ingressDomain", func() {
+				newSeed := prepareSeedForUpdate(seed)
+				otherDomain := "other-domain"
+				newSeed.Spec.Ingress = nil
+				newSeed.Spec.DNS.IngressDomain = &otherDomain
+
+				errorList := ValidateSeedUpdate(newSeed, seed)
+
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.dns.ingressDomain"),
+					"Detail": Equal(`field is immutable`),
+				}))
 			})
 
 			It("should succeed if ingress config is correct", func() {

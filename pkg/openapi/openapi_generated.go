@@ -2015,7 +2015,7 @@ func schema_pkg_apis_core_v1alpha1_DNS(ref common.ReferenceCallback) common.Open
 				Properties: map[string]spec.Schema{
 					"domain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Domain is the external available domain of the Shoot cluster. This domain will be written into the kubeconfig that is handed out to end-users.",
+							Description: "Domain is the external available domain of the Shoot cluster. This domain will be written into the kubeconfig that is handed out to end-users. Once set it is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -2547,7 +2547,7 @@ func schema_pkg_apis_core_v1alpha1_Ingress(ref common.ReferenceCallback) common.
 				Properties: map[string]spec.Schema{
 					"domain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters.",
+							Description: "Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -5107,7 +5107,7 @@ func schema_pkg_apis_core_v1alpha1_SeedDNS(ref common.ReferenceCallback) common.
 				Properties: map[string]spec.Schema{
 					"ingressDomain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. This will be removed in the next API version and replaced by spec.ingress.domain.",
+							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable. This will be removed in the next API version and replaced by spec.ingress.domain.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -8214,7 +8214,7 @@ func schema_pkg_apis_core_v1beta1_DNS(ref common.ReferenceCallback) common.OpenA
 				Properties: map[string]spec.Schema{
 					"domain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Domain is the external available domain of the Shoot cluster. This domain will be written into the kubeconfig that is handed out to end-users.",
+							Description: "Domain is the external available domain of the Shoot cluster. This domain will be written into the kubeconfig that is handed out to end-users. Once set it is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -8654,7 +8654,7 @@ func schema_pkg_apis_core_v1beta1_Ingress(ref common.ReferenceCallback) common.O
 				Properties: map[string]spec.Schema{
 					"domain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters.",
+							Description: "Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -11171,7 +11171,7 @@ func schema_pkg_apis_core_v1beta1_SeedDNS(ref common.ReferenceCallback) common.O
 				Properties: map[string]spec.Schema{
 					"ingressDomain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. This will be removed in the next API version and replaced by spec.ingress.domain.",
+							Description: "IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable. This will be removed in the next API version and replaced by spec.ingress.domain.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
