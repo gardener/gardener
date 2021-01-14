@@ -90,6 +90,86 @@ var _ = Describe("Downloader", func() {
 			))
 		})
 	})
+
+	Describe("#GenerateRBACResourcesData", func() {
+		var (
+			secretName1 = "secret1"
+			secretName2 = "secret2"
+
+			roleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: cloud-config-downloader
+  namespace: kube-system
+rules:
+- apiGroups:
+  - ""
+  resourceNames:
+  - ` + secretName1 + `
+  - ` + secretName2 + `
+  resources:
+  - secrets
+  verbs:
+  - get
+`
+
+			roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  creationTimestamp: null
+  name: cloud-config-downloader
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cloud-config-downloader
+subjects:
+- kind: User
+  name: cloud-config-downloader
+`
+
+			clusterRoleBindingNodeBootstrapperYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: system:node-bootstrapper
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:node-bootstrapper
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:bootstrappers
+`
+
+			clusterRoleBindingNodeClientYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: system:certificates.k8s.io:certificatesigningrequests:nodeclient
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:certificates.k8s.io:certificatesigningrequests:nodeclient
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:bootstrappers
+`
+		)
+
+		It("should generate the expected RBAC resources", func() {
+			data, err := GenerateRBACResourcesData([]string{secretName1, secretName2})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(data).To(HaveLen(4))
+			Expect(string(data["role__kube-system__cloud-config-downloader.yaml"])).To(Equal(roleYAML))
+			Expect(string(data["rolebinding__kube-system__cloud-config-downloader.yaml"])).To(Equal(roleBindingYAML))
+			Expect(string(data["clusterrolebinding____system_node-bootstrapper.yaml"])).To(Equal(clusterRoleBindingNodeBootstrapperYAML))
+			Expect(string(data["clusterrolebinding____system_certificates.k8s.io_certificatesigningrequests_nodeclient.yaml"])).To(Equal(clusterRoleBindingNodeClientYAML))
+		})
+	})
 })
 
 const (

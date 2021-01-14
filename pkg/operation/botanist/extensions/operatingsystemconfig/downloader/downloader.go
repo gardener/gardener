@@ -20,12 +20,17 @@ import (
 	"text/template"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/downloader/templates"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	"github.com/Masterminds/sprig"
+	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"k8s.io/utils/pointer"
 )
 
@@ -186,4 +191,83 @@ WantedBy=multi-user.target`),
 	}
 
 	return units, files, nil
+}
+
+// GenerateRBACResourcesData returns a map of serialized Kubernetes resources that allow the cloud-config-downloader to
+// access the list of given secrets. Additionally, serialized resources providing permissions to allow initiating the
+// Kubernetes TLS bootstrapping process will be returned.
+func GenerateRBACResourcesData(secretNames []string) (map[string][]byte, error) {
+	var (
+		role = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      Name,
+				Namespace: metav1.NamespaceSystem,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups:     []string{""},
+					Resources:     []string{"secrets"},
+					ResourceNames: secretNames,
+					Verbs:         []string{"get"},
+				},
+			},
+		}
+
+		roleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      Name,
+				Namespace: metav1.NamespaceSystem,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.SchemeGroupVersion.Group,
+				Kind:     "Role",
+				Name:     role.Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind: rbacv1.UserKind,
+				Name: SecretName,
+			}},
+		}
+
+		clusterRoleBindingNodeBootstrapper = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "system:node-bootstrapper",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.SchemeGroupVersion.Group,
+				Kind:     "ClusterRole",
+				Name:     "system:node-bootstrapper",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.SchemeGroupVersion.Group,
+				Kind:     rbacv1.GroupKind,
+				Name:     bootstraptokenapi.BootstrapDefaultGroup,
+			}},
+		}
+
+		clusterRoleBindingNodeClient = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "system:certificates.k8s.io:certificatesigningrequests:nodeclient",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.SchemeGroupVersion.Group,
+				Kind:     "ClusterRole",
+				Name:     "system:certificates.k8s.io:certificatesigningrequests:nodeclient",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.SchemeGroupVersion.Group,
+				Kind:     rbacv1.GroupKind,
+				Name:     bootstraptokenapi.BootstrapDefaultGroup,
+			}},
+		}
+	)
+
+	return managedresources.
+		NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer).
+		AddAllAndSerialize(
+			role,
+			roleBinding,
+			clusterRoleBindingNodeBootstrapper,
+			clusterRoleBindingNodeClient,
+		)
 }
