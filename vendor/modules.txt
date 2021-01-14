@@ -1227,7 +1227,7 @@ k8s.io/kube-aggregator/pkg/client/informers/externalversions/internalinterfaces
 k8s.io/kube-aggregator/pkg/client/listers/apiregistration/v1
 k8s.io/kube-aggregator/pkg/controllers
 k8s.io/kube-aggregator/pkg/controllers/autoregister
-# k8s.io/kube-openapi v0.0.0-20201221124747-75e88872edcf => github.com/gardener/kube-openapi v0.0.0-20201221124747-75e88872edcf
+# k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6 => github.com/gardener/kube-openapi v0.0.0-20201221124747-75e88872edcf
 ## explicit
 k8s.io/kube-openapi/cmd/openapi-gen
 k8s.io/kube-openapi/cmd/openapi-gen/args
