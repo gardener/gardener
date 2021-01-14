@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 	"github.com/gardener/gardener/plugin/pkg/global/extensionvalidation"
 	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
+	managedseedvalidator "github.com/gardener/gardener/plugin/pkg/managedseed/validator"
 	plantvalidator "github.com/gardener/gardener/plugin/pkg/plant"
 	seedvalidator "github.com/gardener/gardener/plugin/pkg/seed/validator"
 	shootdns "github.com/gardener/gardener/plugin/pkg/shoot/dns"
@@ -56,6 +57,7 @@ var AllOrderedPlugins = []string{
 	clusteropenidconnectpreset.PluginName,
 	shootstatedeletionvalidator.PluginName,
 	customverbauthorizer.PluginName,
+	managedseedvalidator.PluginName,
 
 	// new admission plugins should generally be inserted above here
 	// webhook, and resourcequota plugins must go at the end
@@ -85,5 +87,6 @@ func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	clusteropenidconnectpreset.Register(plugins)
 	shootstatedeletionvalidator.Register(plugins)
 	customverbauthorizer.Register(plugins)
+	managedseedvalidator.Register(plugins)
 	resourcequota.Register(plugins)
 }

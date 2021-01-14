@@ -136,14 +136,14 @@ ManagedSeedStatus
 </tr>
 </tbody>
 </table>
-<h3 id="seedmanagement.gardener.cloud/v1alpha1.GardenConnectionBootstrap">GardenConnectionBootstrap
+<h3 id="seedmanagement.gardener.cloud/v1alpha1.Bootstrap">Bootstrap
 (<code>string</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
 <a href="#seedmanagement.gardener.cloud/v1alpha1.Gardenlet">Gardenlet</a>)
 </p>
 <p>
-<p>GardenConnectionBootstrap describes a mechanism for bootstrapping gardenlet connection to the Garden cluster.</p>
+<p>Bootstrap describes a mechanism for bootstrapping gardenlet connection to the Garden cluster.</p>
 </p>
 <h3 id="seedmanagement.gardener.cloud/v1alpha1.Gardenlet">Gardenlet
 </h3>
@@ -191,31 +191,31 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </tr>
 <tr>
 <td>
-<code>gardenConnectionBootstrap</code></br>
+<code>bootstrap</code></br>
 <em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.GardenConnectionBootstrap">
-GardenConnectionBootstrap
+<a href="#seedmanagement.gardener.cloud/v1alpha1.Bootstrap">
+Bootstrap
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>GardenConnectionBootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken.
-If specified, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig.
-If not specified, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster.</p>
+<p>Bootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken, None.
+If set to ServiceAccount or BootstrapToken, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig.
+If set to None, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster. Defaults to BootstrapToken.</p>
 </td>
 </tr>
 <tr>
 <td>
-<code>disableMergingWithParent</code></br>
+<code>mergeWithParent</code></br>
 <em>
 bool
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>DisableMergingWithParent specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet
-should be merged with the specified deployment parameters and GardenletConfiguration. Defaults to false.</p>
+<p>MergeWithParent specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet
+should be merged with the specified deployment parameters and GardenletConfiguration. Defaults to true.</p>
 </td>
 </tr>
 </tbody>
@@ -259,7 +259,7 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 10.</p>
+<p>RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 0.</p>
 </td>
 </tr>
 <tr>
@@ -434,7 +434,8 @@ Kubernetes core/v1.PullPolicy
 </td>
 <td>
 <em>(Optional)</em>
-<p>PullPolicy is the image pull policy. One of Always, Never, IfNotPresent.</p>
+<p>PullPolicy is the image pull policy. One of Always, Never, IfNotPresent.
+Defaults to Always if latest tag is specified, or IfNotPresent otherwise.</p>
 </td>
 </tr>
 </tbody>

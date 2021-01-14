@@ -91,15 +91,15 @@ type Gardenlet struct {
 	// Config is the GardenletConfiguration used to configure gardenlet.
 	// +optional
 	Config *runtime.RawExtension `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`
-	// GardenConnectionBootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken.
-	// If specified, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig.
-	// If not specified, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster.
+	// Bootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken, None.
+	// If set to ServiceAccount or BootstrapToken, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig.
+	// If set to None, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster. Defaults to BootstrapToken.
 	// +optional
-	GardenConnectionBootstrap *GardenConnectionBootstrap `json:"gardenConnectionBootstrap,omitempty" protobuf:"bytes,3,opt,name=gardenConnectionBootstrap"`
-	// DisableMergingWithParent specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet
-	// should be merged with the specified deployment parameters and GardenletConfiguration. Defaults to false.
+	Bootstrap *Bootstrap `json:"bootstrap,omitempty" protobuf:"bytes,3,opt,name=bootstrap"`
+	// MergeWithParent specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet
+	// should be merged with the specified deployment parameters and GardenletConfiguration. Defaults to true.
 	// +optional
-	DisableMergingWithParent *bool `json:"disableMergingWithParent,omitempty" protobuf:"varint,4,opt,name=disableMergingWithParent"`
+	MergeWithParent *bool `json:"mergeWithParent,omitempty" protobuf:"varint,4,opt,name=mergeWithParent"`
 }
 
 // GardenletDeployment specifies certain gardenlet deployment parameters, such as the number of replicas,
@@ -108,7 +108,7 @@ type GardenletDeployment struct {
 	// ReplicaCount is the number of gardenlet replicas. Defaults to 1.
 	// +optional
 	ReplicaCount *int32 `json:"replicaCount,omitempty" protobuf:"varint,1,opt,name=replicaCount"`
-	// RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 10.
+	// RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 0.
 	// +optional
 	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty" protobuf:"varint,2,opt,name=revisionHistoryLimit"`
 	// ServiceAccountName is the name of the ServiceAccount to use to run gardenlet pods.
@@ -149,18 +149,22 @@ type Image struct {
 	// +optional
 	Tag *string `json:"tag,omitempty" protobuf:"bytes,2,opt,name=tag"`
 	// PullPolicy is the image pull policy. One of Always, Never, IfNotPresent.
+	// Defaults to Always if latest tag is specified, or IfNotPresent otherwise.
 	// +optional
 	PullPolicy *corev1.PullPolicy `json:"pullPolicy,omitempty" protobuf:"bytes,3,opt,name=pullPolicy"`
 }
 
-// GardenConnectionBootstrap describes a mechanism for bootstrapping gardenlet connection to the Garden cluster.
-type GardenConnectionBootstrap string
+// Bootstrap describes a mechanism for bootstrapping gardenlet connection to the Garden cluster.
+type Bootstrap string
 
 const (
-	// GardenConnectionBootstrapServiceAccount means that a temporary service account should be used for bootstrapping gardenlet connection to the Garden cluster.
-	GardenConnectionBootstrapServiceAccount GardenConnectionBootstrap = "ServiceAccount"
-	// GardenConnectionBootstrapToken means that a bootstrap token should be used for bootstrapping gardenlet connection to the Garden cluster.
-	GardenConnectionBootstrapToken GardenConnectionBootstrap = "BootstrapToken"
+	// BootstrapServiceAccount means that a temporary service account should be used for bootstrapping gardenlet connection to the Garden cluster.
+	BootstrapServiceAccount Bootstrap = "ServiceAccount"
+	// BootstrapToken means that a bootstrap token should be used for bootstrapping gardenlet connection to the Garden cluster.
+	BootstrapToken Bootstrap = "BootstrapToken"
+	// BootstrapNone means that gardenlet connection to the Garden cluster should not be bootstrapped
+	// and the gardenClientConnection.kubeconfig field should be used to connect to the Garden cluster.
+	BootstrapNone Bootstrap = "None"
 )
 
 // ManagedSeedStatus is the status of a ManagedSeed.
@@ -176,8 +180,8 @@ type ManagedSeedStatus struct {
 }
 
 const (
-	// ManagedSeedValid is a condition type for indicating whether the ManagedSeed is valid.
-	ManagedSeedValid gardencorev1beta1.ConditionType = "Valid"
+	// ManagedSeedShootExists is a condition type for indicating whether the ManagedSeed's shoot exists.
+	ManagedSeedShootExists gardencorev1beta1.ConditionType = "ShootExists"
 	// ManagedSeedShootReconciled is a condition type for indicating whether the ManagedSeed's shoot has been reconciled.
 	ManagedSeedShootReconciled gardencorev1beta1.ConditionType = "ShootReconciled"
 	// ManagedSeedSeedRegistered is a condition type for indicating whether the ManagedSeed's seed has been registered,

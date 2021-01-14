@@ -28,5 +28,26 @@ import (
 // Public to allow building arbitrary schemes.
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
+	scheme.AddTypeDefaultingFunc(&ManagedSeed{}, func(obj interface{}) { SetObjectDefaults_ManagedSeed(obj.(*ManagedSeed)) })
+	scheme.AddTypeDefaultingFunc(&ManagedSeedList{}, func(obj interface{}) { SetObjectDefaults_ManagedSeedList(obj.(*ManagedSeedList)) })
 	return nil
+}
+
+func SetObjectDefaults_ManagedSeed(in *ManagedSeed) {
+	SetDefaults_ManagedSeed(in)
+	if in.Spec.Gardenlet != nil {
+		if in.Spec.Gardenlet.Deployment != nil {
+			SetDefaults_GardenletDeployment(in.Spec.Gardenlet.Deployment)
+			if in.Spec.Gardenlet.Deployment.Image != nil {
+				SetDefaults_Image(in.Spec.Gardenlet.Deployment.Image)
+			}
+		}
+	}
+}
+
+func SetObjectDefaults_ManagedSeedList(in *ManagedSeedList) {
+	for i := range in.Items {
+		a := &in.Items[i]
+		SetObjectDefaults_ManagedSeed(a)
+	}
 }

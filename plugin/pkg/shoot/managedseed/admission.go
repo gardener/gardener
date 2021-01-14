@@ -22,12 +22,12 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 )
@@ -47,13 +47,13 @@ func Register(plugins *admission.Plugins) {
 // ManagedSeed contains listers and and admission handler.
 type ManagedSeed struct {
 	*admission.Handler
-	shootLister          corelisters.ShootLister
+	coreClient           coreclientset.Interface
 	seedManagementClient seedmanagementclientset.Interface
 	readyFunc            admission.ReadyFunc
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ManagedSeed{})
+	_ = admissioninitializer.WantsInternalCoreClientset(&ManagedSeed{})
 	_ = admissioninitializer.WantsSeedManagementClientset(&ManagedSeed{})
 
 	readyFuncs = []admission.ReadyFunc{}
@@ -72,23 +72,20 @@ func (v *ManagedSeed) AssignReadyFunc(f admission.ReadyFunc) {
 	v.SetReadyFunc(f)
 }
 
-// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (v *ManagedSeed) SetInternalCoreInformerFactory(f coreinformers.SharedInformerFactory) {
-	shootInformer := f.Core().InternalVersion().Shoots()
-	v.shootLister = shootInformer.Lister()
-
-	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced)
+// SetInternalCoreClientset sets the garden core clientset.
+func (v *ManagedSeed) SetInternalCoreClientset(c coreclientset.Interface) {
+	v.coreClient = c
 }
 
-// SetSeedManagementClientset gets the clientset from the Kubernetes client.
+// SetSeedManagementClientset sets the garden seedmanagement clientset.
 func (v *ManagedSeed) SetSeedManagementClientset(c seedmanagementclientset.Interface) {
 	v.seedManagementClient = c
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *ManagedSeed) ValidateInitialization() error {
-	if v.shootLister == nil {
-		return errors.New("missing shoot lister")
+	if v.coreClient == nil {
+		return errors.New("missing garden core client")
 	}
 	if v.seedManagementClient == nil {
 		return errors.New("missing garden seedmanagement client")
@@ -134,11 +131,11 @@ func (v *ManagedSeed) Validate(ctx context.Context, a admission.Attributes, _ ad
 }
 
 func (v *ManagedSeed) validateDeleteCollection(ctx context.Context, a admission.Attributes) error {
-	shootList, err := v.shootLister.List(labels.Everything())
+	shoots, err := v.getShoots(ctx, labels.Everything())
 	if err != nil {
 		return err
 	}
-	for _, shoot := range shootList {
+	for _, shoot := range shoots {
 		if err := v.validateDelete(ctx, v.newAttributesWithName(a, shoot.Name)); err != nil {
 			return err
 		}
@@ -156,7 +153,7 @@ func (v *ManagedSeed) validateDelete(ctx context.Context, a admission.Attributes
 		return nil
 	}
 
-	return admission.NewForbidden(a, fmt.Errorf("cannot delete shoot '%s/%s' since it is still referenced by a ManagedSeed", a.GetNamespace(), a.GetName()))
+	return admission.NewForbidden(a, fmt.Errorf("cannot delete shoot %s/%s since it is still referenced by a managed seed", a.GetNamespace(), a.GetName()))
 }
 
 func (d *ManagedSeed) newAttributesWithName(a admission.Attributes, name string) admission.Attributes {
@@ -171,4 +168,12 @@ func (d *ManagedSeed) newAttributesWithName(a admission.Attributes, name string)
 		a.GetOperationOptions(),
 		a.IsDryRun(),
 		a.GetUserInfo())
+}
+
+func (v *ManagedSeed) getShoots(ctx context.Context, selector labels.Selector) ([]core.Shoot, error) {
+	shootList, err := v.coreClient.Core().Shoots("").List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
+	if err != nil {
+		return nil, err
+	}
+	return shootList.Items, nil
 }

@@ -93,12 +93,12 @@ func (r *reconciler) reconcile(gardenClient kubernetes.Interface, managedSeed *s
 		return reconcile.Result{}, err
 	}
 
-	conditionValid := gardencorev1beta1helper.GetOrInitCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedValid)
+	conditionShootExists := gardencorev1beta1helper.GetOrInitCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedShootExists)
 	conditionShootReconciled := gardencorev1beta1helper.GetOrInitCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedShootReconciled)
 	conditionSeedRegistered := gardencorev1beta1helper.GetOrInitCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedSeedRegistered)
 
 	defer func() {
-		if err := updateStatus(r.ctx, gardenClient.Client(), managedSeed, conditionValid, conditionShootReconciled, conditionSeedRegistered); err != nil {
+		if err := updateStatus(r.ctx, gardenClient.Client(), managedSeed, conditionShootExists, conditionShootReconciled, conditionSeedRegistered); err != nil {
 			managedSeedLogger.Errorf("Could not update status: %+v", err)
 		}
 	}()
@@ -107,26 +107,16 @@ func (r *reconciler) reconcile(gardenClient kubernetes.Interface, managedSeed *s
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := gardenClient.DirectClient().Get(r.ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
 		if apierrors.IsNotFound(err) {
-			message := fmt.Sprintf("Shoot %s not found: %+v", kutil.ObjectName(shoot), err)
-			conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "ShootNotFound", message)
+			message := fmt.Sprintf("Shoot %s/%s not found", managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
+			conditionShootExists = gardencorev1beta1helper.UpdatedCondition(conditionShootExists, gardencorev1beta1.ConditionFalse, "ShootNotFound", message)
 			managedSeedLogger.Error(message)
 			r.recorder.Eventf(managedSeed, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", message)
-			return reconcile.Result{}, fmt.Errorf("shoot %s not found: %w", kutil.ObjectName(shoot), err)
+			return reconcile.Result{}, fmt.Errorf("shoot %s/%s not found: %w", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err)
 		}
-		return reconcile.Result{}, fmt.Errorf("could not get shoot %s: %w", kutil.ObjectName(shoot), err)
+		return reconcile.Result{}, fmt.Errorf("could not get shoot %s/%s: %w", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err)
 	}
-
-	// Check if shoot can be registered as seed
-	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
-		message := fmt.Sprintf("Shoot %s cannot be registered as seed as it does not specify a domain", kutil.ObjectName(shoot))
-		conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "ShootCantBeSeed", message)
-		managedSeedLogger.Error(message)
-		r.recorder.Eventf(managedSeed, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", message)
-		return reconcile.Result{}, fmt.Errorf("shoot %s cannot be registered as seed as it does not specify a domain", kutil.ObjectName(shoot))
-	}
-
-	conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionTrue, "ShootFoundAndCanBeSeed",
-		fmt.Sprintf("Shoot %s found and can be registered as seed", kutil.ObjectName(shoot)))
+	conditionShootExists = gardencorev1beta1helper.UpdatedCondition(conditionShootExists, gardencorev1beta1.ConditionTrue, "ShootFound",
+		fmt.Sprintf("Shoot %s found", kutil.ObjectName(shoot)))
 
 	// Check if the shoot is reconciled
 	if shoot.Generation != shoot.Status.ObservedGeneration || shoot.Status.LastOperation == nil || shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
@@ -177,11 +167,11 @@ func (r *reconciler) delete(gardenClient kubernetes.Interface, managedSeed *seed
 		return reconcile.Result{}, nil
 	}
 
-	conditionValid := gardencorev1beta1helper.GetOrInitCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedValid)
+	conditionShootExists := gardencorev1beta1helper.GetOrInitCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedShootExists)
 	conditionSeedRegistered := gardencorev1beta1helper.GetOrInitCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedSeedRegistered)
 
 	defer func() {
-		if err := updateStatus(r.ctx, gardenClient.Client(), managedSeed, conditionValid, conditionSeedRegistered); err != nil {
+		if err := updateStatus(r.ctx, gardenClient.Client(), managedSeed, conditionShootExists, conditionSeedRegistered); err != nil {
 			managedSeedLogger.Errorf("Could not update status: %+v", err)
 		}
 	}()
@@ -190,15 +180,15 @@ func (r *reconciler) delete(gardenClient kubernetes.Interface, managedSeed *seed
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := gardenClient.DirectClient().Get(r.ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
 		if apierrors.IsNotFound(err) {
-			message := fmt.Sprintf("Shoot %s not found: %+v", kutil.ObjectName(shoot), err)
-			conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "ShootNotFound", message)
+			message := fmt.Sprintf("Shoot %s/%s not found", managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
+			conditionShootExists = gardencorev1beta1helper.UpdatedCondition(conditionShootExists, gardencorev1beta1.ConditionFalse, "ShootNotFound", message)
 			managedSeedLogger.Error(message)
 			r.recorder.Eventf(managedSeed, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", message)
-			return reconcile.Result{}, fmt.Errorf("shoot %s not found: %w", kutil.ObjectName(shoot), err)
+			return reconcile.Result{}, fmt.Errorf("shoot %s/%s not found: %w", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err)
 		}
-		return reconcile.Result{}, fmt.Errorf("could not get shoot %s: %w", kutil.ObjectName(shoot), err)
+		return reconcile.Result{}, fmt.Errorf("could not get shoot %s/%s: %w", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err)
 	}
-	conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionTrue, "ShootFound",
+	conditionShootExists = gardencorev1beta1helper.UpdatedCondition(conditionShootExists, gardencorev1beta1.ConditionTrue, "ShootFound",
 		fmt.Sprintf("Shoot %s found", kutil.ObjectName(shoot)))
 
 	// Get seed client

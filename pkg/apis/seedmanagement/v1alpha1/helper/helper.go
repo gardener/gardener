@@ -12,12 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seedmanagement
+package helper
 
-// Field path constants that are specific to the internal API
-// representation.
-const (
-	// ManagedSeedShootName is the field selector path for finding
-	// the Shoot of a seedmanagement.gardener.cloud/v1alpha1 ManagedSeed.
-	ManagedSeedShootName = "spec.shoot.name"
+import (
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 )
+
+// Bootstrap returns the value of the Bootstrap field of the given gardenlet, or None if the field is nil.
+func Bootstrap(gardenlet *seedmanagementv1alpha1.Gardenlet) seedmanagementv1alpha1.Bootstrap {
+	if gardenlet.Bootstrap != nil {
+		return *gardenlet.Bootstrap
+	}
+	return seedmanagementv1alpha1.BootstrapNone
+}
+
+// MergeWithParent returns the value of the MergeWithParent field of the given gardenlet, or false if the field is nil.
+func MergeWithParent(gardenlet *seedmanagementv1alpha1.Gardenlet) bool {
+	if gardenlet.MergeWithParent != nil {
+		return *gardenlet.MergeWithParent
+	}
+	return false
+}

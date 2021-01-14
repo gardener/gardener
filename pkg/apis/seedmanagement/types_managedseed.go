@@ -81,13 +81,13 @@ type Gardenlet struct {
 	Deployment *GardenletDeployment
 	// Config is the GardenletConfiguration used to configure gardenlet.
 	Config *runtime.RawExtension
-	// GardenConnectionBootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken.
-	// If specified, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig.
-	// If not specified, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster.
-	GardenConnectionBootstrap *GardenConnectionBootstrap
-	// DisableMergingWithParent specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet
-	// should be merged with the specified deployment parameters and GardenletConfiguration. Defaults to false.
-	DisableMergingWithParent *bool
+	// Bootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken, None.
+	// If set to ServiceAccount or BootstrapToken, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig.
+	// If set to None, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster. Defaults to BootstrapToken.
+	Bootstrap *Bootstrap
+	// MergeWithParent specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet
+	// should be merged with the specified deployment parameters and GardenletConfiguration. Defaults to true.
+	MergeWithParent *bool
 }
 
 // GardenletDeployment specifies certain gardenlet deployment parameters, such as the number of replicas,
@@ -95,7 +95,7 @@ type Gardenlet struct {
 type GardenletDeployment struct {
 	// ReplicaCount is the number of gardenlet replicas. Defaults to 1.
 	ReplicaCount *int32
-	// RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 10.
+	// RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 0.
 	RevisionHistoryLimit *int32
 	// ServiceAccountName is the name of the ServiceAccount to use to run gardenlet pods.
 	ServiceAccountName *string
@@ -124,17 +124,21 @@ type Image struct {
 	// Tag is the image tag.
 	Tag *string
 	// PullPolicy is the image pull policy. One of Always, Never, IfNotPresent.
+	// Defaults to Always if latest tag is specified, or IfNotPresent otherwise.
 	PullPolicy *corev1.PullPolicy
 }
 
-// GardenConnectionBootstrap describes a mechanism for bootstrapping gardenlet connection to the Garden cluster.
-type GardenConnectionBootstrap string
+// Bootstrap describes a mechanism for bootstrapping gardenlet connection to the Garden cluster.
+type Bootstrap string
 
 const (
-	// GardenConnectionBootstrapServiceAccount means that a temporary service account should be used for bootstrapping gardenlet connection to the Garden cluster.
-	GardenConnectionBootstrapServiceAccount GardenConnectionBootstrap = "ServiceAccount"
-	// GardenConnectionBootstrapToken means that a bootstrap token should be used for bootstrapping gardenlet connection to the Garden cluster.
-	GardenConnectionBootstrapToken GardenConnectionBootstrap = "BootstrapToken"
+	// BootstrapServiceAccount means that a temporary service account should be used for bootstrapping gardenlet connection to the Garden cluster.
+	BootstrapServiceAccount Bootstrap = "ServiceAccount"
+	// BootstrapToken means that a bootstrap token should be used for bootstrapping gardenlet connection to the Garden cluster.
+	BootstrapToken Bootstrap = "BootstrapToken"
+	// BootstrapNone means that gardenlet connection to the Garden cluster should not be bootstrapped
+	// and the gardenClientConnection.kubeconfig field should be used to connect to the Garden cluster.
+	BootstrapNone Bootstrap = "None"
 )
 
 // ManagedSeedStatus is the status of a ManagedSeed.
@@ -147,8 +151,8 @@ type ManagedSeedStatus struct {
 }
 
 const (
-	// ManagedSeedValid is a condition type for indicating whether the ManagedSeed is valid.
-	ManagedSeedValid gardencore.ConditionType = "Valid"
+	// ManagedSeedShootExists is a condition type for indicating whether the ManagedSeed's shoot exists.
+	ManagedSeedShootExists gardencore.ConditionType = "ShootExists"
 	// ManagedSeedShootReconciled is a condition type for indicating whether the ManagedSeed's shoot has been reconciled.
 	ManagedSeedShootReconciled gardencore.ConditionType = "ShootReconciled"
 	// ManagedSeedSeedRegistered is a condition type for indicating whether the ManagedSeed's seed has been registered,

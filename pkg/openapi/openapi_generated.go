@@ -12762,16 +12762,16 @@ func schema_pkg_apis_seedmanagement_v1alpha1_Gardenlet(ref common.ReferenceCallb
 							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
-					"gardenConnectionBootstrap": {
+					"bootstrap": {
 						SchemaProps: spec.SchemaProps{
-							Description: "GardenConnectionBootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken. If specified, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig. If not specified, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster.",
+							Description: "Bootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken, None. If set to ServiceAccount or BootstrapToken, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig. If set to None, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster. Defaults to BootstrapToken.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"disableMergingWithParent": {
+					"mergeWithParent": {
 						SchemaProps: spec.SchemaProps{
-							Description: "DisableMergingWithParent specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet should be merged with the specified deployment parameters and GardenletConfiguration. Defaults to false.",
+							Description: "MergeWithParent specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet should be merged with the specified deployment parameters and GardenletConfiguration. Defaults to true.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -12800,7 +12800,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref common.Refe
 					},
 					"revisionHistoryLimit": {
 						SchemaProps: spec.SchemaProps{
-							Description: "RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 10.",
+							Description: "RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 0.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -12931,7 +12931,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_Image(ref common.ReferenceCallback)
 					},
 					"pullPolicy": {
 						SchemaProps: spec.SchemaProps{
-							Description: "PullPolicy is the image pull policy. One of Always, Never, IfNotPresent.",
+							Description: "PullPolicy is the image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if latest tag is specified, or IfNotPresent otherwise.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

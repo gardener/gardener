@@ -39,13 +39,13 @@ func (in *Gardenlet) DeepCopyInto(out *Gardenlet) {
 		*out = new(runtime.RawExtension)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.GardenConnectionBootstrap != nil {
-		in, out := &in.GardenConnectionBootstrap, &out.GardenConnectionBootstrap
-		*out = new(GardenConnectionBootstrap)
+	if in.Bootstrap != nil {
+		in, out := &in.Bootstrap, &out.Bootstrap
+		*out = new(Bootstrap)
 		**out = **in
 	}
-	if in.DisableMergingWithParent != nil {
-		in, out := &in.DisableMergingWithParent, &out.DisableMergingWithParent
+	if in.MergeWithParent != nil {
+		in, out := &in.MergeWithParent, &out.MergeWithParent
 		*out = new(bool)
 		**out = **in
 	}

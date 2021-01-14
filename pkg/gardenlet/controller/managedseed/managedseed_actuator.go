@@ -23,11 +23,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	v1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
@@ -51,13 +51,10 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/rest"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -149,7 +146,7 @@ func (a *actuator) Delete(ctx context.Context, managedSeed *seedmanagementv1alph
 
 func (a *actuator) registerAsSeed(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
 	// Prepare seed spec
-	seedSpec, err := a.prepareSeedSpec(ctx, managedSeed, shoot, &managedSeed.Spec.SeedTemplate.Spec)
+	err := a.prepareSeedSpec(ctx, &managedSeed.Spec.SeedTemplate.Spec, managedSeed, shoot)
 	if err != nil {
 		return err
 	}
@@ -168,7 +165,7 @@ func (a *actuator) registerAsSeed(ctx context.Context, managedSeed *seedmanageme
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
 		})
 		seed.Annotations = managedSeed.Spec.SeedTemplate.Annotations
-		seed.Spec = *seedSpec
+		seed.Spec = managedSeed.Spec.SeedTemplate.Spec
 		return nil
 	})
 	return err
@@ -232,68 +229,30 @@ func (a *actuator) deleteGardenlet(ctx context.Context, managedSeed *seedmanagem
 	return a.shootClient.ChartApplier().Delete(ctx, filepath.Join(common.ChartPath, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(values))
 }
 
-func (a *actuator) prepareSeedSpec(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot, seedSpec *gardencorev1beta1.SeedSpec) (*gardencorev1beta1.SeedSpec, error) {
+func (a *actuator) prepareSeedSpec(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
 	// Get shoot secret
 	shootSecret, err := a.getShootSecret(ctx, shoot)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// Prepare seed backup
-	seedBackup, err := a.prepareSeedBackup(ctx, managedSeed, shoot, shootSecret, seedSpec.Backup)
-	if err != nil {
-		return nil, err
-	}
+	// If backup is specified, create or update the backup secret if it doesn't exist or is owned by the managed seed
+	if spec.Backup != nil {
+		// Get backup secret
+		backupSecret, err := kutil.GetSecretByReference(ctx, a.gardenClient.Client(), &spec.Backup.SecretRef)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
 
-	// Copy seed spec
-	spec := seedSpec.DeepCopy()
-
-	// Initialize backup
-	spec.Backup = seedBackup
-
-	// Initialize DNS and ingress
-	ingressDomain := fmt.Sprintf("%s.%s", common.IngressPrefix, *(shoot.Spec.DNS.Domain))
-	enableIngressController, err := a.shouldEnableIngressController(ctx, shoot)
-	if err != nil {
-		return nil, err
-	}
-	if !enableIngressController {
-		spec.Ingress = nil
-	}
-	if spec.Ingress != nil {
-		if spec.DNS.Provider == nil {
-			dnsProvider, err := a.getSeedDNSProvider(ctx, shoot)
-			if err != nil {
-				return nil, err
+		if apierrors.IsNotFound(err) || metav1.IsControlledBy(backupSecret, managedSeed) {
+			// Create or update backup secret
+			ownerRefs := []metav1.OwnerReference{
+				*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
 			}
-			spec.DNS.Provider = dnsProvider
+			if err := kutil.CreateOrUpdateSecretByReference(ctx, a.gardenClient.Client(), &spec.Backup.SecretRef, corev1.SecretTypeOpaque, shootSecret.Data, ownerRefs); err != nil {
+				return err
+			}
 		}
-		if spec.Ingress.Domain == "" {
-			spec.Ingress.Domain = ingressDomain
-		}
-	} else {
-		if spec.DNS.IngressDomain == nil || *spec.DNS.IngressDomain == "" {
-			spec.DNS.IngressDomain = &ingressDomain
-		}
-	}
-
-	// Initialize networks
-	if spec.Networks.Nodes == nil {
-		spec.Networks.Nodes = shoot.Spec.Networking.Nodes
-	}
-	if spec.Networks.Pods == "" && shoot.Spec.Networking.Pods != nil {
-		spec.Networks.Pods = *shoot.Spec.Networking.Pods
-	}
-	if spec.Networks.Services == "" && shoot.Spec.Networking.Services != nil {
-		spec.Networks.Services = *shoot.Spec.Networking.Services
-	}
-
-	// Initialize provider
-	if spec.Provider.Type == "" {
-		spec.Provider.Type = shoot.Spec.Provider.Type
-	}
-	if spec.Provider.Region == "" {
-		spec.Provider.Region = shoot.Spec.Region
 	}
 
 	// If secret reference is specified, create or update the corresponding secret
@@ -301,7 +260,7 @@ func (a *actuator) prepareSeedSpec(ctx context.Context, managedSeed *seedmanagem
 		// Get shoot kubeconfig secret
 		shootKubeconfigSecret, err := a.getShootKubeconfigSecret(ctx, shoot)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		// Initialize seed secret data
@@ -313,61 +272,32 @@ func (a *actuator) prepareSeedSpec(ctx context.Context, managedSeed *seedmanagem
 			*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
 		}
 		if err := kutil.CreateOrUpdateSecretByReference(ctx, a.gardenClient.Client(), spec.SecretRef, corev1.SecretTypeOpaque, data, ownerRefs); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	// Initialize settings
-	if spec.Settings == nil {
-		spec.Settings = &gardencorev1beta1.SeedSettings{}
+	// Check if the shoot namespace in the seed contains a vpa-admission-controller deployment
+	vpaEnabled := spec.Settings != nil && spec.Settings.VerticalPodAutoscaler != nil && spec.Settings.VerticalPodAutoscaler.Enabled
+	seedVPAAdmissionControllerExists, err := a.seedVPADeploymentExists(ctx, shoot)
+	if err != nil {
+		return err
+	}
+	if vpaEnabled && seedVPAAdmissionControllerExists {
+		return fmt.Errorf("seed VPA is enabled but shoot already has a VPA")
 	}
 
-	// If settings.verticalPodAutoscaler is not specified, enable it if the shoot namespace in the seed doesn't contain
-	// a vpa-admission-controller deployment, and disable it otherwise
-	if spec.Settings.VerticalPodAutoscaler == nil {
-		disableVPA, err := a.shouldDisableVPA(ctx, shoot)
+	// If ingress is specified, check if the shoot namespace in the seed contains an ingress DNSEntry
+	if spec.Ingress != nil {
+		seedNginxDNSEntryExists, err := a.seedIngressDNSEntryExists(ctx, shoot)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		spec.Settings.VerticalPodAutoscaler = &gardencorev1beta1.SeedSettingVerticalPodAutoscaler{
-			Enabled: !disableVPA,
-		}
-	}
-
-	return spec, nil
-}
-
-func (a *actuator) prepareSeedBackup(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot, shootSecret *corev1.Secret, seedBackup *gardencorev1beta1.SeedBackup) (*gardencorev1beta1.SeedBackup, error) {
-	if seedBackup == nil {
-		return nil, nil
-	}
-
-	// Copy backup
-	backup := seedBackup.DeepCopy()
-
-	// Initialize provider
-	if backup.Provider == "" {
-		backup.Provider = shoot.Spec.Provider.Type
-	}
-
-	// If backup secret reference is not specified, initialize it and create or update the corresponding secret
-	if backup.SecretRef.Name == "" || backup.SecretRef.Namespace == "" {
-		// Initialize backup secret reference
-		backup.SecretRef = corev1.SecretReference{
-			Name:      fmt.Sprintf("backup-%s", managedSeed.Name),
-			Namespace: managedSeed.Namespace,
-		}
-
-		// Create or update backup secret
-		ownerRefs := []metav1.OwnerReference{
-			*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
-		}
-		if err := kutil.CreateOrUpdateSecretByReference(ctx, a.gardenClient.Client(), &backup.SecretRef, corev1.SecretTypeOpaque, shootSecret.Data, ownerRefs); err != nil {
-			return nil, err
+		if seedNginxDNSEntryExists {
+			return fmt.Errorf("seed ingress controller is enabled but an ingress DNS entry still exists")
 		}
 	}
 
-	return backup, nil
+	return nil
 }
 
 func (a *actuator) getShootSecret(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*corev1.Secret, error) {
@@ -386,7 +316,7 @@ func (a *actuator) getShootKubeconfigSecret(ctx context.Context, shoot *gardenco
 	return shootKubeconfigSecret, nil
 }
 
-func (a *actuator) shouldDisableVPA(ctx context.Context, shoot *gardencorev1beta1.Shoot) (bool, error) {
+func (a *actuator) seedVPADeploymentExists(ctx context.Context, shoot *gardencorev1beta1.Shoot) (bool, error) {
 	if err := a.seedClient.Client().Get(ctx, kutil.Key(shoot.Status.TechnicalID, "vpa-admission-controller"), &appsv1.Deployment{}); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil
@@ -396,115 +326,14 @@ func (a *actuator) shouldDisableVPA(ctx context.Context, shoot *gardencorev1beta
 	return true, nil
 }
 
-func (a *actuator) shouldEnableIngressController(ctx context.Context, shoot *gardencorev1beta1.Shoot) (bool, error) {
-	if gardencorev1beta1helper.NginxIngressEnabled(shoot.Spec.Addons) {
-		return false, nil
-	}
-
-	// If migrating from shoot nginx addon to seed ingress controller wait until DNSEntry pointing to ShootNginxAddon service
-	// got deleted before activating seed ingress controller.
+func (a *actuator) seedIngressDNSEntryExists(ctx context.Context, shoot *gardencorev1beta1.Shoot) (bool, error) {
 	if err := a.seedClient.Client().Get(ctx, kutil.Key(shoot.Status.TechnicalID, common.ShootDNSIngressName), &dnsv1alpha1.DNSEntry{}); err != nil {
 		if apierrors.IsNotFound(err) {
-			return true, nil
+			return false, nil
 		}
 		return false, err
 	}
-
-	return false, nil
-}
-
-func (a *actuator) getSeedDNSProvider(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.SeedDNSProvider, error) {
-	var dnsProvider *gardencorev1beta1.SeedDNSProvider
-	dnsProvider, err := a.getSeedDNSProviderForCustomDomain(ctx, shoot)
-	if err != nil {
-		return nil, err
-	}
-	if dnsProvider == nil {
-		dnsProvider, err = a.getSeedDNSProviderForDefaultDomain(ctx, shoot)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if dnsProvider == nil {
-		return nil, fmt.Errorf("domain of shoot %s is neither a custom domain nor a default domain", kutil.ObjectName(shoot))
-	}
-	return dnsProvider, nil
-}
-
-func (a *actuator) getSeedDNSProviderForCustomDomain(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.SeedDNSProvider, error) {
-	// Find a primary DNS provider in the list of shoot DNS providers
-	primaryProvider := gardencorev1beta1helper.FindPrimaryDNSProvider(shoot.Spec.DNS.Providers)
-	if primaryProvider == nil {
-		return nil, nil
-	}
-	if primaryProvider.Type == nil {
-		return nil, fmt.Errorf("primary DNS provider of shoot %s does not have a type", kutil.ObjectName(shoot))
-	}
-	if *primaryProvider.Type == core.DNSUnmanaged {
-		return nil, nil
-	}
-
-	// Initialize a reference to the primary DNS provider secret
-	var secretRef corev1.SecretReference
-	if primaryProvider.SecretName != nil {
-		secretRef.Name = *primaryProvider.SecretName
-		secretRef.Namespace = shoot.Namespace
-	} else {
-		secretBinding := &gardencorev1beta1.SecretBinding{}
-		if err := a.gardenClient.Client().Get(ctx, kutil.Key(shoot.Namespace, shoot.Spec.SecretBindingName), secretBinding); err != nil {
-			return nil, err
-		}
-		secretRef = secretBinding.SecretRef
-	}
-
-	return &gardencorev1beta1.SeedDNSProvider{
-		Type:      *primaryProvider.Type,
-		SecretRef: secretRef,
-		Domains:   primaryProvider.Domains,
-		Zones:     primaryProvider.Zones,
-	}, nil
-}
-
-func (a *actuator) getSeedDNSProviderForDefaultDomain(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.SeedDNSProvider, error) {
-	// Get all default domain secrets in the garden namespace
-	defaultDomainSecrets := &corev1.SecretList{}
-	if err := a.gardenClient.Client().List(ctx, defaultDomainSecrets, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{
-		v1beta1constants.GardenRole: common.GardenRoleDefaultDomain,
-	}); err != nil {
-		return nil, err
-	}
-
-	// Search for a default domain secret that matches the shoot domain
-	for _, secret := range defaultDomainSecrets.Items {
-		provider, domain, includeZones, excludeZones, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
-		if err != nil {
-			return nil, err
-		}
-
-		if strings.HasSuffix(*shoot.Spec.DNS.Domain, domain) {
-			var zones *gardencorev1beta1.DNSIncludeExclude
-			if includeZones != nil || excludeZones != nil {
-				zones = &gardencorev1beta1.DNSIncludeExclude{
-					Include: includeZones,
-					Exclude: excludeZones,
-				}
-			}
-
-			return &gardencorev1beta1.SeedDNSProvider{
-				Type: provider,
-				SecretRef: corev1.SecretReference{
-					Name:      secret.Name,
-					Namespace: secret.Namespace,
-				},
-				Domains: &gardencorev1beta1.DNSIncludeExclude{
-					Include: []string{domain},
-				},
-				Zones: zones,
-			}, nil
-		}
-	}
-
-	return nil, nil
+	return true, nil
 }
 
 const (
@@ -520,7 +349,7 @@ func (a *actuator) getGardenletChartValues(ctx context.Context, managedSeed *see
 	if deploymentValues, err = utils.ToValues(managedSeed.Spec.Gardenlet.Deployment); err != nil {
 		return nil, err
 	}
-	if managedSeed.Spec.Gardenlet.DisableMergingWithParent == nil || !*managedSeed.Spec.Gardenlet.DisableMergingWithParent {
+	if v1alpha1helper.MergeWithParent(managedSeed.Spec.Gardenlet) {
 		parentDeployment, err := getParentGardenletDeployment(a.imageVector, shoot)
 		if err != nil {
 			return nil, err
@@ -544,7 +373,7 @@ func (a *actuator) getGardenletChartValues(ctx context.Context, managedSeed *see
 	}
 
 	// Determine config values
-	gardenletConfig, err := getGardenletConfig(managedSeed.Spec.Gardenlet.Config)
+	gardenletConfig, err := helper.DecodeGardenletConfigExternal(managedSeed.Spec.Gardenlet.Config, true)
 	if err != nil {
 		return nil, err
 	}
@@ -552,8 +381,8 @@ func (a *actuator) getGardenletChartValues(ctx context.Context, managedSeed *see
 	if configValues, err = utils.ToValues(gardenletConfig); err != nil {
 		return nil, err
 	}
-	if managedSeed.Spec.Gardenlet.DisableMergingWithParent == nil || !*managedSeed.Spec.Gardenlet.DisableMergingWithParent {
-		parentConfig, err := getParentGardenletConfig(a.config)
+	if v1alpha1helper.MergeWithParent(managedSeed.Spec.Gardenlet) {
+		parentConfig, err := helper.ConvertGardenletConfigExternal(a.config)
 		if err != nil {
 			return nil, err
 		}
@@ -587,13 +416,13 @@ func (a *actuator) getGardenletChartValues(ctx context.Context, managedSeed *see
 	if gccValues, err = utils.GetMapFromValues(configValues, "gardenClientConnection"); err != nil {
 		return nil, err
 	}
-	if managedSeed.Spec.Gardenlet.GardenConnectionBootstrap != nil {
+	if v1alpha1helper.Bootstrap(managedSeed.Spec.Gardenlet) != seedmanagementv1alpha1.BootstrapNone {
 		gccValues = utils.InitValues(gccValues)
 
 		// Compute bootstrap kubeconfig
 		address, _ := gccValues["gardenClusterAddress"].(*string)
 		caCert, _ := gccValues["gardenClusterCACert"].([]byte)
-		bootstrapKubeconfig, err := a.getBootstrapKubeconfig(ctx, managedSeed.Name, address, caCert, *managedSeed.Spec.Gardenlet.GardenConnectionBootstrap)
+		bootstrapKubeconfig, err := a.getBootstrapKubeconfig(ctx, managedSeed.Name, address, caCert, v1alpha1helper.Bootstrap(managedSeed.Spec.Gardenlet))
 		if err != nil {
 			return nil, err
 		}
@@ -690,7 +519,7 @@ func (a *actuator) getGardenletChartValues(ctx context.Context, managedSeed *see
 	if configObj != nil {
 		seedConfig = configObj.SeedConfig
 	}
-	seedConfig, err = a.prepareSeedConfig(ctx, managedSeed, shoot, seedConfig)
+	err = a.prepareSeedConfig(ctx, seedConfig, managedSeed, shoot)
 	if err != nil {
 		return nil, err
 	}
@@ -719,7 +548,7 @@ func (a *actuator) getGardenletChartValues(ctx context.Context, managedSeed *see
 }
 
 // getBootstrapKubeconfig returns the bootstrap kubeconfig.
-func (a *actuator) getBootstrapKubeconfig(ctx context.Context, name string, address *string, caCert []byte, bootstrap seedmanagementv1alpha1.GardenConnectionBootstrap) (string, error) {
+func (a *actuator) getBootstrapKubeconfig(ctx context.Context, name string, address *string, caCert []byte, bootstrap seedmanagementv1alpha1.Bootstrap) (string, error) {
 	// If a Gardenlet kubeconfig secret already exists, return an empty result
 	var err error
 	if err = a.shootClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, gardenletKubeconfigSecretName), &corev1.Secret{}); client.IgnoreNotFound(err) != nil {
@@ -742,7 +571,7 @@ func (a *actuator) getBootstrapKubeconfig(ctx context.Context, name string, addr
 
 	var bootstrapKubeconfig []byte
 	switch bootstrap {
-	case seedmanagementv1alpha1.GardenConnectionBootstrapServiceAccount:
+	case seedmanagementv1alpha1.BootstrapServiceAccount:
 		// Create a temporary service account with bootstrap kubeconfig in order to create CSR
 
 		// Create a temporary service account
@@ -796,7 +625,7 @@ func (a *actuator) getBootstrapKubeconfig(ctx context.Context, name string, addr
 			return "", err
 		}
 
-	case seedmanagementv1alpha1.GardenConnectionBootstrapToken:
+	case seedmanagementv1alpha1.BootstrapToken:
 		// Create bootstrap token with bootstrap kubeconfig in order to create CSR
 
 		// Get bootstrap token secret
@@ -836,25 +665,21 @@ func (a *actuator) getBootstrapKubeconfig(ctx context.Context, name string, addr
 	return string(bootstrapKubeconfig), nil
 }
 
-func (a *actuator) prepareSeedConfig(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot, seedConfig *configv1alpha1.SeedConfig) (*configv1alpha1.SeedConfig, error) {
-	// Initialize the seed config if it's nil
+func (a *actuator) prepareSeedConfig(ctx context.Context, seedConfig *configv1alpha1.SeedConfig, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
 	if seedConfig == nil {
-		seedConfig = &configv1alpha1.SeedConfig{}
+		return nil
 	}
 
 	// Set the seed name to the managed seed name
 	seedConfig.Seed.Name = managedSeed.Name
 
 	// Prepare the seed spec
-	seedSpec, err := a.prepareSeedSpec(ctx, managedSeed, shoot, &seedConfig.Spec)
+	err := a.prepareSeedSpec(ctx, &seedConfig.Seed.Spec, managedSeed, shoot)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// Set the seed spec to the prepared spec
-	seedConfig.Seed.Spec = *seedSpec
-
-	return seedConfig, nil
+	return nil
 }
 
 func getParentGardenletDeployment(imageVector imagevector.ImageVector, shoot *gardencorev1beta1.Shoot) (*seedmanagementv1alpha1.GardenletDeployment, error) {
@@ -874,12 +699,10 @@ func getParentGardenletDeployment(imageVector imagevector.ImageVector, shoot *ga
 
 	// Create and return result
 	return &seedmanagementv1alpha1.GardenletDeployment{
-		RevisionHistoryLimit: pointer.Int32Ptr(0),
 		Image: &seedmanagementv1alpha1.Image{
 			Repository: &imageRepository,
 			Tag:        &imageTag,
 		},
-		VPA:            pointer.BoolPtr(true),
 		PodAnnotations: getParentPodAnnotations(shoot),
 	}, nil
 }
@@ -935,49 +758,6 @@ func getParentPodAnnotations(shoot *gardencorev1beta1.Shoot) map[string]string {
 		}
 	}
 	return nil
-}
-
-func getGardenletConfig(rawConfig *runtime.RawExtension) (*configv1alpha1.GardenletConfiguration, error) {
-	scheme, err := getGardenletConfigScheme()
-	if err != nil {
-		return nil, err
-	}
-	cfg := &config.GardenletConfiguration{}
-	if _, _, err := serializer.NewCodecFactory(scheme).UniversalDecoder().Decode(rawConfig.Raw, nil, cfg); err != nil {
-		return nil, err
-	}
-	return convertGardenletConfig(cfg, scheme)
-}
-
-func getParentGardenletConfig(cfg *config.GardenletConfiguration) (*configv1alpha1.GardenletConfiguration, error) {
-	scheme, err := getGardenletConfigScheme()
-	if err != nil {
-		return nil, err
-	}
-	return convertGardenletConfig(cfg, scheme)
-}
-
-func getGardenletConfigScheme() (*runtime.Scheme, error) {
-	scheme := runtime.NewScheme()
-	if err := config.AddToScheme(scheme); err != nil {
-		return nil, err
-	}
-	if err := configv1alpha1.AddToScheme(scheme); err != nil {
-		return nil, err
-	}
-	return scheme, nil
-}
-
-func convertGardenletConfig(cfg *config.GardenletConfiguration, scheme *runtime.Scheme) (*configv1alpha1.GardenletConfiguration, error) {
-	obj, err := scheme.ConvertToVersion(cfg, configv1alpha1.SchemeGroupVersion)
-	if err != nil {
-		return nil, err
-	}
-	result, ok := obj.(*configv1alpha1.GardenletConfiguration)
-	if !ok {
-		return nil, fmt.Errorf("could not convert Gardenlet config to version %s", configv1alpha1.SchemeGroupVersion.String())
-	}
-	return result, nil
 }
 
 func checkSeedAssociations(ctx context.Context, c client.Client, seedName string) error {

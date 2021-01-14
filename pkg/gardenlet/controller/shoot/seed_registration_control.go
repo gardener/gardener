@@ -19,6 +19,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"k8s.io/utils/pointer"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -263,9 +265,9 @@ func getManagedSeedSpec(shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev
 		}
 
 		// Initialize the garden connection bootstrap mechanism
-		gardenConnectionBootstrap := seedmanagementv1alpha1.GardenConnectionBootstrapToken
+		bootstrap := seedmanagementv1alpha1.BootstrapToken
 		if shootedSeed.UseServiceAccountBootstrapping {
-			gardenConnectionBootstrap = seedmanagementv1alpha1.GardenConnectionBootstrapServiceAccount
+			bootstrap = seedmanagementv1alpha1.BootstrapServiceAccount
 		}
 
 		// Marshal gardenlet config to JSON
@@ -276,8 +278,9 @@ func getManagedSeedSpec(shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev
 
 		// Initialize gardenlet configuraton and parameters
 		gardenlet = &seedmanagementv1alpha1.Gardenlet{
-			Config:                    &runtime.RawExtension{Raw: configJSON},
-			GardenConnectionBootstrap: &gardenConnectionBootstrap,
+			Config:          &runtime.RawExtension{Raw: configJSON},
+			Bootstrap:       &bootstrap,
+			MergeWithParent: pointer.BoolPtr(true),
 		}
 	}
 

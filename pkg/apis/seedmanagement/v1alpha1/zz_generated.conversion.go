@@ -134,8 +134,8 @@ func RegisterConversions(s *runtime.Scheme) error {
 func autoConvert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet(in *Gardenlet, out *seedmanagement.Gardenlet, s conversion.Scope) error {
 	out.Deployment = (*seedmanagement.GardenletDeployment)(unsafe.Pointer(in.Deployment))
 	out.Config = (*runtime.RawExtension)(unsafe.Pointer(in.Config))
-	out.GardenConnectionBootstrap = (*seedmanagement.GardenConnectionBootstrap)(unsafe.Pointer(in.GardenConnectionBootstrap))
-	out.DisableMergingWithParent = (*bool)(unsafe.Pointer(in.DisableMergingWithParent))
+	out.Bootstrap = (*seedmanagement.Bootstrap)(unsafe.Pointer(in.Bootstrap))
+	out.MergeWithParent = (*bool)(unsafe.Pointer(in.MergeWithParent))
 	return nil
 }
 
@@ -147,8 +147,8 @@ func Convert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet(in *Gardenlet, out *
 func autoConvert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(in *seedmanagement.Gardenlet, out *Gardenlet, s conversion.Scope) error {
 	out.Deployment = (*GardenletDeployment)(unsafe.Pointer(in.Deployment))
 	out.Config = (*runtime.RawExtension)(unsafe.Pointer(in.Config))
-	out.GardenConnectionBootstrap = (*GardenConnectionBootstrap)(unsafe.Pointer(in.GardenConnectionBootstrap))
-	out.DisableMergingWithParent = (*bool)(unsafe.Pointer(in.DisableMergingWithParent))
+	out.Bootstrap = (*Bootstrap)(unsafe.Pointer(in.Bootstrap))
+	out.MergeWithParent = (*bool)(unsafe.Pointer(in.MergeWithParent))
 	return nil
 }
 

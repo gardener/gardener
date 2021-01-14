@@ -15,16 +15,31 @@
 package validation
 
 import (
+	"fmt"
+
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	configvalidation "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
+	"github.com/gardener/gardener/pkg/utils"
 
+	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // ValidateManagedSeed validates a ManagedSeed object.
 func ValidateManagedSeed(managedSeed *seedmanagement.ManagedSeed) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	// Ensure namespace is garden
+	if managedSeed.Namespace != v1beta1constants.GardenNamespace {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), managedSeed.Namespace, "namespace must be garden"))
+	}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&managedSeed.ObjectMeta, true, corevalidation.ValidateName, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateManagedSeedSpec(&managedSeed.Spec, field.NewPath("spec"))...)
@@ -44,19 +59,47 @@ func ValidateManagedSeedUpdate(newManagedSeed, oldManagedSeed *seedmanagement.Ma
 }
 
 // ValidateManagedSeedSpec validates the specification of a ManagedSeed object.
-func ValidateManagedSeedSpec(seedSpec *seedmanagement.ManagedSeedSpec, fldPath *field.Path) field.ErrorList {
+func ValidateManagedSeedSpec(spec *seedmanagement.ManagedSeedSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// TODO Add validation logic
+	// Ensure shoot name is specified
+	if spec.Shoot.Name == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("shoot", "name"), "shoot name is required"))
+	}
+
+	// Ensure either seed template or gardenlet is specified
+	if (spec.SeedTemplate == nil && spec.Gardenlet == nil) || (spec.SeedTemplate != nil && spec.Gardenlet != nil) {
+		allErrs = append(allErrs, field.Invalid(fldPath, spec, "either seed template or gardenlet is required"))
+	}
+
+	switch {
+	case spec.SeedTemplate != nil:
+		allErrs = append(allErrs, validateSeedTemplate(spec.SeedTemplate, fldPath.Child("seedTemplate"))...)
+	case spec.Gardenlet != nil:
+		allErrs = append(allErrs, validateGardenlet(spec.Gardenlet, fldPath.Child("gardenlet"))...)
+	}
 
 	return allErrs
 }
 
 // ValidateManagedSeedSpecUpdate validates the specification updates of a ManagedSeed object.
-func ValidateManagedSeedSpecUpdate(newManagedSeedSpec, oldManagedSeedSpec *seedmanagement.ManagedSeedSpec, fldPath *field.Path) field.ErrorList {
+func ValidateManagedSeedSpecUpdate(newSpec, oldSpec *seedmanagement.ManagedSeedSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// TODO Add validation logic
+	// Ensure shoot name is not changed
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Shoot.Name, oldSpec.Shoot.Name, fldPath.Child("shoot", "name"))...)
+
+	// Ensure no changing from seed template to gardenlet or vice versa takes place
+	if (newSpec.SeedTemplate != nil) != (oldSpec.SeedTemplate != nil) || (newSpec.Gardenlet != nil) != (oldSpec.Gardenlet != nil) {
+		allErrs = append(allErrs, field.Invalid(fldPath, newSpec, "changing from seed template to gardenlet and vice versa is not allowed"))
+	}
+
+	switch {
+	case newSpec.SeedTemplate != nil && oldSpec.SeedTemplate != nil:
+		allErrs = append(allErrs, validateSeedTemplateUpdate(newSpec.SeedTemplate, oldSpec.SeedTemplate, fldPath.Child("seedTemplate"))...)
+	case newSpec.Gardenlet != nil && oldSpec.Gardenlet != nil:
+		allErrs = append(allErrs, validateGardenletUpdate(newSpec.Gardenlet, oldSpec.Gardenlet, fldPath.Child("gardenlet"))...)
+	}
 
 	return allErrs
 }
@@ -64,5 +107,217 @@ func ValidateManagedSeedSpecUpdate(newManagedSeedSpec, oldManagedSeedSpec *seedm
 // ValidateManagedSeedStatusUpdate validates the status field of a ManagedSeed object.
 func ValidateManagedSeedStatusUpdate(newManagedSeed, oldManagedSeed *seedmanagement.ManagedSeed) field.ErrorList {
 	allErrs := field.ErrorList{}
+	return allErrs
+}
+
+func validateSeedTemplate(seedTemplate *seedmanagement.SeedTemplate, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// Validate labels, annotations, and spec
+	allErrs = append(allErrs, metav1validation.ValidateLabels(seedTemplate.Labels, fldPath.Child("metadata", "labels"))...)
+	allErrs = append(allErrs, apivalidation.ValidateAnnotations(seedTemplate.Annotations, fldPath.Child("metadata", "annotations"))...)
+	allErrs = append(allErrs, corevalidation.ValidateSeedSpec(&seedTemplate.Spec, fldPath.Child("spec"))...)
+
+	return allErrs
+}
+
+func validateSeedTemplateUpdate(newSeedTemplate, oldSeedTemplate *seedmanagement.SeedTemplate, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, corevalidation.ValidateSeedSpecUpdate(&newSeedTemplate.Spec, &oldSeedTemplate.Spec, fldPath.Child("spec"))...)
+
+	return allErrs
+}
+
+func validateGardenlet(gardenlet *seedmanagement.Gardenlet, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if gardenlet.Deployment != nil {
+		allErrs = append(allErrs, validateGardenletDeployment(gardenlet.Deployment, fldPath.Child("deployment"))...)
+	}
+
+	if gardenlet.Config != nil {
+		configPath := fldPath.Child("config")
+
+		// Decode gardenlet config to an internal version
+		// With defaults, since the subsequent validation would fail without them
+		gardenletConfig, err := helper.DecodeGardenletConfig(gardenlet.Config, true)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(configPath, gardenlet.Config, fmt.Sprintf("could not decode config: %v", err)))
+			return allErrs
+		}
+
+		// Validate gardenlet config
+		allErrs = append(allErrs, validateGardenletConfiguration(gardenletConfig, helper.Bootstrap(gardenlet), helper.MergeWithParent(gardenlet), configPath)...)
+	}
+
+	if gardenlet.Bootstrap != nil {
+		validValues := []string{string(seedmanagement.BootstrapServiceAccount), string(seedmanagement.BootstrapToken), string(seedmanagement.BootstrapNone)}
+		if !utils.ValueExists(string(*gardenlet.Bootstrap), validValues) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("bootstrap"), *gardenlet.Bootstrap, validValues))
+		}
+	}
+
+	return allErrs
+}
+
+func validateGardenletUpdate(newGardenlet, oldGardenlet *seedmanagement.Gardenlet, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if newGardenlet.Config != nil && oldGardenlet.Config != nil {
+		configPath := fldPath.Child("config")
+
+		// Decode new gardenlet config to an internal version
+		newGardenletConfig, err := helper.DecodeGardenletConfig(newGardenlet.Config, true)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(configPath, newGardenlet.Config, fmt.Sprintf("could not decode config: %v", err)))
+			return allErrs
+		}
+
+		// Decode old gardenlet config to an internal version
+		oldGardenletConfig, err := helper.DecodeGardenletConfig(oldGardenlet.Config, true)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(configPath, oldGardenlet.Config, fmt.Sprintf("could not decode config: %v", err)))
+			return allErrs
+		}
+
+		// Validate gardenlet config update
+		allErrs = append(allErrs, validateGardenletConfigurationUpdate(newGardenletConfig, oldGardenletConfig, configPath)...)
+	}
+
+	// Ensure bootstrap is not changed
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newGardenlet.Bootstrap, oldGardenlet.Bootstrap, fldPath.Child("bootstrap"))...)
+
+	// Ensure merge with parent is not changed
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newGardenlet.MergeWithParent, oldGardenlet.MergeWithParent, fldPath.Child("mergeWithParent"))...)
+
+	return allErrs
+}
+
+func validateGardenletDeployment(deployment *seedmanagement.GardenletDeployment, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if deployment.Image != nil {
+		allErrs = append(allErrs, validateImage(deployment.Image, fldPath.Child("image"))...)
+	}
+
+	return allErrs
+}
+
+func validateImage(image *seedmanagement.Image, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if image.PullPolicy != nil {
+		validValues := []string{string(corev1.PullAlways), string(corev1.PullIfNotPresent), string(corev1.PullNever)}
+		if !utils.ValueExists(string(*image.PullPolicy), validValues) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("pullPolicy"), *image.PullPolicy, validValues))
+		}
+	}
+
+	return allErrs
+}
+
+func validateGardenletConfiguration(gardenletConfig *config.GardenletConfiguration, bootstrap seedmanagement.Bootstrap, mergeWithParent bool, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// Ensure seed selector is not specified
+	if gardenletConfig.SeedSelector != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("seedSelector"), "seed selector is forbidden"))
+	}
+
+	// Validate gardenlet config
+	allErrs = append(allErrs, configvalidation.ValidateGardenletConfiguration(gardenletConfig, fldPath)...)
+
+	if gardenletConfig.SeedConfig != nil {
+		seedConfigPath := fldPath.Child("seedConfig")
+
+		// Convert seed to internal version
+		seed, err := helper.ConvertSeed(&gardenletConfig.SeedConfig.Seed)
+		if err != nil {
+			allErrs = append(allErrs, field.InternalError(seedConfigPath, fmt.Errorf("could not convert seed config: %v", err)))
+			return allErrs
+		}
+
+		// Validate seed
+		allErrs = append(allErrs, validateSeed(seed, seedConfigPath)...)
+	}
+
+	// Validate garden client connection
+	allErrs = append(allErrs, validateGardenClientConnection(gardenletConfig.GardenClientConnection, bootstrap, mergeWithParent, fldPath.Child("gardenClientConnection"))...)
+
+	return allErrs
+}
+
+func validateGardenletConfigurationUpdate(newGardenletConfig, oldGardenletConfig *config.GardenletConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if newGardenletConfig.SeedConfig != nil && oldGardenletConfig != nil {
+		seedConfigPath := fldPath.Child("seedConfig")
+
+		// Convert new seed to internal version
+		newSeed, err := helper.ConvertSeed(&newGardenletConfig.SeedConfig.Seed)
+		if err != nil {
+			allErrs = append(allErrs, field.InternalError(seedConfigPath, fmt.Errorf("could not convert seed config: %v", err)))
+			return allErrs
+		}
+
+		// Convert old seed to internal version
+		oldSeed, err := helper.ConvertSeed(&oldGardenletConfig.SeedConfig.Seed)
+		if err != nil {
+			allErrs = append(allErrs, field.InternalError(seedConfigPath, fmt.Errorf("could not convert seed config: %v", err)))
+			return allErrs
+		}
+
+		// Validate seed
+		allErrs = append(allErrs, validateSeedUpdate(newSeed, oldSeed, seedConfigPath)...)
+	}
+
+	return allErrs
+}
+
+func validateSeed(seed *gardencore.Seed, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// Ensure name is not specified since it will be set by the controller
+	if seed.Name != "" {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("metadata", "name"), "seed name is forbidden"))
+	}
+
+	// Validate labels, annotations, and spec
+	allErrs = append(allErrs, metav1validation.ValidateLabels(seed.Labels, fldPath.Child("metadata", "labels"))...)
+	allErrs = append(allErrs, apivalidation.ValidateAnnotations(seed.Annotations, fldPath.Child("metadata", "annotations"))...)
+	allErrs = append(allErrs, corevalidation.ValidateSeedSpec(&seed.Spec, fldPath.Child("spec"))...)
+
+	return allErrs
+}
+
+func validateSeedUpdate(newSeed, oldSeed *gardencore.Seed, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, corevalidation.ValidateSeedSpecUpdate(&newSeed.Spec, &oldSeed.Spec, fldPath.Child("spec"))...)
+
+	return allErrs
+}
+
+func validateGardenClientConnection(gcc *config.GardenClientConnection, bootstrap seedmanagement.Bootstrap, mergeWithParent bool, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	switch bootstrap {
+	case seedmanagement.BootstrapServiceAccount, seedmanagement.BootstrapToken:
+		if gcc.Kubeconfig != "" {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeconfig"), "kubeconfig is forbidden if bootstrap is specified"))
+		}
+	case seedmanagement.BootstrapNone:
+		if gcc.Kubeconfig == "" && !mergeWithParent {
+			allErrs = append(allErrs, field.Required(fldPath.Child("kubeconfig"), "kubeconfig is required if bootstrap is not specified and merging with parent is disabled"))
+		}
+		if gcc.BootstrapKubeconfig != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("bootstrapKubeconfig"), "bootstrap kubeconfig is forbidden if bootstrap is not specified"))
+		}
+		if gcc.KubeconfigSecret != nil {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeconfigSecret"), "kubeconfig secret is forbidden if bootstrap is not specified"))
+		}
+	}
+
 	return allErrs
 }
