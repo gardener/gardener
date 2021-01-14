@@ -1,7 +1,0 @@
-{{- define "cloud-config-downloader-service" -}}
-- name: cloud-config-downloader.service
-  command: start
-  enable: true
-  content: |
-{{ include "cloud-config-downloader-service-content" . | indent 4 }}
-{{- end }}

@@ -35,14 +35,6 @@ const (
 	// ChartPath is the path to the Helm charts.
 	ChartPath = "charts"
 
-	// CloudConfigPrefix is a constant for the prefix which is added to secret storing the original cloud config (which
-	// is being downloaded from the cloud-config-downloader process)
-	CloudConfigPrefix = "cloud-config"
-
-	// CloudConfigFilePath is the path on the shoot worker nodes to which the operating system specific configuration
-	// will be downloaded.
-	CloudConfigFilePath = "/var/lib/cloud-config-downloader/downloads/cloud_config"
-
 	// CloudConfigChecksumSecretAnnotation is the key of an annotation on a Secret object whose value is the checksum of
 	// the cloud config user data stored in the data map of this Secret.
 	CloudConfigChecksumSecretAnnotation = "checksum/data-script"

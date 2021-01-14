@@ -1,8 +1,0 @@
-{{- define "cloud-config-downloader-service-file" -}}
-- path: /etc/systemd/system/cloud-config-downloader.service
-  permissions: 0644
-  content:
-    inline:
-      encoding: b64
-      data: {{ include "cloud-config-downloader-service-content" . | b64enc }}
-{{- end -}}
