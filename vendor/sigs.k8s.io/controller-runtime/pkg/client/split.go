@@ -18,6 +18,7 @@ package client
 
 import (
 	"context"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -98,6 +99,11 @@ func (d *delegatingReader) shouldBypassCache(obj runtime.Object) (bool, error) {
 	gvk, err := apiutil.GVKForObject(obj, d.scheme)
 	if err != nil {
 		return false, err
+	}
+	// TODO: this is producing unsafe guesses that don't actually work,
+	// but it matches ~99% of the cases out there.
+	if meta.IsListType(obj) {
+		gvk.Kind = strings.TrimSuffix(gvk.Kind, "List")
 	}
 	_, isUncached := d.uncachedGVKs[gvk]
 	_, isUnstructured := obj.(*unstructured.Unstructured)

@@ -56,12 +56,12 @@ require (
 	k8s.io/helm v2.16.1+incompatible
 	k8s.io/klog v1.0.0
 	k8s.io/kube-aggregator v0.19.6
-	k8s.io/kube-openapi v0.0.0-20201221124747-75e88872edcf // keep this value in sync with k8s.io/apiserver
+	k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6 // keep this value in sync with k8s.io/apiserver
 	k8s.io/kube-scheduler v0.19.6
 	k8s.io/kubelet v0.19.6
 	k8s.io/metrics v0.19.6
 	k8s.io/utils v0.0.0-20200912215256-4140de9c8800
-	sigs.k8s.io/controller-runtime v0.7.0
+	sigs.k8s.io/controller-runtime v0.7.1
 	sigs.k8s.io/controller-tools v0.4.1
 	sigs.k8s.io/yaml v1.2.0
 )
