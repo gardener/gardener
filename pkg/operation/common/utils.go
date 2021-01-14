@@ -271,7 +271,7 @@ func DeleteHvpa(ctx context.Context, k8sClient kubernetes.Interface, namespace s
 
 // DeleteVpa delete all resources required for the VPA in the given namespace.
 func DeleteVpa(ctx context.Context, c client.Client, namespace string, isShoot bool) error {
-	resources := []runtime.Object{
+	resources := []client.Object{
 		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPAAdmissionController, Namespace: namespace}},
 		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPARecommender, Namespace: namespace}},
 		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPAUpdater, Namespace: namespace}},
@@ -325,7 +325,7 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 	}
 
 	// Delete the resources below that match "gardener.cloud/role=logging"
-	lists := []runtime.Object{
+	lists := []client.ObjectList{
 		&corev1.ConfigMapList{},
 		&batchv1beta1.CronJobList{},
 		&rbacv1.ClusterRoleList{},
@@ -351,7 +351,7 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 		}
 
 		if err := meta.EachListItem(list, func(obj runtime.Object) error {
-			return client.IgnoreNotFound(k8sClient.Delete(ctx, obj, kubernetes.DefaultDeleteOptions...))
+			return client.IgnoreNotFound(k8sClient.Delete(ctx, obj.(client.Object), kubernetes.DefaultDeleteOptions...))
 		}); err != nil {
 			return err
 		}
@@ -413,7 +413,7 @@ func DeleteReserveExcessCapacity(ctx context.Context, k8sClient client.Client) e
 
 // DeleteAlertmanager deletes all resources of the Alertmanager in a given namespace.
 func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace string) error {
-	objs := []runtime.Object{
+	objs := []client.Object{
 		&appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      v1beta1constants.StatefulSetNameAlertManager,
@@ -720,14 +720,9 @@ func annotationRequiredError() error {
 }
 
 // ConfirmDeletion adds Gardener's deletion confirmation annotation to the given object and sends an UPDATE request.
-func ConfirmDeletion(ctx context.Context, c client.Client, obj runtime.Object) error {
+func ConfirmDeletion(ctx context.Context, c client.Client, obj client.Object) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		key, err := client.ObjectKeyFromObject(obj)
-		if err != nil {
-			return err
-		}
-
-		if err := c.Get(ctx, key, obj); err != nil {
+		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return err
 			}

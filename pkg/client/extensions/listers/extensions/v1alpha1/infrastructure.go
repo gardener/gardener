@@ -26,8 +26,10 @@ import (
 )
 
 // InfrastructureLister helps list Infrastructures.
+// All objects returned here must be treated as read-only.
 type InfrastructureLister interface {
 	// List lists all Infrastructures in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.Infrastructure, err error)
 	// Infrastructures returns an object that can list and get Infrastructures.
 	Infrastructures(namespace string) InfrastructureNamespaceLister
@@ -58,10 +60,13 @@ func (s *infrastructureLister) Infrastructures(namespace string) InfrastructureN
 }
 
 // InfrastructureNamespaceLister helps list and get Infrastructures.
+// All objects returned here must be treated as read-only.
 type InfrastructureNamespaceLister interface {
 	// List lists all Infrastructures in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.Infrastructure, err error)
 	// Get retrieves the Infrastructure from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.Infrastructure, error)
 	InfrastructureNamespaceListerExpansion
 }

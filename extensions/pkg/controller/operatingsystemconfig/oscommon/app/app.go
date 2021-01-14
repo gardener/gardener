@@ -15,7 +15,6 @@
 package app
 
 import (
-	"context"
 	"os"
 
 	extcontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -31,7 +30,7 @@ import (
 )
 
 // NewControllerCommand creates a new command for running an OS controller.
-func NewControllerCommand(ctx context.Context, ctrlName string, osTypes []string, generator generator.Generator) *cobra.Command {
+func NewControllerCommand(ctrlName string, osTypes []string, generator generator.Generator) *cobra.Command {
 	var (
 		restOpts = &controllercmd.RESTOptions{}
 		mgrOpts  = &controllercmd.ManagerOptions{
@@ -60,6 +59,8 @@ func NewControllerCommand(ctx context.Context, ctrlName string, osTypes []string
 		Use: "os-" + ctrlName + "-controller-manager",
 
 		Run: func(cmd *cobra.Command, args []string) {
+			ctx := cmd.Context()
+
 			if err := aggOption.Complete(); err != nil {
 				controllercmd.LogErrAndExit(err, "Error completing options")
 			}
@@ -87,7 +88,7 @@ func NewControllerCommand(ctx context.Context, ctrlName string, osTypes []string
 				controllercmd.LogErrAndExit(err, "Could not add controller to manager")
 			}
 
-			if err := mgr.Start(ctx.Done()); err != nil {
+			if err := mgr.Start(ctx); err != nil {
 				controllercmd.LogErrAndExit(err, "Error running manager")
 			}
 		},

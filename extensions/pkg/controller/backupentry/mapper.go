@@ -17,16 +17,16 @@ package backupentry
 import (
 	"context"
 
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
+	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 type secretToBackupEntryMapper struct {
@@ -34,12 +34,8 @@ type secretToBackupEntryMapper struct {
 	predicates []predicate.Predicate
 }
 
-func (m *secretToBackupEntryMapper) Map(obj handler.MapObject) []reconcile.Request {
-	if obj.Object == nil {
-		return nil
-	}
-
-	secret, ok := obj.Object.(*corev1.Secret)
+func (m *secretToBackupEntryMapper) Map(obj client.Object) []reconcile.Request {
+	secret, ok := obj.(*corev1.Secret)
 	if !ok {
 		return nil
 	}
@@ -67,7 +63,7 @@ func (m *secretToBackupEntryMapper) Map(obj handler.MapObject) []reconcile.Reque
 
 // SecretToBackupEntryMapper returns a mapper that returns requests for BackupEntry whose
 // referenced secrets have been modified.
-func SecretToBackupEntryMapper(client client.Client, predicates []predicate.Predicate) handler.Mapper {
+func SecretToBackupEntryMapper(client client.Client, predicates []predicate.Predicate) extensionshandler.Mapper {
 	return &secretToBackupEntryMapper{client, predicates}
 }
 
@@ -76,12 +72,8 @@ type namespaceToBackupEntryMapper struct {
 	predicates []predicate.Predicate
 }
 
-func (m *namespaceToBackupEntryMapper) Map(obj handler.MapObject) []reconcile.Request {
-	if obj.Object == nil {
-		return nil
-	}
-
-	namespace, ok := obj.Object.(*corev1.Namespace)
+func (m *namespaceToBackupEntryMapper) Map(obj client.Object) []reconcile.Request {
+	namespace, ok := obj.(*corev1.Namespace)
 	if !ok {
 		return nil
 	}
@@ -116,7 +108,7 @@ func (m *namespaceToBackupEntryMapper) Map(obj handler.MapObject) []reconcile.Re
 
 // NamespaceToBackupEntryMapper returns a mapper that returns requests for BackupEntry whose
 // associated Shoot's seed namespace have been modified.
-func NamespaceToBackupEntryMapper(client client.Client, predicates []predicate.Predicate) handler.Mapper {
+func NamespaceToBackupEntryMapper(client client.Client, predicates []predicate.Predicate) extensionshandler.Mapper {
 	return &namespaceToBackupEntryMapper{client, predicates}
 }
 

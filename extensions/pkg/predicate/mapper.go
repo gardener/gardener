@@ -15,8 +15,6 @@
 package predicate
 
 import (
-	extensionsevent "github.com/gardener/gardener/extensions/pkg/event"
-
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
@@ -74,7 +72,7 @@ func (m *mapperWithTriggers) InjectFunc(f inject.Func) error {
 // Create implements Predicate.
 func (m *mapperWithTriggers) Create(e event.CreateEvent) bool {
 	if _, ok := m.triggers[CreateTrigger]; ok {
-		return m.mapper.Map(extensionsevent.NewGeneric(e.Meta, e.Object))
+		return m.mapper.Map(event.GenericEvent(e))
 	}
 	return true
 }
@@ -82,7 +80,7 @@ func (m *mapperWithTriggers) Create(e event.CreateEvent) bool {
 // Delete implements Predicate.
 func (m *mapperWithTriggers) Delete(e event.DeleteEvent) bool {
 	if _, ok := m.triggers[DeleteTrigger]; ok {
-		return m.mapper.Map(extensionsevent.NewGeneric(e.Meta, e.Object))
+		return m.mapper.Map(event.GenericEvent{Object: e.Object})
 	}
 	return true
 }
@@ -90,10 +88,10 @@ func (m *mapperWithTriggers) Delete(e event.DeleteEvent) bool {
 // Update implements Predicate.
 func (m *mapperWithTriggers) Update(e event.UpdateEvent) bool {
 	if _, ok := m.triggers[UpdateOldTrigger]; ok {
-		return m.mapper.Map(extensionsevent.NewGeneric(e.MetaOld, e.ObjectOld))
+		return m.mapper.Map(event.GenericEvent{Object: e.ObjectOld})
 	}
 	if _, ok := m.triggers[UpdateNewTrigger]; ok {
-		return m.mapper.Map(extensionsevent.NewGeneric(e.MetaNew, e.ObjectNew))
+		return m.mapper.Map(event.GenericEvent{Object: e.ObjectNew})
 	}
 	return true
 }
@@ -101,7 +99,7 @@ func (m *mapperWithTriggers) Update(e event.UpdateEvent) bool {
 // Generic implements Predicate.
 func (m *mapperWithTriggers) Generic(e event.GenericEvent) bool {
 	if _, ok := m.triggers[GenericTrigger]; ok {
-		return m.mapper.Map(extensionsevent.NewGeneric(e.Meta, e.Object))
+		return m.mapper.Map(event.GenericEvent{Object: e.Object})
 	}
 	return true
 }

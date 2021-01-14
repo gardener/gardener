@@ -69,7 +69,7 @@ func NewBackupEntryController(ctx context.Context, clientMap clientmap.ClientMap
 	return &Controller{
 		gardenClient:        gardenClient.Client(),
 		config:              config,
-		reconciler:          newReconciler(ctx, clientMap, recorder, config),
+		reconciler:          newReconciler(clientMap, recorder, config),
 		recorder:            recorder,
 		backupEntryInformer: backupEntryInformer,
 		backupEntryQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupEntry"),

@@ -18,7 +18,7 @@ import (
 	"net/http"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -44,7 +44,7 @@ type Webhook struct {
 	Provider string
 	Path     string
 	Target   string
-	Types    []runtime.Object
+	Types    []client.Object
 	Webhook  *admission.Webhook
 	Handler  http.Handler
 	Selector *metav1.LabelSelector
@@ -55,8 +55,8 @@ type Args struct {
 	Name       string
 	Path       string
 	Predicates []predicate.Predicate
-	Validators map[Validator][]runtime.Object
-	Mutators   map[Mutator][]runtime.Object
+	Validators map[Validator][]client.Object
+	Mutators   map[Mutator][]client.Object
 }
 
 // New creates a new Webhook with the given args.

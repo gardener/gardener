@@ -15,25 +15,26 @@
 package extensions
 
 import (
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // GetShootNamespacedCRsLists returns an empty CR list struct, for each CR used for Shoot management
-func GetShootNamespacedCRsLists() []runtime.Object {
-	return []runtime.Object{
-		//The ControlPlane CR is now handled as a shoot component
-		//&extensionsv1alpha1.ControlPlaneList{},
-		//The Extension CR is now handled as a shoot component
-		//&extensionsv1alpha1.ExtensionList{},
-		//The Infrastructure CR is now handled as a shoot component
-		//&extensionsv1alpha1.InfrastructureList{},
-		//The Network CR is now handled as a shoot component
-		//&extensionsv1alpha1.NetworkList{},
+func GetShootNamespacedCRsLists() []client.ObjectList {
+	return []client.ObjectList{
+		// The ControlPlane CR is now handled as a shoot component
+		// &extensionsv1alpha1.ControlPlaneList{},
+		// The Extension CR is now handled as a shoot component
+		// &extensionsv1alpha1.ExtensionList{},
+		// The Infrastructure CR is now handled as a shoot component
+		// &extensionsv1alpha1.InfrastructureList{},
+		// The Network CR is now handled as a shoot component
+		// &extensionsv1alpha1.NetworkList{},
 		&extensionsv1alpha1.OperatingSystemConfigList{},
-		//The Worker CR is now handled as a shoot component
-		//&extensionsv1alpha1.WorkerList{},
-		//The ContainerRuntime CR is now handled as a shoot component
-		//&extensionsv1alpha1.ContainerRuntimeList{},
+		// The Worker CR is now handled as a shoot component
+		// &extensionsv1alpha1.WorkerList{},
+		// The ContainerRuntime CR is now handled as a shoot component
+		// &extensionsv1alpha1.ContainerRuntimeList{},
 	}
 }

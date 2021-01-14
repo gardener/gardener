@@ -16,18 +16,16 @@ package seedadmission
 
 import (
 	"context"
-	"encoding/json"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-func getRequestObject(ctx context.Context, c client.Client, request *admissionv1beta1.AdmissionRequest) (runtime.Object, error) {
-	// Older Kubernetes versions don't provide the object neither in OldObject nor in the Object field. In this case
-	// we have to look it up ourselves.
+func getRequestObject(ctx context.Context, c client.Client, decoder *admission.Decoder, request admission.Request) (runtime.Object, error) {
 	var (
 		obj runtime.Object
 		err error
@@ -35,15 +33,14 @@ func getRequestObject(ctx context.Context, c client.Client, request *admissionv1
 
 	switch {
 	case request.OldObject.Raw != nil:
-		o := &unstructured.Unstructured{}
-		err = json.Unmarshal(request.OldObject.Raw, o)
-		obj = o
+		obj = &unstructured.Unstructured{}
+		err = decoder.DecodeRaw(request.OldObject, obj)
 
 	case request.Object.Raw != nil:
-		o := &unstructured.Unstructured{}
-		err = json.Unmarshal(request.Object.Raw, o)
-		obj = o
+		obj = &unstructured.Unstructured{}
+		err = decoder.DecodeRaw(request.Object, obj)
 
+	// DELETECOLLECTION request, lookup all existing objects of that gvk
 	case request.Name == "":
 		o := &unstructured.UnstructuredList{}
 		o.SetAPIVersion(request.Kind.Group + "/" + request.Kind.Version)
@@ -51,6 +48,8 @@ func getRequestObject(ctx context.Context, c client.Client, request *admissionv1
 		err = c.List(ctx, o, client.InNamespace(request.Namespace))
 		obj = o
 
+	// Older Kubernetes versions don't provide the object neither in OldObject nor in the Object field. In this case
+	// we have to look it up ourselves.
 	default:
 		o := &unstructured.Unstructured{}
 		o.SetAPIVersion(request.Kind.Group + "/" + request.Kind.Version)

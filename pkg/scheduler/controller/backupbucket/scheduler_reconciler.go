@@ -54,31 +54,29 @@ func (c *SchedulerController) backupBucketAdd(obj interface{}) {
 	c.backupBucketQueue.Add(key)
 }
 
-func (c *SchedulerController) backupBucketUpdate(oldObj, newObj interface{}) {
+func (c *SchedulerController) backupBucketUpdate(_, newObj interface{}) {
 	c.backupBucketAdd(newObj)
 }
 
 // reconciler implements the reconcile.Reconcile interface for backupBucket scheduler.
 type reconciler struct {
-	ctx      context.Context
 	client   client.Client
 	recorder record.EventRecorder
 	logger   *logrus.Entry
 }
 
 // newReconciler returns the new backupBucker reconciler.
-func newReconciler(ctx context.Context, gardenClient client.Client, recorder record.EventRecorder) reconcile.Reconciler {
+func newReconciler(gardenClient client.Client, recorder record.EventRecorder) reconcile.Reconciler {
 	return &reconciler{
-		ctx:      ctx,
 		client:   gardenClient,
 		recorder: recorder,
 		logger:   logger.NewFieldLogger(logger.Logger, "scheduler", "backupbucket"),
 	}
 }
 
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	bb := &gardencorev1beta1.BackupBucket{}
-	if err := r.client.Get(r.ctx, request.NamespacedName, bb); err != nil {
+	if err := r.client.Get(ctx, request.NamespacedName, bb); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Debugf("[SCHEDULER BACKUPBUCKET RECONCILE] %s - skipping because BackupBucket has been deleted", request.NamespacedName)
 			return reconcile.Result{}, nil
@@ -87,10 +85,10 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, r.scheduleBackupBucket(bb)
+	return reconcile.Result{}, r.scheduleBackupBucket(ctx, bb)
 }
 
-func (r *reconciler) scheduleBackupBucket(obj *gardencorev1beta1.BackupBucket) error {
+func (r *reconciler) scheduleBackupBucket(ctx context.Context, obj *gardencorev1beta1.BackupBucket) error {
 	var (
 		backupBucket    = obj.DeepCopy()
 		schedulerLogger = r.logger.WithField("backupbucket", backupBucket.Name)
@@ -101,7 +99,7 @@ func (r *reconciler) scheduleBackupBucket(obj *gardencorev1beta1.BackupBucket) e
 		// we should check its availability. If its not available we will try to reschedule it again.
 		schedulerLogger.Infof("BackupBucket is already scheduled on seed %s", *backupBucket.Spec.SeedName)
 		seed := &gardencorev1beta1.Seed{}
-		if err := r.client.Get(r.ctx, kutil.Key(*backupBucket.Spec.SeedName), seed); err != nil {
+		if err := r.client.Get(ctx, kutil.Key(*backupBucket.Spec.SeedName), seed); err != nil {
 			return err
 		}
 
@@ -112,13 +110,13 @@ func (r *reconciler) scheduleBackupBucket(obj *gardencorev1beta1.BackupBucket) e
 		schedulerLogger.Infof("Seed %s is not available, we will schedule it on another seed", *backupBucket.Spec.SeedName)
 	}
 	// If no Seed is referenced, we try to determine an adequate one.
-	seed, err := r.determineSeed(backupBucket)
+	seed, err := r.determineSeed(ctx, backupBucket)
 	if err != nil {
 		r.reportFailedScheduling(backupBucket, err)
 		return err
 	}
 
-	if err := r.updateBackupBucketToBeScheduledOntoSeed(backupBucket, seed.Name); err != nil {
+	if err := r.updateBackupBucketToBeScheduledOntoSeed(ctx, backupBucket, seed.Name); err != nil {
 		if _, ok := err.(*common.AlreadyScheduledError); ok {
 			return nil
 		}
@@ -139,14 +137,14 @@ func (r *reconciler) scheduleBackupBucket(obj *gardencorev1beta1.BackupBucket) e
 // 4. If failed find seed in step 3, then select a seed with matching cloud provider.
 // 5. If still not found then, select any of remaining seed.
 // 6. Return error if none of the above step found seed.
-func (r *reconciler) determineSeed(backupBucket *gardencorev1beta1.BackupBucket) (*gardencorev1beta1.Seed, error) {
+func (r *reconciler) determineSeed(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket) (*gardencorev1beta1.Seed, error) {
 	var (
 		candidatesWithMatchingProvider    = make([]*gardencorev1beta1.Seed, 0)
 		candidatesWithoutMatchingProvider = make([]*gardencorev1beta1.Seed, 0)
 	)
 
 	seeds := &gardencorev1beta1.SeedList{}
-	if err := r.client.List(r.ctx, seeds); err != nil {
+	if err := r.client.List(ctx, seeds); err != nil {
 		return nil, err
 	}
 
@@ -180,8 +178,8 @@ func (r *reconciler) determineSeed(backupBucket *gardencorev1beta1.BackupBucket)
 }
 
 // updateBackupBucketToBeScheduledOntoSeed sets the seed name where the backupBucket should be scheduled on. Then it executes the actual update call to the API server. The call is capsuled to allow for easier testing.
-func (r *reconciler) updateBackupBucketToBeScheduledOntoSeed(backupBucket *gardencorev1beta1.BackupBucket, seedName string) error {
-	return kutil.TryUpdate(r.ctx, retry.DefaultBackoff, r.client, backupBucket, func() error {
+func (r *reconciler) updateBackupBucketToBeScheduledOntoSeed(ctx context.Context, backupBucket *gardencorev1beta1.BackupBucket, seedName string) error {
+	return kutil.TryUpdate(ctx, retry.DefaultBackoff, r.client, backupBucket, func() error {
 		if backupBucket.Spec.SeedName != nil {
 			alreadyScheduledErr := common.NewAlreadyScheduledError(fmt.Sprintf("backupBucket has already a seed assigned when trying to schedule the backupBucket to %s", *backupBucket.Spec.SeedName))
 			return &alreadyScheduledErr

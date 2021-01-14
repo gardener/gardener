@@ -192,7 +192,7 @@ func (a *actuator) waitUntilBackupBucketReconciled(ctx context.Context) error {
 		a.gardenClient.DirectClient(),
 		a.logger,
 		health.CheckBackupBucket,
-		func() runtime.Object { return &gardencorev1beta1.BackupBucket{} },
+		func() client.Object { return &gardencorev1beta1.BackupBucket{} },
 		extensionsv1alpha1.BackupBucketResource,
 		"",
 		a.backupEntry.Spec.BucketName,

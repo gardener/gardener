@@ -122,7 +122,7 @@ var _ = Describe("Mutator", func() {
 			ensurer  *mockgenericmutator.MockEnsurer
 			us       *mockcontrolplane.MockUnitSerializer
 			fcic     *mockcontrolplane.MockFileContentInlineCodec
-			old, new runtime.Object
+			old, new client.Object
 		)
 
 		BeforeEach(func() {
@@ -135,7 +135,7 @@ var _ = Describe("Mutator", func() {
 			new = nil
 		})
 
-		DescribeTable("Should ignore", func(new, old runtime.Object) {
+		DescribeTable("Should ignore", func(new, old client.Object) {
 			err := mutator.Mutate(context.TODO(), new, old)
 			Expect(err).To(Not(HaveOccurred()))
 		},
@@ -173,7 +173,7 @@ var _ = Describe("Mutator", func() {
 				"EnsureKubeAPIServerService with a kube-apiserver service and existing service",
 				func() {
 					new = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer}}
-					old = new.DeepCopyObject()
+					old = new.DeepCopyObject().(client.Object)
 					ensurer.EXPECT().EnsureKubeAPIServerService(context.TODO(), gomock.Any(), new, old).Return(nil)
 				},
 			),
@@ -188,7 +188,7 @@ var _ = Describe("Mutator", func() {
 				"EnsureKubeAPIServerDeployment with a kube-apiserver deployment and existing deployment",
 				func() {
 					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer}}
-					old = new.DeepCopyObject()
+					old = new.DeepCopyObject().(client.Object)
 					ensurer.EXPECT().EnsureKubeAPIServerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
 				},
 			),
@@ -203,7 +203,7 @@ var _ = Describe("Mutator", func() {
 				"EnsureKubeControllerManagerDeployment with a kube-controller-manager deployment and existing deployment",
 				func() {
 					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager}}
-					old = new.DeepCopyObject()
+					old = new.DeepCopyObject().(client.Object)
 					ensurer.EXPECT().EnsureKubeControllerManagerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
 				},
 			),
@@ -218,7 +218,7 @@ var _ = Describe("Mutator", func() {
 				"EnsureKubeSchedulerDeployment with a kube-scheduler deployment and existing deployment",
 				func() {
 					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler}}
-					old = new.DeepCopyObject()
+					old = new.DeepCopyObject().(client.Object)
 					ensurer.EXPECT().EnsureKubeSchedulerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
 				},
 			),

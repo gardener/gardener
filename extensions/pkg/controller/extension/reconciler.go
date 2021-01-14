@@ -19,15 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
-
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
@@ -40,6 +31,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
+	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 const (
@@ -103,9 +102,10 @@ func add(mgr manager.Manager, args AddArgs) error {
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 
 	if args.IgnoreOperationAnnotation {
-		if err := ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Cluster{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
-			ToRequests: extensionshandler.SimpleMapper(ClusterToExtensionMapper(predicates...), extensionshandler.UpdateWithNew),
-		}); err != nil {
+		if err := ctrl.Watch(
+			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
+			extensionshandler.EnqueueRequestsFromMapper(ClusterToExtensionMapper(predicates...), extensionshandler.UpdateWithNew),
+		); err != nil {
 			return err
 		}
 	}
@@ -120,13 +120,10 @@ type reconciler struct {
 	actuator      Actuator
 	finalizerName string
 
-	ctx    context.Context
 	client client.Client
 
 	resync time.Duration
 }
-
-var _ reconcile.Reconciler = (*reconciler)(nil)
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // Extension resources of Gardener's `extensions.gardener.cloud` API group.
@@ -134,7 +131,7 @@ func NewReconciler(args AddArgs) reconcile.Reconciler {
 	logger := log.Log.WithName(args.Name)
 	finalizer := fmt.Sprintf("%s/%s", FinalizerPrefix, args.FinalizerSuffix)
 	return extensionscontroller.OperationAnnotationWrapper(
-		&extensionsv1alpha1.Extension{},
+		func() client.Object { return &extensionsv1alpha1.Extension{} },
 		&reconciler{
 			logger:        logger,
 			actuator:      args.Actuator,
@@ -154,16 +151,10 @@ func (r *reconciler) InjectClient(client client.Client) error {
 	return nil
 }
 
-// InjectStopChannel is an implementation for getting the respective stop channel managed by the controller-runtime.
-func (r *reconciler) InjectStopChannel(stopCh <-chan struct{}) error {
-	r.ctx = contextutil.FromStopChannel(stopCh)
-	return nil
-}
-
 // Reconcile is the reconciler function that gets executed in case there are new events for `Extension` resources.
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	ex := &extensionsv1alpha1.Extension{}
-	if err := r.client.Get(r.ctx, request.NamespacedName, ex); err != nil {
+	if err := r.client.Get(ctx, request.NamespacedName, ex); err != nil {
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
@@ -172,7 +163,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 	var result reconcile.Result
 
-	shoot, err := extensionscontroller.GetShoot(r.ctx, r.client, request.Namespace)
+	shoot, err := extensionscontroller.GetShoot(ctx, r.client, request.Namespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -188,13 +179,13 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	case extensionscontroller.IsMigrated(ex):
 		return reconcile.Result{}, nil
 	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
-		return r.migrate(r.ctx, ex)
+		return r.migrate(ctx, ex)
 	case ex.DeletionTimestamp != nil:
-		return r.delete(r.ctx, ex)
+		return r.delete(ctx, ex)
 	case ex.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
-		return r.restore(r.ctx, ex, operationType)
+		return r.restore(ctx, ex, operationType)
 	default:
-		if result, err = r.reconcile(r.ctx, ex, operationType); err != nil {
+		if result, err = r.reconcile(ctx, ex, operationType); err != nil {
 			return result, err
 		}
 		return reconcile.Result{Requeue: r.resync != 0, RequeueAfter: r.resync}, nil
@@ -202,7 +193,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 }
 
 func (r *reconciler) reconcile(ctx context.Context, ex *extensionsv1alpha1.Extension, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, r.finalizerName, ex); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, ex, r.finalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -245,14 +236,14 @@ func (r *reconciler) delete(ctx context.Context, ex *extensionsv1alpha1.Extensio
 		return reconcile.Result{}, err
 	}
 
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, r.finalizerName, ex); err != nil {
+	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, ex, r.finalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from Extension resource: %+v", err)
 	}
 	return reconcile.Result{}, nil
 }
 
 func (r *reconciler) restore(ctx context.Context, ex *extensionsv1alpha1.Extension, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, r.finalizerName, ex); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, ex, r.finalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 

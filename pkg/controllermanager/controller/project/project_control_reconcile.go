@@ -334,7 +334,7 @@ func createOrUpdateResourceQuota(ctx context.Context, c client.Client, projectNa
 }
 
 func deleteStaleExtensionRoles(ctx context.Context, c client.Client, nonStaleExtensionRoles sets.String, projectName, namespace string) error {
-	for _, list := range []runtime.Object{
+	for _, list := range []client.ObjectList{
 		&rbacv1.RoleBindingList{},
 		&rbacv1.ClusterRoleList{},
 	} {
@@ -351,16 +351,12 @@ func deleteStaleExtensionRoles(ctx context.Context, c client.Client, nonStaleExt
 		}
 
 		if err := meta.EachListItem(list, func(obj runtime.Object) error {
-			accessor, err := meta.Accessor(obj)
-			if err != nil {
-				return err
-			}
-
-			if nonStaleExtensionRoles.Has(getExtensionRoleNameFromRBAC(accessor.GetName(), projectName)) {
+			o := obj.(client.Object)
+			if nonStaleExtensionRoles.Has(getExtensionRoleNameFromRBAC(o.GetName(), projectName)) {
 				return nil
 			}
 
-			return client.IgnoreNotFound(c.Delete(ctx, obj))
+			return client.IgnoreNotFound(c.Delete(ctx, o))
 		}); err != nil {
 			return err
 		}

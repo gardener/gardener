@@ -121,7 +121,7 @@ func (c *Controller) seedRegistrationUpdate(oldObj, newObj interface{}) {
 	c.seedRegistrationAdd(newObj, true)
 }
 
-func (c *Controller) reconcileShootedSeedRegistrationKey(req reconcile.Request) (reconcile.Result, error) {
+func (c *Controller) reconcileShootedSeedRegistrationKey(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	shoot, err := c.shootLister.Shoots(req.Namespace).Get(req.Name)
 	if apierrors.IsNotFound(err) {
 		logger.Logger.Debugf("[SHOOTED SEED REGISTRATION] %s/%s - skipping because Shoot has been deleted", req.Namespace, req.Name)
@@ -137,14 +137,14 @@ func (c *Controller) reconcileShootedSeedRegistrationKey(req reconcile.Request) 
 		return reconcile.Result{}, err
 	}
 
-	return c.seedRegistrationControl.Reconcile(shoot, shootedSeedConfig)
+	return c.seedRegistrationControl.Reconcile(ctx, shoot, shootedSeedConfig)
 }
 
 // SeedRegistrationControlInterface implements the control logic for requeuing shooted Seeds after extensions have been updated.
 // It is implemented as an interface to allow for extensions that provide different semantics. Currently, there is only one
 // implementation.
 type SeedRegistrationControlInterface interface {
-	Reconcile(shootObj *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed) (reconcile.Result, error)
+	Reconcile(ctx context.Context, shootObj *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed) (reconcile.Result, error)
 }
 
 // NewDefaultSeedRegistrationControl returns a new instance of the default implementation SeedRegistrationControlInterface that
@@ -162,9 +162,8 @@ type defaultSeedRegistrationControl struct {
 	recorder               record.EventRecorder
 }
 
-func (c *defaultSeedRegistrationControl) Reconcile(shootObj *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed) (reconcile.Result, error) {
+func (c *defaultSeedRegistrationControl) Reconcile(ctx context.Context, shootObj *gardencorev1beta1.Shoot, shootedSeedConfig *gardencorev1beta1helper.ShootedSeed) (reconcile.Result, error) {
 	var (
-		ctx         = context.TODO()
 		shoot       = shootObj.DeepCopy()
 		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace)
 	)

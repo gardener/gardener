@@ -17,25 +17,63 @@ package seedadmission
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
-
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardenlogger "github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
+	"time"
 
 	"github.com/sirupsen/logrus"
-	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	admissionv1 "k8s.io/api/admission/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/common"
 )
 
-// ValidateExtensionDeletion validates whether it is allowed to delete extension CRDs or extension resources.
-func ValidateExtensionDeletion(ctx context.Context, c client.Client, logger *logrus.Logger, request *admissionv1beta1.AdmissionRequest) error {
+// NewExtensionDeletionProtection creates a new handler validating DELETE requests for extension CRDs and extension
+// resources, that are marked for deletion protection (`gardener.cloud/deletion-protected`).
+// TODO: remove this constructor in favor of InjectLogger once we have switched to logr.
+func NewExtensionDeletionProtection(logger logrus.FieldLogger) admission.Handler {
+	return &extensionDeletionProtection{
+		logger: logger,
+	}
+}
+
+type extensionDeletionProtection struct {
+	logger  logrus.FieldLogger
+	client  client.Client
+	decoder *admission.Decoder
+}
+
+// InjectClient injects a client.
+func (h *extensionDeletionProtection) InjectClient(c client.Client) error {
+	h.client = c
+	return nil
+}
+
+// InjectDecoder injects a decoder capable of decoding objects included in admission requests.
+func (h *extensionDeletionProtection) InjectDecoder(d *admission.Decoder) error {
+	h.decoder = d
+	return nil
+}
+
+// Handle implements the webhook handler for extension deletion protection.
+func (h *extensionDeletionProtection) Handle(ctx context.Context, request admission.Request) admission.Response {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	// If the request does not indicate the correct operation (DELETE) we allow the review without further doing.
+	if request.Operation != admissionv1.Delete {
+		return admission.Allowed("operation is not DELETE")
+	}
+
 	// Ignore all resources other than our expected ones
 	switch request.Resource {
 	case
@@ -52,34 +90,40 @@ func ValidateExtensionDeletion(ctx context.Context, c client.Client, logger *log
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "operatingsystemconfigs"},
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "workers"}:
 	default:
-		return nil
+		return admission.Allowed("resource is not deletion-protected")
+	}
+
+	obj, err := getRequestObject(ctx, h.client, h.decoder, request)
+	if apierrors.IsNotFound(err) {
+		return admission.Allowed("object was not found")
+	}
+	if err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
 	var operation string
-
-	obj, err := getRequestObject(ctx, c, request)
-	if err != nil {
-		return client.IgnoreNotFound(err)
-	}
-
 	if strings.HasSuffix(obj.GetObjectKind().GroupVersionKind().Kind, "List") {
 		operation = "DELETECOLLECTION"
 	} else {
 		operation = "DELETE"
 	}
 
-	entryLogger := gardenlogger.
-		NewFieldLogger(logger, "resource", fmt.Sprintf("%s/%s/%s", request.Kind.Group, request.Kind.Version, request.Kind.Kind)).
+	entryLogger := h.logger.
+		WithField("resource", fmt.Sprintf("%s/%s/%s", request.Kind.Group, request.Kind.Version, request.Kind.Kind)).
 		WithField("operation", operation).
 		WithField("namespace", request.Namespace)
 
 	entryLogger.Info("Handling request")
-	return admitObjectDeletion(entryLogger, obj, request.Kind.Kind)
+
+	if err := admitObjectDeletion(entryLogger, obj, request.Kind.Kind); err != nil {
+		return admission.Denied(err.Error())
+	}
+	return admission.Allowed("")
 }
 
 // admitObjectDeletion checks if the object deletion is confirmed. If the given object is a list of objects then it
 // performs the check for every single object.
-func admitObjectDeletion(logger *logrus.Entry, obj runtime.Object, kind string) error {
+func admitObjectDeletion(logger logrus.FieldLogger, obj runtime.Object, kind string) error {
 	if strings.HasSuffix(obj.GetObjectKind().GroupVersionKind().Kind, "List") {
 		return meta.EachListItem(obj, func(o runtime.Object) error {
 			return checkIfObjectDeletionIsConfirmed(logger, o, kind)
@@ -90,7 +134,7 @@ func admitObjectDeletion(logger *logrus.Entry, obj runtime.Object, kind string) 
 
 // checkIfObjectDeletionIsConfirmed checks if the object was annotated with the deletion confirmation. If it is a custom
 // resource definition then it is only considered if the CRD has the deletion protection label.
-func checkIfObjectDeletionIsConfirmed(logger *logrus.Entry, obj runtime.Object, kind string) error {
+func checkIfObjectDeletionIsConfirmed(logger logrus.FieldLogger, obj runtime.Object, kind string) error {
 	acc, err := meta.Accessor(obj)
 	if err != nil {
 		return err
@@ -113,14 +157,14 @@ func checkIfObjectDeletionIsConfirmed(logger *logrus.Entry, obj runtime.Object, 
 
 // TODO: This function can be removed once the minimum seed Kubernetes version is bumped to >= 1.15. In 1.15, webhook
 // configurations may use object selectors, i.e., we can get rid of this custom filtering.
-func crdMustBeConsidered(logger *logrus.Entry, labels map[string]string) bool {
+func crdMustBeConsidered(logger logrus.FieldLogger, labels map[string]string) bool {
 	val, ok := labels[common.GardenerDeletionProtected]
 	if !ok {
 		logger.Infof("Ignoring CRD because it has no %s label - allowing deletion", common.GardenerDeletionProtected)
 		return false
 	}
 
-	if bool, _ := strconv.ParseBool(val); !bool {
+	if ok, _ := strconv.ParseBool(val); !ok {
 		logger.Infof("Admitting CRD deletion because %s label value is not true - allowing deletion", common.GardenerDeletionProtected)
 		return false
 	}

@@ -37,6 +37,7 @@ import (
 
 var _ = Describe("#reconcileEvent", func() {
 	var (
+		ctx                    context.Context
 		ctrl                   *gomock.Controller
 		clientMap              *fakeclientmap.ClientMap
 		k8sGardenRuntimeClient *mockclient.MockClient
@@ -57,6 +58,7 @@ var _ = Describe("#reconcileEvent", func() {
 	)
 
 	BeforeEach(func() {
+		ctx = context.TODO()
 		ctrl = gomock.NewController(GinkgoT())
 		k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
 		clientMap = fakeclientmap.NewClientMap().AddRuntimeClient(keys.ForGarden(), k8sGardenRuntimeClient)
@@ -96,20 +98,17 @@ var _ = Describe("#reconcileEvent", func() {
 	})
 
 	Context("Shoot Events", func() {
-
 		It("should ignore them", func() {
 			mockClientGet(k8sGardenRuntimeClient, request.NamespacedName, shootEvent)
 			expected := reconcile.Result{}
-			actual, err := eventController.reconcileEvent(request)
+			actual, err := eventController.reconcileEvent(ctx, request)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(Equal(expected))
 		})
 	})
 
 	Context("Non-Shoot events", func() {
-
 		Context("ttl is not yet reached", func() {
-
 			BeforeEach(func() {
 				nowFunc = func() time.Time {
 					return time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC)
@@ -119,28 +118,27 @@ var _ = Describe("#reconcileEvent", func() {
 			It("should requeue non-shoot events", func() {
 				mockClientGet(k8sGardenRuntimeClient, request.NamespacedName, nonShootEvent)
 				expected := reconcile.Result{Requeue: false, RequeueAfter: ttl.Duration}
-				actual, err := eventController.reconcileEvent(request)
+				actual, err := eventController.reconcileEvent(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).To(Equal(expected))
 			})
 			It("should requeue events with an empty involvedObject", func() {
 				mockClientGet(k8sGardenRuntimeClient, request.NamespacedName, eventWithoutInvolvedObject)
 				expected := reconcile.Result{Requeue: false, RequeueAfter: ttl.Duration}
-				actual, err := eventController.reconcileEvent(request)
+				actual, err := eventController.reconcileEvent(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).To(Equal(expected))
 			})
 			It("should requeue events with non Gardener APIGroup", func() {
 				mockClientGet(k8sGardenRuntimeClient, request.NamespacedName, nonGardenerAPIGroupEvent)
 				expected := reconcile.Result{Requeue: false, RequeueAfter: ttl.Duration}
-				actual, err := eventController.reconcileEvent(request)
+				actual, err := eventController.reconcileEvent(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).To(Equal(expected))
 			})
 		})
 
 		Context("ttl is reached", func() {
-
 			BeforeEach(func() {
 				nowFunc = func() time.Time {
 					return time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC).
@@ -156,7 +154,7 @@ var _ = Describe("#reconcileEvent", func() {
 					Return(nil).
 					Times(1)
 				expected := reconcile.Result{}
-				actual, err := eventController.reconcileEvent(request)
+				actual, err := eventController.reconcileEvent(ctx, request)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actual).To(Equal(expected))
 			})

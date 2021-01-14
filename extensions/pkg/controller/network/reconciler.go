@@ -18,13 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -36,6 +29,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 const (
@@ -53,7 +52,6 @@ type reconciler struct {
 	logger   logr.Logger
 	actuator Actuator
 
-	ctx      context.Context
 	client   client.Client
 	recorder record.EventRecorder
 }
@@ -62,7 +60,7 @@ type reconciler struct {
 // Network resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler {
 	return extensionscontroller.OperationAnnotationWrapper(
-		&extensionsv1alpha1.Network{},
+		func() client.Object { return &extensionsv1alpha1.Network{} },
 		&reconciler{
 			logger:   log.Log.WithName(ControllerName),
 			actuator: actuator,
@@ -80,21 +78,16 @@ func (r *reconciler) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (r *reconciler) InjectStopChannel(stopCh <-chan struct{}) error {
-	r.ctx = contextutil.FromStopChannel(stopCh)
-	return nil
-}
-
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	network := &extensionsv1alpha1.Network{}
-	if err := r.client.Get(r.ctx, request.NamespacedName, network); err != nil {
+	if err := r.client.Get(ctx, request.NamespacedName, network); err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
 	}
 
-	cluster, err := extensionscontroller.GetCluster(r.ctx, r.client, network.Namespace)
+	cluster, err := extensionscontroller.GetCluster(ctx, r.client, network.Namespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -110,18 +103,18 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	case extensionscontroller.IsMigrated(network):
 		return reconcile.Result{}, nil
 	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
-		return r.migrate(r.ctx, network, cluster)
+		return r.migrate(ctx, network, cluster)
 	case network.DeletionTimestamp != nil:
-		return r.delete(r.ctx, network, cluster)
+		return r.delete(ctx, network, cluster)
 	case network.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
-		return r.restore(r.ctx, network, cluster)
+		return r.restore(ctx, network, cluster)
 	default:
-		return r.reconcile(r.ctx, network, cluster, operationType)
+		return r.reconcile(ctx, network, cluster, operationType)
 	}
 }
 
 func (r *reconciler) reconcile(ctx context.Context, network *extensionsv1alpha1.Network, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, network); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, network, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -142,7 +135,7 @@ func (r *reconciler) reconcile(ctx context.Context, network *extensionsv1alpha1.
 }
 
 func (r *reconciler) restore(ctx context.Context, network *extensionsv1alpha1.Network, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, network); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, network, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -185,7 +178,7 @@ func (r *reconciler) delete(ctx context.Context, network *extensionsv1alpha1.Net
 
 	r.logger.Info("Starting the deletion of network", "network", network.Name)
 	r.recorder.Event(network, corev1.EventTypeNormal, EventNetworkDeletion, "Deleting the network")
-	if err := r.actuator.Delete(r.ctx, network, cluster); err != nil {
+	if err := r.actuator.Delete(ctx, network, cluster); err != nil {
 		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), network, gardencorev1beta1.LastOperationTypeDelete, EventNetworkDeletion, "Error deleting network"))
 		return extensionscontroller.ReconcileErr(err)
 	}
@@ -195,7 +188,7 @@ func (r *reconciler) delete(ctx context.Context, network *extensionsv1alpha1.Net
 	}
 
 	r.logger.Info("Removing finalizer.", "network", network.Name)
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, network); err != nil {
+	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, network, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from the Network resource: %+v", err)
 	}
 
@@ -207,7 +200,7 @@ func (r *reconciler) migrate(ctx context.Context, network *extensionsv1alpha1.Ne
 		return reconcile.Result{}, err
 	}
 
-	if err := r.actuator.Migrate(r.ctx, network, cluster); err != nil {
+	if err := r.actuator.Migrate(ctx, network, cluster); err != nil {
 		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), network, gardencorev1beta1.LastOperationTypeMigrate, EventNetworkMigartion, "Error migrating network"))
 		return extensionscontroller.ReconcileErr(err)
 	}

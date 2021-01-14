@@ -15,6 +15,8 @@
 package fake
 
 import (
+	"context"
+
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -136,11 +138,11 @@ func (c *ClientSet) DiscoverVersion() (*version.Info, error) {
 }
 
 // Start does nothing as the fake ClientSet does not support it.
-func (c *ClientSet) Start(<-chan struct{}) {
+func (c *ClientSet) Start(context.Context) {
 }
 
 // WaitForCacheSync does nothing and return trues.
-func (c *ClientSet) WaitForCacheSync(<-chan struct{}) bool {
+func (c *ClientSet) WaitForCacheSync(context.Context) bool {
 	return true
 }
 

@@ -96,7 +96,7 @@ type KubeSchedulerConfiguration struct {
 	// Extenders are the list of scheduler extenders, each holding the values of how to communicate
 	// with the extender. These extenders are shared by all scheduler profiles.
 	// +listType=set
-	Extenders []v1.Extender `json:"extenders"`
+	Extenders []v1.LegacyExtender `json:"extenders"`
 }
 
 // KubeSchedulerProfile is a scheduling profile.

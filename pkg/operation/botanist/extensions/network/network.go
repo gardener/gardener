@@ -141,7 +141,7 @@ func (d *network) Wait(ctx context.Context) error {
 		ctx,
 		d.client,
 		d.logger,
-		func() runtime.Object { return &extensionsv1alpha1.Network{} },
+		func() client.Object { return &extensionsv1alpha1.Network{} },
 		extensionsv1alpha1.NetworkResource,
 		d.values.Namespace,
 		d.values.Name,

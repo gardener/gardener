@@ -36,7 +36,6 @@ import (
 
 // namespaceReconciler implements the reconcile.Reconcile interface for namespace reconciliation.
 type namespaceReconciler struct {
-	ctx                    context.Context
 	log                    *logrus.Entry
 	seedClient             client.Client
 	seedName               string
@@ -46,7 +45,7 @@ type namespaceReconciler struct {
 }
 
 // newNamespaceReconciler returns the new namespace reconciler.
-func newNamespaceReconciler(ctx context.Context,
+func newNamespaceReconciler(
 	seedLogger *logrus.Entry,
 	seedClient client.Client,
 	endpointsLister kubecorev1listers.EndpointsLister,
@@ -55,7 +54,6 @@ func newNamespaceReconciler(ctx context.Context,
 	resolver hostnameresolver.HostResolver,
 ) reconcile.Reconciler {
 	return &namespaceReconciler{
-		ctx:                    ctx,
 		seedClient:             seedClient,
 		endpointsLister:        endpointsLister,
 		log:                    seedLogger,
@@ -66,9 +64,9 @@ func newNamespaceReconciler(ctx context.Context,
 }
 
 // Reconcile reconciles namespace in order to create the "allowed-to-seed-apiserver" Network Policy
-func (r *namespaceReconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *namespaceReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	namespace := &corev1.Namespace{}
-	if err := r.seedClient.Get(r.ctx, request.NamespacedName, namespace); err != nil {
+	if err := r.seedClient.Get(ctx, request.NamespacedName, namespace); err != nil {
 		if client.IgnoreNotFound(err) != nil {
 			return reconcile.Result{}, err
 		}
@@ -84,7 +82,7 @@ func (r *namespaceReconciler) Reconcile(request reconcile.Request) (reconcile.Re
 				Namespace: request.Name,
 			},
 		}
-		err := r.seedClient.Delete(r.ctx, policy)
+		err := r.seedClient.Delete(ctx, policy)
 		if client.IgnoreNotFound(err) != nil {
 			return reconcile.Result{}, fmt.Errorf("unable to delete NetworkPolicy %q from namespace %q: %v", policy.Name, namespace.Name, err)
 		} else if err == nil {
@@ -113,7 +111,7 @@ func (r *namespaceReconciler) Reconcile(request reconcile.Request) (reconcile.Re
 	egressRules := helper.GetEgressRules(append(kubernetesEndpoints.Subsets, r.resolver.Subset()...)...)
 	// avoid duplicate NetworkPolicy updates
 	policy := &networkingv1.NetworkPolicy{}
-	if err := r.seedClient.Get(r.ctx, kutil.Key(request.Name, helper.AllowToSeedAPIServer), policy); client.IgnoreNotFound(err) != nil {
+	if err := r.seedClient.Get(ctx, kutil.Key(request.Name, helper.AllowToSeedAPIServer), policy); client.IgnoreNotFound(err) != nil {
 		return reconcile.Result{}, err
 	}
 	if apiequality.Semantic.DeepEqual(policy.Spec.Egress, egressRules) {
@@ -121,7 +119,7 @@ func (r *namespaceReconciler) Reconcile(request reconcile.Request) (reconcile.Re
 		return reconcile.Result{}, nil
 	}
 
-	err = helper.CreateOrUpdateNetworkPolicy(r.ctx, r.seedClient, request.Name, egressRules)
+	err = helper.CreateOrUpdateNetworkPolicy(ctx, r.seedClient, request.Name, egressRules)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

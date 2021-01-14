@@ -840,7 +840,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	// If HVPA feature gate is enabled then we should delete the old HPA and VPA resources as
 	// the HVPA controller will create its own for the kube-apiserver deployment.
 	if hvpaEnabled {
-		objects := []runtime.Object{
+		objects := []client.Object{
 			// TODO: Use autoscaling/v2beta2 for Kubernetes 1.19+ shoots once kubernetes-v1.19 golang dependencies were vendored.
 			&autoscalingv2beta1.HorizontalPodAutoscaler{
 				ObjectMeta: metav1.ObjectMeta{

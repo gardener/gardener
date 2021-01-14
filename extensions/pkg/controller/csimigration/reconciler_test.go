@@ -63,7 +63,6 @@ var _ = Describe("reconciler", func() {
 
 			reconciler = &reconciler{
 				logger:                              logger,
-				ctx:                                 ctx,
 				csiMigrationKubernetesVersion:       csiMigrationKubernetesVersion,
 				storageClassNameToLegacyProvisioner: map[string]string{storageClassName: storageClassProvisioner},
 			}

@@ -27,7 +27,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -116,7 +115,7 @@ func (e *extension) Wait(ctx context.Context) error {
 			ctx,
 			e.client,
 			e.logger,
-			func() runtime.Object { return &extensionsv1alpha1.Extension{} },
+			func() client.Object { return &extensionsv1alpha1.Extension{} },
 			extensionsv1alpha1.ExtensionResource,
 			extension.Namespace,
 			extension.Name,

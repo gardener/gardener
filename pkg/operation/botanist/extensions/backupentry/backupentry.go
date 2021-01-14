@@ -176,7 +176,7 @@ func (b *backupEntry) Wait(ctx context.Context) error {
 		ctx,
 		b.client,
 		b.logger,
-		func() runtime.Object { return &extensionsv1alpha1.BackupEntry{} },
+		func() client.Object { return &extensionsv1alpha1.BackupEntry{} },
 		extensionsv1alpha1.BackupEntryResource,
 		"",
 		b.values.Name,

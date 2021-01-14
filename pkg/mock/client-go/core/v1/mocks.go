@@ -190,6 +190,20 @@ func (mr *MockPodInterfaceMockRecorder) Patch(arg0, arg1, arg2, arg3, arg4 inter
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockPodInterface)(nil).Patch), varargs...)
 }
 
+// ProxyGet mocks base method.
+func (m *MockPodInterface) ProxyGet(arg0, arg1, arg2, arg3 string, arg4 map[string]string) rest.ResponseWrapper {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ProxyGet", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(rest.ResponseWrapper)
+	return ret0
+}
+
+// ProxyGet indicates an expected call of ProxyGet.
+func (mr *MockPodInterfaceMockRecorder) ProxyGet(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProxyGet", reflect.TypeOf((*MockPodInterface)(nil).ProxyGet), arg0, arg1, arg2, arg3, arg4)
+}
+
 // Update mocks base method.
 func (m *MockPodInterface) Update(arg0 context.Context, arg1 *v1.Pod, arg2 v10.UpdateOptions) (*v1.Pod, error) {
 	m.ctrl.T.Helper()

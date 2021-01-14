@@ -165,7 +165,7 @@ func run(ctx context.Context, o *Options) error {
 }
 
 // NewCommandStartGardenlet creates a *cobra.Command object with default parameters
-func NewCommandStartGardenlet(ctx context.Context) *cobra.Command {
+func NewCommandStartGardenlet() *cobra.Command {
 	opts, err := NewOptions()
 	if err != nil {
 		panic(err)
@@ -191,7 +191,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 			if err := opts.validate(args); err != nil {
 				return err
 			}
-			return run(ctx, opts)
+			return run(cmd.Context(), opts)
 		},
 	}
 
@@ -383,7 +383,6 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 // Run runs the Gardenlet. This should never exit.
 func (g *Gardenlet) Run(ctx context.Context) error {
 	controllerCtx, controllerCancel := context.WithCancel(ctx)
-
 	defer controllerCancel()
 
 	// Initialize /healthz manager.

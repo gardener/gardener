@@ -191,13 +191,8 @@ func (f *GardenerFramework) DeleteShoot(ctx context.Context, shoot *gardencorev1
 // UpdateShoot Updates a shoot from a shoot Object and waits for its reconciliation
 func (f *GardenerFramework) UpdateShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot, update func(shoot *gardencorev1beta1.Shoot) error) error {
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
-		key, err := client.ObjectKeyFromObject(shoot)
-		if err != nil {
-			return retry.SevereError(err)
-		}
-
 		updatedShoot := &gardencorev1beta1.Shoot{}
-		if err := f.GardenClient.DirectClient().Get(ctx, key, updatedShoot); err != nil {
+		if err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot); err != nil {
 			return retry.MinorError(err)
 		}
 

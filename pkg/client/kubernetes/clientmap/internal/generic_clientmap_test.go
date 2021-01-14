@@ -236,8 +236,8 @@ var _ = Describe("GenericClientMap", func() {
 				By("should create a new ClientSet beforehand and start it automatically")
 				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
 				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil)
-				cs.EXPECT().Start(gomock.Any()).Do(func(stopCh <-chan struct{}) {
-					clientSetStopCh = stopCh
+				cs.EXPECT().Start(gomock.Any()).Do(func(ctx context.Context) {
+					clientSetStopCh = ctx.Done()
 				})
 				cs.EXPECT().WaitForCacheSync(gomock.Any()).Return(true)
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))

@@ -26,12 +26,11 @@ import (
 )
 
 func main() {
+	utils.DeduplicateWarnings()
 	features.RegisterFeatureGates()
 
-	ctx := utils.ContextFromStopChannel(signals.SetupSignalHandler())
-	command := app.NewCommandStartGardenerScheduler(ctx)
-
-	if err := command.Execute(); err != nil {
+	ctx := signals.SetupSignalHandler()
+	if err := app.NewCommandStartGardenerScheduler().ExecuteContext(ctx); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

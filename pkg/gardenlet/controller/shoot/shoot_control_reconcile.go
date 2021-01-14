@@ -38,10 +38,9 @@ import (
 
 // runReconcileShootFlow reconciles the Shoot cluster's state.
 // It receives an Operation object <o> which stores the Shoot object.
-func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
+func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	// We create the botanists (which will do the actual work).
 	var (
-		ctx                  = context.TODO()
 		botanist             *botanistpkg.Botanist
 		enableEtcdEncryption bool
 		tasksWithErrors      []string

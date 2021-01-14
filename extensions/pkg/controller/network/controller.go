@@ -87,9 +87,10 @@ func add(mgr manager.Manager, args AddArgs) error {
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 
 	if args.IgnoreOperationAnnotation {
-		if err := ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Cluster{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
-			ToRequests: extensionshandler.SimpleMapper(ClusterToNetworkMapper(predicates), extensionshandler.UpdateWithNew),
-		}); err != nil {
+		if err := ctrl.Watch(
+			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
+			extensionshandler.EnqueueRequestsFromMapper(ClusterToNetworkMapper(predicates), extensionshandler.UpdateWithNew),
+		); err != nil {
 			return err
 		}
 	}

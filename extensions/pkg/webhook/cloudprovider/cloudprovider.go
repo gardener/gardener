@@ -15,16 +15,15 @@
 package cloudprovider
 
 import (
-	"github.com/gardener/gardener/extensions/pkg/webhook"
-	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 const (
@@ -39,15 +38,15 @@ var (
 // Args are the requirements to create a cloudprovider webhook.
 type Args struct {
 	Provider string
-	Mutator  webhook.Mutator
+	Mutator  extensionswebhook.Mutator
 }
 
 // New creates a new cloudprovider webhook.
-func New(mgr manager.Manager, args Args) (*webhook.Webhook, error) {
+func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	logger := logger.WithValues("cloud-provider", args.Provider)
 
-	types := []runtime.Object{&corev1.Secret{}}
-	handler, err := webhook.NewBuilder(mgr, logger).WithMutator(args.Mutator, types...).Build()
+	types := []client.Object{&corev1.Secret{}}
+	handler, err := extensionswebhook.NewBuilder(mgr, logger).WithMutator(args.Mutator, types...).Build()
 	if err != nil {
 		return nil, err
 	}

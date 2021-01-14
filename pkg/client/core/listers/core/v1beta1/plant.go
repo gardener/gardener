@@ -26,8 +26,10 @@ import (
 )
 
 // PlantLister helps list Plants.
+// All objects returned here must be treated as read-only.
 type PlantLister interface {
 	// List lists all Plants in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.Plant, err error)
 	// Plants returns an object that can list and get Plants.
 	Plants(namespace string) PlantNamespaceLister
@@ -58,10 +60,13 @@ func (s *plantLister) Plants(namespace string) PlantNamespaceLister {
 }
 
 // PlantNamespaceLister helps list and get Plants.
+// All objects returned here must be treated as read-only.
 type PlantNamespaceLister interface {
 	// List lists all Plants in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.Plant, err error)
 	// Get retrieves the Plant from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.Plant, error)
 	PlantNamespaceListerExpansion
 }

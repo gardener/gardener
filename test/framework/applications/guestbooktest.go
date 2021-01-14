@@ -32,7 +32,6 @@ import (
 	apiextensions "k8s.io/api/extensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/onsi/ginkgo"
@@ -231,7 +230,7 @@ func (t *GuestBookTest) Cleanup(ctx context.Context) {
 
 	// Clean up shoot
 	ginkgo.By("Cleaning up guestbook app resources")
-	deleteResource := func(ctx context.Context, resource runtime.Object) error {
+	deleteResource := func(ctx context.Context, resource client.Object) error {
 		err := t.framework.ShootClient.DirectClient().Delete(ctx, resource)
 		if apierrors.IsNotFound(err) {
 			return nil

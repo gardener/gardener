@@ -95,7 +95,7 @@ func (o *Options) run(ctx context.Context) error {
 }
 
 // NewCommandStartGardenerScheduler creates a *cobra.Command object with default parameters
-func NewCommandStartGardenerScheduler(ctx context.Context) *cobra.Command {
+func NewCommandStartGardenerScheduler() *cobra.Command {
 	opts := &Options{
 		config: new(config.SchedulerConfiguration),
 	}
@@ -110,7 +110,7 @@ func NewCommandStartGardenerScheduler(ctx context.Context) *cobra.Command {
 			if err := opts.validate(args); err != nil {
 				return err
 			}
-			return opts.run(ctx)
+			return opts.run(cmd.Context())
 		},
 	}
 
@@ -203,8 +203,8 @@ func NewGardenerScheduler(cfg *config.SchedulerConfiguration) (*GardenerSchedule
 
 // Run runs the Gardener Scheduler. This should never exit.
 func (g *GardenerScheduler) Run(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	controllerCtx, controllerCancel := context.WithCancel(ctx)
+	defer controllerCancel()
 
 	// Prepare a reusable run function.
 	run := func(ctx context.Context) {
@@ -225,16 +225,19 @@ func (g *GardenerScheduler) Run(ctx context.Context) error {
 		Build().
 		Start(ctx)
 
+	leaderElectionCtx, leaderElectionCancel := context.WithCancel(context.Background())
+
 	// If leader election is enabled, run via LeaderElector until done and exit.
 	if g.LeaderElection != nil {
 		g.LeaderElection.Callbacks = leaderelection.LeaderCallbacks{
-			OnStartedLeading: func(leaderCtx context.Context) {
+			OnStartedLeading: func(_ context.Context) {
 				g.Logger.Info("Acquired leadership, starting scheduler.")
-				run(leaderCtx)
+				run(controllerCtx)
+				leaderElectionCancel()
 			},
 			OnStoppedLeading: func() {
 				g.Logger.Info("Lost leadership, terminating.")
-				cancel()
+				controllerCancel()
 			},
 		}
 
@@ -243,10 +246,13 @@ func (g *GardenerScheduler) Run(ctx context.Context) error {
 			return fmt.Errorf("couldn't create leader elector: %v", err)
 		}
 
-		leaderElector.Run(ctx)
+		leaderElector.Run(leaderElectionCtx)
 		return nil
 	}
-	run(ctx)
+
+	// Leader election is disabled, thus run directly until done.
+	leaderElectionCancel()
+	run(controllerCtx)
 	return nil
 }
 

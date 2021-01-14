@@ -15,17 +15,17 @@
 package worker
 
 import (
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
+	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 const (
@@ -77,7 +77,7 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 // Add creates a new Worker Controller and adds it to the Manager.
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
+	args.ControllerOptions.Reconciler = NewReconciler(args.Actuator)
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 	if err := add(mgr, args, predicates); err != nil {
 		return err
@@ -94,9 +94,10 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 	}
 
 	if args.IgnoreOperationAnnotation {
-		if err := ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Cluster{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
-			ToRequests: extensionshandler.SimpleMapper(ClusterToWorkerMapper(predicates), extensionshandler.UpdateWithNew),
-		}); err != nil {
+		if err := ctrl.Watch(
+			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
+			extensionshandler.EnqueueRequestsFromMapper(ClusterToWorkerMapper(predicates), extensionshandler.UpdateWithNew),
+		); err != nil {
 			return err
 		}
 	}
@@ -130,13 +131,17 @@ func addStateUpdatingController(mgr manager.Manager, options controller.Options,
 		return err
 	}
 
-	if err := ctrl.Watch(&source.Kind{Type: &machinev1alpha1.MachineSet{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
-		ToRequests: extensionshandler.SimpleMapper(MachineSetToWorkerMapper(workerPredicates), extensionshandler.UpdateWithNew),
-	}, machinePredicates...); err != nil {
+	if err := ctrl.Watch(
+		&source.Kind{Type: &machinev1alpha1.MachineSet{}},
+		extensionshandler.EnqueueRequestsFromMapper(MachineSetToWorkerMapper(workerPredicates), extensionshandler.UpdateWithNew),
+		machinePredicates...,
+	); err != nil {
 		return err
 	}
 
-	return ctrl.Watch(&source.Kind{Type: &machinev1alpha1.Machine{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
-		ToRequests: extensionshandler.SimpleMapper(MachineToWorkerMapper(workerPredicates), extensionshandler.UpdateWithNew),
-	}, machinePredicates...)
+	return ctrl.Watch(
+		&source.Kind{Type: &machinev1alpha1.Machine{}},
+		extensionshandler.EnqueueRequestsFromMapper(MachineToWorkerMapper(workerPredicates), extensionshandler.UpdateWithNew),
+		machinePredicates...,
+	)
 }

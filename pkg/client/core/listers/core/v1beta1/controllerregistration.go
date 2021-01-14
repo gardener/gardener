@@ -26,10 +26,13 @@ import (
 )
 
 // ControllerRegistrationLister helps list ControllerRegistrations.
+// All objects returned here must be treated as read-only.
 type ControllerRegistrationLister interface {
 	// List lists all ControllerRegistrations in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.ControllerRegistration, err error)
 	// Get retrieves the ControllerRegistration from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.ControllerRegistration, error)
 	ControllerRegistrationListerExpansion
 }

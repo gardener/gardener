@@ -36,7 +36,7 @@ import (
 // added to the wait group when started and marked done when finished.
 // Deprecated: Use CreateWorker instead.
 func DeprecatedCreateWorker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler func(key string) error, waitGroup *sync.WaitGroup, workerCh chan int) {
-	CreateWorker(ctx, queue, resourceType, reconcile.Func(func(req reconcile.Request) (reconcile.Result, error) {
+	CreateWorker(ctx, queue, resourceType, reconcile.Func(func(_ context.Context, req reconcile.Request) (reconcile.Result, error) {
 		meta := kutil.ObjectMeta(req.Namespace, req.Name)
 		key, err := cache.MetaNamespaceKeyFunc(&meta)
 		if err != nil {
@@ -68,7 +68,9 @@ func CreateWorker(ctx context.Context, queue workqueue.RateLimitingInterface, re
 	waitGroup.Add(1)
 	workerCh <- 1
 	go func() {
-		wait.Until(worker(queue, resourceType, reconciler), time.Second, ctx.Done())
+		wait.UntilWithContext(ctx, func(ctx context.Context) {
+			worker(ctx, queue, resourceType, reconciler)
+		}, time.Second)
 		workerCh <- -1
 		waitGroup.Done()
 	}()
@@ -92,42 +94,40 @@ func requestFromKey(key interface{}) (reconcile.Request, error) {
 
 // worker runs a worker thread that just dequeues items, processes them, and marks them done.
 // It enforces that the reconciler is never invoked concurrently with the same key.
-func worker(queue workqueue.RateLimitingInterface, resourceType string, reconciler reconcile.Reconciler) func() {
-	return func() {
-		exit := false
-		for !exit {
-			exit = func() bool {
-				key, quit := queue.Get()
-				if quit {
-					return true
-				}
-				defer queue.Done(key)
+func worker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler reconcile.Reconciler) {
+	exit := false
+	for !exit {
+		exit = func() bool {
+			key, quit := queue.Get()
+			if quit {
+				return true
+			}
+			defer queue.Done(key)
 
-				req, err := requestFromKey(key)
-				if err != nil {
-					logger.Logger.WithError(err).Error("Cannot obtain request from key")
-					queue.Forget(key)
-					return false
-				}
-
-				res, err := reconciler.Reconcile(req)
-				if err != nil {
-					logger.Logger.Infof("Error syncing %s %v: %v", resourceType, key, err)
-					queue.AddRateLimited(key)
-					return false
-				}
-
-				if res.RequeueAfter > 0 {
-					queue.AddAfter(key, res.RequeueAfter)
-					return false
-				}
-				if res.Requeue {
-					queue.AddRateLimited(key)
-					return false
-				}
+			req, err := requestFromKey(key)
+			if err != nil {
+				logger.Logger.WithError(err).Error("Cannot obtain request from key")
 				queue.Forget(key)
 				return false
-			}()
-		}
+			}
+
+			res, err := reconciler.Reconcile(ctx, req)
+			if err != nil {
+				logger.Logger.Infof("Error syncing %s %v: %v", resourceType, key, err)
+				queue.AddRateLimited(key)
+				return false
+			}
+
+			if res.RequeueAfter > 0 {
+				queue.AddAfter(key, res.RequeueAfter)
+				return false
+			}
+			if res.Requeue {
+				queue.AddRateLimited(key)
+				return false
+			}
+			queue.Forget(key)
+			return false
+		}()
 	}
 }

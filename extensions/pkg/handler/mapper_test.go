@@ -18,21 +18,19 @@ import (
 	"context"
 	"testing"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
 func TestHandler(t *testing.T) {
@@ -60,7 +58,7 @@ var _ = Describe("Controller Mapper", func() {
 			resourceName = "infra"
 			namespace    = "shoot"
 
-			newObjListFunc = func() runtime.Object { return &extensionsv1alpha1.InfrastructureList{} }
+			newObjListFunc = func() client.ObjectList { return &extensionsv1alpha1.InfrastructureList{} }
 		)
 
 		It("should find all objects for the passed cluster", func() {
@@ -69,7 +67,7 @@ var _ = Describe("Controller Mapper", func() {
 
 			c.EXPECT().
 				List(
-					gomock.AssignableToTypeOf(context.TODO()),
+					gomock.Any(),
 					gomock.AssignableToTypeOf(&extensionsv1alpha1.InfrastructureList{}),
 					gomock.AssignableToTypeOf(client.InNamespace(namespace)),
 				).
@@ -87,11 +85,9 @@ var _ = Describe("Controller Mapper", func() {
 					return nil
 				})
 
-			result := mapper.Map(handler.MapObject{
-				Object: &extensionsv1alpha1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: namespace,
-					},
+			result := mapper.Map(&extensionsv1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
 				},
 			})
 
@@ -118,7 +114,7 @@ var _ = Describe("Controller Mapper", func() {
 
 			c.EXPECT().
 				List(
-					gomock.AssignableToTypeOf(context.TODO()),
+					gomock.Any(),
 					gomock.AssignableToTypeOf(&extensionsv1alpha1.InfrastructureList{}),
 					gomock.AssignableToTypeOf(client.InNamespace(namespace)),
 				).
@@ -136,11 +132,9 @@ var _ = Describe("Controller Mapper", func() {
 					return nil
 				})
 
-			result := mapper.Map(handler.MapObject{
-				Object: &extensionsv1alpha1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: namespace,
-					},
+			result := mapper.Map(&extensionsv1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
 				},
 			})
 
@@ -154,7 +148,7 @@ var _ = Describe("Controller Mapper", func() {
 
 			c.EXPECT().
 				List(
-					gomock.AssignableToTypeOf(context.TODO()),
+					gomock.Any(),
 					gomock.AssignableToTypeOf(&extensionsv1alpha1.InfrastructureList{}),
 					gomock.AssignableToTypeOf(client.InNamespace(namespace)),
 				).
@@ -163,11 +157,9 @@ var _ = Describe("Controller Mapper", func() {
 					return nil
 				})
 
-			result := mapper.Map(handler.MapObject{
-				Object: &extensionsv1alpha1.Cluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: namespace,
-					},
+			result := mapper.Map(&extensionsv1alpha1.Cluster{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
 				},
 			})
 
@@ -176,9 +168,7 @@ var _ = Describe("Controller Mapper", func() {
 
 		It("should find no objects because the passed object is no cluster", func() {
 			mapper := ClusterToObjectMapper(newObjListFunc, nil)
-			result := mapper.Map(handler.MapObject{
-				Object: &extensionsv1alpha1.Infrastructure{},
-			})
+			result := mapper.Map(&extensionsv1alpha1.Infrastructure{})
 			ExpectInject(inject.ClientInto(c, mapper))
 			Expect(result).To(BeNil())
 		})

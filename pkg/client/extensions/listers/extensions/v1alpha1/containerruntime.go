@@ -26,8 +26,10 @@ import (
 )
 
 // ContainerRuntimeLister helps list ContainerRuntimes.
+// All objects returned here must be treated as read-only.
 type ContainerRuntimeLister interface {
 	// List lists all ContainerRuntimes in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ContainerRuntime, err error)
 	// ContainerRuntimes returns an object that can list and get ContainerRuntimes.
 	ContainerRuntimes(namespace string) ContainerRuntimeNamespaceLister
@@ -58,10 +60,13 @@ func (s *containerRuntimeLister) ContainerRuntimes(namespace string) ContainerRu
 }
 
 // ContainerRuntimeNamespaceLister helps list and get ContainerRuntimes.
+// All objects returned here must be treated as read-only.
 type ContainerRuntimeNamespaceLister interface {
 	// List lists all ContainerRuntimes in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ContainerRuntime, err error)
 	// Get retrieves the ContainerRuntime from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.ContainerRuntime, error)
 	ContainerRuntimeNamespaceListerExpansion
 }

@@ -65,7 +65,7 @@ var _ = Describe("#tryPatch", func() {
 	})
 })
 
-func (c *conflictErrManager) patchFunc(ctx context.Context, obj runtime.Object, patch client.Patch, o ...client.PatchOption) error {
+func (c *conflictErrManager) patchFunc(ctx context.Context, obj client.Object, patch client.Patch, o ...client.PatchOption) error {
 	if c.conflictsBeforeUpdate == c.conflictsOccured {
 		return c.client.Status().Patch(ctx, obj, patch, o...)
 	}

@@ -83,7 +83,7 @@ type conflictErrManager struct {
 	client                client.Client
 }
 
-func (c *conflictErrManager) updateFunc(ctx context.Context, obj runtime.Object, o ...client.UpdateOption) error {
+func (c *conflictErrManager) updateFunc(ctx context.Context, obj client.Object, o ...client.UpdateOption) error {
 	if c.conflictsBeforeUpdate == c.conflictsOccured {
 		return c.client.Status().Update(ctx, obj, o...)
 	}

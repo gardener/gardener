@@ -21,21 +21,10 @@ import (
 	"fmt"
 	"strings"
 
-	baseconfig "k8s.io/component-base/config"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap"
-	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -45,7 +34,17 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/keyutil"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
+	baseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap"
+	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Util", func() {
@@ -66,13 +65,13 @@ var _ = Describe("Util", func() {
 				Organization: []string{organization},
 				CommonName:   "test-cn",
 			}
-			digest, err := bootstraputil.DigestedName(signer.Public(), subject, []certificatesv1beta1.KeyUsage{certificatesv1beta1.UsageDigitalSignature})
+			digest, err := bootstraputil.DigestedName(signer.Public(), subject, []certificatesv1.KeyUsage{certificatesv1.UsageDigitalSignature})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(strings.HasPrefix(digest, "seed-csr-")).To(BeTrue())
 		})
 
 		It("should return an error because the public key cannot be marshalled", func() {
-			_, err := bootstraputil.DigestedName([]byte("test"), nil, []certificatesv1beta1.KeyUsage{certificatesv1beta1.UsageDigitalSignature})
+			_, err := bootstraputil.DigestedName([]byte("test"), nil, []certificatesv1.KeyUsage{certificatesv1.UsageDigitalSignature})
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -183,7 +182,7 @@ var _ = Describe("Util", func() {
 
 			It("should return an error because the CSR was not found", func() {
 				c.EXPECT().
-					Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1beta1.CertificateSigningRequest{})).
+					Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
 					Return(apierrors.NewNotFound(schema.GroupResource{Resource: "CertificateSigningRequests"}, csrName))
 
 				Expect(DeleteBootstrapAuth(ctx, c, csrName, "")).NotTo(Succeed())
@@ -191,7 +190,7 @@ var _ = Describe("Util", func() {
 
 			It("should delete nothing because the username in the CSR does not match a known pattern", func() {
 				c.EXPECT().
-					Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1beta1.CertificateSigningRequest{})).
+					Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
 					Return(nil)
 
 				Expect(DeleteBootstrapAuth(ctx, c, csrName, "")).To(Succeed())
@@ -207,8 +206,8 @@ var _ = Describe("Util", func() {
 
 				gomock.InOrder(
 					c.EXPECT().
-						Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1beta1.CertificateSigningRequest{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1beta1.CertificateSigningRequest) error {
+						Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
+						DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1.CertificateSigningRequest) error {
 							csr.Spec.Username = bootstrapTokenUserName
 							return nil
 						}),
@@ -233,8 +232,8 @@ var _ = Describe("Util", func() {
 
 				gomock.InOrder(
 					c.EXPECT().
-						Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1beta1.CertificateSigningRequest{})).
-						DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1beta1.CertificateSigningRequest) error {
+						Get(ctx, csrKey, gomock.AssignableToTypeOf(&certificatesv1.CertificateSigningRequest{})).
+						DoAndReturn(func(_ context.Context, _ client.ObjectKey, csr *certificatesv1.CertificateSigningRequest) error {
 							csr.Spec.Username = serviceAccountUserName
 							return nil
 						}),

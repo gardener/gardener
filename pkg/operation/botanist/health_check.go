@@ -909,7 +909,7 @@ func (b *Botanist) getAllExtensionConditions(ctx context.Context) ([]ExtensionCo
 		conditionsSystemComponentsHealthy []ExtensionCondition
 	)
 
-	for _, listObj := range []runtime.Object{
+	for _, listObj := range []client.ObjectList{
 		&extensionsv1alpha1.BackupEntryList{},
 		&extensionsv1alpha1.ContainerRuntimeList{},
 		&extensionsv1alpha1.ControlPlaneList{},

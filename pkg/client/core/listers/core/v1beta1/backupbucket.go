@@ -26,10 +26,13 @@ import (
 )
 
 // BackupBucketLister helps list BackupBuckets.
+// All objects returned here must be treated as read-only.
 type BackupBucketLister interface {
 	// List lists all BackupBuckets in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.BackupBucket, err error)
 	// Get retrieves the BackupBucket from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.BackupBucket, error)
 	BackupBucketListerExpansion
 }

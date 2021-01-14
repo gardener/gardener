@@ -26,8 +26,10 @@ import (
 )
 
 // BackupEntryLister helps list BackupEntries.
+// All objects returned here must be treated as read-only.
 type BackupEntryLister interface {
 	// List lists all BackupEntries in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.BackupEntry, err error)
 	// BackupEntries returns an object that can list and get BackupEntries.
 	BackupEntries(namespace string) BackupEntryNamespaceLister
@@ -58,10 +60,13 @@ func (s *backupEntryLister) BackupEntries(namespace string) BackupEntryNamespace
 }
 
 // BackupEntryNamespaceLister helps list and get BackupEntries.
+// All objects returned here must be treated as read-only.
 type BackupEntryNamespaceLister interface {
 	// List lists all BackupEntries in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.BackupEntry, err error)
 	// Get retrieves the BackupEntry from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.BackupEntry, error)
 	BackupEntryNamespaceListerExpansion
 }

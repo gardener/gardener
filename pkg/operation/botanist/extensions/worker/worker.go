@@ -278,7 +278,7 @@ func (w *worker) Wait(ctx context.Context) error {
 		ctx,
 		w.client,
 		w.logger,
-		func() runtime.Object { return &extensionsv1alpha1.Worker{} },
+		func() client.Object { return &extensionsv1alpha1.Worker{} },
 		extensionsv1alpha1.WorkerResource,
 		w.values.Namespace,
 		w.values.Name,

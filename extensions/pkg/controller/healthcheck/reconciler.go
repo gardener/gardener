@@ -19,15 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/extensions/pkg/controller"
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/pkg/api/extensions"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenv1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
-
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,12 +30,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/pkg/api/extensions"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardenv1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 type reconciler struct {
 	logger              logr.Logger
 	actuator            HealthCheckActuator
-	ctx                 context.Context
 	client              client.Client
 	recorder            record.EventRecorder
 	registeredExtension RegisteredExtension
@@ -81,15 +78,10 @@ func (r *reconciler) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (r *reconciler) InjectStopChannel(stopCh <-chan struct{}) error {
-	r.ctx = contextutil.FromStopChannel(stopCh)
-	return nil
-}
-
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	extension := r.registeredExtension.getExtensionObjFunc()
 
-	if err := r.client.Get(r.ctx, request.NamespacedName, extension); err != nil {
+	if err := r.client.Get(ctx, request.NamespacedName, extension); err != nil {
 		if errors.IsNotFound(err) {
 			return r.resultWithRequeue(), nil
 		}
@@ -111,12 +103,12 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 		return reconcile.Result{}, nil
 	}
 
-	cluster, err := extensionscontroller.GetCluster(r.ctx, r.client, acc.GetNamespace())
+	cluster, err := extensionscontroller.GetCluster(ctx, r.client, acc.GetNamespace())
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if controller.IsHibernated(cluster) {
+	if extensionscontroller.IsHibernated(cluster) {
 		var conditions []condition
 		for _, healthConditionType := range r.registeredExtension.healthConditionTypes {
 			conditionBuilder, err := gardencorev1beta1helper.NewConditionBuilder(gardencorev1beta1.ConditionType(healthConditionType))
@@ -126,7 +118,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 
 			conditions = append(conditions, extensionConditionHibernated(conditionBuilder, healthConditionType))
 		}
-		if err := r.updateExtensionConditions(r.ctx, extension, conditions...); err != nil {
+		if err := r.updateExtensionConditions(ctx, extension, conditions...); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -135,7 +127,7 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	}
 
 	r.logger.V(6).Info("Performing health check", "name", acc.GetName(), "namespace", acc.GetNamespace(), "kind", acc.GetObjectKind().GroupVersionKind().Kind)
-	return r.performHealthCheck(r.ctx, request, extension)
+	return r.performHealthCheck(ctx, request, extension)
 }
 
 func (r *reconciler) performHealthCheck(ctx context.Context, request reconcile.Request, extension extensionsv1alpha1.Object) (reconcile.Result, error) {
@@ -164,7 +156,7 @@ func (r *reconciler) performHealthCheck(ctx context.Context, request reconcile.R
 			return reconcile.Result{}, err
 		}
 
-		var logger logr.InfoLogger
+		var logger logr.Logger
 		if healthCheckResult.Status == gardencorev1beta1.ConditionTrue || healthCheckResult.Status == gardencorev1beta1.ConditionProgressing {
 			logger = r.logger.V(6)
 		} else {

@@ -24,7 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	resourcemanagerv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
@@ -42,7 +42,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -89,11 +88,6 @@ func ReconcileErrCauseOrErr(err error) error {
 		return cause
 	}
 	return err
-}
-
-// SetupSignalHandlerContext sets up a context from signals.SetupSignalHandler stop channel.
-func SetupSignalHandlerContext() context.Context {
-	return contextutil.FromStopChannel(signals.SetupSignalHandler())
 }
 
 // AddToManagerBuilder aggregates various AddToManager functions.
@@ -143,48 +137,16 @@ func HasFinalizer(obj runtime.Object, finalizerName string) (bool, error) {
 
 // EnsureFinalizer ensures that a finalizer of the given name is set on the given object.
 // If the finalizer is not set, it adds it to the list of finalizers and updates the remote object.
-func EnsureFinalizer(ctx context.Context, client client.Client, finalizerName string, obj runtime.Object) error {
-	finalizers, accessor, err := finalizersAndAccessorOf(obj)
-	if err != nil {
-		return err
-	}
-
-	if finalizers.Has(finalizerName) {
-		return nil
-	}
-
-	finalizers.Insert(finalizerName)
-	accessor.SetFinalizers(finalizers.UnsortedList())
-
-	return client.Update(ctx, obj)
-}
+var EnsureFinalizer = controllerutils.EnsureFinalizer
 
 // DeleteFinalizer ensures that the given finalizer is not present anymore in the given object.
 // If it is set, it removes it and issues an update.
-func DeleteFinalizer(ctx context.Context, client client.Client, finalizerName string, obj runtime.Object) error {
-	finalizers, accessor, err := finalizersAndAccessorOf(obj)
-	if err != nil {
-		return err
-	}
-
-	if !finalizers.Has(finalizerName) {
-		return nil
-	}
-
-	finalizers.Delete(finalizerName)
-	accessor.SetFinalizers(finalizers.UnsortedList())
-
-	return client.Update(ctx, obj)
-}
+var DeleteFinalizer = controllerutils.RemoveFinalizer
 
 // DeleteAllFinalizers removes all finalizers from the object and issues an  update.
-func DeleteAllFinalizers(ctx context.Context, client client.Client, obj runtime.Object) error {
+func DeleteAllFinalizers(ctx context.Context, client client.Client, obj client.Object) error {
 	return TryUpdate(ctx, retry.DefaultBackoff, client, obj, func() error {
-		accessor, err := meta.Accessor(obj)
-		if err != nil {
-			return err
-		}
-		accessor.SetFinalizers(nil)
+		obj.SetFinalizers(nil)
 		return nil
 	})
 }
@@ -265,16 +227,12 @@ func GetVerticalPodAutoscalerObject() *unstructured.Unstructured {
 }
 
 // RemoveAnnotation removes an annotation key passed as annotation
-func RemoveAnnotation(ctx context.Context, c client.Client, obj runtime.Object, annotation string) error {
-	accessor, err := meta.Accessor(obj)
-	if err != nil {
-		return err
-	}
+func RemoveAnnotation(ctx context.Context, c client.Client, obj client.Object, annotation string) error {
 	withAnnotation := obj.DeepCopyObject()
 
-	annotations := accessor.GetAnnotations()
+	annotations := obj.GetAnnotations()
 	delete(annotations, annotation)
-	accessor.SetAnnotations(annotations)
+	obj.SetAnnotations(annotations)
 
 	return c.Patch(ctx, obj, client.MergeFrom(withAnnotation))
 }
@@ -294,6 +252,6 @@ func IsMigrated(obj runtime.Object) bool {
 
 // GetObjectByReference gets an object by the given reference, in the given namespace.
 // If the object kind doesn't match the given reference kind this will result in an error.
-func GetObjectByReference(ctx context.Context, c client.Client, ref *autoscalingv1.CrossVersionObjectReference, namespace string, obj runtime.Object) error {
+func GetObjectByReference(ctx context.Context, c client.Client, ref *autoscalingv1.CrossVersionObjectReference, namespace string, obj client.Object) error {
 	return c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: v1beta1constants.ReferencedResourcesPrefix + ref.Name}, obj)
 }

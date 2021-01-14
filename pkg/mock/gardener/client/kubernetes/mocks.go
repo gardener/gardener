@@ -5,6 +5,7 @@
 package kubernetes
 
 import (
+	context "context"
 	reflect "reflect"
 
 	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
@@ -271,7 +272,7 @@ func (mr *MockInterfaceMockRecorder) RESTMapper() *gomock.Call {
 }
 
 // Start mocks base method.
-func (m *MockInterface) Start(arg0 <-chan struct{}) {
+func (m *MockInterface) Start(arg0 context.Context) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "Start", arg0)
 }
@@ -297,7 +298,7 @@ func (mr *MockInterfaceMockRecorder) Version() *gomock.Call {
 }
 
 // WaitForCacheSync mocks base method.
-func (m *MockInterface) WaitForCacheSync(arg0 <-chan struct{}) bool {
+func (m *MockInterface) WaitForCacheSync(arg0 context.Context) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WaitForCacheSync", arg0)
 	ret0, _ := ret[0].(bool)

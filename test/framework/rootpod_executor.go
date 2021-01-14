@@ -114,11 +114,7 @@ func (e *rootPodExecutor) checkPodRunning(ctx context.Context) (bool, error) {
 	}
 
 	pod := e.Pod.DeepCopy()
-	key, err := client.ObjectKeyFromObject(e.Pod)
-	if err != nil {
-		return false, err
-	}
-	if err := e.client.DirectClient().Get(ctx, key, pod); err != nil {
+	if err := e.client.DirectClient().Get(ctx, client.ObjectKeyFromObject(e.Pod), pod); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}

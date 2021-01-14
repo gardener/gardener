@@ -22,7 +22,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -64,7 +63,7 @@ func ScaleDeployment(ctx context.Context, c client.Client, key client.ObjectKey,
 }
 
 // scaleResource scales resource's 'spec.replicas' to replicas count
-func scaleResource(ctx context.Context, c client.Client, obj runtime.Object, replicas int32) error {
+func scaleResource(ctx context.Context, c client.Client, obj client.Object, replicas int32) error {
 	patch := []byte(fmt.Sprintf(`{"spec":{"replicas":%d}}`, replicas))
 
 	// TODO: replace this with call to scale subresource once controller-runtime supports it

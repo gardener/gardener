@@ -17,8 +17,9 @@ package predicate
 import (
 	"errors"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	extensionsevent "github.com/gardener/gardener/extensions/pkg/event"
 	extensionsinject "github.com/gardener/gardener/extensions/pkg/inject"
 	gardencore "github.com/gardener/gardener/pkg/api/core"
 	"github.com/gardener/gardener/pkg/api/extensions"
@@ -38,9 +39,8 @@ import (
 var Log logr.Logger = log.Log
 
 // EvalGeneric returns true if all predicates match for the given object.
-func EvalGeneric(obj runtime.Object, predicates ...predicate.Predicate) bool {
-	e := extensionsevent.NewFromObject(obj)
-
+func EvalGeneric(obj client.Object, predicates ...predicate.Predicate) bool {
+	e := event.GenericEvent{Object: obj}
 	for _, p := range predicates {
 		if !p.Generic(e) {
 			return false
@@ -58,18 +58,14 @@ type shootNotFailedMapper struct {
 }
 
 func (s *shootNotFailedMapper) Map(e event.GenericEvent) bool {
-	if e.Meta == nil {
-		return false
-	}
-
 	// Wait for cache sync because of backing client cache.
-	if !s.Cache.WaitForCacheSync(s.Context.Done()) {
+	if !s.Cache.WaitForCacheSync(s.Context) {
 		err := errors.New("failed to wait for caches to sync")
 		s.log.Error(err, "Could not wait for Cache to sync", "predicate", "ShootNotFailed")
 		return false
 	}
 
-	cluster, err := extensionscontroller.GetCluster(s.Context, s.Client, e.Meta.GetNamespace())
+	cluster, err := extensionscontroller.GetCluster(s.Context, s.Client, e.Object.GetNamespace())
 	if err != nil {
 		s.log.Error(err, "Could not retrieve corresponding cluster")
 		return false
@@ -104,16 +100,16 @@ func HasType(typeName string) predicate.Predicate {
 // HasName returns a predicate that matches the given name of a resource.
 func HasName(name string) predicate.Predicate {
 	return FromMapper(MapperFunc(func(e event.GenericEvent) bool {
-		return e.Meta.GetName() == name
+		return e.Object.GetName() == name
 	}), CreateTrigger, UpdateNewTrigger, DeleteTrigger, GenericTrigger)
 }
 
 // HasOperationAnnotation is a predicate for the operation annotation.
 func HasOperationAnnotation() predicate.Predicate {
 	return FromMapper(MapperFunc(func(e event.GenericEvent) bool {
-		return e.Meta.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationReconcile ||
-			e.Meta.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore ||
-			e.Meta.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate
+		return e.Object.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationReconcile ||
+			e.Object.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore ||
+			e.Object.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate
 	}), CreateTrigger, UpdateNewTrigger, GenericTrigger)
 }
 
@@ -149,7 +145,7 @@ func LastOperationNotSuccessful() predicate.Predicate {
 // IsDeleting is a predicate for objects having a deletion timestamp.
 func IsDeleting() predicate.Predicate {
 	return FromMapper(MapperFunc(func(e event.GenericEvent) bool {
-		return e.Meta.GetDeletionTimestamp() != nil
+		return e.Object.GetDeletionTimestamp() != nil
 	}), CreateTrigger, UpdateNewTrigger, GenericTrigger)
 }
 

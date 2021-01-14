@@ -37,7 +37,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -437,7 +436,7 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
-	objects := []runtime.Object{
+	objects := []client.Object{
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,

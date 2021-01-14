@@ -1021,12 +1021,6 @@ var _ = Describe("kubernetes", func() {
 			podList = &corev1.PodList{}
 		})
 
-		It("should return an error because the provided object is not a List type", func() {
-			obj, err := NewestObject(ctx, c, &corev1.Pod{}, nil)
-			Expect(err).To(MatchError(ContainSubstring("is not a List type")))
-			Expect(obj).To(BeNil())
-		})
-
 		It("should return an error because the List() call failed", func() {
 			c.EXPECT().List(ctx, podList).Return(fakeErr)
 
