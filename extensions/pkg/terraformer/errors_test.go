@@ -18,6 +18,7 @@ import (
 	"regexp"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
@@ -139,20 +140,16 @@ Error: ` + errorLog5error2
 			regexMultiNewline = regexp.MustCompile(`\n{2,}`)
 		)
 
-		It("should parse and format the errors correctly", func() {
-			Expect(retrieveTerraformErrors(map[string]string{
-				"pod1": errorLog1,
-				"pod2": errorLog2,
-				"pod3": errorLog3,
-				"pod4": errorLog4,
-				"pod5": errorLog5,
-			})).To(ConsistOf(
-				"-> Pod 'pod1' reported:\n* "+regexUUID.ReplaceAllString(regexMultiNewline.ReplaceAllString(errorLog1error1, "\n"), "<omitted>"),
-				"-> Pod 'pod2' reported:\n* "+regexUUID.ReplaceAllString(regexMultiNewline.ReplaceAllString(errorLog2error2, "\n")+"\n* "+regexMultiNewline.ReplaceAllString(errorLog2error1, "\n"), "<omitted>"),
-				"-> Pod 'pod3' reported:\n* "+regexUUID.ReplaceAllString(regexMultiNewline.ReplaceAllString(errorLog3error1, "\n")+"\n* "+regexMultiNewline.ReplaceAllString(errorLog3error2, "\n")+"\n* "+regexMultiNewline.ReplaceAllString(errorLog3error3, "\n"), "<omitted>"),
-				"-> Pod 'pod4' reported:\n* "+regexUUID.ReplaceAllString(regexMultiNewline.ReplaceAllString(errorLog4error1, "\n")+"\n* "+regexMultiNewline.ReplaceAllString(errorLog4error1, "\n"), "<omitted>"),
-				"-> Pod 'pod5' reported:\n* "+regexUUID.ReplaceAllString(regexMultiNewline.ReplaceAllString(errorLog5error2, "\n")+"\n* "+regexMultiNewline.ReplaceAllString(errorLog5error1, "\n"), "<omitted>"),
-			))
-		})
+		DescribeTable("detects correct errors",
+			func(podName, logs, expectedMessage string) {
+				Expect(retrieveTerraformErrors(podName, logs)).To(ConsistOf(expectedMessage))
+			},
+
+			Entry("pod1", "pod1", errorLog1, "-> Pod 'pod1' reported:\n* "+regexUUID.ReplaceAllString(regexMultiNewline.ReplaceAllString(errorLog1error1, "\n"), "<omitted>")),
+			Entry("pod2", "pod2", errorLog2, "-> Pod 'pod2' reported:\n* "+regexUUID.ReplaceAllString(regexMultiNewline.ReplaceAllString(errorLog2error2, "\n")+"\n* "+regexMultiNewline.ReplaceAllString(errorLog2error1, "\n"), "<omitted>")),
+			Entry("pod3", "pod3", errorLog3, "-> Pod 'pod3' reported:\n* "+regexUUID.ReplaceAllString(regexMultiNewline.ReplaceAllString(errorLog3error1, "\n")+"\n* "+regexMultiNewline.ReplaceAllString(errorLog3error2, "\n")+"\n* "+regexMultiNewline.ReplaceAllString(errorLog3error3, "\n"), "<omitted>")),
+			Entry("pod4", "pod4", errorLog4, "-> Pod 'pod4' reported:\n* "+regexUUID.ReplaceAllString(regexMultiNewline.ReplaceAllString(errorLog4error1, "\n")+"\n* "+regexMultiNewline.ReplaceAllString(errorLog4error1, "\n"), "<omitted>")),
+			Entry("pod5", "pod5", errorLog5, "-> Pod 'pod5' reported:\n* "+regexUUID.ReplaceAllString(regexMultiNewline.ReplaceAllString(errorLog5error2, "\n")+"\n* "+regexMultiNewline.ReplaceAllString(errorLog5error1, "\n"), "<omitted>")),
+		)
 	})
 })

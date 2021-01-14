@@ -80,14 +80,14 @@ type RawState struct {
 const (
 	numberOfConfigResources = 3
 
-	// TerraformerConfigSuffix is the suffix used for the ConfigMap which stores the Terraform configuration and variables declaration.
-	TerraformerConfigSuffix = ".tf-config"
+	// ConfigSuffix is the suffix used for the ConfigMap which stores the Terraform configuration and variables declaration.
+	ConfigSuffix = ".tf-config"
 
-	// TerraformerVariablesSuffix is the suffix used for the Secret which stores the Terraform variables definition.
-	TerraformerVariablesSuffix = ".tf-vars"
+	// VariablesSuffix is the suffix used for the Secret which stores the Terraform variables definition.
+	VariablesSuffix = ".tf-vars"
 
-	// TerraformerStateSuffix is the suffix used for the ConfigMap which stores the Terraform state.
-	TerraformerStateSuffix = ".tf-state"
+	// StateSuffix is the suffix used for the ConfigMap which stores the Terraform state.
+	StateSuffix = ".tf-state"
 
 	// Base64Encoding denotes base64 encoding for the RawState.Data
 	Base64Encoding = "base64"
