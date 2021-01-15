@@ -27,6 +27,12 @@ const BackupBucketResource = "BackupBucket"
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:resource:scope=Cluster,path=backupbuckets,shortName=bb,singular=backupbucket
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Type,JSONPath=".spec.type",type=string,description="The type of the cloud provider for this resource."
+// +kubebuilder:printcolumn:name=Region,JSONPath=".spec.region",type=string,description="The region into which the backup bucket should be created."
+// +kubebuilder:printcolumn:name=State,JSONPath=".status.lastOperation.state",type=string,description="status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed"
+// +kubebuilder:printcolumn:name=Age,JSONPath=".metadata.creationTimestamp",type=date,description="creation timestamp"
 
 // BackupBucket is a specification for backup bucket.
 type BackupBucket struct {
@@ -34,7 +40,8 @@ type BackupBucket struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   BackupBucketSpec   `json:"spec"`
+	Spec BackupBucketSpec `json:"spec"`
+	// +optional
 	Status BackupBucketStatus `json:"status"`
 }
 

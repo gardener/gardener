@@ -54,6 +54,7 @@ spec:
           description: InfrastructureSpec is the spec for an Infrastructure resource.
           properties:
             providerConfig:
+              description: ProviderConfig is the provider specific configuration.
               type: object
               x-kubernetes-preserve-unknown-fields: true
             region:
@@ -216,6 +217,7 @@ spec:
             state:
               description: State can be filled by the operating controller with what ever data it needs.
               type: object
+              x-kubernetes-preserve-unknown-fields: true
           type: object
       required:
         - spec

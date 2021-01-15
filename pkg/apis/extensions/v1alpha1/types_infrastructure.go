@@ -26,6 +26,12 @@ const InfrastructureResource = "Infrastructure"
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:resource:scope=Namespaced,path=infrastructures,shortName=infra,singular=infrastructure
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Type,JSONPath=".spec.type",type=string,description="The type of the cloud provider for this resource."
+// +kubebuilder:printcolumn:name=Region,JSONPath=".spec.region",type=string,description="The region into which the infrastructure should be deployed."
+// +kubebuilder:printcolumn:name=Status,JSONPath=".status.lastOperation.state",type=string,description="Status of infrastructure resource."
+// +kubebuilder:printcolumn:name=Age,JSONPath=".metadata.creationTimestamp",type=date,description="creation timestamp"
 
 // Infrastructure is a specification for cloud provider infrastructure.
 type Infrastructure struct {
@@ -33,7 +39,8 @@ type Infrastructure struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   InfrastructureSpec   `json:"spec"`
+	Spec InfrastructureSpec `json:"spec"`
+	// +optional
 	Status InfrastructureStatus `json:"status"`
 }
 

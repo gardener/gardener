@@ -57,6 +57,7 @@ spec:
               description: PodCIDR defines the CIDR that will be used for pods.
               type: string
             providerConfig:
+              description: ProviderConfig is the provider specific configuration.
               type: object
               x-kubernetes-preserve-unknown-fields: true
             serviceCIDR:
@@ -202,6 +203,7 @@ spec:
             state:
               description: State can be filled by the operating controller with what ever data it needs.
               type: object
+              x-kubernetes-preserve-unknown-fields: true
           type: object
       required:
         - spec
