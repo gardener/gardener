@@ -48,7 +48,6 @@ import (
 var (
 	kubeSystemLabels = labels.Set{
 		common.ShootNoCleanup:            "true",
-		v1beta1constants.LabelRole:       metav1.NamespaceSystem,
 		v1beta1constants.GardenerPurpose: metav1.NamespaceSystem,
 	}
 	podsLabels = labels.Set{
@@ -60,9 +59,10 @@ var (
 	WebhookConstraintMatchers = []WebhookConstraintMatcher{
 		{GVR: corev1.SchemeGroupVersion.WithResource("pods"), NamespaceLabels: kubeSystemLabels, ObjectLabels: podsLabels},
 		{GVR: corev1.SchemeGroupVersion.WithResource("pods"), NamespaceLabels: kubeSystemLabels, ObjectLabels: podsLabels, Subresource: "status"},
-		{GVR: corev1.SchemeGroupVersion.WithResource("configmaps"), NamespaceLabels: kubeSystemLabels},
 
-		// kube-system and default namespaces for apiserver in-cluster discovery.
+		// leader election of kube-controller-manager, kube-scheduler, cloud-controller-manager, cluster-autoscaler, ...
+		{GVR: corev1.SchemeGroupVersion.WithResource("configmaps"), NamespaceLabels: kubeSystemLabels},
+		// kube-system and default namespaces for leader election and apiserver in-cluster discovery.
 		{GVR: corev1.SchemeGroupVersion.WithResource("endpoints")},
 
 		{GVR: corev1.SchemeGroupVersion.WithResource("secrets"), NamespaceLabels: kubeSystemLabels},

@@ -17,8 +17,6 @@ package care_test
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/operation/care"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -47,6 +45,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
+
+	"github.com/gardener/gardener/pkg/operation/care"
 )
 
 type webhookTestCase struct {
@@ -55,6 +55,7 @@ type webhookTestCase struct {
 	gvr               schema.GroupVersionResource
 	namespaceSelector *metav1.LabelSelector
 	objectSelector    *metav1.LabelSelector
+	timeoutSeconds    *int32
 }
 
 func (w *webhookTestCase) build() (
@@ -62,6 +63,7 @@ func (w *webhookTestCase) build() (
 	objSelector *metav1.LabelSelector,
 	nsSelector *metav1.LabelSelector,
 	rules []admissionregistrationv1beta1.RuleWithOperations,
+	timeoutSeconds *int32,
 ) {
 	failurePolicy = w.failurePolicy
 	nsSelector = w.namespaceSelector
@@ -73,6 +75,7 @@ func (w *webhookTestCase) build() (
 			APIVersions: []string{w.gvr.Version},
 		}},
 	}
+	timeoutSeconds = w.timeoutSeconds
 
 	opType := admissionregistrationv1beta1.OperationAll
 	if w.operationType != nil {
@@ -89,6 +92,9 @@ var _ = Describe("#IsProblematicWebhook", func() {
 		failurePolicyIgnore = admissionregistrationv1beta1.Ignore
 		failurePolicyFail   = admissionregistrationv1beta1.Fail
 
+		timeoutSecondsNotProblematic int32 = 15
+		timeoutSecondsProblematic    int32 = 16
+
 		operationCreate = admissionregistrationv1beta1.Create
 		operationUpdate = admissionregistrationv1beta1.Update
 		operationAll    = admissionregistrationv1beta1.OperationAll
@@ -103,16 +109,11 @@ var _ = Describe("#IsProblematicWebhook", func() {
 				namespaceSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"gardener.cloud/purpose": "kube-system"}},
 			}),
-			Entry("namespaceSelector matching role", webhookTestCase{
-				namespaceSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{"role": "kube-system"}},
-			}),
 			Entry("namespaceSelector matching all gardener labels", webhookTestCase{
 				namespaceSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"shoot.gardener.cloud/no-cleanup": "true",
 						"gardener.cloud/purpose":          "kube-system",
-						"role":                            "kube-system",
 					}},
 			}),
 		}
@@ -128,14 +129,25 @@ var _ = Describe("#IsProblematicWebhook", func() {
 			DescribeTable(fmt.Sprintf("problematic webhook for %s", gvr.String()),
 				func(testCase webhookTestCase) {
 					testCase.gvr = gvr
-					Expect(care.IsProblematicWebhook(testCase.build())).To(BeTrue())
+					Expect(care.IsProblematicWebhook(testCase.build())).To(BeTrue(), "expected webhook to be problematic")
 				},
 				append([]TableEntry{
 					Entry("CREATE", webhookTestCase{
-						failurePolicy: &failurePolicyFail,
-						operationType: &operationCreate,
+						failurePolicy:  &failurePolicyFail,
+						timeoutSeconds: &timeoutSecondsProblematic,
+						operationType:  &operationCreate,
 					}),
-					Entry("CREATE with nil failure policy", webhookTestCase{operationType: &operationCreate}),
+					Entry("CREATE with nil failurePolicy and nil timeoutSeconds", webhookTestCase{operationType: &operationCreate}),
+					Entry("CREATE with nil failurePolicy and timeoutSeconds too high",
+						webhookTestCase{operationType: &operationCreate, timeoutSeconds: &timeoutSecondsProblematic}),
+					Entry("CREATE with failurePolicy 'Ignore' and nil timeoutSeconds",
+						webhookTestCase{failurePolicy: &failurePolicyIgnore, operationType: &operationCreate}),
+					Entry("CREATE with failurePolicy 'Ignore' and timeoutSeconds too high",
+						webhookTestCase{failurePolicy: &failurePolicyIgnore, operationType: &operationCreate, timeoutSeconds: &timeoutSecondsProblematic}),
+					Entry("CREATE with failurePolicy 'Fail' and nil timeoutSeconds",
+						webhookTestCase{failurePolicy: &failurePolicyFail, operationType: &operationCreate}),
+					Entry("CREATE with failurePolicy 'Fail' and timeoutSeconds ok",
+						webhookTestCase{failurePolicy: &failurePolicyFail, operationType: &operationCreate, timeoutSeconds: &timeoutSecondsNotProblematic}),
 					Entry("UPDATE", webhookTestCase{operationType: &operationUpdate}),
 					Entry("*", webhookTestCase{operationType: &operationAll}),
 				}, problematic...)...,
@@ -144,10 +156,10 @@ var _ = Describe("#IsProblematicWebhook", func() {
 			DescribeTable(fmt.Sprintf("not problematic webhook for %s", gvr.String()),
 				func(testCase webhookTestCase) {
 					testCase.gvr = gvr
-					Expect(care.IsProblematicWebhook(testCase.build())).To(BeFalse())
+					Expect(care.IsProblematicWebhook(testCase.build())).To(BeFalse(), "expected webhook not to be problematic")
 				},
 				append([]TableEntry{
-					Entry("failurePolicy 'Ignore'", webhookTestCase{failurePolicy: &failurePolicyIgnore}),
+					Entry("failurePolicy 'Ignore' and timeoutSeconds ok", webhookTestCase{failurePolicy: &failurePolicyIgnore, timeoutSeconds: &timeoutSecondsNotProblematic}),
 					Entry("operationType 'DELETE'", webhookTestCase{operationType: &operationDelete}),
 				}, notProblematic...)...,
 			)
@@ -180,7 +192,6 @@ var _ = Describe("#IsProblematicWebhook", func() {
 						MatchLabels: map[string]string{
 							"shoot.gardener.cloud/no-cleanup": "true",
 							"gardener.cloud/purpose":          "kube-system",
-							"role":                            "kube-system",
 						}},
 				}),
 			), append(kubeSystemNamespaceNotProblematic,
@@ -204,7 +215,6 @@ var _ = Describe("#IsProblematicWebhook", func() {
 						MatchLabels: map[string]string{
 							"shoot.gardener.cloud/no-cleanup": "true",
 							"gardener.cloud/purpose":          "kube-system",
-							"role":                            "kube-system",
 						}},
 				}),
 			))
@@ -242,7 +252,7 @@ var _ = Describe("#IsProblematicWebhook", func() {
 	kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("replicasets/status"))
 	kubeSystemNamespaceTables(appsv1.SchemeGroupVersion.WithResource("replicasets/scale"))
 
-	//don't remove this version if deprecated / removed
+	// don't remove this version if deprecated / removed
 	kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("controllerrevisions"))
 	kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("daemonsets"))
 	kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("daemonsets/status"))
@@ -252,7 +262,7 @@ var _ = Describe("#IsProblematicWebhook", func() {
 	kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("replicasets/status"))
 	kubeSystemNamespaceTables(appsv1beta1.SchemeGroupVersion.WithResource("replicasets/scale"))
 
-	//don't remove this version if deprecated / removed
+	// don't remove this version if deprecated / removed
 	kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("controllerrevisions"))
 	kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("daemonsets"))
 	kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("daemonsets/status"))
@@ -262,7 +272,7 @@ var _ = Describe("#IsProblematicWebhook", func() {
 	kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("replicasets/status"))
 	kubeSystemNamespaceTables(appsv1beta2.SchemeGroupVersion.WithResource("replicasets/scale"))
 
-	//don't remove this version if deprecated / removed
+	// don't remove this version if deprecated / removed
 	kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("controllerrevisions"))
 	kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("daemonsets"))
 	kubeSystemNamespaceTables(extensionsv1beta1.SchemeGroupVersion.WithResource("daemonsets/status"))
