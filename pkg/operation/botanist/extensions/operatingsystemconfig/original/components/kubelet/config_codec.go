@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controlplane
+package kubelet
 
 import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -27,9 +27,9 @@ import (
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 )
 
-// KubeletConfigCodec contains methods for encoding and decoding *kubeletconfigv1beta1.KubeletConfiguration objects
+// ConfigCodec contains methods for encoding and decoding *kubeletconfigv1beta1.KubeletConfiguration objects
 // to and from *extensionsv1alpha1.FileContentInline.
-type KubeletConfigCodec interface {
+type ConfigCodec interface {
 	// Encode encodes the given *kubeletconfigv1beta1.KubeletConfiguration into a *extensionsv1alpha1.FileContentInline.
 	Encode(*kubeletconfigv1beta1.KubeletConfiguration, string) (*extensionsv1alpha1.FileContentInline, error)
 	// Decode decodes a *kubeletconfigv1beta1.KubeletConfiguration from the given *extensionsv1alpha1.FileContentInline.
@@ -44,26 +44,26 @@ func init() {
 	utilruntime.Must(kubeletconfigv1beta1.AddToScheme(scheme))
 }
 
-// NewKubeletConfigCodec creates an returns a new KubeletConfigCodec.
-func NewKubeletConfigCodec(fciCodec oscutils.FileContentInlineCodec) KubeletConfigCodec {
+// NewConfigCodec creates an returns a new ConfigCodec.
+func NewConfigCodec(fciCodec oscutils.FileContentInlineCodec) ConfigCodec {
 	// Create codec for encoding / decoding to and from YAML
 	ser := json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
 	versions := schema.GroupVersions([]schema.GroupVersion{kubeletconfigv1beta1.SchemeGroupVersion})
 	codec := serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
 
-	return &kubeletConfigCodec{
+	return &configCodec{
 		fciCodec: fciCodec,
 		codec:    codec,
 	}
 }
 
-type kubeletConfigCodec struct {
+type configCodec struct {
 	fciCodec oscutils.FileContentInlineCodec
 	codec    runtime.Codec
 }
 
 // Encode encodes the given *kubeletconfigv1beta1.KubeletConfiguration into a *extensionsv1alpha1.FileContentInline.
-func (c *kubeletConfigCodec) Encode(kubeletConfig *kubeletconfigv1beta1.KubeletConfiguration, encoding string) (*extensionsv1alpha1.FileContentInline, error) {
+func (c *configCodec) Encode(kubeletConfig *kubeletconfigv1beta1.KubeletConfiguration, encoding string) (*extensionsv1alpha1.FileContentInline, error) {
 	// Encode kubelet configuration to YAML
 	data, err := runtime.Encode(c.codec, kubeletConfig)
 	if err != nil {
@@ -79,7 +79,7 @@ func (c *kubeletConfigCodec) Encode(kubeletConfig *kubeletconfigv1beta1.KubeletC
 }
 
 // Decode decodes a *kubeletconfigv1beta1.KubeletConfiguration from the given *extensionsv1alpha1.FileContentInline.
-func (c *kubeletConfigCodec) Decode(fci *extensionsv1alpha1.FileContentInline) (*kubeletconfigv1beta1.KubeletConfiguration, error) {
+func (c *configCodec) Decode(fci *extensionsv1alpha1.FileContentInline) (*kubeletconfigv1beta1.KubeletConfiguration, error) {
 	data, err := c.fciCodec.Decode(fci)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode kubelet config file content data")

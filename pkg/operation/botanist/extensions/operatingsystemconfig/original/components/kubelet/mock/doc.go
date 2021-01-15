@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -package=controlplane -destination=mocks.go github.com/gardener/gardener/extensions/pkg/webhook/controlplane KubeletConfigCodec
+//go:generate mockgen -package=kubelet -destination=mocks.go github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/kubelet ConfigCodec
 
-package controlplane
+package kubelet

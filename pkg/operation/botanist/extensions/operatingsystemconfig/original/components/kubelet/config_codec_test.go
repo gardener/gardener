@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controlplane
+package kubelet
 
 import (
 	"time"
@@ -27,7 +27,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-var _ = Describe("KubeletConfigCodec", func() {
+var _ = Describe("ConfigCodec", func() {
 	var (
 		kubeletConfig = &kubeletconfigv1beta1.KubeletConfiguration{
 			TypeMeta: metav1.TypeMeta{
@@ -205,7 +205,7 @@ volumeStatsAggPeriod: 1m0s
 	Describe("#Encode", func() {
 		It("should encode the given KubeletConfiguration into a FileContentInline appropriately", func() {
 			// Create codec
-			c := NewKubeletConfigCodec(oscutils.NewFileContentInlineCodec())
+			c := NewConfigCodec(oscutils.NewFileContentInlineCodec())
 
 			// Call Encode and check result
 			fci, err := c.Encode(kubeletConfig, "")
@@ -217,7 +217,7 @@ volumeStatsAggPeriod: 1m0s
 	Describe("#Decode", func() {
 		It("should decode a KubeletConfiguration from the given FileContentInline appropriately", func() {
 			// Create codec
-			c := NewKubeletConfigCodec(oscutils.NewFileContentInlineCodec())
+			c := NewConfigCodec(oscutils.NewFileContentInlineCodec())
 
 			// Call Decode and check result
 			kc, err := c.Decode(fileContent)

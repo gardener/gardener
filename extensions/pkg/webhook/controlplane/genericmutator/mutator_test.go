@@ -27,8 +27,9 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mockcontrolplane "github.com/gardener/gardener/pkg/mock/gardener/extensions/webhook/controlplane"
 	mockgenericmutator "github.com/gardener/gardener/pkg/mock/gardener/extensions/webhook/controlplane/genericmutator"
+	mockkubelet "github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/kubelet/mock"
+	mockoscutils "github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/utils/mock"
 
 	"github.com/coreos/go-systemd/v22/unit"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -118,18 +119,18 @@ var _ = Describe("Mutator", func() {
 	Describe("#Mutate", func() {
 		var (
 			mutator  extensionswebhook.Mutator
-			kcc      *mockcontrolplane.MockKubeletConfigCodec
+			kcc      *mockkubelet.MockConfigCodec
 			ensurer  *mockgenericmutator.MockEnsurer
-			us       *mockcontrolplane.MockUnitSerializer
-			fcic     *mockcontrolplane.MockFileContentInlineCodec
+			us       *mockoscutils.MockUnitSerializer
+			fcic     *mockoscutils.MockFileContentInlineCodec
 			old, new client.Object
 		)
 
 		BeforeEach(func() {
 			ensurer = mockgenericmutator.NewMockEnsurer(ctrl)
-			kcc = mockcontrolplane.NewMockKubeletConfigCodec(ctrl)
-			us = mockcontrolplane.NewMockUnitSerializer(ctrl)
-			fcic = mockcontrolplane.NewMockFileContentInlineCodec(ctrl)
+			kcc = mockkubelet.NewMockConfigCodec(ctrl)
+			us = mockoscutils.NewMockUnitSerializer(ctrl)
+			fcic = mockoscutils.NewMockFileContentInlineCodec(ctrl)
 			mutator = genericmutator.NewMutator(ensurer, us, kcc, fcic, logger)
 			old = nil
 			new = nil
