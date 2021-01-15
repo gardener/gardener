@@ -17,6 +17,8 @@ spec:
   - pathPrefix: /var/run/dbus/system_bus_socket
   - pathPrefix: /lib/modules
   - pathPrefix: /var/lib/kube-proxy
+  allowedCapabilities:
+  - NET_ADMIN
   runAsUser:
     rule: 'RunAsAny'
   seLinux:
