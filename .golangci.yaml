@@ -5,6 +5,7 @@ run:
   skip-dirs:
   - pkg/client/core
   - pkg/client/extensions
+  - pkg/client/seedmanagement
   - pkg/client/settings
 
   skip-files:
