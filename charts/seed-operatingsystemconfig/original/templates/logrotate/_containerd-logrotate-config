@@ -1,9 +1,0 @@
-{{- define "containerd-logrotate-config" -}}
-- path: /etc/systemd/containerd.conf
-  permissions: 0644
-  content:
-    inline:
-      encoding: ""
-      data: |
-{{ include "containerd-config" . | indent 8 }}
-{{- end -}}
