@@ -40,3 +40,19 @@ Please note that only the token (and basic auth password, if enabled) are exchan
 ```bash
 kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/operation=rotate-kubeconfig-credentials
 ```
+
+## Restart systemd services on particular worker nodes
+
+It is possible to make Gardener restart particular systemd services on your shoot worker nodes if needed.
+The annotation is not set on the `Shoot` resource but directly on the `Node` object you want to target.
+For example, the following will restart both the `kubelet` and the `docker` services:
+
+```bash
+kubectl annotate node <node-name> worker.gardener.cloud/restart-systemd-services=kubelet,docker
+```
+
+It may take up to a minute until the service is restarted.
+The annotation will be removed from the `Node` object after all specified systemd services have been restarted.
+It will also be removed even if the restart of one or more services failed.
+
+> ℹ️ In the example mentioned above, you could additionally verify when/whether the kubelet restarted by using `kubectl describe node <node-name>` and looking for such a `Starting kubelet` event.

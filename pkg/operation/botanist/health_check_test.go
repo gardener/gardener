@@ -15,6 +15,7 @@
 package botanist_test
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -22,12 +23,15 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -38,6 +42,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
@@ -58,12 +63,6 @@ func constDeploymentLister(deployments []*appsv1.Deployment) kutil.DeploymentLis
 func constStatefulSetLister(statefulSets []*appsv1.StatefulSet) kutil.StatefulSetLister {
 	return kutil.NewStatefulSetLister(func() ([]*appsv1.StatefulSet, error) {
 		return statefulSets, nil
-	})
-}
-
-func constNodeLister(nodes []*corev1.Node) kutil.NodeLister {
-	return kutil.NewNodeLister(func() ([]*corev1.Node, error) {
-		return nodes, nil
 	})
 }
 
@@ -133,11 +132,12 @@ func newEtcd(namespace, name, role string, healthy bool, lastError *string) *dru
 	return etcd
 }
 
-func newNode(name string, healthy bool, labels labels.Set, kubeletVersion string) *corev1.Node {
-	node := &corev1.Node{
+func newNode(name string, healthy bool, labels labels.Set, annotations map[string]string, kubeletVersion string) corev1.Node {
+	node := corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: labels,
+			Name:        name,
+			Labels:      labels,
+			Annotations: annotations,
 		},
 		Status: corev1.NodeStatus{
 			NodeInfo: corev1.NodeSystemInfo{
@@ -508,148 +508,232 @@ var _ = Describe("health check", func() {
 			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.OutdatedStatusError, "outdated")),
 	)
 
-	var (
-		workerPoolName1 = "cpu-worker-1"
-		workerPoolName2 = "cpu-worker-2"
-		nodeName        = "node1"
-	)
+	Describe("#CheckClusterNodes", func() {
+		var (
+			ctrl *gomock.Controller
+			c    *mockclient.MockClient
 
-	DescribeTable("#CheckClusterNodes",
-		func(nodes []*corev1.Node, workerPools []gardencorev1beta1.Worker, conditionMatcher types.GomegaMatcher) {
-			var (
-				nodeLister = constNodeLister(nodes)
-				checker    = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
-			)
+			ctx                        = context.TODO()
+			workerPoolName1            = "cpu-worker-1"
+			workerPoolName2            = "cpu-worker-2"
+			cloudConfigSecretChecksum1 = "foo"
+			cloudConfigSecretChecksum2 = "foo"
+			nodeName                   = "node1"
+			cloudConfigSecretChecksums = map[string]string{
+				workerPoolName1: cloudConfigSecretChecksum1,
+				workerPoolName2: cloudConfigSecretChecksum2,
+			}
+		)
 
-			exitCondition, err := checker.CheckClusterNodes(workerPools, condition, nodeLister)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(exitCondition).To(conditionMatcher)
-		},
-		Entry("all healthy",
-			[]*corev1.Node{
-				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, kubernetesVersion.Original()),
-			},
-			[]gardencorev1beta1.Worker{
-				{
-					Name:    workerPoolName1,
-					Maximum: 10,
-					Minimum: 1,
-				},
-			},
-			BeNil()),
-		Entry("node not healthy",
-			[]*corev1.Node{
-				newNode(nodeName, false, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, kubernetesVersion.Original()),
-			},
-			[]gardencorev1beta1.Worker{
-				{
-					Name:    workerPoolName1,
-					Maximum: 10,
-					Minimum: 1,
-				},
-			},
-			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "NodeUnhealthy", fmt.Sprintf("Node '%s' in worker group '%s' is unhealthy", nodeName, workerPoolName1))),
-		Entry("node not healthy with error codes",
-			[]*corev1.Node{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   nodeName,
-						Labels: labels.Set{"worker.gardener.cloud/pool": workerPoolName1},
-					},
-					Status: corev1.NodeStatus{
-						Conditions: []corev1.NodeCondition{
-							{
-								Type:   corev1.NodeReady,
-								Status: corev1.ConditionTrue,
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+			c = mockclient.NewMockClient(ctrl)
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		DescribeTable("#CheckClusterNodes",
+			func(nodes []corev1.Node, workerPools []gardencorev1beta1.Worker, cloudConfigSecretChecksums map[string]string, conditionMatcher types.GomegaMatcher) {
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list *corev1.NodeList, _ ...client.ListOption) error {
+					*list = corev1.NodeList{Items: nodes}
+					return nil
+				})
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), gomock.AssignableToTypeOf(client.MatchingLabels{})).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+					*list = corev1.SecretList{}
+					for pool, checksum := range cloudConfigSecretChecksums {
+						list.Items = append(list.Items, corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Labels:      map[string]string{v1beta1constants.LabelWorkerPool: pool},
+								Annotations: map[string]string{common.CloudConfigChecksumSecretAnnotation: checksum},
 							},
-							{
-								Type:   corev1.NodeDiskPressure,
-								Status: corev1.ConditionTrue,
-								Reason: "KubeletHasDiskPressure",
+						})
+					}
+					return nil
+				})
+
+				checker := botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
+
+				exitCondition, err := checker.CheckClusterNodes(ctx, c, workerPools, condition)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(exitCondition).To(conditionMatcher)
+			},
+			Entry("all healthy",
+				[]corev1.Node{
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, kubernetesVersion.Original()),
+				},
+				[]gardencorev1beta1.Worker{
+					{
+						Name:    workerPoolName1,
+						Maximum: 10,
+						Minimum: 1,
+					},
+				},
+				cloudConfigSecretChecksums,
+				BeNil()),
+			Entry("node not healthy",
+				[]corev1.Node{
+					newNode(nodeName, false, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, kubernetesVersion.Original()),
+				},
+				[]gardencorev1beta1.Worker{
+					{
+						Name:    workerPoolName1,
+						Maximum: 10,
+						Minimum: 1,
+					},
+				},
+				cloudConfigSecretChecksums,
+				beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "NodeUnhealthy", fmt.Sprintf("Node '%s' in worker group '%s' is unhealthy", nodeName, workerPoolName1))),
+			Entry("node not healthy with error codes",
+				[]corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   nodeName,
+							Labels: labels.Set{"worker.gardener.cloud/pool": workerPoolName1},
+						},
+						Status: corev1.NodeStatus{
+							Conditions: []corev1.NodeCondition{
+								{
+									Type:   corev1.NodeReady,
+									Status: corev1.ConditionTrue,
+								},
+								{
+									Type:   corev1.NodeDiskPressure,
+									Status: corev1.ConditionTrue,
+									Reason: "KubeletHasDiskPressure",
+								},
 							},
 						},
 					},
 				},
-			},
-			[]gardencorev1beta1.Worker{
-				{
-					Name:    workerPoolName1,
-					Maximum: 10,
-					Minimum: 1,
+				[]gardencorev1beta1.Worker{
+					{
+						Name:    workerPoolName1,
+						Maximum: 10,
+						Minimum: 1,
+					},
 				},
-			},
-			beConditionWithStatusAndCodes(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ErrorConfigurationProblem)),
-		Entry("not enough nodes in worker pool",
-			[]*corev1.Node{
-				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, kubernetesVersion.Original()),
-			},
-			[]gardencorev1beta1.Worker{
-				{
-					Name:    workerPoolName1,
-					Maximum: 10,
-					Minimum: 1,
+				cloudConfigSecretChecksums,
+				beConditionWithStatusAndCodes(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ErrorConfigurationProblem)),
+			Entry("not enough nodes in worker pool",
+				[]corev1.Node{
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, kubernetesVersion.Original()),
 				},
-				{
-					Name:    workerPoolName2,
-					Maximum: 2,
-					Minimum: 1,
+				[]gardencorev1beta1.Worker{
+					{
+						Name:    workerPoolName1,
+						Maximum: 10,
+						Minimum: 1,
+					},
+					{
+						Name:    workerPoolName2,
+						Maximum: 2,
+						Minimum: 1,
+					},
 				},
-			},
-			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool '%s' to meet minimum desired machine count. (%d/%d).", workerPoolName2, 0, 1))),
-		Entry("not enough nodes in worker pool",
-			[]*corev1.Node{
-				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, kubernetesVersion.Original()),
-			},
-			[]gardencorev1beta1.Worker{
-				{
-					Name:    workerPoolName1,
-					Maximum: 10,
-					Minimum: 1,
+				cloudConfigSecretChecksums,
+				beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool '%s' to meet minimum desired machine count. (%d/%d).", workerPoolName2, 0, 1))),
+			Entry("not enough nodes in worker pool",
+				[]corev1.Node{
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, kubernetesVersion.Original()),
 				},
-				{
-					Name:    workerPoolName2,
-					Maximum: 2,
-					Minimum: 1,
+				[]gardencorev1beta1.Worker{
+					{
+						Name:    workerPoolName1,
+						Maximum: 10,
+						Minimum: 1,
+					},
+					{
+						Name:    workerPoolName2,
+						Maximum: 2,
+						Minimum: 1,
+					},
 				},
-			},
-			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool '%s' to meet minimum desired machine count. (%d/%d).", workerPoolName2, 0, 1))),
-		Entry("too old Kubernetes patch version",
-			[]*corev1.Node{
-				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, "v1.19.2"),
-			},
-			[]gardencorev1beta1.Worker{
-				{
-					Name:    workerPoolName1,
-					Maximum: 10,
-					Minimum: 1,
+				cloudConfigSecretChecksums,
+				beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool '%s' to meet minimum desired machine count. (%d/%d).", workerPoolName2, 0, 1))),
+			Entry("too old Kubernetes patch version",
+				[]corev1.Node{
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, "v1.19.2"),
 				},
-			},
-			beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (v1.19.2) does not match the desired Kubernetes version (v%s)", nodeName, kubernetesVersion.Original()))),
-		Entry("same Kubernetes patch version",
-			[]*corev1.Node{
-				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, "v1.19.3"),
-			},
-			[]gardencorev1beta1.Worker{
-				{
-					Name:    workerPoolName1,
-					Maximum: 10,
-					Minimum: 1,
+				[]gardencorev1beta1.Worker{
+					{
+						Name:    workerPoolName1,
+						Maximum: 10,
+						Minimum: 1,
+					},
 				},
-			},
-			BeNil()),
-		Entry("different Kubernetes minor version (all healthy)",
-			[]*corev1.Node{
-				newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, "v1.18.2"),
-			},
-			[]gardencorev1beta1.Worker{
-				{
-					Name:    workerPoolName1,
-					Maximum: 10,
-					Minimum: 1,
+				cloudConfigSecretChecksums,
+				beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "KubeletVersionMismatch", fmt.Sprintf("The kubelet version for node %q (v1.19.2) does not match the desired Kubernetes version (v%s)", nodeName, kubernetesVersion.Original()))),
+			Entry("same Kubernetes patch version",
+				[]corev1.Node{
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, "v1.19.3"),
 				},
-			},
-			BeNil()),
-	)
+				[]gardencorev1beta1.Worker{
+					{
+						Name:    workerPoolName1,
+						Maximum: 10,
+						Minimum: 1,
+					},
+				},
+				cloudConfigSecretChecksums,
+				BeNil()),
+			Entry("different Kubernetes minor version (all healthy)",
+				[]corev1.Node{
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, "v1.18.2"),
+				},
+				[]gardencorev1beta1.Worker{
+					{
+						Name:    workerPoolName1,
+						Maximum: 10,
+						Minimum: 1,
+					},
+				},
+				cloudConfigSecretChecksums,
+				BeNil()),
+			Entry("missing cloud-config secret checksum for a worker pool",
+				[]corev1.Node{
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, "v1.18.2"),
+				},
+				[]gardencorev1beta1.Worker{
+					{
+						Name:    workerPoolName1,
+						Maximum: 10,
+						Minimum: 1,
+					},
+				},
+				nil,
+				BeNil()),
+			Entry("no cloud-config node checksum for a worker pool",
+				[]corev1.Node{
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, "v1.18.2"),
+				},
+				[]gardencorev1beta1.Worker{
+					{
+						Name:    workerPoolName1,
+						Maximum: 10,
+						Minimum: 1,
+					},
+				},
+				cloudConfigSecretChecksums,
+				BeNil()),
+			Entry("outdated cloud-config secret checksum for a worker pool",
+				[]corev1.Node{
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, map[string]string{common.CloudConfigChecksumNodeAnnotation: "outdated"}, "v1.18.2"),
+				},
+				[]gardencorev1beta1.Worker{
+					{
+						Name:    workerPoolName1,
+						Maximum: 10,
+						Minimum: 1,
+					},
+				},
+				map[string]string{
+					workerPoolName1: cloudConfigSecretChecksum1,
+				},
+				beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "CloudConfigOutdated", fmt.Sprintf("the last successfully applied cloud config on node %q is outdated", nodeName))),
+		)
+	})
 
 	DescribeTable("#CheckMonitoringControlPlane",
 		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, isTestingShoot, wantsAlertmanager bool, conditionMatcher types.GomegaMatcher) {

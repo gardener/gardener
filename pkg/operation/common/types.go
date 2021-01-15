@@ -43,6 +43,14 @@ const (
 	// will be downloaded.
 	CloudConfigFilePath = "/var/lib/cloud-config-downloader/downloads/cloud_config"
 
+	// CloudConfigChecksumSecretAnnotation is the key of an annotation on a Secret object whose value is the checksum of
+	// the cloud config user data stored in the data map of this Secret.
+	CloudConfigChecksumSecretAnnotation = "checksum/data-script"
+
+	// CloudConfigChecksumNodeAnnotation is the key of an annotation on a shoot Node object whose value is the checksum
+	// of the last applied cloud config user data.
+	CloudConfigChecksumNodeAnnotation = "checksum/cloud-config-data"
+
 	// ConfirmationDeletion is an annotation on a Shoot and Project resources whose value must be set to "true" in order to
 	// allow deleting the resource (if the annotation is not set any DELETE request will be denied).
 	ConfirmationDeletion = "confirmation.gardener.cloud/deletion"
