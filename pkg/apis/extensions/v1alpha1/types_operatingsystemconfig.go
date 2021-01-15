@@ -223,7 +223,9 @@ type CRIName string
 
 const (
 	// CRINameContainerD is a constant for ContainerD CRI name
-	CRINameContainerD = "containerd"
+	CRINameContainerD CRIName = "containerd"
+	// CRINameDocker is a constant for Docker CRI name
+	CRINameDocker CRIName = "docker"
 )
 
 // ContainerDRuntimeContainersBinFolder is the folder where Container Runtime binaries should be saved for ContainerD usage
