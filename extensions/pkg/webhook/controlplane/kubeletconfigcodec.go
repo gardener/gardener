@@ -16,6 +16,8 @@ package controlplane
 
 import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	oscutils "github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/utils"
+
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -43,7 +45,7 @@ func init() {
 }
 
 // NewKubeletConfigCodec creates an returns a new KubeletConfigCodec.
-func NewKubeletConfigCodec(fciCodec FileContentInlineCodec) KubeletConfigCodec {
+func NewKubeletConfigCodec(fciCodec oscutils.FileContentInlineCodec) KubeletConfigCodec {
 	// Create codec for encoding / decoding to and from YAML
 	ser := json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
 	versions := schema.GroupVersions([]schema.GroupVersion{kubeletconfigv1beta1.SchemeGroupVersion})
@@ -56,7 +58,7 @@ func NewKubeletConfigCodec(fciCodec FileContentInlineCodec) KubeletConfigCodec {
 }
 
 type kubeletConfigCodec struct {
-	fciCodec FileContentInlineCodec
+	fciCodec oscutils.FileContentInlineCodec
 	codec    runtime.Codec
 }
 

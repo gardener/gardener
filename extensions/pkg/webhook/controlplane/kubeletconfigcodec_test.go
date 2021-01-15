@@ -18,6 +18,7 @@ import (
 	"time"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	oscutils "github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/utils"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -204,7 +205,7 @@ volumeStatsAggPeriod: 1m0s
 	Describe("#Encode", func() {
 		It("should encode the given KubeletConfiguration into a FileContentInline appropriately", func() {
 			// Create codec
-			c := NewKubeletConfigCodec(NewFileContentInlineCodec())
+			c := NewKubeletConfigCodec(oscutils.NewFileContentInlineCodec())
 
 			// Call Encode and check result
 			fci, err := c.Encode(kubeletConfig, "")
@@ -216,7 +217,7 @@ volumeStatsAggPeriod: 1m0s
 	Describe("#Decode", func() {
 		It("should decode a KubeletConfiguration from the given FileContentInline appropriately", func() {
 			// Create codec
-			c := NewKubeletConfigCodec(NewFileContentInlineCodec())
+			c := NewKubeletConfigCodec(oscutils.NewFileContentInlineCodec())
 
 			// Call Decode and check result
 			kc, err := c.Decode(fileContent)
