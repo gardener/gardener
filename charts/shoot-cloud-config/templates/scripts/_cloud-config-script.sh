@@ -110,7 +110,7 @@ ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-servi
 
 # Try to find Node object for this machine
 if [[ -f "$DIR_KUBELET/kubeconfig-real" ]]; then
-  {{`NODE="$(/opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" get node -l "kubernetes.io/hostname=$(hostname)" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ if (index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\") }} {{ index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}")"`}}
+  {{`NODE="$(/opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" get node -l "kubernetes.io/hostname=$(hostname)" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ if (index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\") }} {{ index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}{{ end }}")"`}}
 
   if [[ ! -z "$NODE" ]]; then
     NODENAME="$(echo "$NODE" | awk '{print $1}')"
