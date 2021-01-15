@@ -25,6 +25,13 @@ const NetworkResource = "Network"
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:resource:scope=Namespaced,path=networks,singular=network
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Type,JSONPath=".spec.type",type=string,description="The type of the network provider for this resource."
+// +kubebuilder:printcolumn:name=Pod CIDR,JSONPath=".spec.podCIDR",type=string,description="The CIDR that will be used for pods."
+// +kubebuilder:printcolumn:name=Service CIDR,JSONPath=".spec.serviceCIDR",type=string,description="The CIDR that will be used for services."
+// +kubebuilder:printcolumn:name=Status,JSONPath=".status.lastOperation.state",type=string,description="Status of network resource."
+// +kubebuilder:printcolumn:name=Age,JSONPath=".metadata.creationTimestamp",type=date,description="creation timestamp"
 
 // Network is the specification for cluster networking.
 type Network struct {
@@ -32,7 +39,8 @@ type Network struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   NetworkSpec   `json:"spec"`
+	Spec NetworkSpec `json:"spec"`
+	// +optional
 	Status NetworkStatus `json:"status"`
 }
 

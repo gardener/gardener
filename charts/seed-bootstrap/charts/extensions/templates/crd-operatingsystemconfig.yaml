@@ -111,6 +111,7 @@ spec:
                 type: object
               type: array
             providerConfig:
+              description: ProviderConfig is the provider specific configuration.
               type: object
               x-kubernetes-preserve-unknown-fields: true
             purpose:
@@ -314,6 +315,7 @@ spec:
             state:
               description: State can be filled by the operating controller with what ever data it needs.
               type: object
+              x-kubernetes-preserve-unknown-fields: true
             units:
               description: Units is a list of systemd unit names that are part of the generated Cloud Config and shall be restarted when a new version has been downloaded.
               items:

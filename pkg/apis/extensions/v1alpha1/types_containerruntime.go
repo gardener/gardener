@@ -31,14 +31,20 @@ const (
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:resource:scope=Namespaced,path=containerruntimes,shortName=cr,singular=containerruntime
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Type,JSONPath=".spec.type",type=string,description="The type of the Container Runtime resource."
+// +kubebuilder:printcolumn:name=Status,JSONPath=".status.lastOperation.state",type=string,description="status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed"
+// +kubebuilder:printcolumn:name=Age,JSONPath=".metadata.creationTimestamp",type=date,description="creation timestamp"
 
 // ContainerRuntime is a specification for a container runtime resource.
 type ContainerRuntime struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              ContainerRuntimeSpec   `json:"spec"`
-	Status            ContainerRuntimeStatus `json:"status"`
+	Spec              ContainerRuntimeSpec `json:"spec"`
+	// +optional
+	Status ContainerRuntimeStatus `json:"status"`
 }
 
 // GetExtensionSpec implements Object.
