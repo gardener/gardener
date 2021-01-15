@@ -158,7 +158,7 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 			Name: common.GrafanaTLS,
 
 			CommonName:   "grafana",
-			Organization: []string{"garden.sapcloud.io:monitoring:ingress"},
+			Organization: []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:     []string{seed.GetIngressFQDN(grafanaPrefix)},
 			IPAddresses:  nil,
 
@@ -170,7 +170,7 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 			Name: prometheusTLS,
 
 			CommonName:   "prometheus",
-			Organization: []string{"garden.sapcloud.io:monitoring:ingress"},
+			Organization: []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:     []string{seed.GetIngressFQDN(prometheusPrefix)},
 			IPAddresses:  nil,
 
