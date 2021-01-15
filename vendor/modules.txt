@@ -1325,7 +1325,7 @@ sigs.k8s.io/controller-tools/pkg/schemapatcher
 sigs.k8s.io/controller-tools/pkg/schemapatcher/internal/yaml
 sigs.k8s.io/controller-tools/pkg/version
 sigs.k8s.io/controller-tools/pkg/webhook
-# sigs.k8s.io/structured-merge-diff/v4 v4.0.1 => github.com/gardener/structured-merge-diff/v4 v4.0.2-0.20210114123732-dc8c8e7e22b6
+# sigs.k8s.io/structured-merge-diff/v4 v4.0.1 => sigs.k8s.io/structured-merge-diff/v4 v4.0.2-0.20210114175505-c02124475cb0
 sigs.k8s.io/structured-merge-diff/v4/fieldpath
 sigs.k8s.io/structured-merge-diff/v4/merge
 sigs.k8s.io/structured-merge-diff/v4/schema
@@ -1350,4 +1350,4 @@ sigs.k8s.io/yaml
 # k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 # k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.19.6
 # k8s.io/kube-openapi => github.com/gardener/kube-openapi v0.0.0-20201221124747-75e88872edcf
-# sigs.k8s.io/structured-merge-diff/v4 => github.com/gardener/structured-merge-diff/v4 v4.0.2-0.20210114123732-dc8c8e7e22b6
+# sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-diff/v4 v4.0.2-0.20210114175505-c02124475cb0
