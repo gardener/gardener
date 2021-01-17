@@ -31,6 +31,7 @@ import (
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/extension"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -251,6 +252,21 @@ func calculateExtensions(ctx context.Context, gardenClient client.Client, shoot 
 		return nil, err
 	}
 	return MergeExtensions(controllerRegistrations.Items, shoot.Spec.Extensions, seedNamespace)
+}
+
+// GetExtensionComponents returns a list of component.DeployMigrateWaiters of all extension components.
+func (s *Shoot) GetExtensionComponents() []component.DeployMigrateWaiter {
+	return []component.DeployMigrateWaiter{
+		s.Components.Extensions.BackupEntry,
+		s.Components.Extensions.ContainerRuntime,
+		s.Components.Extensions.ControlPlane,
+		s.Components.Extensions.ControlPlaneExposure,
+		s.Components.Extensions.Extension,
+		s.Components.Extensions.Infrastructure,
+		s.Components.Extensions.Network,
+		s.Components.Extensions.OperatingSystemConfig,
+		s.Components.Extensions.Worker,
+	}
 }
 
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Shoot cluster. The

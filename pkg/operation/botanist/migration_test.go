@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,155 +17,171 @@ package botanist_test
 import (
 	"context"
 	"fmt"
-	"time"
 
-	"github.com/gardener/gardener/pkg/api/extensions"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	extensionsclient "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/logger"
+	mockcomponent "github.com/gardener/gardener/pkg/mock/gardener/operation/botanist/component"
+	mockextension "github.com/gardener/gardener/pkg/mock/gardener/operation/botanist/extensions/extension"
+	mockshoot "github.com/gardener/gardener/pkg/mock/gardener/operation/shoot"
 	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/botanist"
-	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/extensions/backupentry"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/containerruntime"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/extension"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/infrastructure"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/network"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/worker"
-	"github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/sirupsen/logrus"
+	. "github.com/gardener/gardener/pkg/operation/botanist"
+	mockbackupentry "github.com/gardener/gardener/pkg/operation/botanist/extensions/backupentry/mock"
+	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/mock"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 
 	"github.com/golang/mock/gomock"
+	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-var _ = Describe("control plane migration", func() {
-	const (
-		testSeedNamespace    = "test-seed-namespace"
-		workerName           = "test-worker"
-		networkName          = "test-network"
-		containerRuntimeName = "testContainerRuntime"
-		extensionName        = "testExtension"
-		backupEntryName      = "test-backupEntry"
-	)
-
+var _ = Describe("migration", func() {
 	var (
-		ctrl          *gomock.Controller
-		fakeClient    client.Client
-		k8sSeedClient *fakeclientset.ClientSet
-		expected      []runtime.Object
+		ctrl *gomock.Controller
+
+		backupEntry           *mockbackupentry.MockBackupEntry
+		containerRuntime      *mockshoot.MockExtensionContainerRuntime
+		controlPlane          *mockshoot.MockExtensionControlPlane
+		controlPlaneExposure  *mockshoot.MockExtensionControlPlane
+		extension             *mockextension.MockInterface
+		infrastructure        *mockshoot.MockExtensionInfrastructure
+		network               *mockcomponent.MockDeployMigrateWaiter
+		operatingSystemConfig *mockoperatingsystemconfig.MockInterface
+		worker                *mockshoot.MockExtensionWorker
+
+		botanist *Botanist
+
+		ctx     = context.TODO()
+		fakeErr = fmt.Errorf("fake")
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		expected = []runtime.Object{
-			&extensionsv1alpha1.Extension{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      extensionName,
-					Namespace: testSeedNamespace,
-				},
-			},
-			&extensionsv1alpha1.Worker{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      workerName,
-					Namespace: testSeedNamespace,
-				},
-			},
-			&extensionsv1alpha1.Network{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      networkName,
-					Namespace: testSeedNamespace,
-				},
-			},
-			&extensionsv1alpha1.ContainerRuntime{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      containerRuntimeName,
-					Namespace: testSeedNamespace,
-				},
-			},
-		}
 
-		fakeClient = fakeclient.NewFakeClientWithScheme(extensionsclient.Scheme, expected...)
-		k8sSeedClient = fakeclientset.NewClientSetBuilder().WithClient(fakeClient).WithDirectClient(fakeClient).Build()
+		backupEntry = mockbackupentry.NewMockBackupEntry(ctrl)
+		containerRuntime = mockshoot.NewMockExtensionContainerRuntime(ctrl)
+		controlPlane = mockshoot.NewMockExtensionControlPlane(ctrl)
+		controlPlaneExposure = mockshoot.NewMockExtensionControlPlane(ctrl)
+		extension = mockextension.NewMockInterface(ctrl)
+		infrastructure = mockshoot.NewMockExtensionInfrastructure(ctrl)
+		network = mockcomponent.NewMockDeployMigrateWaiter(ctrl)
+		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
+		worker = mockshoot.NewMockExtensionWorker(ctrl)
+
+		botanist = &Botanist{Operation: &operation.Operation{
+			Shoot: &shootpkg.Shoot{
+				Components: &shootpkg.Components{
+					Extensions: &shootpkg.Extensions{
+						BackupEntry:           backupEntry,
+						ContainerRuntime:      containerRuntime,
+						ControlPlane:          controlPlane,
+						ControlPlaneExposure:  controlPlaneExposure,
+						Extension:             extension,
+						Infrastructure:        infrastructure,
+						Network:               network,
+						OperatingSystemConfig: operatingSystemConfig,
+						Worker:                worker,
+					},
+				},
+			},
+		}}
 	})
 
 	AfterEach(func() {
 		ctrl.Finish()
 	})
 
-	Describe("#AnnotateExtensionCRDsForMigration()", func() {
-		It("should annotate all extension objects", func() {
-			var (
-				log   = logrus.NewEntry(logger.NewNopLogger())
-				ctx   = context.TODO()
-				shoot = &shoot.Shoot{
-					SeedNamespace: testSeedNamespace,
-					Components: &shoot.Components{
-						Extensions: &shoot.Extensions{
-							BackupEntry: extensionsbackupentry.New(log, fakeClient, &extensionsbackupentry.Values{
-								Name: backupEntryName,
-							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
-							ContainerRuntime: containerruntime.New(log, fakeClient, &containerruntime.Values{
-								Namespace: testSeedNamespace,
-								Workers:   []gardencorev1beta1.Worker{},
-							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
-							ControlPlane: controlplane.New(log, fakeClient, &controlplane.Values{
-								Namespace: testSeedNamespace,
-							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
-							ControlPlaneExposure: controlplane.New(log, fakeClient, &controlplane.Values{
-								Namespace: testSeedNamespace,
-							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
-							Extension: extension.New(log, fakeClient, &extension.Values{
-								Namespace: testSeedNamespace,
-							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
-							Infrastructure: infrastructure.New(log, fakeClient, &infrastructure.Values{
-								Namespace: testSeedNamespace,
-								Name:      networkName,
-							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
-							Network: network.New(log, fakeClient, &network.Values{
-								Namespace: testSeedNamespace,
-								Name:      networkName,
-							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
-							Worker: worker.New(log, fakeClient, &worker.Values{
-								Namespace: testSeedNamespace,
-								Name:      workerName,
-							}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond),
-						},
-					},
-				}
-			)
+	Describe("#MigrateAllExtensionResources", func() {
+		It("should call the Migrate() func of all extension components", func() {
+			backupEntry.EXPECT().Migrate(ctx)
+			containerRuntime.EXPECT().Migrate(ctx)
+			controlPlane.EXPECT().Migrate(ctx)
+			controlPlaneExposure.EXPECT().Migrate(ctx)
+			extension.EXPECT().Migrate(ctx)
+			infrastructure.EXPECT().Migrate(ctx)
+			network.EXPECT().Migrate(ctx)
+			operatingSystemConfig.EXPECT().Migrate(ctx)
+			worker.EXPECT().Migrate(ctx)
 
-			op := &operation.Operation{
-				K8sSeedClient: k8sSeedClient,
-				Shoot:         shoot,
-			}
+			Expect(botanist.MigrateAllExtensionResources(ctx)).To(Succeed())
+		})
 
-			botanist := botanist.Botanist{Operation: op}
-			err := botanist.AnnotateExtensionCRsForMigration(ctx)
-			Expect(err).NotTo(HaveOccurred())
+		It("should return an error if not all the Migrate() func of all extension components succeed", func() {
+			backupEntry.EXPECT().Migrate(ctx)
+			containerRuntime.EXPECT().Migrate(ctx)
+			controlPlane.EXPECT().Migrate(ctx).Return(fakeErr)
+			controlPlaneExposure.EXPECT().Migrate(ctx)
+			extension.EXPECT().Migrate(ctx)
+			infrastructure.EXPECT().Migrate(ctx)
+			network.EXPECT().Migrate(ctx)
+			operatingSystemConfig.EXPECT().Migrate(ctx)
+			worker.EXPECT().Migrate(ctx)
 
-			for _, obj := range expected {
-				actual, err := extensions.Accessor(obj)
-				Expect(err).NotTo(HaveOccurred())
+			err := botanist.MigrateAllExtensionResources(ctx)
+			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
+			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(fakeErr)))
+		})
+	})
 
-				Expect(
-					fakeClient.Get(ctx, types.NamespacedName{Name: actual.GetName(), Namespace: testSeedNamespace}, actual),
-				).To(Succeed())
+	Describe("#WaitUntilAllExtensionResourcesMigrated", func() {
+		It("should call the Migrate() func of all extension components", func() {
+			backupEntry.EXPECT().WaitMigrate(ctx)
+			containerRuntime.EXPECT().WaitMigrate(ctx)
+			controlPlane.EXPECT().WaitMigrate(ctx)
+			controlPlaneExposure.EXPECT().WaitMigrate(ctx)
+			extension.EXPECT().WaitMigrate(ctx)
+			infrastructure.EXPECT().WaitMigrate(ctx)
+			network.EXPECT().WaitMigrate(ctx)
+			operatingSystemConfig.EXPECT().WaitMigrate(ctx)
+			worker.EXPECT().WaitMigrate(ctx)
 
-				Expect(actual.GetAnnotations()).NotTo(BeNil(), fmt.Sprintf("%s should have annotations", actual.GetName()))
-				Expect(
-					actual.GetAnnotations()[v1beta1constants.GardenerOperation],
-				).To(Equal(v1beta1constants.GardenerOperationMigrate), fmt.Sprintf("%s should have migrate annotation", actual.GetName()))
-			}
+			Expect(botanist.WaitUntilAllExtensionResourcesMigrated(ctx)).To(Succeed())
+		})
+
+		It("should return an error if not all the WaitMigrate() func of all extension components succeed", func() {
+			backupEntry.EXPECT().WaitMigrate(ctx)
+			containerRuntime.EXPECT().WaitMigrate(ctx)
+			controlPlane.EXPECT().WaitMigrate(ctx)
+			controlPlaneExposure.EXPECT().WaitMigrate(ctx)
+			extension.EXPECT().WaitMigrate(ctx)
+			infrastructure.EXPECT().WaitMigrate(ctx)
+			network.EXPECT().WaitMigrate(ctx).Return(fakeErr)
+			operatingSystemConfig.EXPECT().WaitMigrate(ctx)
+			worker.EXPECT().WaitMigrate(ctx).Return(fakeErr)
+
+			err := botanist.WaitUntilAllExtensionResourcesMigrated(ctx)
+			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
+			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(fakeErr), Equal(fakeErr)))
+		})
+	})
+
+	Describe("#DestroyAllExtensionResources", func() {
+		It("should call the Migrate() func of all extension components", func() {
+			backupEntry.EXPECT().Destroy(ctx)
+			containerRuntime.EXPECT().Destroy(ctx)
+			controlPlane.EXPECT().Destroy(ctx)
+			controlPlaneExposure.EXPECT().Destroy(ctx)
+			extension.EXPECT().Destroy(ctx)
+			infrastructure.EXPECT().Destroy(ctx)
+			network.EXPECT().Destroy(ctx)
+			operatingSystemConfig.EXPECT().Destroy(ctx)
+			worker.EXPECT().Destroy(ctx)
+
+			Expect(botanist.DestroyAllExtensionResources(ctx)).To(Succeed())
+		})
+
+		It("should return an error if not all the Destroy() func of all extension components succeed", func() {
+			backupEntry.EXPECT().Destroy(ctx).Return(fakeErr)
+			containerRuntime.EXPECT().Destroy(ctx).Return(fakeErr)
+			controlPlane.EXPECT().Destroy(ctx)
+			controlPlaneExposure.EXPECT().Destroy(ctx)
+			extension.EXPECT().Destroy(ctx)
+			infrastructure.EXPECT().Destroy(ctx)
+			network.EXPECT().Destroy(ctx)
+			operatingSystemConfig.EXPECT().Destroy(ctx)
+			worker.EXPECT().Destroy(ctx)
+
+			err := botanist.DestroyAllExtensionResources(ctx)
+			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
+			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(fakeErr), Equal(fakeErr)))
 		})
 	})
 })
