@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 package v1alpha1
 
 import (
-	"encoding/json"
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -108,8 +107,7 @@ func setDefaultsGardenlet(obj *Gardenlet, name, namespace string) {
 	setDefaultsGardenletConfiguration(gardenletConfig, name, namespace)
 
 	// Set gardenlet config back to obj.Config
-	gardenletConfigJSON, _ := json.Marshal(gardenletConfig)
-	obj.Config = &runtime.RawExtension{Raw: gardenletConfigJSON}
+	obj.Config = &runtime.RawExtension{Object: gardenletConfig}
 
 	// Set default garden connection bootstrap
 	if obj.Bootstrap == nil {

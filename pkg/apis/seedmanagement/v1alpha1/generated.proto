@@ -152,7 +152,7 @@ message ManagedSeedSpec {
   // +optional
   optional SeedTemplate seedTemplate = 2;
 
-  // Gardenlet specifies, that the ManagedSeed controller should deploy a gardenlet into the cluster
+  // Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
   // with the given deployment parameters and GardenletConfiguration.
   // +optional
   optional Gardenlet gardenlet = 3;

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ type ManagedSeedSpec struct {
 	// Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster
 	// and an existing gardenlet reconciling the new Seed is required.
 	SeedTemplate *SeedTemplate
-	// Gardenlet specifies, that the ManagedSeed controller should deploy a gardenlet into the cluster
+	// Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
 	// with the given deployment parameters and GardenletConfiguration.
 	Gardenlet *Gardenlet
 }
@@ -80,7 +80,7 @@ type Gardenlet struct {
 	// the image, etc.
 	Deployment *GardenletDeployment
 	// Config is the GardenletConfiguration used to configure gardenlet.
-	Config *runtime.RawExtension
+	Config runtime.Object
 	// Bootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken, None.
 	// If set to ServiceAccount or BootstrapToken, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig.
 	// If set to None, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster. Defaults to BootstrapToken.

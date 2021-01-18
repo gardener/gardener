@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,25 +41,41 @@ func init() {
 
 // DecodeGardenletConfig decodes the given raw extension into an internal GardenletConfiguration version.
 func DecodeGardenletConfig(rawConfig *runtime.RawExtension, withDefaults bool) (*config.GardenletConfiguration, error) {
-	cfg := &config.GardenletConfiguration{}
+	cfg, err := DecodeGardenletConfigExternal(rawConfig, withDefaults)
+	if err != nil {
+		return nil, err
+	}
+	return ConvertGardenletConfig(cfg)
+}
+
+// DecodeGardenletConfig decodes the given raw extension into an external GardenletConfiguration version.
+func DecodeGardenletConfigExternal(rawConfig *runtime.RawExtension, withDefaults bool) (*configv1alpha1.GardenletConfiguration, error) {
+	if cfg, ok := rawConfig.Object.(*configv1alpha1.GardenletConfiguration); ok {
+		return cfg, nil
+	}
+	cfg := &configv1alpha1.GardenletConfiguration{}
 	if _, _, err := getDecoder(withDefaults).Decode(rawConfig.Raw, nil, cfg); err != nil {
 		return nil, err
 	}
 	return cfg, nil
 }
 
-// DecodeGardenletConfig decodes the given raw extension into an external GardenletConfiguration version.
-func DecodeGardenletConfigExternal(rawConfig *runtime.RawExtension, withDefaults bool) (*configv1alpha1.GardenletConfiguration, error) {
-	cfg, err := DecodeGardenletConfig(rawConfig, withDefaults)
+// ConvertGardenletConfig converts the given object to an internal GardenletConfiguration version.
+func ConvertGardenletConfig(obj runtime.Object) (*config.GardenletConfiguration, error) {
+	obj, err := scheme.ConvertToVersion(obj, config.SchemeGroupVersion)
 	if err != nil {
 		return nil, err
 	}
-	return ConvertGardenletConfigExternal(cfg)
+	result, ok := obj.(*config.GardenletConfiguration)
+	if !ok {
+		return nil, fmt.Errorf("could not convert GardenletConfiguration to internal version")
+	}
+	return result, nil
 }
 
-// ConvertGardenletConfigExternal converts the given internal GardenletConfiguration version to an external version.
-func ConvertGardenletConfigExternal(cfg *config.GardenletConfiguration) (*configv1alpha1.GardenletConfiguration, error) {
-	obj, err := scheme.ConvertToVersion(cfg, configv1alpha1.SchemeGroupVersion)
+// ConvertGardenletConfigExternal converts the given object to an external  GardenletConfiguration version.
+func ConvertGardenletConfigExternal(obj runtime.Object) (*configv1alpha1.GardenletConfiguration, error) {
+	obj, err := scheme.ConvertToVersion(obj, configv1alpha1.SchemeGroupVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +87,8 @@ func ConvertGardenletConfigExternal(cfg *config.GardenletConfiguration) (*config
 }
 
 // ConvertSeed converts the given external Seed version to an internal version.
-func ConvertSeed(seed *gardencorev1beta1.Seed) (*gardencore.Seed, error) {
-	obj, err := scheme.ConvertToVersion(seed, gardencore.SchemeGroupVersion)
+func ConvertSeed(obj runtime.Object) (*gardencore.Seed, error) {
+	obj, err := scheme.ConvertToVersion(obj, gardencore.SchemeGroupVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -84,8 +100,8 @@ func ConvertSeed(seed *gardencorev1beta1.Seed) (*gardencore.Seed, error) {
 }
 
 // ConvertSeedExternal converts the given internal Seed version to an external version.
-func ConvertSeedExternal(seed *gardencore.Seed) (*gardencorev1beta1.Seed, error) {
-	obj, err := scheme.ConvertToVersion(seed, gardencorev1beta1.SchemeGroupVersion)
+func ConvertSeedExternal(obj runtime.Object) (*gardencorev1beta1.Seed, error) {
+	obj, err := scheme.ConvertToVersion(obj, gardencorev1beta1.SchemeGroupVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -105,18 +121,10 @@ func getDecoder(withDefaulter bool) runtime.Decoder {
 
 }
 
-// Bootstrap returns the value of the Bootstrap field of the given gardenlet, or None if the field is nil.
-func Bootstrap(gardenlet *seedmanagement.Gardenlet) seedmanagement.Bootstrap {
-	if gardenlet.Bootstrap != nil {
-		return *gardenlet.Bootstrap
+// GetBootstrap returns the value of the given Bootstrap, or None if nil.
+func GetBootstrap(bootstrap *seedmanagement.Bootstrap) seedmanagement.Bootstrap {
+	if bootstrap != nil {
+		return *bootstrap
 	}
 	return seedmanagement.BootstrapNone
-}
-
-// MergeWithParent returns the value of the MergeWithParent field of the given gardenlet, or false if the field is nil.
-func MergeWithParent(gardenlet *seedmanagement.Gardenlet) bool {
-	if gardenlet.MergeWithParent != nil {
-		return *gardenlet.MergeWithParent
-	}
-	return false
 }

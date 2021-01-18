@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -46,13 +47,30 @@ var _ = Describe("Helper", func() {
 				Kind:       "Seed",
 			},
 		}
-
-		rawConfig = &runtime.RawExtension{Raw: encode(configx)}
 	)
 
 	Describe("#DecodeGardenletConfig", func() {
 		It("should decode the raw config to an internal GardenletConfiguration version without defaults", func() {
-			result, err := DecodeGardenletConfig(rawConfig, false)
+			result, err := DecodeGardenletConfig(&runtime.RawExtension{Raw: encode(configx)}, false)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(config))
+		})
+
+		It("should decode the raw config to an internal GardenletConfiguration version with defaults", func() {
+			configxWithDefaults := configx.DeepCopy()
+			configv1alpha1.SetObjectDefaults_GardenletConfiguration(configxWithDefaults)
+			configWithDefaults, err := ConvertGardenletConfig(configxWithDefaults)
+			Expect(err).ToNot(HaveOccurred())
+
+			result, err := DecodeGardenletConfig(&runtime.RawExtension{Raw: encode(configx)}, true)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(configWithDefaults))
+		})
+
+		It("should return the raw config object if it's already set", func() {
+			result, err := DecodeGardenletConfig(&runtime.RawExtension{Object: configx}, true)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(config))
@@ -61,7 +79,7 @@ var _ = Describe("Helper", func() {
 
 	Describe("#DecodeGardenletConfigExternal", func() {
 		It("should decode the raw config to an external GardenletConfiguration version without defaults", func() {
-			result, err := DecodeGardenletConfigExternal(rawConfig, false)
+			result, err := DecodeGardenletConfigExternal(&runtime.RawExtension{Raw: encode(configx)}, false)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(configx))
@@ -71,10 +89,26 @@ var _ = Describe("Helper", func() {
 			configxWithDefaults := configx.DeepCopy()
 			configv1alpha1.SetObjectDefaults_GardenletConfiguration(configxWithDefaults)
 
-			result, err := DecodeGardenletConfigExternal(rawConfig, true)
+			result, err := DecodeGardenletConfigExternal(&runtime.RawExtension{Raw: encode(configx)}, true)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(configxWithDefaults))
+		})
+
+		It("should return the raw config object if it's already set", func() {
+			result, err := DecodeGardenletConfigExternal(&runtime.RawExtension{Object: configx}, true)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(configx))
+		})
+	})
+
+	Describe("#ConvertGardenletConfig", func() {
+		It("should convert the external GardenletConfiguration version to an internal one", func() {
+			result, err := ConvertGardenletConfig(configx)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(config))
 		})
 	})
 
@@ -104,9 +138,20 @@ var _ = Describe("Helper", func() {
 			Expect(result).To(Equal(seedx))
 		})
 	})
+
+	Describe("#GetBootstrap", func() {
+		It("should return the correct Bootstrap value", func() {
+			Expect(GetBootstrap(bootstrapPtr(seedmanagement.BootstrapToken))).To(Equal(seedmanagement.BootstrapToken))
+			Expect(GetBootstrap(bootstrapPtr(seedmanagement.BootstrapServiceAccount))).To(Equal(seedmanagement.BootstrapServiceAccount))
+			Expect(GetBootstrap(bootstrapPtr(seedmanagement.BootstrapNone))).To(Equal(seedmanagement.BootstrapNone))
+			Expect(GetBootstrap(nil)).To(Equal(seedmanagement.BootstrapNone))
+		})
+	})
 })
 
 func encode(obj runtime.Object) []byte {
 	data, _ := json.Marshal(obj)
 	return data
 }
+
+func bootstrapPtr(v seedmanagement.Bootstrap) *seedmanagement.Bootstrap { return &v }

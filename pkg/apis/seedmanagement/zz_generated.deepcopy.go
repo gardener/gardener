@@ -35,9 +35,7 @@ func (in *Gardenlet) DeepCopyInto(out *Gardenlet) {
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Config != nil {
-		in, out := &in.Config, &out.Config
-		*out = new(runtime.RawExtension)
-		(*in).DeepCopyInto(*out)
+		out.Config = in.Config.DeepCopyObject()
 	}
 	if in.Bootstrap != nil {
 		in, out := &in.Bootstrap, &out.Bootstrap
