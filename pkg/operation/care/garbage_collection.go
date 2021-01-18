@@ -53,9 +53,9 @@ func NewGarbageCollection(op *operation.Operation, shootClientInit ShootClientIn
 	}
 }
 
-// GarbageCollection cleans the Seed and the Shoot cluster from no longer required
+// Collect cleans the Seed and the Shoot cluster from no longer required
 // objects. It receives a botanist object <botanist> which stores the Shoot object.
-func (g *GarbageCollection) GarbageCollection(ctx context.Context) {
+func (g *GarbageCollection) Collect(ctx context.Context) {
 	var (
 		qualifiedShootName = fmt.Sprintf("%s/%s", g.shoot.Info.Namespace, g.shoot.Info.Name)
 		wg                 sync.WaitGroup
@@ -95,10 +95,7 @@ func (g *GarbageCollection) performGarbageCollectionSeed(ctx context.Context) er
 		return err
 	}
 
-	if err := g.deleteStalePods(ctx, g.seedClient, podList); err != nil {
-		return err
-	}
-	return nil
+	return g.deleteStalePods(ctx, g.seedClient, podList)
 }
 
 // PerformGarbageCollectionShoot performs garbage collection in the kube-system namespace in the Shoot

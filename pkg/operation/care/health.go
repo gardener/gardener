@@ -69,8 +69,8 @@ func NewHealth(op *operation.Operation, shootClientInit ShootClientInit) *Health
 	}
 }
 
-// HealthChecks conducts the health checks on all the given conditions.
-func (h *Health) HealthChecks(
+// Check conducts the health checks on all the given conditions.
+func (h *Health) Check(
 	ctx context.Context,
 	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
 	healthCheckOutdatedThreshold *metav1.Duration,

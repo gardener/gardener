@@ -298,7 +298,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		// Trigger health check
 		func(ctx context.Context) error {
 			shootHealth := care.NewHealth(operation, initializeShootClients)
-			updatedConditions = shootHealth.HealthChecks(
+			updatedConditions = shootHealth.Check(
 				ctx,
 				c.conditionThresholdsToProgressingMapping(),
 				staleExtensionHealthCheckThreshold,
@@ -326,7 +326,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		// Trigger garbage collection
 		func(ctx context.Context) error {
 			garbageCollector := care.NewGarbageCollection(operation, initializeShootClients)
-			garbageCollector.GarbageCollection(ctx)
+			garbageCollector.Collect(ctx)
 			// errors during garbage collection are only being logged and do not cause the care operation to fail
 			return nil
 		},
