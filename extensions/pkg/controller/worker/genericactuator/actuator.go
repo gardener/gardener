@@ -257,7 +257,7 @@ func (a *genericActuator) shallowDeleteMachineClassSecrets(ctx context.Context, 
 	return nil
 }
 
-// cleanupMachineClassSecrets deletes MachineSets having number of desired and actual replicas equaling 0
+// cleanupMachineSets deletes MachineSets having number of desired and actual replicas equaling 0
 func (a *genericActuator) cleanupMachineSets(ctx context.Context, logger logr.Logger, namespace string) error {
 	logger.Info("Cleaning up machine sets")
 	machineSetList := &machinev1alpha1.MachineSetList{}
