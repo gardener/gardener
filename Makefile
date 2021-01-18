@@ -44,51 +44,19 @@ dev-setup-register-gardener:
 
 .PHONY: local-garden-up
 local-garden-up:
-	# Remove old containers and create the docker user network
-	@-./hack/local-development/local-garden/cleanup
-	@-docker network create gardener-dev --label $(LOCAL_GARDEN_LABEL)
-
-	# Start the nodeless kubernetes environment
-	@./hack/local-development/local-garden/run-kube-etcd $(LOCAL_GARDEN_LABEL)
-	@./hack/local-development/local-garden/run-kube-apiserver $(LOCAL_GARDEN_LABEL)
-	@./hack/local-development/local-garden/run-kube-controller-manager $(LOCAL_GARDEN_LABEL)
-
-	# This etcd will be used to storge gardener resources (e.g., seeds, shoots)
-	@./hack/local-development/local-garden/run-gardener-etcd $(LOCAL_GARDEN_LABEL)
-
-	# Applying proxy RBAC for the extension controller
-	# After this step, you can start using the cluster at KUBECONFIG=hack/local-development/local-garden/kubeconfigs/default-admin.conf
-	@./hack/local-development/local-garden/apply-rbac-garden-ns
-
-	# Now you can start using the cluster at with `export KUBECONFIG=hack/local-development/local-garden/kubeconfigs/default-admin.conf`
-	# Then you need to run `make dev-setup` to setup config and certificates files for gardener's components and to register the gardener-apiserver.
-	# Finally, run `make start-apiserver,start-controller-manager,start-scheduler,start-gardenlet` to start the gardener components as usual.
+	@./hack/local-development/local-garden/start.sh $(LOCAL_GARDEN_LABEL)
 
 .PHONY: local-garden-down
 local-garden-down:
-	@-./hack/local-development/local-garden/cleanup
+	@./hack/local-development/local-garden/stop.sh $(LOCAL_GARDEN_LABEL)
 
 .PHONY: remote-garden-up
 remote-garden-up:
-	# Remove old containers and create the docker user network
-	@-./hack/local-development/remote-garden/cleanup
-	@-docker network create gardener-dev-remote --label $(REMOTE_GARDEN_LABEL)
-
-	# Start gardener etcd used to store gardener resources (e.g., seeds, shoots)
-	@./hack/local-development/remote-garden/run-gardener-etcd $(REMOTE_GARDEN_LABEL)
-
-	# Open tunnels for accessing local gardener components from the remote cluster
-	@./hack/local-development/remote-garden/open-gardener-tunnels $(REMOTE_GARDEN_LABEL)
-
-	# Now, run `make dev-setup` to setup config and certificates files for gardener's components and to register the gardener-apiserver.
-	# Finally, run `make start-apiserver,start-controller-manager,start-scheduler,start-gardenlet` to start the gardener components as usual.
+	@./hack/local-development/remote-garden/start.sh $(REMOTE_GARDEN_LABEL)
 
 .PHONY: remote-garden-down
 remote-garden-down:
-	# Cleanup tunnels for accessing local gardener components from the remote cluster
-	@./hack/local-development/remote-garden/open-gardener-tunnels -c
-	# Remove docker containers and networks
-	@-./hack/local-development/remote-garden/cleanup $(REMOTE_GARDEN_LABEL)
+	@./hack/local-development/remote-garden/stop.sh $(REMOTE_GARDEN_LABEL)
 
 .PHONY: start-apiserver
 start-apiserver:

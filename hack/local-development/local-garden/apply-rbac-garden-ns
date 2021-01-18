@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-KUBECONFIGPATH="$(dirname $0)/kubeconfigs/default-admin.conf"
+KUBECONFIGPATH=${1:-"$(dirname $0)/kubeconfigs/default-admin.conf"}
 
 cat <<EOF | KUBECONFIG=$KUBECONFIGPATH kubectl apply -f -
 ---
