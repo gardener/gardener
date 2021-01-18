@@ -202,7 +202,7 @@ var _ = Describe("Fake ClientSet", func() {
 	})
 
 	It("should do nothing on CheckForwardPodPort", func() {
-		cs := fake.NewClientSet()
+		cs := builder.Build()
 
 		Expect(cs.CheckForwardPodPort("", "", 0, 0)).To(Succeed())
 	})

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package botanist
+package care
 
 import (
 	"context"
@@ -21,31 +21,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
+	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/namespaces"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
-	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -245,8 +237,12 @@ func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Conditi
 	return nil
 }
 
-func shootHibernatedCondition(condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "ConditionNotChecked", "Shoot cluster has been hibernated.")
+func shootHibernatedConditions(conditions []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+	hibernationConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
+	for _, cond := range conditions {
+		hibernationConditions = append(hibernationConditions, gardencorev1beta1helper.UpdatedCondition(cond, gardencorev1beta1.ConditionTrue, "ConditionNotChecked", "Shoot cluster has been hibernated."))
+	}
+	return hibernationConditions
 }
 
 func shootControlPlaneNotRunningMessage(lastOperation *gardencorev1beta1.LastOperation) string {
@@ -386,15 +382,8 @@ func (b *HealthChecker) FailedCondition(condition gardencorev1beta1.Condition, r
 	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, reason, message, codes...)
 }
 
-// checkAPIServerAvailability checks if the API server of a Shoot cluster is reachable and measure the response time.
-func (b *Botanist) checkAPIServerAvailability(ctx context.Context, checker *HealthChecker, condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	return health.CheckAPIServerAvailability(ctx, condition, b.K8sShootClient.RESTClient(), func(conditionType, message string) gardencorev1beta1.Condition {
-		return checker.FailedCondition(condition, conditionType, message)
-	}, b.Logger)
-}
-
-// CheckClusterNodes checks whether cluster nodes are healthy and within the desired range. Additional checks may be
-// executed in the provider extension.
+// CheckClusterNodes checks whether cluster nodes in the given listers are healthy and within the desired range.
+// Additional checks are executed in the provider extension
 func (b *HealthChecker) CheckClusterNodes(
 	ctx context.Context,
 	shootClient client.Client,
@@ -404,12 +393,12 @@ func (b *HealthChecker) CheckClusterNodes(
 	*gardencorev1beta1.Condition,
 	error,
 ) {
-	workerPoolToNodes, err := WorkerPoolToNodesMap(ctx, shootClient)
+	workerPoolToNodes, err := botanist.WorkerPoolToNodesMap(ctx, shootClient)
 	if err != nil {
 		return nil, err
 	}
 
-	workerPoolToSecretChecksum, err := WorkerPoolToCloudConfigSecretChecksumMap(ctx, shootClient)
+	workerPoolToSecretChecksum, err := botanist.WorkerPoolToCloudConfigSecretChecksumMap(ctx, shootClient)
 	if err != nil {
 		return nil, err
 	}
@@ -427,7 +416,7 @@ func (b *HealthChecker) CheckClusterNodes(
 		}
 	}
 
-	if err := CloudConfigUpdatedForAllWorkerPools(workers, workerPoolToNodes, workerPoolToSecretChecksum); err != nil {
+	if err := botanist.CloudConfigUpdatedForAllWorkerPools(workers, workerPoolToNodes, workerPoolToSecretChecksum); err != nil {
 		c := b.FailedCondition(condition, "CloudConfigOutdated", err.Error())
 		return &c, nil
 	}
@@ -521,39 +510,6 @@ func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Cond
 	return nil
 }
 
-// checkControlPlane checks whether the control plane of the Shoot cluster is healthy.
-func (b *Botanist) checkControlPlane(
-	ctx context.Context,
-	effectiveShoot *gardencorev1beta1.Shoot,
-	checker *HealthChecker,
-	condition gardencorev1beta1.Condition,
-	seedDeploymentLister kutil.DeploymentLister,
-	seedStatefulSetLister kutil.StatefulSetLister,
-	seedEtcdLister kutil.EtcdLister,
-	seedWorkerLister kutil.WorkerLister,
-	extensionConditions []ExtensionCondition,
-) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := checker.CheckControlPlane(effectiveShoot, b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedEtcdLister, seedWorkerLister); err != nil || exitCondition != nil {
-		return exitCondition, err
-	}
-
-	wantsAlertmanager := gardencorev1beta1helper.ShootWantsAlertManager(effectiveShoot)
-	if exitCondition, err := checker.CheckMonitoringControlPlane(b.Shoot.SeedNamespace, gardencorev1beta1helper.GetPurpose(effectiveShoot) == gardencorev1beta1.ShootPurposeTesting, wantsAlertmanager, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
-		return exitCondition, err
-	}
-	if gardenletfeatures.FeatureGate.Enabled(features.Logging) {
-		if exitCondition, err := checker.CheckLoggingControlPlane(b.Shoot.SeedNamespace, gardencorev1beta1helper.GetPurpose(effectiveShoot) == gardencorev1beta1.ShootPurposeTesting, condition, seedStatefulSetLister); err != nil || exitCondition != nil {
-			return exitCondition, err
-		}
-	}
-	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	c := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "ControlPlaneRunning", "All control plane components are healthy.")
-	return &c, nil
-}
-
 var versionConstraintGreaterEqual113 *semver.Constraints
 
 func init() {
@@ -568,81 +524,6 @@ var managedResourcesShoot = sets.NewString(
 	common.ManagedResourceShootCoreName,
 	common.ManagedResourceAddonsName,
 )
-
-// checkSystemComponents checks whether the system components of a Shoot are running.
-func (b *Botanist) checkSystemComponents(
-	ctx context.Context,
-	checker *HealthChecker,
-	condition gardencorev1beta1.Condition,
-	extensionConditions []ExtensionCondition,
-) (*gardencorev1beta1.Condition, error) {
-	managedResources := managedResourcesShoot.List()
-	if versionConstraintGreaterEqual113.Check(checker.gardenerVersion) {
-		managedResources = append(managedResources, metricsserver.ManagedResourceName)
-	}
-
-	for _, name := range managedResources {
-		mr := &resourcesv1alpha1.ManagedResource{}
-		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, name), mr); err != nil {
-			return nil, err
-		}
-
-		if exitCondition := checker.CheckManagedResource(condition, mr); exitCondition != nil {
-			return exitCondition, nil
-		}
-	}
-
-	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	podsList := &corev1.PodList{}
-	if err := b.K8sShootClient.Client().List(ctx, podsList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"type": "tunnel"}); err != nil {
-		return nil, err
-	}
-	if len(podsList.Items) == 0 {
-		c := checker.FailedCondition(condition, "NoTunnelDeployed", "no tunnels are currently deployed to perform health-check on")
-		return &c, nil
-	}
-
-	tunnelName := common.VPNTunnel
-	if podsList.Items[0].Labels["app"] == common.KonnectivityTunnel {
-		tunnelName = common.KonnectivityTunnel
-	}
-
-	if established, err := b.CheckTunnelConnection(ctx, logrus.NewEntry(logger.NewNopLogger()), tunnelName); err != nil || !established {
-		msg := "Tunnel connection has not been established"
-		if err != nil {
-			msg += fmt.Sprintf(" (%+v)", err)
-		}
-		c := checker.FailedCondition(condition, "TunnelConnectionBroken", msg)
-		return &c, nil
-	}
-
-	c := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "SystemComponentsRunning", "All system components are healthy.")
-	return &c, nil
-}
-
-// checkClusterNodes checks whether every node registered at the Shoot cluster is in "Ready" state, that
-// as many nodes are registered as desired, and that every machine is running.
-func (b *Botanist) checkClusterNodes(
-	ctx context.Context,
-	shootClient client.Client,
-	effectiveShoot *gardencorev1beta1.Shoot,
-	checker *HealthChecker,
-	condition gardencorev1beta1.Condition,
-	extensionConditions []ExtensionCondition,
-) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := checker.CheckClusterNodes(ctx, shootClient, effectiveShoot.Spec.Provider.Workers, condition); err != nil || exitCondition != nil {
-		return exitCondition, err
-	}
-	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {
-		return exitCondition, nil
-	}
-
-	c := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "EveryNodeReady", "Every node registered to the cluster is ready.")
-	return &c, nil
-}
 
 func makeDeploymentLister(ctx context.Context, c client.Client, namespace string, selector labels.Selector) kutil.DeploymentLister {
 	var (
@@ -744,7 +625,8 @@ func makeWorkerLister(ctx context.Context, c client.Client, namespace string) ku
 	})
 }
 
-func newConditionOrError(oldCondition gardencorev1beta1.Condition, newCondition *gardencorev1beta1.Condition, err error) gardencorev1beta1.Condition {
+// NewConditionOrError returns the given new condition or returns an unknown error condition if an error occurred or `newCondition` is nil.
+func NewConditionOrError(oldCondition gardencorev1beta1.Condition, newCondition *gardencorev1beta1.Condition, err error) gardencorev1beta1.Condition {
 	if err != nil || newCondition == nil {
 		return gardencorev1beta1helper.UpdatedConditionUnknownError(oldCondition, err)
 	}
@@ -758,77 +640,6 @@ var (
 		v1beta1constants.GardenRoleLogging,
 	)
 )
-
-func (b *Botanist) healthChecks(
-	ctx context.Context,
-	effectiveShoot *gardencorev1beta1.Shoot,
-	initializeShootClients func() (bool, error),
-	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
-	healthCheckOutdatedThreshold *metav1.Duration,
-	gardenerVersion *semver.Version,
-	apiserverAvailability,
-	controlPlane,
-	nodes,
-	systemComponents gardencorev1beta1.Condition,
-) (
-	gardencorev1beta1.Condition,
-	gardencorev1beta1.Condition,
-	gardencorev1beta1.Condition,
-	gardencorev1beta1.Condition,
-) {
-	if gardencorev1beta1helper.HibernationIsEnabled(effectiveShoot) || b.Shoot.Info.Status.IsHibernated {
-		return shootHibernatedCondition(apiserverAvailability), shootHibernatedCondition(controlPlane), shootHibernatedCondition(nodes), shootHibernatedCondition(systemComponents)
-	}
-
-	extensionConditionsControlPlaneHealthy, extensionConditionsEveryNodeReady, extensionConditionsSystemComponentsHealthy, err := b.getAllExtensionConditions(ctx)
-	if err != nil {
-		b.Logger.Errorf("error getting extension conditions: %+v", err)
-	}
-
-	var (
-		checker               = NewHealthChecker(thresholdMappings, healthCheckOutdatedThreshold, b.Shoot.Info.Status.LastOperation, b.Shoot.KubernetesVersion, gardenerVersion)
-		seedDeploymentLister  = makeDeploymentLister(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, controlPlaneMonitoringLoggingSelector)
-		seedStatefulSetLister = makeStatefulSetLister(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, controlPlaneMonitoringLoggingSelector)
-		seedEtcdLister        = makeEtcdLister(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
-		seedWorkerLister      = makeWorkerLister(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
-	)
-
-	if apiServerRunning, err := initializeShootClients(); err != nil || !apiServerRunning {
-		// don't execute health checks if API server has already been deleted or has not been created yet
-		message := shootControlPlaneNotRunningMessage(b.Shoot.Info.Status.LastOperation)
-		if err != nil {
-			message = fmt.Sprintf("Could not initialize Shoot client for health check: %+v", err)
-			b.Logger.Error(message)
-		}
-
-		apiserverAvailability = checker.FailedCondition(apiserverAvailability, "APIServerDown", "Could not reach API server during client initialization.")
-		nodes = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(nodes, message)
-		systemComponents = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(systemComponents, message)
-
-		newControlPlane, err := b.checkControlPlane(ctx, effectiveShoot, checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedEtcdLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
-		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
-		return apiserverAvailability, controlPlane, nodes, systemComponents
-	}
-
-	_ = flow.Parallel(func(ctx context.Context) error {
-		apiserverAvailability = b.checkAPIServerAvailability(ctx, checker, apiserverAvailability)
-		return nil
-	}, func(ctx context.Context) error {
-		newControlPlane, err := b.checkControlPlane(ctx, effectiveShoot, checker, controlPlane, seedDeploymentLister, seedStatefulSetLister, seedEtcdLister, seedWorkerLister, extensionConditionsControlPlaneHealthy)
-		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
-		return nil
-	}, func(ctx context.Context) error {
-		newNodes, err := b.checkClusterNodes(ctx, b.K8sShootClient.Client(), effectiveShoot, checker, nodes, extensionConditionsEveryNodeReady)
-		nodes = newConditionOrError(nodes, newNodes, err)
-		return nil
-	}, func(ctx context.Context) error {
-		newSystemComponents, err := b.checkSystemComponents(ctx, checker, systemComponents, extensionConditionsSystemComponentsHealthy)
-		systemComponents = newConditionOrError(systemComponents, newSystemComponents, err)
-		return nil
-	})(ctx)
-
-	return apiserverAvailability, controlPlane, nodes, systemComponents
-}
 
 func isUnstableLastOperation(lastOperation *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError) bool {
 	return (isUnstableOperationType(lastOperation.Type) && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded) ||
@@ -845,98 +656,15 @@ func isUnstableOperationType(lastOperationType gardencorev1beta1.LastOperationTy
 	return ok
 }
 
-// PardonCondition pardons the given condition if the Shoot is either in create (except successful create) or delete state.
-func PardonCondition(condition gardencorev1beta1.Condition, lastOp *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError) gardencorev1beta1.Condition {
-	if (lastOp == nil || isUnstableLastOperation(lastOp, lastErrors)) && condition.Status == gardencorev1beta1.ConditionFalse {
-		return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionProgressing, condition.Reason, condition.Message, condition.Codes...)
-	}
-	return condition
-}
-
-// HealthChecks conducts the health checks on all the given conditions.
-func (b *Botanist) HealthChecks(
-	ctx context.Context,
-	effectiveShoot *gardencorev1beta1.Shoot,
-	initializeShootClients func() (bool, error),
-	thresholdMappings map[gardencorev1beta1.ConditionType]time.Duration,
-	healthCheckOutdatedThreshold *metav1.Duration,
-	gardenerVersion *semver.Version,
-	apiserverAvailability,
-	controlPlane,
-	nodes,
-	systemComponents gardencorev1beta1.Condition,
-) (
-	gardencorev1beta1.Condition,
-	gardencorev1beta1.Condition,
-	gardencorev1beta1.Condition,
-	gardencorev1beta1.Condition,
-) {
-	apiServerAvailable, controlPlaneHealthy, everyNodeReady, systemComponentsHealthy := b.healthChecks(ctx, effectiveShoot, initializeShootClients, thresholdMappings, healthCheckOutdatedThreshold, gardenerVersion, apiserverAvailability, controlPlane, nodes, systemComponents)
-	lastOp := b.Shoot.Info.Status.LastOperation
-	lastErrors := b.Shoot.Info.Status.LastErrors
-	return PardonCondition(apiServerAvailable, lastOp, lastErrors),
-		PardonCondition(controlPlaneHealthy, lastOp, lastErrors),
-		PardonCondition(everyNodeReady, lastOp, lastErrors),
-		PardonCondition(systemComponentsHealthy, lastOp, lastErrors)
-}
-
-// ExtensionCondition contains information about the extension type, name, namespace and the respective condition object.
-type ExtensionCondition struct {
-	Condition          gardencorev1beta1.Condition
-	ExtensionType      string
-	ExtensionName      string
-	ExtensionNamespace string
-}
-
-func (b *Botanist) getAllExtensionConditions(ctx context.Context) ([]ExtensionCondition, []ExtensionCondition, []ExtensionCondition, error) {
-	var (
-		conditionsControlPlaneHealthy     []ExtensionCondition
-		conditionsEveryNodeReady          []ExtensionCondition
-		conditionsSystemComponentsHealthy []ExtensionCondition
-	)
-
-	for _, listObj := range []client.ObjectList{
-		&extensionsv1alpha1.BackupEntryList{},
-		&extensionsv1alpha1.ContainerRuntimeList{},
-		&extensionsv1alpha1.ControlPlaneList{},
-		&extensionsv1alpha1.ExtensionList{},
-		&extensionsv1alpha1.InfrastructureList{},
-		&extensionsv1alpha1.NetworkList{},
-		&extensionsv1alpha1.OperatingSystemConfigList{},
-		&extensionsv1alpha1.WorkerList{},
-	} {
-		listKind := listObj.GetObjectKind().GroupVersionKind().Kind
-		if err := b.K8sSeedClient.Client().List(ctx, listObj, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
-			return nil, nil, nil, err
+// PardonConditions pardons the given condition if the Shoot is either in create (except successful create) or delete state.
+func PardonConditions(conditions []gardencorev1beta1.Condition, lastOp *gardencorev1beta1.LastOperation, lastErrors []gardencorev1beta1.LastError) []gardencorev1beta1.Condition {
+	pardoningConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
+	for _, cond := range conditions {
+		if (lastOp == nil || isUnstableLastOperation(lastOp, lastErrors)) && cond.Status == gardencorev1beta1.ConditionFalse {
+			pardoningConditions = append(pardoningConditions, gardencorev1beta1helper.UpdatedCondition(cond, gardencorev1beta1.ConditionProgressing, cond.Reason, cond.Message, cond.Codes...))
+			continue
 		}
-
-		if err := meta.EachListItem(listObj, func(obj runtime.Object) error {
-			acc, err := extensions.Accessor(obj)
-			if err != nil {
-				return err
-			}
-
-			kind := obj.GetObjectKind().GroupVersionKind().Kind
-			name := acc.GetName()
-			namespace := acc.GetNamespace()
-
-			for _, condition := range acc.GetExtensionStatus().GetConditions() {
-				switch condition.Type {
-				case gardencorev1beta1.ShootControlPlaneHealthy:
-					conditionsControlPlaneHealthy = append(conditionsControlPlaneHealthy, ExtensionCondition{condition, kind, name, namespace})
-				case gardencorev1beta1.ShootEveryNodeReady:
-					conditionsEveryNodeReady = append(conditionsEveryNodeReady, ExtensionCondition{condition, kind, name, namespace})
-				case gardencorev1beta1.ShootSystemComponentsHealthy:
-					conditionsSystemComponentsHealthy = append(conditionsSystemComponentsHealthy, ExtensionCondition{condition, kind, name, namespace})
-				}
-			}
-
-			return nil
-		}); err != nil {
-			b.Logger.Errorf("Error during evaluation of kind %q for extensions health check: %+v", listKind, err)
-			return nil, nil, nil, err
-		}
+		pardoningConditions = append(pardoningConditions, cond)
 	}
-
-	return conditionsControlPlaneHealthy, conditionsEveryNodeReady, conditionsSystemComponentsHealthy, nil
+	return pardoningConditions
 }

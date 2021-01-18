@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,11 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package botanist
+package care
 
 import (
 	"context"
 	"fmt"
+
+	"github.com/gardener/gardener/pkg/operation"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/sirupsen/logrus"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -26,63 +33,90 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func shootHibernatedConstraint(condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, "ConstraintNotChecked", "Shoot cluster has been hibernated.")
+func shootHibernatedConstraints(conditions ...gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+	hibernationConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
+	for _, cond := range conditions {
+		hibernationConditions = append(hibernationConditions, gardencorev1beta1helper.UpdatedCondition(cond, gardencorev1beta1.ConditionTrue, "ConstraintNotChecked", "Shoot cluster has been hibernated."))
+	}
+	return hibernationConditions
 }
 
-func shootControlPlaneNotRunningConstraint(condition gardencorev1beta1.Condition) gardencorev1beta1.Condition {
-	return gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionFalse, "ConstraintNotChecked", "Shoot control plane is not running at the moment.")
+func shootControlPlaneNotRunningConstraints(conditions ...gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+	constraints := make([]gardencorev1beta1.Condition, 0, len(conditions))
+	for _, cond := range conditions {
+		constraints = append(constraints, gardencorev1beta1helper.UpdatedCondition(cond, gardencorev1beta1.ConditionFalse, "ConstraintNotChecked", "Shoot control plane is not running at the moment."))
+	}
+	return constraints
+}
+
+// Constraint contains required information for shoot constraint checks.
+type Constraint struct {
+	shoot *shoot.Shoot
+
+	initializeShootClients ShootClientInit
+	shootClient            client.Client
+
+	logger logrus.FieldLogger
+}
+
+// NewConstraint returns a new constraint instance.
+func NewConstraint(op *operation.Operation, shootClientInit ShootClientInit) *Constraint {
+	return &Constraint{
+		shoot:                  op.Shoot,
+		initializeShootClients: shootClientInit,
+		logger:                 op.Logger,
+	}
 }
 
 // ConstraintsChecks conducts the constraints checks on all the given constraints.
-func (b *Botanist) ConstraintsChecks(
+func (c *Constraint) ConstraintsChecks(
 	ctx context.Context,
-	initializeShootClients func() (bool, error),
-	hibernationPossibleConstraint gardencorev1beta1.Condition,
-	maintenancePreconditionsSatisfiedConstraint gardencorev1beta1.Condition,
-) (
-	gardencorev1beta1.Condition,
-	gardencorev1beta1.Condition,
-) {
-	hibernationPossible, maintenancePreconditionsSatisfied := b.constraintsChecks(ctx, initializeShootClients, hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint)
-	lastOp := b.Shoot.Info.Status.LastOperation
-	lastErrors := b.Shoot.Info.Status.LastErrors
-	return PardonCondition(hibernationPossible, lastOp, lastErrors),
-		PardonCondition(maintenancePreconditionsSatisfied, lastOp, lastErrors)
+	constraints []gardencorev1beta1.Condition,
+) []gardencorev1beta1.Condition {
+	updatedConstrataints := c.constraintsChecks(ctx, constraints)
+	lastOp := c.shoot.Info.Status.LastOperation
+	lastErrors := c.shoot.Info.Status.LastErrors
+	return PardonConditions(updatedConstrataints, lastOp, lastErrors)
 }
 
-func (b *Botanist) constraintsChecks(
+func (c *Constraint) constraintsChecks(
 	ctx context.Context,
-	initializeShootClients func() (bool, error),
-	hibernationPossibleConstraint gardencorev1beta1.Condition,
-	maintenancePreconditionsSatisfiedConstraint gardencorev1beta1.Condition,
-) (
-	gardencorev1beta1.Condition,
-	gardencorev1beta1.Condition,
-) {
-	if b.Shoot.HibernationEnabled || b.Shoot.Info.Status.IsHibernated {
-		return shootHibernatedConstraint(hibernationPossibleConstraint), shootHibernatedConstraint(maintenancePreconditionsSatisfiedConstraint)
+	constraints []gardencorev1beta1.Condition,
+) []gardencorev1beta1.Condition {
+	if c.shoot.HibernationEnabled || c.shoot.Info.Status.IsHibernated {
+		return shootHibernatedConstraints(constraints...)
 	}
 
-	apiServerRunning, err := initializeShootClients()
+	var hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint gardencorev1beta1.Condition
+	for _, cons := range constraints {
+		switch cons.Type {
+		case gardencorev1beta1.ShootHibernationPossible:
+			hibernationPossibleConstraint = cons
+		case gardencorev1beta1.ShootMaintenancePreconditionsSatisfied:
+			maintenancePreconditionsSatisfiedConstraint = cons
+		}
+	}
+
+	client, apiServerRunning, err := c.initializeShootClients()
 	if err != nil {
 		message := fmt.Sprintf("Could not initialize Shoot client for constraints check: %+v", err)
-		b.Logger.Error(message)
+		c.logger.Error(message)
 		hibernationPossibleConstraint = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(hibernationPossibleConstraint, message)
 		maintenancePreconditionsSatisfiedConstraint = gardencorev1beta1helper.UpdatedConditionUnknownErrorMessage(maintenancePreconditionsSatisfiedConstraint, message)
 
-		return hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint
+		return []gardencorev1beta1.Condition{hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint}
 	}
 
 	if !apiServerRunning {
 		// don't check constraints if API server has already been deleted or has not been created yet
-		return shootControlPlaneNotRunningConstraint(hibernationPossibleConstraint),
-			shootControlPlaneNotRunningConstraint(maintenancePreconditionsSatisfiedConstraint)
+		return shootControlPlaneNotRunningConstraints(hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint)
 	}
+
+	c.shootClient = client.Client()
 
 	var newHibernationConstraint, newMaintenancePreconditionsSatisfiedConstraint *gardencorev1beta1.Condition
 
-	status, reason, message, err := b.CheckForProblematicWebhooks(ctx)
+	status, reason, message, err := c.CheckForProblematicWebhooks(ctx)
 	if err == nil {
 		updatedHibernationCondition := gardencorev1beta1helper.UpdatedCondition(hibernationPossibleConstraint, status, reason, message)
 		newHibernationConstraint = &updatedHibernationCondition
@@ -91,17 +125,17 @@ func (b *Botanist) constraintsChecks(
 		newMaintenancePreconditionsSatisfiedConstraint = &updatedMaintenanceCondition
 	}
 
-	hibernationPossibleConstraint = newConditionOrError(hibernationPossibleConstraint, newHibernationConstraint, err)
-	maintenancePreconditionsSatisfiedConstraint = newConditionOrError(maintenancePreconditionsSatisfiedConstraint, newMaintenancePreconditionsSatisfiedConstraint, err)
+	hibernationPossibleConstraint = NewConditionOrError(hibernationPossibleConstraint, newHibernationConstraint, err)
+	maintenancePreconditionsSatisfiedConstraint = NewConditionOrError(maintenancePreconditionsSatisfiedConstraint, newMaintenancePreconditionsSatisfiedConstraint, err)
 
-	return hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint
+	return []gardencorev1beta1.Condition{hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint}
 }
 
 // CheckForProblematicWebhooks checks the Shoot for problematic webhooks which could prevent shoot worker nodes from
 // joining the cluster.
-func (b *Botanist) CheckForProblematicWebhooks(ctx context.Context) (gardencorev1beta1.ConditionStatus, string, string, error) {
+func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencorev1beta1.ConditionStatus, string, string, error) {
 	validatingWebhookConfigs := &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}
-	if err := b.K8sShootClient.Client().List(ctx, validatingWebhookConfigs); err != nil {
+	if err := c.shootClient.List(ctx, validatingWebhookConfigs); err != nil {
 		return "", "", "", fmt.Errorf("could not get ValidatingWebhookConfigurations of Shoot cluster to check for problematic webhooks")
 	}
 
@@ -123,7 +157,7 @@ func (b *Botanist) CheckForProblematicWebhooks(ctx context.Context) (gardencorev
 	}
 
 	mutatingWebhookConfigs := &admissionregistrationv1beta1.MutatingWebhookConfigurationList{}
-	if err := b.K8sShootClient.Client().List(ctx, mutatingWebhookConfigs); err != nil {
+	if err := c.shootClient.List(ctx, mutatingWebhookConfigs); err != nil {
 		return "", "", "", fmt.Errorf("could not get MutatingWebhookConfigurations of Shoot cluster to check for problematic webhooks")
 	}
 

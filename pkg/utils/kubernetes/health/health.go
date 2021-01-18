@@ -22,6 +22,7 @@ import (
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -29,13 +30,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/sirupsen/logrus"
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 func requiredConditionMissing(conditionType string) error {
@@ -422,4 +425,33 @@ func getManagedResourceCondition(conditions []resourcesv1alpha1.ManagedResourceC
 		}
 	}
 	return nil
+}
+
+// CheckTunnelConnection checks if the tunnel connection between the control plane and the shoot networks
+// is established.
+func CheckTunnelConnection(ctx context.Context, shootClient kubernetes.Interface, logger logrus.FieldLogger, tunnelName string) (bool, error) {
+	podList := &corev1.PodList{}
+	if err := shootClient.Client().List(ctx, podList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"app": tunnelName}); err != nil {
+		return retry.SevereError(err)
+	}
+
+	var tunnelPod *corev1.Pod
+	for _, pod := range podList.Items {
+		if pod.Status.Phase == corev1.PodRunning {
+			tunnelPod = &pod
+			break
+		}
+	}
+
+	if tunnelPod == nil {
+		logger.Infof("Waiting until a running %s pod exists in the Shoot cluster...", tunnelName)
+		return retry.MinorError(fmt.Errorf("no running %s pod found yet in the shoot cluster", tunnelName))
+	}
+	if err := shootClient.CheckForwardPodPort(tunnelPod.Namespace, tunnelPod.Name, 0, 22); err != nil {
+		logger.Info("Waiting until the tunnel connection has been established...")
+		return retry.MinorError(fmt.Errorf("could not forward to %s pod: %v", tunnelName, err))
+	}
+
+	logger.Info("Tunnel connection has been established.")
+	return retry.Ok()
 }
