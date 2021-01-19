@@ -25,7 +25,7 @@ import (
 )
 
 var _ = Describe("utils", func() {
-	Describe("#ValidateNetworkDisjointedness", func() {
+	Describe("#ValidateNetworkDisjointedness IPv4", func() {
 		var (
 			seedPodsCIDR     = "10.241.128.0/17"
 			seedServicesCIDR = "10.241.0.0/17"
@@ -129,6 +129,89 @@ var _ = Describe("utils", func() {
 					"Field": Equal("[].pods"),
 				})),
 			))
+		})
+	})
+
+	Describe("#ValidateNetworkDisjointedness IPv6", func() {
+		var (
+			seedPodsCIDRIPv6     = "2001:0db8:65a3::/113"
+			seedServicesCIDRIPv6 = "2001:0db8:75a3::/113"
+			seedNodesCIDRIPv6    = "2001:0db8:85a3::/112"
+		)
+		It("should pass the validation", func() {
+			var (
+				podsCIDR     = "2001:0db8:35a3::/113"
+				servicesCIDR = "2001:0db8:45a3::/113"
+				nodesCIDR    = "2001:0db8:55a3::/112"
+			)
+
+			errorList := ValidateNetworkDisjointedness(
+				field.NewPath(""),
+				&nodesCIDR,
+				&podsCIDR,
+				&servicesCIDR,
+				&seedNodesCIDRIPv6,
+				seedPodsCIDRIPv6,
+				seedServicesCIDRIPv6,
+			)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should fail due to disjointedness", func() {
+			var (
+				podsCIDR     = seedPodsCIDRIPv6
+				servicesCIDR = seedServicesCIDRIPv6
+				nodesCIDR    = seedNodesCIDRIPv6
+			)
+
+			errorList := ValidateNetworkDisjointedness(
+				field.NewPath(""),
+				&nodesCIDR,
+				&podsCIDR,
+				&servicesCIDR,
+				&seedNodesCIDRIPv6,
+				seedPodsCIDRIPv6,
+				seedServicesCIDRIPv6,
+			)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].nodes"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].services"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].pods"),
+			}))))
+		})
+
+		It("should fail due to disjointedness of service and pod networks", func() {
+			var (
+				podsCIDR     = seedPodsCIDRIPv6
+				servicesCIDR = seedServicesCIDRIPv6
+				nodesCIDR    = "2001:0db8:65a3::/113"
+			)
+
+			errorList := ValidateNetworkDisjointedness(
+				field.NewPath(""),
+				&nodesCIDR,
+				&podsCIDR,
+				&servicesCIDR,
+				&seedNodesCIDRIPv6,
+				seedPodsCIDRIPv6,
+				seedServicesCIDRIPv6,
+			)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].services"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("[].pods"),
+			}))),
+			)
 		})
 	})
 })
