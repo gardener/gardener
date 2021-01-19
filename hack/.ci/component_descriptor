@@ -8,20 +8,12 @@ descriptor_out_file="${COMPONENT_DESCRIPTOR_PATH}"
 
 echo "enriching creating component descriptor from ${BASE_DEFINITION_PATH}"
 
-if [[ -f "$repo_root_dir/charts/images.yaml" ]]; then
-  images="$(yaml2json < "$repo_root_dir/charts/images.yaml")"
-  eval "$(jq -r ".images |
-    map(select(.sourceRepository != \"$repo_name\") |
-    if (.name == \"hyperkube\" or .name == \"kube-apiserver\" or .name == \"kube-controller-manager\" or .name == \"kube-scheduler\" or .name == \"kube-proxy\" or .repository == \"k8s.gcr.io/hyperkube\") then
-      \"--generic-dependencies '{\\\"name\\\": \\\"\" + .name + \"\\\", \\\"version\\\": \\\"\" + .tag + \"\\\"}'\"
-    elif (.repository | startswith(\"eu.gcr.io/gardener-project/gardener\")) then
-      \"--component-dependencies '{\\\"name\\\": \\\"\" + .sourceRepository + \"\\\", \\\"version\\\": \\\"\" + .tag + \"\\\"}'\"
-    else
-      \"--container-image-dependencies '{\\\"name\\\": \\\"\" + .name + \"\\\", \\\"image_reference\\\": \\\"\" + .repository + \":\" + .tag + \"\\\", \\\"version\\\": \\\"\" + .tag + \"\\\"}'\"
-    end) |
-    \"${ADD_DEPENDENCIES_CMD} \\\\\n\" +
-    join(\" \\\\\n\")" <<< "$images")"
-fi
+# translates all images defined the images.yaml into component descriptor resources.
+# For detailed documentation see https://github.com/gardener/component-cli/blob/main/docs/reference/components-cli_image-vector_add.md
+component-cli image-vector add --comp-desc ${BASE_DEFINITION_PATH} \
+  --image-vector "$repo_root_dir/charts/images.yaml" \
+  --component-prefixes eu.gcr.io/gardener-project/gardener \
+  --generic-dependencies hyperkube,kube-apiserver,kube-controller-manager,kube-scheduler,kube-proxy
 
 if [[ -d "$repo_root_dir/charts/" ]]; then
   for image_tpl_path in "$repo_root_dir/charts/"*"/templates/_images.tpl"; do
