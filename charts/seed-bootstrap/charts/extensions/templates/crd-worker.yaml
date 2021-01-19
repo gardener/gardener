@@ -221,7 +221,9 @@ spec:
                 type: object
               type: array
             providerConfig:
+              description: ProviderConfig is the provider specific configuration.
               type: object
+              x-kubernetes-preserve-unknown-fields: true
             region:
               description: Region is the name of the region where the worker pool should be deployed to.
               type: string
@@ -402,6 +404,7 @@ spec:
             state:
               description: State can be filled by the operating controller with what ever data it needs.
               type: object
+              x-kubernetes-preserve-unknown-fields: true
           type: object
       required:
         - spec

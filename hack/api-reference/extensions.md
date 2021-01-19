@@ -141,6 +141,7 @@ BackupBucketStatus
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 </td>
 </tr>
 </tbody>
@@ -282,6 +283,7 @@ BackupEntryStatus
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 </td>
 </tr>
 </tbody>
@@ -501,6 +503,7 @@ ContainerRuntimeStatus
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 </td>
 </tr>
 </tbody>
@@ -644,6 +647,7 @@ ControlPlaneStatus
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 </td>
 </tr>
 </tbody>
@@ -735,6 +739,7 @@ ExtensionStatus
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 </td>
 </tr>
 </tbody>
@@ -862,6 +867,7 @@ InfrastructureStatus
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 </td>
 </tr>
 </tbody>
@@ -975,6 +981,7 @@ NetworkStatus
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 </td>
 </tr>
 </tbody>
@@ -1138,6 +1145,7 @@ OperatingSystemConfigStatus
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 </td>
 </tr>
 </tbody>
@@ -1293,6 +1301,7 @@ WorkerStatus
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 </td>
 </tr>
 </tbody>
@@ -2031,6 +2040,8 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </em>
 </td>
 <td>
+<em>(Optional)</em>
+<p>ProviderConfig is the provider specific configuration.</p>
 </td>
 </tr>
 </tbody>
