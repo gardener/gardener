@@ -49,7 +49,12 @@
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [],
+      "seriesOverrides": [
+        {
+          "alias": "/Requests|Limits/",
+          "dashes": true
+        }
+      ],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -165,7 +170,12 @@
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [],
+      "seriesOverrides": [
+        {
+          "alias": "/Requests|Limits/",
+          "dashes": true
+        }
+      ],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
