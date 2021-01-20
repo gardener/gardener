@@ -76,9 +76,9 @@ var _ = Describe("GardenletConfiguration", func() {
 		}
 	})
 
-	Describe("#ValidGardenletConfiguration", func() {
+	Describe("#ValidateGardenletConfiguration", func() {
 		It("should allow valid configurations", func() {
-			errorList := ValidateGardenletConfiguration(cfg)
+			errorList := ValidateGardenletConfiguration(cfg, nil)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -92,7 +92,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				cfg.Controllers.Shoot.SyncPeriod = &metav1.Duration{Duration: -1}
 				cfg.Controllers.Shoot.RetryDuration = &metav1.Duration{Duration: -1}
 
-				errorList := ValidateGardenletConfiguration(cfg)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -117,7 +117,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should forbid too low values for the DNS TTL", func() {
 				cfg.Controllers.Shoot.DNSEntryTTLSeconds = pointer.Int64Ptr(-1)
 
-				errorList := ValidateGardenletConfiguration(cfg)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -128,7 +128,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should forbid too high values for the DNS TTL", func() {
 				cfg.Controllers.Shoot.DNSEntryTTLSeconds = pointer.Int64Ptr(601)
 
-				errorList := ValidateGardenletConfiguration(cfg)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -142,11 +142,11 @@ var _ = Describe("GardenletConfiguration", func() {
 				cfg.SeedSelector = nil
 				cfg.SeedConfig = nil
 
-				errorList := ValidateGardenletConfiguration(cfg)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("seedSelector/seedConfig"),
+					"Field": Equal("seedConfig"),
 				}))))
 			})
 
@@ -154,31 +154,20 @@ var _ = Describe("GardenletConfiguration", func() {
 				cfg.SeedSelector = &metav1.LabelSelector{}
 				cfg.SeedConfig = &config.SeedConfig{}
 
-				errorList := ValidateGardenletConfiguration(cfg)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("seedSelector/seedConfig"),
+					"Field": Equal("seedConfig"),
 				}))))
 			})
 		})
 
 		Context("server", func() {
-			It("should forbid not specifying a server configuration", func() {
-				cfg.Server = nil
-
-				errorList := ValidateGardenletConfiguration(cfg)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("server"),
-				}))))
-			})
-
 			It("should forbid invalid server configuration", func() {
 				cfg.Server = &config.ServerConfiguration{}
 
-				errorList := ValidateGardenletConfiguration(cfg)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -193,61 +182,6 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 		})
 
-		It("should forbid not specifying a sni configuration", func() {
-			cfg.SNI = nil
-
-			errorList := ValidateGardenletConfiguration(cfg)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("sni"),
-			}))))
-		})
-
-		It("should forbid not specifying a sni ingress configuration", func() {
-			cfg.SNI.Ingress = nil
-
-			errorList := ValidateGardenletConfiguration(cfg)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("sni.ingress"),
-			}))))
-		})
-
-		It("should forbid not specifying a sni ingress namespace configuration", func() {
-			cfg.SNI.Ingress.Namespace = pointer.StringPtr("")
-
-			errorList := ValidateGardenletConfiguration(cfg)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("sni.ingress.namespace"),
-			}))))
-		})
-
-		It("should forbid not specifying a sni ingress service name configuration", func() {
-			cfg.SNI.Ingress.ServiceName = pointer.StringPtr("")
-
-			errorList := ValidateGardenletConfiguration(cfg)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("sni.ingress.serviceName"),
-			}))))
-		})
-
-		It("should forbid not specifying a sni ingress labels configuration", func() {
-			cfg.SNI.Ingress.Labels = nil
-
-			errorList := ValidateGardenletConfiguration(cfg)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("sni.ingress.labels"),
-			}))))
-		})
-
 		It("should forbid reserved greater than capacity", func() {
 			cfg.Resources = &config.ResourcesConfiguration{
 				Capacity: corev1.ResourceList{
@@ -258,7 +192,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				},
 			}
 
-			errorList := ValidateGardenletConfiguration(cfg)
+			errorList := ValidateGardenletConfiguration(cfg, nil)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
@@ -273,7 +207,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				},
 			}
 
-			errorList := ValidateGardenletConfiguration(cfg)
+			errorList := ValidateGardenletConfiguration(cfg, nil)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),

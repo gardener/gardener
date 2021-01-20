@@ -24,72 +24,40 @@ import (
 )
 
 // ValidateGardenletConfiguration validates a GardenletConfiguration object.
-func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration) field.ErrorList {
+func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cfg.Controllers != nil {
 		if cfg.Controllers.Shoot != nil {
-			allErrs = append(allErrs, ValidateShootControllerConfiguration(cfg.Controllers.Shoot, field.NewPath("controllers", "shoot"))...)
+			allErrs = append(allErrs, ValidateShootControllerConfiguration(cfg.Controllers.Shoot, fieldPath(fldPath, "controllers", "shoot"))...)
 		}
 	}
 
 	if (cfg.SeedConfig == nil && cfg.SeedSelector == nil) || (cfg.SeedConfig != nil && cfg.SeedSelector != nil) {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("seedSelector/seedConfig"), cfg, "exactly one of `seedConfig` and `seedSelector` is required"))
+		allErrs = append(allErrs, field.Invalid(fieldPath(fldPath, "seedConfig"), cfg, "either seed config or seed selector is required"))
 	}
 
-	serverPath := field.NewPath("server")
-	if cfg.Server == nil {
-		allErrs = append(allErrs, field.Required(serverPath, "require configuration for server"))
-	} else {
+	serverPath := fieldPath(fldPath, "server")
+	if cfg.Server != nil {
 		if len(cfg.Server.HTTPS.BindAddress) == 0 {
-			allErrs = append(allErrs, field.Required(serverPath.Child("https", "bindAddress"), "bind address must be specified"))
+			allErrs = append(allErrs, field.Required(serverPath.Child("https", "bindAddress"), "bind address is required"))
 		}
 		if cfg.Server.HTTPS.Port == 0 {
-			allErrs = append(allErrs, field.Required(serverPath.Child("https", "port"), "port must be specified"))
+			allErrs = append(allErrs, field.Required(serverPath.Child("https", "port"), "port is required"))
 		}
-	}
-
-	sniPath := field.NewPath("sni")
-
-	if cfg.SNI == nil {
-		allErrs = append(allErrs, field.Required(sniPath, "required configuration for SNI"))
-	} else {
-		allErrs = append(allErrs, validateSNI(sniPath, cfg.SNI)...)
 	}
 
 	resourcesPath := field.NewPath("resources")
 	if cfg.Resources != nil {
 		for resourceName, quantity := range cfg.Resources.Capacity {
 			if reservedQuantity, ok := cfg.Resources.Reserved[resourceName]; ok && reservedQuantity.Value() > quantity.Value() {
-				allErrs = append(allErrs, field.Invalid(resourcesPath.Child("reserved", string(resourceName)), cfg.Resources.Reserved[resourceName], "must be lower or equal to capacity"))
+				allErrs = append(allErrs, field.Invalid(resourcesPath.Child("reserved", string(resourceName)), cfg.Resources.Reserved[resourceName], "reserved must be lower or equal to capacity"))
 			}
 		}
 		for resourceName := range cfg.Resources.Reserved {
 			if _, ok := cfg.Resources.Capacity[resourceName]; !ok {
 				allErrs = append(allErrs, field.Invalid(resourcesPath.Child("reserved", string(resourceName)), cfg.Resources.Reserved[resourceName], "reserved without capacity"))
 			}
-		}
-	}
-
-	return allErrs
-}
-
-func validateSNI(sniPath *field.Path, sni *config.SNI) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	ingressPath := sniPath.Child("ingress")
-
-	if sni.Ingress == nil {
-		allErrs = append(allErrs, field.Required(ingressPath, "required configuration for SNI ingress"))
-	} else {
-		if len(sni.Ingress.Labels) == 0 {
-			allErrs = append(allErrs, field.Required(ingressPath.Child("labels"), "must specify ingress gateway labels"))
-		}
-		if sni.Ingress.Namespace == nil || *sni.Ingress.Namespace == "" {
-			allErrs = append(allErrs, field.Required(ingressPath.Child("namespace"), "must specify ingress gateway namespace"))
-		}
-		if sni.Ingress.ServiceName == nil || *sni.Ingress.ServiceName == "" {
-			allErrs = append(allErrs, field.Required(ingressPath.Child("serviceName"), "must specify ingress gateway service name"))
 		}
 	}
 
@@ -128,4 +96,11 @@ func ValidateShootControllerConfiguration(cfg *config.ShootControllerConfigurati
 	}
 
 	return allErrs
+}
+
+func fieldPath(fldPath *field.Path, name string, moreNames ...string) *field.Path {
+	if fldPath != nil {
+		return fldPath.Child(name, moreNames...)
+	}
+	return field.NewPath(name, moreNames...)
 }
