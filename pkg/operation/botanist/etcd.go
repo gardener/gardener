@@ -23,7 +23,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -44,7 +44,7 @@ var NewEtcd = etcd.New
 
 // DefaultEtcd returns a deployer for the etcd.
 func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Etcd, error) {
-	defragmentationSchedule, err := determineDefragmentationSchedule(b.Shoot.Info, b.ShootedSeed, class)
+	defragmentationSchedule, err := determineDefragmentationSchedule(b.Shoot.Info, b.ManagedSeed, class)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Etcd, error)
 	)
 
 	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
-	if b.ShootedSeed != nil {
+	if b.ManagedSeed != nil {
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 	e.SetHVPAConfig(&etcd.HVPAConfig{
@@ -159,9 +159,9 @@ func determineBackupSchedule(shoot *gardencorev1beta1.Shoot) (string, error) {
 	})
 }
 
-func determineDefragmentationSchedule(shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev1beta1helper.ShootedSeed, class etcd.Class) (string, error) {
+func determineDefragmentationSchedule(shoot *gardencorev1beta1.Shoot, managedSeed *seedmanagementv1alpha1.ManagedSeed, class etcd.Class) (string, error) {
 	schedule := "%d %d */3 * *"
-	if shootedSeed != nil && class == etcd.ClassImportant {
+	if managedSeed != nil && class == etcd.ClassImportant {
 		// defrag important etcds of shooted seeds daily in the maintenance window
 		schedule = "%d %d * * *"
 	}

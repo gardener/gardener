@@ -51,7 +51,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.Shoot).NotTo(BeNil())
 			Expect(obj.Controllers.ShootCare).NotTo(BeNil())
 			Expect(obj.Controllers.ShootStateSync).NotTo(BeNil())
-			Expect(obj.Controllers.ShootedSeedRegistration).NotTo(BeNil())
+			Expect(obj.Controllers.ManagedSeed).NotTo(BeNil())
 			Expect(obj.LeaderElection).NotTo(BeNil())
 			Expect(obj.LogLevel).To(PointTo(Equal("info")))
 			Expect(obj.KubernetesLogLevel).To(PointTo(Equal(klog.Level(0))))
@@ -134,16 +134,17 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
-	Describe("#SetDefaults_ShootedSeedRegistrationControllerConfiguration", func() {
-		var obj *ShootedSeedRegistrationControllerConfiguration
+	Describe("#SetDefaults_ManagedSeedControllerConfiguration", func() {
+		var obj *ManagedSeedControllerConfiguration
 
 		BeforeEach(func() {
-			obj = &ShootedSeedRegistrationControllerConfiguration{}
+			obj = &ManagedSeedControllerConfiguration{}
 		})
 
 		It("should default the configuration", func() {
-			SetDefaults_ShootedSeedRegistrationControllerConfiguration(obj)
+			SetDefaults_ManagedSeedControllerConfiguration(obj)
 
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(DefaultControllerConcurrentSyncs)))
 			Expect(obj.SyncJitterPeriod).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Minute})))
 		})
 	})

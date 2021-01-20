@@ -284,11 +284,28 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 	}
 	operation.Shoot = shoot
 
-	shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(shoot.Info)
+	// Get the ManagedSeed object for this shoot, if it exists.
+	// Also read the managed seed API server settings from the managed-seed-api-server annotation.
+	operation.ManagedSeed, err = kutil.GetManagedSeed(ctx, gardenClient.GardenSeedManagement(), shoot.Info.Namespace, shoot.Info.Name)
 	if err != nil {
-		logger.Warnf("Cannot use shoot %s/%s as shooted seed: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
-	} else {
-		operation.ShootedSeed = shootedSeed
+		logger.Warnf("Cannot use shoot %s/%s as managed seed: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
+	}
+	operation.ManagedSeedAPIServer, err = gardencorev1beta1helper.ReadManagedSeedAPIServer(shoot.Info)
+	if err != nil {
+		logger.Warnf("Cannot read managed seed API server settings of shoot %s/%s: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
+	}
+
+	// If the managed-seed-api-server annotation is not present, try to read the managed seed API server settings
+	// from the use-as-seed annotation. This is done to avoid re-annotating a shoot annotated with the use-as-seed annotation
+	// by the shooted seed registration controller.
+	if operation.ManagedSeedAPIServer == nil {
+		shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(shoot.Info)
+		if err != nil {
+			logger.Warnf("Cannot read managed seed API server settings of shoot %s/%s: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
+		}
+		if shootedSeed != nil {
+			operation.ManagedSeedAPIServer = shootedSeed.APIServer
+		}
 	}
 
 	operation.ChartsRootPath = b.chartsRootPathFunc()

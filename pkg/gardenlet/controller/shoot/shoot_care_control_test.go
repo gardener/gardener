@@ -20,7 +20,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	"github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -163,7 +163,7 @@ var _ = Describe("Shoot Care Control", func() {
 				clientMap                clientmap.ClientMap
 				gardenCoreClient         *fake.Clientset
 
-				shootedSeed *gardencorev1beta1helper.ShootedSeed
+				managedSeed *seedmanagementv1alpha1.ManagedSeed
 
 				operationFunc NewOperationFunc
 				revertFns     []func()
@@ -187,7 +187,7 @@ var _ = Describe("Shoot Care Control", func() {
 				operationFunc = opFunc(&operation.Operation{
 					K8sGardenClient: gardenClientSet,
 					K8sSeedClient:   seedClientSet,
-					ShootedSeed:     shootedSeed,
+					ManagedSeed:     managedSeed,
 					Shoot: &operationshoot.Shoot{
 						Info: shoot,
 					},
@@ -434,7 +434,7 @@ var _ = Describe("Shoot Care Control", func() {
 							},
 						}
 
-						shootedSeed = &gardencorev1beta1helper.ShootedSeed{}
+						managedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 
 						gardenClient.EXPECT().Get(gomock.Any(), kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
 							func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Seed) error {
@@ -444,7 +444,7 @@ var _ = Describe("Shoot Care Control", func() {
 					})
 
 					AfterEach(func() {
-						shootedSeed = nil
+						managedSeed = nil
 					})
 
 					It("should merge shoot and seed conditions", func() {

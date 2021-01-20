@@ -123,10 +123,11 @@ data:
       shootStateSync:
         concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.shootStateSync.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.shootStateSync.concurrentSyncs }}
         syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.shootStateSync.syncPeriod is required" .Values.global.gardenlet.config.controllers.shootStateSync.syncPeriod }}
-      {{- if .Values.global.gardenlet.config.controllers.shootedSeedRegistration }}
-      shootedSeedRegistration:
-        {{- if .Values.global.gardenlet.config.controllers.shootedSeedRegistration.syncJitterPeriod }}
-        syncJitterPeriod: {{ .Values.global.gardenlet.config.controllers.shootedSeedRegistration.syncJitterPeriod }}
+      {{- if .Values.global.gardenlet.config.controllers.managedSeed }}
+      managedSeed:
+        concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.managedSeed.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.managedSeed.concurrentSyncs }}
+        {{- if .Values.global.gardenlet.config.controllers.managedSeed.syncJitterPeriod }}
+        syncJitterPeriod: {{ .Values.global.gardenlet.config.controllers.managedSeed.syncJitterPeriod }}
         {{- end }}
       {{- end }}
     resources:

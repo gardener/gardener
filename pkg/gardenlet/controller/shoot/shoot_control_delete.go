@@ -96,37 +96,6 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			}
 			return err
 		}),
-		// Check if Seed object for shooted seed has been deleted
-		errors.ToExecute("Check if Seed object for shooted seed has been deleted", func() error {
-			if o.ShootedSeed != nil {
-				if err := o.K8sGardenClient.DirectClient().Get(ctx, kutil.Key(o.Shoot.Info.Name), &gardencorev1beta1.Seed{}); err != nil {
-					if !apierrors.IsNotFound(err) {
-						return err
-					}
-					return nil
-				}
-				return fmt.Errorf("seed object for shooted seed is not yet deleted - can't delete shoot")
-			}
-			return nil
-		}),
-		errors.ToExecute("Wait for seed deletion", func() error {
-			if o.Shoot.Info.Namespace == v1beta1constants.GardenNamespace && o.ShootedSeed != nil {
-				// wait for seed object to be deleted before going on with shoot deletion
-				if err := retryutils.UntilTimeout(ctx, time.Second, 300*time.Second, func(context.Context) (done bool, err error) {
-					_, err = o.K8sGardenClient.GardenCore().CoreV1beta1().Seeds().Get(ctx, o.Shoot.Info.Name, kubernetes.DefaultGetOptions())
-					if apierrors.IsNotFound(err) {
-						return retryutils.Ok()
-					}
-					if err != nil {
-						return retryutils.SevereError(err)
-					}
-					return retryutils.NotOk()
-				}); err != nil {
-					return fmt.Errorf("failed while waiting for seed %s to be deleted, err=%s", o.Shoot.Info.Name, err.Error())
-				}
-			}
-			return nil
-		}),
 		// We check whether the kube-apiserver deployment exists in the shoot namespace. If it does not, then we assume
 		// that it has never been deployed successfully, or that we have deleted it in a previous run because we already
 		// cleaned up. We follow that no (more) resources can have been deployed in the shoot cluster, thus there is nothing
