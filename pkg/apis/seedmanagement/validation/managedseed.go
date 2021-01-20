@@ -105,6 +105,12 @@ func ValidateManagedSeedSpecUpdate(newSpec, oldSpec *seedmanagement.ManagedSeedS
 	return allErrs
 }
 
+// ValidateManagedSeedStatusUpdate validates a ManagedSeed object before a status update.
+func ValidateManagedSeedStatusUpdate(newManagedSeed, oldManagedSeed *seedmanagement.ManagedSeed) field.ErrorList {
+	allErrs := field.ErrorList{}
+	return allErrs
+}
+
 func validateSeedTemplate(metadata *metav1.ObjectMeta, seedSpec *gardencore.SeedSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 

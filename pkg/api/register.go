@@ -16,6 +16,7 @@ package api
 
 import (
 	coreinstall "github.com/gardener/gardener/pkg/apis/core/install"
+	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
 	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +34,7 @@ var (
 
 func init() {
 	coreinstall.Install(Scheme)
+	seedmanagementinstall.Install(Scheme)
 	settingsinstall.Install(Scheme)
 
 	metav1.AddToGroupVersion(Scheme, schema.GroupVersion{Version: "v1"})
