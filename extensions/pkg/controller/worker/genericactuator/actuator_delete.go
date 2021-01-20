@@ -32,6 +32,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -249,7 +250,7 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 			if ok {
 				releasedMachineClassCredentialsSecret = true
 			} else {
-				secret, err := extensionscontroller.GetSecretByReference(ctx, a.client, &worker.Spec.SecretRef)
+				secret, err := kutil.GetSecretByReference(ctx, a.client, &worker.Spec.SecretRef)
 				if err != nil {
 					return retryutils.SevereError(fmt.Errorf("could not get the secret referenced by worker: %+v", err))
 				}

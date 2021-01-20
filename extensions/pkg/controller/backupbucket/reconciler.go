@@ -34,6 +34,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -98,7 +99,7 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 		return reconcile.Result{}, err
 	}
 
-	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
+	secret, err := kutil.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
@@ -151,7 +152,7 @@ func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBu
 		return reconcile.Result{}, err
 	}
 
-	secret, err := extensionscontroller.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
+	secret, err := kutil.GetSecretByReference(ctx, r.client, &bb.Spec.SecretRef)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}

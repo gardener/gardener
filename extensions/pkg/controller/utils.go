@@ -28,7 +28,6 @@ import (
 
 	resourcemanagerv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -126,20 +125,6 @@ func DeleteAllFinalizers(ctx context.Context, client client.Client, obj client.O
 		obj.SetFinalizers(nil)
 		return nil
 	})
-}
-
-// SecretReferenceToKey returns the key of the given SecretReference.
-func SecretReferenceToKey(ref *corev1.SecretReference) client.ObjectKey {
-	return kutil.Key(ref.Namespace, ref.Name)
-}
-
-// GetSecretByReference returns the Secret object matching the given SecretReference.
-func GetSecretByReference(ctx context.Context, c client.Client, ref *corev1.SecretReference) (*corev1.Secret, error) {
-	secret := &corev1.Secret{}
-	if err := c.Get(ctx, SecretReferenceToKey(ref), secret); err != nil {
-		return nil, err
-	}
-	return secret, nil
 }
 
 // TryPatch tries to apply the given transformation function onto the given object, and to patch it afterwards with optimistic locking.
