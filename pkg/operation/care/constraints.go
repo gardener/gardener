@@ -33,6 +33,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// WebhookMaximumTimeoutSecondsNotProblematic is the maximum timeout in seconds a webhooks on critical resources can
+// have in order to not be considered as a problematic webhook by the constraints checks. Any webhook on critical
+// resources with a larger timeout is considered to be problematic.
+const WebhookMaximumTimeoutSecondsNotProblematic = 15
+
 func shootHibernatedConstraints(conditions ...gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
 	hibernationConditions := make([]gardencorev1beta1.Condition, 0, len(conditions))
 	for _, cond := range conditions {
@@ -141,16 +146,10 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 
 	for _, webhookConfig := range validatingWebhookConfigs.Items {
 		for _, w := range webhookConfig.Webhooks {
-			if IsProblematicWebhook(w.FailurePolicy, w.ObjectSelector, w.NamespaceSelector, w.Rules) {
-				failurePolicy := "nil"
-				if w.FailurePolicy != nil {
-					failurePolicy = string(*w.FailurePolicy)
-				}
-
+			if IsProblematicWebhook(w.FailurePolicy, w.ObjectSelector, w.NamespaceSelector, w.Rules, w.TimeoutSeconds) {
 				return gardencorev1beta1.ConditionFalse,
 					"ProblematicWebhooks",
-					fmt.Sprintf("ValidatingWebhookConfiguration %q is problematic: webhook %q with failurePolicy %q might prevent worker nodes from properly joining the shoot cluster",
-						webhookConfig.Name, w.Name, failurePolicy),
+					buildProblematicWebhookMessage("ValidatingWebhookConfiguration", webhookConfig.Name, w.Name, w.FailurePolicy, w.TimeoutSeconds),
 					nil
 			}
 		}
@@ -163,16 +162,10 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 
 	for _, webhookConfig := range mutatingWebhookConfigs.Items {
 		for _, w := range webhookConfig.Webhooks {
-			if IsProblematicWebhook(w.FailurePolicy, w.ObjectSelector, w.NamespaceSelector, w.Rules) {
-				failurePolicy := "nil"
-				if w.FailurePolicy != nil {
-					failurePolicy = string(*w.FailurePolicy)
-				}
-
+			if IsProblematicWebhook(w.FailurePolicy, w.ObjectSelector, w.NamespaceSelector, w.Rules, w.TimeoutSeconds) {
 				return gardencorev1beta1.ConditionFalse,
 					"ProblematicWebhooks",
-					fmt.Sprintf("MutatingWebhookConfiguration %q is problematic: webhook %q with failurePolicy %q might prevent worker nodes from properly joining the shoot cluster",
-						webhookConfig.Name, w.Name, failurePolicy),
+					buildProblematicWebhookMessage("MutatingWebhookConfiguration", webhookConfig.Name, w.Name, w.FailurePolicy, w.TimeoutSeconds),
 					nil
 			}
 		}
@@ -184,22 +177,51 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 		nil
 }
 
+func buildProblematicWebhookMessage(
+	kind string,
+	configName string,
+	webhookName string,
+	failurePolicy *admissionregistrationv1beta1.FailurePolicyType,
+	timeoutSeconds *int32,
+) string {
+	failurePolicyString := "nil"
+	if failurePolicy != nil {
+		failurePolicyString = string(*failurePolicy)
+	}
+	timeoutString := "and unset timeoutSeconds"
+	if timeoutSeconds != nil {
+		timeoutString = fmt.Sprintf("and %ds timeout", *timeoutSeconds)
+	}
+	return fmt.Sprintf("%s %q is problematic: webhook %q with failurePolicy %q %s might prevent worker nodes from properly joining the shoot cluster",
+		kind, configName, webhookName, failurePolicyString, timeoutString)
+}
+
 // IsProblematicWebhook checks if a single webhook of the Shoot Cluster is problematic. Problematic webhooks are
 // webhooks with rules for CREATE/UPDATE/* pods or nodes and failurePolicy=Fail/nil. If the Shoot contains such a
-// webhook, we can never wake up this shoot cluster again  as new nodes cannot get created/ready, or our system
+// webhook, we can never wake up this shoot cluster again as new nodes cannot get created/ready, or our system
 // component pods cannot get created/ready (because the webhook's backing pod is not yet running).
 func IsProblematicWebhook(
 	failurePolicy *admissionregistrationv1beta1.FailurePolicyType,
 	objSelector *metav1.LabelSelector,
 	nsSelector *metav1.LabelSelector,
 	rules []admissionregistrationv1beta1.RuleWithOperations,
+	timeoutSeconds *int32,
 ) bool {
 	if failurePolicy != nil && *failurePolicy != admissionregistrationv1beta1.Fail {
 		// in admissionregistration.k8s.io/v1 FailurePolicy is defaulted to `Fail`
 		// see https://github.com/kubernetes/api/blob/release-1.16/admissionregistration/v1/types.go#L195
 		// and https://github.com/kubernetes/api/blob/release-1.16/admissionregistration/v1/types.go#L324
 		// therefore, webhook with FailurePolicy==nil is also considered problematic
-		return false
+		if timeoutSeconds != nil && *timeoutSeconds <= WebhookMaximumTimeoutSecondsNotProblematic {
+			// most control-plane API calls are made with a client-side timeout of 30s, so if a webhook has
+			// timeoutSeconds==30 the overall request might still fail although failurePolicy==Ignore, as there
+			// is overhead in communication with the API server and possible other webhooks.
+			// in admissionregistration/v1 timeoutSeconds is defaulted to 10 while in v1beta1 it's defaulted to 30.
+			// be restrictive here and mark all webhooks without a timeout set or timeouts > 15s as problematic to
+			// avoid ops effort. It's clearly documented that users should specify low timeouts, see
+			// https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts
+			return false
+		}
 	}
 
 	for _, rule := range rules {
