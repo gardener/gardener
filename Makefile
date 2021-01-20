@@ -93,7 +93,15 @@ remote-garden-down:
 	@-./hack/local-development/remote-garden/cleanup $(REMOTE_GARDEN_LABEL)
 
 .PHONY: start-all-servers
-start-all-servers: start-apiserver start-controller-manager start-scheduler start-gardenlet
+start-all-servers:
+	# start a screen session and open all servers in named tabs
+	echo "starting screen session with all servers"
+	@screen -ls gardener-dev || screen -AdmS gardner-dev -t tab0 bash
+	@screen -S gardener-dev -X screen -t apiserver bash -c "make --debug=j start-apiserver; exec bash"
+	@screen -S gardener-dev -X screen -t controller bash -c "make --debug=j start-controller-manager; exec bash"
+	@screen -S gardener-dev -X screen -t scheduler bash -c "make --debug=j start-scheduler; exec bash"
+	@screen -S gardener-dev -X screen -t gardenlet bash -c "make --debug=j start-gardenlet; exec bash"
+	screen -r gardener-dev
 
 .PHONY: start-apiserver
 start-apiserver:
