@@ -62,7 +62,7 @@
         {
           "expr": "sum (container_memory_working_set_bytes{pod=~\"$pod\", container=~\"$container\"})",
           "format": "time_series",
-          "interval": "10s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Current",
           "metric": "container_memory_working_set_bytes",
@@ -73,16 +73,16 @@
           "expr": "sum(kube_pod_container_resource_requests_memory_bytes{pod=~\"$pod\", container=~\"$container\"})",
           "format": "time_series",
           "hide": false,
-          "interval": "10s",
-          "intervalFactor": 2,
+          "interval": "",
+          "intervalFactor": 1,
           "legendFormat": "Requests",
           "refId": "C"
         },
         {
           "expr": "sum(kube_pod_container_resource_limits_memory_bytes{pod=~\"$pod\", container=~\"$container\"})",
           "format": "time_series",
-          "interval": "10s",
-          "intervalFactor": 2,
+          "interval": "",
+          "intervalFactor": 1,
           "legendFormat": "Limits",
           "refId": "B"
         }
@@ -190,7 +190,7 @@
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{container=~\"$container\",pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
-          "interval": "10s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Current",
           "refId": "A",
@@ -200,16 +200,16 @@
           "expr": "sum(kube_pod_container_resource_requests_cpu_cores{container=~\"$container\",pod=~\"$pod\"})",
           "format": "time_series",
           "hide": false,
-          "interval": "10s",
-          "intervalFactor": 2,
+          "interval": "",
+          "intervalFactor": 1,
           "legendFormat": "Requests",
           "refId": "B"
         },
         {
           "expr": "sum(kube_pod_container_resource_limits_cpu_cores{container=~\"$container\",pod=~\"$pod\"})",
           "format": "time_series",
-          "interval": "10s",
-          "intervalFactor": 2,
+          "interval": "",
+          "intervalFactor": 1,
           "legendFormat": "Limits",
           "refId": "C"
         },
@@ -313,7 +313,8 @@
         {
           "expr": "sum(rate(container_network_receive_bytes_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "interval": "",
+          "intervalFactor": 1,
           "legendFormat": "Received",
           "refId": "A",
           "step": 20
@@ -418,7 +419,7 @@
           "expr": "sum(container_fs_usage_bytes{pod=~\"$pod\", container=~\"$container\",})",
           "format": "time_series",
           "hide": false,
-          "interval": "10s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Current",
           "metric": "container_fs_usage_bytes",
@@ -429,7 +430,7 @@
           "expr": "sum(container_fs_usage_bytes{pod=~\"$pod\", image!=\"\"})",
           "format": "time_series",
           "hide": false,
-          "interval": "10s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "metric": "container_fs_usage_bytes",
