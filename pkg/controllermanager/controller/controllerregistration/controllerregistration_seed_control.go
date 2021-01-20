@@ -347,27 +347,43 @@ func computeWantedControllerRegistrationNames(
 		}
 	}
 
-	for _, requiredExtension := range wantedKindTypeCombinations.UnsortedList() {
-		names, ok := kindTypeToControllerRegistrationNames[requiredExtension]
-		if !ok {
-			return nil, fmt.Errorf("need to install an extension controller for %q but no appropriate ControllerRegistration found", requiredExtension)
-		}
-
-		wantedControllerRegistrationNames.Insert(names...)
+	installedAndRequired := installedAndRequiredRegistrationNames(controllerInstallationList, seedObjectMeta.Name)
+	if seedObjectMeta.DeletionTimestamp == nil {
+		wantedControllerRegistrationNames.Insert(installedAndRequired.List()...)
 	}
 
+	for _, wantedExtension := range wantedKindTypeCombinations.UnsortedList() {
+		names, ok := kindTypeToControllerRegistrationNames[wantedExtension]
+		if !ok {
+			return nil, fmt.Errorf("need to install an extension controller for %q but no appropriate ControllerRegistration found", wantedExtension)
+		}
+		if seedObjectMeta.DeletionTimestamp != nil {
+			for _, name := range names {
+				if installedAndRequired.Has(name) {
+					wantedControllerRegistrationNames.Insert(name)
+				}
+			}
+		} else {
+			wantedControllerRegistrationNames.Insert(names...)
+		}
+	}
+
+	// filter controller registrations with non-matching seed selector
+	return controllerRegistrationNamesWithMatchingSeedLabelSelector(wantedControllerRegistrationNames.UnsortedList(), controllerRegistrations, seedObjectMeta.Labels)
+}
+
+func installedAndRequiredRegistrationNames(controllerInstallationList *gardencorev1beta1.ControllerInstallationList, seedName string) sets.String {
+	requiredControllerRegistrationNames := sets.NewString()
 	for _, controllerInstallation := range controllerInstallationList.Items {
-		if controllerInstallation.Spec.SeedRef.Name != seedObjectMeta.Name {
+		if controllerInstallation.Spec.SeedRef.Name != seedName {
 			continue
 		}
 		if !gardencorev1beta1helper.IsControllerInstallationRequired(controllerInstallation) {
 			continue
 		}
-		wantedControllerRegistrationNames.Insert(controllerInstallation.Spec.RegistrationRef.Name)
+		requiredControllerRegistrationNames.Insert(controllerInstallation.Spec.RegistrationRef.Name)
 	}
-
-	// filter controller registrations with non-matching seed selector
-	return controllerRegistrationNamesWithMatchingSeedLabelSelector(wantedControllerRegistrationNames.UnsortedList(), controllerRegistrations, seedObjectMeta.Labels)
+	return requiredControllerRegistrationNames
 }
 
 // computeRegistrationNameToInstallationNameMap computes a map that maps the name of a ControllerRegistration to the name of an

@@ -448,6 +448,12 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				Deployment: &gardencorev1beta1.ControllerDeployment{
 					Policy: &onDemandPolicy,
 				},
+				Resources: []gardencorev1beta1.ControllerResource{
+					{
+						Kind: extensionsv1alpha1.ExtensionResource,
+						Type: type7,
+					},
+				},
 			},
 		}
 		controllerRegistration8 = &gardencorev1beta1.ControllerRegistration{
@@ -717,7 +723,6 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 
 	Describe("#computeKindTypesForSeed", func() {
 		var providerType = "fake-provider-type"
-
 		It("should add the DNSProvider extension", func() {
 			seed := &gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
@@ -784,16 +789,34 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should not consider 'always-deploy' registrations when seed has no shoots and deletion timestamp", func() {
-			seedObjectMetaCopy := seedObjectMeta.DeepCopy()
-			time := metav1.Time{}
-			seedObjectMetaCopy.DeletionTimestamp = &time
-			wantedKindTypeCombinations := sets.NewString()
+		Context("Deletion timestamp set", func() {
+			It("should not consider 'always-deploy' registrations when seed has no shoots", func() {
+				seedObjectMetaCopy := seedObjectMeta.DeepCopy()
+				time := metav1.Time{}
+				seedObjectMetaCopy.DeletionTimestamp = &time
 
-			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, 0, *seedObjectMetaCopy)
+				wantedKindTypeCombinations := sets.NewString()
+				names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, 0, *seedObjectMetaCopy)
 
-			Expect(names).To(Equal(sets.NewString(controllerRegistration7.Name)))
-			Expect(err).NotTo(HaveOccurred())
+				Expect(names).To(Equal(sets.NewString()))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should add wanted registrations only if there exists an installation which has the status required `true`", func() {
+				seedObjectMetaCopy := seedObjectMeta.DeepCopy()
+				time := metav1.Time{}
+				seedObjectMetaCopy.DeletionTimestamp = &time
+
+				wantedKindTypeCombinations := sets.NewString(
+					extensionsv1alpha1.ExtensionResource+"/"+type7,
+					extensionsv1alpha1.BackupBucketResource+"/"+type1,
+				)
+
+				names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, 0, *seedObjectMetaCopy)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(names).To(Equal(sets.NewString(controllerRegistration7.Name)))
+			})
 		})
 
 		It("should fail to compute the result and return error", func() {

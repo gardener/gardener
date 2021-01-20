@@ -253,6 +253,19 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 		if len(associatedShoots) == 0 && len(associatedBackupBuckets) == 0 {
 			seedLogger.Info("No Shoots or BackupBuckets are referencing the Seed. Deletion accepted.")
 
+			if providerConf := seed.Spec.DNS.Provider; providerConf != nil {
+				cloudProviderSecret := kutil.Key(providerConf.SecretRef.Namespace, providerConf.SecretRef.Name)
+				if err = seedpkg.CopyDNSProviderSecretToSeed(ctx, gardenClient.Client(), seedClient.Client(), cloudProviderSecret); err != nil {
+					return err
+				}
+			}
+			if err = seedpkg.DeleteIngressDNSEntry(ctx, seedClient, seedObj); err != nil {
+				return err
+			}
+			if err = seedpkg.DeleteDNSProvider(ctx, seedClient.Client()); err != nil {
+				return err
+			}
+
 			// Debootstrap the Seed cluster.
 			if err := seedpkg.DebootstrapCluster(ctx, seedClient); err != nil {
 				message := fmt.Sprintf("Failed to unbootstrap Seed Cluster (%s).", err.Error())

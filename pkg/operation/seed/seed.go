@@ -802,7 +802,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	}
 
 	// managed nginx-ingress handling
-	if err := handleIngressDNSEntry(ctx, k8sSeedClient, chartApplier, seed); err != nil {
+	if err := handleIngressDNSEntry(ctx, k8sSeedClient, seed); err != nil {
 		return err
 	}
 
@@ -1100,26 +1100,16 @@ func getIngressClass(seedIngressEnabled bool) string {
 
 func handleDNSProvider(ctx context.Context, gardenClient, seedClient client.Client, dnsConfig gardencorev1beta1.SeedDNS) error {
 	var (
-		dnsProvider = &dnsv1alpha1.DNSProvider{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: v1beta1constants.GardenNamespace,
-				Name:      "seed",
-			},
-		}
-		providerSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: v1beta1constants.GardenNamespace,
-				Name:      "dnsprovider-seed",
-			},
-		}
+		dnsProvider    = emptyDNSProvider()
+		providerSecret = emptyDNSProviderSecret()
 	)
 
 	if dnsConfig.Provider == nil {
-		return kutil.DeleteObjects(ctx, seedClient, dnsProvider, providerSecret)
+		return DeleteDNSProvider(ctx, seedClient)
 	}
 
 	cloudProviderSecret := kutil.Key(dnsConfig.Provider.SecretRef.Namespace, dnsConfig.Provider.SecretRef.Name)
-	if err := copySecretFromGardenerToSeed(ctx, gardenClient, seedClient, cloudProviderSecret, providerSecret); err != nil {
+	if err := CopyDNSProviderSecretToSeed(ctx, gardenClient, seedClient, cloudProviderSecret); err != nil {
 		return err
 	}
 
@@ -1151,13 +1141,74 @@ func handleDNSProvider(ctx context.Context, gardenClient, seedClient client.Clie
 	return err
 }
 
-func handleIngressDNSEntry(ctx context.Context, c kubernetes.Interface, chartApplier kubernetes.ChartApplier, seed *Seed) error {
+func emptyDNSProvider() *dnsv1alpha1.DNSProvider {
+	return &dnsv1alpha1.DNSProvider{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: v1beta1constants.GardenNamespace,
+			Name:      "seed",
+		},
+	}
+}
+
+func emptyDNSProviderSecret() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: v1beta1constants.GardenNamespace,
+			Name:      "dnsprovider-seed",
+		},
+	}
+}
+
+// DeleteDNSProvider deletes the DNS Provider created during Seed bootstrap
+func DeleteDNSProvider(ctx context.Context, seedClient client.Client) error {
+	return kutil.DeleteObjects(ctx, seedClient, emptyDNSProvider(), emptyDNSProviderSecret())
+}
+
+// CopyDNSProviderSecretToSeed copies a given cloud Provider secret from the garden cluster to the seed cluster used by the DNSProvider
+func CopyDNSProviderSecretToSeed(ctx context.Context, gardenClient, seedClient client.Client, secretKey types.NamespacedName) error {
+	var (
+		targetSecret = emptyDNSProviderSecret()
+		gardenSecret = &corev1.Secret{}
+	)
+	if err := gardenClient.Get(ctx, secretKey, gardenSecret); err != nil {
+		return err
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, seedClient, targetSecret, func() error {
+		targetSecret.Type = gardenSecret.Type
+		targetSecret.Data = gardenSecret.Data
+		return nil
+	})
+	return err
+}
+
+func handleIngressDNSEntry(ctx context.Context, c kubernetes.Interface, seed *Seed) error {
+	if managedIngress(seed) {
+		dnsEntry, err := getIngressDNSEntry(ctx, c, seed, true)
+		if err != nil {
+			return err
+		}
+		return dnsEntry.Deploy(ctx)
+	}
+	return DeleteIngressDNSEntry(ctx, c, seed)
+}
+
+// DeleteIngressDNSEntry deletes the Seed Ingress DNS Entry.
+func DeleteIngressDNSEntry(ctx context.Context, c kubernetes.Interface, seed *Seed) error {
+	entry, err := getIngressDNSEntry(ctx, c, seed, false)
+	if err != nil {
+		return err
+	}
+	return entry.Destroy(ctx)
+}
+
+func getIngressDNSEntry(ctx context.Context, c kubernetes.Interface, seed *Seed, waitForLB bool) (component.DeployWaiter, error) {
 	var (
 		seedLogger = logger.Logger.WithField("seed", seed.Info.Name)
 		values     = &dns.EntryValues{Name: "ingress"}
 	)
 
-	if managedIngress(seed) {
+	if managedIngress(seed) && waitForLB {
 		loadBalancerAddress, err := kutil.WaitUntilLoadBalancerIsReady(
 			ctx,
 			c,
@@ -1167,27 +1218,22 @@ func handleIngressDNSEntry(ctx context.Context, c kubernetes.Interface, chartApp
 			seedLogger,
 		)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		values.DNSName = seed.GetIngressFQDN("*")
 		values.Targets = []string{loadBalancerAddress}
 	}
 
-	dnsEntry := dns.NewDNSEntry(
+	return dns.NewDNSEntry(
 		values,
 		v1beta1constants.GardenNamespace,
-		chartApplier,
+		c.ChartApplier(),
 		common.ChartPath,
 		seedLogger,
 		c.Client(),
 		nil,
-	)
-
-	if managedIngress(seed) {
-		return dnsEntry.Deploy(ctx)
-	}
-	return dnsEntry.Destroy(ctx)
+	), nil
 }
 
 const annotationSeedIngressClass = "seed.gardener.cloud/ingress-class"
@@ -1234,20 +1280,6 @@ func switchIngressClass(ctx context.Context, seedClient client.Client, ingressKe
 
 	ingress.Annotations["kubernetes.io/ingress.class"] = newClass
 	return seedClient.Update(ctx, ingress)
-}
-
-func copySecretFromGardenerToSeed(ctx context.Context, gardenClient, seedClient client.Client, secretKey types.NamespacedName, targetSecret *corev1.Secret) error {
-	gardenSecret := &corev1.Secret{}
-	if err := gardenClient.Get(ctx, secretKey, gardenSecret); err != nil {
-		return err
-	}
-
-	_, err := controllerutil.CreateOrUpdate(ctx, seedClient, targetSecret, func() error {
-		targetSecret.Type = gardenSecret.Type
-		targetSecret.Data = gardenSecret.Data
-		return nil
-	})
-	return err
 }
 
 func computeNginxIngress(seed *Seed) map[string]interface{} {
