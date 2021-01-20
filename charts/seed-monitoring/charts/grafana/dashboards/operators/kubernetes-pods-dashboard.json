@@ -5,6 +5,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
+  "id": 24,
   "iteration": 1591170710914,
   "links": [],
   "panels": [
@@ -16,6 +17,13 @@
       "datasource": "prometheus",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "grid": {},
@@ -43,13 +51,19 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.2.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [],
+      "seriesOverrides": [
+        {
+          "alias": "/Requests|Limits/",
+          "dashes": true
+        }
+      ],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -57,7 +71,7 @@
         {
           "expr": "sum (container_memory_working_set_bytes{pod=~\"$pod\", container=~\"$container\"})",
           "format": "time_series",
-          "interval": "10s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Current",
           "metric": "container_memory_working_set_bytes",
@@ -68,17 +82,17 @@
           "expr": "sum(kube_pod_container_resource_requests_memory_bytes{pod=~\"$pod\", container=~\"$container\"})",
           "format": "time_series",
           "hide": false,
-          "interval": "10s",
-          "intervalFactor": 2,
+          "interval": "",
+          "intervalFactor": 1,
           "legendFormat": "Requests",
           "refId": "C"
         },
         {
           "expr": "sum(kube_pod_container_resource_limits_memory_bytes{pod=~\"$pod\", container=~\"$container\"})",
           "format": "time_series",
-          "interval": "10s",
-          "intervalFactor": 2,
-          "legendFormat": "Limits:",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "Limits",
           "refId": "B"
         }
       ],
@@ -130,8 +144,16 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
+      "description": "The experimental \"Throttle factor\" metric tries to estimate how much more time the execution of the pod takes due to CPU throttling. A factor of 1 means no throttling, a factor of 2 could be OK, a factor of 10 could indicate underprovisioned requests/limits or contention for the burstable CPU shares",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "grid": {},
@@ -159,13 +181,25 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.2.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [],
+      "seriesOverrides": [
+        {
+          "alias": "Throttle factor",
+          "dashLength": 5,
+          "dashes": true,
+          "yaxis": 2
+        },
+        {
+          "alias": "/Requests|Limits/",
+          "dashes": true
+        }
+      ],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -173,7 +207,7 @@
         {
           "expr": "sum(rate(container_cpu_usage_seconds_total{container=~\"$container\",pod=~\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
-          "interval": "10s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Current",
           "refId": "A",
@@ -183,18 +217,26 @@
           "expr": "sum(kube_pod_container_resource_requests_cpu_cores{container=~\"$container\",pod=~\"$pod\"})",
           "format": "time_series",
           "hide": false,
-          "interval": "10s",
-          "intervalFactor": 2,
+          "interval": "",
+          "intervalFactor": 1,
           "legendFormat": "Requests",
           "refId": "B"
         },
         {
           "expr": "sum(kube_pod_container_resource_limits_cpu_cores{container=~\"$container\",pod=~\"$pod\"})",
           "format": "time_series",
-          "interval": "10s",
-          "intervalFactor": 2,
+          "interval": "",
+          "intervalFactor": 1,
           "legendFormat": "Limits",
           "refId": "C"
+        },
+        {
+          "expr": "1 / (1 -\nmax(\nrate(container_cpu_cfs_throttled_periods_total{container=~\"$container\",pod=~\"$pod\"}[$__rate_interval])\n/\nrate(container_cpu_cfs_periods_total{container=~\"$container\",pod=~\"$pod\"}[$__rate_interval])\n))",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "Throttle factor",
+          "refId": "D"
         }
       ],
       "thresholds": [],
@@ -230,7 +272,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "1",
           "show": true
         }
       ],
@@ -247,6 +289,13 @@
       "datasource": "prometheus",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "grid": {},
@@ -274,9 +323,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.2.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -288,7 +338,8 @@
         {
           "expr": "sum(rate(container_network_receive_bytes_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "format": "time_series",
-          "intervalFactor": 2,
+          "interval": "",
+          "intervalFactor": 1,
           "legendFormat": "Received",
           "refId": "A",
           "step": 20
@@ -351,6 +402,13 @@
       "datasource": "prometheus",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "grid": {},
@@ -378,9 +436,10 @@
       "links": [],
       "nullPointMode": "connected",
       "options": {
-        "dataLinks": []
+        "alertThreshold": true
       },
       "percentage": false,
+      "pluginVersion": "7.2.1",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -393,7 +452,7 @@
           "expr": "sum(container_fs_usage_bytes{pod=~\"$pod\", container=~\"$container\",})",
           "format": "time_series",
           "hide": false,
-          "interval": "10s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Current",
           "metric": "container_fs_usage_bytes",
@@ -404,7 +463,7 @@
           "expr": "sum(container_fs_usage_bytes{pod=~\"$pod\", image!=\"\"})",
           "format": "time_series",
           "hide": false,
-          "interval": "10s",
+          "interval": "",
           "intervalFactor": 1,
           "legendFormat": "Total",
           "metric": "container_fs_usage_bytes",
@@ -456,6 +515,12 @@
     },
     {
       "datasource": "loki",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "gridPos": {
         "h": 21,
         "w": 24,
@@ -484,7 +549,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 25,
+  "schemaVersion": 26,
   "style": "dark",
   "tags": [
     "kubernetes",
@@ -523,6 +588,7 @@
           }
         ],
         "query": "seed,shoot",
+        "queryValue": "",
         "skipUrlSync": false,
         "type": "custom"
       },
