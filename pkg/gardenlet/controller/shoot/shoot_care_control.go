@@ -332,7 +332,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		},
 	)(ctx)
 
-	conditions = append(conditions, seedConditions...)
+	conditions = append(updatedConditions, seedConditions...)
 
 	// Update Shoot status if necessary
 	if gardencorev1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) ||
