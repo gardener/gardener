@@ -78,7 +78,7 @@
           "format": "time_series",
           "interval": "10s",
           "intervalFactor": 2,
-          "legendFormat": "Limits:",
+          "legendFormat": "Limits",
           "refId": "B"
         }
       ],
