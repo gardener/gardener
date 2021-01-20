@@ -135,6 +135,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "prometheus",
+      "description": "The experimental \"Throttle factor\" metric tries to estimate how much more time the execution of the pod takes due to CPU throttling. A factor of 1 means no throttling, a factor of 2 could be OK, a factor of 10 could indicate underprovisioned requests/limits or contention for the burstable CPU shares",
       "editable": true,
       "error": false,
       "fill": 0,
@@ -172,6 +173,12 @@
       "renderer": "flot",
       "seriesOverrides": [
         {
+          "alias": "Throttle factor",
+          "dashLength": 5,
+          "dashes": true,
+          "yaxis": 2
+        },
+        {
           "alias": "/Requests|Limits/",
           "dashes": true
         }
@@ -205,6 +212,14 @@
           "intervalFactor": 2,
           "legendFormat": "Limits",
           "refId": "C"
+        },
+        {
+          "expr": "1 / (1 -\nmax(\nrate(container_cpu_cfs_throttled_periods_total{container=~\"$container\",pod=~\"$pod\"}[$__rate_interval])\n/\nrate(container_cpu_cfs_periods_total{container=~\"$container\",pod=~\"$pod\"}[$__rate_interval])\n))",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "Throttle factor",
+          "refId": "D"
         }
       ],
       "thresholds": [],
@@ -240,7 +255,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "1",
           "show": true
         }
       ],
