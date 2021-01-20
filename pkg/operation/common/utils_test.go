@@ -31,6 +31,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	"github.com/gardener/gardener/pkg/version"
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -39,6 +40,9 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -808,6 +812,95 @@ var _ = Describe("common", func() {
 
 			err := DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx, c, []client.ObjectKey{key1, key2})
 			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("#DeleteSeedLoggingStack", func() {
+		var (
+			ctrl *gomock.Controller
+			c    *mockclient.MockClient
+			ctx  context.Context
+		)
+
+		resources := []client.Object{
+			//seed components
+			&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit-config", Namespace: v1beta1constants.GardenNamespace}},
+			&appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}},
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-fluentbit", Namespace: v1beta1constants.GardenNamespace}},
+			&schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit"}},
+			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit-read"}},
+			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit-read"}},
+			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}},
+			&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}},
+			//shoot components
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-loki", Namespace: v1beta1constants.GardenNamespace}},
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-loki", Namespace: v1beta1constants.GardenNamespace}},
+			&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
+			&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "loki-config", Namespace: v1beta1constants.GardenNamespace}},
+			&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
+			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
+			&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
+			&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: v1beta1constants.GardenNamespace}},
+		}
+
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+			c = mockclient.NewMockClient(ctrl)
+
+			ctx = context.TODO()
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		It("should delete all seed logging stack components", func() {
+			for _, resource := range resources {
+				c.EXPECT().Delete(ctx, resource)
+			}
+
+			err := DeleteSeedLoggingStack(ctx, c)
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
+	Describe("#DeleteShootLoggingStack", func() {
+		var (
+			ctrl *gomock.Controller
+			c    *mockclient.MockClient
+			ctx  context.Context
+		)
+
+		resources := []client.Object{
+			//shoot components
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-loki", Namespace: v1beta1constants.GardenNamespace}},
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-loki", Namespace: v1beta1constants.GardenNamespace}},
+			&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
+			&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "loki-config", Namespace: v1beta1constants.GardenNamespace}},
+			&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
+			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
+			&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
+			&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: v1beta1constants.GardenNamespace}},
+		}
+
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+			c = mockclient.NewMockClient(ctrl)
+
+			ctx = context.TODO()
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		It("should delete all shoot logging stack components", func() {
+			for _, resource := range resources {
+				c.EXPECT().Delete(ctx, resource)
+			}
+
+			err := DeleteShootLoggingStack(ctx, c, v1beta1constants.GardenNamespace)
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 })

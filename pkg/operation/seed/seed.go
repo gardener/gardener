@@ -469,7 +469,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			}
 		}
 	} else {
-		if err := common.DeleteLoggingStack(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
+		if err := common.DeleteSeedLoggingStack(ctx, k8sSeedClient.Client()); err != nil {
 			return err
 		}
 	}
