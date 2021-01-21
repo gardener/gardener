@@ -165,6 +165,7 @@ revendor:
 	@GO111MODULE=on cd third_party/kube-scheduler/v19; go mod tidy
 	@GO111MODULE=on cd third_party/kube-scheduler/v20; go mod tidy
 	@GO111MODULE=on cd third_party/kube-scheduler; go mod tidy
+	@cd vendor/k8s.io/code-generator; go mod vendor
 
 .PHONY: clean
 clean:
