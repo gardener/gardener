@@ -127,6 +127,20 @@ The Gardener repository and all the above-mentioned tools (git, golang, kubectl,
 
 In case you have to create a new release or a new hotfix of the Gardener you have to push the resulting Docker image into a Docker registry. Currently, we are using the Google Container Registry (this could change in the future). Please follow the official [installation instructions from Google](https://cloud.google.com/sdk/downloads).
 
+## [Optional] Install GNU screen
+
+When screen is installed, you can easily start all local daemons using `make start-all`
+To install screen on *MacOS*
+
+```bash
+brew install screen
+```
+
+To install screen on *Debian/Ubuntu*
+```bash
+apt install screen
+```
+
 ## Local Gardener setup
 
 This setup is only meant to be used for developing purposes, which means that only the control plane of the Gardener cluster is running on your machine.
