@@ -55,6 +55,7 @@ func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, provi
 			Name:              fmt.Sprintf("%s.%s.extensions.gardener.cloud", webhook.Name, strings.TrimPrefix(providerName, "provider-")),
 			NamespaceSelector: webhook.Selector,
 			Rules:             rules,
+			TimeoutSeconds:    pointer.Int32Ptr(10),
 		}
 
 		switch webhook.Target {
