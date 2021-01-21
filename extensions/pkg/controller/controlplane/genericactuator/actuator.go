@@ -17,11 +17,11 @@ package genericactuator
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"time"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane"
+	"github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -474,7 +474,7 @@ func marshalWebhooks(webhooks []admissionregistrationv1beta1.MutatingWebhook, na
 				Kind:       kind,
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("gardener-extension-%s-shoot", name),
+				Name: webhook.NamePrefix + name + webhook.NameSuffixShoot,
 			},
 			Webhooks: webhooks,
 		}
