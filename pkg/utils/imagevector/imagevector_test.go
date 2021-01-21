@@ -37,18 +37,20 @@ var _ = Describe("imagevector", func() {
 			image1Src1VectorJSON string
 			image1Src1VectorYAML string
 
-			k8s164               = "1.6.4"
-			k8s180               = "1.8.0"
-			k8s113               = "1.13"
-			k8s1142              = "1.14.2"
-			k8s1170              = "1.17.0"
-			k8s164RuntimeVersion = RuntimeVersion(k8s164)
-			k8s164TargetVersion  = TargetVersion(k8s164)
-			k8s1170TargetVersion = TargetVersion(k8s1170)
-			k8s180RuntimeVersion = RuntimeVersion(k8s180)
-			k8s180TargetVersion  = TargetVersion(k8s180)
-			k8s113TargetVersion  = TargetVersion(k8s113)
-			k8s1142TargetVersion = TargetVersion(k8s1142)
+			k8s164                         = "1.6.4"
+			k8s164WithSuffix               = "1.6.4-foo.5"
+			k8s180                         = "1.8.0"
+			k8s113                         = "1.13"
+			k8s1142                        = "1.14.2"
+			k8s1170                        = "1.17.0"
+			k8s164RuntimeVersion           = RuntimeVersion(k8s164)
+			k8s164WithSuffixRuntimeVersion = RuntimeVersion(k8s164WithSuffix)
+			k8s164TargetVersion            = TargetVersion(k8s164)
+			k8s1170TargetVersion           = TargetVersion(k8s1170)
+			k8s180RuntimeVersion           = RuntimeVersion(k8s180)
+			k8s180TargetVersion            = TargetVersion(k8s180)
+			k8s113TargetVersion            = TargetVersion(k8s113)
+			k8s1142TargetVersion           = TargetVersion(k8s1142)
 
 			tag1, tag2, tag3, tag4, tag5 string
 			repo1, repo2, repo3, repo4   string
@@ -263,6 +265,7 @@ images:
 			Entry("no entries, no match", ImageVector{}, image1Name, nil, BeNil(), HaveOccurred()),
 			Entry("single entry, match with runtime wildcard", ImageVector{image1Src1}, image1Name, nil, Equal(image1Src1.ToImage(nil)), Not(HaveOccurred())),
 			Entry("single entry, match with runtime version", ImageVector{image1Src1}, image1Name, []FindOptionFunc{k8s164RuntimeVersion}, Equal(image1Src1.ToImage(nil)), Not(HaveOccurred())),
+			Entry("single entry w/ suffix, match with runtime version", ImageVector{image1Src1}, image1Name, []FindOptionFunc{k8s164WithSuffixRuntimeVersion}, Equal(image1Src1.ToImage(nil)), Not(HaveOccurred())),
 			Entry("single entry, match with runtime and target version", ImageVector{image1Src1}, image1Name, []FindOptionFunc{k8s164RuntimeVersion, k8s164TargetVersion}, Equal(image1Src1.ToImage(&k8s164)), Not(HaveOccurred())),
 			Entry("single entry, match with runtime and non-runtime target version", ImageVector{image1Src1}, image1Name, []FindOptionFunc{k8s164RuntimeVersion, k8s180TargetVersion}, Equal(image1Src1.ToImage(&k8s180)), Not(HaveOccurred())),
 			Entry("single entry, name mismatch", ImageVector{image1Src1}, image2Name, nil, BeNil(), HaveOccurred()),

@@ -883,21 +883,18 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 	}
 	components = append(components, seedadmission.New(c.Client(), namespace, gsacImage.String(), kubernetesVersion))
 
-	// gardener-seed-scheduler.
+	// kube-scheduler for shoot control plane pods
 	var schedulerImage *imagevector.Image
-
 	if imageVector != nil {
 		schedulerImage, err = imageVector.FindImage(common.KubeSchedulerImageName, imagevector.TargetVersion(kubernetesVersion.String()))
 		if err != nil {
 			return nil, err
 		}
 	}
-
 	sched, err := scheduler.Bootstrap(c.DirectClient(), namespace, schedulerImage, kubernetesVersion)
 	if err != nil {
 		return nil, err
 	}
-
 	components = append(components, sched)
 
 	return components, nil
