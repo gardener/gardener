@@ -222,6 +222,11 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	}
 	seedClusterIdentity := *seed.Status.ClusterIdentity
 
+	ingressDomain := seed.Spec.DNS.IngressDomain
+	if ingressDomain == nil {
+		ingressDomain = &seed.Spec.Ingress.Domain
+	}
+
 	// Mix-in some standard values for garden and seed.
 	gardenerValues := map[string]interface{}{
 		"gardener": map[string]interface{}{
@@ -238,7 +243,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 				"region":          seed.Spec.Provider.Region,
 				"volumeProvider":  volumeProvider,
 				"volumeProviders": volumeProviders,
-				"ingressDomain":   seed.Spec.DNS.IngressDomain,
+				"ingressDomain":   ingressDomain,
 				"protected":       gardencorev1beta1helper.TaintsHave(seed.Spec.Taints, gardencorev1beta1.SeedTaintProtected),
 				"visible":         seed.Spec.Settings.Scheduling.Visible,
 				"taints":          seed.Spec.Taints,
