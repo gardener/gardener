@@ -64,6 +64,13 @@ func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
 	return b.Shoot.Components.ControlPlane.KubeControllerManager.Deploy(ctx)
 }
 
+// WaitForKubeControllerManagerToBeActive waits for the kube controller manager of a Shoot cluster has acquired leader election, thus is active.
+func (b *Botanist) WaitForKubeControllerManagerToBeActive(ctx context.Context) error {
+	b.Shoot.Components.ControlPlane.KubeControllerManager.SetShootClient(b.K8sShootClient.Client())
+
+	return b.Shoot.Components.ControlPlane.KubeControllerManager.WaitForControllerToBeActive(ctx)
+}
+
 // ScaleKubeControllerManagerToOne scales kube-controller-manager replicas to one.
 func (b *Botanist) ScaleKubeControllerManagerToOne(ctx context.Context) error {
 	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.DirectClient(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager), 1)

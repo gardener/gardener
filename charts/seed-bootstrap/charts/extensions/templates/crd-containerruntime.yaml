@@ -54,6 +54,7 @@ spec:
               description: BinaryPath is the Worker's machine path where container runtime extensions should copy the binaries to.
               type: string
             providerConfig:
+              description: ProviderConfig is the provider specific configuration.
               type: object
               x-kubernetes-preserve-unknown-fields: true
             type:
@@ -236,6 +237,7 @@ spec:
             state:
               description: State can be filled by the operating controller with what ever data it needs.
               type: object
+              x-kubernetes-preserve-unknown-fields: true
           type: object
       required:
         - spec

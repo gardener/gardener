@@ -20,7 +20,6 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 
 	"github.com/pkg/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -31,12 +30,12 @@ type GardenContext interface {
 
 type gardenContext struct {
 	client  client.Client
-	object  metav1.Object
+	object  client.Object
 	cluster *extensionscontroller.Cluster
 }
 
 // NewGardenContext creates a context object.
-func NewGardenContext(client client.Client, object metav1.Object) GardenContext {
+func NewGardenContext(client client.Client, object client.Object) GardenContext {
 	return &gardenContext{
 		client: client,
 		object: object,

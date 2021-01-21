@@ -30,20 +30,21 @@ import (
 
 // ClientSetBuilder is a builder for fake ClientSets
 type ClientSetBuilder struct {
-	applier         kubernetes.Applier
-	chartRenderer   chartrenderer.Interface
-	chartApplier    kubernetes.ChartApplier
-	restConfig      *rest.Config
-	client          client.Client
-	directClient    client.Client
-	cache           cache.Cache
-	restMapper      meta.RESTMapper
-	kubernetes      kubernetesclientset.Interface
-	gardenCore      gardencoreclientset.Interface
-	apiextension    apiextensionclientset.Interface
-	apiregistration apiregistrationclientset.Interface
-	restClient      rest.Interface
-	version         string
+	applier               kubernetes.Applier
+	chartRenderer         chartrenderer.Interface
+	chartApplier          kubernetes.ChartApplier
+	restConfig            *rest.Config
+	client                client.Client
+	directClient          client.Client
+	cache                 cache.Cache
+	restMapper            meta.RESTMapper
+	kubernetes            kubernetesclientset.Interface
+	gardenCore            gardencoreclientset.Interface
+	apiextension          apiextensionclientset.Interface
+	apiregistration       apiregistrationclientset.Interface
+	restClient            rest.Interface
+	version               string
+	checkForwardPodPortFn CheckForwardPodPortFn
 }
 
 // NewClientSetBuilder return a new builder for building fake ClientSets
@@ -135,22 +136,35 @@ func (b *ClientSetBuilder) WithVersion(version string) *ClientSetBuilder {
 	return b
 }
 
+// WithCheckForwardPodPortFn sets the CheckForwardPodPortFn function.
+func (b *ClientSetBuilder) WithCheckForwardPodPortFn(fn CheckForwardPodPortFn) *ClientSetBuilder {
+	b.checkForwardPodPortFn = fn
+	return b
+}
+
 // Build builds the ClientSet.
 func (b *ClientSetBuilder) Build() *ClientSet {
+	if b.checkForwardPodPortFn == nil {
+		b.checkForwardPodPortFn = func(string, string, int, int) error {
+			return nil
+		}
+	}
+
 	return &ClientSet{
-		applier:         b.applier,
-		chartRenderer:   b.chartRenderer,
-		chartApplier:    b.chartApplier,
-		restConfig:      b.restConfig,
-		client:          b.client,
-		directClient:    b.directClient,
-		cache:           b.cache,
-		restMapper:      b.restMapper,
-		kubernetes:      b.kubernetes,
-		gardenCore:      b.gardenCore,
-		apiextension:    b.apiextension,
-		apiregistration: b.apiregistration,
-		restClient:      b.restClient,
-		version:         b.version,
+		applier:               b.applier,
+		chartRenderer:         b.chartRenderer,
+		chartApplier:          b.chartApplier,
+		CheckForwardPodPortFn: b.checkForwardPodPortFn,
+		restConfig:            b.restConfig,
+		client:                b.client,
+		directClient:          b.directClient,
+		cache:                 b.cache,
+		restMapper:            b.restMapper,
+		kubernetes:            b.kubernetes,
+		gardenCore:            b.gardenCore,
+		apiextension:          b.apiextension,
+		apiregistration:       b.apiregistration,
+		restClient:            b.restClient,
+		version:               b.version,
 	}
 }

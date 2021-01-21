@@ -198,6 +198,19 @@ func ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec *core.SeedSpec, fldPath *fi
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Networks.Nodes, oldSeedSpec.Networks.Nodes, fldPath.Child("networks", "nodes"))...)
 	}
 
+	if oldSeedSpec.DNS.IngressDomain != nil && newSeedSpec.DNS.IngressDomain != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.DNS.IngressDomain, oldSeedSpec.DNS.IngressDomain, fldPath.Child("dns", "ingressDomain"))...)
+	}
+	if oldSeedSpec.Ingress != nil && newSeedSpec.Ingress != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Ingress.Domain, oldSeedSpec.Ingress.Domain, fldPath.Child("ingress", "domain"))...)
+	}
+	if oldSeedSpec.Ingress != nil && newSeedSpec.DNS.IngressDomain != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.DNS.IngressDomain, oldSeedSpec.Ingress.Domain, fldPath.Child("dns", "ingressDomain"))...)
+	}
+	if oldSeedSpec.DNS.IngressDomain != nil && newSeedSpec.Ingress != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Ingress.Domain, oldSeedSpec.DNS.IngressDomain, fldPath.Child("ingress", "domain"))...)
+	}
+
 	if oldSeedSpec.Backup != nil {
 		if newSeedSpec.Backup != nil {
 			allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeedSpec.Backup.Provider, oldSeedSpec.Backup.Provider, fldPath.Child("backup", "provider"))...)

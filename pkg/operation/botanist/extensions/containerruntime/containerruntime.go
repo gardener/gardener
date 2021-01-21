@@ -29,7 +29,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -105,7 +104,7 @@ func (d *containerruntime) Wait(ctx context.Context) error {
 			ctx,
 			d.client,
 			d.logger,
-			func() runtime.Object { return &extensionsv1alpha1.ContainerRuntime{} },
+			func() client.Object { return &extensionsv1alpha1.ContainerRuntime{} },
 			extensionsv1alpha1.ContainerRuntimeResource,
 			d.values.Namespace,
 			getContainerRuntimeKey(cr.Type, workerName),

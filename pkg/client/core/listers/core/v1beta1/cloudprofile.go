@@ -26,10 +26,13 @@ import (
 )
 
 // CloudProfileLister helps list CloudProfiles.
+// All objects returned here must be treated as read-only.
 type CloudProfileLister interface {
 	// List lists all CloudProfiles in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.CloudProfile, err error)
 	// Get retrieves the CloudProfile from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.CloudProfile, error)
 	CloudProfileListerExpansion
 }

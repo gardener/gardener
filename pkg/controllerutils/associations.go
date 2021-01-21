@@ -138,7 +138,7 @@ func DetermineShootAssociations(ctx context.Context, c client.Client, seedName s
 	})
 }
 
-func determineAssociations(ctx context.Context, c client.Client, seedName string, listObj runtime.Object, seedNameFunc func(runtime.Object) (string, error)) ([]string, error) {
+func determineAssociations(ctx context.Context, c client.Client, seedName string, listObj client.ObjectList, seedNameFunc func(runtime.Object) (string, error)) ([]string, error) {
 	if err := c.List(ctx, listObj); err != nil {
 		return nil, err
 	}

@@ -88,7 +88,10 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 	}
 
 	if args.IgnoreOperationAnnotation {
-		if err := ctrl.Watch(&source.Kind{Type: &corev1.Secret{}}, &extensionshandler.EnqueueRequestsFromMapFunc{ToRequests: extensionshandler.SimpleMapper(SecretToBackupBucketMapper(predicates), extensionshandler.UpdateWithNew)}); err != nil {
+		if err := ctrl.Watch(
+			&source.Kind{Type: &corev1.Secret{}},
+			extensionshandler.EnqueueRequestsFromMapper(SecretToBackupBucketMapper(predicates), extensionshandler.UpdateWithNew),
+		); err != nil {
 			return err
 		}
 	}

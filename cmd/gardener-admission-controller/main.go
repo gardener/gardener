@@ -25,10 +25,10 @@ import (
 )
 
 func main() {
-	ctx := utils.ContextFromStopChannel(signals.SetupSignalHandler())
-	command := app.NewCommandStartGardenerAdmissionController()
+	utils.DeduplicateWarnings()
 
-	if err := command.ExecuteContext(ctx); err != nil {
+	ctx := signals.SetupSignalHandler()
+	if err := app.NewCommandStartGardenerAdmissionController().ExecuteContext(ctx); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

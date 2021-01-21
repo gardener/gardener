@@ -6,7 +6,7 @@ metadata:
   name: nginx-ingress-k8s-backend
   namespace: garden
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   replicas: 1
   selector:
     matchLabels:

@@ -26,10 +26,13 @@ import (
 )
 
 // SeedLister helps list Seeds.
+// All objects returned here must be treated as read-only.
 type SeedLister interface {
 	// List lists all Seeds in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.Seed, err error)
 	// Get retrieves the Seed from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.Seed, error)
 	SeedListerExpansion
 }

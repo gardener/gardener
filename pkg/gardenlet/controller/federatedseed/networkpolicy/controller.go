@@ -87,7 +87,6 @@ func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDef
 		ctx: ctx,
 		log: seedLogger,
 		namespaceReconciler: newNamespaceReconciler(
-			ctx,
 			seedLogger,
 			seedClient.Client(),
 			endpointsInformer.Lister(),

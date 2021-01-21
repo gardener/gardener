@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	"github.com/gardener/gardener/pkg/client/kubernetes/utils"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	corev1 "k8s.io/api/core/v1"
@@ -262,17 +261,10 @@ func newClientSet(conf *Config) (Interface, error) {
 	}
 
 	var runtimeClient client.Client
-	if UseCachedRuntimeClients && !conf.disableCachedClient {
-		if cacheOpts := conf.cacheReaderOptions; cacheOpts != nil {
-			runtimeClient, err = utils.NewClientWithSpecificallyCachedReader(runtimeCache, conf.restConfig, conf.clientOptions, cacheOpts.readSpecifiedFromCache, cacheOpts.specificallyCachedObjects...)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			runtimeClient, err = newRuntimeClientWithCache(conf.restConfig, conf.clientOptions, runtimeCache)
-			if err != nil {
-				return nil, err
-			}
+	if UseCachedRuntimeClients && !conf.disableCache {
+		runtimeClient, err = newRuntimeClientWithCache(conf.restConfig, conf.clientOptions, runtimeCache, conf.uncachedObjects...)
+		if err != nil {
+			return nil, err
 		}
 	} else {
 		runtimeClient = directClient

@@ -5,6 +5,7 @@
 package manager
 
 import (
+	context "context"
 	http "net/http"
 	reflect "reflect"
 
@@ -269,7 +270,7 @@ func (mr *MockManagerMockRecorder) SetFields(arg0 interface{}) *gomock.Call {
 }
 
 // Start mocks base method.
-func (m *MockManager) Start(arg0 <-chan struct{}) error {
+func (m *MockManager) Start(arg0 context.Context) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Start", arg0)
 	ret0, _ := ret[0].(error)

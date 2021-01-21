@@ -180,6 +180,7 @@ kubeAPIQPS: 50
 kubeReserved:
   cpu: 80m
   memory: 1Gi
+logging: {}
 maxOpenFiles: 1000000
 maxPods: 110
 nodeStatusReportFrequency: 0s

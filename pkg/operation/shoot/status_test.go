@@ -15,7 +15,6 @@ package shoot_test
 
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/pkg/operation/shoot"
 
 	. "github.com/onsi/ginkgo"
@@ -109,28 +108,6 @@ var _ = Describe("Shoot Utils", func() {
 				&gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}, nil, []gardencorev1beta1.Condition{{Status: gardencorev1beta1.ConditionFalse}}, StatusUnhealthy),
 			Entry("lastOperation.Type is LastOperationTypeCreate and lastOperation.State is LastOperationStateSucceeded with unhealthy conditions",
 				&gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeCreate, State: gardencorev1beta1.LastOperationStateSucceeded}, nil, []gardencorev1beta1.Condition{{Status: gardencorev1beta1.ConditionFalse}}, StatusUnhealthy),
-		)
-
-		DescribeTable("#StatusLabelTransform",
-			func(status Status, expectedLabels map[string]string) {
-				original := &gardencorev1beta1.Shoot{}
-
-				modified, err := StatusLabelTransform(status)(original.DeepCopy())
-				Expect(err).NotTo(HaveOccurred())
-				modifiedWithoutLabels := modified.DeepCopy()
-				modifiedWithoutLabels.Labels = nil
-				Expect(modifiedWithoutLabels).To(Equal(original), "not only labels were modified")
-				Expect(modified.Labels).To(Equal(expectedLabels))
-			},
-			Entry("StatusHealthy", StatusHealthy, map[string]string{
-				common.ShootStatus: string(StatusHealthy),
-			}),
-			Entry("StatusProgressing", StatusProgressing, map[string]string{
-				common.ShootStatus: string(StatusProgressing),
-			}),
-			Entry("StatusUnhealthy", StatusUnhealthy, map[string]string{
-				common.ShootStatus: string(StatusUnhealthy),
-			}),
 		)
 	})
 })

@@ -18,6 +18,16 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
 	apiextensions "github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -29,15 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
-	"github.com/sirupsen/logrus"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 type shootStateControl struct {
@@ -48,8 +49,8 @@ type shootStateControl struct {
 	shootRetriever  *ShootRetriever
 }
 
-func (s *shootStateControl) createShootStateSyncReconcileFunc(ctx context.Context, kind string, objectCreator func() runtime.Object) reconcile.Func {
-	return func(req reconcile.Request) (reconcile.Result, error) {
+func (s *shootStateControl) createShootStateSyncReconcileFunc(kind string, objectCreator func() client.Object) reconcile.Func {
+	return func(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 		obj := objectCreator()
 		err := s.seedClient.Client().Get(ctx, req.NamespacedName, obj)
 		if apierrors.IsNotFound(err) {

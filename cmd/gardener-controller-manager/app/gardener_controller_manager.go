@@ -124,7 +124,7 @@ func (o *Options) validate(args []string) error {
 	return nil
 }
 
-func (o *Options) run(ctx context.Context, cancel context.CancelFunc) error {
+func (o *Options) run(ctx context.Context) error {
 	if len(o.ConfigFile) > 0 {
 		c, err := o.loadConfigFromFile(o.ConfigFile)
 		if err != nil {
@@ -148,11 +148,11 @@ func (o *Options) run(ctx context.Context, cancel context.CancelFunc) error {
 		return err
 	}
 
-	return gardener.Run(ctx, cancel)
+	return gardener.Run(ctx)
 }
 
 // NewCommandStartGardenerControllerManager creates a *cobra.Command object with default parameters
-func NewCommandStartGardenerControllerManager(ctx context.Context, cancel context.CancelFunc) *cobra.Command {
+func NewCommandStartGardenerControllerManager() *cobra.Command {
 	opts, err := NewOptions()
 	if err != nil {
 		panic(err)
@@ -178,7 +178,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 			if err := opts.validate(args); err != nil {
 				return err
 			}
-			return opts.run(ctx, cancel)
+			return opts.run(cmd.Context())
 		},
 	}
 
@@ -277,8 +277,9 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 }
 
 // Run runs the Gardener. This should never exit.
-func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
-	leaderElectionCtx, leaderElectionCancel := context.WithCancel(context.Background())
+func (g *Gardener) Run(ctx context.Context) error {
+	controllerCtx, controllerCancel := context.WithCancel(ctx)
+	defer controllerCancel()
 
 	// Prepare a reusable run function.
 	run := func(ctx context.Context) error {
@@ -303,19 +304,21 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 		Build().
 		Start(ctx)
 
+	leaderElectionCtx, leaderElectionCancel := context.WithCancel(context.Background())
+
 	// If leader election is enabled, run via LeaderElector until done and exit.
 	if g.LeaderElection != nil {
 		g.LeaderElection.Callbacks = leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(_ context.Context) {
 				g.Logger.Info("Acquired leadership, starting controllers.")
-				if err := run(ctx); err != nil {
+				if err := run(controllerCtx); err != nil {
 					g.Logger.Errorf("failed to run controllers: %v", err)
 				}
 				leaderElectionCancel()
 			},
 			OnStoppedLeading: func() {
 				g.Logger.Info("Lost leadership, terminating.")
-				cancel()
+				controllerCancel()
 			},
 		}
 		leaderElector, err := leaderelection.NewLeaderElector(*g.LeaderElection)
@@ -328,7 +331,7 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 
 	// Leader election is disabled, thus run directly until done.
 	leaderElectionCancel()
-	return run(ctx)
+	return run(controllerCtx)
 }
 
 func (g *Gardener) startControllers(ctx context.Context) error {

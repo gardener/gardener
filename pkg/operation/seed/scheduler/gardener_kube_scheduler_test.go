@@ -16,9 +16,11 @@ package scheduler_test
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/seed/scheduler"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
@@ -46,7 +48,6 @@ import (
 var _ = Describe("New", func() {
 	const (
 		deployNS = "test-namespace"
-		image    = "foo:v1"
 	)
 
 	var (
@@ -56,11 +57,12 @@ var _ = Describe("New", func() {
 		webhookClientConfig, expectedWebhookClientConfig *admissionregistrationv1beta1.WebhookClientConfig
 		expectedLabels                                   map[string]string
 		codec                                            serializer.CodecFactory
+		image                                            *imagevector.Image
 	)
 
 	BeforeEach(func() {
 		ctx = context.TODO()
-
+		image = &imagevector.Image{Repository: "foo"}
 		webhookClientConfig = &admissionregistrationv1beta1.WebhookClientConfig{}
 		expectedWebhookClientConfig = webhookClientConfig.DeepCopy()
 
@@ -83,27 +85,15 @@ var _ = Describe("New", func() {
 		var err error
 
 		It("when client is nil", func() {
-			sched, err = New(nil, "foo", "foo", &dummyConfigurator{}, &admissionregistrationv1beta1.WebhookClientConfig{})
+			sched, err = New(nil, "foo", nil, nil, nil)
 		})
 
 		It("when namespace is empty", func() {
-			sched, err = New(c, "", "foo", &dummyConfigurator{}, &admissionregistrationv1beta1.WebhookClientConfig{})
+			sched, err = New(c, "", nil, nil, nil)
 		})
 
 		It("when namespace is garden", func() {
-			sched, err = New(c, "garden", "foo", &dummyConfigurator{}, &admissionregistrationv1beta1.WebhookClientConfig{})
-		})
-
-		It("when image is empty", func() {
-			sched, err = New(c, "foo", "", &dummyConfigurator{}, &admissionregistrationv1beta1.WebhookClientConfig{})
-		})
-
-		It("when configurator is nil", func() {
-			sched, err = New(c, "foo", "baz", nil, &admissionregistrationv1beta1.WebhookClientConfig{})
-		})
-
-		It("when webhook client is nil", func() {
-			sched, err = New(c, "foo", "baz", &dummyConfigurator{}, nil)
+			sched, err = New(c, "garden", nil, nil, nil)
 		})
 
 		AfterEach(func() {
@@ -124,6 +114,43 @@ var _ = Describe("New", func() {
 			Expect(err).NotTo(HaveOccurred(), "New succeeds")
 
 			sched = s
+		})
+
+		Context("Deploy fails", func() {
+			It("cannot accept nil configurator", func() {
+				s, err := New(c, deployNS, image, nil, webhookClientConfig)
+				Expect(err).To(Succeed(), "New succeeds")
+
+				Expect(s.Deploy(ctx)).NotTo(Succeed(), "deploy should fail")
+			})
+
+			It("cannot accept configurator that returns error", func() {
+				s, err := New(c, deployNS, image, &dummyConfigurator{err: fmt.Errorf("foo")}, webhookClientConfig)
+				Expect(err).To(Succeed(), "New succeeds")
+
+				Expect(s.Deploy(ctx)).NotTo(Succeed(), "deploy should fail")
+			})
+
+			It("cannot accept nil image", func() {
+				s, err := New(c, deployNS, nil, &dummyConfigurator{}, webhookClientConfig)
+				Expect(err).To(Succeed(), "New succeeds")
+
+				Expect(s.Deploy(ctx)).NotTo(Succeed(), "deploy should fail")
+			})
+
+			It("cannot accept empty image", func() {
+				s, err := New(c, deployNS, &imagevector.Image{}, &dummyConfigurator{}, webhookClientConfig)
+				Expect(err).To(Succeed(), "New succeeds")
+
+				Expect(s.Deploy(ctx)).NotTo(Succeed(), "deploy should fail")
+			})
+
+			It("cannot accept nil webhookClientConfig", func() {
+				s, err := New(c, deployNS, image, &dummyConfigurator{}, nil)
+				Expect(err).To(Succeed(), "New succeeds")
+
+				Expect(s.Deploy(ctx)).NotTo(Succeed(), "deploy should fail")
+			})
 		})
 
 		Context("Deploy", func() {
@@ -188,6 +215,63 @@ var _ = Describe("New", func() {
 						Kind:      "ServiceAccount",
 						Name:      "gardener-kube-scheduler",
 						Namespace: deployNS,
+					}},
+				}
+
+				Expect(managedResourceSecret.Data).To(HaveKey(key))
+				_, _, err := codec.UniversalDecoder().Decode(managedResourceSecret.Data[key], nil, actual)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(actual).To(DeepDerivativeEqual(expected))
+			})
+
+			It("lease rolebinding is created", func() {
+				const key = "rolebinding__test-namespace__gardener-kube-scheduler.yaml"
+				actual := &rbacv1.RoleBinding{}
+				expected := &rbacv1.RoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardener-kube-scheduler",
+						Namespace: deployNS,
+						Labels:    expectedLabels,
+					},
+					RoleRef: rbacv1.RoleRef{
+						APIGroup: rbacv1.SchemeGroupVersion.Group,
+						Kind:     "Role",
+						Name:     "gardener-kube-scheduler",
+					},
+					Subjects: []rbacv1.Subject{{
+						APIGroup:  corev1.SchemeGroupVersion.Group,
+						Kind:      "ServiceAccount",
+						Name:      "gardener-kube-scheduler",
+						Namespace: deployNS,
+					}},
+				}
+
+				Expect(managedResourceSecret.Data).To(HaveKey(key))
+				_, _, err := codec.UniversalDecoder().Decode(managedResourceSecret.Data[key], nil, actual)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(actual).To(DeepDerivativeEqual(expected))
+			})
+
+			It("lease role is created", func() {
+				const key = "role__test-namespace__gardener-kube-scheduler.yaml"
+				actual := &rbacv1.Role{}
+				expected := &rbacv1.Role{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gardener-kube-scheduler",
+						Namespace: deployNS,
+						Labels:    expectedLabels,
+					},
+					Rules: []rbacv1.PolicyRule{{
+						Verbs:     []string{"create"},
+						APIGroups: []string{"coordination.k8s.io"},
+						Resources: []string{"leases"},
+					}, {
+						Verbs:         []string{"get", "update"},
+						APIGroups:     []string{"coordination.k8s.io"},
+						Resources:     []string{"leases"},
+						ResourceNames: []string{"gardener-kube-scheduler"},
 					}},
 				}
 
@@ -330,7 +414,7 @@ var _ = Describe("New", func() {
 					},
 					Spec: appsv1.DeploymentSpec{
 						Replicas:             pointer.Int32Ptr(2),
-						RevisionHistoryLimit: pointer.Int32Ptr(0),
+						RevisionHistoryLimit: pointer.Int32Ptr(1),
 						Selector:             &metav1.LabelSelector{MatchLabels: expectedLabels},
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{
@@ -355,7 +439,7 @@ var _ = Describe("New", func() {
 								Containers: []corev1.Container{
 									{
 										Name:            "kube-scheduler",
-										Image:           image,
+										Image:           image.String(),
 										ImagePullPolicy: corev1.PullIfNotPresent,
 										Command: []string{
 											"/usr/local/bin/kube-scheduler",
@@ -524,8 +608,10 @@ var _ = Describe("New", func() {
 	})
 })
 
-type dummyConfigurator struct{}
+type dummyConfigurator struct {
+	err error
+}
 
 func (d *dummyConfigurator) Config() (string, string, error) {
-	return "dummy", "hash", nil
+	return "dummy", "hash", d.err
 }

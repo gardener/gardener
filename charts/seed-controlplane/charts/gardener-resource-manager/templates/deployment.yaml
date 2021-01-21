@@ -8,11 +8,10 @@ metadata:
     gardener.cloud/role: controlplane
     app: gardener-resource-manager
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
-      garden.sapcloud.io/role: controlplane
       app: gardener-resource-manager
   template:
     metadata:
@@ -21,6 +20,7 @@ spec:
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
       labels:
+        gardener.cloud/role: controlplane
         garden.sapcloud.io/role: controlplane
         app: gardener-resource-manager
         networking.gardener.cloud/to-dns: allowed

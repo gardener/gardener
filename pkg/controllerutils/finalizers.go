@@ -25,15 +25,13 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // PatchFinalizers adds the given finalizers to the object via a patch request.
-func PatchFinalizers(ctx context.Context, c client.Client, obj controllerutil.Object, finalizers ...string) error {
+func PatchFinalizers(ctx context.Context, c client.Client, obj client.Object, finalizers ...string) error {
 	beforePatch := obj.DeepCopyObject()
 
 	for _, finalizer := range finalizers {
@@ -44,7 +42,7 @@ func PatchFinalizers(ctx context.Context, c client.Client, obj controllerutil.Ob
 }
 
 // PatchRemoveFinalizers removes the given finalizers from the object via a patch request.
-func PatchRemoveFinalizers(ctx context.Context, c client.Client, obj controllerutil.Object, finalizers ...string) error {
+func PatchRemoveFinalizers(ctx context.Context, c client.Client, obj client.Object, finalizers ...string) error {
 	beforePatch := obj.DeepCopyObject()
 
 	for _, finalizer := range finalizers {
@@ -55,11 +53,9 @@ func PatchRemoveFinalizers(ctx context.Context, c client.Client, obj controlleru
 }
 
 // EnsureFinalizer ensure the <finalizer> is present for the object.
-func EnsureFinalizer(ctx context.Context, c client.Client, obj controllerutil.Object, finalizer string) error {
+func EnsureFinalizer(ctx context.Context, c client.Client, obj client.Object, finalizer string) error {
 	if err := kutil.TryUpdate(ctx, retry.DefaultBackoff, c, obj, func() error {
-		finalizers := sets.NewString(obj.GetFinalizers()...)
-		finalizers.Insert(finalizer)
-		obj.SetFinalizers(finalizers.UnsortedList())
+		controllerutil.AddFinalizer(obj, finalizer)
 		return nil
 	}); err != nil {
 		return fmt.Errorf("could not ensure %q finalizer: %+v", finalizer, err)
@@ -68,19 +64,14 @@ func EnsureFinalizer(ctx context.Context, c client.Client, obj controllerutil.Ob
 }
 
 // RemoveGardenerFinalizer removes the gardener finalizer from the object.
-func RemoveGardenerFinalizer(ctx context.Context, c client.Client, obj controllerutil.Object) error {
+func RemoveGardenerFinalizer(ctx context.Context, c client.Client, obj client.Object) error {
 	return RemoveFinalizer(ctx, c, obj, gardencorev1beta1.GardenerName)
 }
 
 // RemoveFinalizer removes the <finalizer> from the object.
-func RemoveFinalizer(ctx context.Context, c client.Client, obj controllerutil.Object, finalizer string) error {
+func RemoveFinalizer(ctx context.Context, c client.Client, obj client.Object, finalizer string) error {
 	if err := kutil.TryUpdate(ctx, retry.DefaultBackoff, c, obj, func() error {
-		if len(obj.GetFinalizers()) == 0 {
-			return nil
-		}
-		finalizers := sets.NewString(obj.GetFinalizers()...)
-		finalizers.Delete(finalizer)
-		obj.SetFinalizers(finalizers.UnsortedList())
+		controllerutil.RemoveFinalizer(obj, finalizer)
 		return nil
 	}); client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("could not remove %q finalizer: %+v", finalizer, err)
@@ -91,14 +82,14 @@ func RemoveFinalizer(ctx context.Context, c client.Client, obj controllerutil.Ob
 	pollerCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	return wait.PollImmediateUntil(time.Second, func() (bool, error) {
-		err := c.Get(ctx, kutil.KeyFromObject(obj), obj)
+		err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}
 		if err != nil {
 			return false, err
 		}
-		if !HasFinalizer(obj, finalizer) {
+		if !controllerutil.ContainsFinalizer(obj, finalizer) {
 			return true, nil
 		}
 		return false, nil
@@ -106,6 +97,5 @@ func RemoveFinalizer(ctx context.Context, c client.Client, obj controllerutil.Ob
 }
 
 // HasFinalizer checks whether the given obj has the given finalizer.
-func HasFinalizer(obj metav1.Object, finalizer string) bool {
-	return sets.NewString(obj.GetFinalizers()...).Has(finalizer)
-}
+// Deprecated: use controllerutil.ContainsFinalizer instead
+var HasFinalizer = controllerutil.ContainsFinalizer

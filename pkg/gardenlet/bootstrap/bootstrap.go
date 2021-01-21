@@ -21,52 +21,34 @@ import (
 	"net"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+	certificatesv1 "k8s.io/api/certificates/v1"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/authentication/serviceaccount"
+	kubernetesclientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
-	"github.com/sirupsen/logrus"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apiserver/pkg/authentication/serviceaccount"
-	certificatesv1beta1client "k8s.io/client-go/kubernetes/typed/certificates/v1beta1"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// CreateBootstrapClientFromKubeconfig creates a CertificatesV1beta1Client client from a given kubeconfig
-func CreateBootstrapClientFromKubeconfig(kubeconfig []byte) (*certificatesv1beta1client.CertificatesV1beta1Client, *rest.Config, error) {
-	bootstrapClientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	bootstrapConfig, err := bootstrapClientConfig.ClientConfig()
-	if err != nil {
-		return nil, nil, err
-	}
-	bootstrapClient, err := certificatesv1beta1client.NewForConfig(bootstrapConfig)
-	if err != nil {
-		return nil, nil, err
-	}
-	return bootstrapClient, bootstrapConfig, nil
-}
 
 // RequestBootstrapKubeconfig creates a kubeconfig with a signed certificate using the given bootstrap client
 // returns the kubeconfig []byte representation, the CSR name, the seed name or an error
-func RequestBootstrapKubeconfig(ctx context.Context, logger logrus.FieldLogger, seedClient client.Client, bootstrapClient certificatesv1beta1client.CertificatesV1beta1Interface, bootstrapConfig *rest.Config, gardenClientConnection *config.GardenClientConnection, seedName, bootstrapTargetCluster string) ([]byte, string, string, error) {
+func RequestBootstrapKubeconfig(ctx context.Context, logger logrus.FieldLogger, seedClient client.Client, clientSet kubernetesclientset.Interface, bootstrapConfig *rest.Config, gardenClientConnection *config.GardenClientConnection, seedName, bootstrapTargetCluster string) ([]byte, string, string, error) {
 	certificateSubject := &pkix.Name{
 		Organization: []string{"gardener.cloud:system:seeds"},
 		CommonName:   "gardener.cloud:system:seed:" + seedName,
 	}
 
-	certData, privateKeyData, csrName, err := certificate.RequestCertificate(ctx, logger, bootstrapClient, certificateSubject, []string{}, []net.IP{})
+	certData, privateKeyData, csrName, err := certificate.RequestCertificate(ctx, logger, clientSet, certificateSubject, []string{}, []net.IP{})
 	if err != nil {
 		return nil, "", "", fmt.Errorf("unable to bootstrap the kubeconfig for the Garden cluster: %v", err)
 	}
@@ -97,26 +79,40 @@ func RequestBootstrapKubeconfig(ctx context.Context, logger logrus.FieldLogger, 
 // (either a bootstrap token or a service account token was used). If the latter is true then it
 // also deletes the corresponding ClusterRoleBinding.
 func DeleteBootstrapAuth(ctx context.Context, c client.Client, csrName, seedName string) error {
-	csr := &certificatesv1beta1.CertificateSigningRequest{}
-	if err := c.Get(ctx, kutil.Key(csrName), csr); err != nil {
-		return err
+	var username string
+
+	// try certificates v1 API first
+	csr := &certificatesv1.CertificateSigningRequest{}
+	if err := c.Get(ctx, kutil.Key(csrName), csr); err == nil {
+		username = csr.Spec.Username
+	} else {
+		if !meta.IsNoMatchError(err) {
+			return err
+		}
+
+		// certificates v1 API not found, fall back to v1beta1
+		csrv1beta1 := &certificatesv1beta1.CertificateSigningRequest{}
+		if err := c.Get(ctx, kutil.Key(csrName), csrv1beta1); err != nil {
+			return err
+		}
+		username = csrv1beta1.Spec.Username
 	}
 
-	var resourcesToDelete []runtime.Object
+	var resourcesToDelete []client.Object
 
 	switch {
-	case strings.HasPrefix(csr.Spec.Username, bootstraptokenapi.BootstrapUserPrefix):
+	case strings.HasPrefix(username, bootstraptokenapi.BootstrapUserPrefix):
 		resourcesToDelete = append(resourcesToDelete,
 			&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("bootstrap-token-%s", strings.TrimPrefix(csr.Spec.Username, "system:bootstrap:")),
+					Name:      fmt.Sprintf("bootstrap-token-%s", strings.TrimPrefix(username, "system:bootstrap:")),
 					Namespace: metav1.NamespaceSystem,
 				},
 			},
 		)
 
-	case strings.HasPrefix(csr.Spec.Username, serviceaccount.ServiceAccountUsernamePrefix):
-		namespace, name, err := serviceaccount.SplitUsername(csr.Spec.Username)
+	case strings.HasPrefix(username, serviceaccount.ServiceAccountUsernamePrefix):
+		namespace, name, err := serviceaccount.SplitUsername(username)
 		if err != nil {
 			return err
 		}

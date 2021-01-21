@@ -188,7 +188,7 @@ func (c *controlPlane) Wait(ctx context.Context) error {
 		ctx,
 		c.client,
 		c.logger,
-		func() runtime.Object { return &extensionsv1alpha1.ControlPlane{} },
+		func() client.Object { return &extensionsv1alpha1.ControlPlane{} },
 		extensionsv1alpha1.ControlPlaneResource,
 		c.values.Namespace,
 		c.name(),

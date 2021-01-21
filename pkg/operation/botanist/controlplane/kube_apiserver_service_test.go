@@ -195,7 +195,7 @@ var _ = Describe("#KubeAPIServerService", func() {
 				},
 			}
 
-			key, _ := client.ObjectKeyFromObject(expected)
+			key := client.ObjectKeyFromObject(expected)
 			Expect(c.Get(ctx, key, expected)).NotTo(HaveOccurred())
 			Expect(c.Status().Update(ctx, expected)).NotTo(HaveOccurred())
 			Expect(defaultDepWaiter.Wait(ctx)).NotTo(HaveOccurred())

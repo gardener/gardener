@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed/scheduler/configurator"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
@@ -32,6 +33,7 @@ import (
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -45,7 +47,6 @@ import (
 )
 
 const (
-	name                                  = "gardener-kube-scheduler"
 	containerName                         = "kube-scheduler"
 	portNameMetrics                       = "metrics"
 	dataKeyComponentConfig                = "config.yaml"
@@ -64,7 +65,7 @@ const (
 func New(
 	client client.Client,
 	namespace string,
-	image string,
+	image *imagevector.Image,
 	config configurator.Configurator,
 	webhookClientConfig *admissionregistrationv1beta1.WebhookClientConfig,
 ) (
@@ -83,18 +84,6 @@ func New(
 		return nil, errors.New("namespace cannot be 'garden'")
 	}
 
-	if len(image) == 0 {
-		return nil, errors.New("image is required")
-	}
-
-	if config == nil {
-		return nil, errors.New("config is required")
-	}
-
-	if webhookClientConfig == nil {
-		return nil, errors.New("webhookClientConfig is required")
-	}
-
 	s := &kubeScheduler{
 		client:    client,
 		namespace: namespace,
@@ -110,15 +99,27 @@ func New(
 type kubeScheduler struct {
 	client              client.Client
 	namespace           string
-	image               string
+	image               *imagevector.Image
 	config              configurator.Configurator
 	webhookClientConfig *admissionregistrationv1beta1.WebhookClientConfig
 }
 
 func (k *kubeScheduler) Deploy(ctx context.Context) error {
+	if k.config == nil {
+		return errors.New("config is required")
+	}
+
 	componentConfigYAML, componentConfigChecksum, err := k.config.Config()
 	if err != nil {
 		return errors.Wrap(err, "generate component config failed")
+	}
+
+	if k.image == nil || len(k.image.String()) == 0 {
+		return errors.New("image is required")
+	}
+
+	if k.webhookClientConfig == nil {
+		return errors.New("webhookClientConfig is required")
 	}
 
 	const (
@@ -152,7 +153,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      name,
+				Name:      Name,
 				Namespace: k.namespace,
 			}},
 		}
@@ -168,13 +169,13 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      name,
+				Name:      Name,
 				Namespace: k.namespace,
 			}},
 		}
 		configMap = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      Name,
 				Namespace: k.namespace,
 				Labels:    getLabels(),
 			},
@@ -182,13 +183,13 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		}
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      Name,
 				Namespace: k.namespace,
 				Labels:    getLabels(),
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             pointer.Int32Ptr(2),
-				RevisionHistoryLimit: pointer.Int32Ptr(0),
+				RevisionHistoryLimit: pointer.Int32Ptr(1),
 				Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
@@ -209,11 +210,11 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 								}},
 							},
 						},
-						ServiceAccountName: name,
+						ServiceAccountName: Name,
 						Containers: []corev1.Container{
 							{
 								Name:            containerName,
-								Image:           k.image,
+								Image:           k.image.String(),
 								ImagePullPolicy: corev1.PullIfNotPresent,
 								Command:         k.command(port),
 								LivenessProbe: &corev1.Probe{
@@ -272,7 +273,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			},
 		}
 		serviceAccount = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      Name,
 			Namespace: k.namespace,
 			Labels:    getLabels(),
 		}}
@@ -289,7 +290,41 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      name,
+				Name:      Name,
+				Namespace: k.namespace,
+			}},
+		}
+		leaseRole = &rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      Name,
+				Namespace: k.namespace,
+				Labels:    getLabels(),
+			},
+			Rules: []rbacv1.PolicyRule{{
+				Verbs:     []string{"create"},
+				Resources: []string{"leases"},
+				APIGroups: []string{coordinationv1.SchemeGroupVersion.Group},
+			}, {
+				Verbs:         []string{"get", "update"},
+				Resources:     []string{"leases"},
+				APIGroups:     []string{coordinationv1.SchemeGroupVersion.Group},
+				ResourceNames: []string{Name},
+			}},
+		}
+		leaseRoleBinding = &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      Name,
+				Namespace: k.namespace,
+				Labels:    getLabels(),
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     Name,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      Name,
 				Namespace: k.namespace,
 			}},
 		}
@@ -326,7 +361,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		}
 		vpa = &autoscalingv1beta2.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      Name,
 				Namespace: k.namespace,
 				Labels:    getLabels(),
 			},
@@ -343,7 +378,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		}
 		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      Name,
 				Namespace: k.namespace,
 				Labels:    getLabels(),
 			},
@@ -370,6 +405,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		volumeSchedulerClusterRoleBinding,
 		roleBinding,
 		serviceAccount,
+		leaseRole,
+		leaseRoleBinding,
 		configMap,
 		deployment,
 		webhook,

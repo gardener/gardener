@@ -147,7 +147,7 @@ var _ = Describe("KubeScheduler", func() {
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					RevisionHistoryLimit: pointer.Int32Ptr(0),
+					RevisionHistoryLimit: pointer.Int32Ptr(1),
 					Replicas:             &replicas,
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -165,6 +165,7 @@ var _ = Describe("KubeScheduler", func() {
 							Labels: map[string]string{
 								"app":                                "kubernetes",
 								"role":                               "scheduler",
+								"gardener.cloud/role":                "controlplane",
 								"garden.sapcloud.io/role":            "controlplane",
 								"maintenance.gardener.cloud/restart": "true",
 								"networking.gardener.cloud/to-dns":   "allowed",

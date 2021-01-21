@@ -41,9 +41,7 @@ func (c *Controller) enqueueEvent(obj interface{}) {
 	c.eventQueue.Add(key)
 }
 
-func (c *Controller) reconcileEvent(req reconcile.Request) (reconcile.Result, error) {
-	ctx := context.TODO()
-
+func (c *Controller) reconcileEvent(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)

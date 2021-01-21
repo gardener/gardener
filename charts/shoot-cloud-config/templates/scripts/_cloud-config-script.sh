@@ -9,6 +9,7 @@ PATH_CLOUDCONFIG_DOWNLOADER_SERVER="$DIR_CLOUDCONFIG_DOWNLOADER/credentials/serv
 PATH_CLOUDCONFIG_DOWNLOADER_CA_CERT="$DIR_CLOUDCONFIG_DOWNLOADER/credentials/ca.crt"
 PATH_CLOUDCONFIG="{{ .configFilePath }}"
 PATH_CLOUDCONFIG_OLD="${PATH_CLOUDCONFIG}.old"
+PATH_CHECKSUM="$DIR_CLOUDCONFIG_DOWNLOADER/downloaded_checksum"
 
 mkdir -p "$DIR_CLOUDCONFIG" "$DIR_KUBELET"
 
@@ -104,4 +105,28 @@ if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null; then
 fi
 
 rm "$PATH_CLOUDCONFIG"
+
+ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-services"
+
+# Try to find Node object for this machine
+if [[ -f "$DIR_KUBELET/kubeconfig-real" ]]; then
+  {{`NODE="$(/opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" get node -l "kubernetes.io/hostname=$(hostname)" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ if (index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\") }} {{ index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}{{ end }}")"`}}
+
+  if [[ ! -z "$NODE" ]]; then
+    NODENAME="$(echo "$NODE" | awk '{print $1}')"
+    SYSTEMD_SERVICES_TO_RESTART="$(echo "$NODE" | awk '{print $2}')"
+  fi
+
+  # Update checksum/cloud-config-data annotation on Node object if possible
+  if [[ ! -z "$NODENAME" ]] && [[ -f "$PATH_CHECKSUM" ]]; then
+    /opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" annotate node "$NODENAME" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
+  fi
+
+  # Restart systemd services if requested
+  for service in $(echo "$SYSTEMD_SERVICES_TO_RESTART" | sed "s/,/ /g"); do
+    echo "Restarting systemd service $service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
+    systemctl restart "$service" || true
+  done
+  /opt/bin/kubectl --kubeconfig="$DIR_KUBELET/kubeconfig-real" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
+fi
 {{- end}}

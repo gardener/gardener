@@ -26,8 +26,10 @@ import (
 )
 
 // OperatingSystemConfigLister helps list OperatingSystemConfigs.
+// All objects returned here must be treated as read-only.
 type OperatingSystemConfigLister interface {
 	// List lists all OperatingSystemConfigs in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.OperatingSystemConfig, err error)
 	// OperatingSystemConfigs returns an object that can list and get OperatingSystemConfigs.
 	OperatingSystemConfigs(namespace string) OperatingSystemConfigNamespaceLister
@@ -58,10 +60,13 @@ func (s *operatingSystemConfigLister) OperatingSystemConfigs(namespace string) O
 }
 
 // OperatingSystemConfigNamespaceLister helps list and get OperatingSystemConfigs.
+// All objects returned here must be treated as read-only.
 type OperatingSystemConfigNamespaceLister interface {
 	// List lists all OperatingSystemConfigs in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.OperatingSystemConfig, err error)
 	// Get retrieves the OperatingSystemConfig from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.OperatingSystemConfig, error)
 	OperatingSystemConfigNamespaceListerExpansion
 }

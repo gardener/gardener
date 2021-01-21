@@ -30,9 +30,6 @@ import (
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -104,30 +101,23 @@ type mutator struct {
 }
 
 // InjectClient injects the given client into the ensurer.
-// TODO Replace this with the more generic InjectFunc when controller runtime supports it
 func (m *mutator) InjectClient(client client.Client) error {
 	m.client = client
-	if _, err := inject.ClientInto(client, m.ensurer); err != nil {
-		return errors.Wrap(err, "could not inject the client into the ensurer")
-	}
 	return nil
 }
 
+// InjectFunc injects stuff into the ensurer.
+func (m *mutator) InjectFunc(f inject.Func) error {
+	return f(m.ensurer)
+}
+
 // Mutate validates and if needed mutates the given object.
-func (m *mutator) Mutate(ctx context.Context, new, old runtime.Object) error {
-	acc, err := meta.Accessor(new)
-	if err != nil {
-		return errors.Wrapf(err, "could not create accessor during webhook")
-	}
+func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 	// If the object does have a deletion timestamp then we don't want to mutate anything.
-	if acc.GetDeletionTimestamp() != nil {
+	if new.GetDeletionTimestamp() != nil {
 		return nil
 	}
-	o, ok := new.(metav1.Object)
-	if !ok {
-		return errors.Wrapf(err, "could not cast runtime object to metav1 object")
-	}
-	gctx := gcontext.NewGardenContext(m.client, o)
+	gctx := gcontext.NewGardenContext(m.client, new)
 
 	switch x := new.(type) {
 	case *corev1.Service:
@@ -135,9 +125,10 @@ func (m *mutator) Mutate(ctx context.Context, new, old runtime.Object) error {
 		case v1beta1constants.DeploymentNameKubeAPIServer:
 			var oldSvc *corev1.Service
 			if old != nil {
+				var ok bool
 				oldSvc, ok = old.(*corev1.Service)
 				if !ok {
-					return errors.Wrapf(err, "could not cast old object to corev1.Service")
+					return errors.New("could not cast old object to corev1.Service")
 				}
 			}
 
@@ -147,9 +138,10 @@ func (m *mutator) Mutate(ctx context.Context, new, old runtime.Object) error {
 	case *appsv1.Deployment:
 		var oldDep *appsv1.Deployment
 		if old != nil {
+			var ok bool
 			oldDep, ok = old.(*appsv1.Deployment)
 			if !ok {
-				return errors.Wrapf(err, "could not cast old object to appsv1.Deployment")
+				return errors.New("could not cast old object to appsv1.Deployment")
 			}
 		}
 
@@ -169,9 +161,10 @@ func (m *mutator) Mutate(ctx context.Context, new, old runtime.Object) error {
 		case v1beta1constants.ETCDMain, v1beta1constants.ETCDEvents:
 			var oldEtcd *druidv1alpha1.Etcd
 			if old != nil {
+				var ok bool
 				oldEtcd, ok = old.(*druidv1alpha1.Etcd)
 				if !ok {
-					return errors.Wrapf(err, "could not cast old object to druidv1alpha1.Etcd")
+					return errors.New("could not cast old object to druidv1alpha1.Etcd")
 				}
 			}
 
@@ -182,9 +175,10 @@ func (m *mutator) Mutate(ctx context.Context, new, old runtime.Object) error {
 		if x.Spec.Purpose == extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
 			var oldOSC *extensionsv1alpha1.OperatingSystemConfig
 			if old != nil {
+				var ok bool
 				oldOSC, ok = old.(*extensionsv1alpha1.OperatingSystemConfig)
 				if !ok {
-					return errors.Wrapf(err, "could not cast old object to extensionsv1alpha1.OperatingSystemConfig")
+					return errors.New("could not cast old object to extensionsv1alpha1.OperatingSystemConfig")
 				}
 			}
 

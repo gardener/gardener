@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -38,7 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -60,7 +61,6 @@ import (
 	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
@@ -412,56 +412,15 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 		return err
 	}
 
-	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), b.Shoot.SeedNamespace, name, kubernetes.Values(values))
-}
-
-// DeployBackupEntryInGarden deploys the BackupEntry resource in garden.
-func (b *Botanist) DeployBackupEntryInGarden(ctx context.Context) error {
-	var (
-		name        = common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
-		backupEntry = &gardencorev1beta1.BackupEntry{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: b.Shoot.Info.Namespace,
-			},
-		}
-		bucketName string
-		seedName   *string
-	)
-
-	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, name), backupEntry); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-
-		// If backupEntry doesn't already exists, we have to assign backupBucket to backupEntry.
-		bucketName = string(b.Seed.Info.UID)
-		seedName = &b.Seed.Info.Name
-	} else if b.isRestorePhase() {
-		bucketName = backupEntry.Spec.BucketName
-		seedName = &b.Seed.Info.Name
-	} else {
-		bucketName = backupEntry.Spec.BucketName
-		seedName = backupEntry.Spec.SeedName
+	// TODO (ialidzhikov): remove in a future version
+	deploymentKeys := []client.ObjectKey{
+		kutil.Key(b.Shoot.SeedNamespace, name),
 	}
-	ownerRef := metav1.NewControllerRef(b.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
-	blockOwnerDeletion := false
-	ownerRef.BlockOwnerDeletion = &blockOwnerDeletion
+	if err := common.DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx, b.K8sSeedClient.Client(), deploymentKeys); err != nil {
+		return err
+	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), backupEntry, func() error {
-		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
-
-		finalizers := sets.NewString(backupEntry.GetFinalizers()...)
-		finalizers.Insert(gardencorev1beta1.GardenerName)
-		backupEntry.SetFinalizers(finalizers.UnsortedList())
-
-		backupEntry.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*ownerRef}
-		backupEntry.Spec.BucketName = bucketName
-		backupEntry.Spec.SeedName = seedName
-		return nil
-	})
-	return err
+	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), b.Shoot.SeedNamespace, name, kubernetes.Values(values))
 }
 
 const (
@@ -882,7 +841,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	// If HVPA feature gate is enabled then we should delete the old HPA and VPA resources as
 	// the HVPA controller will create its own for the kube-apiserver deployment.
 	if hvpaEnabled {
-		objects := []runtime.Object{
+		objects := []client.Object{
 			// TODO: Use autoscaling/v2beta2 for Kubernetes 1.19+ shoots once kubernetes-v1.19 golang dependencies were vendored.
 			&autoscalingv2beta1.HorizontalPodAutoscaler{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1141,30 +1100,7 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 // CheckTunnelConnection checks if the tunnel connection between the control plane and the shoot networks
 // is established.
 func (b *Botanist) CheckTunnelConnection(ctx context.Context, logger *logrus.Entry, tunnelName string) (bool, error) {
-	podList := &corev1.PodList{}
-	if err := b.K8sShootClient.Client().List(ctx, podList, client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"app": tunnelName}); err != nil {
-		return retry.SevereError(err)
-	}
-
-	var tunnelPod *corev1.Pod
-	for _, pod := range podList.Items {
-		if pod.Status.Phase == corev1.PodRunning {
-			tunnelPod = &pod
-			break
-		}
-	}
-
-	if tunnelPod == nil {
-		logger.Infof("Waiting until a running %s pod exists in the Shoot cluster...", tunnelName)
-		return retry.MinorError(fmt.Errorf("no running %s pod found yet in the shoot cluster", tunnelName))
-	}
-	if err := b.K8sShootClient.CheckForwardPodPort(tunnelPod.Namespace, tunnelPod.Name, 0, 22); err != nil {
-		logger.Info("Waiting until the tunnel connection has been established...")
-		return retry.MinorError(fmt.Errorf("could not forward to %s pod: %v", tunnelName, err))
-	}
-
-	logger.Info("Tunnel connection has been established.")
-	return retry.Ok()
+	return health.CheckTunnelConnection(ctx, b.K8sShootClient, logger, tunnelName)
 }
 
 // RestartControlPlanePods restarts (deletes) pods of the shoot control plane.

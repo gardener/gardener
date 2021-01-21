@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -74,12 +73,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
-
-type byName []corev1.ConfigMap
-
-func (a byName) Len() int           { return len(a) }
-func (a byName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a byName) Less(i, j int) bool { return a[i].ObjectMeta.Name < a[j].ObjectMeta.Name }
 
 // NewBuilder returns a new Builder.
 func NewBuilder() *Builder {
@@ -165,7 +158,7 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 			Name: common.GrafanaTLS,
 
 			CommonName:   "grafana",
-			Organization: []string{"garden.sapcloud.io:monitoring:ingress"},
+			Organization: []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:     []string{seed.GetIngressFQDN(grafanaPrefix)},
 			IPAddresses:  nil,
 
@@ -177,7 +170,7 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 			Name: prometheusTLS,
 
 			CommonName:   "prometheus",
-			Organization: []string{"garden.sapcloud.io:monitoring:ingress"},
+			Organization: []string{"gardener.cloud:monitoring:ingress"},
 			DNSNames:     []string{seed.GetIngressFQDN(prometheusPrefix)},
 			IPAddresses:  nil,
 
@@ -452,7 +445,9 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			client.MatchingLabels{v1beta1constants.LabelExtensionConfiguration: v1beta1constants.LabelLogging}); err != nil {
 			return err
 		}
-		sort.Sort(byName(existingConfigMaps.Items))
+
+		// Need stable order before passing the dashboards to Grafana config to avoid unnecessary changes
+		kutil.ByName().Sort(existingConfigMaps)
 
 		// Read all filters and parsers coming from the extension provider configurations
 		for _, cm := range existingConfigMaps.Items {
@@ -474,7 +469,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			}
 		}
 	} else {
-		if err := common.DeleteLoggingStack(ctx, k8sSeedClient.Client(), v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
+		if err := common.DeleteSeedLoggingStack(ctx, k8sSeedClient.Client()); err != nil {
 			return err
 		}
 	}
@@ -700,10 +695,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		return err
 	}
 
-	if err := handleDNSProvider(ctx, k8sGardenClient.Client(), k8sSeedClient.Client(), seed.Info.Spec.DNS); err != nil {
-		return err
-	}
-
 	values := kubernetes.Values(map[string]interface{}{
 		"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane,
 		"global": map[string]interface{}{
@@ -779,6 +770,10 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	})
 
 	if err := chartApplier.Apply(ctx, filepath.Join(common.ChartPath, chartName), v1beta1constants.GardenNamespace, chartName, values, applierOptions); err != nil {
+		return err
+	}
+
+	if err := handleDNSProvider(ctx, k8sGardenClient.Client(), k8sSeedClient.Client(), seed.Info.Spec.DNS); err != nil {
 		return err
 	}
 
@@ -888,20 +883,18 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 	}
 	components = append(components, seedadmission.New(c.Client(), namespace, gsacImage.String(), kubernetesVersion))
 
-	// gardener-seed-scheduler
-	schedulerImage := &imagevector.Image{}
+	// kube-scheduler for shoot control plane pods
+	var schedulerImage *imagevector.Image
 	if imageVector != nil {
 		schedulerImage, err = imageVector.FindImage(common.KubeSchedulerImageName, imagevector.TargetVersion(kubernetesVersion.String()))
 		if err != nil {
 			return nil, err
 		}
 	}
-
 	sched, err := scheduler.Bootstrap(c.DirectClient(), namespace, schedulerImage, kubernetesVersion)
 	if err != nil {
 		return nil, err
 	}
-
 	components = append(components, sched)
 
 	return components, nil

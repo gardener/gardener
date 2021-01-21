@@ -20,20 +20,20 @@ import (
 	"errors"
 	"net/http"
 
-	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
-	mockwebhook "github.com/gardener/gardener/pkg/mock/gardener/extensions/webhook"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"gomodules.xyz/jsonpatch/v2"
-	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	mockmanager "github.com/gardener/gardener/pkg/mock/controller-runtime/manager"
+	mockwebhook "github.com/gardener/gardener/pkg/mock/gardener/extensions/webhook"
 )
 
 var logger = log.Log.WithName("controlplane-webhook-test")
@@ -48,7 +48,7 @@ var _ = Describe("Handler", func() {
 		ctrl *gomock.Controller
 		mgr  *mockmanager.MockManager
 
-		objTypes = []runtime.Object{&corev1.Service{}}
+		objTypes = []client.Object{&corev1.Service{}}
 		svc      = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
 		}
@@ -68,11 +68,11 @@ var _ = Describe("Handler", func() {
 		mgr.EXPECT().GetScheme().Return(scheme)
 
 		req = admission.Request{
-			AdmissionRequest: admissionv1beta1.AdmissionRequest{
+			AdmissionRequest: admissionv1.AdmissionRequest{
 				Kind:      metav1.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"},
 				Name:      name,
 				Namespace: namespace,
-				Operation: admissionv1beta1.Create,
+				Operation: admissionv1.Create,
 				Object:    runtime.RawExtension{Raw: encode(svc)},
 			},
 		}
@@ -97,7 +97,7 @@ var _ = Describe("Handler", func() {
 			// Call Handle and check response
 			resp := h.Handle(context.TODO(), req)
 			Expect(resp).To(Equal(admission.Response{
-				AdmissionResponse: admissionv1beta1.AdmissionResponse{
+				AdmissionResponse: admissionv1.AdmissionResponse{
 					Allowed: true,
 					Result: &metav1.Status{
 						Code: 200,
@@ -120,13 +120,13 @@ var _ = Describe("Handler", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(err).NotTo(HaveOccurred())
 
-			req.AdmissionRequest.Operation = admissionv1beta1.Update
+			req.AdmissionRequest.Operation = admissionv1.Update
 			req.AdmissionRequest.OldObject = runtime.RawExtension{Raw: encode(oldSvc)}
 
 			// Call Handle and check response
 			resp := h.Handle(context.TODO(), req)
 			Expect(resp).To(Equal(admission.Response{
-				AdmissionResponse: admissionv1beta1.AdmissionResponse{
+				AdmissionResponse: admissionv1.AdmissionResponse{
 					Allowed: true,
 					Result: &metav1.Status{
 						Code: 200,
@@ -138,9 +138,8 @@ var _ = Describe("Handler", func() {
 		It("should return a patch response if the resource was changed by mutator", func() {
 			// Create mock mutator
 			mutator := mockwebhook.NewMockMutator(ctrl)
-			mutator.EXPECT().Mutate(context.TODO(), svc, nil).DoAndReturn(func(ctx context.Context, obj, oldOjb runtime.Object) error {
-				accessor, _ := meta.Accessor(obj)
-				accessor.SetAnnotations(map[string]string{"foo": "bar"})
+			mutator.EXPECT().Mutate(context.TODO(), svc, nil).DoAndReturn(func(ctx context.Context, obj, oldOjb client.Object) error {
+				obj.SetAnnotations(map[string]string{"foo": "bar"})
 				return nil
 			})
 
@@ -151,7 +150,7 @@ var _ = Describe("Handler", func() {
 
 			// Call Handle and check response
 			resp := h.Handle(context.TODO(), req)
-			pt := admissionv1beta1.PatchTypeJSONPatch
+			pt := admissionv1.PatchTypeJSONPatch
 			Expect(resp).To(Equal(admission.Response{
 				Patches: []jsonpatch.JsonPatchOperation{
 					{
@@ -160,7 +159,7 @@ var _ = Describe("Handler", func() {
 						Value:     map[string]interface{}{"foo": "bar"},
 					},
 				},
-				AdmissionResponse: admissionv1beta1.AdmissionResponse{
+				AdmissionResponse: admissionv1.AdmissionResponse{
 					Allowed:   true,
 					PatchType: &pt,
 				},
@@ -180,7 +179,7 @@ var _ = Describe("Handler", func() {
 			// Call Handle and check response
 			resp := h.Handle(context.TODO(), req)
 			Expect(resp).To(Equal(admission.Response{
-				AdmissionResponse: admissionv1beta1.AdmissionResponse{
+				AdmissionResponse: admissionv1.AdmissionResponse{
 					Allowed: false,
 					Result: &metav1.Status{
 						Code:    http.StatusBadRequest,

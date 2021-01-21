@@ -15,13 +15,39 @@
 package seedadmission_test
 
 import (
+	"net/http"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
+	"gomodules.xyz/jsonpatch/v2"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 func TestSeedadmission(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Seed Admission Suite")
+}
+
+func expectAllowed(response admission.Response, reason gomegatypes.GomegaMatcher, optionalDescription ...interface{}) {
+	Expect(response.Allowed).To(BeTrue(), optionalDescription...)
+	Expect(string(response.Result.Reason)).To(reason, optionalDescription...)
+}
+
+func expectPatched(response admission.Response, reason gomegatypes.GomegaMatcher, patches []jsonpatch.JsonPatchOperation, optionalDescription ...interface{}) {
+	expectAllowed(response, reason, optionalDescription...)
+	Expect(response.Patches).To(Equal(patches))
+}
+
+func expectDenied(response admission.Response, reason gomegatypes.GomegaMatcher, optionalDescription ...interface{}) {
+	Expect(response.Allowed).To(BeFalse(), optionalDescription...)
+	Expect(response.Result.Code).To(BeEquivalentTo(http.StatusForbidden), optionalDescription...)
+	Expect(string(response.Result.Reason)).To(reason, optionalDescription...)
+}
+
+func expectErrored(response admission.Response, code, err gomegatypes.GomegaMatcher, optionalDescription ...interface{}) {
+	Expect(response.Allowed).To(BeFalse(), optionalDescription...)
+	Expect(response.Result.Code).To(code, optionalDescription...)
+	Expect(response.Result.Message).To(err, optionalDescription...)
 }

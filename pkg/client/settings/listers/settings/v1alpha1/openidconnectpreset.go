@@ -26,8 +26,10 @@ import (
 )
 
 // OpenIDConnectPresetLister helps list OpenIDConnectPresets.
+// All objects returned here must be treated as read-only.
 type OpenIDConnectPresetLister interface {
 	// List lists all OpenIDConnectPresets in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.OpenIDConnectPreset, err error)
 	// OpenIDConnectPresets returns an object that can list and get OpenIDConnectPresets.
 	OpenIDConnectPresets(namespace string) OpenIDConnectPresetNamespaceLister
@@ -58,10 +60,13 @@ func (s *openIDConnectPresetLister) OpenIDConnectPresets(namespace string) OpenI
 }
 
 // OpenIDConnectPresetNamespaceLister helps list and get OpenIDConnectPresets.
+// All objects returned here must be treated as read-only.
 type OpenIDConnectPresetNamespaceLister interface {
 	// List lists all OpenIDConnectPresets in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.OpenIDConnectPreset, err error)
 	// Get retrieves the OpenIDConnectPreset from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.OpenIDConnectPreset, error)
 	OpenIDConnectPresetNamespaceListerExpansion
 }

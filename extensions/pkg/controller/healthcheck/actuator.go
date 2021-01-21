@@ -18,12 +18,13 @@ import (
 	"context"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 /*
@@ -48,8 +49,8 @@ import (
 type GetExtensionObjectFunc = func() extensionsv1alpha1.Object
 
 // GetExtensionObjectFunc returns the extension object that should be registered with the health check controller. Has to be a List.
-// For example: func() runtime.Object {return &extensionsv1alpha1.WorkerList{}}
-type GetExtensionObjectListFunc = func() runtime.Object
+// For example: func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }
+type GetExtensionObjectListFunc = func() client.ObjectList
 
 // PreCheckFunc checks whether the health check shall be performed based on the given object and cluster.
 type PreCheckFunc = func(runtime.Object, *extensionscontroller.Cluster) bool
@@ -92,7 +93,7 @@ type Result struct {
 	// FailedChecks is the amount of health checks that could not be performed (e.g client could not reach Api Server)
 	// Results in a condition with with type "Unknown" with reason "ConditionCheckError" for this healthConditionType
 	FailedChecks int
-	// Codes is an optional list of error codes that were produced by the the health checks.
+	// Codes is an optional list of error codes that were produced by the health checks.
 	Codes []gardencorev1beta1.ErrorCode
 	// ProgressingThreshold is the threshold duration after which a health check that reported the `Progressing` status
 	// shall be transitioned to `False`

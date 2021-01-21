@@ -85,11 +85,7 @@ func (a *defaultApplier) applyObject(ctx context.Context, desired *unstructured.
 		}
 	}
 
-	key, err := client.ObjectKeyFromObject(desired)
-	if err != nil {
-		return err
-	}
-
+	key := client.ObjectKeyFromObject(desired)
 	if len(key.Name) == 0 {
 		return fmt.Errorf("missing 'metadata.name' in: %+v", desired)
 	}

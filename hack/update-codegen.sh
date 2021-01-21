@@ -49,6 +49,23 @@ bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-groups.sh \
   github.com/gardener/gardener/pkg/apis \
   "extensions:v1alpha1" \
   -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  
+# seedmanagement.gardener.cloud APIs
+
+bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-groups.sh \
+  "all" \
+  github.com/gardener/gardener/pkg/client/seedmanagement \
+  github.com/gardener/gardener/pkg/apis \
+  "seedmanagement:v1alpha1" \
+  -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+
+bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+  "deepcopy,defaulter,conversion" \
+  github.com/gardener/gardener/pkg/client/seedmanagement \
+  github.com/gardener/gardener/pkg/apis \
+  github.com/gardener/gardener/pkg/apis \
+  "seedmanagement:v1alpha1" \
+  -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
 
 # settings.gardener.cloud APIs
 
@@ -173,6 +190,7 @@ ${GOPATH}/bin/openapi-gen "$@" \
   --input-dirs=github.com/gardener/gardener/pkg/apis/core/v1alpha1 \
   --input-dirs=github.com/gardener/gardener/pkg/apis/core/v1beta1 \
   --input-dirs=github.com/gardener/gardener/pkg/apis/settings/v1alpha1 \
+  --input-dirs=github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1 \
   --input-dirs=k8s.io/api/core/v1 \
   --input-dirs=k8s.io/api/rbac/v1 \
   --input-dirs=k8s.io/api/autoscaling/v1 \

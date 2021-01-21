@@ -111,6 +111,7 @@ func Key(namespaceOrName string, nameOpt ...string) client.ObjectKey {
 }
 
 // KeyFromObject obtains the client.ObjectKey from the given metav1.Object.
+// Deprecated: use client.ObjectKeyFromObject instead.
 func KeyFromObject(obj metav1.Object) client.ObjectKey {
 	return Key(obj.GetNamespace(), obj.GetName())
 }
@@ -133,12 +134,8 @@ func ObjectMetaFromKey(key client.ObjectKey) metav1.ObjectMeta {
 
 // WaitUntilResourceDeleted deletes the given resource and then waits until it has been deleted. It respects the
 // given interval and timeout.
-func WaitUntilResourceDeleted(ctx context.Context, c client.Client, obj runtime.Object, interval time.Duration) error {
-	key, err := client.ObjectKeyFromObject(obj)
-	if err != nil {
-		return err
-	}
-
+func WaitUntilResourceDeleted(ctx context.Context, c client.Client, obj client.Object, interval time.Duration) error {
+	key := client.ObjectKeyFromObject(obj)
 	return retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
 		if err := c.Get(ctx, key, obj); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -152,17 +149,17 @@ func WaitUntilResourceDeleted(ctx context.Context, c client.Client, obj runtime.
 
 // WaitUntilResourcesDeleted waits until the given resources are gone.
 // It respects the given interval and timeout.
-func WaitUntilResourcesDeleted(ctx context.Context, c client.Client, obj runtime.Object, interval time.Duration, opts ...client.ListOption) error {
+func WaitUntilResourcesDeleted(ctx context.Context, c client.Client, list client.ObjectList, interval time.Duration, opts ...client.ListOption) error {
 	return retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
-		if err := c.List(ctx, obj, opts...); err != nil {
+		if err := c.List(ctx, list, opts...); err != nil {
 			return retry.SevereError(err)
 		}
-		if meta.LenList(obj) == 0 {
+		if meta.LenList(list) == 0 {
 			return retry.Ok()
 		}
 		var remainingItems []string
 		acc := meta.NewAccessor()
-		if err := meta.EachListItem(obj, func(remainingObj runtime.Object) error {
+		if err := meta.EachListItem(list, func(remainingObj runtime.Object) error {
 			name, err := acc.Name(remainingObj)
 			if err != nil {
 				return err
@@ -178,7 +175,7 @@ func WaitUntilResourcesDeleted(ctx context.Context, c client.Client, obj runtime
 
 // WaitUntilResourceDeletedWithDefaults deletes the given resource and then waits until it has been deleted. It
 // uses a default interval and timeout
-func WaitUntilResourceDeletedWithDefaults(ctx context.Context, c client.Client, obj runtime.Object) error {
+func WaitUntilResourceDeletedWithDefaults(ctx context.Context, c client.Client, obj client.Object) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
@@ -250,7 +247,7 @@ func GetLoadBalancerIngress(ctx context.Context, client client.Client, namespace
 // LookupObject retrieves an obj for the given object key dealing with potential stale cache that still does not contain the obj.
 // It first tries to retrieve the obj using the given cached client.
 // If the object key is not found, then it does live lookup from the API server using the given apiReader.
-func LookupObject(ctx context.Context, c client.Client, apiReader client.Reader, key client.ObjectKey, obj runtime.Object) error {
+func LookupObject(ctx context.Context, c client.Client, apiReader client.Reader, key client.ObjectKey, obj client.Object) error {
 	err := c.Get(ctx, key, obj)
 	if err == nil {
 		return nil
@@ -421,11 +418,7 @@ func OwnedBy(obj runtime.Object, apiVersion, kind, name string, uid types.UID) b
 // is provided then it will be applied for each object right after listing all objects. If no object remains then nil
 // is returned. The Items field in the list object will be populated with the result returned from the server after
 // applying the filter function (if provided).
-func NewestObject(ctx context.Context, c client.Client, listObj runtime.Object, filterFn func(runtime.Object) bool, listOpts ...client.ListOption) (runtime.Object, error) {
-	if !meta.IsListType(listObj) {
-		return nil, fmt.Errorf("provided <listObj> is not a List type")
-	}
-
+func NewestObject(ctx context.Context, c client.Client, listObj client.ObjectList, filterFn func(runtime.Object) bool, listOpts ...client.ListOption) (runtime.Object, error) {
 	if err := c.List(ctx, listObj, listOpts...); err != nil {
 		return nil, err
 	}

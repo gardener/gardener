@@ -33,15 +33,14 @@ import (
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
-	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // runReconcileShootFlow reconciles the Shoot cluster's state.
 // It receives an Operation object <o> which stores the Shoot object.
-func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
+func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	// We create the botanists (which will do the actual work).
 	var (
-		ctx                  = context.TODO()
 		botanist             *botanistpkg.Botanist
 		enableEtcdEncryption bool
 		tasksWithErrors      []string
@@ -191,11 +190,11 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 		})
 		deployBackupEntryInGarden = g.Add(flow.Task{
 			Name: "Deploying backup entry",
-			Fn:   flow.TaskFn(botanist.DeployBackupEntryInGarden).DoIf(allowBackup),
+			Fn:   flow.TaskFn(botanist.Shoot.Components.BackupEntry.Deploy).DoIf(allowBackup),
 		})
 		waitUntilBackupEntryInGardenReconciled = g.Add(flow.Task{
 			Name:         "Waiting until the backup entry has been reconciled",
-			Fn:           flow.TaskFn(botanist.WaitUntilBackupEntryInGardenReconciled).DoIf(allowBackup),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.BackupEntry.Wait).DoIf(allowBackup),
 			Dependencies: flow.NewTaskIDs(deployBackupEntryInGarden),
 		})
 		deployETCD = g.Add(flow.Task{
@@ -367,6 +366,11 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 			Dependencies: flow.NewTaskIDs(deployManagedResources, waitUntilNetworkIsReady, waitUntilWorkerReady, vpnLBReady),
 		})
 		_ = g.Add(flow.Task{
+			Name:         "Waiting until all shoot worker nodes have updated the cloud config user data",
+			Fn:           flow.TaskFn(botanist.WaitUntilCloudConfigUpdatedForAllWorkerPools).SkipIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, waitUntilTunnelConnectionExists),
+		})
+		_ = g.Add(flow.Task{
 			Name: "Finishing Kubernetes API server service SNI transition",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				return botanist.DeployKubeAPIService(ctx, sniPhase.Done())
@@ -499,18 +503,18 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation) *gardencorev1
 }
 
 func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generation int64, tasksToRemove ...string) error {
-	newShoot, err := kutil.TryUpdateShootAnnotations(ctx, o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			if shoot.Generation == generation {
-				controllerutils.RemoveTasks(shoot.Annotations, tasksToRemove...)
-			}
-			return shoot, nil
-		},
-	)
-	if err != nil {
+	// Check if shoot generation was changed mid-air, i.e., whether we need to wait for the next reconciliation until we
+	// can safely remove the task annotations to ensure all required tasks are executed.
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := o.K8sGardenClient.DirectClient().Get(ctx, kutil.Key(o.Shoot.Info.Namespace, o.Shoot.Info.Name), shoot); err != nil {
 		return err
 	}
 
-	o.Shoot.Info = newShoot
-	return nil
+	if shoot.Generation != generation {
+		return nil
+	}
+
+	oldObj := o.Shoot.Info.DeepCopy()
+	controllerutils.RemoveTasks(o.Shoot.Info.Annotations, tasksToRemove...)
+	return o.K8sGardenClient.Client().Patch(ctx, o.Shoot.Info, client.MergeFrom(oldObj))
 }

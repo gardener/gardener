@@ -208,22 +208,6 @@ func DefaultInitializer(c client.Client, main, variables string, tfvars []byte, 
 	})
 }
 
-// prepare checks whether all required ConfigMaps and Secrets exist. It returns the number of
-// existing ConfigMaps/Secrets, or the error in case something unexpected happens.
-func (t *terraformer) prepare(ctx context.Context) (int, error) {
-	numberOfExistingResources, err := t.NumberOfResources(ctx)
-	if err != nil {
-		return -1, err
-	}
-
-	// Clean up possible existing pod artifacts from previous runs
-	if err := t.EnsureCleanedUp(ctx); err != nil {
-		return -1, err
-	}
-
-	return numberOfExistingResources, nil
-}
-
 // NumberOfResources returns the number of existing Terraform resources or an error in case something went wrong.
 func (t *terraformer) NumberOfResources(ctx context.Context) (int, error) {
 	numberOfExistingResources := 0
@@ -280,12 +264,13 @@ func (t *terraformer) CleanupConfiguration(ctx context.Context) error {
 
 // EnsureCleanedUp deletes the Terraformer pods, and waits until everything has been cleaned up.
 func (t *terraformer) EnsureCleanedUp(ctx context.Context) error {
-	t.logger.Info("Ensuring all terraformer Pods have been deleted")
+	t.logger.Info("Ensuring all Terraformer pods have been deleted")
 
-	podList, err := t.listTerraformerPods(ctx)
+	podList, err := t.listPods(ctx)
 	if err != nil {
 		return err
 	}
+
 	if err := t.deleteTerraformerPods(ctx, podList); err != nil {
 		return err
 	}

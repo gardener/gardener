@@ -9,7 +9,7 @@ metadata:
     component: grafana
     role: {{ .Values.role }}
 spec:
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
@@ -22,6 +22,7 @@ spec:
         checksum/configmap-datasources: {{ include (print $.Template.BasePath "/grafana-datasources-configmap.yaml") . | sha256sum }}
         checksum/configmap-dashboard-providers: {{ include (print $.Template.BasePath "/grafana-dashboard-providers-configmap.yaml") . | sha256sum }}
       labels:
+        gardener.cloud/role: monitoring
         garden.sapcloud.io/role: monitoring
         component: grafana
         networking.gardener.cloud/to-dns: allowed

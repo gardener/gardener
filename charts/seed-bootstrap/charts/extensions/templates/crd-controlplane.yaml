@@ -59,6 +59,7 @@ spec:
               type: object
               x-kubernetes-preserve-unknown-fields: true
             providerConfig:
+              description: ProviderConfig is the provider specific configuration.
               type: object
               x-kubernetes-preserve-unknown-fields: true
             purpose:
@@ -217,6 +218,7 @@ spec:
             state:
               description: State can be filled by the operating controller with what ever data it needs.
               type: object
+              x-kubernetes-preserve-unknown-fields: true
           type: object
       required:
         - spec

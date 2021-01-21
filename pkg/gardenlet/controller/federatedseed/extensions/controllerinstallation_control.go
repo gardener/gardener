@@ -54,8 +54,8 @@ type controllerInstallationControl struct {
 // the given kind.
 // The returned reconciler doesn't care about which object was created/updated/deleted, it just cares about being
 // triggered when some object of the kind, it is responsible for, is created/updated/deleted.
-func (c *controllerInstallationControl) createExtensionRequiredReconcileFunc(ctx context.Context, kind string, newListObjFunc func() runtime.Object) reconcile.Func {
-	return func(_ reconcile.Request) (reconcile.Result, error) {
+func (c *controllerInstallationControl) createExtensionRequiredReconcileFunc(kind string, newListObjFunc func() client.ObjectList) reconcile.Func {
+	return func(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 		listObj := newListObjFunc()
 		if err := c.seedClient.Client().List(ctx, listObj); err != nil {
 			return reconcile.Result{}, err
@@ -136,63 +136,61 @@ func (c *controllerInstallationControl) createExtensionRequiredReconcileFunc(ctx
 	}
 }
 
-// createControllerInstallationRequiredReconcileFunc reconciles ControllerInstallations. It checks whether it is still
+// reconcileControllerInstallationRequired reconciles ControllerInstallations. It checks whether it is still
 // required by using the <kindToRequiredTypes> map that was computed by a separate reconciler.
-func (c *controllerInstallationControl) createControllerInstallationRequiredReconcileFunc(ctx context.Context) reconcile.Func {
-	return func(req reconcile.Request) (reconcile.Result, error) {
-		controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
-		if err := c.k8sGardenClient.Client().Get(ctx, req.NamespacedName, controllerInstallation); err != nil {
-			return reconcile.Result{}, err
-		}
-
-		controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
-		if err := c.k8sGardenClient.Client().Get(ctx, kutil.Key(controllerInstallation.Spec.RegistrationRef.Name), controllerRegistration); err != nil {
-			return reconcile.Result{}, err
-		}
-
-		var (
-			allKindsCalculated = true
-			required           *bool
-			requiredKindTypes  = sets.NewString()
-			message            string
-		)
-
-		c.lock.RLock()
-		for _, resource := range controllerRegistration.Spec.Resources {
-			requiredTypes, ok := c.kindToRequiredTypes[resource.Kind]
-			if !ok {
-				allKindsCalculated = false
-				continue
-			}
-
-			if requiredTypes.Has(resource.Type) {
-				required = pointer.BoolPtr(true)
-				requiredKindTypes.Insert(fmt.Sprintf("%s/%s", resource.Kind, resource.Type))
-			}
-		}
-		c.lock.RUnlock()
-
-		if required == nil {
-			if !allKindsCalculated {
-				// if required wasn't set yet then but not all kinds were calculated then the it's not possible to
-				// decide yet whether it's required or not
-				return reconcile.Result{}, nil
-			}
-
-			// if required wasn't set yet then but all kinds were calculated then the installation is no longer required
-			required = pointer.BoolPtr(false)
-			message = "no extension objects exist in the seed having the kind/type combinations the controller is responsible for"
-		} else if required != nil && *required {
-			message = fmt.Sprintf("extension objects still exist in the seed: %+v", requiredKindTypes.UnsortedList())
-		}
-
-		if err := updateControllerInstallationRequiredCondition(ctx, c.k8sGardenClient.DirectClient(), controllerInstallation, *required, message); err != nil {
-			c.log.Error(err)
-			return reconcile.Result{}, err
-		}
-
-		return reconcile.Result{}, nil
+func (c *controllerInstallationControl) reconcileControllerInstallationRequired(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
+	if err := c.k8sGardenClient.Client().Get(ctx, req.NamespacedName, controllerInstallation); err != nil {
+		return reconcile.Result{}, err
 	}
+
+	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
+	if err := c.k8sGardenClient.Client().Get(ctx, kutil.Key(controllerInstallation.Spec.RegistrationRef.Name), controllerRegistration); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	var (
+		allKindsCalculated = true
+		required           *bool
+		requiredKindTypes  = sets.NewString()
+		message            string
+	)
+
+	c.lock.RLock()
+	for _, resource := range controllerRegistration.Spec.Resources {
+		requiredTypes, ok := c.kindToRequiredTypes[resource.Kind]
+		if !ok {
+			allKindsCalculated = false
+			continue
+		}
+
+		if requiredTypes.Has(resource.Type) {
+			required = pointer.BoolPtr(true)
+			requiredKindTypes.Insert(fmt.Sprintf("%s/%s", resource.Kind, resource.Type))
+		}
+	}
+	c.lock.RUnlock()
+
+	if required == nil {
+		if !allKindsCalculated {
+			// if required wasn't set yet then but not all kinds were calculated then the it's not possible to
+			// decide yet whether it's required or not
+			return reconcile.Result{}, nil
+		}
+
+		// if required wasn't set yet then but all kinds were calculated then the installation is no longer required
+		required = pointer.BoolPtr(false)
+		message = "no extension objects exist in the seed having the kind/type combinations the controller is responsible for"
+	} else if required != nil && *required {
+		message = fmt.Sprintf("extension objects still exist in the seed: %+v", requiredKindTypes.UnsortedList())
+	}
+
+	if err := updateControllerInstallationRequiredCondition(ctx, c.k8sGardenClient.DirectClient(), controllerInstallation, *required, message); err != nil {
+		c.log.Error(err)
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{}, nil
 }
 
 func updateControllerInstallationRequiredCondition(ctx context.Context, c client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation, required bool, message string) error {

@@ -16,10 +16,8 @@ package app
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -30,15 +28,11 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"gomodules.xyz/jsonpatch/v2"
-	admissionv1beta1 "k8s.io/api/admission/v1beta1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -97,7 +91,7 @@ func (o *Options) run(ctx context.Context) {
 }
 
 // NewCommandStartGardenerSeedAdmissionController creates a *cobra.Command object with default parameters
-func NewCommandStartGardenerSeedAdmissionController(ctx context.Context) *cobra.Command {
+func NewCommandStartGardenerSeedAdmissionController() *cobra.Command {
 	opts := &Options{}
 
 	cmd := &cobra.Command{
@@ -114,7 +108,7 @@ func NewCommandStartGardenerSeedAdmissionController(ctx context.Context) *cobra.
 				logger.Infof("FLAG: --%s=%s", flag.Name, flag.Value)
 			})
 
-			opts.run(ctx)
+			opts.run(cmd.Context())
 		},
 	}
 
@@ -126,12 +120,10 @@ func NewCommandStartGardenerSeedAdmissionController(ctx context.Context) *cobra.
 
 // run runs the Gardener seed admission controller. This should never exit.
 func run(ctx context.Context, bindAddress string, port int, certPath, keyPath, kubeconfigPath string) {
-	scheme := runtime.NewScheme()
-	utilruntime.Must(corev1.AddToScheme(scheme))
-	utilruntime.Must(admissionregistrationv1beta1.AddToScheme(scheme))
-	deserializer := serializer.NewCodecFactory(scheme).UniversalDeserializer()
-
-	mux := http.NewServeMux()
+	var (
+		log = logzap.New(logzap.UseDevMode(false))
+		mux = http.NewServeMux()
+	)
 
 	k8sClient, err := kubernetes.NewClientFromFile("", kubeconfigPath, kubernetes.WithClientOptions(client.Options{
 		Scheme: kubernetes.SeedScheme,
@@ -141,18 +133,41 @@ func run(ctx context.Context, bindAddress string, port int, certPath, keyPath, k
 		panic(err)
 	}
 
-	seedAdmissionController := &GardenerSeedAdmissionController{
-		deserializer,
-		k8sClient.DirectClient(),
-		metav1.GroupVersionKind{Group: "", Kind: "Pod", Version: "v1"},
+	// prepare an injection func that will inject needed dependencies into webhook and handler.
+	var setFields inject.Func
+	setFields = func(i interface{}) error {
+		if _, err := inject.InjectorInto(setFields, i); err != nil {
+			return err
+		}
+		if _, err := inject.ClientInto(k8sClient.DirectClient(), i); err != nil {
+			return err
+		}
+		if _, err := inject.LoggerInto(log, i); err != nil {
+			return err
+		}
+		// inject scheme into webhook, needed to construct and a decoder for decoding the included objects
+		// decoder will be inject by webhook into handler
+		if _, err := inject.SchemeInto(kubernetes.SeedScheme, i); err != nil {
+			return err
+		}
+		return nil
 	}
 
-	mux.HandleFunc("/webhooks/validate-extension-crd-deletion", seedAdmissionController.validateExtensionCRDDeletion)
-	mux.HandleFunc(
+	extensionDeletionProtection := &webhook.Admission{Handler: seedadmission.NewExtensionDeletionProtection(logger)}
+	defaultSchedulerName := &webhook.Admission{Handler: admission.HandlerFunc(seedadmission.DefaultShootControlPlanePodsSchedulerName)}
+	if err := setFields(extensionDeletionProtection); err != nil {
+		panic(fmt.Errorf("error injecting dependencies into webhook handler: %w", err))
+	}
+	if err := setFields(defaultSchedulerName); err != nil {
+		panic(fmt.Errorf("error injecting dependencies into webhook handler: %w", err))
+	}
+
+	mux.Handle("/webhooks/validate-extension-crd-deletion", extensionDeletionProtection)
+	mux.Handle(
 		// in the future we might want to have additional scheduler names
 		// so lets have the handler be of pattern "/webhooks/default-pod-scheduler-name/{scheduler-name}"
 		fmt.Sprintf(seedadmission.GardenerShootControlPlaneSchedulerWebhookPath),
-		seedAdmissionController.defaultShootControlPlanePodsSchedulerName,
+		defaultSchedulerName,
 	)
 
 	srv := &http.Server{
@@ -174,125 +189,4 @@ func run(ctx context.Context, bindAddress string, port int, certPath, keyPath, k
 		logger.Errorf("Error when shutting down HTTPS server: %v", err)
 	}
 	logger.Info("HTTPS servers stopped.")
-}
-
-func respond(w http.ResponseWriter, request *admission.Request, response admission.Response) {
-	if request != nil {
-		if err := response.Complete(*request); err != nil {
-			logger.Error(err)
-		}
-	}
-
-	jsonResponse, err := json.Marshal(admissionv1beta1.AdmissionReview{Response: &response.AdmissionResponse})
-	if err != nil {
-		logger.Error(err)
-	}
-
-	if _, err := w.Write(jsonResponse); err != nil {
-		logger.Error(err)
-	}
-}
-
-// GardenerSeedAdmissionController represents all the parameters required to start the
-// Gardener seed admission controller.
-type GardenerSeedAdmissionController struct {
-	codecs runtime.Decoder
-	client client.Client
-	podGVK metav1.GroupVersionKind
-}
-
-func (g *GardenerSeedAdmissionController) handleAdmissionReview(w http.ResponseWriter, r *http.Request) (admissionv1beta1.AdmissionReview, error) {
-	var (
-		body           []byte
-		receivedReview = admissionv1beta1.AdmissionReview{}
-	)
-
-	// Read HTTP request body into variable.
-	if r.Body != nil {
-		if data, err := ioutil.ReadAll(r.Body); err == nil {
-			body = data
-		}
-	}
-
-	// Verify that the correct content-type header has been sent.
-	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
-		err := fmt.Errorf("contentType=%s, expect %s", contentType, "application/json")
-		logger.Errorf(err.Error())
-		respond(w, nil, admission.Errored(http.StatusBadRequest, err))
-		return receivedReview, err
-	}
-
-	// Deserialize HTTP request body into admissionv1beta1.AdmissionReview object.
-	if _, _, err := g.codecs.Decode(body, nil, &receivedReview); err != nil {
-		err = fmt.Errorf("invalid request body (error decoding body): %+v", err)
-		logger.Errorf(err.Error())
-		respond(w, nil, admission.Errored(http.StatusBadRequest, err))
-		return receivedReview, err
-	}
-
-	// If the request field is empty then do not admit (invalid body).
-	if receivedReview.Request == nil {
-		err := fmt.Errorf("invalid request body (missing admission request)")
-		logger.Errorf(err.Error())
-		respond(w, nil, admission.Errored(http.StatusBadRequest, err))
-		return receivedReview, err
-	}
-
-	return receivedReview, nil
-}
-
-func (g *GardenerSeedAdmissionController) validateExtensionCRDDeletion(w http.ResponseWriter, r *http.Request) {
-	receivedReview, err := g.handleAdmissionReview(w, r)
-	if err != nil {
-		return
-	}
-
-	// If the request does not indicate the correct operation (DELETE) we allow the review without further doing.
-	if receivedReview.Request.Operation != admissionv1beta1.Delete {
-		respond(w, nil, admission.Allowed("operation is no DELETE operation"))
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
-	defer cancel()
-
-	if err := seedadmission.ValidateExtensionDeletion(ctx, g.client, logger, receivedReview.Request); err != nil {
-		logger.Errorf(err.Error())
-		respond(w, nil, admission.Errored(http.StatusBadRequest, err))
-		return
-	}
-
-	respond(w, nil, admission.Allowed(""))
-}
-
-// defaultShootControlPlanePodsSchedulerName sets "gardener-shoot-controlplane-scheduler"
-// as schedulerName on Pods.
-func (g *GardenerSeedAdmissionController) defaultShootControlPlanePodsSchedulerName(w http.ResponseWriter, r *http.Request) {
-	receivedReview, err := g.handleAdmissionReview(w, r)
-	if err != nil {
-		return
-	}
-
-	// If the request does not indicate the correct operation (CREATE) we allow the review without further doing.
-	if receivedReview.Request.Operation != admissionv1beta1.Create {
-		respond(w, nil, admission.Allowed("operation is no CREATE operation"))
-		return
-	}
-
-	if receivedReview.Request.Kind != g.podGVK {
-		respond(w, nil, admission.Allowed("requested resource is not a pod"))
-		return
-	}
-
-	if receivedReview.Request.SubResource != "" {
-		respond(w, nil, admission.Allowed("subresources on pods are not supported"))
-		return
-	}
-
-	resp := admission.Allowed("")
-	resp.Patches = []jsonpatch.Operation{
-		jsonpatch.NewPatch("replace", "/spec/schedulerName", seedadmission.GardenerShootControlPlaneSchedulerName),
-	}
-
-	respond(w, &admission.Request{AdmissionRequest: *receivedReview.Request}, resp)
 }

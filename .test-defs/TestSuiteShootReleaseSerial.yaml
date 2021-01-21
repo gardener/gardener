@@ -3,7 +3,7 @@ metadata:
   name: shoot-release-serial-test-suite
 spec:
   owner: gardener-oq@listserv.sap.com
-  description: shoot test suites that includes all serial release
+  description: shoot test suites that includes all serial release tests
 
   activeDeadlineSeconds: 7200
   labels: ["shoot", "release"]

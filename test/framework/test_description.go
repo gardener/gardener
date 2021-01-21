@@ -56,7 +56,7 @@ func (t TestDescription) Serial() TestDescription {
 }
 
 // Disruptive labels a test as disruptive.
-// Tis kind of test should not run on a productive landscape.
+// This kind of test should run with care.
 func (t TestDescription) Disruptive() TestDescription {
 	return t.newLabel("DISRUPTIVE")
 }

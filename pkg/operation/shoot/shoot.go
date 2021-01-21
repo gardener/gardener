@@ -27,6 +27,8 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/extension"
@@ -48,7 +50,7 @@ import (
 // NewBuilder returns a new Builder.
 func NewBuilder() *Builder {
 	return &Builder{
-		shootObjectFunc: func() (*gardencorev1beta1.Shoot, error) {
+		shootObjectFunc: func(context.Context) (*gardencorev1beta1.Shoot, error) {
 			return nil, fmt.Errorf("shoot object is required but not set")
 		},
 		cloudProfileFunc: func(string) (*gardencorev1beta1.CloudProfile, error) {
@@ -62,13 +64,27 @@ func NewBuilder() *Builder {
 
 // WithShootObject sets the shootObjectFunc attribute at the Builder.
 func (b *Builder) WithShootObject(shootObject *gardencorev1beta1.Shoot) *Builder {
-	b.shootObjectFunc = func() (*gardencorev1beta1.Shoot, error) { return shootObject, nil }
+	b.shootObjectFunc = func(context.Context) (*gardencorev1beta1.Shoot, error) { return shootObject, nil }
+	return b
+}
+
+// WithShootObjectFromCluster sets the shootObjectFunc attribute at the Builder.
+func (b *Builder) WithShootObjectFromCluster(seedClient kubernetes.Interface, seedNamespace string) *Builder {
+	b.shootObjectFunc = func(ctx context.Context) (*gardencorev1beta1.Shoot, error) {
+		cluster, err := gardenerextensions.GetCluster(ctx, seedClient.Client(), seedNamespace)
+		if err != nil {
+			return nil, err
+		}
+		return cluster.Shoot, err
+	}
 	return b
 }
 
 // WithShootObjectFromLister sets the shootObjectFunc attribute at the Builder after fetching it from the given lister.
 func (b *Builder) WithShootObjectFromLister(shootLister gardencorelisters.ShootLister, namespace, name string) *Builder {
-	b.shootObjectFunc = func() (*gardencorev1beta1.Shoot, error) { return shootLister.Shoots(namespace).Get(name) }
+	b.shootObjectFunc = func(context.Context) (*gardencorev1beta1.Shoot, error) {
+		return shootLister.Shoots(namespace).Get(name)
+	}
 	return b
 }
 
@@ -135,7 +151,7 @@ func (b *Builder) WithDefaultDomains(defaultDomains []*garden.Domain) *Builder {
 func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	shoot := &Shoot{}
 
-	shootObject, err := b.shootObjectFunc()
+	shootObject, err := b.shootObjectFunc(ctx)
 	if err != nil {
 		return nil, err
 	}

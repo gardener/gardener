@@ -33,21 +33,20 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/version"
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	schedulingv1beta1 "k8s.io/api/scheduling/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/client-go/util/retry"
@@ -271,7 +270,7 @@ func DeleteHvpa(ctx context.Context, k8sClient kubernetes.Interface, namespace s
 
 // DeleteVpa delete all resources required for the VPA in the given namespace.
 func DeleteVpa(ctx context.Context, c client.Client, namespace string, isShoot bool) error {
-	resources := []runtime.Object{
+	resources := []client.Object{
 		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPAAdmissionController, Namespace: namespace}},
 		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPARecommender, Namespace: namespace}},
 		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPAUpdater, Namespace: namespace}},
@@ -318,56 +317,52 @@ func DeleteVpa(ctx context.Context, c client.Client, namespace string, isShoot b
 	return nil
 }
 
-// DeleteLoggingStack deletes all resource of the EFK logging stack in the given namespace.
-func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace string) error {
-	if k8sClient == nil {
-		return errors.New("must provide non-nil kubernetes client to common.DeleteLoggingStack")
+// DeleteShootLoggingStack deletes all shoot resource of the logging stack in the given namespace.
+func DeleteShootLoggingStack(ctx context.Context, k8sClient client.Client, namespace string) error {
+	return DeleteLoki(ctx, k8sClient, namespace)
+}
+
+// DeleteLoki  deletes all resources of the Loki in a given namespace.
+func DeleteLoki(ctx context.Context, k8sClient client.Client, namespace string) error {
+	resources := []client.Object{
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-loki", Namespace: namespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-loki", Namespace: namespace}},
+		&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "loki-config", Namespace: namespace}},
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
+		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
+		&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
+		&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: namespace}},
 	}
 
-	// Delete the resources below that match "gardener.cloud/role=logging"
-	lists := []runtime.Object{
-		&corev1.ConfigMapList{},
-		&batchv1beta1.CronJobList{},
-		&rbacv1.ClusterRoleList{},
-		&rbacv1.ClusterRoleBindingList{},
-		&rbacv1.RoleList{},
-		&rbacv1.RoleBindingList{},
-		&appsv1.DaemonSetList{},
-		&appsv1.DeploymentList{},
-		// TODO: Use autoscaling/v2beta2 for Kubernetes 1.19+ shoots once kubernetes-v1.19 golang dependencies were vendored.
-		&autoscalingv2beta1.HorizontalPodAutoscalerList{},
-		&extensionsv1beta1.IngressList{},
-		&corev1.SecretList{},
-		&corev1.ServiceAccountList{},
-		&corev1.ServiceList{},
-		&appsv1.StatefulSetList{},
-	}
-
-	for _, list := range lists {
-		if err := k8sClient.List(ctx, list,
-			client.InNamespace(namespace),
-			client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleLogging}); err != nil {
-			return err
-		}
-
-		if err := meta.EachListItem(list, func(obj runtime.Object) error {
-			return client.IgnoreNotFound(k8sClient.Delete(ctx, obj, kubernetes.DefaultDeleteOptions...))
-		}); err != nil {
+	for _, resource := range resources {
+		if err := k8sClient.Delete(ctx, resource); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
 			return err
 		}
 	}
-
-	pvc := &corev1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "loki-loki-0",
-			Namespace: namespace,
-		},
-	}
-	if err := k8sClient.Delete(ctx, pvc); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
-		return err
-	}
-
 	return nil
+}
+
+// DeleteSeedLoggingStack deletes all seed resource of the logging stack in the garden namespace.
+func DeleteSeedLoggingStack(ctx context.Context, k8sClient client.Client) error {
+	resources := []client.Object{
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit-config", Namespace: v1beta1constants.GardenNamespace}},
+		&appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}},
+		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-fluentbit", Namespace: v1beta1constants.GardenNamespace}},
+		&schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit"}},
+		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit-read"}},
+		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit-read"}},
+		&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}},
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "fluent-bit", Namespace: v1beta1constants.GardenNamespace}},
+	}
+
+	for _, resource := range resources {
+		if err := k8sClient.Delete(ctx, resource); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
+			return err
+		}
+	}
+
+	return DeleteLoki(ctx, k8sClient, v1beta1constants.GardenNamespace)
 }
 
 // GetContainerResourcesInStatefulSet  returns the containers resources in StatefulSet
@@ -413,7 +408,7 @@ func DeleteReserveExcessCapacity(ctx context.Context, k8sClient client.Client) e
 
 // DeleteAlertmanager deletes all resources of the Alertmanager in a given namespace.
 func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace string) error {
-	objs := []runtime.Object{
+	objs := []client.Object{
 		&appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      v1beta1constants.StatefulSetNameAlertManager,
@@ -720,14 +715,9 @@ func annotationRequiredError() error {
 }
 
 // ConfirmDeletion adds Gardener's deletion confirmation annotation to the given object and sends an UPDATE request.
-func ConfirmDeletion(ctx context.Context, c client.Client, obj runtime.Object) error {
+func ConfirmDeletion(ctx context.Context, c client.Client, obj client.Object) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		key, err := client.ObjectKeyFromObject(obj)
-		if err != nil {
-			return err
-		}
-
-		if err := c.Get(ctx, key, obj); err != nil {
+		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return err
 			}
@@ -771,6 +761,10 @@ func DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx context.Context, c client
 
 		if _, ok := deployment.Spec.Selector.MatchLabels[v1beta1constants.DeprecatedGardenRole]; ok {
 			if err := c.Delete(ctx, deployment); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+
+			if err := kutil.WaitUntilResourceDeleted(ctx, c, deployment, 2*time.Second); err != nil {
 				return err
 			}
 		}

@@ -23,6 +23,8 @@ spec:
         app: {{ include "node-problem-detector.name" . }}
         gardener.cloud/role: system-component
         origin: gardener
+        networking.gardener.cloud/to-apiserver: allowed
+        networking.gardener.cloud/to-dns: allowed
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/custom-config-configmap.yaml") . | sha256sum }}
         scheduler.alpha.kubernetes.io/critical-pod: ''

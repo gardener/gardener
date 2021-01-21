@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	// ShootNoCleanupLabel is a constant for a label on a resource indicating the the Gardener cleaner should not delete this
+	// ShootNoCleanupLabel is a constant for a label on a resource indicating that the Gardener cleaner should not delete this
 	// resource when cleaning a shoot during the deletion flow.
 	ShootNoCleanupLabel = "shoot.gardener.cloud/no-cleanup"
 )

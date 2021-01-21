@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"github.com/gardener/gardener/cmd/gardener-apiserver/app"
+	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/apiserver/features"
 
 	genericapiserver "k8s.io/apiserver/pkg/server"
@@ -26,6 +27,7 @@ import (
 )
 
 func main() {
+	utils.DeduplicateWarnings()
 	features.RegisterFeatureGates()
 
 	logs.InitLogs()

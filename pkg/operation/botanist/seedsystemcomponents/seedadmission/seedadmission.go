@@ -177,7 +177,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 				Labels:    getLabels(),
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: pointer.Int32Ptr(0),
+				RevisionHistoryLimit: pointer.Int32Ptr(1),
 				Replicas:             pointer.Int32Ptr(3),
 				Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 				Template: corev1.PodTemplateSpec{

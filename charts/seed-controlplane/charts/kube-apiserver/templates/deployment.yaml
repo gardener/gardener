@@ -12,7 +12,7 @@ metadata:
 {{- end }}
 spec:
   minReadySeconds: 30
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
@@ -41,6 +41,7 @@ spec:
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
       labels:
+        gardener.cloud/role: controlplane
         garden.sapcloud.io/role: controlplane
         app: kubernetes
         role: apiserver

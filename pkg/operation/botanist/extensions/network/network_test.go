@@ -95,7 +95,7 @@ var _ = Describe("#Network", func() {
 		}
 
 		values = &network.Values{
-			Name:           "test-deploy",
+			Name:           networkName,
 			Namespace:      networkNs,
 			Type:           networkType,
 			ProviderConfig: nil,

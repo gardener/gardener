@@ -145,7 +145,7 @@ func (cm *GenericClientMap) GetClient(ctx context.Context, key clientmap.ClientS
 		defer cancel()
 
 		// make sure the ClientSet has synced before returning
-		if !waitForClientSetCacheSync(entry, waitContext.Done()) {
+		if !waitForClientSetCacheSync(waitContext, entry) {
 			return nil, fmt.Errorf("timed out waiting for caches of ClientSet with key %q to sync", key.Key())
 		}
 	}
@@ -254,17 +254,17 @@ func (cm *GenericClientMap) startClientSet(entry *clientMapEntry) {
 
 	entry.cancel = clientSetCancel
 
-	entry.clientSet.Start(clientSetContext.Done())
+	entry.clientSet.Start(clientSetContext)
 }
 
-func waitForClientSetCacheSync(entry *clientMapEntry, waitStopCh <-chan struct{}) bool {
+func waitForClientSetCacheSync(ctx context.Context, entry *clientMapEntry) bool {
 	// We don't need a lock here, as waiting in multiple goroutines is not harmful.
 	// But RLocking here (for every GetClient) would be blocking creating new clients, so we should avoid that.
 	if entry.synced {
 		return true
 	}
 
-	if !entry.clientSet.WaitForCacheSync(waitStopCh) {
+	if !entry.clientSet.WaitForCacheSync(ctx) {
 		return false
 	}
 

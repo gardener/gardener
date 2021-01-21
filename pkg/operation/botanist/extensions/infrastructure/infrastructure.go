@@ -186,7 +186,7 @@ func (i *infrastructure) Wait(ctx context.Context) error {
 		ctx,
 		i.client,
 		i.logger,
-		func() runtime.Object { return &extensionsv1alpha1.Infrastructure{} },
+		func() client.Object { return &extensionsv1alpha1.Infrastructure{} },
 		extensionsv1alpha1.InfrastructureResource,
 		i.values.Namespace,
 		i.values.Name,

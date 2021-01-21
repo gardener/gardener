@@ -15,16 +15,16 @@
 package backupentry
 
 import (
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
-
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
+	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 const (
@@ -88,17 +88,15 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &corev1.Namespace{}},
-			&extensionshandler.EnqueueRequestsFromMapFunc{
-				ToRequests: extensionshandler.SimpleMapper(NamespaceToBackupEntryMapper(mgr.GetClient(), predicates), extensionshandler.UpdateWithNew),
-			}); err != nil {
+			extensionshandler.EnqueueRequestsFromMapper(NamespaceToBackupEntryMapper(mgr.GetClient(), predicates), extensionshandler.UpdateWithNew),
+		); err != nil {
 			return err
 		}
 
 		if err := ctrl.Watch(
 			&source.Kind{Type: &corev1.Secret{}},
-			&extensionshandler.EnqueueRequestsFromMapFunc{
-				ToRequests: extensionshandler.SimpleMapper(SecretToBackupEntryMapper(mgr.GetClient(), predicates), extensionshandler.UpdateWithNew),
-			}); err != nil {
+			extensionshandler.EnqueueRequestsFromMapper(SecretToBackupEntryMapper(mgr.GetClient(), predicates), extensionshandler.UpdateWithNew),
+		); err != nil {
 			return err
 		}
 	}

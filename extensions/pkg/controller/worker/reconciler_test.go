@@ -20,13 +20,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/gardener/gardener/extensions/pkg/controller"
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/controller/worker"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	extensionsclient "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -38,6 +31,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/controller/worker"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsclient "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
 )
 
 var _ = Describe("Worker Reconcile", func() {
@@ -57,7 +57,7 @@ var _ = Describe("Worker Reconcile", func() {
 		wantErr bool
 	}
 
-	//Ummutable throuth the function calls
+	// Immutable through the function calls
 	arguments := args{
 		request: reconcile.Request{
 			NamespacedName: types.NamespacedName{
@@ -67,22 +67,25 @@ var _ = Describe("Worker Reconcile", func() {
 		},
 	}
 
-	var logger logr.Logger
+	var (
+		ctx    context.Context
+		logger logr.Logger
+	)
 
 	BeforeEach(func() {
+		ctx = context.TODO()
 		logger = log.Log.WithName("Reconcile-Test-Controller")
 	})
 
 	DescribeTable("Reconcile function", func(t *test) {
-		reconciler := worker.NewReconciler(nil, t.fields.actuator)
+		reconciler := worker.NewReconciler(t.fields.actuator)
 		expectInject(inject.ClientInto(t.fields.client, reconciler))
-		expectInject(inject.InjectorInto(inject.Func(func(i interface{}) error {
+		expectInject(inject.InjectorInto(func(i interface{}) error {
 			expectInject(inject.ClientInto(t.fields.client, i))
-			expectInject(inject.StopChannelInto(make(chan struct{}), i))
 			return nil
-		}), reconciler))
+		}, reconciler))
 
-		got, err := reconciler.Reconcile(t.args.request)
+		got, err := reconciler.Reconcile(ctx, t.args.request)
 		Expect(err != nil).To(Equal(t.wantErr))
 		Expect(reflect.DeepEqual(got, t.want)).To(BeTrue())
 	},
@@ -389,28 +392,28 @@ func newFakeActuator(reconcile, delete, restore, migrate bool) worker.Actuator {
 	}
 }
 
-func (a *fakeActuator) Reconcile(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
+func (a *fakeActuator) Reconcile(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	if a.reconcile {
 		return nil
 	}
 	return fmt.Errorf("Wrong function call: actuator Reconcile")
 }
 
-func (a *fakeActuator) Delete(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
+func (a *fakeActuator) Delete(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	if a.delete {
 		return nil
 	}
 	return fmt.Errorf("Wrong function call: actuator Delete")
 }
 
-func (a *fakeActuator) Restore(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
+func (a *fakeActuator) Restore(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	if a.restore {
 		return nil
 	}
 	return fmt.Errorf("Wrong function call: actuator Restore")
 }
 
-func (a *fakeActuator) Migrate(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
+func (a *fakeActuator) Migrate(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	if a.migrate {
 		return nil
 	}

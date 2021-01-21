@@ -15,15 +15,15 @@
 package network
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 const (
@@ -40,7 +40,7 @@ type Args struct {
 	// CloudProvider is the cloud provider of this webhook.
 	CloudProvider string
 	// Types is a list of resource types.
-	Types []runtime.Object
+	Types []client.Object
 	// Mutator is a mutator to be used by the admission handler.
 	Mutator webhook.Mutator
 }

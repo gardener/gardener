@@ -18,7 +18,6 @@ import (
 	"errors"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	baseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,17 +25,11 @@ import (
 
 // Config carries options for new ClientSets.
 type Config struct {
-	clientOptions       client.Options
-	restConfig          *rest.Config
-	cacheResync         *time.Duration
-	disableCachedClient bool
-	cacheReaderOptions  *cacheReaderOptions
-}
-
-// cacheReaderOptions configures the specificallyCachedReader
-type cacheReaderOptions struct {
-	readSpecifiedFromCache    bool
-	specificallyCachedObjects []runtime.Object
+	clientOptions   client.Options
+	restConfig      *rest.Config
+	cacheResync     *time.Duration
+	disableCache    bool
+	uncachedObjects []client.Object
 }
 
 // NewConfig returns a new Config with an empty REST config to allow testing ConfigFuncs without exporting
@@ -94,29 +87,15 @@ func WithCacheResyncPeriod(resync time.Duration) ConfigFunc {
 // DirectClient().
 func WithDisabledCachedClient() ConfigFunc {
 	return func(config *Config) error {
-		config.disableCachedClient = true
+		config.disableCache = true
 		return nil
 	}
 }
 
-// WithDisabledCacheFor disables the cached client for the specified objects' GroupKinds.
-func WithDisabledCacheFor(objects ...runtime.Object) ConfigFunc {
+// WithUncached disables the cached client for the specified objects' GroupKinds.
+func WithUncached(objs ...client.Object) ConfigFunc {
 	return func(config *Config) error {
-		config.cacheReaderOptions = &cacheReaderOptions{
-			readSpecifiedFromCache:    false,
-			specificallyCachedObjects: objects,
-		}
-		return nil
-	}
-}
-
-// WithEnabledCacheFor enables the cached client only for the specified objects' GroupKinds.
-func WithEnabledCacheFor(objects ...runtime.Object) ConfigFunc {
-	return func(config *Config) error {
-		config.cacheReaderOptions = &cacheReaderOptions{
-			readSpecifiedFromCache:    true,
-			specificallyCachedObjects: objects,
-		}
+		config.uncachedObjects = append(config.uncachedObjects, objs...)
 		return nil
 	}
 }

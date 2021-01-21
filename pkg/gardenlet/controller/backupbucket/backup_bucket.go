@@ -74,7 +74,7 @@ func NewBackupBucketController(ctx context.Context, clientMap clientmap.ClientMa
 	return &Controller{
 		gardenClient:         gardenClient.Client(),
 		config:               config,
-		reconciler:           newReconciler(ctx, clientMap, recorder, config),
+		reconciler:           newReconciler(clientMap, recorder, config),
 		recorder:             recorder,
 		backupBucketInformer: backupBucketInformer,
 		backupBucketQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupBucket"),

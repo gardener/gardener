@@ -9,7 +9,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	cache "sigs.k8s.io/controller-runtime/pkg/cache"
@@ -40,7 +39,7 @@ func (m *MockCache) EXPECT() *MockCacheMockRecorder {
 }
 
 // Get mocks base method.
-func (m *MockCache) Get(arg0 context.Context, arg1 types.NamespacedName, arg2 runtime.Object) error {
+func (m *MockCache) Get(arg0 context.Context, arg1 types.NamespacedName, arg2 client.Object) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
@@ -54,7 +53,7 @@ func (mr *MockCacheMockRecorder) Get(arg0, arg1, arg2 interface{}) *gomock.Call 
 }
 
 // GetInformer mocks base method.
-func (m *MockCache) GetInformer(arg0 context.Context, arg1 runtime.Object) (cache.Informer, error) {
+func (m *MockCache) GetInformer(arg0 context.Context, arg1 client.Object) (cache.Informer, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetInformer", arg0, arg1)
 	ret0, _ := ret[0].(cache.Informer)
@@ -84,7 +83,7 @@ func (mr *MockCacheMockRecorder) GetInformerForKind(arg0, arg1 interface{}) *gom
 }
 
 // IndexField mocks base method.
-func (m *MockCache) IndexField(arg0 context.Context, arg1 runtime.Object, arg2 string, arg3 client.IndexerFunc) error {
+func (m *MockCache) IndexField(arg0 context.Context, arg1 client.Object, arg2 string, arg3 client.IndexerFunc) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IndexField", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
@@ -98,7 +97,7 @@ func (mr *MockCacheMockRecorder) IndexField(arg0, arg1, arg2, arg3 interface{}) 
 }
 
 // List mocks base method.
-func (m *MockCache) List(arg0 context.Context, arg1 runtime.Object, arg2 ...client.ListOption) error {
+func (m *MockCache) List(arg0 context.Context, arg1 client.ObjectList, arg2 ...client.ListOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -117,7 +116,7 @@ func (mr *MockCacheMockRecorder) List(arg0, arg1 interface{}, arg2 ...interface{
 }
 
 // Start mocks base method.
-func (m *MockCache) Start(arg0 <-chan struct{}) error {
+func (m *MockCache) Start(arg0 context.Context) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Start", arg0)
 	ret0, _ := ret[0].(error)
@@ -131,7 +130,7 @@ func (mr *MockCacheMockRecorder) Start(arg0 interface{}) *gomock.Call {
 }
 
 // WaitForCacheSync mocks base method.
-func (m *MockCache) WaitForCacheSync(arg0 <-chan struct{}) bool {
+func (m *MockCache) WaitForCacheSync(arg0 context.Context) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WaitForCacheSync", arg0)
 	ret0, _ := ret[0].(bool)

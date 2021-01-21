@@ -1,0 +1,6 @@
+nodesSelector:
+  path: https://github.com/gardener/gardener/tree/master/docs    
+links:
+  downloads:
+    scope:
+      gardener/gardener/(blob|raw)/(.*)/docs: ~

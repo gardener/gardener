@@ -19,13 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	contextutil "github.com/gardener/gardener/pkg/utils/context"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -36,6 +29,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 const (
@@ -49,14 +48,13 @@ const (
 	EventControlPlaneMigration string = "ControlPlaneMigration"
 
 	// RequeueAfter is the duration to requeue a controlplane reconciliation if indicated by the actuator.
-	RequeueAfter time.Duration = 2 * time.Second
+	RequeueAfter = 2 * time.Second
 )
 
 type reconciler struct {
 	logger   logr.Logger
 	actuator Actuator
 
-	ctx      context.Context
 	client   client.Client
 	recorder record.EventRecorder
 }
@@ -65,7 +63,7 @@ type reconciler struct {
 // controlplane resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler {
 	return extensionscontroller.OperationAnnotationWrapper(
-		&extensionsv1alpha1.ControlPlane{},
+		func() client.Object { return &extensionsv1alpha1.ControlPlane{} },
 		&reconciler{
 			logger:   log.Log.WithName(ControllerName),
 			actuator: actuator,
@@ -82,21 +80,16 @@ func (r *reconciler) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (r *reconciler) InjectStopChannel(stopCh <-chan struct{}) error {
-	r.ctx = contextutil.FromStopChannel(stopCh)
-	return nil
-}
-
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	cp := &extensionsv1alpha1.ControlPlane{}
-	if err := r.client.Get(r.ctx, request.NamespacedName, cp); err != nil {
+	if err := r.client.Get(ctx, request.NamespacedName, cp); err != nil {
 		if errors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
 	}
 
-	cluster, err := extensionscontroller.GetCluster(r.ctx, r.client, cp.Namespace)
+	cluster, err := extensionscontroller.GetCluster(ctx, r.client, cp.Namespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -112,18 +105,18 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	case extensionscontroller.IsMigrated(cp):
 		return reconcile.Result{}, nil
 	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
-		return r.migrate(r.ctx, cp, cluster)
+		return r.migrate(ctx, cp, cluster)
 	case cp.DeletionTimestamp != nil:
-		return r.delete(r.ctx, cp, cluster)
+		return r.delete(ctx, cp, cluster)
 	case cp.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
-		return r.restore(r.ctx, cp, cluster)
+		return r.restore(ctx, cp, cluster)
 	default:
-		return r.reconcile(r.ctx, cp, cluster, operationType)
+		return r.reconcile(ctx, cp, cluster, operationType)
 	}
 }
 
 func (r *reconciler) reconcile(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, cp); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, cp, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -154,7 +147,7 @@ func (r *reconciler) reconcile(ctx context.Context, cp *extensionsv1alpha1.Contr
 }
 
 func (r *reconciler) restore(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, FinalizerName, cp); err != nil {
+	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, cp, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -199,7 +192,7 @@ func (r *reconciler) migrate(ctx context.Context, cp *extensionsv1alpha1.Control
 
 	r.logger.Info("Starting the migration of controlplane", "controlplane", cp.Name)
 	r.recorder.Event(cp, corev1.EventTypeNormal, EventControlPlaneMigration, "Migrating the cp")
-	if err := r.actuator.Migrate(r.ctx, cp, cluster); err != nil {
+	if err := r.actuator.Migrate(ctx, cp, cluster); err != nil {
 		msg := "Error migrating controlplane"
 		r.recorder.Eventf(cp, corev1.EventTypeWarning, EventControlPlaneMigration, "%s: %+v", msg, err)
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cp, gardencorev1beta1.LastOperationTypeMigrate, msg)
@@ -245,7 +238,7 @@ func (r *reconciler) delete(ctx context.Context, cp *extensionsv1alpha1.ControlP
 
 	r.logger.Info("Starting the deletion of controlplane", "controlplane", cp.Name)
 	r.recorder.Event(cp, corev1.EventTypeNormal, EventControlPlaneDeletion, "Deleting the cp")
-	if err := r.actuator.Delete(r.ctx, cp, cluster); err != nil {
+	if err := r.actuator.Delete(ctx, cp, cluster); err != nil {
 		msg := "Error deleting controlplane"
 		r.recorder.Eventf(cp, corev1.EventTypeWarning, EventControlPlaneDeletion, "%s: %+v", msg, err)
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cp, operationType, msg)
@@ -260,7 +253,7 @@ func (r *reconciler) delete(ctx context.Context, cp *extensionsv1alpha1.ControlP
 	}
 
 	r.logger.Info("Removing finalizer.", "controlplane", cp.Name)
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, FinalizerName, cp); err != nil {
+	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, cp, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from ControlPlane: %+v", err)
 	}
 

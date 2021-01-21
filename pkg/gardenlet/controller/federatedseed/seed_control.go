@@ -19,18 +19,6 @@ import (
 	"fmt"
 	"sync"
 
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/extensions"
-	seedapiservernetworkpolicy "github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,6 +29,18 @@ import (
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/extensions"
+	seedapiservernetworkpolicy "github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy"
+	"github.com/gardener/gardener/pkg/logger"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Controller is responsible for maintaining multiple federated Seeds' controllers
@@ -155,7 +155,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	logger.Logger.Infof("Starting federated controllers")
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.createReconcileSeedRequestFunc(ctx), &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", reconcile.Func(c.reconcileSeedRequest), &waitGroup, c.workerCh)
 	}
 
 	<-ctx.Done()
@@ -166,38 +166,36 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	waitGroup.Wait()
 }
 
-func (c *Controller) createReconcileSeedRequestFunc(ctx context.Context) reconcile.Func {
-	return func(req reconcile.Request) (reconcile.Result, error) {
-		seed := &gardencorev1beta1.Seed{}
-		if err := c.gardenClient.Get(ctx, kutil.Key(req.Name), seed); err != nil {
-			if apierrors.IsNotFound(err) {
-				logger.Logger.Infof("Skipping federated seed setup - Seed %s was not found", req.Name)
-				return reconcile.Result{}, nil
-			}
-			return reconcile.Result{}, err
-		}
-
-		if seed.DeletionTimestamp != nil {
-			logger.Logger.Infof("Skipping federated seed setup - Seed %s is being deleted", req.Name)
+func (c *Controller) reconcileSeedRequest(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	seed := &gardencorev1beta1.Seed{}
+	if err := c.gardenClient.Get(ctx, kutil.Key(req.Name), seed); err != nil {
+		if apierrors.IsNotFound(err) {
+			logger.Logger.Infof("Skipping federated seed setup - Seed %s was not found", req.Name)
 			return reconcile.Result{}, nil
 		}
+		return reconcile.Result{}, err
+	}
 
-		condition := helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-		if condition.Status != gardencorev1beta1.ConditionTrue {
-			return reconcile.Result{}, nil
-		}
-
-		seedLogger := logger.Logger.WithField("Seed", seed.GetName())
-		if err := c.federatedSeedControllerManager.createExtensionControllers(ctx, seedLogger, seed.GetName(), c.clientMap, c.config, c.recorder); err != nil {
-			return reconcile.Result{}, err
-		}
-
-		if err := c.federatedSeedControllerManager.createNamespaceControllers(ctx, seedLogger, seed.GetName(), c.clientMap, c.config, c.recorder); err != nil {
-			return reconcile.Result{}, err
-		}
-
+	if seed.DeletionTimestamp != nil {
+		logger.Logger.Infof("Skipping federated seed setup - Seed %s is being deleted", req.Name)
 		return reconcile.Result{}, nil
 	}
+
+	condition := helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
+	if condition.Status != gardencorev1beta1.ConditionTrue {
+		return reconcile.Result{}, nil
+	}
+
+	seedLogger := logger.Logger.WithField("Seed", seed.GetName())
+	if err := c.federatedSeedControllerManager.createExtensionControllers(ctx, seedLogger, seed.GetName(), c.clientMap, c.config, c.recorder); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := c.federatedSeedControllerManager.createNamespaceControllers(ctx, seedLogger, seed.GetName(), c.clientMap, c.config, c.recorder); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{}, nil
 }
 
 type federatedSeedControllerManager struct {

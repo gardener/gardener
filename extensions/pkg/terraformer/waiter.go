@@ -19,28 +19,28 @@ import (
 	"fmt"
 	"time"
 
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
-// WaitForCleanEnvironment waits until no Terraform Pod(s) exist for the current instance
-// of the Terraformer.
+// WaitForCleanEnvironment waits until no Terraform Pod(s) exist for the current instance of the Terraformer.
 func (t *terraformer) WaitForCleanEnvironment(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, t.deadlineCleaning)
 	defer cancel()
 
 	t.logger.Info("Waiting for clean environment")
 	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-		podList, err := t.listTerraformerPods(ctx)
+		podList, err := t.listPods(ctx)
 		if err != nil {
 			return retry.SevereError(err)
 		}
+
 		if len(podList.Items) > 0 {
-			t.logger.Info("Waiting until all Terraformer Pods have been cleaned up")
+			t.logger.Info("Waiting until all Terraformer pods have been cleaned up")
 			return retry.MinorError(fmt.Errorf("at least one terraformer pod still exists: %s", podList.Items[0].Name))
 		}
 
@@ -60,15 +60,15 @@ func (t *terraformer) waitForPod(ctx context.Context, logger logr.Logger, pod *c
 
 	logger = logger.WithValues("pod", kutil.KeyFromObject(pod))
 
-	logger.Info("Waiting for Terraformer Pod to be completed...")
+	logger.Info("Waiting for Terraformer pod to be completed...")
 	if err := retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
 		err = t.client.Get(ctx, kutil.KeyFromObject(pod), pod)
 		if apierrors.IsNotFound(err) {
-			logger.Info("Terraformer Pod disappeared unexpectedly, somebody must have manually deleted it")
+			logger.Info("Terraformer pod disappeared unexpectedly, somebody must have manually deleted it")
 			return retry.Ok()
 		}
 		if err != nil {
-			logger.Error(err, "Error retrieving Pod")
+			logger.Error(err, "Error retrieving pod")
 			return retry.SevereError(err)
 		}
 
@@ -85,7 +85,7 @@ func (t *terraformer) waitForPod(ctx context.Context, logger logr.Logger, pod *c
 			return retry.Ok()
 		}
 
-		logger.Info("Waiting for terraformer pod to be completed, pod hasn't finished yet", "phase", phase, "len-of-containerstatuses", len(containerStatuses))
+		logger.Info("Waiting for Terraformer pod to be completed, pod hasn't finished yet", "phase", phase, "len-of-containerstatuses", len(containerStatuses))
 		return retry.MinorError(fmt.Errorf("pod was not successful: phase=%s, len-of-containerstatuses=%d", phase, len(containerStatuses)))
 	}); err != nil {
 		exitCode = 1

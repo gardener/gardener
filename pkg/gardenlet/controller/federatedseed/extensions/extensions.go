@@ -110,16 +110,16 @@ func (s *Controller) Run(ctx context.Context, controllerInstallationWorkers, sho
 }
 
 func (s *Controller) createControllerInstallationWorkers(ctx context.Context, control controllerInstallationControl) {
-	controllerutils.CreateWorker(ctx, s.controllerInstallationControl.controllerInstallationQueue, "ControllerInstallation-Required", control.createControllerInstallationRequiredReconcileFunc(ctx), &s.waitGroup, s.workerCh)
+	controllerutils.CreateWorker(ctx, s.controllerInstallationControl.controllerInstallationQueue, "ControllerInstallation-Required", reconcile.Func(control.reconcileControllerInstallationRequired), &s.waitGroup, s.workerCh)
 
 	for kind, artifact := range s.controllerArtifacts.controllerInstallationArtifacts {
 		workerName := fmt.Sprintf("ControllerInstallation-Extension-%s", kind)
-		controlFn := control.createExtensionRequiredReconcileFunc(ctx, kind, artifact.newFunc)
+		controlFn := control.createExtensionRequiredReconcileFunc(kind, artifact.newListFunc)
 		// Execute control function once outside of the worker to initialize the `kindToRequiredTypes` map once.
 		// This is necessary for Kinds which are registered but no extension object exists in the seed yet (e.g. disabled backups).
 		// In this case no event is triggered and the control function would never be executed.
-		// Eventually, the Kind would never be part of the `kindToRequiredTypes` map and no decision if the the ControllerInstallation is required could be taken.
-		if _, err := controlFn(reconcile.Request{}); err != nil {
+		// Eventually, the Kind would never be part of the `kindToRequiredTypes` map and no decision if the ControllerInstallation is required could be taken.
+		if _, err := controlFn(ctx, reconcile.Request{}); err != nil {
 			s.log.Errorf("Error during initial run of extension reconciliation: %v", err)
 		}
 		controllerutils.CreateWorker(ctx, artifact.queue, workerName, controlFn, &s.waitGroup, s.workerCh)
@@ -129,7 +129,7 @@ func (s *Controller) createControllerInstallationWorkers(ctx context.Context, co
 func (s *Controller) createShootStateWorkers(ctx context.Context, control shootStateControl) {
 	for kind, artifact := range s.controllerArtifacts.stateArtifacts {
 		workerName := fmt.Sprintf("ShootState-%s", kind)
-		controllerutils.CreateWorker(ctx, artifact.queue, workerName, control.createShootStateSyncReconcileFunc(ctx, kind, artifact.newFunc), &s.waitGroup, s.workerCh)
+		controllerutils.CreateWorker(ctx, artifact.queue, workerName, control.createShootStateSyncReconcileFunc(kind, artifact.newObjFunc), &s.waitGroup, s.workerCh)
 	}
 }
 

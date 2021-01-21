@@ -70,6 +70,9 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 		}
 		if in.Controllers.ShootCare != nil {
 			SetDefaults_ShootCareControllerConfiguration(in.Controllers.ShootCare)
+			if in.Controllers.ShootCare.StaleExtensionHealthChecks != nil {
+				SetDefaults_StaleExtensionHealthChecks(in.Controllers.ShootCare.StaleExtensionHealthChecks)
+			}
 		}
 		if in.Controllers.ShootStateSync != nil {
 			SetDefaults_ShootStateSyncControllerConfiguration(in.Controllers.ShootStateSync)

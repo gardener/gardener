@@ -18,9 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	. "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -28,8 +25,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Object", func() {
@@ -42,7 +42,7 @@ var _ = Describe("Object", func() {
 
 		obj1 = &corev1.Secret{}
 		obj2 = &appsv1.Deployment{}
-		objs = []runtime.Object{obj1, obj2}
+		objs = []client.Object{obj1, obj2}
 	)
 
 	BeforeEach(func() {

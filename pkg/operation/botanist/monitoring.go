@@ -37,7 +37,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -99,6 +98,9 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
+	// Need stable order before passing the dashboards to Grafana config to avoid unnecessary changes
+	kutil.ByName().Sort(existingConfigMaps)
+
 	// Read extension monitoring configurations
 	for _, cm := range existingConfigMaps.Items {
 		alertingRules.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapAlertingRules]))
@@ -118,11 +120,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 
 	hosts := []map[string]interface{}{
-		// TODO: timuthy - remove in the future. Old Prometheus host is retained for migration reasons.
-		{
-			"hostName":   b.ComputePrometheusHostDeprecated(),
-			"secretName": common.PrometheusTLS,
-		},
 		{
 			"hostName":   b.ComputePrometheusHost(),
 			"secretName": prometheusTLSOverride,
@@ -270,11 +267,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		}
 
 		hosts := []map[string]interface{}{
-			// TODO: timuthy - remove in the future. Old Prometheus host is retained for migration reasons.
-			{
-				"hostName":   b.ComputeAlertManagerHostDeprecated(),
-				"secretName": common.AlertManagerTLS,
-			},
 			{
 				"hostName":   b.ComputeAlertManagerHost(),
 				"secretName": alertManagerTLSOverride,
@@ -398,10 +390,6 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 
 	hosts := []map[string]interface{}{
 		{
-			"hostName":   b.ComputeIngressHostDeprecated(subDomain),
-			"secretName": common.GrafanaTLS,
-		},
-		{
 			"hostName":   b.ComputeIngressHost(subDomain),
 			"secretName": grafanaTLSOverride,
 		},
@@ -448,7 +436,7 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
-	objects := []runtime.Object{
+	objects := []client.Object{
 		&corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,

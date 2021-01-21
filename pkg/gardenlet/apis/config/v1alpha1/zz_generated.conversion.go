@@ -309,6 +309,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*StaleExtensionHealthChecks)(nil), (*config.StaleExtensionHealthChecks)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_StaleExtensionHealthChecks_To_config_StaleExtensionHealthChecks(a.(*StaleExtensionHealthChecks), b.(*config.StaleExtensionHealthChecks), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*config.StaleExtensionHealthChecks)(nil), (*StaleExtensionHealthChecks)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_config_StaleExtensionHealthChecks_To_v1alpha1_StaleExtensionHealthChecks(a.(*config.StaleExtensionHealthChecks), b.(*StaleExtensionHealthChecks), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*TLSServer)(nil), (*config.TLSServer)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_TLSServer_To_config_TLSServer(a.(*TLSServer), b.(*config.TLSServer), scope)
 	}); err != nil {
@@ -366,9 +376,7 @@ func Convert_config_BackupEntryControllerConfiguration_To_v1alpha1_BackupEntryCo
 
 func autoConvert_v1alpha1_ConditionThreshold_To_config_ConditionThreshold(in *ConditionThreshold, out *config.ConditionThreshold, s conversion.Scope) error {
 	out.Type = in.Type
-	if err := v1.Convert_v1_Duration_To_Pointer_v1_Duration(&in.Duration, &out.Duration, s); err != nil {
-		return err
-	}
+	out.Duration = in.Duration
 	return nil
 }
 
@@ -379,9 +387,7 @@ func Convert_v1alpha1_ConditionThreshold_To_config_ConditionThreshold(in *Condit
 
 func autoConvert_config_ConditionThreshold_To_v1alpha1_ConditionThreshold(in *config.ConditionThreshold, out *ConditionThreshold, s conversion.Scope) error {
 	out.Type = in.Type
-	if err := v1.Convert_Pointer_v1_Duration_To_v1_Duration(&in.Duration, &out.Duration, s); err != nil {
-		return err
-	}
+	out.Duration = in.Duration
 	return nil
 }
 
@@ -536,15 +542,7 @@ func autoConvert_v1alpha1_GardenletConfiguration_To_config_GardenletConfiguratio
 	} else {
 		out.ShootClientConnection = nil
 	}
-	if in.Controllers != nil {
-		in, out := &in.Controllers, &out.Controllers
-		*out = new(config.GardenletControllerConfiguration)
-		if err := Convert_v1alpha1_GardenletControllerConfiguration_To_config_GardenletControllerConfiguration(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Controllers = nil
-	}
+	out.Controllers = (*config.GardenletControllerConfiguration)(unsafe.Pointer(in.Controllers))
 	out.Resources = (*config.ResourcesConfiguration)(unsafe.Pointer(in.Resources))
 	if in.LeaderElection != nil {
 		in, out := &in.LeaderElection, &out.LeaderElection
@@ -599,15 +597,7 @@ func autoConvert_config_GardenletConfiguration_To_v1alpha1_GardenletConfiguratio
 	} else {
 		out.ShootClientConnection = nil
 	}
-	if in.Controllers != nil {
-		in, out := &in.Controllers, &out.Controllers
-		*out = new(GardenletControllerConfiguration)
-		if err := Convert_config_GardenletControllerConfiguration_To_v1alpha1_GardenletControllerConfiguration(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Controllers = nil
-	}
+	out.Controllers = (*GardenletControllerConfiguration)(unsafe.Pointer(in.Controllers))
 	out.Resources = (*ResourcesConfiguration)(unsafe.Pointer(in.Resources))
 	if in.LeaderElection != nil {
 		in, out := &in.LeaderElection, &out.LeaderElection
@@ -642,15 +632,7 @@ func autoConvert_v1alpha1_GardenletControllerConfiguration_To_config_GardenletCo
 	out.ControllerInstallationRequired = (*config.ControllerInstallationRequiredControllerConfiguration)(unsafe.Pointer(in.ControllerInstallationRequired))
 	out.Seed = (*config.SeedControllerConfiguration)(unsafe.Pointer(in.Seed))
 	out.Shoot = (*config.ShootControllerConfiguration)(unsafe.Pointer(in.Shoot))
-	if in.ShootCare != nil {
-		in, out := &in.ShootCare, &out.ShootCare
-		*out = new(config.ShootCareControllerConfiguration)
-		if err := Convert_v1alpha1_ShootCareControllerConfiguration_To_config_ShootCareControllerConfiguration(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.ShootCare = nil
-	}
+	out.ShootCare = (*config.ShootCareControllerConfiguration)(unsafe.Pointer(in.ShootCare))
 	out.ShootStateSync = (*config.ShootStateSyncControllerConfiguration)(unsafe.Pointer(in.ShootStateSync))
 	out.ShootedSeedRegistration = (*config.ShootedSeedRegistrationControllerConfiguration)(unsafe.Pointer(in.ShootedSeedRegistration))
 	out.SeedAPIServerNetworkPolicy = (*config.SeedAPIServerNetworkPolicyControllerConfiguration)(unsafe.Pointer(in.SeedAPIServerNetworkPolicy))
@@ -670,15 +652,7 @@ func autoConvert_config_GardenletControllerConfiguration_To_v1alpha1_GardenletCo
 	out.ControllerInstallationRequired = (*ControllerInstallationRequiredControllerConfiguration)(unsafe.Pointer(in.ControllerInstallationRequired))
 	out.Seed = (*SeedControllerConfiguration)(unsafe.Pointer(in.Seed))
 	out.Shoot = (*ShootControllerConfiguration)(unsafe.Pointer(in.Shoot))
-	if in.ShootCare != nil {
-		in, out := &in.ShootCare, &out.ShootCare
-		*out = new(ShootCareControllerConfiguration)
-		if err := Convert_config_ShootCareControllerConfiguration_To_v1alpha1_ShootCareControllerConfiguration(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.ShootCare = nil
-	}
+	out.ShootCare = (*ShootCareControllerConfiguration)(unsafe.Pointer(in.ShootCare))
 	out.ShootStateSync = (*ShootStateSyncControllerConfiguration)(unsafe.Pointer(in.ShootStateSync))
 	out.ShootedSeedRegistration = (*ShootedSeedRegistrationControllerConfiguration)(unsafe.Pointer(in.ShootedSeedRegistration))
 	out.SeedAPIServerNetworkPolicy = (*SeedAPIServerNetworkPolicyControllerConfiguration)(unsafe.Pointer(in.SeedAPIServerNetworkPolicy))
@@ -965,18 +939,8 @@ func Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *conf
 func autoConvert_v1alpha1_ShootCareControllerConfiguration_To_config_ShootCareControllerConfiguration(in *ShootCareControllerConfiguration, out *config.ShootCareControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
-	out.StaleExtensionHealthCheckThreshold = (*v1.Duration)(unsafe.Pointer(in.StaleExtensionHealthCheckThreshold))
-	if in.ConditionThresholds != nil {
-		in, out := &in.ConditionThresholds, &out.ConditionThresholds
-		*out = make([]config.ConditionThreshold, len(*in))
-		for i := range *in {
-			if err := Convert_v1alpha1_ConditionThreshold_To_config_ConditionThreshold(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.ConditionThresholds = nil
-	}
+	out.StaleExtensionHealthChecks = (*config.StaleExtensionHealthChecks)(unsafe.Pointer(in.StaleExtensionHealthChecks))
+	out.ConditionThresholds = *(*[]config.ConditionThreshold)(unsafe.Pointer(&in.ConditionThresholds))
 	return nil
 }
 
@@ -988,18 +952,8 @@ func Convert_v1alpha1_ShootCareControllerConfiguration_To_config_ShootCareContro
 func autoConvert_config_ShootCareControllerConfiguration_To_v1alpha1_ShootCareControllerConfiguration(in *config.ShootCareControllerConfiguration, out *ShootCareControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
-	out.StaleExtensionHealthCheckThreshold = (*v1.Duration)(unsafe.Pointer(in.StaleExtensionHealthCheckThreshold))
-	if in.ConditionThresholds != nil {
-		in, out := &in.ConditionThresholds, &out.ConditionThresholds
-		*out = make([]ConditionThreshold, len(*in))
-		for i := range *in {
-			if err := Convert_config_ConditionThreshold_To_v1alpha1_ConditionThreshold(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.ConditionThresholds = nil
-	}
+	out.StaleExtensionHealthChecks = (*StaleExtensionHealthChecks)(unsafe.Pointer(in.StaleExtensionHealthChecks))
+	out.ConditionThresholds = *(*[]ConditionThreshold)(unsafe.Pointer(&in.ConditionThresholds))
 	return nil
 }
 
@@ -1104,6 +1058,28 @@ func autoConvert_config_ShootedSeedRegistrationControllerConfiguration_To_v1alph
 // Convert_config_ShootedSeedRegistrationControllerConfiguration_To_v1alpha1_ShootedSeedRegistrationControllerConfiguration is an autogenerated conversion function.
 func Convert_config_ShootedSeedRegistrationControllerConfiguration_To_v1alpha1_ShootedSeedRegistrationControllerConfiguration(in *config.ShootedSeedRegistrationControllerConfiguration, out *ShootedSeedRegistrationControllerConfiguration, s conversion.Scope) error {
 	return autoConvert_config_ShootedSeedRegistrationControllerConfiguration_To_v1alpha1_ShootedSeedRegistrationControllerConfiguration(in, out, s)
+}
+
+func autoConvert_v1alpha1_StaleExtensionHealthChecks_To_config_StaleExtensionHealthChecks(in *StaleExtensionHealthChecks, out *config.StaleExtensionHealthChecks, s conversion.Scope) error {
+	out.Enabled = in.Enabled
+	out.Threshold = (*v1.Duration)(unsafe.Pointer(in.Threshold))
+	return nil
+}
+
+// Convert_v1alpha1_StaleExtensionHealthChecks_To_config_StaleExtensionHealthChecks is an autogenerated conversion function.
+func Convert_v1alpha1_StaleExtensionHealthChecks_To_config_StaleExtensionHealthChecks(in *StaleExtensionHealthChecks, out *config.StaleExtensionHealthChecks, s conversion.Scope) error {
+	return autoConvert_v1alpha1_StaleExtensionHealthChecks_To_config_StaleExtensionHealthChecks(in, out, s)
+}
+
+func autoConvert_config_StaleExtensionHealthChecks_To_v1alpha1_StaleExtensionHealthChecks(in *config.StaleExtensionHealthChecks, out *StaleExtensionHealthChecks, s conversion.Scope) error {
+	out.Enabled = in.Enabled
+	out.Threshold = (*v1.Duration)(unsafe.Pointer(in.Threshold))
+	return nil
+}
+
+// Convert_config_StaleExtensionHealthChecks_To_v1alpha1_StaleExtensionHealthChecks is an autogenerated conversion function.
+func Convert_config_StaleExtensionHealthChecks_To_v1alpha1_StaleExtensionHealthChecks(in *config.StaleExtensionHealthChecks, out *StaleExtensionHealthChecks, s conversion.Scope) error {
+	return autoConvert_config_StaleExtensionHealthChecks_To_v1alpha1_StaleExtensionHealthChecks(in, out, s)
 }
 
 func autoConvert_v1alpha1_TLSServer_To_config_TLSServer(in *TLSServer, out *config.TLSServer, s conversion.Scope) error {

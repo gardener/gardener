@@ -184,13 +184,13 @@ var _ = Describe("Fake ClientSet", func() {
 	It("should do nothing on Start", func() {
 		cs := fake.NewClientSet()
 
-		cs.Start(context.Background().Done())
+		cs.Start(context.Background())
 	})
 
 	It("should do nothing on WaitForCacheSync", func() {
 		cs := fake.NewClientSet()
 
-		Expect(cs.WaitForCacheSync(context.Background().Done())).To(BeTrue())
+		Expect(cs.WaitForCacheSync(context.Background())).To(BeTrue())
 	})
 
 	It("should do nothing on ForwardPodPort", func() {
@@ -202,7 +202,7 @@ var _ = Describe("Fake ClientSet", func() {
 	})
 
 	It("should do nothing on CheckForwardPodPort", func() {
-		cs := fake.NewClientSet()
+		cs := builder.Build()
 
 		Expect(cs.CheckForwardPodPort("", "", 0, 0)).To(Succeed())
 	})

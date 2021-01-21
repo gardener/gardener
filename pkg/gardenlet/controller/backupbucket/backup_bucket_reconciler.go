@@ -45,7 +45,6 @@ import (
 
 // reconciler implements the reconcile.Reconcile interface for backupBucket reconciliation.
 type reconciler struct {
-	ctx       context.Context
 	clientMap clientmap.ClientMap
 	recorder  record.EventRecorder
 	logger    *logrus.Logger
@@ -53,9 +52,8 @@ type reconciler struct {
 }
 
 // newReconciler returns the new backupBucker reconciler.
-func newReconciler(ctx context.Context, clientMap clientmap.ClientMap, recorder record.EventRecorder, config *config.GardenletConfiguration) reconcile.Reconciler {
+func newReconciler(clientMap clientmap.ClientMap, recorder record.EventRecorder, config *config.GardenletConfiguration) reconcile.Reconciler {
 	return &reconciler{
-		ctx:       ctx,
 		clientMap: clientMap,
 		recorder:  recorder,
 		logger:    logger.Logger,
@@ -63,14 +61,14 @@ func newReconciler(ctx context.Context, clientMap clientmap.ClientMap, recorder 
 	}
 }
 
-func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	gardenClient, err := r.clientMap.GetClient(r.ctx, keys.ForGarden())
+func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
 	bb := &gardencorev1beta1.BackupBucket{}
-	if err := gardenClient.Client().Get(r.ctx, request.NamespacedName, bb); err != nil {
+	if err := gardenClient.Client().Get(ctx, request.NamespacedName, bb); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Debugf("[BACKUPBUCKET RECONCILE] %s - skipping because BackupBucket has been deleted", request.NamespacedName)
 			return reconcile.Result{}, nil
@@ -82,30 +80,30 @@ func (r *reconciler) Reconcile(request reconcile.Request) (reconcile.Result, err
 	if bb.Spec.SeedName == nil {
 		message := "Cannot reconcile BackupBucket: Waiting for BackupBucket to get scheduled on a Seed"
 		r.recorder.Event(bb, corev1.EventTypeWarning, "OperationPending", message)
-		return reconcile.Result{}, utilerrors.WithSuppressed(fmt.Errorf("backupBucket %s has not yet been scheduled on a Seed", bb.Name), updateBackupBucketStatusPending(r.ctx, gardenClient.Client(), bb, message))
+		return reconcile.Result{}, utilerrors.WithSuppressed(fmt.Errorf("backupBucket %s has not yet been scheduled on a Seed", bb.Name), updateBackupBucketStatusPending(ctx, gardenClient.Client(), bb, message))
 	}
 
 	if bb.DeletionTimestamp != nil {
-		return r.deleteBackupBucket(gardenClient, bb)
+		return r.deleteBackupBucket(ctx, gardenClient, bb)
 	}
 	// When a BackupBucket deletion timestamp is not set we need to create/reconcile the backup bucket.
-	return r.reconcileBackupBucket(gardenClient, bb)
+	return r.reconcileBackupBucket(ctx, gardenClient, bb)
 }
 
-func (r *reconciler) reconcileBackupBucket(gardenClient kubernetes.Interface, backupBucket *gardencorev1beta1.BackupBucket) (reconcile.Result, error) {
+func (r *reconciler) reconcileBackupBucket(ctx context.Context, gardenClient kubernetes.Interface, backupBucket *gardencorev1beta1.BackupBucket) (reconcile.Result, error) {
 	backupBucketLogger := logger.NewFieldLogger(logger.Logger, "backupbucket", backupBucket.Name)
 
-	if err := controllerutils.EnsureFinalizer(r.ctx, gardenClient.DirectClient(), backupBucket, gardencorev1beta1.GardenerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, gardenClient.DirectClient(), backupBucket, gardencorev1beta1.GardenerName); err != nil {
 		backupBucketLogger.Errorf("Failed to ensure gardener finalizer on backupbucket: %+v", err)
 		return reconcile.Result{}, err
 	}
 
-	if updateErr := updateBackupBucketStatusProcessing(r.ctx, gardenClient.DirectClient(), backupBucket, "Reconciliation of Backup Bucket state in progress.", 2); updateErr != nil {
+	if updateErr := updateBackupBucketStatusProcessing(ctx, gardenClient.DirectClient(), backupBucket, "Reconciliation of Backup Bucket state in progress.", 2); updateErr != nil {
 		backupBucketLogger.Errorf("Could not update the BackupBucket status after reconciliation start: %+v", updateErr)
 		return reconcile.Result{}, updateErr
 	}
 
-	secret, err := common.GetSecretFromSecretRef(r.ctx, gardenClient.Client(), &backupBucket.Spec.SecretRef)
+	secret, err := common.GetSecretFromSecretRef(ctx, gardenClient.Client(), &backupBucket.Spec.SecretRef)
 	if err != nil {
 		msg := fmt.Sprintf("Failed to get backup secret (%s/%s): %+v", backupBucket.Spec.SecretRef.Namespace, backupBucket.Spec.SecretRef.Name, err)
 		backupBucketLogger.Error(msg)
@@ -113,18 +111,18 @@ func (r *reconciler) reconcileBackupBucket(gardenClient kubernetes.Interface, ba
 		return reconcile.Result{}, err
 	}
 
-	if err := controllerutils.EnsureFinalizer(r.ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 		backupBucketLogger.Errorf("Failed to ensure external gardener finalizer on referred secret: %+v", err)
 		return reconcile.Result{}, err
 	}
 
-	seedClient, err := r.clientMap.GetClient(r.ctx, keys.ForSeedWithName(*backupBucket.Spec.SeedName))
+	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(*backupBucket.Spec.SeedName))
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get seed client: %w", err)
 	}
 
 	a := newActuator(gardenClient, seedClient, backupBucket, r.logger)
-	if err := a.Reconcile(r.ctx); err != nil {
+	if err := a.Reconcile(ctx); err != nil {
 		backupBucketLogger.Errorf("Failed to reconcile backup bucket: %+v", err)
 
 		reconcileErr := &gardencorev1beta1.LastError{
@@ -133,14 +131,14 @@ func (r *reconciler) reconcileBackupBucket(gardenClient kubernetes.Interface, ba
 		}
 		r.recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", reconcileErr.Description)
 
-		if updateErr := updateBackupBucketStatusError(r.ctx, gardenClient.DirectClient(), backupBucket, reconcileErr.Description+" Operation will be retried.", reconcileErr); updateErr != nil {
+		if updateErr := updateBackupBucketStatusError(ctx, gardenClient.DirectClient(), backupBucket, reconcileErr.Description+" Operation will be retried.", reconcileErr); updateErr != nil {
 			backupBucketLogger.Errorf("Could not update the BackupBucket status after deletion error: %+v", updateErr)
 			return reconcile.Result{}, updateErr
 		}
 		return reconcile.Result{}, errors.New(reconcileErr.Description)
 	}
 
-	if updateErr := updateBackupBucketStatusSucceeded(r.ctx, gardenClient.DirectClient(), backupBucket, "Backup Bucket has been successfully reconciled."); updateErr != nil {
+	if updateErr := updateBackupBucketStatusSucceeded(ctx, gardenClient.DirectClient(), backupBucket, "Backup Bucket has been successfully reconciled."); updateErr != nil {
 		backupBucketLogger.Errorf("Could not update the Shoot status after reconciliation success: %+v", updateErr)
 		return reconcile.Result{}, updateErr
 	}
@@ -148,21 +146,21 @@ func (r *reconciler) reconcileBackupBucket(gardenClient kubernetes.Interface, ba
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) deleteBackupBucket(gardenClient kubernetes.Interface, backupBucket *gardencorev1beta1.BackupBucket) (reconcile.Result, error) {
+func (r *reconciler) deleteBackupBucket(ctx context.Context, gardenClient kubernetes.Interface, backupBucket *gardencorev1beta1.BackupBucket) (reconcile.Result, error) {
 	backupBucketLogger := logger.NewFieldLogger(r.logger, "backupbucket", backupBucket.Name)
 	if !sets.NewString(backupBucket.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 		backupBucketLogger.Debug("Do not need to do anything as the BackupBucket does not have my finalizer")
 		return reconcile.Result{}, nil
 	}
 
-	if updateErr := updateBackupBucketStatusProcessing(r.ctx, gardenClient.DirectClient(), backupBucket, "Deletion of Backup Bucket in progress.", 2); updateErr != nil {
+	if updateErr := updateBackupBucketStatusProcessing(ctx, gardenClient.DirectClient(), backupBucket, "Deletion of Backup Bucket in progress.", 2); updateErr != nil {
 		backupBucketLogger.Errorf("Could not update the BackupBucket status after deletion start: %+v", updateErr)
 		return reconcile.Result{}, updateErr
 	}
 
 	associatedBackupEntries := make([]string, 0)
 	backupEntryList := &gardencorev1beta1.BackupEntryList{}
-	if err := gardenClient.DirectClient().List(r.ctx, backupEntryList); err != nil {
+	if err := gardenClient.DirectClient().List(ctx, backupEntryList); err != nil {
 		backupBucketLogger.Errorf("Could not list the backup entries associated with backupbucket: %s", err)
 		return reconcile.Result{}, err
 	}
@@ -183,13 +181,13 @@ func (r *reconciler) deleteBackupBucket(gardenClient kubernetes.Interface, backu
 
 	backupBucketLogger.Infof("No BackupEntries are referencing the BackupBucket. Deletion accepted.")
 
-	seedClient, err := r.clientMap.GetClient(r.ctx, keys.ForSeedWithName(*backupBucket.Spec.SeedName))
+	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(*backupBucket.Spec.SeedName))
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get seed client: %w", err)
 	}
 
 	a := newActuator(gardenClient, seedClient, backupBucket, r.logger)
-	if err := a.Delete(r.ctx); err != nil {
+	if err := a.Delete(ctx); err != nil {
 		backupBucketLogger.Errorf("Failed to delete backup bucket: %+v", err)
 
 		deleteErr := &gardencorev1beta1.LastError{
@@ -198,31 +196,31 @@ func (r *reconciler) deleteBackupBucket(gardenClient kubernetes.Interface, backu
 		}
 		r.recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, "%s", deleteErr.Description)
 
-		if updateErr := updateBackupBucketStatusError(r.ctx, gardenClient.DirectClient(), backupBucket, deleteErr.Description+" Operation will be retried.", deleteErr); updateErr != nil {
+		if updateErr := updateBackupBucketStatusError(ctx, gardenClient.DirectClient(), backupBucket, deleteErr.Description+" Operation will be retried.", deleteErr); updateErr != nil {
 			backupBucketLogger.Errorf("Could not update the BackupBucket status after deletion error: %+v", updateErr)
 			return reconcile.Result{}, updateErr
 		}
 		return reconcile.Result{}, errors.New(deleteErr.Description)
 	}
-	if updateErr := updateBackupBucketStatusSucceeded(r.ctx, gardenClient.DirectClient(), backupBucket, "Backup Bucket has been successfully deleted."); updateErr != nil {
+	if updateErr := updateBackupBucketStatusSucceeded(ctx, gardenClient.DirectClient(), backupBucket, "Backup Bucket has been successfully deleted."); updateErr != nil {
 		backupBucketLogger.Errorf("Could not update the BackupBucket status after deletion successful: %+v", updateErr)
 		return reconcile.Result{}, updateErr
 	}
 
 	backupBucketLogger.Infof("Successfully deleted backup bucket %q", backupBucket.Name)
 
-	secret, err := common.GetSecretFromSecretRef(r.ctx, gardenClient.Client(), &backupBucket.Spec.SecretRef)
+	secret, err := common.GetSecretFromSecretRef(ctx, gardenClient.Client(), &backupBucket.Spec.SecretRef)
 	if err != nil {
 		backupBucketLogger.Errorf("Failed to get referred secret: %+v", err)
 		return reconcile.Result{}, err
 	}
 
-	if err := controllerutils.RemoveFinalizer(r.ctx, gardenClient.DirectClient(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+	if err := controllerutils.RemoveFinalizer(ctx, gardenClient.DirectClient(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 		backupBucketLogger.Errorf("Failed to remove external gardener finalizer on referred secret: %+v", err)
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, controllerutils.RemoveGardenerFinalizer(r.ctx, gardenClient.DirectClient(), backupBucket)
+	return reconcile.Result{}, controllerutils.RemoveGardenerFinalizer(ctx, gardenClient.DirectClient(), backupBucket)
 }
 
 func updateBackupBucketStatusProcessing(ctx context.Context, c client.Client, bb *gardencorev1beta1.BackupBucket, message string, progress int32) error {

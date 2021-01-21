@@ -26,8 +26,10 @@ import (
 )
 
 // WorkerLister helps list Workers.
+// All objects returned here must be treated as read-only.
 type WorkerLister interface {
 	// List lists all Workers in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.Worker, err error)
 	// Workers returns an object that can list and get Workers.
 	Workers(namespace string) WorkerNamespaceLister
@@ -58,10 +60,13 @@ func (s *workerLister) Workers(namespace string) WorkerNamespaceLister {
 }
 
 // WorkerNamespaceLister helps list and get Workers.
+// All objects returned here must be treated as read-only.
 type WorkerNamespaceLister interface {
 	// List lists all Workers in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.Worker, err error)
 	// Get retrieves the Worker from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.Worker, error)
 	WorkerNamespaceListerExpansion
 }

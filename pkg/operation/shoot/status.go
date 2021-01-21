@@ -18,8 +18,6 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // Status is the status of a shoot used in the common.ShootStatus label.
@@ -58,14 +56,6 @@ func (s Status) OrWorse(other Status) Status {
 		return other
 	}
 	return s
-}
-
-// StatusLabelTransform transforms the shoot labels depending on the given Status.
-func StatusLabelTransform(status Status) func(*gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-	return func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-		kubernetes.SetMetaDataLabel(&shoot.ObjectMeta, common.ShootStatus, string(status))
-		return shoot, nil
-	}
 }
 
 // ConditionStatusToStatus converts the given ConditionStatus to a shoot label Status.

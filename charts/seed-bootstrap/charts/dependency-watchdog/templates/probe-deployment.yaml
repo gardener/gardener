@@ -8,7 +8,7 @@ metadata:
     role: dependency-watchdog-probe
 spec:
   replicas: {{ .Values.replicas }}
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   selector:
     matchLabels:
       role: dependency-watchdog-probe

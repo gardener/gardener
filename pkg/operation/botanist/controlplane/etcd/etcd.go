@@ -223,7 +223,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from the Shoot's Kubernetes API Server.",
 		}
 		networkPolicy.Labels = map[string]string{
-			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		}
 		networkPolicy.Spec.PodSelector = metav1.LabelSelector{
 			MatchLabels: map[string]string{
@@ -525,7 +525,7 @@ func (e *etcd) getExistingStatefulSet(ctx context.Context, name string) (*appsv1
 	return nil, found, err
 }
 
-func (e *etcd) getExistingResource(ctx context.Context, name string, obj runtime.Object) (runtime.Object, bool, error) {
+func (e *etcd) getExistingResource(ctx context.Context, name string, obj client.Object) (runtime.Object, bool, error) {
 	if err := e.client.Get(ctx, kutil.Key(e.namespace, name), obj); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return nil, false, err

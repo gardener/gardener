@@ -15,16 +15,16 @@
 package infrastructure
 
 import (
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
-
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
+	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 const (
@@ -97,18 +97,14 @@ func add(mgr manager.Manager, args AddArgs) error {
 	// do not watch cluster if respect operation annotation to prevent unwanted reconciliations in case the operation annotation
 	// is already present & the extension CRD is already deleting
 	if args.IgnoreOperationAnnotation {
-		if err := ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Cluster{}}, &extensionshandler.EnqueueRequestsFromMapFunc{
-			ToRequests: extensionshandler.SimpleMapper(ClusterToInfrastructureMapper(predicates), extensionshandler.UpdateWithNew),
-		}); err != nil {
+		if err := ctrl.Watch(
+			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
+			extensionshandler.EnqueueRequestsFromMapper(ClusterToInfrastructureMapper(predicates), extensionshandler.UpdateWithNew),
+		); err != nil {
 			return err
 		}
 	}
 
 	// Add additional watches to the controller besides the standard one.
-	err = args.WatchBuilder.AddToController(ctrl)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return args.WatchBuilder.AddToController(ctrl)
 }

@@ -117,7 +117,6 @@ func NewOptions(out, errOut io.Writer) *Options {
 				gardencorev1alpha1.SchemeGroupVersion,
 				settingsv1alpha1.SchemeGroupVersion,
 			),
-			genericoptions.NewProcessInfo("gardener-apiserver", "garden"),
 		),
 		ServerRunOptions: genericoptions.NewServerRunOptions(),
 		ExtraOptions:     &apiserver.ExtraOptions{},
@@ -316,7 +315,7 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	if err := o.Recommended.Authorization.ApplyTo(&gardenerAPIServerConfig.Authorization); err != nil {
 		return err
 	}
-	if err := o.Recommended.Audit.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.ClientConfig, gardenerAPIServerConfig.SharedInformerFactory, o.Recommended.ProcessInfo, o.Recommended.Webhook); err != nil {
+	if err := o.Recommended.Audit.ApplyTo(&gardenerAPIServerConfig.Config); err != nil {
 		return err
 	}
 	if err := o.Recommended.Features.ApplyTo(&gardenerAPIServerConfig.Config); err != nil {

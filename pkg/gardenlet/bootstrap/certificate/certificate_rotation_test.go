@@ -21,8 +21,19 @@ import (
 	"net"
 	"time"
 
+	"github.com/golang/mock/gomock"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
+	certificatesv1 "k8s.io/api/certificates/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -35,24 +46,14 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
-
-	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Certificates", func() {
 	var (
 		log logrus.FieldLogger = logger.NewNopLogger()
-		ctx                    = context.TODO()
+
+		ctx       context.Context
+		ctxCancel context.CancelFunc
 
 		ctrl                *gomock.Controller
 		mockGardenInterface *mock.MockInterface
@@ -73,28 +74,28 @@ var _ = Describe("Certificates", func() {
 			},
 		}
 
-		approvedCSR = certificatesv1beta1.CertificateSigningRequest{
+		approvedCSR = certificatesv1.CertificateSigningRequest{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "watched-csr",
 			},
-			Status: certificatesv1beta1.CertificateSigningRequestStatus{
-				Conditions: []certificatesv1beta1.CertificateSigningRequestCondition{
+			Status: certificatesv1.CertificateSigningRequestStatus{
+				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
-						Type: certificatesv1beta1.CertificateApproved,
+						Type: certificatesv1.CertificateApproved,
 					},
 				},
 				Certificate: []byte("my-cert"),
 			},
 		}
 
-		deniedCSR = certificatesv1beta1.CertificateSigningRequest{
+		deniedCSR = certificatesv1.CertificateSigningRequest{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "watched-csr",
 			},
-			Status: certificatesv1beta1.CertificateSigningRequestStatus{
-				Conditions: []certificatesv1beta1.CertificateSigningRequestCondition{
+			Status: certificatesv1.CertificateSigningRequestStatus{
+				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
-						Type: certificatesv1beta1.CertificateDenied,
+						Type: certificatesv1.CertificateDenied,
 					},
 				},
 			},
@@ -105,11 +106,12 @@ var _ = Describe("Certificates", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		mockSeedInterface = mock.NewMockInterface(ctrl)
 		mockSeedClient = mockclient.NewMockClient(ctrl)
-		// mockSeedInterface.EXPECT().Client().Return(mockSeedClient).AnyTimes()
+		ctx, ctxCancel = context.WithTimeout(context.Background(), 1*time.Minute)
 	})
 
 	AfterEach(func() {
 		ctrl.Finish()
+		ctxCancel()
 	})
 
 	Describe("#rotateCertificate", func() {
@@ -151,7 +153,7 @@ var _ = Describe("Certificates", func() {
 			fakeClientMap := fakeclientmap.NewClientMap().
 				AddClient(keys.ForGarden(), mockGardenInterface)
 
-			err := rotateCertificate(context.TODO(), log, fakeClientMap, mockSeedClient, gardenClientConnection, &certificateSubject, []string{}, []net.IP{})
+			err := rotateCertificate(ctx, log, fakeClientMap, mockSeedClient, gardenClientConnection, &certificateSubject, []string{}, []net.IP{})
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -162,7 +164,7 @@ var _ = Describe("Certificates", func() {
 				AddClient(keys.ForGarden(), mockGardenInterface).
 				AddClient(keys.ForSeed(seed), mockSeedInterface)
 
-			err := rotateCertificate(context.TODO(), log, fakeClientMap, mockSeedClient, gardenClientConnection, &certificateSubject, []string{}, []net.IP{})
+			err := rotateCertificate(ctx, log, fakeClientMap, mockSeedClient, gardenClientConnection, &certificateSubject, []string{}, []net.IP{})
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -173,7 +175,7 @@ var _ = Describe("Certificates", func() {
 				AddClient(keys.ForGarden(), mockGardenInterface).
 				AddClient(keys.ForSeed(seed), mockSeedInterface)
 
-			err := rotateCertificate(context.TODO(), log, fakeClientMap, mockSeedClient, gardenClientConnection, nil, x509DnsNames, x509IpAddresses)
+			err := rotateCertificate(ctx, log, fakeClientMap, mockSeedClient, gardenClientConnection, nil, x509DnsNames, x509IpAddresses)
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -224,7 +226,7 @@ users:
 					return nil
 				})
 
-				cert, err := getCurrentCertificate(context.TODO(), log, mockSeedClient, gardenClientConnection)
+				cert, err := getCurrentCertificate(ctx, log, mockSeedClient, gardenClientConnection)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(cert).ToNot(BeNil())
 			})
@@ -234,7 +236,7 @@ users:
 				secretNotFoundErr := apierrors.NewNotFound(secretGroupResource, gardenClientConnection.KubeconfigSecret.Name)
 				mockSeedClient.EXPECT().Get(ctx, kutil.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(secretNotFoundErr)
 
-				_, err := getCurrentCertificate(context.TODO(), log, mockSeedClient, gardenClientConnection)
+				_, err := getCurrentCertificate(ctx, log, mockSeedClient, gardenClientConnection)
 				Expect(err).To(HaveOccurred())
 			})
 
@@ -249,7 +251,7 @@ users:
 					return nil
 				})
 
-				_, err := getCurrentCertificate(context.TODO(), log, mockSeedClient, gardenClientConnection)
+				_, err := getCurrentCertificate(ctx, log, mockSeedClient, gardenClientConnection)
 				Expect(err).To(HaveOccurred())
 			})
 
@@ -264,7 +266,7 @@ users:
 					return nil
 				})
 
-				_, err := getCurrentCertificate(context.TODO(), log, mockSeedClient, gardenClientConnection)
+				_, err := getCurrentCertificate(ctx, log, mockSeedClient, gardenClientConnection)
 				Expect(err).To(HaveOccurred())
 			})
 		})
@@ -278,7 +280,7 @@ users:
 					return nil
 				})
 
-				seeds, err := getTargetedSeeds(context.TODO(), mockSeedClient, nil, seedName)
+				seeds, err := getTargetedSeeds(ctx, mockSeedClient, nil, seedName)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(seeds).To(HaveLen(1))
 				Expect(seeds[0]).To(Equal(gardencorev1beta1.Seed{
@@ -313,7 +315,7 @@ users:
 					return nil
 				})
 
-				seeds, err := getTargetedSeeds(context.TODO(), mockSeedClient, seedSelector, seedName)
+				seeds, err := getTargetedSeeds(ctx, mockSeedClient, seedSelector, seedName)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(seeds).To(HaveLen(2))
 				Expect(seeds).To(Equal(items))
@@ -322,7 +324,6 @@ users:
 
 		Describe("#waitForCertificateRotation", func() {
 			var (
-				ctx            = context.TODO()
 				testKubeconfig string
 			)
 
@@ -357,7 +358,7 @@ users:
 					return nil
 				})
 
-				subject, dnsSANs, ipSANs, _, err := waitForCertificateRotation(context.TODO(), log, mockSeedClient, gardenClientConnection, time.Now)
+				subject, dnsSANs, ipSANs, _, err := waitForCertificateRotation(ctx, log, mockSeedClient, gardenClientConnection, time.Now)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(subject).ToNot(BeNil())
 				Expect(subject.CommonName).To(Equal(x509CommonName))
@@ -383,7 +384,7 @@ users:
 					return nil
 				})
 
-				_, _, _, _, err := waitForCertificateRotation(context.TODO(), log, mockSeedClient, gardenClientConnection, time.Now)
+				_, _, _, _, err := waitForCertificateRotation(ctx, log, mockSeedClient, gardenClientConnection, time.Now)
 				Expect(err).To(HaveOccurred())
 			})
 		})

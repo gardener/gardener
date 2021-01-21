@@ -134,7 +134,7 @@ func (a *genericActuator) cleanupMachineDeployments(ctx context.Context, logger 
 	return nil
 }
 
-func (a *genericActuator) listMachineClassNames(ctx context.Context, namespace string, machineClassList runtime.Object) (sets.String, error) {
+func (a *genericActuator) listMachineClassNames(ctx context.Context, namespace string, machineClassList client.ObjectList) (sets.String, error) {
 	if err := a.client.List(ctx, machineClassList, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
@@ -156,19 +156,15 @@ func (a *genericActuator) listMachineClassNames(ctx context.Context, namespace s
 	return classNames, nil
 }
 
-func (a *genericActuator) cleanupMachineClasses(ctx context.Context, logger logr.Logger, namespace string, machineClassList runtime.Object, wantedMachineDeployments worker.MachineDeployments) error {
+func (a *genericActuator) cleanupMachineClasses(ctx context.Context, logger logr.Logger, namespace string, machineClassList client.ObjectList, wantedMachineDeployments worker.MachineDeployments) error {
 	logger.Info("Cleaning up machine classes")
 	if err := a.client.List(ctx, machineClassList, client.InNamespace(namespace)); err != nil {
 		return err
 	}
 
-	return meta.EachListItem(machineClassList, func(machineClass runtime.Object) error {
-		accessor, err := meta.Accessor(machineClass)
-		if err != nil {
-			return err
-		}
-
-		if !wantedMachineDeployments.HasClass(accessor.GetName()) {
+	return meta.EachListItem(machineClassList, func(obj runtime.Object) error {
+		machineClass := obj.(client.Object)
+		if !wantedMachineDeployments.HasClass(machineClass.GetName()) {
 			logger.Info("Deleting machine class", "machineClass", machineClass)
 			if err := a.client.Delete(ctx, machineClass); err != nil {
 				return err
@@ -257,7 +253,7 @@ func (a *genericActuator) shallowDeleteMachineClassSecrets(ctx context.Context, 
 	return nil
 }
 
-// cleanupMachineClassSecrets deletes MachineSets having number of desired and actual replicas equaling 0
+// cleanupMachineSets deletes MachineSets having number of desired and actual replicas equaling 0
 func (a *genericActuator) cleanupMachineSets(ctx context.Context, logger logr.Logger, namespace string) error {
 	logger.Info("Cleaning up machine sets")
 	machineSetList := &machinev1alpha1.MachineSetList{}
@@ -279,7 +275,7 @@ func (a *genericActuator) cleanupMachineSets(ctx context.Context, logger logr.Lo
 	return nil
 }
 
-func (a *genericActuator) shallowDeleteAllObjects(ctx context.Context, logger logr.Logger, namespace string, objectList runtime.Object) error {
+func (a *genericActuator) shallowDeleteAllObjects(ctx context.Context, logger logr.Logger, namespace string, objectList client.ObjectList) error {
 	var objectKind interface{} = strings.TrimSuffix(fmt.Sprintf("%T", objectList), "List")
 	if gvk, err := apiutil.GVKForObject(objectList, a.scheme); err == nil {
 		objectKind = gvk
@@ -291,7 +287,7 @@ func (a *genericActuator) shallowDeleteAllObjects(ctx context.Context, logger lo
 	}
 
 	return meta.EachListItem(objectList, func(obj runtime.Object) error {
-		object := obj.DeepCopyObject()
+		object := obj.(client.Object)
 		if err := extensionscontroller.DeleteAllFinalizers(ctx, a.client, object); err != nil {
 			return err
 		}

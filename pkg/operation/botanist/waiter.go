@@ -21,7 +21,6 @@ import (
 	"net"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -131,13 +130,6 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 	return nil
 }
 
-// WaitForKubeControllerManagerToBeActive waits for the kube controller manager of a Shoot cluster has acquired leader election, thus is active.
-func (b *Botanist) WaitForKubeControllerManagerToBeActive(ctx context.Context) error {
-	b.Shoot.Components.ControlPlane.KubeControllerManager.SetShootClient(b.K8sShootClient.Client())
-
-	return b.Shoot.Components.ControlPlane.KubeControllerManager.WaitForControllerToBeActive(ctx)
-}
-
 // WaitUntilTunnelConnectionExists waits until a port forward connection to the tunnel pod (vpn-shoot or konnectivity-agent) in the kube-system
 // namespace of the Shoot cluster can be established.
 func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
@@ -148,25 +140,6 @@ func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
 		}
 
 		return b.CheckTunnelConnection(ctx, b.Logger, tunnelName)
-	})
-}
-
-// WaitUntilSeedNamespaceDeleted waits until the namespace of the Shoot cluster within the Seed cluster is deleted.
-func (b *Botanist) WaitUntilSeedNamespaceDeleted(ctx context.Context) error {
-	return b.waitUntilNamespaceDeleted(ctx, b.Shoot.SeedNamespace)
-}
-
-// WaitUntilNamespaceDeleted waits until the <namespace> within the Seed cluster is deleted.
-func (b *Botanist) waitUntilNamespaceDeleted(ctx context.Context, namespace string) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 900*time.Second, func(ctx context.Context) (done bool, err error) {
-		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: namespace}, &corev1.Namespace{}); err != nil {
-			if apierrors.IsNotFound(err) {
-				return retry.Ok()
-			}
-			return retry.SevereError(err)
-		}
-		b.Logger.Infof("Waiting until the namespace '%s' has been cleaned up and deleted in the Seed cluster...", namespace)
-		return retry.MinorError(fmt.Errorf("namespace %q is not yet cleaned up", namespace))
 	})
 }
 
@@ -262,29 +235,6 @@ func (b *Botanist) WaitUntilEndpointsDoNotContainPodIPs(ctx context.Context) err
 		}
 
 		return retry.Ok()
-	})
-}
-
-// WaitUntilBackupEntryInGardenReconciled waits until the backup entry within the garden cluster has
-// been reconciled.
-func (b *Botanist) WaitUntilBackupEntryInGardenReconciled(ctx context.Context) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 600*time.Second, func(ctx context.Context) (done bool, err error) {
-		be := &gardencorev1beta1.BackupEntry{}
-		if err := b.K8sGardenClient.DirectClient().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, common.GenerateBackupEntryName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)), be); err != nil {
-			return retry.SevereError(err)
-		}
-		if be.Status.LastOperation != nil {
-			if be.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
-				b.Logger.Info("Backup entry has been successfully reconciled.")
-				return retry.Ok()
-			}
-			if be.Status.LastOperation.State == gardencorev1beta1.LastOperationStateError {
-				b.Logger.Info("Backup entry has been reconciled with error.")
-				return retry.SevereError(errors.New(be.Status.LastError.Description))
-			}
-		}
-		b.Logger.Info("Waiting until the backup entry has been reconciled in the Garden cluster...")
-		return retry.MinorError(fmt.Errorf("backup entry %q has not yet been reconciled", be.Name))
 	})
 }
 

@@ -17,16 +17,16 @@ package backupbucket
 import (
 	"context"
 
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
+	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 type secretToBackupBucketMapper struct {
@@ -48,12 +48,8 @@ func (m *secretToBackupBucketMapper) InjectFunc(f inject.Func) error {
 	return nil
 }
 
-func (m *secretToBackupBucketMapper) Map(obj handler.MapObject) []reconcile.Request {
-	if obj.Object == nil {
-		return nil
-	}
-
-	secret, ok := obj.Object.(*corev1.Secret)
+func (m *secretToBackupBucketMapper) Map(obj client.Object) []reconcile.Request {
+	secret, ok := obj.(*corev1.Secret)
 	if !ok {
 		return nil
 	}
@@ -80,6 +76,6 @@ func (m *secretToBackupBucketMapper) Map(obj handler.MapObject) []reconcile.Requ
 
 // SecretToBackupBucketMapper returns a mapper that returns requests for BackupBucket whose
 // referenced secrets have been modified.
-func SecretToBackupBucketMapper(predicates []predicate.Predicate) handler.Mapper {
+func SecretToBackupBucketMapper(predicates []predicate.Predicate) extensionshandler.Mapper {
 	return &secretToBackupBucketMapper{predicates: predicates}
 }

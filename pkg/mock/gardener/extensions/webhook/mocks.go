@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	runtime "k8s.io/apimachinery/pkg/runtime"
+	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // MockMutator is a mock of Mutator interface.
@@ -36,7 +36,7 @@ func (m *MockMutator) EXPECT() *MockMutatorMockRecorder {
 }
 
 // Mutate mocks base method.
-func (m *MockMutator) Mutate(arg0 context.Context, arg1, arg2 runtime.Object) error {
+func (m *MockMutator) Mutate(arg0 context.Context, arg1, arg2 client.Object) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Mutate", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)

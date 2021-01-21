@@ -26,10 +26,13 @@ import (
 )
 
 // ProjectLister helps list Projects.
+// All objects returned here must be treated as read-only.
 type ProjectLister interface {
 	// List lists all Projects in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*core.Project, err error)
 	// Get retrieves the Project from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*core.Project, error)
 	ProjectListerExpansion
 }

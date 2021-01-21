@@ -26,8 +26,10 @@ import (
 )
 
 // ShootLister helps list Shoots.
+// All objects returned here must be treated as read-only.
 type ShootLister interface {
 	// List lists all Shoots in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.Shoot, err error)
 	// Shoots returns an object that can list and get Shoots.
 	Shoots(namespace string) ShootNamespaceLister
@@ -58,10 +60,13 @@ func (s *shootLister) Shoots(namespace string) ShootNamespaceLister {
 }
 
 // ShootNamespaceLister helps list and get Shoots.
+// All objects returned here must be treated as read-only.
 type ShootNamespaceLister interface {
 	// List lists all Shoots in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1beta1.Shoot, err error)
 	// Get retrieves the Shoot from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1beta1.Shoot, error)
 	ShootNamespaceListerExpansion
 }

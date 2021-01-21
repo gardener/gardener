@@ -23,7 +23,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -146,7 +145,7 @@ func (a *genericActuator) deployMachineSetsAndMachines(ctx context.Context, logg
 	return nil
 }
 
-func (a *genericActuator) waitUntilStatusIsUpdates(ctx context.Context, obj runtime.Object, transform func() error) error {
+func (a *genericActuator) waitUntilStatusIsUpdates(ctx context.Context, obj client.Object, transform func() error) error {
 	return gardeneretry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
 		if err := extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, a.client, obj, transform); err != nil {
 			if apierrors.IsNotFound(err) {

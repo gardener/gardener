@@ -15,6 +15,7 @@
 package kubernetes
 
 import (
+	"context"
 	"sync"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
@@ -159,10 +160,10 @@ func (c *clientSet) DiscoverVersion() (*version.Info, error) {
 
 // Start starts the cache of the ClientSet's controller-runtime client and returns immediately.
 // It must be called first before using the client to retrieve objects from the API server.
-func (c *clientSet) Start(stopCh <-chan struct{}) {
+func (c *clientSet) Start(ctx context.Context) {
 	c.startOnce.Do(func() {
 		go func() {
-			if err := c.cache.Start(stopCh); err != nil {
+			if err := c.cache.Start(ctx); err != nil {
 				logger.Logger.Errorf("cache.Start returned error, which should never happen, ignoring.")
 			}
 		}()
@@ -170,6 +171,6 @@ func (c *clientSet) Start(stopCh <-chan struct{}) {
 }
 
 // WaitForCacheSync waits for the cache of the ClientSet's controller-runtime client to be synced.
-func (c *clientSet) WaitForCacheSync(stopCh <-chan struct{}) bool {
-	return c.cache.WaitForCacheSync(stopCh)
+func (c *clientSet) WaitForCacheSync(ctx context.Context) bool {
+	return c.cache.WaitForCacheSync(ctx)
 }

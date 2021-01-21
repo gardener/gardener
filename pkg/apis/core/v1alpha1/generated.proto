@@ -499,7 +499,7 @@ message ControllerResource {
 // DNS holds information about the provider, the hosted zone id and the domain.
 message DNS {
   // Domain is the external available domain of the Shoot cluster. This domain will be written into the
-  // kubeconfig that is handed out to end-users.
+  // kubeconfig that is handed out to end-users. Once set it is immutable.
   // +optional
   optional string domain = 1;
 
@@ -715,7 +715,7 @@ message HorizontalPodAutoscalerConfig {
 // Ingress configures the Ingress specific settings of the Seed cluster.
 message Ingress {
   // Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-  // to construct ingress URLs for system applications running in Shoot clusters.
+  // to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.
   optional string domain = 1;
 
   // Controller configures a Gardener managed Ingress Controller listening on the ingressDomain
@@ -1681,7 +1681,7 @@ message SeedBackup {
 // SeedDNS contains DNS-relevant information about this seed cluster.
 message SeedDNS {
   // IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-  // to construct ingress URLs for system applications running in Shoot clusters.
+  // to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.
   // This will be removed in the next API version and replaced by spec.ingress.domain.
   // +optional
   optional string ingressDomain = 1;

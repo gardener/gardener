@@ -97,8 +97,12 @@ data:
       shootCare:
         concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.shootCare.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.shootCare.concurrentSyncs }}
         syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.shootCare.syncPeriod is required" .Values.global.gardenlet.config.controllers.shootCare.syncPeriod }}
-        {{- if .Values.global.gardenlet.config.controllers.shootCare.staleExtensionHealthCheckThreshold }}
-        staleExtensionHealthCheckThreshold: {{ .Values.global.gardenlet.config.controllers.shootCare.staleExtensionHealthCheckThreshold }}
+        {{- if .Values.global.gardenlet.config.controllers.shootCare.staleExtensionHealthChecks }}
+        staleExtensionHealthChecks:
+          enabled: {{ required ".Values.global.gardenlet.config.controllers.shootCare.staleExtensionHealthChecks.enabled is required" .Values.global.gardenlet.config.controllers.shootCare.staleExtensionHealthChecks.enabled }}
+          {{- if .Values.global.gardenlet.config.controllers.shootCare.staleExtensionHealthChecks.threshold }}
+          threshold: {{ .Values.global.gardenlet.config.controllers.shootCare.staleExtensionHealthChecks.threshold }}
+          {{- end }}
         {{- end }}
         conditionThresholds:
         {{- if .Values.global.gardenlet.config.controllers.shootCare.conditionThresholds }}

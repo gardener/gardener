@@ -15,23 +15,32 @@
 package health_test
 
 import (
+	"context"
+	"errors"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/logger"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func replicas(i int32) *int32 {
@@ -459,4 +468,105 @@ var _ = Describe("health", func() {
 			ObjectMeta: metav1.ObjectMeta{Generation: 1},
 		}, HaveOccurred()),
 	)
+
+	Describe("CheckTunnelConnection", func() {
+		var (
+			ctrl *gomock.Controller
+
+			ctx        context.Context
+			checkFn    fake.CheckForwardPodPortFn
+			cl         *mockclient.MockClient
+			clientset  *fake.ClientSet
+			logEntry   logrus.FieldLogger
+			tunnelName string
+			tunnelPod  corev1.Pod
+		)
+
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+
+			ctx = context.Background()
+			cl = mockclient.NewMockClient(ctrl)
+			logEntry = logger.NewNopLogger()
+			tunnelName = common.VPNTunnel
+			tunnelPod = corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: metav1.NamespaceSystem,
+					Name:      tunnelName,
+				},
+			}
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		JustBeforeEach(func() {
+			clientset = fake.NewClientSetBuilder().
+				WithClient(cl).
+				WithCheckForwardPodPortFn(checkFn).
+				Build()
+		})
+
+		Context("unavailable tunnel pod", func() {
+			It("should fail because pod does not exist", func() {
+				cl.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PodList{}), client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"app": tunnelName}).Return(nil)
+				done, err := health.CheckTunnelConnection(context.Background(), clientset, logEntry, tunnelName)
+				Expect(done).To(BeFalse())
+				Expect(err).To(HaveOccurred())
+			})
+			It("should fail because pod list returns error", func() {
+				cl.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PodList{}), client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"app": tunnelName}).Return(errors.New("foo"))
+				done, err := health.CheckTunnelConnection(context.Background(), clientset, logEntry, tunnelName)
+				Expect(done).To(BeTrue())
+				Expect(err).To(HaveOccurred())
+			})
+			It("should fail because pod is not running", func() {
+				cl.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PodList{}), client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"app": tunnelName}).DoAndReturn(
+					func(_ context.Context, podList *corev1.PodList, _ ...client.ListOption) error {
+						podList.Items = append(podList.Items, tunnelPod)
+						return nil
+					})
+				done, err := health.CheckTunnelConnection(context.Background(), clientset, logEntry, tunnelName)
+				Expect(done).To(BeFalse())
+				Expect(err).To(HaveOccurred())
+			})
+		})
+		Context("available tunnel pod", func() {
+			BeforeEach(func() {
+				tunnelPod.Status = corev1.PodStatus{
+					Phase: corev1.PodRunning,
+				}
+				cl.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.PodList{}), client.InNamespace(metav1.NamespaceSystem), client.MatchingLabels{"app": tunnelName}).DoAndReturn(
+					func(_ context.Context, podList *corev1.PodList, _ ...client.ListOption) error {
+						podList.Items = append(podList.Items, tunnelPod)
+						return nil
+					})
+			})
+			Context("established connection", func() {
+				BeforeEach(func() {
+					checkFn = func(_, _ string, _, _ int) error {
+						return nil
+					}
+				})
+				It("should succeed because pod is running and connection successful", func() {
+					done, err := health.CheckTunnelConnection(context.Background(), clientset, logEntry, tunnelName)
+					Expect(done).To(BeTrue())
+					Expect(err).ToNot(HaveOccurred())
+				})
+			})
+			Context("broken connection", func() {
+				BeforeEach(func() {
+					checkFn = func(_, _ string, _, _ int) error {
+						return errors.New("foo")
+					}
+				})
+				It("should fail because pod is running and but connection is not established", func() {
+					done, err := health.CheckTunnelConnection(context.Background(), clientset, logEntry, tunnelName)
+					Expect(done).To(BeFalse())
+					Expect(err).To(HaveOccurred())
+				})
+			})
+		})
+	})
 })

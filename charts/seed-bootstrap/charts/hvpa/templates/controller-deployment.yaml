@@ -16,7 +16,7 @@ metadata:
 {{ toYaml .Values.labels | indent 4 }}
 spec:
   replicas: 1
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 1
   selector:
     matchLabels:
       app: hvpa-controller

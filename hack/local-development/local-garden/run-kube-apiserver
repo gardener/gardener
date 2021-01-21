@@ -13,7 +13,7 @@ LABEL=${1:-local-garden}
 
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 
-IMAGE=k8s.gcr.io/kube-apiserver:v1.17.9
+IMAGE=k8s.gcr.io/kube-apiserver:v1.20.2
 MOUNTS="-v $SCRIPTPATH/certificates/certs:/certs -v $SCRIPTPATH/certificates/keys:/keys"
 ETCD_PORT=12379
 LISTEN_PORT="2443"
@@ -36,4 +36,7 @@ docker run -d --name kube-apiserver -l $LABEL $ADD_HOSTS --network gardener-dev 
   --proxy-client-key-file="/keys/front-proxy-client.key" \
   --proxy-client-cert-file="/certs/front-proxy-client.crt" \
   --service-account-key-file="/keys/sa.key" \
+  --service-account-signing-key-file="/keys/sa.key" \
+  --service-account-issuer="local-garden" \
+  --service-cluster-ip-range="10.0.0.0/24" \
   --secure-port=$LISTEN_PORT

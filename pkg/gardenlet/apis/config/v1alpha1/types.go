@@ -27,7 +27,7 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// GardenletConfiguration defines the configuration for the Gardener controller manager.
+// GardenletConfiguration defines the configuration for the Gardenlet.
 type GardenletConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
 	// GardenClientConnection specifies the kubeconfig file and the client connection settings
@@ -66,7 +66,7 @@ type GardenletConfiguration struct {
 	// Default: nil
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
-	// SeedConfig contains configuration for the seed cluster. May not be set if seed selector is set.
+	// SeedConfig contains configuration for the seed cluster. Must not be set if seed selector is set.
 	// In this case the gardenlet creates the `Seed` object itself based on the provided config.
 	// +optional
 	SeedConfig *SeedConfig `json:"seedConfig,omitempty"`
@@ -147,7 +147,7 @@ type GardenletControllerConfiguration struct {
 	// ShootCare defines the configuration of the ShootCare controller.
 	// +optional
 	ShootCare *ShootCareControllerConfiguration `json:"shootCare,omitempty"`
-	// ShootStateSync defines the configuration of the ShootStateController controller
+	// ShootStateSync defines the configuration of the ShootState controller
 	// +optional
 	ShootStateSync *ShootStateSyncControllerConfiguration `json:"shootStateSync,omitempty"`
 	// ShootedSeedRegistration the configuration of the shooted seed registration controller.
@@ -172,7 +172,7 @@ type BackupEntryControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
-	// DeletionGracePeriodHours holds the period in number of hours to delete the Backup Entry after deletion timestamp is set.
+	// DeletionGracePeriodHours holds the period in number of hours to delete the BackupEntry after deletion timestamp is set.
 	// If value is set to 0 then the BackupEntryController will trigger deletion immediately.
 	// +optional
 	DeletionGracePeriodHours *int `json:"deletionGracePeriodHours,omitempty"`
@@ -218,26 +218,6 @@ type SeedControllerConfiguration struct {
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
-}
-
-// ShootStateSyncControllerConfiguration defines the configuration of the ShootState Sync controller.
-type ShootStateSyncControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
-	// SyncPeriod is the duration how often the existing extension resources are synced to the ShootState resource
-	// +optional
-	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
-}
-
-// SeedAPIServerNetworkPolicyControllerConfiguration defines the configuration of the SeedAPIServerNetworkPolicy
-// controller.
-type SeedAPIServerNetworkPolicyControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	// +optional
-	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // ShootControllerConfiguration defines the configuration of the Shoot
@@ -286,16 +266,24 @@ type ShootCareControllerConfiguration struct {
 	// already running on them).
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
-	// StaleExtensionHealthCheckThreshold configures the threshold when Gardener considers a Health check report of an
-	// Extension CRD as outdated.
-	// The StaleExtensionHealthCheckThreshold should have some leeway in case a Gardener extension is temporarily unavailable.
-	// If not set, Gardener does not verify for outdated health check reports. This is for backwards-compatibility reasons
-	// and will become default in a future version.
+	// StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.
 	// +optional
-	StaleExtensionHealthCheckThreshold *metav1.Duration `json:"staleExtensionHealthCheckThreshold,omitempty"`
+	StaleExtensionHealthChecks *StaleExtensionHealthChecks `json:"staleExtensionHealthChecks,omitempty"`
 	// ConditionThresholds defines the condition threshold per condition type.
 	// +optional
 	ConditionThresholds []ConditionThreshold `json:"conditionThresholds,omitempty"`
+}
+
+// StaleExtensionHealthChecks defines the configuration of the check for stale extension health checks.
+type StaleExtensionHealthChecks struct {
+	// Enabled specifies whether the check for stale extensions health checks is enabled.
+	// Defaults to true.
+	Enabled bool `json:"enabled"`
+	// Threshold configures the threshold when gardenlet considers a health check report of an extension CRD as outdated.
+	// The threshold should have some leeway in case a Gardener extension is temporarily unavailable.
+	// Defaults to 5m.
+	// +optional
+	Threshold *metav1.Duration `json:"threshold,omitempty"`
 }
 
 // ShootedSeedRegistrationControllerConfiguration defines the configuration of the shooted seed registration controller.
@@ -313,6 +301,25 @@ type ConditionThreshold struct {
 	Type string `json:"type"`
 	// Duration is the duration how long the condition can stay in the progressing state.
 	Duration metav1.Duration `json:"duration"`
+}
+
+// ShootStateSyncControllerConfiguration defines the configuration of the ShootState Sync controller.
+type ShootStateSyncControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// SyncPeriod is the duration how often the existing extension resources are synced to the ShootState resource
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+}
+
+// SeedAPIServerNetworkPolicyControllerConfiguration defines the configuration of the SeedAPIServerNetworkPolicy
+// controller.
+type SeedAPIServerNetworkPolicyControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // ResourcesConfiguration defines the total capacity for seed resources and the amount reserved for use by Gardener.
