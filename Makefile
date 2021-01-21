@@ -25,6 +25,7 @@ EFFECTIVE_VERSION                   := $(VERSION)-$(shell git rev-parse HEAD)
 REPO_ROOT                           := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 LOCAL_GARDEN_LABEL                  := local-garden
 REMOTE_GARDEN_LABEL                 := remote-garden
+DEV_SCREEN_NAME                     := gardener-dev
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
@@ -96,12 +97,12 @@ remote-garden-down:
 start-all-servers:
 	# start a screen session and open all servers in named tabs
 	echo "starting screen session with all servers"
-	@screen -ls gardener-dev || screen -AdmS gardner-dev -t tab0 bash
-	@screen -S gardener-dev -X screen -t apiserver bash -c "make --debug=j start-apiserver; exec bash"
-	@screen -S gardener-dev -X screen -t controller bash -c "make --debug=j start-controller-manager; exec bash"
-	@screen -S gardener-dev -X screen -t scheduler bash -c "make --debug=j start-scheduler; exec bash"
-	@screen -S gardener-dev -X screen -t gardenlet bash -c "make --debug=j start-gardenlet; exec bash"
-	screen -r gardener-dev
+	@screen -ls $(DEV_SCREEN_NAME) || screen -AdmS $(DEV_SCREEN_NAME) -t tab0 bash
+	@screen -S $(DEV_SCREEN_NAME) -X screen -t apiserver bash -c "make --debug=j start-apiserver; exec bash"
+	@screen -S $(DEV_SCREEN_NAME) -X screen -t controller bash -c "make --debug=j start-controller-manager; exec bash"
+	@screen -S $(DEV_SCREEN_NAME) -X screen -t scheduler bash -c "make --debug=j start-scheduler; exec bash"
+	@screen -S $(DEV_SCREEN_NAME) -X screen -t gardenlet bash -c "make --debug=j start-gardenlet; exec bash"
+	screen -r $(DEV_SCREEN_NAME)
 
 .PHONY: start-apiserver
 start-apiserver:
