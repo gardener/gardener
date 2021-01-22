@@ -246,7 +246,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		gardencorev1beta1.ShootHibernationPossible,
 		gardencorev1beta1.ShootMaintenancePreconditionsSatisfied,
 	} {
-		constraints = append(constraints, gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Conditions, cond))
+		constraints = append(constraints, gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Constraints, cond))
 	}
 
 	seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeedWithName(*shoot.Spec.SeedName))
