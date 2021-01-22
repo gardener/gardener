@@ -65,12 +65,17 @@ start-all:
 	echo "starting screen session with all servers"
 	@screen -ls $(DEV_SCREEN_NAME) || screen -AdmS $(DEV_SCREEN_NAME) -t tab0 bash
 	@screen -S $(DEV_SCREEN_NAME) -X screen -t apiserver bash -c "make --debug=j start-apiserver; exec bash"
+	@./hack/wait-for-apiserver.sh
 	@screen -S $(DEV_SCREEN_NAME) -X screen -t controller bash -c "make --debug=j start-controller-manager; exec bash"
 	@screen -S $(DEV_SCREEN_NAME) -X screen -t scheduler bash -c "make --debug=j start-scheduler; exec bash"
 	@screen -S $(DEV_SCREEN_NAME) -X screen -t gardenlet bash -c "make --debug=j start-gardenlet; exec bash"
-	@screen -S $(DEV_SCREEN_NAME) -X screen -t admission bash -c "make --debug=j admission-controller; exec bash"
-	@screen -S $(DEV_SCREEN_NAME) -X screen -t seed bash -c "make --debug=j seed-admission-controller; exec bash"
+	@screen -S $(DEV_SCREEN_NAME) -X screen -t admission bash -c "make --debug=j start-admission-controller; exec bash"
+	@screen -S $(DEV_SCREEN_NAME) -X screen -t seed-admission bash -c "make --debug=j start-seed-admission-controller; exec bash"
 	screen -r $(DEV_SCREEN_NAME)
+.PHONY: stop-all
+stop-all:
+	@echo "stopping screen session"
+	@screen -XS $(DEV_SCREEN_NAME) quit
 
 .PHONY: start-apiserver
 start-apiserver:
