@@ -71,13 +71,19 @@ spec:
         imagePullPolicy: IfNotPresent
         command:
         - /bin/node_exporter
+        - --web.listen-address=:{{ .Values.ports.metrics }}
         - --path.procfs=/host/proc
         - --path.sysfs=/host/sys
-        - --collector.filesystem.ignored-mount-points=^/.+$
-        - --web.listen-address=:{{ .Values.ports.metrics }}
         - --path.rootfs=/host
         - --log.level=error
-        - --no-collector.netclass
+        - --collector.disable-defaults
+        - --collector.conntrack
+        - --collector.cpu
+        - --collector.filefd
+        - --collector.filesystem
+        - --collector.filesystem.ignored-mount-points=^/.+$
+        - --collector.loadavg
+        - --collector.meminfo
         ports:
         - containerPort: {{ .Values.ports.metrics }}
           protocol: TCP
@@ -97,16 +103,11 @@ spec:
           timeoutSeconds: 5
         resources:
           requests:
-            cpu: 5m
-            memory: 10Mi
+            cpu: 50m
+            memory: 50Mi
           limits:
-          {{- if .Values.global.vpaEnabled }}
-            cpu: 20m
-            memory: 40Mi
-          {{- else }}
-            cpu: 25m
-            memory: 100Mi
-          {{- end }}
+            cpu: 50m
+            memory: 50Mi
         volumeMounts:
         - name: host
           readOnly: true
