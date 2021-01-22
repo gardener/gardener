@@ -138,8 +138,7 @@ spec:
       - command:
         - /gardener-seed-admission-controller
         - --port=10250
-        - --tls-cert-path=/srv/gardener-seed-admission-controller/tls.crt
-        - --tls-private-key-path=/srv/gardener-seed-admission-controller/tls.key
+        - --tls-cert-dir=/srv/gardener-seed-admission-controller
         image: ` + image + `
         imagePullPolicy: IfNotPresent
         name: gardener-seed-admission-controller

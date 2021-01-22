@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/seedadmission"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	"github.com/Masterminds/semver"
@@ -204,8 +205,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 							Command: []string{
 								"/gardener-seed-admission-controller",
 								fmt.Sprintf("--port=%d", port),
-								fmt.Sprintf("--tls-cert-path=%s/%s", volumeMountPath, corev1.TLSCertKey),
-								fmt.Sprintf("--tls-private-key-path=%s/%s", volumeMountPath, corev1.TLSPrivateKeyKey),
+								fmt.Sprintf("--tls-cert-dir=%s", volumeMountPath),
 							},
 							Ports: []corev1.ContainerPort{{
 								ContainerPort: int32(port),
@@ -298,7 +298,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 						Service: &admissionregistrationv1beta1.ServiceReference{
 							Name:      service.Name,
 							Namespace: service.Namespace,
-							Path:      pointer.StringPtr("/webhooks/validate-extension-crd-deletion"),
+							Path:      pointer.StringPtr(seedadmission.ExtensionDeletionProtectionWebhookPath),
 						},
 					},
 				},
@@ -329,7 +329,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 						Service: &admissionregistrationv1beta1.ServiceReference{
 							Name:      service.Name,
 							Namespace: service.Namespace,
-							Path:      pointer.StringPtr("/webhooks/validate-extension-crd-deletion"),
+							Path:      pointer.StringPtr(seedadmission.ExtensionDeletionProtectionWebhookPath),
 						},
 					},
 				},

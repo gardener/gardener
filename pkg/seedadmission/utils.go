@@ -25,7 +25,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-func getRequestObject(ctx context.Context, c client.Client, decoder *admission.Decoder, request admission.Request) (runtime.Object, error) {
+func getRequestObject(ctx context.Context, reader client.Reader, decoder *admission.Decoder, request admission.Request) (runtime.Object, error) {
 	var (
 		obj runtime.Object
 		err error
@@ -45,7 +45,7 @@ func getRequestObject(ctx context.Context, c client.Client, decoder *admission.D
 		o := &unstructured.UnstructuredList{}
 		o.SetAPIVersion(request.Kind.Group + "/" + request.Kind.Version)
 		o.SetKind(request.Kind.Kind + "List")
-		err = c.List(ctx, o, client.InNamespace(request.Namespace))
+		err = reader.List(ctx, o, client.InNamespace(request.Namespace))
 		obj = o
 
 	// Older Kubernetes versions don't provide the object neither in OldObject nor in the Object field. In this case
@@ -54,7 +54,7 @@ func getRequestObject(ctx context.Context, c client.Client, decoder *admission.D
 		o := &unstructured.Unstructured{}
 		o.SetAPIVersion(request.Kind.Group + "/" + request.Kind.Version)
 		o.SetKind(request.Kind.Kind)
-		err = c.Get(ctx, kutil.Key(request.Namespace, request.Name), o)
+		err = reader.Get(ctx, kutil.Key(request.Namespace, request.Name), o)
 		obj = o
 	}
 
