@@ -18,7 +18,10 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 // ObjectName returns the name of the given object in the format <namespace>/<name>
@@ -42,4 +45,23 @@ func DeleteObject(ctx context.Context, c client.Client, object client.Object) er
 		return err
 	}
 	return nil
+}
+
+// DeleteObjectsFromListConditionally takes a Kubernetes List object. It iterates over its items and, if provided,
+// executes the predicate function. If it evaluates to true then the object will be deleted.
+func DeleteObjectsFromListConditionally(ctx context.Context, c client.Client, listObj client.ObjectList, predicateFn func(runtime.Object) bool) error {
+	fns := make([]flow.TaskFn, 0, meta.LenList(listObj))
+
+	if err := meta.EachListItem(listObj, func(obj runtime.Object) error {
+		if predicateFn == nil || predicateFn(obj) {
+			fns = append(fns, func(ctx context.Context) error {
+				return client.IgnoreNotFound(c.Delete(ctx, obj.(client.Object)))
+			})
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return flow.Parallel(fns...)(ctx)
 }
