@@ -214,11 +214,15 @@ images:
 - name: fluent-bit-plugin-installer
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluent-bit-to-loki
-  tag: "v0.33.0"
+  tag: "v0.34.0"
 - name: loki
   sourceRepository: github.com/grafana/loki
   repository: grafana/loki
   tag: "1.6.0"
+- name: loki-curator
+  sourceRepository: github.com/gardener/logging
+  repository: eu.gcr.io/gardener-project/gardener/loki-curator
+  tag: "v0.34.0"
 
 # VPA
 - name: vpa-admission-controller

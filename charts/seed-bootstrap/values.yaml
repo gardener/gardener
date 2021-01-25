@@ -116,6 +116,7 @@ allowedMetrics:
   - fluentbit_loki_gardener_errors_total
   - fluentbit_loki_gardener_logs_without_metadata_total
   - fluentbit_loki_gardener_incoming_logs_total
+  - fluentbit_loki_gardener_incoming_logs_with_endpoint_total
   - fluentbit_loki_gardener_forwarded_logs_total
   - fluentbit_loki_gardener_dropped_logs_total
 

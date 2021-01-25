@@ -1,6 +1,7 @@
 global:
   images:
     loki: image-repository:image-tag
+    loki-curator: image-repository:image-tag
   fluentbit:
     labels:
       gardener.cloud/role: logging
@@ -45,12 +46,20 @@ readinessProbe:
 replicas: 1
 
 resources:
-  limits:
-    cpu: 450m
-    memory: 512Mi
-  requests:
-    cpu: 200m
-    memory: 300Mi
+  loki:
+    limits:
+      cpu: 450m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 300Mi
+  curator:
+    limits:
+      cpu: 200m
+      memory: 200Mi
+    requests:
+      cpu: 10m
+      memory: 12Mi 
 
 securityContext:
   fsGroup: 10001
@@ -62,6 +71,8 @@ service:
   type: ClusterIP
   port: 3100
 
+curator:
+  port: 2718
 
 hvpa:
   enabled: false

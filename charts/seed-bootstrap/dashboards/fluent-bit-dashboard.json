@@ -6,6 +6,7 @@
   "editable": true,
   "gnetId": 7752,
   "graphTooltip": 1,
+  "iteration": 1612884134921,
   "links": [],
   "panels": [
     {
@@ -64,7 +65,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_input_bytes_total[$__rate_interval])) by (pod, name)",
+          "expr": "sum(rate(fluentbit_input_bytes_total{pod=~\"$pod\"}[$__rate_interval])) by (pod, name)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -170,7 +171,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_output_proc_bytes_total[$__rate_interval])) by (pod, name)",
+          "expr": "sum(rate(fluentbit_output_proc_bytes_total{pod=~\"$pod\"}[$__rate_interval])) by (pod, name)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -199,6 +200,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:222",
           "format": "Bps",
           "label": null,
           "logBase": 1,
@@ -207,6 +209,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:223",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -274,7 +277,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_input_records_total[$__rate_interval])) by (pod, name)",
+          "expr": "sum(rate(fluentbit_input_records_total{pod=~\"$pod\"}[$__rate_interval])) by (pod, name)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -382,7 +385,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_output_proc_records_total[$__rate_interval])) by (pod, name)",
+          "expr": "sum(rate(fluentbit_output_proc_records_total{pod=~\"$pod\"}[$__rate_interval])) by (pod, name)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -411,6 +414,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:324",
           "format": "rps",
           "label": null,
           "logBase": 1,
@@ -419,6 +423,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:325",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -498,18 +503,24 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_incoming_logs_total[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_loki_gardener_incoming_logs_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "instant": false,
           "interval": "",
-          "legendFormat": "Incoming Logs-{{pod}}",
+          "legendFormat": "Incoming logs-{{pod}}",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_forwarded_logs_total[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_loki_gardener_incoming_logs_with_endpoint_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "instant": false,
           "interval": "",
-          "legendFormat": "Transferred to Promtail-{{pod}}",
+          "legendFormat": "Incoming logs with endpoint-{{pod}}",
           "refId": "B"
+        },
+        {
+          "expr": "sum(rate(fluentbit_loki_gardener_forwarded_logs_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
+          "interval": "",
+          "legendFormat": "Transferred to Promtail-{{pod}}",
+          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -605,33 +616,33 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_dropped_logs_total[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_loki_gardener_dropped_logs_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
-          "legendFormat": "Dropped Logs-{{pod}}",
+          "legendFormat": "Dropped logs-{{pod}}",
           "refId": "C"
         },
         {
-          "expr": "sum(rate(prometheus_target_scrapes_sample_out_of_order_total[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(prometheus_target_scrapes_sample_out_of_order_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
-          "legendFormat": "OutOfOrder Logs-{{pod}}",
+          "legendFormat": "OutOfOrder logs-{{pod}}",
           "refId": "D"
         },
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_logs_without_metadata_total[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_loki_gardener_logs_without_metadata_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
-          "legendFormat": "Missing Metadata-{{pod}}",
+          "legendFormat": "Missing metadata-{{pod}}",
           "refId": "E"
         },
         {
-          "expr": "sum(rate(fluentbit_loki_gardener_errors_total[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(fluentbit_loki_gardener_errors_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
           "legendFormat": "Errors-{{pod}}",
           "refId": "F"
         },
         {
-          "expr": "sum(rate(promtail_dropped_entries_total[$__rate_interval])) by (pod)",
+          "expr": "sum(rate(promtail_dropped_entries_total{pod=~\"$pod\"}[$__rate_interval])) by (pod)",
           "interval": "",
-          "legendFormat": "Promtail Dropped-{{pod}}",
+          "legendFormat": "Promtail dropped-{{pod}}",
           "refId": "G"
         }
       ],
@@ -705,8 +716,8 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 12,
+        "h": 5,
+        "w": 8,
         "x": 0,
         "y": 16
       },
@@ -721,7 +732,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_incoming_logs_total[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(fluentbit_loki_gardener_incoming_logs_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -731,7 +742,98 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "[Output Plugin] Incoming logs",
+      "title": "[Output Plugin] Incoming Logs",
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "delta"
+            ]
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Delta": "Total number of logs",
+              "Field": "Namespace",
+              "Last": "Dropped logs from last 1h",
+              "Mean": "Average number of incoming logs per hour",
+              "Total": ""
+            }
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Namespace": {
+                "aggregations": [],
+                "operation": "aggregate"
+              }
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": null,
+      "description": "Table which shows the total incoming logs with attached endpoint and are ready to be forwarded to the Promtail client",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "filterable": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 8,
+        "y": 16
+      },
+      "hideTimeOverride": true,
+      "id": 63,
+      "interval": "",
+      "options": {
+        "frameIndex": 0,
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "7.2.1",
+      "targets": [
+        {
+          "expr": "sum(increase(fluentbit_loki_gardener_incoming_logs_with_endpoint_total{pod=~\"$pod\"}[$__rate_interval])  != 0) by (host)",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{host}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "[Output Plugin] Incoming Logs With Endpoint",
       "transformations": [
         {
           "id": "reduce",
@@ -796,9 +898,9 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 12,
+        "h": 5,
+        "w": 8,
+        "x": 16,
         "y": 16
       },
       "id": 49,
@@ -809,7 +911,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_forwarded_logs_total[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(fluentbit_loki_gardener_forwarded_logs_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "instant": false,
           "interval": "",
           "legendFormat": "{{host}}",
@@ -887,7 +989,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 22
+        "y": 21
       },
       "hideTimeOverride": true,
       "id": 58,
@@ -899,7 +1001,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(promtail_dropped_entries_total[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(promtail_dropped_entries_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -966,7 +1068,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 22
+        "y": 21
       },
       "hideTimeOverride": true,
       "id": 53,
@@ -978,7 +1080,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_dropped_logs_total[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(fluentbit_loki_gardener_dropped_logs_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1042,7 +1144,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 28
+        "y": 27
       },
       "hideTimeOverride": true,
       "id": 52,
@@ -1053,7 +1155,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_logs_without_metadata_total[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(fluentbit_loki_gardener_logs_without_metadata_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1106,7 +1208,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 28
+        "y": 27
       },
       "hideTimeOverride": true,
       "id": 54,
@@ -1117,7 +1219,7 @@
       "pluginVersion": "7.2.1",
       "targets": [
         {
-          "expr": "sum(increase(fluentbit_loki_gardener_errors_total[$__rate_interval]) != 0) by (host)",
+          "expr": "sum(increase(fluentbit_loki_gardener_errors_total{pod=~\"$pod\"}[$__rate_interval]) != 0) by (host)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1146,10 +1248,42 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": "fluent-bit.+",
+        "current": {
+          "selected": true,
+          "tags": [],
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(pod)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Pod",
+        "multi": true,
+        "name": "pod",
+        "options": [],
+        "query": "label_values(pod)",
+        "refresh": 1,
+        "regex": "fluent-bit.+",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-5m",
     "to": "now"
   },
   "timepicker": {

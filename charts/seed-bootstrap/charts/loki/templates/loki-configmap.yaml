@@ -44,3 +44,15 @@ data:
     table_manager:
       retention_deletes_enabled: true
       retention_period: 360h
+  curator.yaml: |-
+    LogLevel: info
+    DiskPath: /data/loki/chunks
+    TriggerInterval: 1h
+    InodeConfig:
+      MinFreePercentages: 10
+      TargetFreePercentages: 15
+      PageSizeForDeletionPercentages: 1
+    StorageConfig:
+      MinFreePercentages: 10
+      TargetFreePercentages: 15
+      PageSizeForDeletionPercentages: 1

@@ -381,6 +381,9 @@ const (
 	// LokiImageName is the name of the Loki image used for logging
 	LokiImageName = "loki"
 
+	// CuratorImageName is the image of the curator responsible for Loki Disk
+	CuratorImageName = "loki-curator"
+
 	// FluentBitImageName is the image of Fluent-bit image
 	FluentBitImageName = "fluent-bit"
 

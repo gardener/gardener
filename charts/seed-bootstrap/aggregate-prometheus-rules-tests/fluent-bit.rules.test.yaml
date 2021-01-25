@@ -96,25 +96,3 @@ tests:
           aws.
         summary: Errors in Fluent-bit GardenerLoki plugin
 
-- interval: 1m
-  external_labels:
-    seed: aws
-  input_series:
-  # FluentBitGardenerLokiPluginDoesNotSendLogs
-  - series: 'fluentbit_loki_gardener_forwarded_logs_total{pod="fluent-bit-test"}'
-    values: '1+1x3 4+0x30'
-  alert_rule_test:
-  - eval_time: 22m
-    alertname: FluentBitGardenerLokiPluginDoesNotSendLogs
-    exp_alerts:
-    - exp_labels:
-        pod: fluent-bit-test
-        service: logging
-        severity: warning
-        type: seed
-        visibility: operator
-      exp_annotations:
-        description: >
-          fluent-bit-test GardenerLoki plugin on seed: aws
-          does not send logs.
-        summary: Fluent-bit GardenerLoki plugin does not send logs

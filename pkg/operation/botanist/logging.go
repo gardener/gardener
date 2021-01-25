@@ -35,6 +35,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 
 	images, err := b.InjectSeedSeedImages(map[string]interface{}{},
 		common.LokiImageName,
+		common.CuratorImageName,
 	)
 	if err != nil {
 		return err
@@ -59,8 +60,10 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if len(currentResources) != 0 && currentResources[0] != nil {
-			lokiValues["resources"] = currentResources[0]
+		if len(currentResources) != 0 && currentResources["loki"] != nil {
+			lokiValues["resources"] = map[string]interface{}{
+				"loki": currentResources["loki"],
+			}
 		}
 	}
 

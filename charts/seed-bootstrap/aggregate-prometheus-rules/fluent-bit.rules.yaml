@@ -73,22 +73,4 @@ groups:
         description: >
           There are errors in the {{$labels.pod}} GardenerLoki plugin on seed:
           {{$externalLabels.seed}}.
-  
-    - alert: FluentBitGardenerLokiPluginDoesNotSendLogs
-      expr: |
-        sum by (pod) (
-          rate(
-            fluentbit_loki_gardener_forwarded_logs_total[4m]
-          )
-        ) == 0
-      for: 15m
-      labels:
-        severity: warning
-        service: logging
-        type: seed
-        visibility: operator
-      annotations:
-        summary: Fluent-bit GardenerLoki plugin does not send logs
-        description: >
-          {{$labels.pod}} GardenerLoki plugin on seed: {{$externalLabels.seed}}
-          does not send logs.
+

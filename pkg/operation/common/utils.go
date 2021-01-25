@@ -366,14 +366,14 @@ func DeleteSeedLoggingStack(ctx context.Context, k8sClient client.Client) error 
 }
 
 // GetContainerResourcesInStatefulSet  returns the containers resources in StatefulSet
-func GetContainerResourcesInStatefulSet(ctx context.Context, k8sClient client.Client, key client.ObjectKey) ([]*corev1.ResourceRequirements, error) {
+func GetContainerResourcesInStatefulSet(ctx context.Context, k8sClient client.Client, key client.ObjectKey) (map[string]*corev1.ResourceRequirements, error) {
 	statefulSet := &appsv1.StatefulSet{}
-	resourcesPerContainer := make([]*corev1.ResourceRequirements, 0)
+	resourcesPerContainer := make(map[string]*corev1.ResourceRequirements)
 	if err := k8sClient.Get(ctx, key, statefulSet); client.IgnoreNotFound(err) != nil {
 		return nil, err
 	} else if !apierrors.IsNotFound(err) {
 		for _, container := range statefulSet.Spec.Template.Spec.Containers {
-			resourcesPerContainer = append(resourcesPerContainer, container.Resources.DeepCopy())
+			resourcesPerContainer[container.Name] = container.Resources.DeepCopy()
 		}
 		return resourcesPerContainer, nil
 	}
