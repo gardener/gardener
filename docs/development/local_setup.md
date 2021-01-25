@@ -137,8 +137,24 @@ brew install screen
 ```
 
 To install screen on *Debian/Ubuntu*
+
 ```bash
 apt install screen
+```
+
+## NixOS/Nix support
+
+Gardner contains a `shell.nix` file for development purposes. All the required dependencies
+will be automatically installed when your run:
+
+```bash
+nix-shell
+```
+
+You can use this environment from a IDE with commands like:
+
+```bash
+nix-shell --command "make generate"
 ```
 
 ## Local Gardener setup
