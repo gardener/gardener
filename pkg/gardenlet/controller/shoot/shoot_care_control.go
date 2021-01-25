@@ -20,19 +20,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/care"
-	"github.com/gardener/gardener/pkg/operation/common"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/retry"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -40,11 +32,18 @@ import (
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/common"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *Controller) shootCareAdd(obj interface{}) {
@@ -143,10 +142,38 @@ type CareControlInterface interface {
 // implements the documented semantics for caring for Shoots. You should use an instance returned from NewDefaultCareControl()
 // for any scenario other than testing.
 func NewDefaultCareControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardencorev1beta1.Gardener, gardenClusterIdentity string, config *config.GardenletConfiguration) CareControlInterface {
-	return &defaultCareControl{clientMap, k8sGardenCoreInformers, secrets, imageVector, identity, gardenClusterIdentity, config}
+	return &defaultCareControl{
+		NewOperation,
+		NewHealthCheck,
+		NewConstraintCheck,
+		NewGarbageCollector,
+		clientMap,
+		k8sGardenCoreInformers,
+		secrets,
+		imageVector,
+		identity,
+		gardenClusterIdentity,
+		config,
+	}
 }
 
+var (
+	// NewOperation is used to create a new `operation.Operation` instance.
+	NewOperation = defaultNewOperationFunc
+	// NewHealthCheck is used to create a new Health check instance.
+	NewHealthCheck = defaultNewHealthCheck
+	// NewConstraintCheck is used to create a new Constraint check instance.
+	NewConstraintCheck = defaultNewConstraintCheck
+	// NewGarbageCollector is used to create a new Constraint check instance.
+	NewGarbageCollector = defaultNewGarbageCollector
+)
+
 type defaultCareControl struct {
+	newOperation        NewOperationFunc
+	newHealthCheck      NewHealthCheckFunc
+	newConstraintCheck  NewConstraintCheckFunc
+	NewGarbageCollector NewGarbageCollectorFunc
+
 	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.Interface
 	secrets                map[string]*corev1.Secret
@@ -242,11 +269,11 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 
 	// Initialize constraints
 	var constraints []gardencorev1beta1.Condition
-	for _, cond := range []gardencorev1beta1.ConditionType{
+	for _, constr := range []gardencorev1beta1.ConditionType{
 		gardencorev1beta1.ShootHibernationPossible,
 		gardencorev1beta1.ShootMaintenancePreconditionsSatisfied,
 	} {
-		constraints = append(constraints, gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Constraints, cond))
+		constraints = append(constraints, gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Constraints, constr))
 	}
 
 	seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeedWithName(*shoot.Spec.SeedName))
@@ -259,22 +286,23 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		return nil
 	}
 
-	operation, err := operation.
-		NewBuilder().
-		WithLogger(shootLogger).
-		WithConfig(c.config).
-		WithGardenerInfo(c.identity).
-		WithGardenClusterIdentity(c.gardenClusterIdentity).
-		WithSecrets(c.secrets).
-		WithImageVector(c.imageVector).
-		WithGardenFrom(c.k8sGardenCoreInformers, shoot.Namespace).
-		WithSeedFrom(c.k8sGardenCoreInformers, *shoot.Spec.SeedName).
-		WithShootFromCluster(c.k8sGardenCoreInformers, seedClient, shootObj).
-		Build(ctx, c.clientMap)
+	operation, err := c.newOperation(
+		ctx,
+		seedClient,
+		c.config,
+		c.identity,
+		c.gardenClusterIdentity,
+		c.secrets,
+		c.imageVector,
+		c.k8sGardenCoreInformers,
+		c.clientMap,
+		shoot,
+		shootLogger,
+	)
 	if err != nil {
 		shootLogger.Errorf("could not initialize a new operation: %s", err.Error())
 
-		if err := careSetupFailure(ctx, gardenClient, shoot, "precondition failed: operation could not be initialized", conditions, constraints); err != nil {
+		if err := careSetupFailure(ctx, gardenClient, shoot, "Precondition failed: operation could not be initialized", conditions, constraints); err != nil {
 			shootLogger.Error(err)
 		}
 		return nil // We do not want to run in the exponential backoff for the condition checks.
@@ -297,7 +325,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 	_ = flow.Parallel(
 		// Trigger health check
 		func(ctx context.Context) error {
-			shootHealth := care.NewHealth(operation, initializeShootClients)
+			shootHealth := c.newHealthCheck(operation, initializeShootClients)
 			updatedConditions = shootHealth.Check(
 				ctx,
 				c.conditionThresholdsToProgressingMapping(),
@@ -316,8 +344,8 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		},
 		// Trigger constraint checks
 		func(ctx context.Context) error {
-			constraint := care.NewConstraint(operation, initializeShootClients)
-			updatedConstraints = constraint.ConstraintsChecks(
+			constraint := c.newConstraintCheck(operation, initializeShootClients)
+			updatedConstraints = constraint.Check(
 				ctx,
 				constraints,
 			)
@@ -325,14 +353,14 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		},
 		// Trigger garbage collection
 		func(ctx context.Context) error {
-			garbageCollector := care.NewGarbageCollection(operation, initializeShootClients)
+			garbageCollector := c.NewGarbageCollector(operation, initializeShootClients)
 			garbageCollector.Collect(ctx)
 			// errors during garbage collection are only being logged and do not cause the care operation to fail
 			return nil
 		},
 	)(ctx)
 
-	conditions = append(updatedConditions, seedConditions...)
+	updatedConditions = append(updatedConditions, seedConditions...)
 
 	// Update Shoot status if necessary
 	if gardencorev1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) ||
