@@ -25,6 +25,7 @@ EFFECTIVE_VERSION                   := $(VERSION)-$(shell git rev-parse HEAD)
 REPO_ROOT                           := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 LOCAL_GARDEN_LABEL                  := local-garden
 REMOTE_GARDEN_LABEL                 := remote-garden
+CR_VERSION                          := $(shell go mod edit -json | jq -r '.Require[] | select(.Path=="sigs.k8s.io/controller-runtime") | .Version')
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
@@ -142,10 +143,7 @@ install-requirements:
 revendor:
 	@GO111MODULE=on go mod vendor
 	@GO111MODULE=on go mod tidy
-	@GO111MODULE=on cd third_party/kube-scheduler/v18; go mod tidy
-	@GO111MODULE=on cd third_party/kube-scheduler/v19; go mod tidy
-	@GO111MODULE=on cd third_party/kube-scheduler/v20; go mod tidy
-	@GO111MODULE=on cd third_party/kube-scheduler; go mod tidy
+	@curl -sSLo hack/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/$(CR_VERSION)/hack/setup-envtest.sh
 
 .PHONY: clean
 clean:

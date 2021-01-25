@@ -18,4 +18,4 @@ limitations under the License.
 // +k8s:openapi-gen=true
 // +groupName=kubescheduler.config.k8s.io
 
-package v1alpha2 // import "k8s.io/kube-scheduler/config/v1alpha2"
+package v1alpha2 // import "github.com/gardener/gardener/third_party/kube-scheduler/v18/v1alpha2"
