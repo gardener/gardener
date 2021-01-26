@@ -27,18 +27,24 @@ sni:
 
 exposedComponents:
 - dashboardName: "Kube Apiserver"
-  jobName: "kube-apiserver"
-  podPrefix: "kube-apiserver"
-  fileName: "kube-apiserver.json"
+  fileName: "kube-apiserver-logging.json"
+  pods:
+  - podPrefix: "kube-apiserver"
 - dashboardName: "Kube Controller Manager"
-  jobName: "kube-controller-manager"
-  podPrefix: "kube-controller-manager"
-  fileName: "kube-controller-manager.json"
+  fileName: "kube-controller-manager-logging.json"
+  pods:
+  - podPrefix: "kube-controller-manager"
 - dashboardName: "Kube Scheduler"
-  jobName: "kube-scheduler"
-  podPrefix: "kube-scheduler"
-  fileName: "kube-scheduler.json"
+  fileName: "kube-scheduler-logging.json"
+  pods:
+  - podPrefix: "kube-scheduler"
 - dashboardName: "Cluster Autoscaler"
-  jobName: "cluster-autoscaler"
-  podPrefix: "cluster-autoscaler"
-  fileName: "cluster-autoscaler.json"
+  fileName: "cluster-autoscaler-logging.json"
+  pods:
+  - podPrefix: "cluster-autoscaler"
+- dashboardName: "Vertical Pod Autoscaler"
+  fileName: "vpa-logging.json"
+  pods:
+  - podPrefix: "vpa-admission-controller"
+  - podPrefix: "vpa-recommender"
+  - podPrefix: "vpa-updater"
