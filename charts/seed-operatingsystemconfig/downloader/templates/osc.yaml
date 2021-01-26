@@ -7,67 +7,23 @@
 apiVersion: extensions.gardener.cloud/v1alpha1
 kind: OperatingSystemConfig
 metadata:
-  name: {{ required "secretName is required" .Values.secretName }}-downloader
+  name: {{ required "osc.name is required" .Values.osc.name }}
   namespace: {{ .Release.Namespace }}
   annotations:
     gardener.cloud/operation: reconcile
-    gardener.cloud/timestamp: {{ required "annotationCurrentTimestamp is required" .Values.annotationCurrentTimestamp }}
+    gardener.cloud/timestamp: {{ required "osc.annotationCurrentTimestamp is required" .Values.osc.annotationCurrentTimestamp }}
 spec:
-  type: {{ required "type is required" .Values.type }}
-  purpose: {{ required "purpose is required" .Values.purpose }}
-  {{- if .Values.providerConfig }}
+  type: {{ required "osc.type is required" .Values.osc.type }}
+  purpose: {{ required "osc.purpose is required" .Values.osc.purpose }}
+  {{- if .Values.osc.providerConfig }}
   providerConfig:
-{{ .Values.providerConfig | indent 4 }}
+{{ .Values.osc.providerConfig | indent 4 }}
   {{- end }}
-  {{- if .Values.cri }}
+  {{- if .Values.osc.cri }}
   criConfig:
-    name: {{ .Values.cri.name }}
+    name: {{ .Values.osc.cri.name }}
   {{- end }}
   units:
-  - name: cloud-config-downloader.service
-    command: start
-    enable: true
-    content: |
-      [Unit]
-      Description=Downloads the actual cloud config from the Shoot API server and executes it
-      After=docker.service docker.socket
-      Wants=docker.socket
-      [Service]
-      Restart=always
-      RestartSec=30
-      RuntimeMaxSec=1200
-      EnvironmentFile=/etc/environment
-      ExecStart=/var/lib/cloud-config-downloader/download-cloud-config.sh
-      [Install]
-      WantedBy=multi-user.target
+{{ include "cloud-config-downloader-service" . | indent 2 }}
   files:
-  - path: /var/lib/cloud-config-downloader/credentials/server
-    permissions: 0644
-    content:
-      inline:
-        encoding: b64
-        data: {{ .Values.server | b64enc }}
-  - path: /var/lib/cloud-config-downloader/credentials/ca.crt
-    permissions: 0644
-    content:
-      secretRef:
-        name: cloud-config-downloader
-        dataKey: ca.crt
-  - path: /var/lib/cloud-config-downloader/credentials/client.crt
-    permissions: 0644
-    content:
-      secretRef:
-        name: cloud-config-downloader
-        dataKey: cloud-config-downloader.crt
-  - path: /var/lib/cloud-config-downloader/credentials/client.key
-    permissions: 0644
-    content:
-      secretRef:
-        name: cloud-config-downloader
-        dataKey: cloud-config-downloader.key
-  - path: /var/lib/cloud-config-downloader/download-cloud-config.sh
-    permissions: 0744
-    content:
-      inline:
-        encoding: b64
-        data: {{ include "seed-operatingsystemconfig.downloader.download-script" . | b64enc }}
+{{ include "cloud-config-downloader-files" . | indent 2 }}

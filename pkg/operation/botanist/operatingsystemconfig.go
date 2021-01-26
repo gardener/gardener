@@ -88,7 +88,20 @@ func (b *Botanist) ComputeShootOperatingSystemConfig(ctx context.Context) error 
 			defer wg.Done()
 
 			downloaderConfig := b.generateDownloaderConfig(worker.Machine.Image.Name)
-			oscs, err := b.deployOperatingSystemConfigsForWorker(ctx, b.Shoot.CloudProfile.Spec.MachineTypes, worker.Machine.Image, utils.MergeMaps(downloaderConfig, nil), utils.MergeMaps(originalConfig, nil), worker)
+			oscs, err := b.deployOperatingSystemConfigsForWorker(
+				ctx,
+				b.Shoot.CloudProfile.Spec.MachineTypes,
+				worker.Machine.Image,
+				utils.MergeMaps( // copy the map to avoid concurent write panics
+					downloaderConfig,
+					nil,
+				),
+				utils.MergeMaps(
+					originalConfig,
+					nil,
+				),
+				worker,
+			)
 			results <- &oscOutput{worker.Name, oscs, err}
 		}(worker)
 	}
@@ -160,9 +173,10 @@ func (b *Botanist) generateOriginalConfig() (map[string]interface{}, error) {
 }
 
 func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, machineTypes []gardencorev1beta1.MachineType, machineImage *gardencorev1beta1.ShootMachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardencorev1beta1.Worker) (*shoot.OperatingSystemConfigs, error) {
-	secretName := b.Shoot.ComputeCloudConfigSecretName(worker.Name)
-
 	var (
+		secretName     = b.Shoot.ComputeCloudConfigSecretName(worker.Name)
+		downloaderName = fmt.Sprintf("%s-downloader", secretName)
+		originalName   = fmt.Sprintf("%s-original", secretName)
 		criNamesConfig = map[string]interface{}{
 			"containerd": extensionsv1alpha1.CRINameContainerD,
 		}
@@ -171,10 +185,12 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, ma
 			"names":                       criNamesConfig,
 		}
 		osc = map[string]interface{}{
+			"name":                       originalName,
 			"type":                       machineImage.Name,
 			"purpose":                    extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 			"reloadConfigFilePath":       common.CloudConfigFilePath,
 			"secretName":                 secretName,
+			"server":                     fmt.Sprintf("https://%s", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)),
 			"sshKey":                     string(b.Secrets[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys]),
 			"cri":                        criConfig,
 			"annotationCurrentTimestamp": time.Now().UTC().String(),
@@ -186,6 +202,7 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, ma
 		osc["providerConfig"] = string(machineImage.ProviderConfig.Raw)
 	}
 
+	downloaderConfig["name"] = downloaderName
 	downloaderConfig["secretName"] = secretName
 	originalConfig["osc"] = osc
 
@@ -380,11 +397,17 @@ func (b *Botanist) deployOperatingSystemConfigsForWorker(ctx context.Context, ma
 
 	originalConfig["worker"] = workerConfig
 
-	var (
-		downloaderName = fmt.Sprintf("%s-downloader", secretName)
-		originalName   = fmt.Sprintf("%s-original", secretName)
+	downloaderData, err := b.applyAndWaitForShootOperatingSystemConfig(
+		ctx,
+		filepath.Join(
+			operatingSystemConfigChartPath,
+			"downloader",
+		),
+		downloaderName,
+		map[string]interface{}{
+			"osc": downloaderConfig,
+		},
 	)
-	downloaderData, err := b.applyAndWaitForShootOperatingSystemConfig(ctx, filepath.Join(operatingSystemConfigChartPath, "downloader"), downloaderName, downloaderConfig)
 	if err != nil {
 		return nil, err
 	}

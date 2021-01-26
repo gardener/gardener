@@ -1,0 +1,14 @@
+{{- define "cloud-config-downloader-service-content" -}}
+[Unit]
+Description=Downloads the actual cloud config from the Shoot API server and executes it
+After=docker.service docker.socket
+Wants=docker.socket
+[Service]
+Restart=always
+RestartSec=30
+RuntimeMaxSec=1200
+EnvironmentFile=/etc/environment
+ExecStart=/var/lib/cloud-config-downloader/download-cloud-config.sh
+[Install]
+WantedBy=multi-user.target
+{{- end }}

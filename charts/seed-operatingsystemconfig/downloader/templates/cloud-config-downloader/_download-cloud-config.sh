@@ -1,7 +1,7 @@
 {{- define "seed-operatingsystemconfig.downloader.download-script" -}}
 #!/bin/bash -eu
 
-SECRET_NAME="{{ required "secretName is required" .Values.secretName }}"
+SECRET_NAME="{{ required "osc.secretName is required" .Values.osc.secretName }}"
 
 DIR_CLOUDCONFIG_DOWNLOADER="/var/lib/cloud-config-downloader"
 DIR_CLOUDCONFIG_DOWNLOADER_CREDENTIALS="$DIR_CLOUDCONFIG_DOWNLOADER/credentials"

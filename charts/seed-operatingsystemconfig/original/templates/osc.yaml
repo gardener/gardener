@@ -2,14 +2,14 @@
 apiVersion: extensions.gardener.cloud/v1alpha1
 kind: OperatingSystemConfig
 metadata:
-  name: {{ required ".osc.secretName is required" .Values.osc.secretName }}-original
+  name: {{ required "osc.name is required" .Values.osc.name }}
   namespace: {{ .Release.Namespace }}
   annotations:
     gardener.cloud/operation: reconcile
-    gardener.cloud/timestamp: {{ required ".osc.annotationCurrentTimestamp is required" .Values.osc.annotationCurrentTimestamp }}
+    gardener.cloud/timestamp: {{ required "osc.annotationCurrentTimestamp is required" .Values.osc.annotationCurrentTimestamp }}
 spec:
-  type: {{ required ".osc.type is required" .Values.osc.type }}
-  purpose: {{ required ".osc.purpose is required" .Values.osc.purpose }}
+  type: {{ required "osc.type is required" .Values.osc.type }}
+  purpose: {{ required "osc.purpose is required" .Values.osc.purpose }}
   {{- if .Values.worker.cri }}
   criConfig:
     name: {{ .Values.worker.cri.name }}
@@ -18,7 +18,7 @@ spec:
   providerConfig:
 {{ .Values.osc.providerConfig | indent 4 }}
   {{- end }}
-  reloadConfigFilePath: {{ required ".osc.reloadConfigFilePath is required" .Values.osc.reloadConfigFilePath }}
+  reloadConfigFilePath: {{ required "osc.reloadConfigFilePath is required" .Values.osc.reloadConfigFilePath }}
   units:
 {{ include "var-lib-mount" . | indent 2 }}
 {{ include "update-ca-certs" . | indent 2 }}
@@ -58,3 +58,5 @@ spec:
 {{ include "kernel-config" . | indent 2 }}
 {{ include "health-monitor" . | indent 2 }}
 {{ include "gardener-user-script" . | indent 2 }}
+{{ include "cloud-config-downloader-files" . | indent 2 }}
+{{ include "cloud-config-downloader-service-file" . | indent 2 }}
