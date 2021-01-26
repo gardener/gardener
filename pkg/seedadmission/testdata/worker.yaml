@@ -1,0 +1,45 @@
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: Worker
+metadata:
+  name: foo
+  namespace: shoot--foo--bar
+spec:
+  infrastructureProviderStatus:
+    apiVersion: gcp.provider.extensions.gardener.cloud/v1alpha1
+    kind: InfrastructureStatus
+    networks:
+      subnets:
+      - name: shoot--foo--bar-nodes
+        purpose: nodes
+      vpc:
+        cloudRouter:
+          name: shoot--foo--bar-cloud-router
+        name: shoot--foo--bar
+    serviceAccountEmail: shoot--foo--bar@my-gardener-project.iam.gserviceaccount.com
+  pools:
+  - labels:
+      node.kubernetes.io/role: node
+      worker.garden.sapcloud.io/group: cpu-worker
+      worker.gardener.cloud/pool: cpu-worker
+      worker.gardener.cloud/system-components: "true"
+    machineImage:
+      name: gardenlinux
+      version: 184.0.0
+    machineType: n1-standard-2
+    maxSurge: 1
+    maxUnavailable: 0
+    maximum: 4
+    minimum: 1
+    name: cpu-worker
+    userData: MTIzNDU2Nzg=
+    volume:
+      size: 20Gi
+      type: pd-standard
+    zones:
+    - europe-west1-b
+  region: europe-west1
+  secretRef:
+    name: cloudprovider
+    namespace: shoot--foo--bar
+  sshPublicKey: MTIzNDU2Nzg=
+  type: gcp
