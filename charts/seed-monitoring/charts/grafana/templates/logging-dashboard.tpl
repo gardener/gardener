@@ -6,7 +6,7 @@
     "editable": true,
     "gnetId": null,
     "graphTooltip": 0,
-    "iteration": 1601888883889,
+    "iteration": 1611650877419,
     "links": [],
     "panels": [
       {
@@ -79,7 +79,7 @@
         "tableColumn": "",
         "targets": [
           {
-            "expr": "(sum(up{job=\"{{ $.jobName }}\"} == 1) / sum(up{job=\"{{ $.jobName }}\"})) * 100",
+            "expr": "(sum(up{job=\"$component\"} == 1) / sum(up{job=\"$component\"})) * 100",
             "format": "time_series",
             "intervalFactor": 2,
             "refId": "A",
@@ -148,21 +148,21 @@
         "steppedLine": false,
         "targets": [
           {
-            "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"{{ $.podPrefix }}-(.+)\"}[$__rate_interval])) by (pod)",
+            "expr": "sum(rate(container_cpu_usage_seconds_total{pod=~\"$component-(.+)\"}[$__rate_interval])) by (pod)",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "{{ "{{" }}pod}}-current",
             "refId": "A"
           },
           {
-            "expr": "sum(kube_pod_container_resource_limits_cpu_cores{pod=~\"{{ $.podPrefix }}-(.+)\"}) by (pod)",
+            "expr": "sum(kube_pod_container_resource_limits_cpu_cores{pod=~\"$component-(.+)\"}) by (pod)",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "{{ "{{" }}pod}}-limits",
             "refId": "C"
           },
           {
-            "expr": "sum(kube_pod_container_resource_requests_cpu_cores{pod=~\"{{ $.podPrefix }}-(.+)\"}) by (pod)",
+            "expr": "sum(kube_pod_container_resource_requests_cpu_cores{pod=~\"$component-(.+)\"}) by (pod)",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "{{ "{{" }}pod}}-requests",
@@ -260,21 +260,21 @@
         "steppedLine": false,
         "targets": [
           {
-            "expr": "sum(container_memory_working_set_bytes{pod=~\"{{ $.podPrefix }}-(.+)\"}) by (pod)",
+            "expr": "sum(container_memory_working_set_bytes{pod=~\"$component-(.+)\"}) by (pod)",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "{{ "{{" }}pod}}-current",
             "refId": "A"
           },
           {
-            "expr": "sum(kube_pod_container_resource_limits_memory_bytes{pod=~\"{{ $.podPrefix }}-(.+)\"}) by (pod)",
+            "expr": "sum(kube_pod_container_resource_limits_memory_bytes{pod=~\"$component-(.+)\"}) by (pod)",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "{{ "{{" }}pod}}-limits",
             "refId": "B"
           },
           {
-            "expr": "sum(kube_pod_container_resource_requests_memory_bytes{pod=~\"{{ $.podPrefix }}-(.+)\"}) by (pod)",
+            "expr": "sum(kube_pod_container_resource_requests_memory_bytes{pod=~\"$component-(.+)\"}) by (pod)",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "{{ "{{" }}pod}}-requests",
@@ -346,7 +346,7 @@
         },
         "targets": [
           {
-            "expr": "{pod_name=~\"{{ $.podPrefix }}-(.+)\", severity=~\"$severity\"} |~ \"$search\"",
+            "expr": "{pod_name=~\"$component-(.+)\", container_name=~\"$container\", severity=~\"$severity\"} |~ \"$search\"",
             "refId": "A"
           }
         ],
@@ -357,7 +357,7 @@
       }
     ],
     "refresh": "1m",
-    "schemaVersion": 25,
+    "schemaVersion": 26,
     "style": "dark",
     "tags": [
       "controlplane",
@@ -367,61 +367,116 @@
     "templating": {
       "list": [
         {
-            "allValue": ".+",
-            "current": {
+          "allValue": "",
+          "current": {
             "selected": true,
-            "tags": [],
-            "text": "All",
-            "value": [
-                "$__all"
-            ]
-            },
-            "hide": 0,
-            "includeAll": true,
-            "label": "Severity",
-            "multi": true,
-            "name": "severity",
-            "options": [
+            "text": "{{ (index $.pods 0).podPrefix }}",
+            "value": "{{ (index $.pods 0).podPrefix }}"
+          },
+          "hide": 0,
+          "includeAll": false,
+          "label": "Component",
+          "multi": false,
+          "name": "component",
+          "options": [
             {
-                "selected": true,
-                "text": "All",
-                "value": "$__all"
-            },
+              "selected": true
+            }{{ range $i, $c := $.pods }},
             {
-                "selected": false,
-                "text": "INFO",
-                "value": "INFO"
-            },
-            {
-                "selected": false,
-                "text": "WARN",
-                "value": "WARN"
-            },
-            {
-                "selected": false,
-                "text": "ERR",
-                "value": "ERR"
-            },
-            {
-                "selected": false,
-                "text": "DBG",
-                "value": "DBG"
-            },
-            {
-                "selected": false,
-                "text": "NOTICE",
-                "value": "NOTICE"
-            },
-            {
-                "selected": false,
-                "text": "FATAL",
-                "value": "FATAL"
+              "selected": false,
+              "text": "{{ $c.podPrefix }}",
+              "value": "{{ $c.podPrefix }}"
             }
+              {{- end }}
+          ],
+          "query": "",
+          "queryValue": "",
+          "skipUrlSync": true,
+          "type": "custom"
+        },
+        {
+          "allValue": null,
+          "current": {
+            "selected": false,
+            "text": "All",
+            "value": "$__all"
+          },
+          "datasource": "prometheus",
+          "definition": "label_values(kube_pod_container_info{type=~\"seed\", pod=~\"$component.+\"}, container)",
+          "hide": 0,
+          "includeAll": true,
+          "label": "Container",
+          "multi": false,
+          "name": "container",
+          "options": [],
+          "query": "label_values(kube_pod_container_info{type=~\"seed\", pod=~\"$component.+\"}, container)",
+          "refresh": 2,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "tagValuesQuery": "",
+          "tags": [],
+          "tagsQuery": "",
+          "type": "query",
+          "useTags": false
+        },
+        {
+          "allValue": ".+",
+          "current": {
+            "selected": true,
+            "text": [
+              "All"
             ],
-            "query": "INFO,WARN,ERR,DBG,NOTICE,FATAL",
-            "queryValue": "",
-            "skipUrlSync": false,
-            "type": "custom"
+            "value": [
+              "$__all"
+            ]
+          },
+          "hide": 0,
+          "includeAll": true,
+          "label": "Severity",
+          "multi": true,
+          "name": "severity",
+          "options": [
+            {
+              "selected": true,
+              "text": "All",
+              "value": "$__all"
+            },
+            {
+              "selected": false,
+              "text": "INFO",
+              "value": "INFO"
+            },
+            {
+              "selected": false,
+              "text": "WARN",
+              "value": "WARN"
+            },
+            {
+              "selected": false,
+              "text": "ERR",
+              "value": "ERR"
+            },
+            {
+              "selected": false,
+              "text": "DBG",
+              "value": "DBG"
+            },
+            {
+              "selected": false,
+              "text": "NOTICE",
+              "value": "NOTICE"
+            },
+            {
+              "selected": false,
+              "text": "FATAL",
+              "value": "FATAL"
+            }
+          ],
+          "query": "INFO,WARN,ERR,DBG,NOTICE,FATAL",
+          "queryValue": "",
+          "skipUrlSync": true,
+          "type": "custom"
         },
         {
           "current": {
@@ -475,7 +530,6 @@
     },
     "timezone": "browser",
     "title": "{{ $.dashboardName }}",
-    "uid": "{{ $.jobName }}",
     "version": 1
   }
 {{- end -}}

@@ -413,7 +413,9 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			// shoot system components
 			metricsserver.CentralLoggingConfiguration,
 		}
-		userAllowedComponents := []string{v1beta1constants.DeploymentNameKubeAPIServer}
+		userAllowedComponents := []string{v1beta1constants.DeploymentNameKubeAPIServer,
+			v1beta1constants.DeploymentNameVPAExporter, v1beta1constants.DeploymentNameVPARecommender,
+			v1beta1constants.DeploymentNameVPAAdmissionController}
 
 		// Fetch component specific logging configurations
 		for _, componentFn := range componentsFunctions {
