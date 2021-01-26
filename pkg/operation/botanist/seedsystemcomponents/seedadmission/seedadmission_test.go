@@ -261,6 +261,7 @@ webhooks:
     - DELETE
     resources:
     - customresourcedefinitions
+  timeoutSeconds: 10
 - admissionReviewVersions:
   - v1beta1
   - v1
@@ -290,6 +291,7 @@ webhooks:
     - networks
     - operatingsystemconfigs
     - workers
+  timeoutSeconds: 10
 `
 		validatingWebhookConfigurationYAMLK8sLess115         = validatingWebhookConfigurationTop + validatingWebhookConfigurationBottom
 		validatingWebhookConfigurationYAMLK8sGreaterEqual115 = validatingWebhookConfigurationTop + `  objectSelector:

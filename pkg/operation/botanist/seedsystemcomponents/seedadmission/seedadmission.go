@@ -303,6 +303,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 						},
 					},
 					AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+					TimeoutSeconds:          pointer.Int32Ptr(10),
 				},
 				{
 					Name: "crs.seed.admission.core.gardener.cloud",
@@ -335,6 +336,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 						},
 					},
 					AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+					TimeoutSeconds:          pointer.Int32Ptr(10),
 				},
 			},
 		}

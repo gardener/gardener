@@ -67,7 +67,7 @@ func (h *ExtensionDeletionProtection) InjectDecoder(d *admission.Decoder) error 
 
 // Handle implements the webhook handler for extension deletion protection.
 func (h *ExtensionDeletionProtection) Handle(ctx context.Context, request admission.Request) admission.Response {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	// If the request does not indicate the correct operation (DELETE) we allow the review without further doing.
