@@ -29,15 +29,15 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 
 	if cfg.Controllers != nil {
 		if cfg.Controllers.Shoot != nil {
-			allErrs = append(allErrs, ValidateShootControllerConfiguration(cfg.Controllers.Shoot, fieldPath(fldPath, "controllers", "shoot"))...)
+			allErrs = append(allErrs, ValidateShootControllerConfiguration(cfg.Controllers.Shoot, fldPath.Child("controllers", "shoot"))...)
 		}
 	}
 
 	if (cfg.SeedConfig == nil && cfg.SeedSelector == nil) || (cfg.SeedConfig != nil && cfg.SeedSelector != nil) {
-		allErrs = append(allErrs, field.Invalid(fieldPath(fldPath, "seedConfig"), cfg, "either seed config or seed selector is required"))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedConfig"), cfg, "either seed config or seed selector is required"))
 	}
 
-	serverPath := fieldPath(fldPath, "server")
+	serverPath := fldPath.Child("server")
 	if cfg.Server != nil {
 		if len(cfg.Server.HTTPS.BindAddress) == 0 {
 			allErrs = append(allErrs, field.Required(serverPath.Child("https", "bindAddress"), "bind address is required"))
@@ -47,7 +47,7 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 		}
 	}
 
-	resourcesPath := field.NewPath("resources")
+	resourcesPath := fldPath.Child("resources")
 	if cfg.Resources != nil {
 		for resourceName, quantity := range cfg.Resources.Capacity {
 			if reservedQuantity, ok := cfg.Resources.Reserved[resourceName]; ok && reservedQuantity.Value() > quantity.Value() {
@@ -96,11 +96,4 @@ func ValidateShootControllerConfiguration(cfg *config.ShootControllerConfigurati
 	}
 
 	return allErrs
-}
-
-func fieldPath(fldPath *field.Path, name string, moreNames ...string) *field.Path {
-	if fldPath != nil {
-		return fldPath.Child(name, moreNames...)
-	}
-	return field.NewPath(name, moreNames...)
 }

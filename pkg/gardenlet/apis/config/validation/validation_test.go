@@ -49,21 +49,6 @@ var _ = Describe("GardenletConfiguration", func() {
 				},
 			},
 			SeedConfig: &config.SeedConfig{},
-			Server: &config.ServerConfiguration{
-				HTTPS: config.HTTPSServer{
-					Server: config.Server{
-						BindAddress: "0.0.0.0",
-						Port:        2720,
-					},
-				},
-			},
-			SNI: &config.SNI{
-				Ingress: &config.SNIIngress{
-					Namespace:   pointer.StringPtr("foo"),
-					Labels:      map[string]string{"baz": "bar"},
-					ServiceName: pointer.StringPtr("waldo"),
-				},
-			},
 			Resources: &config.ResourcesConfiguration{
 				Capacity: corev1.ResourceList{
 					"foo": resource.MustParse("42"),

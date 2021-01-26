@@ -171,6 +171,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			})
 
 			It("should forbid empty or invalid fields in seed template", func() {
+				managedSeed.Spec.SeedTemplate.Name = "foo"
 				seedCopy := seed.DeepCopy()
 				seedCopy.Spec.Provider.Type = ""
 				managedSeed.Spec.SeedTemplate.Spec = seedCopy.Spec
@@ -178,6 +179,10 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				errorList := ValidateManagedSeed(managedSeed)
 
 				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.seedTemplate.metadata.name"),
+					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.seedTemplate.spec.provider.type"),
@@ -216,20 +221,22 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			})
 
 			It("should forbid empty or invalid fields in gardenlet", func() {
-				seedxCopy := seedx.DeepCopy()
-				seedxCopy.Name = "foo"
-				seedxCopy.Spec.Provider.Type = ""
+				seedx.Name = "foo"
+				seedx.Spec.Provider.Type = ""
 
 				managedSeed.Spec.Gardenlet.Deployment = &seedmanagement.GardenletDeployment{
 					ReplicaCount:         pointer.Int32Ptr(-1),
 					RevisionHistoryLimit: pointer.Int32Ptr(-1),
+					ServiceAccountName:   pointer.StringPtr(""),
 					Image: &seedmanagement.Image{
+						Repository: pointer.StringPtr(""),
+						Tag:        pointer.StringPtr(""),
 						PullPolicy: pullPolicyPtr("foo"),
 					},
 					PodLabels:      map[string]string{"foo!": "bar"},
 					PodAnnotations: map[string]string{"bar@": "baz"},
 				}
-				managedSeed.Spec.Gardenlet.Config = gardenletConfiguration(seedxCopy, nil)
+				managedSeed.Spec.Gardenlet.Config = gardenletConfiguration(seedx, nil)
 				managedSeed.Spec.Gardenlet.Bootstrap = bootstrapPtr("foo")
 
 				errorList := ValidateManagedSeed(managedSeed)
@@ -242,6 +249,18 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.gardenlet.deployment.revisionHistoryLimit"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.gardenlet.deployment.serviceAccountName"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.gardenlet.deployment.image.repository"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.gardenlet.deployment.image.tag"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeNotSupported),

@@ -28,6 +28,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
@@ -74,7 +75,7 @@ func ValidateManagedSeedSpec(spec *seedmanagement.ManagedSeedSpec, fldPath *fiel
 
 	switch {
 	case spec.SeedTemplate != nil:
-		allErrs = append(allErrs, validateSeedTemplate(spec.SeedTemplate, fldPath.Child("seedTemplate"))...)
+		allErrs = append(allErrs, validateSeedTemplate(&spec.SeedTemplate.ObjectMeta, &spec.SeedTemplate.Spec, fldPath.Child("seedTemplate"))...)
 	case spec.Gardenlet != nil:
 		allErrs = append(allErrs, validateGardenlet(spec.Gardenlet, fldPath.Child("gardenlet"))...)
 	}
@@ -96,7 +97,7 @@ func ValidateManagedSeedSpecUpdate(newSpec, oldSpec *seedmanagement.ManagedSeedS
 
 	switch {
 	case newSpec.SeedTemplate != nil && oldSpec.SeedTemplate != nil:
-		allErrs = append(allErrs, validateSeedTemplateUpdate(newSpec.SeedTemplate, oldSpec.SeedTemplate, fldPath.Child("seedTemplate"))...)
+		allErrs = append(allErrs, validateSeedTemplateUpdate(&newSpec.SeedTemplate.ObjectMeta, &oldSpec.SeedTemplate.ObjectMeta, &newSpec.SeedTemplate.Spec, &oldSpec.SeedTemplate.Spec, fldPath.Child("seedTemplate"))...)
 	case newSpec.Gardenlet != nil && oldSpec.Gardenlet != nil:
 		allErrs = append(allErrs, validateGardenletUpdate(newSpec.Gardenlet, oldSpec.Gardenlet, fldPath.Child("gardenlet"))...)
 	}
@@ -104,21 +105,26 @@ func ValidateManagedSeedSpecUpdate(newSpec, oldSpec *seedmanagement.ManagedSeedS
 	return allErrs
 }
 
-func validateSeedTemplate(seedTemplate *seedmanagement.SeedTemplate, fldPath *field.Path) field.ErrorList {
+func validateSeedTemplate(metadata *metav1.ObjectMeta, seedSpec *gardencore.SeedSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	// Ensure name is not specified since it will be set by the controller
+	if metadata.Name != "" {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("metadata", "name"), "seed name is forbidden"))
+	}
+
 	// Validate labels, annotations, and spec
-	allErrs = append(allErrs, metav1validation.ValidateLabels(seedTemplate.Labels, fldPath.Child("metadata", "labels"))...)
-	allErrs = append(allErrs, apivalidation.ValidateAnnotations(seedTemplate.Annotations, fldPath.Child("metadata", "annotations"))...)
-	allErrs = append(allErrs, corevalidation.ValidateSeedSpec(&seedTemplate.Spec, fldPath.Child("spec"))...)
+	allErrs = append(allErrs, metav1validation.ValidateLabels(metadata.Labels, fldPath.Child("metadata", "labels"))...)
+	allErrs = append(allErrs, apivalidation.ValidateAnnotations(metadata.Annotations, fldPath.Child("metadata", "annotations"))...)
+	allErrs = append(allErrs, corevalidation.ValidateSeedSpec(seedSpec, fldPath.Child("spec"))...)
 
 	return allErrs
 }
 
-func validateSeedTemplateUpdate(newSeedTemplate, oldSeedTemplate *seedmanagement.SeedTemplate, fldPath *field.Path) field.ErrorList {
+func validateSeedTemplateUpdate(_, _ *metav1.ObjectMeta, newSeedSpec, oldSeedSpec *gardencore.SeedSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, corevalidation.ValidateSeedSpecUpdate(&newSeedTemplate.Spec, &oldSeedTemplate.Spec, fldPath.Child("spec"))...)
+	allErrs = append(allErrs, corevalidation.ValidateSeedSpecUpdate(newSeedSpec, oldSeedSpec, fldPath.Child("spec"))...)
 
 	return allErrs
 }
@@ -196,6 +202,11 @@ func validateGardenletDeployment(deployment *seedmanagement.GardenletDeployment,
 	if deployment.RevisionHistoryLimit != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*deployment.RevisionHistoryLimit), fldPath.Child("revisionHistoryLimit"))...)
 	}
+	if deployment.ServiceAccountName != nil {
+		for _, msg := range apivalidation.ValidateServiceAccountName(*deployment.ServiceAccountName, false) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("serviceAccountName"), *deployment.ServiceAccountName, msg))
+		}
+	}
 
 	if deployment.Image != nil {
 		allErrs = append(allErrs, validateImage(deployment.Image, fldPath.Child("image"))...)
@@ -210,6 +221,12 @@ func validateGardenletDeployment(deployment *seedmanagement.GardenletDeployment,
 func validateImage(image *seedmanagement.Image, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	if image.Repository != nil && *image.Repository == "" {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("repository"), *image.Repository, "repository must not be empty if specified"))
+	}
+	if image.Tag != nil && *image.Tag == "" {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("tag"), *image.Tag, "tag must not be empty if specified"))
+	}
 	if image.PullPolicy != nil {
 		validValues := []string{string(corev1.PullAlways), string(corev1.PullIfNotPresent), string(corev1.PullNever)}
 		if !utils.ValueExists(string(*image.PullPolicy), validValues) {
@@ -242,7 +259,7 @@ func validateGardenletConfiguration(gardenletConfig *config.GardenletConfigurati
 		}
 
 		// Validate seed
-		allErrs = append(allErrs, validateSeed(seed, seedConfigPath)...)
+		allErrs = append(allErrs, validateSeedTemplate(&seed.ObjectMeta, &seed.Spec, seedConfigPath)...)
 	}
 
 	if gardenletConfig.GardenClientConnection != nil {
@@ -273,32 +290,8 @@ func validateGardenletConfigurationUpdate(newGardenletConfig, oldGardenletConfig
 		}
 
 		// Validate seed
-		allErrs = append(allErrs, validateSeedUpdate(newSeed, oldSeed, seedConfigPath)...)
+		allErrs = append(allErrs, validateSeedTemplateUpdate(&newSeed.ObjectMeta, &oldSeed.ObjectMeta, &newSeed.Spec, &oldSeed.Spec, seedConfigPath)...)
 	}
-
-	return allErrs
-}
-
-func validateSeed(seed *gardencore.Seed, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	// Ensure name is not specified since it will be set by the controller
-	if seed.Name != "" {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("metadata", "name"), "seed name is forbidden"))
-	}
-
-	// Validate labels, annotations, and spec
-	allErrs = append(allErrs, metav1validation.ValidateLabels(seed.Labels, fldPath.Child("metadata", "labels"))...)
-	allErrs = append(allErrs, apivalidation.ValidateAnnotations(seed.Annotations, fldPath.Child("metadata", "annotations"))...)
-	allErrs = append(allErrs, corevalidation.ValidateSeedSpec(&seed.Spec, fldPath.Child("spec"))...)
-
-	return allErrs
-}
-
-func validateSeedUpdate(newSeed, oldSeed *gardencore.Seed, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	allErrs = append(allErrs, corevalidation.ValidateSeedSpecUpdate(&newSeed.Spec, &oldSeed.Spec, fldPath.Child("spec"))...)
 
 	return allErrs
 }
