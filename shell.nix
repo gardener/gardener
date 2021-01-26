@@ -28,21 +28,22 @@ let
 in pkgs.mkShell {
   nativeBuildInputs = with pkgs;
     [
-      go
-      protobuf
-      docker
-      screen
-      git
-      kubernetes-helm
-      openvpn
-      coreutils
-      gnused
-      kubectl
-      iproute
-      minikube
-      yaml2json
-      gnumake
-      kops
       awscli
+      coreutils
+      curl
+      docker
+      git
+      gnumake
+      gnused
+      go
+      iproute
+      kops
+      kubectl
+      kubernetes-helm
+      minikube
+      openvpn
+      protobuf
+      screen
+      yaml2json
     ] ++ [ spiff ];
 }
