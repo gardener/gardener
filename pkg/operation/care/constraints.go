@@ -17,20 +17,19 @@ package care
 import (
 	"context"
 	"fmt"
+	"strings"
 
-	"github.com/gardener/gardener/pkg/operation"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/sirupsen/logrus"
-
+	"github.com/gardener/gardener/extensions/pkg/webhook"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
+	"github.com/gardener/gardener/pkg/operation/shoot"
 
+	"github.com/sirupsen/logrus"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // WebhookMaximumTimeoutSecondsNotProblematic is the maximum timeout in seconds a webhooks on critical resources can
@@ -78,10 +77,10 @@ func (c *Constraint) ConstraintsChecks(
 	ctx context.Context,
 	constraints []gardencorev1beta1.Condition,
 ) []gardencorev1beta1.Condition {
-	updatedConstrataints := c.constraintsChecks(ctx, constraints)
+	updatedConstraints := c.constraintsChecks(ctx, constraints)
 	lastOp := c.shoot.Info.Status.LastOperation
 	lastErrors := c.shoot.Info.Status.LastErrors
-	return PardonConditions(updatedConstrataints, lastOp, lastErrors)
+	return PardonConditions(updatedConstraints, lastOp, lastErrors)
 }
 
 func (c *Constraint) constraintsChecks(
@@ -139,12 +138,33 @@ func (c *Constraint) constraintsChecks(
 // CheckForProblematicWebhooks checks the Shoot for problematic webhooks which could prevent shoot worker nodes from
 // joining the cluster.
 func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencorev1beta1.ConditionStatus, string, string, error) {
+	// Earlier, the Gardener extensions library was not setting the timeout for auto-registered webhooks, hence, they
+	// ended up with the default (30s) which we consider problematic in shoots. For backwards-compatibility, we skip the
+	// check for shooted seeds to prevent it from failures caused by extension webhooks having a too high timeout value.
+	// See for more details: https://github.com/gardener/gardener/pull/3413#issuecomment-763974466
+	// TODO: Remove this in a future version.
+	if shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(c.shoot.Info); err == nil && shootedSeed != nil {
+		return gardencorev1beta1.ConditionTrue,
+			"NoProblematicWebhooks",
+			"Check is not executed for shooted seeds.",
+			nil
+	}
+
 	validatingWebhookConfigs := &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}
 	if err := c.shootClient.List(ctx, validatingWebhookConfigs); err != nil {
 		return "", "", "", fmt.Errorf("could not get ValidatingWebhookConfigurations of Shoot cluster to check for problematic webhooks")
 	}
 
 	for _, webhookConfig := range validatingWebhookConfigs.Items {
+		// Earlier, the Gardener extensions library was not setting the timeout for auto-registered webhooks, hence, they
+		// ended up with the default (30s) which we consider problematic in shoots. For backwards-compatibility, we skip the
+		// check for shooted seeds to prevent it from failures caused by extension webhooks having a too high timeout value.
+		// See for more details: https://github.com/gardener/gardener/pull/3413#issuecomment-763974466
+		// TODO: Remove this in a future version.
+		if strings.HasPrefix(webhookConfig.Name, webhook.NamePrefix) && strings.HasSuffix(webhookConfig.Name, webhook.NameSuffixShoot) {
+			continue
+		}
+
 		for _, w := range webhookConfig.Webhooks {
 			if IsProblematicWebhook(w.FailurePolicy, w.ObjectSelector, w.NamespaceSelector, w.Rules, w.TimeoutSeconds) {
 				return gardencorev1beta1.ConditionFalse,
@@ -161,6 +181,15 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 	}
 
 	for _, webhookConfig := range mutatingWebhookConfigs.Items {
+		// Earlier, the Gardener extensions library was not setting the timeout for auto-registered webhooks, hence, they
+		// ended up with the default (30s) which we consider problematic in shoots. For backwards-compatibility, we skip the
+		// check for shooted seeds to prevent it from failures caused by extension webhooks having a too high timeout value.
+		// See for more details: https://github.com/gardener/gardener/pull/3413#issuecomment-763974466
+		// TODO: Remove this in a future version.
+		if strings.HasPrefix(webhookConfig.Name, webhook.NamePrefix) && strings.HasSuffix(webhookConfig.Name, webhook.NameSuffixShoot) {
+			continue
+		}
+
 		for _, w := range webhookConfig.Webhooks {
 			if IsProblematicWebhook(w.FailurePolicy, w.ObjectSelector, w.NamespaceSelector, w.Rules, w.TimeoutSeconds) {
 				return gardencorev1beta1.ConditionFalse,

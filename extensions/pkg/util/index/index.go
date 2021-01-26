@@ -17,14 +17,14 @@ package index
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // SecretRefNamespaceField is the field name for the index function that extracts the corresponding field from SecretBinding.
 const SecretRefNamespaceField string = "secretRef.namespace"
 
 // SecretRefNamespaceIndexerFunc extracts the secretRef.namespace field of a SecretBinding.
-func SecretRefNamespaceIndexerFunc(rawObj runtime.Object) []string {
+func SecretRefNamespaceIndexerFunc(rawObj client.Object) []string {
 	secretBinding, ok := rawObj.(*gardencorev1beta1.SecretBinding)
 	if !ok {
 		return []string{}
@@ -36,7 +36,7 @@ func SecretRefNamespaceIndexerFunc(rawObj runtime.Object) []string {
 const SecretBindingNameField string = "spec.secretBindingName"
 
 // SecretBindingNameIndexerFunc extracts the spec.secretBindingName field of a Shoot.
-func SecretBindingNameIndexerFunc(rawObj runtime.Object) []string {
+func SecretBindingNameIndexerFunc(rawObj client.Object) []string {
 	shoot, ok := rawObj.(*gardencorev1beta1.Shoot)
 	if !ok {
 		return []string{}

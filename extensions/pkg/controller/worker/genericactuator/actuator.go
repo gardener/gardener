@@ -24,7 +24,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -258,9 +257,6 @@ func (a *genericActuator) cleanupMachineSets(ctx context.Context, logger logr.Lo
 	logger.Info("Cleaning up machine sets")
 	machineSetList := &machinev1alpha1.MachineSetList{}
 	if err := a.client.List(ctx, machineSetList, client.InNamespace(namespace)); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
 		return err
 	}
 

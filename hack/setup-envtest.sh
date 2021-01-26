@@ -13,14 +13,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-#
-# This file was copied and modified from the kubernetes-sigs/controller-runtime project
-# https://github.com/kubernetes-sigs/controller-runtime/blob/a9bd9117a77a2f84bbc546e28991136fe0000dc0/hack/setup-envtest.sh
-#
-# Modifications copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved.
 
 set -o errexit
-set -o nounset
 set -o pipefail
 
 # Turn colors in this script off by setting the NO_COLOR variable in your
@@ -46,11 +40,11 @@ function setup_envtest_env {
   # Setup env vars
   KUBEBUILDER_ASSETS=${KUBEBUILDER_ASSETS:-""}
   if [[ -z "${KUBEBUILDER_ASSETS}" ]]; then
-    export KUBEBUILDER_ASSETS="$1/bin"
+    export KUBEBUILDER_ASSETS=$1/bin
   fi
 }
 
-# Fetch k8s API gen tools and make it available under KUBEBUILDER_ASSETS.
+# fetch k8s API gen tools and make it available under envtest_root_dir/bin.
 #
 # Skip fetching and untaring the tools by setting the SKIP_FETCH_TOOLS variable
 # in your environment to any value:
@@ -68,7 +62,7 @@ function fetch_envtest_tools {
   tmp_root=/tmp
   envtest_root_dir=$tmp_root/envtest
 
-  k8s_version="${ENVTEST_K8S_VERSION:-1.17.9}"
+  k8s_version="${ENVTEST_K8S_VERSION:-1.19.2}"
   goarch="$(go env GOARCH)"
   goos="$(go env GOOS)"
 
@@ -100,10 +94,3 @@ function fetch_envtest_tools {
   mkdir -p "${dest_dir}"
   tar -C "${dest_dir}" --strip-components=1 -zvxf "$envtest_tools_archive_path"
 }
-
-bin_dir="$(git rev-parse --show-toplevel)/bin"
-kb_root_dir="$bin_dir/kubebuilder"
-
-mkdir -p            "$kb_root_dir"
-fetch_envtest_tools "$kb_root_dir"
-setup_envtest_env   "$kb_root_dir"

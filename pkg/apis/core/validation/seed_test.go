@@ -488,6 +488,14 @@ var _ = Describe("Seed Validation Tests", func() {
 				}))
 			})
 
+			It("should succeed if ingress domain stays the same when migrating from dns.ingressDomain to ingress.domain", func() {
+				newSeed := prepareSeedForUpdate(seed)
+				seed.Spec.DNS.IngressDomain = pointer.StringPtr(seed.Spec.Ingress.Domain)
+				seed.Spec.Ingress = nil
+
+				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
+			})
+
 			It("should fail if ingress domain changed when migrating from dns.ingressDomain to ingress.domain", func() {
 				newSeed := prepareSeedForUpdate(seed)
 				otherDomain := "other-domain"
@@ -501,6 +509,15 @@ var _ = Describe("Seed Validation Tests", func() {
 					"Field":  Equal("spec.ingress.domain"),
 					"Detail": Equal(`field is immutable`),
 				}))
+			})
+
+			It("should succeed if ingress domain stays the same when migrating from ingress.domain to dns.ingressDomain", func() {
+				newSeed := prepareSeedForUpdate(seed)
+				currentDomain := seed.Spec.Ingress.Domain
+				newSeed.Spec.Ingress = nil
+				newSeed.Spec.DNS.IngressDomain = &currentDomain
+
+				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
 			})
 
 			It("should fail if ingress domain changed when migrating from ingress.domain to dns.ingressDomain", func() {

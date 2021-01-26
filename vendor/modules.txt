@@ -1240,9 +1240,6 @@ k8s.io/kube-openapi/pkg/schemaconv
 k8s.io/kube-openapi/pkg/util
 k8s.io/kube-openapi/pkg/util/proto
 k8s.io/kube-openapi/pkg/util/sets
-# k8s.io/kube-scheduler v0.19.6
-## explicit
-k8s.io/kube-scheduler/config/v1
 # k8s.io/kubelet v0.19.6
 ## explicit
 k8s.io/kubelet/config/v1beta1
