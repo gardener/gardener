@@ -144,8 +144,8 @@ apt install screen
 
 ## NixOS/Nix support
 
-Gardner contains a `shell.nix` file for development purposes. All the required dependencies
-will be automatically installed when your run:
+Gardner contains a `shell.nix` file for development purposes. The nix package manager
+can be installed parallel and provides some [unique features](https://nixos.org/guides/how-nix-works.html). All the required dependencies will be automatically installed when your run:
 
 ```bash
 nix-shell
