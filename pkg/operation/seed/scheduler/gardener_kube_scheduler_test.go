@@ -18,12 +18,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	. "github.com/gardener/gardener/pkg/operation/seed/scheduler"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	admissionv1 "k8s.io/api/admission/v1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -41,8 +39,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	. "github.com/gardener/gardener/pkg/operation/seed/scheduler"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("New", func() {
@@ -372,7 +372,7 @@ var _ = Describe("New", func() {
 						},
 						Webhooks: []admissionregistrationv1beta1.MutatingWebhook{{
 							Name:                    "kube-scheduler.scheduling.gardener.cloud",
-							AdmissionReviewVersions: []string{admissionregistrationv1beta1.SchemeGroupVersion.Version},
+							AdmissionReviewVersions: []string{admissionregistrationv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 							ClientConfig:            *expectedWebhookClientConfig,
 							FailurePolicy:           &failurePolicy,
 							MatchPolicy:             &matchPolicy,
