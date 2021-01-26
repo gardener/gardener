@@ -20,19 +20,16 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
-	"github.com/gardener/gardener/pkg/operation"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/sirupsen/logrus"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
+	"github.com/gardener/gardener/pkg/operation/shoot"
 
+	"github.com/sirupsen/logrus"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // WebhookMaximumTimeoutSecondsNotProblematic is the maximum timeout in seconds a webhooks on critical resources can
@@ -80,10 +77,10 @@ func (c *Constraint) ConstraintsChecks(
 	ctx context.Context,
 	constraints []gardencorev1beta1.Condition,
 ) []gardencorev1beta1.Condition {
-	updatedConstrataints := c.constraintsChecks(ctx, constraints)
+	updatedConstraints := c.constraintsChecks(ctx, constraints)
 	lastOp := c.shoot.Info.Status.LastOperation
 	lastErrors := c.shoot.Info.Status.LastErrors
-	return PardonConditions(updatedConstrataints, lastOp, lastErrors)
+	return PardonConditions(updatedConstraints, lastOp, lastErrors)
 }
 
 func (c *Constraint) constraintsChecks(
