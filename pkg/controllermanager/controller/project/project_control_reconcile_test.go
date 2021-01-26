@@ -16,26 +16,19 @@ package project
 
 import (
 	"context"
-	"errors"
-
-	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation/common"
+	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -56,117 +49,6 @@ var _ = Describe("ProjectControlReconcile", func() {
 
 	AfterEach(func() {
 		ctrl.Finish()
-	})
-
-	Describe("#deleteStaleExtensionRoles", func() {
-		var (
-			prefix                 = "gardener.cloud:extension:project:" + projectName + ":"
-			nonStaleExtensionRoles sets.String
-
-			extensionRole1 = "foo"
-			extensionRole2 = "bar"
-
-			listOptions = []client.ListOption{
-				client.InNamespace(namespace),
-				client.MatchingLabels{
-					v1beta1constants.GardenRole: v1beta1constants.LabelExtensionProjectRole,
-					common.ProjectName:          projectName,
-				},
-			}
-
-			rolebinding1 = rbacv1.RoleBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      prefix + extensionRole1,
-					Namespace: namespace,
-				},
-			}
-			rolebinding2 = rbacv1.RoleBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      prefix + extensionRole2,
-					Namespace: namespace,
-				},
-			}
-			clusterrole1 = rbacv1.ClusterRole{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: prefix + extensionRole1,
-				},
-			}
-			clusterrole2 = rbacv1.ClusterRole{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: prefix + extensionRole2,
-				},
-			}
-
-			err = errors.New("error")
-		)
-
-		It("should do nothing because neither rolebindings nor clusterroles exist", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), listOptions).Return(nil)
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), listOptions).Return(nil)
-
-			Expect(deleteStaleExtensionRoles(ctx, c, nonStaleExtensionRoles, projectName, namespace)).To(BeNil())
-		})
-
-		It("should return an error because listing the rolebindings failed", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), listOptions).Return(err)
-
-			Expect(deleteStaleExtensionRoles(ctx, c, nonStaleExtensionRoles, projectName, namespace)).To(Equal(err))
-		})
-
-		It("should return an error because listing the clusterroles failed", func() {
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), listOptions).Return(nil)
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), listOptions).Return(err)
-
-			Expect(deleteStaleExtensionRoles(ctx, c, nonStaleExtensionRoles, projectName, namespace)).To(Equal(err))
-		})
-
-		It("should return an error because deleting a stale rolebinding failed", func() {
-			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), listOptions).DoAndReturn(func(_ context.Context, list *rbacv1.RoleBindingList, _ ...client.ListOption) error {
-					list.Items = []rbacv1.RoleBinding{rolebinding1, rolebinding2}
-					return nil
-				}),
-				c.EXPECT().Delete(ctx, &rolebinding1).Return(err),
-			)
-
-			Expect(deleteStaleExtensionRoles(ctx, c, sets.NewString(extensionRole2), projectName, namespace)).To(Equal(err))
-		})
-
-		It("should return an error because deleting a stale clusterrole failed", func() {
-			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), listOptions).DoAndReturn(func(_ context.Context, list *rbacv1.RoleBindingList, _ ...client.ListOption) error {
-					list.Items = []rbacv1.RoleBinding{rolebinding1, rolebinding2}
-					return nil
-				}),
-				c.EXPECT().Delete(ctx, &rolebinding1),
-
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), listOptions).DoAndReturn(func(_ context.Context, list *rbacv1.ClusterRoleList, _ ...client.ListOption) error {
-					list.Items = []rbacv1.ClusterRole{clusterrole1, clusterrole2}
-					return nil
-				}),
-				c.EXPECT().Delete(ctx, &clusterrole1).Return(err),
-			)
-
-			Expect(deleteStaleExtensionRoles(ctx, c, sets.NewString(extensionRole2), projectName, namespace)).To(Equal(err))
-		})
-
-		It("should succeed deleting the stale rolebindings and clusterroles", func() {
-			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBindingList{}), listOptions).DoAndReturn(func(_ context.Context, list *rbacv1.RoleBindingList, _ ...client.ListOption) error {
-					list.Items = []rbacv1.RoleBinding{rolebinding1, rolebinding2}
-					return nil
-				}),
-				c.EXPECT().Delete(ctx, &rolebinding2),
-
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleList{}), listOptions).DoAndReturn(func(_ context.Context, list *rbacv1.ClusterRoleList, _ ...client.ListOption) error {
-					list.Items = []rbacv1.ClusterRole{clusterrole1, clusterrole2}
-					return nil
-				}),
-				c.EXPECT().Delete(ctx, &clusterrole2),
-			)
-
-			Expect(deleteStaleExtensionRoles(ctx, c, sets.NewString(extensionRole1), projectName, namespace)).To(BeNil())
-		})
 	})
 
 	Describe("#quotaConfiguration", func() {
@@ -199,10 +81,12 @@ var _ = Describe("ProjectControlReconcile", func() {
 		It("should return no quota configuration because no project controller config is specified", func() {
 			Expect(quotaConfiguration(conf, project)).To(BeNil())
 		})
+
 		It("should return no quota configuration because no quota config is specified", func() {
 			conf.Project = &config.ProjectControllerConfiguration{}
 			Expect(quotaConfiguration(conf, project)).To(BeNil())
 		})
+
 		It("should return no quota configuration because label selector does not match project", func() {
 			conf.Project = &config.ProjectControllerConfiguration{
 				Quotas: []config.QuotaConfiguration{
@@ -213,6 +97,7 @@ var _ = Describe("ProjectControlReconcile", func() {
 			}
 			Expect(quotaConfiguration(conf, project)).To(BeNil())
 		})
+
 		It("should return no quota configuration because label selector is invalid", func() {
 			conf.Project = &config.ProjectControllerConfiguration{
 				Quotas: []config.QuotaConfiguration{
@@ -229,6 +114,7 @@ var _ = Describe("ProjectControlReconcile", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(quotaConf).To(BeNil())
 		})
+
 		It("should return no quota configuration because label selector is nil", func() {
 			conf.Project = &config.ProjectControllerConfiguration{
 				Quotas: []config.QuotaConfiguration{
@@ -239,6 +125,7 @@ var _ = Describe("ProjectControlReconcile", func() {
 			}
 			Expect(quotaConfiguration(conf, project)).To(BeNil())
 		})
+
 		It("should return the quota configuration because label selector matches project", func() {
 			conf.Project = &config.ProjectControllerConfiguration{
 				Quotas: []config.QuotaConfiguration{
@@ -254,6 +141,7 @@ var _ = Describe("ProjectControlReconcile", func() {
 			}
 			Expect(quotaConfiguration(conf, project)).To(Equal(&conf.Project.Quotas[1]))
 		})
+
 		It("should return the first matching quota configuration", func() {
 			additionalQuota := *resourceQuota
 			additionalQuota.Spec.Hard["count/bar"] = resource.MustParse("2")
