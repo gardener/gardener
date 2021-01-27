@@ -60,5 +60,39 @@ var _ = Describe("networkpolicies", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(ConsistOf(expectedResult))
 		})
+
+		It("should not have overlapping excepts", func() {
+			result, err := ToExceptNetworks(
+				AllPrivateNetworkBlocks(),
+				"192.167.0.0/16",
+				"192.168.0.0/16",
+				"10.10.0.0/24",
+				"10.0.0.0/8",
+				"100.64.0.0/10",
+				"172.16.0.0/12",
+			)
+
+			expectedResult := []interface{}{
+				map[string]interface{}{
+					"network": "10.0.0.0/8",
+					"except":  []string{"10.10.0.0/24"},
+				},
+				map[string]interface{}{
+					"network": "172.16.0.0/12",
+					"except":  []string{},
+				},
+				map[string]interface{}{
+					"network": "192.168.0.0/16",
+					"except":  []string{},
+				},
+				map[string]interface{}{
+					"network": "100.64.0.0/10",
+					"except":  []string{},
+				},
+			}
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(ConsistOf(expectedResult))
+		})
 	})
 })

@@ -106,11 +106,11 @@ func excludeBlock(parentBlock *net.IPNet, cidrs ...string) ([]string, error) {
 	matchedCIDRs := []string{}
 
 	for _, cidr := range cidrs {
-		ip, _, err := net.ParseCIDR(string(cidr))
+		ip, ipNet, err := net.ParseCIDR(string(cidr))
 		if err != nil {
 			return matchedCIDRs, err
 		}
-		if parentBlock.Contains(ip) {
+		if parentBlock.Contains(ip) && !ipNet.Contains(parentBlock.IP) {
 			matchedCIDRs = append(matchedCIDRs, cidr)
 		}
 	}
