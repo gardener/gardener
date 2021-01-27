@@ -16,8 +16,12 @@ data:
     apiVersion: admissioncontroller.config.gardener.cloud/v1alpha1
     kind: AdmissionControllerConfiguration
     gardenClientConnection:
-      acceptContentTypes: {{ required ".Values.global.admission.config.gardenClientConnection.acceptContentTypes is required" .Values.global.admission.config.gardenClientConnection.acceptContentTypes }}
-      contentType: {{ required ".Values.global.admission.config.gardenClientConnection.contentType is required" .Values.global.admission.config.gardenClientConnection.contentType }}
+      {{- with .Values.global.admission.config.gardenClientConnection.acceptContentTypes }}
+      acceptContentTypes: {{ . | quote }}
+      {{- end }}
+      {{- with .Values.global.admission.config.gardenClientConnection.contentType }}
+      contentType: {{ . | quote }}
+      {{- end }}
       qps: {{ required ".Values.global.admission.config.gardenClientConnection.qps is required" .Values.global.admission.config.gardenClientConnection.qps }}
       burst: {{ required ".Values.global.admission.config.gardenClientConnection.burst is required" .Values.global.admission.config.gardenClientConnection.burst }}
       {{- if .Values.global.admission.config.gardenClientConnection.kubeconfig }}

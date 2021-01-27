@@ -28,8 +28,8 @@ global:
   #  Please find documentation in docs/deployment/image_vector.md
     config:
       gardenClientConnection:
-        acceptContentTypes: application/json
-        contentType: application/json
+      # acceptContentTypes: application/json
+      # contentType: application/json
         qps: 100
         burst: 130
       # gardenClusterAddress: https://some-external-ip-address-to-garden-cluster
@@ -52,15 +52,15 @@ global:
       #   `bootstrapKubeconfig` and `kubeconfigSecret` then it will try to create a CertificateSigningRequest
       #   and to procure a client certificate.
       seedClientConnection:
-        acceptContentTypes: application/json
-        contentType: application/json
+      # acceptContentTypes: application/json
+      # contentType: application/json
         qps: 100
         burst: 130
       # kubeconfig: |
       #   Specify a kubeconfig for the seed cluster here if you don't want to use the Gardenlet's service account.
       shootClientConnection:
-        acceptContentTypes: application/json
-        contentType: application/json
+      # acceptContentTypes: application/json
+      # contentType: application/json
         qps: 25
         burst: 50
       controllers:

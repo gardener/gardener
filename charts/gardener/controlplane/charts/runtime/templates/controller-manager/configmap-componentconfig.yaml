@@ -16,8 +16,12 @@ data:
     apiVersion: controllermanager.config.gardener.cloud/v1alpha1
     kind: ControllerManagerConfiguration
     gardenClientConnection:
-      acceptContentTypes: {{ required ".Values.global.controller.config.gardenClientConnection.acceptContentTypes is required" .Values.global.controller.config.gardenClientConnection.acceptContentTypes }}
-      contentType: {{ required ".Values.global.controller.config.gardenClientConnection.contentType is required" .Values.global.controller.config.gardenClientConnection.contentType }}
+      {{- with .Values.global.controller.config.gardenClientConnection.acceptContentTypes }}
+      acceptContentTypes: {{ . | quote }}
+      {{- end }}
+      {{- with .Values.global.controller.config.gardenClientConnection.contentType }}
+      contentType: {{ . | quote }}
+      {{- end }}
       qps: {{ required ".Values.global.controller.config.gardenClientConnection.qps is required" .Values.global.controller.config.gardenClientConnection.qps }}
       burst: {{ required ".Values.global.controller.config.gardenClientConnection.burst is required" .Values.global.controller.config.gardenClientConnection.burst }}
       {{- if .Values.global.controller.config.gardenClientConnection.kubeconfig }}

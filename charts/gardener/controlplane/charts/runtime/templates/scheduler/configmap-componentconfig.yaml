@@ -16,8 +16,12 @@ data:
     apiVersion: scheduler.config.gardener.cloud/v1alpha1
     kind: SchedulerConfiguration
     clientConnection:
-      acceptContentTypes: {{ required ".Values.global.scheduler.config.clientConnection.acceptContentTypes is required" .Values.global.scheduler.config.clientConnection.acceptContentTypes }}
-      contentType: {{ required ".Values.global.scheduler.config.clientConnection.contentType is required" .Values.global.scheduler.config.clientConnection.contentType }}
+      {{- with .Values.global.scheduler.config.clientConnection.acceptContentTypes }}
+      acceptContentTypes: {{ . | quote }}
+      {{- end }}
+      {{- with .Values.global.scheduler.config.clientConnection.contentType }}
+      contentType: {{ . | quote }}
+      {{- end }}
       qps: {{ required ".Values.global.scheduler.config.clientConnection.qps is required" .Values.global.scheduler.config.clientConnection.qps }}
       burst: {{ required ".Values.global.scheduler.config.clientConnection.burst is required" .Values.global.scheduler.config.clientConnection.burst }}
       {{- if .Values.global.scheduler.config.clientConnection.kubeconfig }}
