@@ -30,12 +30,9 @@ import (
 	resourcemanagerv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/util/retry"
@@ -114,25 +111,6 @@ func (a *AddToManagerBuilder) AddToManager(m manager.Manager) error {
 		}
 	}
 	return nil
-}
-
-func finalizersAndAccessorOf(obj runtime.Object) (sets.String, metav1.Object, error) {
-	accessor, err := meta.Accessor(obj)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return sets.NewString(accessor.GetFinalizers()...), accessor, nil
-}
-
-// HasFinalizer checks if the given object has a finalizer with the given name.
-func HasFinalizer(obj runtime.Object, finalizerName string) (bool, error) {
-	finalizers, _, err := finalizersAndAccessorOf(obj)
-	if err != nil {
-		return false, err
-	}
-
-	return finalizers.Has(finalizerName), nil
 }
 
 // EnsureFinalizer ensures that a finalizer of the given name is set on the given object.

@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -213,12 +214,7 @@ func (r *reconciler) reconcile(ctx context.Context, ex *extensionsv1alpha1.Exten
 }
 
 func (r *reconciler) delete(ctx context.Context, ex *extensionsv1alpha1.Extension) (reconcile.Result, error) {
-	hasFinalizer, err := extensionscontroller.HasFinalizer(ex, r.finalizerName)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
-	}
-
-	if !hasFinalizer {
+	if !controllerutil.ContainsFinalizer(ex, r.finalizerName) {
 		r.logger.Info("Reconciling Extension resource causes a no-op as there is no finalizer.", "extension", ex.Name, "namespace", ex.Namespace)
 		return reconcile.Result{}, nil
 	}

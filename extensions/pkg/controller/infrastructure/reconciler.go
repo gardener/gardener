@@ -18,12 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -31,10 +25,17 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 const (
@@ -137,11 +138,7 @@ func (r *reconciler) reconcile(ctx context.Context, logger logr.Logger, infrastr
 }
 
 func (r *reconciler) delete(ctx context.Context, logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	hasFinalizer, err := extensionscontroller.HasFinalizer(infrastructure, FinalizerName)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
-	}
-	if !hasFinalizer {
+	if !controllerutil.ContainsFinalizer(infrastructure, FinalizerName) {
 		logger.Info("Deleting infrastructure causes a no-op as there is no finalizer.")
 		return reconcile.Result{}, nil
 	}
@@ -159,7 +156,7 @@ func (r *reconciler) delete(ctx context.Context, logger logr.Logger, infrastruct
 		return reconcile.Result{}, err
 	}
 
-	err = r.removeFinalizerFromInfrastructure(ctx, logger, infrastructure)
+	err := r.removeFinalizerFromInfrastructure(ctx, logger, infrastructure)
 	return reconcile.Result{}, err
 }
 

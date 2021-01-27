@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -190,11 +191,7 @@ func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupE
 }
 
 func (r *reconciler) delete(ctx context.Context, be *extensionsv1alpha1.BackupEntry) (reconcile.Result, error) {
-	hasFinalizer, err := extensionscontroller.HasFinalizer(be, FinalizerName)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
-	}
-	if !hasFinalizer {
+	if !controllerutil.ContainsFinalizer(be, FinalizerName) {
 		r.logger.Info("Deleting backupentry causes a no-op as there is no finalizer.", "backupentry", be.Name)
 		return reconcile.Result{}, nil
 	}
