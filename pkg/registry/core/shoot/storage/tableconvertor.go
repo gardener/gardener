@@ -16,6 +16,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -38,13 +39,12 @@ func newTableConvertor() rest.TableConvertor {
 	return &convertor{
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
+			{Name: "Provider", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["provider"]},
 			{Name: "CloudProfile", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["cloudprofile"]},
-			{Name: "Version", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["version"]},
 			{Name: "Seed", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["seed"]},
-			{Name: "Domain", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["domain"]},
+			{Name: "Version", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["version"]},
 			{Name: "Hibernation", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["hibernation"]},
-			{Name: "Operation", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["operation"]},
-			{Name: "Progress", Type: "integer", Format: "name", Description: swaggerMetadataDescriptions["progress"]},
+			{Name: "Last Operation", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["lastoperation"]},
 			{Name: "APIServer", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["apiserver"]},
 			{Name: "Control", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["control"]},
 			{Name: "Nodes", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["nodes"]},
@@ -81,18 +81,15 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 		)
 
 		cells = append(cells, shoot.Name)
+		cells = append(cells, shoot.Spec.Provider.Type)
 		cells = append(cells, shoot.Spec.CloudProfileName)
-		cells = append(cells, shoot.Spec.Kubernetes.Version)
 		if seed := shoot.Spec.SeedName; seed != nil {
 			cells = append(cells, *seed)
 		} else {
 			cells = append(cells, "<none>")
 		}
-		if shoot.Spec.DNS != nil && shoot.Spec.DNS.Domain != nil {
-			cells = append(cells, *shoot.Spec.DNS.Domain)
-		} else {
-			cells = append(cells, "<none>")
-		}
+		cells = append(cells, shoot.Spec.Kubernetes.Version)
+
 		specHibernated := shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil && *shoot.Spec.Hibernation.Enabled
 		statusHibernated := shoot.Status.IsHibernated
 		switch {
@@ -106,11 +103,9 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 			cells = append(cells, "Awake")
 		}
 		if lastOp := shoot.Status.LastOperation; lastOp != nil {
-			cells = append(cells, lastOp.State)
-			cells = append(cells, lastOp.Progress)
+			cells = append(cells, fmt.Sprintf("%s %s (%d%%)", lastOp.Type, lastOp.State, lastOp.Progress))
 		} else {
 			cells = append(cells, "<pending>")
-			cells = append(cells, 0)
 		}
 		if cond := helper.GetCondition(shoot.Status.Conditions, core.ShootAPIServerAvailable); cond != nil {
 			cells = append(cells, cond.Status)
