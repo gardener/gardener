@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -115,7 +116,7 @@ func (c *defaultSeedControl) Reconcile(obj *gardencorev1beta1.Seed) error {
 	}
 
 	if seed.DeletionTimestamp != nil {
-		if !controllerutils.HasFinalizer(seed, FinalizerName) {
+		if !controllerutil.ContainsFinalizer(seed, FinalizerName) {
 			return nil
 		}
 

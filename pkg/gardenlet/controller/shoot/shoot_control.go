@@ -50,6 +50,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -300,7 +301,7 @@ func (c *Controller) deleteShoot(ctx context.Context, logger *logrus.Entry, shoo
 		failedOrIgnored            = failed || ignored
 	)
 
-	if !controllerutils.HasFinalizer(shoot, gardencorev1beta1.GardenerName) {
+	if !controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
 		return reconcile.Result{}, nil
 	}
 
@@ -406,7 +407,7 @@ func (c *Controller) reconcileShoot(ctx context.Context, logger *logrus.Entry, s
 		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	if !controllerutils.HasFinalizer(shoot, gardencorev1beta1.GardenerName) {
+	if !controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
 		if err := controllerutils.EnsureFinalizer(ctx, gardenClient.Client(), shoot.DeepCopy(), gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not add finalizer to Shoot: %s", err.Error())
 		}
