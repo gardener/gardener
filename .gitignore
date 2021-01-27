@@ -28,3 +28,6 @@ config.vmdk
 # Virtual go & fuse
 .virtualgo
 .fuse_hidden*
+
+# GitGuardian
+.cache_ggshield
