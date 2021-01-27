@@ -38,6 +38,7 @@ import (
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -55,8 +56,6 @@ var _ = Describe("Shoot Care Control", func() {
 		careControl   CareControlInterface
 		coreInformers v1beta1.Interface
 		gardenletConf *config.GardenletConfiguration
-
-		operationFunc NewOperationFunc
 	)
 
 	BeforeSuite(func() {
@@ -121,7 +120,8 @@ var _ = Describe("Shoot Care Control", func() {
 					clientMapBuilder.WithClientSetForKey(keys.ForSeedWithName(seedName), fakeclientset.NewClientSet())
 				})
 				It("should report a setup failure", func() {
-					NewOperation = opFunc(nil, errors.New("foo"))
+					operationFunc := opFunc(nil, errors.New("foo"))
+					defer test.WithVars(&NewOperation, operationFunc)()
 					careControl = NewDefaultCareControl(clientMapBuilder.Build(), coreInformers, nil, nil, nil, "", gardenletConf)
 
 					Expect(careControl.Care(shoot, key)).To(Succeed())
@@ -164,6 +164,9 @@ var _ = Describe("Shoot Care Control", func() {
 				gardenCoreClient         *fake.Clientset
 
 				shootedSeed *gardencorev1beta1helper.ShootedSeed
+
+				operationFunc NewOperationFunc
+				revertFns     []func()
 			)
 
 			JustBeforeEach(func() {
@@ -191,8 +194,10 @@ var _ = Describe("Shoot Care Control", func() {
 					Logger: logger.NewNopLogger().WithContext(context.Background()),
 				}, nil)
 
-				NewOperation = operationFunc
-				NewGarbageCollector = nopGarbageCollectorFunc()
+				revertFns = append(revertFns,
+					test.WithVar(&NewOperation, operationFunc),
+					test.WithVar(&NewGarbageCollector, nopGarbageCollectorFunc()),
+				)
 				careControl = NewDefaultCareControl(clientMap, coreInformers, nil, nil, nil, "", gardenletConf)
 			})
 
@@ -206,12 +211,26 @@ var _ = Describe("Shoot Care Control", func() {
 			AfterEach(func() {
 				ctrl.Finish()
 				shoot = nil
+
+				for _, fn := range revertFns {
+					fn()
+				}
 			})
 
 			Context("when no conditions / constraints are returned", func() {
+				var revertFns []func()
 				BeforeEach(func() {
-					NewHealthCheck = healthCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil })
-					NewConstraintCheck = constraintCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil })
+					revertFns = append(revertFns,
+						test.WithVars(&NewHealthCheck,
+							healthCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil })),
+						test.WithVars(&NewConstraintCheck,
+							constraintCheckFunc(func(_ []gardencorev1beta1.Condition) []gardencorev1beta1.Condition { return nil })),
+					)
+				})
+				AfterEach(func() {
+					for _, fn := range revertFns {
+						fn()
+					}
 				})
 				It("should not set conditions / constraints", func() {
 					var updatedShoot *gardencorev1beta1.Shoot
@@ -257,16 +276,29 @@ var _ = Describe("Shoot Care Control", func() {
 			})
 
 			Context("when conditions / constraints are returned unchanged", func() {
+				var revertFns []func()
 				BeforeEach(func() {
-					NewHealthCheck = healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-						copy := append(cond[:0:0], cond...)
-						return copy
-					})
-					NewConstraintCheck = constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-						copy := append(constr[:0:0], constr...)
-						return copy
-					})
+					revertFns = append(revertFns,
+						test.WithVars(&NewHealthCheck,
+							healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+								copy := append(cond[:0:0], cond...)
+								return copy
+							}),
+						),
+						test.WithVars(&NewConstraintCheck,
+							constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+								copy := append(constr[:0:0], constr...)
+								return copy
+							}),
+						),
+					)
 				})
+				AfterEach(func() {
+					for _, fn := range revertFns {
+						fn()
+					}
+				})
+
 				It("should not set conditions / constraints", func() {
 					var updatedShoot *gardencorev1beta1.Shoot
 					gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
@@ -310,7 +342,11 @@ var _ = Describe("Shoot Care Control", func() {
 			})
 
 			Context("when conditions / constraints are changed", func() {
-				var conditions, constraints []gardencorev1beta1.Condition
+				var (
+					conditions, constraints []gardencorev1beta1.Condition
+
+					revertFns []func()
+				)
 
 				BeforeEach(func() {
 					conditions = []gardencorev1beta1.Condition{
@@ -349,12 +385,24 @@ var _ = Describe("Shoot Care Control", func() {
 						},
 					}
 
-					NewHealthCheck = healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-						return conditions
-					})
-					NewConstraintCheck = constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-						return constraints
-					})
+					revertFns = append(revertFns,
+						test.WithVars(&NewHealthCheck,
+							healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+								return conditions
+							}),
+						),
+						test.WithVars(&NewConstraintCheck,
+							constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+								return constraints
+							}),
+						),
+					)
+				})
+
+				AfterEach(func() {
+					for _, fn := range revertFns {
+						fn()
+					}
 				})
 
 				Context("when shoot is a seed", func() {

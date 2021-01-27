@@ -143,10 +143,6 @@ type CareControlInterface interface {
 // for any scenario other than testing.
 func NewDefaultCareControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardencorev1beta1.Gardener, gardenClusterIdentity string, config *config.GardenletConfiguration) CareControlInterface {
 	return &defaultCareControl{
-		NewOperation,
-		NewHealthCheck,
-		NewConstraintCheck,
-		NewGarbageCollector,
 		clientMap,
 		k8sGardenCoreInformers,
 		secrets,
@@ -169,11 +165,6 @@ var (
 )
 
 type defaultCareControl struct {
-	newOperation        NewOperationFunc
-	newHealthCheck      NewHealthCheckFunc
-	newConstraintCheck  NewConstraintCheckFunc
-	NewGarbageCollector NewGarbageCollectorFunc
-
 	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.Interface
 	secrets                map[string]*corev1.Secret
@@ -286,7 +277,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		return nil
 	}
 
-	operation, err := c.newOperation(
+	operation, err := NewOperation(
 		ctx,
 		seedClient,
 		c.config,
@@ -325,7 +316,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 	_ = flow.Parallel(
 		// Trigger health check
 		func(ctx context.Context) error {
-			shootHealth := c.newHealthCheck(operation, initializeShootClients)
+			shootHealth := NewHealthCheck(operation, initializeShootClients)
 			updatedConditions = shootHealth.Check(
 				ctx,
 				c.conditionThresholdsToProgressingMapping(),
@@ -344,7 +335,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		},
 		// Trigger constraint checks
 		func(ctx context.Context) error {
-			constraint := c.newConstraintCheck(operation, initializeShootClients)
+			constraint := NewConstraintCheck(operation, initializeShootClients)
 			updatedConstraints = constraint.Check(
 				ctx,
 				constraints,
@@ -353,7 +344,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		},
 		// Trigger garbage collection
 		func(ctx context.Context) error {
-			garbageCollector := c.NewGarbageCollector(operation, initializeShootClients)
+			garbageCollector := NewGarbageCollector(operation, initializeShootClients)
 			garbageCollector.Collect(ctx)
 			// errors during garbage collection are only being logged and do not cause the care operation to fail
 			return nil
