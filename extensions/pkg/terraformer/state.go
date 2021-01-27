@@ -20,12 +20,18 @@ import (
 	"fmt"
 
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+)
+
+const (
+	// TerraformerFinalizer is the finalizer key set by the terraformer on the configmaps and secrets
+	TerraformerFinalizer = "gardener.cloud/terraformer"
 )
 
 type terraformStateV3 struct {
@@ -91,8 +97,25 @@ func (t *terraformer) GetStateOutputVariables(ctx context.Context, variables ...
 	return output, nil
 }
 
-// IsStateEmpty returns true if the Terraform state is empty, and false otherwise.
+// IsStateEmpty returns true if the Terraform state is empty and the terraformer finalizer
+// is not present on any of the used configmaps and secrets. Otherwise, it returns false.
 func (t *terraformer) IsStateEmpty(ctx context.Context) bool {
+	for _, obj := range []client.Object{
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.configName}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.stateName}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.variablesName}},
+	} {
+		resourceName := obj.GetName()
+		if err := t.client.Get(ctx, kutil.Key(t.namespace, resourceName), obj); client.IgnoreNotFound(err) != nil {
+			t.logger.Error(err, "failed to get resource", "name", resourceName)
+			return false
+		}
+
+		if controllerutil.ContainsFinalizer(obj, TerraformerFinalizer) {
+			return false
+		}
+	}
+
 	state, err := t.GetState(ctx)
 	if err != nil {
 		return apierrors.IsNotFound(err)
