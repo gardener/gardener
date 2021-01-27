@@ -18,9 +18,10 @@ import (
 	"fmt"
 
 	corerest "github.com/gardener/gardener/pkg/registry/core/rest"
+	seedmanagementrest "github.com/gardener/gardener/pkg/registry/seedmanagement/rest"
 	settingsrest "github.com/gardener/gardener/pkg/registry/settings/rest"
-	"github.com/spf13/pflag"
 
+	"github.com/spf13/pflag"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 )
 
@@ -67,11 +68,12 @@ func (c completedConfig) New() (*GardenerServer, error) {
 	var (
 		s = &GardenerServer{GenericAPIServer: genericServer}
 
-		coreAPIGroupInfo     = (corerest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
-		settingsAPIGroupInfo = (settingsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
+		coreAPIGroupInfo           = (corerest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
+		seedManagementAPIGroupInfo = (seedmanagementrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
+		settingsAPIGroupInfo       = (settingsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 	)
 
-	if err := s.GenericAPIServer.InstallAPIGroups(&coreAPIGroupInfo, &settingsAPIGroupInfo); err != nil {
+	if err := s.GenericAPIServer.InstallAPIGroups(&coreAPIGroupInfo, &settingsAPIGroupInfo, &seedManagementAPIGroupInfo); err != nil {
 		return nil, err
 	}
 

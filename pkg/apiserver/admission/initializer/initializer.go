@@ -18,6 +18,8 @@ import (
 	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
+	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	"github.com/gardener/gardener/third_party/forked/kubernetes/pkg/quota/v1"
 
@@ -33,6 +35,8 @@ func New(
 	coreInformers coreinformers.SharedInformerFactory,
 	coreClient coreclientset.Interface,
 	externalCoreInformers externalcoreinformers.SharedInformerFactory,
+	seedManagementInformers seedmanagementinformers.SharedInformerFactory,
+	seedManagementClient seedmanagementclientset.Interface,
 	settingsInformers settingsinformer.SharedInformerFactory,
 	kubeInformers kubeinformers.SharedInformerFactory,
 	kubeClient kubernetes.Interface,
@@ -45,6 +49,9 @@ func New(
 		coreClient:    coreClient,
 
 		externalCoreInformers: externalCoreInformers,
+
+		seedManagementInformers: seedManagementInformers,
+		seedManagementClient:    seedManagementClient,
 
 		settingsInformers: settingsInformers,
 
@@ -71,6 +78,13 @@ func (i pluginInitializer) Initialize(plugin admission.Interface) {
 
 	if wants, ok := plugin.(WantsExternalCoreInformerFactory); ok {
 		wants.SetExternalCoreInformerFactory(i.externalCoreInformers)
+	}
+
+	if wants, ok := plugin.(WantsSeedManagementInformerFactory); ok {
+		wants.SetSeedManagementInformerFactory(i.seedManagementInformers)
+	}
+	if wants, ok := plugin.(WantsSeedManagementClientset); ok {
+		wants.SetSeedManagementClientset(i.seedManagementClient)
 	}
 
 	if wants, ok := plugin.(WantsSettingsInformerFactory); ok {
