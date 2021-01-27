@@ -158,26 +158,31 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 
 	// Initialize admission plugins
 	o.Recommended.ExtraAdmissionInitializers = func(c *genericapiserver.RecommendedConfig) ([]admission.PluginInitializer, error) {
+		protobufLoopbackConfig := *gardenerAPIServerConfig.LoopbackClientConfig
+		if protobufLoopbackConfig.ContentType == "" {
+			protobufLoopbackConfig.ContentType = runtime.ContentTypeProtobuf
+		}
+
 		// core client
-		coreClient, err := gardencoreclientset.NewForConfig(gardenerAPIServerConfig.LoopbackClientConfig)
+		coreClient, err := gardencoreclientset.NewForConfig(&protobufLoopbackConfig)
 		if err != nil {
 			return nil, err
 		}
-		o.CoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(coreClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
+		o.CoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(coreClient, protobufLoopbackConfig.Timeout)
 
 		// versioned core client
-		versionedCoreClient, err := gardenversionedcoreclientset.NewForConfig(gardenerAPIServerConfig.LoopbackClientConfig)
+		versionedCoreClient, err := gardenversionedcoreclientset.NewForConfig(&protobufLoopbackConfig)
 		if err != nil {
 			return nil, err
 		}
-		o.ExternalCoreInformerFactory = gardenexternalcoreinformers.NewSharedInformerFactory(versionedCoreClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
+		o.ExternalCoreInformerFactory = gardenexternalcoreinformers.NewSharedInformerFactory(versionedCoreClient, protobufLoopbackConfig.Timeout)
 
 		// settings client
-		settingsClient, err := settingsclientset.NewForConfig(gardenerAPIServerConfig.LoopbackClientConfig)
+		settingsClient, err := settingsclientset.NewForConfig(&protobufLoopbackConfig)
 		if err != nil {
 			return nil, err
 		}
-		o.SettingsInformerFactory = settingsinformer.NewSharedInformerFactory(settingsClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
+		o.SettingsInformerFactory = settingsinformer.NewSharedInformerFactory(settingsClient, protobufLoopbackConfig.Timeout)
 
 		// dynamic client
 		dynamicClient, err := dynamic.NewForConfig(kubeAPIServerConfig)
@@ -223,8 +228,13 @@ func (o Options) run(stopCh <-chan struct{}) error {
 		return err
 	}
 
+	protobufConfig := *kubeAPIServerConfig
+	if protobufConfig.ContentType == "" {
+		protobufConfig.ContentType = runtime.ContentTypeProtobuf
+	}
+
 	// kube client
-	kubeClient, err := kubernetes.NewForConfig(kubeAPIServerConfig)
+	kubeClient, err := kubernetes.NewForConfig(&protobufConfig)
 	if err != nil {
 		return err
 	}
