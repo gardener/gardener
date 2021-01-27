@@ -17,11 +17,14 @@ package v1beta1_test
 import (
 	"testing"
 
+	"github.com/gardener/gardener/pkg/apiserver/features"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 func TestV1alpha1(t *testing.T) {
+	features.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "API Core V1beta1 Suite")
 }

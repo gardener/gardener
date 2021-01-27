@@ -19,6 +19,7 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
@@ -28,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 )
 
@@ -167,6 +169,13 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.Kubernetes.KubeProxy.Mode == nil {
 		defaultProxyMode := ProxyModeIPTables
 		obj.Spec.Kubernetes.KubeProxy.Mode = &defaultProxyMode
+	}
+
+	if obj.Spec.Kubernetes.VerticalPodAutoscaler == nil &&
+		len(obj.Status.TechnicalID) == 0 &&
+		features.IsFeatureGateKnown(utilfeature.DefaultFeatureGate, features.ShootVPAEnabledByDefault) &&
+		utilfeature.DefaultFeatureGate.Enabled(features.ShootVPAEnabledByDefault) {
+		obj.Spec.Kubernetes.VerticalPodAutoscaler = &VerticalPodAutoscaler{Enabled: true}
 	}
 
 	if obj.Spec.Addons == nil {

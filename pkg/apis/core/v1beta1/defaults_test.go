@@ -19,6 +19,8 @@ import (
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -27,6 +29,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/utils/pointer"
 )
 
@@ -427,6 +430,48 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_Shoot(obj)
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight).To(Equal(&maxNonMutatingRequestsInflight))
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight).To(Equal(&maxMutatingRequestsInflight))
+		})
+
+		It("should not change the VPA field for new shoots if the feature gate is enabled and VPA is already configured", func() {
+			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootVPAEnabledByDefault, true)()
+			obj.Spec.Kubernetes.VerticalPodAutoscaler = &VerticalPodAutoscaler{Enabled: false}
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler).NotTo(BeNil())
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.Enabled).To(BeFalse())
+		})
+
+		It("should default the VPA field for new shoots if the feature gate is enabled", func() {
+			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootVPAEnabledByDefault, true)()
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler).NotTo(BeNil())
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler.Enabled).To(BeTrue())
+		})
+
+		It("should not default the VPA field for existing shoots if the feature gate is enabled", func() {
+			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ShootVPAEnabledByDefault, true)()
+			obj.Status.TechnicalID = "foo"
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler).To(BeNil())
+		})
+
+		It("should not default the VPA field for new shoots if the feature gate is disabled", func() {
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler).To(BeNil())
+		})
+
+		It("should not default the VPA field for existing shoots if the feature gate is disabled", func() {
+			obj.Status.TechnicalID = "foo"
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.VerticalPodAutoscaler).To(BeNil())
 		})
 	})
 

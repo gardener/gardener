@@ -15,6 +15,8 @@
 package features
 
 import (
+	"strings"
+
 	"k8s.io/component-base/featuregate"
 )
 
@@ -88,4 +90,21 @@ const (
 	// owner: @mvladev
 	// alpha: v1.15.0
 	SeedKubeScheduler featuregate.Feature = "SeedKubeScheduler"
+
+	// ShootVPAEnabledByDefault defines whether the `.spec.kubernetes.verticalPodAutoscaler.enabled` field for newly
+	// created Shoots shall be set to `true` by default. Existing Shoots will remain untouched and must explicitly
+	// enable the VPA if desired.
+	// owner: @rfranzke
+	// alpha: v1.16.0
+	ShootVPAEnabledByDefault featuregate.Feature = "ShootVPAEnabledByDefault"
 )
+
+// IsFeatureGateKnown returns true if the provided <feature> is known in the provided list of <featureGates>.
+func IsFeatureGateKnown(featureGates featuregate.FeatureGate, feature featuregate.Feature) bool {
+	for _, fg := range featureGates.KnownFeatures() {
+		if strings.HasPrefix(fg, string(feature)) {
+			return true
+		}
+	}
+	return false
+}

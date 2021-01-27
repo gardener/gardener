@@ -44,7 +44,7 @@ apiserver_flags="
   --secure-port=8443 \
   --tls-cert-file $TLS_CERT_FILE \
   --tls-private-key-file $TLS_KEY_FILE \
-  --feature-gates SeedChange=true \
+  --feature-gates SeedChange=true,ShootVPAEnabledByDefault=true \
   --v 2"
 
 if [[ "$(uname -s)" == "Linux" && "$(uname -r)" =~ "microsoft-standard" ]]; then

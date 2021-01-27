@@ -24,7 +24,8 @@ import (
 
 var (
 	featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-		features.SeedChange: {Default: false, PreRelease: featuregate.Alpha},
+		features.SeedChange:               {Default: false, PreRelease: featuregate.Alpha},
+		features.ShootVPAEnabledByDefault: {Default: false, PreRelease: featuregate.Alpha},
 	}
 )
 
