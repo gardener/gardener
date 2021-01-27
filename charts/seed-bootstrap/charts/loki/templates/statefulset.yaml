@@ -23,6 +23,7 @@ spec:
       serviceAccountName: loki
       securityContext:
         {{- toYaml .Values.securityContext | nindent 8 }}
+      priorityClassName: loki
       containers:
         - name: loki
           image: {{ index .Values.global.images "loki" }}
