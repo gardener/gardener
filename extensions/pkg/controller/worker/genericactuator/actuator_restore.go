@@ -29,7 +29,6 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	workercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	gardeneretry "github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -37,7 +36,7 @@ import (
 // If there is a record in the state corresponding to a wanted deployment then the Restore function
 // deploys that MachineDeployment with all related MachineSet and Machines.
 func (a *genericActuator) Restore(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
-	logger := a.logger.WithValues("worker", kutil.KeyFromObject(worker), "operation", "restore")
+	logger := a.logger.WithValues("worker", client.ObjectKeyFromObject(worker), "operation", "restore")
 
 	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
 	if err != nil {

@@ -24,7 +24,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -78,7 +77,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	logger := r.logger.WithValues("worker", kutil.KeyFromObject(worker))
+	logger := r.logger.WithValues("worker", client.ObjectKeyFromObject(worker))
 	if extensionscontroller.IsFailed(cluster) {
 		logger.Info("Stop reconciling Worker of failed Shoot")
 		return reconcile.Result{}, nil

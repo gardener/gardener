@@ -18,16 +18,16 @@ import (
 	"context"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // AnnotateExtensionCRsForMigration annotates extension CRs with migrate operation annotation
@@ -136,7 +136,7 @@ func (b *Botanist) applyFuncToAllExtensionCRs(ctx context.Context, applyFunc fun
 }
 
 func (b *Botanist) restoreExtensionObject(ctx context.Context, extensionObj extensionsv1alpha1.Object, resourceKind string) error {
-	if err := b.K8sSeedClient.DirectClient().Get(ctx, kutil.KeyFromObject(extensionObj), extensionObj); err != nil {
+	if err := b.K8sSeedClient.DirectClient().Get(ctx, client.ObjectKeyFromObject(extensionObj), extensionObj); err != nil {
 		return err
 	}
 

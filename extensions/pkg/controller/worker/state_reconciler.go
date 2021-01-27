@@ -21,7 +21,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -81,7 +80,7 @@ func (r *stateReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 		return reconcile.Result{}, err
 	}
 
-	logger := r.logger.WithValues("worker", kutil.KeyFromObject(worker))
+	logger := r.logger.WithValues("worker", client.ObjectKeyFromObject(worker))
 
 	// Deletion flow
 	if worker.DeletionTimestamp != nil {
