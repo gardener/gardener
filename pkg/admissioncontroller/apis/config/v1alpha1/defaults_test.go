@@ -15,15 +15,16 @@
 package v1alpha1_test
 
 import (
-	. "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	rbacv1 "k8s.io/api/rbac/v1"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+
+	. "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 )
 
 var _ = Describe("Defaults", func() {
-	Describe("#SetDefaults_AdmissionControllerConfiguration", func() {
+	Describe("AdmissionControllerConfiguration", func() {
 		var obj *AdmissionControllerConfiguration
 
 		Context("Empty configuration", func() {
@@ -32,7 +33,7 @@ var _ = Describe("Defaults", func() {
 			})
 
 			It("should correctly default the admission controller configuration", func() {
-				SetDefaults_AdmissionControllerConfiguration(obj)
+				SetObjectDefaults_AdmissionControllerConfiguration(obj)
 
 				Expect(obj.LogLevel).To(Equal("info"))
 				Expect(obj.Server.HTTPS.BindAddress).To(Equal("0.0.0.0"))
@@ -56,11 +57,30 @@ var _ = Describe("Defaults", func() {
 				}
 			})
 			It("should correctly default the resource admission configuration if given", func() {
-				SetDefaults_AdmissionControllerConfiguration(obj)
+				SetObjectDefaults_AdmissionControllerConfiguration(obj)
 
 				Expect(obj.Server.ResourceAdmissionConfiguration.UnrestrictedSubjects[0].APIGroup).To(Equal(rbacv1.GroupName))
 				Expect(obj.Server.ResourceAdmissionConfiguration.UnrestrictedSubjects[1].APIGroup).To(Equal(rbacv1.GroupName))
 				Expect(obj.Server.ResourceAdmissionConfiguration.UnrestrictedSubjects[2].APIGroup).To(Equal(""))
+			})
+		})
+
+		Describe("GardenClientConnection", func() {
+			It("should not default ContentType and AcceptContentTypes", func() {
+				SetObjectDefaults_AdmissionControllerConfiguration(obj)
+
+				// ContentType fields will be defaulted by client constructors / controller-runtime based on wether a
+				// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
+				// logic will be overwritten
+				Expect(obj.GardenClientConnection.ContentType).To(BeEmpty())
+				Expect(obj.GardenClientConnection.AcceptContentTypes).To(BeEmpty())
+			})
+			It("should correctly default GardenClientConnection", func() {
+				SetObjectDefaults_AdmissionControllerConfiguration(obj)
+				Expect(obj.GardenClientConnection).To(Equal(componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+					QPS:   50.0,
+					Burst: 100,
+				}))
 			})
 		})
 	})

@@ -2,8 +2,6 @@
 apiVersion: admissioncontroller.config.gardener.cloud/v1alpha1
 kind: AdmissionControllerConfiguration
 gardenClientConnection:
-  acceptContentTypes: application/json
-  contentType: application/json
   qps: 100
   burst: 130
 server:

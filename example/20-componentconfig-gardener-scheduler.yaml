@@ -2,8 +2,6 @@
 apiVersion: scheduler.config.gardener.cloud/v1alpha1
 kind: SchedulerConfiguration
 clientConnection:
-  acceptContentTypes: application/json
-  contentType: application/json
   qps: 100
   burst: 130
 leaderElection:
