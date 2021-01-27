@@ -104,11 +104,11 @@ func (c *Controller) shootDelete(obj interface{}) {
 }
 
 func (c *Controller) reconcileInMaintenanceOnly() bool {
-	return controllerutils.BoolPtrDerefOr(c.config.Controllers.Shoot.ReconcileInMaintenanceOnly, false)
+	return pointer.BoolPtrDerefOr(c.config.Controllers.Shoot.ReconcileInMaintenanceOnly, false)
 }
 
 func (c *Controller) respectSyncPeriodOverwrite() bool {
-	return controllerutils.BoolPtrDerefOr(c.config.Controllers.Shoot.RespectSyncPeriodOverwrite, false)
+	return pointer.BoolPtrDerefOr(c.config.Controllers.Shoot.RespectSyncPeriodOverwrite, false)
 }
 
 func confineSpecUpdateRollout(maintenance *gardencorev1beta1.Maintenance) bool {
