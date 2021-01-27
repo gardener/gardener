@@ -1,0 +1,40 @@
+apiVersion: seedmanagement.gardener.cloud/v1alpha1
+kind: ManagedSeed
+metadata:
+  name: my-managed-seed
+  namespace: garden # Must be garden
+spec:
+  shoot:
+    name: crazy-botany
+  # gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
+  # with the given deployment parameters and GardenletConfiguration.
+  gardenlet:
+    bootstrap: ServiceAccount # Mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster, one of ServiceAccount, BootstrapToken, None
+    mergeWithParent: true # If true, the deployment parameters and GardenletConfiguration of the parent gardenlet will be merged with the specified deployment parameters and GardenletConfiguration
+#   deployment: # gardenlet deployment parameters
+#     replicaCount: 1      
+#     revisionHistoryLimit: 1
+#     serviceAccountName: gardenlet
+#     image:
+#       repository: eu.gcr.io/gardener-project/gardener/gardenlet
+#       tag: latest
+#       pullPolicy: IfNotPresent
+#     resources:
+#       requests:
+#         cpu: 100m
+#         memory: 100Mi
+#       limits:
+#         cpu: 2000m
+#         memory: 512Mi
+#     podAnnotations:
+#       foo: bar
+#     podLabels:
+#       foo: bar
+#     additionalVolumes: []
+#     additionalVolumeMounts: []
+#     env: []
+#     vpa: true
+    config: # GardenletConfiguration resource
+      apiVersion: gardenlet.config.gardener.cloud/v1alpha1
+      kind: GardenletConfiguration
+#     <See `20-componentconfig-gardenlet.yaml` for more details>
