@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -163,11 +164,7 @@ func (r *reconciler) restore(ctx context.Context, network *extensionsv1alpha1.Ne
 }
 
 func (r *reconciler) delete(ctx context.Context, network *extensionsv1alpha1.Network, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	hasFinalizer, err := extensionscontroller.HasFinalizer(network, FinalizerName)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
-	}
-	if !hasFinalizer {
+	if !controllerutil.ContainsFinalizer(network, FinalizerName) {
 		r.logger.Info("Deleting network causes a no-op as there is no finalizer.", "network", network.Name)
 		return reconcile.Result{}, nil
 	}

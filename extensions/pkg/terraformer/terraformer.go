@@ -227,7 +227,7 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 		if err != nil {
 			return fmt.Errorf("failed to deploy the Terraformer pod with .meta.generateName %q: %w", generateName, err)
 		}
-		logger.Info("Successfully created Terraformer pod", "pod", kutil.KeyFromObject(pod))
+		logger.Info("Successfully created Terraformer pod", "pod", client.ObjectKeyFromObject(pod))
 	}
 
 	if pod != nil {
@@ -466,7 +466,7 @@ func (t *terraformer) retrievePodLogs(ctx context.Context, logger logr.Logger, p
 
 	logs, err := kubernetes.GetPodLogs(ctx, t.coreV1Client.Pods(pod.Namespace), pod.Name, &corev1.PodLogOptions{})
 	if err != nil {
-		logger.Error(err, "Could not retrieve the logs of Terraformer pod", "pod", kutil.KeyFromObject(pod))
+		logger.Error(err, "Could not retrieve the logs of Terraformer pod", "pod", client.ObjectKeyFromObject(pod))
 		return "", err
 	}
 

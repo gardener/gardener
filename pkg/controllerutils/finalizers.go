@@ -95,7 +95,3 @@ func RemoveFinalizer(ctx context.Context, c client.Client, obj client.Object, fi
 		return false, nil
 	}, pollerCtx.Done())
 }
-
-// HasFinalizer checks whether the given obj has the given finalizer.
-// Deprecated: use controllerutil.ContainsFinalizer instead
-var HasFinalizer = controllerutil.ContainsFinalizer

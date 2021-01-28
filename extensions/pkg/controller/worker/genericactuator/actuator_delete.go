@@ -26,8 +26,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"github.com/gardener/gardener/extensions/pkg/controller"
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -39,7 +40,7 @@ const (
 	forceDeletionLabelValue = "True"
 )
 
-func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
+func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) error {
 	logger := a.logger.WithValues("worker", client.ObjectKeyFromObject(worker), "operation", "delete")
 
 	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
@@ -248,16 +249,12 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 			if ok {
 				releasedMachineClassCredentialsSecret = true
 			} else {
-				secret, err := controller.GetSecretByReference(ctx, a.client, &worker.Spec.SecretRef)
+				secret, err := extensionscontroller.GetSecretByReference(ctx, a.client, &worker.Spec.SecretRef)
 				if err != nil {
 					return retryutils.SevereError(fmt.Errorf("could not get the secret referenced by worker: %+v", err))
 				}
 
-				hasFinalizer, err := controller.HasFinalizer(secret, mcmFinalizer)
-				if err != nil {
-					return retryutils.SevereError(fmt.Errorf("could not check whether machine class credentials secret has finalizer: %+v", err))
-				}
-				if hasFinalizer {
+				if controllerutil.ContainsFinalizer(secret, mcmFinalizer) {
 					msg += "1 machine class credentials secret, "
 				} else {
 					releasedMachineClassCredentialsSecret = true

@@ -177,11 +177,7 @@ func (r *reconciler) restore(ctx context.Context, osc *extensionsv1alpha1.Operat
 }
 
 func (r *reconciler) delete(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig) (reconcile.Result, error) {
-	hasFinalizer, err := extensionscontroller.HasFinalizer(osc, FinalizerName)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
-	}
-	if !hasFinalizer {
+	if !controllerutil.ContainsFinalizer(osc, FinalizerName) {
 		r.logger.Info("Deleting operating system config causes a no-op as there is no finalizer.", "osc", osc.Name)
 		return reconcile.Result{}, nil
 	}
@@ -208,11 +204,7 @@ func (r *reconciler) delete(ctx context.Context, osc *extensionsv1alpha1.Operati
 }
 
 func (r *reconciler) migrate(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig) (reconcile.Result, error) {
-	hasFinalizer, err := extensionscontroller.HasFinalizer(osc, FinalizerName)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
-	}
-	if !hasFinalizer {
+	if !controllerutil.ContainsFinalizer(osc, FinalizerName) {
 		r.logger.Info("Migrating operating system config causes a no-op as there is no finalizer.", "osc", osc.Name)
 		return reconcile.Result{}, nil
 	}

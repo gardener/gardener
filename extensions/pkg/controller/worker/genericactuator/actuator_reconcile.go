@@ -48,7 +48,7 @@ import (
 )
 
 func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {
-	logger := a.logger.WithValues("worker", kutil.KeyFromObject(worker), "operation", "reconcile")
+	logger := a.logger.WithValues("worker", client.ObjectKeyFromObject(worker), "operation", "reconcile")
 
 	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
 	if err != nil {

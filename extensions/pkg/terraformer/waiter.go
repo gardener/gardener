@@ -19,12 +19,12 @@ import (
 	"fmt"
 	"time"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 // WaitForCleanEnvironment waits until no Terraform Pod(s) exist for the current instance of the Terraformer.
@@ -58,11 +58,11 @@ func (t *terraformer) waitForPod(ctx context.Context, logger logr.Logger, pod *c
 	ctx, cancel := context.WithTimeout(ctx, deadline)
 	defer cancel()
 
-	logger = logger.WithValues("pod", kutil.KeyFromObject(pod))
+	logger = logger.WithValues("pod", client.ObjectKeyFromObject(pod))
 
 	logger.Info("Waiting for Terraformer pod to be completed...")
 	if err := retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-		err = t.client.Get(ctx, kutil.KeyFromObject(pod), pod)
+		err = t.client.Get(ctx, client.ObjectKeyFromObject(pod), pod)
 		if apierrors.IsNotFound(err) {
 			logger.Info("Terraformer pod disappeared unexpectedly, somebody must have manually deleted it")
 			return retry.Ok()

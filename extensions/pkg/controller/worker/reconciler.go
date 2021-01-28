@@ -18,22 +18,22 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/errors"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
-	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/util/retry"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 type reconciler struct {
@@ -78,7 +78,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	logger := r.logger.WithValues("worker", kutil.KeyFromObject(worker))
+	logger := r.logger.WithValues("worker", client.ObjectKeyFromObject(worker))
 	if extensionscontroller.IsFailed(cluster) {
 		logger.Info("Stop reconciling Worker of failed Shoot")
 		return reconcile.Result{}, nil
@@ -167,11 +167,7 @@ func (r *reconciler) migrate(ctx context.Context, logger logr.Logger, worker *ex
 }
 
 func (r *reconciler) delete(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	hasFinalizer, err := extensionscontroller.HasFinalizer(worker, FinalizerName)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not instantiate finalizer deletion: %+v", err)
-	}
-	if !hasFinalizer {
+	if !controllerutil.ContainsFinalizer(worker, FinalizerName) {
 		logger.Info("Deleting worker causes a no-op as there is no finalizer")
 		return reconcile.Result{}, nil
 	}
@@ -189,7 +185,7 @@ func (r *reconciler) delete(ctx context.Context, logger logr.Logger, worker *ext
 		return reconcile.Result{}, err
 	}
 
-	err = r.removeFinalizerFromWorker(ctx, logger, worker)
+	err := r.removeFinalizerFromWorker(ctx, logger, worker)
 	return reconcile.Result{}, err
 }
 

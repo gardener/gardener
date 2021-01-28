@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -128,7 +129,7 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardencorev1beta1.SecretBin
 	// it has to be ensured that no Shoots are depending on the SecretBinding anymore.
 	// When this happens the controller will remove the finalizers from the SecretBinding so that it can be garbage collected.
 	if secretBinding.DeletionTimestamp != nil {
-		if !controllerutils.HasFinalizer(secretBinding, gardencorev1beta1.GardenerName) {
+		if !controllerutil.ContainsFinalizer(secretBinding, gardencorev1beta1.GardenerName) {
 			return nil
 		}
 
