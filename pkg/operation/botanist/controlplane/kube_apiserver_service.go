@@ -153,8 +153,11 @@ func (d *kubeAPIService) Wait(ctx context.Context) error {
 		loadBalancerIngress, err := kutil.GetLoadBalancerIngress(
 			ctx,
 			d.client,
-			d.loadBalancerServicekey.Namespace,
-			d.loadBalancerServicekey.Name,
+			&corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: d.loadBalancerServicekey.Name, Namespace: d.loadBalancerServicekey.Namespace,
+				},
+			},
 		)
 		if err != nil {
 			d.logger.Info("Waiting until the KubeAPI Server ingress LoadBalancer deployed in the Seed cluster is ready...")

@@ -184,9 +184,12 @@ func WaitUntilResourceDeletedWithDefaults(ctx context.Context, c client.Client, 
 // WaitUntilLoadBalancerIsReady waits until the given external load balancer has
 // been created (i.e., its ingress information has been updated in the service status).
 func WaitUntilLoadBalancerIsReady(ctx context.Context, kubeClient kubernetes.Interface, namespace, name string, timeout time.Duration, logger *logrus.Entry) (string, error) {
-	var loadBalancerIngress string
+	var (
+		loadBalancerIngress string
+		service             = &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace}}
+	)
 	if err := retry.UntilTimeout(ctx, 5*time.Second, timeout, func(ctx context.Context) (done bool, err error) {
-		loadBalancerIngress, err = GetLoadBalancerIngress(ctx, kubeClient.Client(), namespace, name)
+		loadBalancerIngress, err = GetLoadBalancerIngress(ctx, kubeClient.Client(), service)
 		if err != nil {
 			logger.Infof("Waiting until the %s service deployed is ready...", name)
 			// TODO(AC): This is a quite optimistic check / we should differentiate here
@@ -196,17 +199,7 @@ func WaitUntilLoadBalancerIsReady(ctx context.Context, kubeClient kubernetes.Int
 	}); err != nil {
 		const eventsLimit = 2
 
-		lbService := &corev1.Service{
-			TypeMeta: metav1.TypeMeta{
-				Kind: "Service",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-		}
-
-		eventsErrorMessage, err2 := FetchEventMessages(ctx, kubeClient.DirectClient(), lbService, corev1.EventTypeWarning, eventsLimit)
+		eventsErrorMessage, err2 := FetchEventMessages(ctx, kubeClient.DirectClient(), service, corev1.EventTypeWarning, eventsLimit)
 		if err2 != nil {
 			return "", fmt.Errorf("error '%v' occured while fetching more details on error '%v'", err2, err)
 		}
@@ -220,12 +213,11 @@ func WaitUntilLoadBalancerIsReady(ctx context.Context, kubeClient kubernetes.Int
 	return loadBalancerIngress, nil
 }
 
-// GetLoadBalancerIngress takes a context, a client, a namespace and a service name. It queries for a load balancer's technical name
+// GetLoadBalancerIngress takes a context, a client, a service object. It queries for a load balancer's technical name
 // (ip address or hostname). It returns the value of the technical name whereby it always prefers the hostname (if given)
 // over the IP address. It also returns the list of all load balancer ingresses.
-func GetLoadBalancerIngress(ctx context.Context, client client.Client, namespace, name string) (string, error) {
-	service := &corev1.Service{}
-	if err := client.Get(ctx, Key(namespace, name), service); err != nil {
+func GetLoadBalancerIngress(ctx context.Context, c client.Client, service *corev1.Service) (string, error) {
+	if err := c.Get(ctx, client.ObjectKeyFromObject(service), service); err != nil {
 		return "", err
 	}
 
@@ -320,12 +312,21 @@ func ReconcileServicePorts(existingPorts []corev1.ServicePort, desiredPorts []co
 }
 
 // FetchEventMessages gets events for the given object of the given `eventType` and returns them as a formatted output.
+// The function expects that the given `obj` is specified with a proper `metav1.TypeMeta`.
 func FetchEventMessages(ctx context.Context, c client.Client, obj client.Object, eventType string, eventsLimit int) (string, error) {
+	apiVersion, kind := obj.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
+	if apiVersion == "" {
+		return "", fmt.Errorf("apiVersion not specified for object %s/%s", obj.GetNamespace(), obj.GetName())
+	}
+	if kind == "" {
+		return "", fmt.Errorf("kind not specified for object %s/%s", obj.GetNamespace(), obj.GetName())
+	}
 	fieldSelector := client.MatchingFields{
-		"involvedObject.kind":      obj.GetObjectKind().GroupVersionKind().Kind,
-		"involvedObject.name":      obj.GetName(),
-		"involvedObject.namespace": obj.GetNamespace(),
-		"type":                     eventType,
+		"involvedObject.apiVersion": apiVersion,
+		"involvedObject.kind":       kind,
+		"involvedObject.name":       obj.GetName(),
+		"involvedObject.namespace":  obj.GetNamespace(),
+		"type":                      eventType,
 	}
 	eventList := &corev1.EventList{}
 	if err := c.List(ctx, eventList, fieldSelector); err != nil {
