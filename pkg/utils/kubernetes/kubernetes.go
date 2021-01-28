@@ -213,9 +213,10 @@ func WaitUntilLoadBalancerIsReady(ctx context.Context, kubeClient kubernetes.Int
 	return loadBalancerIngress, nil
 }
 
-// GetLoadBalancerIngress takes a context, a client, a service object. It queries for a load balancer's technical name
-// (ip address or hostname). It returns the value of the technical name whereby it always prefers the hostname (if given)
-// over the IP address. It also returns the list of all load balancer ingresses.
+// GetLoadBalancerIngress takes a context, a client, a service object. It gets the `service` and
+// queries for a load balancer's technical name (ip address or hostname). It returns the value of the technical name
+// whereby it always prefers the hostname (if given) over the IP address.
+// The passed `service` instance is updated with the information received from the API server.
 func GetLoadBalancerIngress(ctx context.Context, c client.Client, service *corev1.Service) (string, error) {
 	if err := c.Get(ctx, client.ObjectKeyFromObject(service), service); err != nil {
 		return "", err
