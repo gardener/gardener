@@ -38,7 +38,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // TruncateLabelValue truncates a string at 63 characters so it's suitable for a label value.
@@ -195,23 +194,26 @@ func WaitUntilLoadBalancerIsReady(ctx context.Context, kubeClient kubernetes.Int
 		}
 		return retry.Ok()
 	}); err != nil {
-		fieldSelector := client.MatchingFields{
-			"involvedObject.kind":      "Service",
-			"involvedObject.name":      name,
-			"involvedObject.namespace": namespace,
-			"type":                     corev1.EventTypeWarning,
-		}
-		eventList := &corev1.EventList{}
-		if err2 := kubeClient.DirectClient().List(ctx, eventList, fieldSelector); err2 != nil {
-			return "", fmt.Errorf("error '%v' occured while fetching more details on error '%v'", err2, err)
+		const eventsLimit = 2
+
+		lbService := &corev1.Service{
+			TypeMeta: metav1.TypeMeta{
+				Kind: "Service",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
 		}
 
-		if len(eventList.Items) > 0 {
-			eventsErrorMessage := buildEventsErrorMessage(eventList.Items)
+		eventsErrorMessage, err2 := FetchEventMessages(ctx, kubeClient.DirectClient(), lbService, corev1.EventTypeWarning, eventsLimit)
+		if err2 != nil {
+			return "", fmt.Errorf("error '%v' occured while fetching more details on error '%v'", err2, err)
+		}
+		if eventsErrorMessage != "" {
 			errorMessage := err.Error() + "\n\n" + eventsErrorMessage
 			return "", errors.New(errorMessage)
 		}
-
 		return "", err
 	}
 
@@ -317,8 +319,27 @@ func ReconcileServicePorts(existingPorts []corev1.ServicePort, desiredPorts []co
 	return out
 }
 
-func buildEventsErrorMessage(events []corev1.Event) string {
-	sortByLastTimestamp := func(o1, o2 controllerutil.Object) bool {
+// FetchEventMessages gets events for the given object of the given `eventType` and returns them as a formatted output.
+func FetchEventMessages(ctx context.Context, c client.Client, obj client.Object, eventType string, eventsLimit int) (string, error) {
+	fieldSelector := client.MatchingFields{
+		"involvedObject.kind":      obj.GetObjectKind().GroupVersionKind().Kind,
+		"involvedObject.name":      obj.GetName(),
+		"involvedObject.namespace": obj.GetNamespace(),
+		"type":                     eventType,
+	}
+	eventList := &corev1.EventList{}
+	if err := c.List(ctx, eventList, fieldSelector); err != nil {
+		return "", fmt.Errorf("error '%v' occurred while fetching more details", err)
+	}
+
+	if len(eventList.Items) > 0 {
+		return buildEventsErrorMessage(eventList.Items, eventsLimit), nil
+	}
+	return "", nil
+}
+
+func buildEventsErrorMessage(events []corev1.Event, eventsLimit int) string {
+	sortByLastTimestamp := func(o1, o2 client.Object) bool {
 		obj1, ok1 := o1.(*corev1.Event)
 		obj2, ok2 := o2.(*corev1.Event)
 
@@ -333,7 +354,6 @@ func buildEventsErrorMessage(events []corev1.Event) string {
 	SortBy(sortByLastTimestamp).Sort(list)
 	events = list.Items
 
-	const eventsLimit = 2
 	if len(events) > eventsLimit {
 		events = events[len(events)-eventsLimit:]
 	}

@@ -16,6 +16,7 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -926,6 +927,150 @@ var _ = Describe("kubernetes", func() {
 			Expect(err.Error()).To(ContainSubstring("-> Events:\n* service-controller reported"))
 			Expect(err.Error()).To(ContainSubstring("Error syncing load balancer: an error occurred"))
 			Expect(actual).To(BeEmpty())
+		})
+	})
+
+	Describe("#FetchEventMessages", func() {
+		var (
+			ctrl                  *gomock.Controller
+			k8sShootClient        *mock.MockInterface
+			k8sShootRuntimeClient *mockclient.MockClient
+			events                []corev1.Event
+			serviceObj            *corev1.Service
+		)
+
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+
+			k8sShootClient = mock.NewMockInterface(ctrl)
+			k8sShootRuntimeClient = mockclient.NewMockClient(ctrl)
+
+			events = []corev1.Event{
+				{
+					Source:         corev1.EventSource{Component: "service-controller"},
+					Message:        "Error syncing load balancer: first error occurred",
+					FirstTimestamp: metav1.NewTime(time.Date(2020, time.January, 15, 0, 0, 0, 0, time.UTC)),
+					LastTimestamp:  metav1.NewTime(time.Date(2020, time.January, 15, 0, 0, 0, 0, time.UTC)),
+					Count:          1,
+					Type:           corev1.EventTypeWarning,
+				},
+				{
+					Source:         corev1.EventSource{Component: "service-controller"},
+					Message:        "Error syncing load balancer: second error occurred",
+					FirstTimestamp: metav1.NewTime(time.Date(2020, time.January, 15, 1, 0, 0, 0, time.UTC)),
+					LastTimestamp:  metav1.NewTime(time.Date(2020, time.January, 15, 1, 0, 0, 0, time.UTC)),
+					Count:          1,
+					Type:           corev1.EventTypeWarning,
+				},
+			}
+
+			serviceObj = &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+			}
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		It("should return event message with only the latest event", func() {
+			var listOpts []client.ListOption
+			gomock.InOrder(
+				k8sShootClient.EXPECT().DirectClient().Return(k8sShootRuntimeClient),
+				k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
+					func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
+						list.Items = append(list.Items, events...)
+						listOpts = listOptions
+						return nil
+					}),
+			)
+
+			msg, err := FetchEventMessages(ctx, k8sShootClient.DirectClient(), serviceObj, corev1.EventTypeWarning, 1)
+
+			Expect(listOpts).To(ContainElement(client.MatchingFields{
+				"involvedObject.kind":      serviceObj.Kind,
+				"involvedObject.name":      serviceObj.Name,
+				"involvedObject.namespace": serviceObj.Namespace,
+				"type":                     corev1.EventTypeWarning,
+			}))
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(msg).To(ContainSubstring("-> Events:\n* service-controller reported"))
+			Expect(msg).To(ContainSubstring("second error occurred"))
+		})
+		It("should return event message with all events", func() {
+			var listOpts []client.ListOption
+			gomock.InOrder(
+				k8sShootClient.EXPECT().DirectClient().Return(k8sShootRuntimeClient),
+				k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
+					func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
+						list.Items = append(list.Items, events...)
+						listOpts = listOptions
+						return nil
+					}),
+			)
+
+			msg, err := FetchEventMessages(ctx, k8sShootClient.DirectClient(), serviceObj, corev1.EventTypeWarning, len(events))
+
+			Expect(listOpts).To(ContainElement(client.MatchingFields{
+				"involvedObject.kind":      serviceObj.Kind,
+				"involvedObject.name":      serviceObj.Name,
+				"involvedObject.namespace": serviceObj.Namespace,
+				"type":                     corev1.EventTypeWarning,
+			}))
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(msg).To(ContainSubstring("-> Events:\n* service-controller reported"))
+			Expect(msg).To(ContainSubstring("first error occurred"))
+			Expect(msg).To(ContainSubstring("second error occurred"))
+		})
+		It("should not return a message because no events exist", func() {
+			var listOpts []client.ListOption
+			gomock.InOrder(
+				k8sShootClient.EXPECT().DirectClient().Return(k8sShootRuntimeClient),
+				k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
+					func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
+						listOpts = listOptions
+						return nil
+					}),
+			)
+
+			msg, err := FetchEventMessages(ctx, k8sShootClient.DirectClient(), serviceObj, corev1.EventTypeWarning, len(events))
+
+			Expect(listOpts).To(ContainElement(client.MatchingFields{
+				"involvedObject.kind":      serviceObj.Kind,
+				"involvedObject.name":      serviceObj.Name,
+				"involvedObject.namespace": serviceObj.Namespace,
+				"type":                     corev1.EventTypeWarning,
+			}))
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(msg).To(BeEmpty())
+		})
+		It("should not return a message because an error occurred", func() {
+			var listOpts []client.ListOption
+			gomock.InOrder(
+				k8sShootClient.EXPECT().DirectClient().Return(k8sShootRuntimeClient),
+				k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
+					func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
+						listOpts = listOptions
+						return errors.New("foo")
+					}),
+			)
+
+			msg, err := FetchEventMessages(ctx, k8sShootClient.DirectClient(), serviceObj, corev1.EventTypeWarning, len(events))
+
+			Expect(listOpts).To(ContainElement(client.MatchingFields{
+				"involvedObject.kind":      serviceObj.Kind,
+				"involvedObject.name":      serviceObj.Name,
+				"involvedObject.namespace": serviceObj.Namespace,
+				"type":                     corev1.EventTypeWarning,
+			}))
+			Expect(err).To(MatchError("error 'foo' occurred while fetching more details"))
+			Expect(msg).To(BeEmpty())
 		})
 	})
 
