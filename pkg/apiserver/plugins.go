@@ -86,7 +86,7 @@ var (
 		openidconnectpreset.PluginName,             // OpenIDConnectPreset
 		clusteropenidconnectpreset.PluginName,      // ClusterOpenIDConnectPreset
 		shootstatedeletionvalidator.PluginName,     // ShootStateDeletionValidator
-		customverbauthorizer.PluginName,            // ShootVPA
+		customverbauthorizer.PluginName,            // CustomVerbAuthorizer
 		mutatingwebhook.PluginName,                 // MutatingAdmissionWebhook
 		validatingwebhook.PluginName,               // ValidatingAdmissionWebhook
 		resourcequota.PluginName,                   // ResourceQuota
