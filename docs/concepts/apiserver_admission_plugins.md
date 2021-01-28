@@ -99,6 +99,16 @@ It validates the resource consumption declared in the specification against appl
 Only if the applicable `Quota` resources admit the configured resources in the `Shoot` then it allows the request.
 Applicable `Quota`s are referred in the `SecretBinding` that is used by the `Shoot`.
 
+## `ShootVPAEnabledByDefault`
+
+_(disabled by default)_
+
+This admission controller reacts on `CREATE` operations for `Shoot`s.
+If enabled, it will enable the managed `VerticalPodAutoscaler` components (see [this doc](../usage/shoot_autoscaling.md#vertical-pod-auto-scaling))
+by setting `spec.kubernetes.verticalPodAutoscaler.enabled=true` for newly created Shoots.
+Already existing Shoots and new Shoots that explicitly disable VPA (`spec.kubernetes.verticalPodAutoscaler.enabled=false`)
+will not be affected by this admission plugin.
+
 ## `ShootStateDeletionValidator`
 
 _(enabled by default)_
