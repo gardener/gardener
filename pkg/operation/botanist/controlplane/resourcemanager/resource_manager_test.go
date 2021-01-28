@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package resourcemanager_test
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -68,19 +69,19 @@ var _ = Describe("ResourceManager", func() {
 			"fake-label-name": "fake-value",
 			"app":             "gardener-resource-manager",
 		}
-		healthSyncPeriod                 = "1m0s"
-		leaseDuration                    = "40s"
+		healthSyncPeriod                 = time.Minute
+		leaseDuration                    = time.Second * 40
 		maxConcurrentHealthWorkers int32 = 20
-		renewDeadline                    = "10s"
+		renewDeadline                    = time.Second * 10
 		resourceClass                    = "fake-ResourceClass"
-		retryPeriod                      = "20s"
-		syncPeriod                       = "1m20s"
+		retryPeriod                      = time.Second * 20
+		syncPeriod                       = time.Second * 80
 		targetDisableCache               = true
 		watchedNamespace                 = "fake-ns"
 
 		allowAll                   []rbacv1.PolicyRule
 		allowManagedResources      []rbacv1.PolicyRule
-		cfg                        resourcemanager.Config
+		cfg                        resourcemanager.Values
 		clusterRole                *rbacv1.ClusterRole
 		clusterRoleBinding         *rbacv1.ClusterRoleBinding
 		cmd                        []string
@@ -192,11 +193,11 @@ var _ = Describe("ResourceManager", func() {
 				},
 			},
 		}
-		cfg = resourcemanager.Config{
+		cfg = resourcemanager.Values{
 			AlwaysUpdate:               &alwaysUpdate,
 			ConcurrentSyncs:            &concurrentSyncs,
 			ClusterRoleName:            &clusterRoleName,
-			DefaultLabels:              &defaultLabels,
+			Labels:                     defaultLabels,
 			HealthSyncPeriod:           &healthSyncPeriod,
 			KubeConfig:                 &kubeCfg,
 			LeaseDuration:              &leaseDuration,
@@ -261,7 +262,7 @@ var _ = Describe("ResourceManager", func() {
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             pointer.Int32Ptr(1),
-				RevisionHistoryLimit: pointer.Int32Ptr(0),
+				RevisionHistoryLimit: pointer.Int32Ptr(1),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"app": "gardener-resource-manager",
@@ -407,10 +408,10 @@ var _ = Describe("ResourceManager", func() {
 				)
 				Expect(resourceManager.Deploy(ctx)).To(Succeed())
 			})
-			It("is also possible to set the kubeconfig via SetKubeConfig", func() {
+			It("is also possible to set the kubeconfig via SetSecrets", func() {
 				cfg.KubeConfig = nil
 				rm := resourcemanager.New(c, deployNamespace, image, replicas, cfg)
-				rm.SetKubeConfig(&kubeCfg)
+				rm.SetSecrets(resourcemanager.Secrets{KubeConfig: kubeCfg})
 
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),

@@ -840,6 +840,25 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 		return nil, err
 	}
 
+	// gardener-resource-manager
+	image, err := imageVector.FindImage(common.GardenerResourceManagerImageName, imagevector.RuntimeVersion(c.Version()), imagevector.TargetVersion(c.Version()))
+	if err != nil {
+		return nil, err
+	}
+	oneMinute := time.Minute
+	oneHour := time.Hour
+	cfg := resourcemanager.Values{
+		ConcurrentSyncs:  pointer.Int32Ptr(20),
+		ClusterRoleName:  pointer.StringPtr("gardener-resource-manager-seed"),
+		HealthSyncPeriod: &oneMinute,
+		ResourceClass:    pointer.StringPtr(v1beta1constants.SeedResourceManagerClass),
+
+		SyncPeriod: &oneHour,
+	}
+	rm := resourcemanager.New(c.Client(), namespace, image.String(), 1, cfg)
+	components = append(components, rm)
+
+	// cluster-autoscaler
 	components = append(components, clusterautoscaler.NewBootstrapper(c.Client(), namespace))
 
 	// etcd
@@ -860,21 +879,6 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 		}
 	}
 	components = append(components, etcd.NewBootstrapper(c.Client(), namespace, etcdImage, kubernetesVersion, etcdImageVectorOverwrite))
-
-	// gardener-resource-manager
-	image, err := imageVector.FindImage(common.GardenerResourceManagerImageName, imagevector.RuntimeVersion(c.Version()), imagevector.TargetVersion(c.Version()))
-	if err != nil {
-		return nil, err
-	}
-	cfg := resourcemanager.Config{
-		ConcurrentSyncs:  pointer.Int32Ptr(20),
-		ClusterRoleName:  pointer.StringPtr("gardener-resource-manager-seed"),
-		HealthSyncPeriod: pointer.StringPtr("1m0s"),
-		ResourceClass:    pointer.StringPtr(v1beta1constants.SeedResourceManagerClass),
-		SyncPeriod:       pointer.StringPtr("1h0m0s"),
-	}
-	rm := resourcemanager.New(c.Client(), namespace, image.String(), 1, cfg)
-	components = append(components, rm)
 
 	// gardener-seed-admission-controller
 	var gsacImage imagevector.Image

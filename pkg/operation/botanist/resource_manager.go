@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -35,16 +36,20 @@ func (b *Botanist) DefaultResourceManager() (*resourcemanager.ResourceManager, e
 		return nil, err
 	}
 
-	cfg := resourcemanager.Config{
+	oneMinute := time.Minute
+	fourtySeconds := time.Second * 40
+	fiveteenSeconds := time.Second * 15
+	tenSeconds := time.Second * 10
+	cfg := resourcemanager.Values{
 		AlwaysUpdate:    pointer.BoolPtr(true),
 		ConcurrentSyncs: pointer.Int32Ptr(20),
-		DefaultLabels: &map[string]string{
+		Labels: map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 			v1beta1constants.LabelApp:   "gardener-resource-manager",
 		},
-		HealthSyncPeriod:           pointer.StringPtr("1m0s"),
+		HealthSyncPeriod:           &oneMinute,
 		MaxConcurrentHealthWorkers: pointer.Int32Ptr(10),
-		SyncPeriod:                 pointer.StringPtr("1m0s"),
+		SyncPeriod:                 &oneMinute,
 		TargetDisableCache:         pointer.BoolPtr(true),
 		WatchedNamespace:           pointer.StringPtr(b.Shoot.SeedNamespace),
 		// We run one GRM per shoot control plane, and the GRM is doing its leader election via configmaps in the seed -
@@ -52,9 +57,9 @@ func (b *Botanist) DefaultResourceManager() (*resourcemanager.ResourceManager, e
 		// a seed is very busy anyways, we should not unnecessarily stress the API server with this leader election.
 		// The GRM's sync period is 1m anyways, so it doesn't matter too much if the leadership determination may take up
 		// to one minute.
-		LeaseDuration: pointer.StringPtr("40s"),
-		RenewDeadline: pointer.StringPtr("15s"),
-		RetryPeriod:   pointer.StringPtr("10s"),
+		LeaseDuration: &fourtySeconds,
+		RenewDeadline: &fiveteenSeconds,
+		RetryPeriod:   &tenSeconds,
 	}
 
 	return resourcemanager.New(
@@ -69,7 +74,7 @@ func (b *Botanist) DefaultResourceManager() (*resourcemanager.ResourceManager, e
 // DeployGardenerResourceManager deploys the gardener-resource-manager
 func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 	kubeCfg := component.Secret{Name: resourcemanager.SecretName, Checksum: b.CheckSums[resourcemanager.SecretName]}
-	b.Shoot.Components.ControlPlane.ResourceManager.SetKubeConfig(&kubeCfg)
+	b.Shoot.Components.ControlPlane.ResourceManager.SetSecrets(resourcemanager.Secrets{KubeConfig: kubeCfg})
 
 	// TODO (ialidzhikov): remove in a future version
 	deploymentKeys := []client.ObjectKey{
