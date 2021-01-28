@@ -94,3 +94,11 @@ func BeMissingKindError() types.GomegaMatcher {
 		message:   "Object 'Kind' is missing",
 	}
 }
+
+// BeInternalServerError checks if error is a InternalServerError.
+func BeInternalServerError() types.GomegaMatcher {
+	return &kubernetesErrors{
+		checkFunc: apierrors.IsInternalError,
+		message:   "",
+	}
+}

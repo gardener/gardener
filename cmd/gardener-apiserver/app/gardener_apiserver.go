@@ -134,6 +134,7 @@ func NewOptions(out, errOut io.Writer) *Options {
 		schema.GroupKind{Group: gardencorev1beta1.GroupName},
 	)
 	apiserver.RegisterAllAdmissionPlugins(o.Recommended.Admission.Plugins)
+	o.Recommended.Admission.DefaultOffPlugins = apiserver.DefaultOffPlugins
 	o.Recommended.Admission.RecommendedPluginOrder = apiserver.AllOrderedPlugins
 
 	return o
