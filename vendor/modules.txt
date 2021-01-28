@@ -1170,6 +1170,7 @@ k8s.io/component-base/metrics
 k8s.io/component-base/metrics/legacyregistry
 k8s.io/component-base/metrics/testutil
 k8s.io/component-base/version
+k8s.io/component-base/version/verflag
 # k8s.io/gengo v0.0.0-20200428234225-8167cfdcfc14
 ## explicit
 k8s.io/gengo/args

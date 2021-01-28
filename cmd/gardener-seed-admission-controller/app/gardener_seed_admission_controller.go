@@ -24,11 +24,11 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerlogger "github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/seedadmission"
-	"github.com/gardener/gardener/pkg/version/verflag"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"

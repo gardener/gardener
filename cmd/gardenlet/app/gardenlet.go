@@ -50,8 +50,6 @@ import (
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
-	"github.com/gardener/gardener/pkg/version"
-	"github.com/gardener/gardener/pkg/version/verflag"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
@@ -66,6 +64,8 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/component-base/version"
+	"k8s.io/component-base/version/verflag"
 )
 
 // Options has all the context and parameters needed to run a Gardenlet.

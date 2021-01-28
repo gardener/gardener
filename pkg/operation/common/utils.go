@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/version"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
@@ -50,6 +49,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

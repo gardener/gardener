@@ -37,7 +37,6 @@ import (
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
-	"github.com/gardener/gardener/pkg/version/verflag"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
@@ -50,6 +49,7 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/component-base/version/verflag"
 )
 
 // Options has all the context and parameters needed to run a Gardener controller manager.
