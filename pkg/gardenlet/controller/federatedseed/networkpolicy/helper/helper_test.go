@@ -31,7 +31,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -210,7 +209,7 @@ var _ = Describe("helper", func() {
 
 		It("should create the allow-to-seed-apiserver Network Policy", func() {
 			mockRuntimeClient.EXPECT().Get(ctx, kutil.Key(namespace, AllowToSeedAPIServer), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(errors.NewNotFound(core.Resource("networkpolicy"), ""))
-			mockRuntimeClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).DoAndReturn(func(_ context.Context, obj runtime.Object, _ ...client.UpdateOption) error {
+			mockRuntimeClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).DoAndReturn(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) error {
 				policy, ok := obj.(*networkingv1.NetworkPolicy)
 				Expect(ok).To(BeTrue())
 				Expect(policy.Annotations).To(HaveKeyWithValue("gardener.cloud/description", "Allows Egress from pods labeled with 'networking.gardener.cloud/to-seed-apiserver=allowed' to Seed's Kubernetes API Server endpoints in the default namespace."))
@@ -231,7 +230,7 @@ var _ = Describe("helper", func() {
 
 		It("should update the allow-to-seed-apiserver Network Policy", func() {
 			mockRuntimeClient.EXPECT().Get(ctx, kutil.Key(namespace, AllowToSeedAPIServer), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(nil)
-			mockRuntimeClient.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).DoAndReturn(func(_ context.Context, obj runtime.Object, _ ...client.UpdateOption) error {
+			mockRuntimeClient.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).DoAndReturn(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) error {
 				policy, ok := obj.(*networkingv1.NetworkPolicy)
 				Expect(ok).To(BeTrue())
 				Expect(policy.Annotations).To(HaveKeyWithValue("gardener.cloud/description", "Allows Egress from pods labeled with 'networking.gardener.cloud/to-seed-apiserver=allowed' to Seed's Kubernetes API Server endpoints in the default namespace."))

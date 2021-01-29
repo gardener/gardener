@@ -193,7 +193,7 @@ func (i *infrastructure) Wait(ctx context.Context) error {
 		i.waitInterval,
 		i.waitSevereThreshold,
 		i.waitTimeout,
-		func(obj runtime.Object) error {
+		func(obj client.Object) error {
 			infrastructure, ok := obj.(*extensionsv1alpha1.Infrastructure)
 			if !ok {
 				return fmt.Errorf("expected extensionsv1alpha1.Infrastructure but got %T", infrastructure)

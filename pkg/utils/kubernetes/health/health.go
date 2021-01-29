@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -291,7 +290,7 @@ func checkSeed(seed *gardencorev1beta1.Seed, identity *gardencorev1beta1.Gardene
 // * No gardener.cloud/operation is set
 // * No lastError is in the status
 // * A last operation is state succeeded is present
-func CheckExtensionObject(o runtime.Object) error {
+func CheckExtensionObject(o client.Object) error {
 	obj, ok := o.(extensionsv1alpha1.Object)
 	if !ok {
 		return fmt.Errorf("expected extensionsv1alpha1.Object but got %T", o)
@@ -304,7 +303,7 @@ func CheckExtensionObject(o runtime.Object) error {
 // ExtensionOperationHasBeenUpdatedSince returns a health check function that checks if an extension Object's last
 // operation has been updated since `lastUpdateTime`.
 func ExtensionOperationHasBeenUpdatedSince(lastUpdateTime metav1.Time) Func {
-	return func(o runtime.Object) error {
+	return func(o client.Object) error {
 		obj, ok := o.(extensionsv1alpha1.Object)
 		if !ok {
 			return fmt.Errorf("expected extensionsv1alpha1.Object but got %T", o)
@@ -319,7 +318,7 @@ func ExtensionOperationHasBeenUpdatedSince(lastUpdateTime metav1.Time) Func {
 }
 
 // CheckBackupBucket checks if an backup bucket Object is healthy or not.
-func CheckBackupBucket(bb runtime.Object) error {
+func CheckBackupBucket(bb client.Object) error {
 	obj, ok := bb.(*gardencorev1beta1.BackupBucket)
 	if !ok {
 		return fmt.Errorf("expected gardencorev1beta1.BackupBucket but got %T", bb)

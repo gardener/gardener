@@ -113,7 +113,7 @@ func WaitUntilExtensionCRReady(
 	interval time.Duration,
 	severeThreshold time.Duration,
 	timeout time.Duration,
-	postReadyFunc func(runtime.Object) error,
+	postReadyFunc func(client.Object) error,
 ) error {
 	return WaitUntilObjectReadyWithHealthFunction(
 		ctx,
@@ -145,7 +145,7 @@ func WaitUntilObjectReadyWithHealthFunction(
 	interval time.Duration,
 	severeThreshold time.Duration,
 	timeout time.Duration,
-	postReadyFunc func(runtime.Object) error,
+	postReadyFunc func(client.Object) error,
 ) error {
 	var (
 		errorWithCode         *gardencorev1beta1helper.ErrorWithCodes

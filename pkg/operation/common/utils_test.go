@@ -45,7 +45,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -700,8 +699,8 @@ var _ = Describe("common", func() {
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), obj)
 			c.EXPECT().Update(ctx, expectedObj).Return(apierrors.NewConflict(corev1.Resource("namespaces"), "", errors.New("conflict")))
-			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), expectedObj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
-				baseObj.DeepCopyInto(o.(*corev1.Namespace))
+			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), expectedObj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
+				baseObj.DeepCopyInto(obj.(*corev1.Namespace))
 				return nil
 			})
 			c.EXPECT().Update(ctx, expectedObj)

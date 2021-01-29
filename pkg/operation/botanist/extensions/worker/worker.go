@@ -285,7 +285,7 @@ func (w *worker) Wait(ctx context.Context) error {
 		w.waitInterval,
 		w.waitSevereThreshold,
 		w.waitTimeout,
-		func(obj runtime.Object) error {
+		func(obj client.Object) error {
 			worker, ok := obj.(*extensionsv1alpha1.Worker)
 			if !ok {
 				return fmt.Errorf("expected extensionsv1alpha1.Worker but got %T", worker)

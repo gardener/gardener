@@ -24,7 +24,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -446,7 +445,7 @@ func (b *Botanist) applyAndWaitForShootOperatingSystemConfig(ctx context.Context
 		DefaultInterval,
 		15*time.Second,
 		30*time.Second,
-		func(obj runtime.Object) error {
+		func(obj client.Object) error {
 			o, ok := obj.(*extensionsv1alpha1.OperatingSystemConfig)
 			if !ok {
 				return fmt.Errorf("expected extensionsv1alpha1.OperatingSystemConfig but got %T", obj)

@@ -105,8 +105,8 @@ func (r *Registry) AddAllAndSerialize(objects ...client.Object) (map[string][]by
 }
 
 // RegisteredObjects returns a map whose keys are filenames and whose values are objects.
-func (r *Registry) RegisteredObjects() map[string]runtime.Object {
-	out := make(map[string]runtime.Object, len(r.nameToObject))
+func (r *Registry) RegisteredObjects() map[string]client.Object {
+	out := make(map[string]client.Object, len(r.nameToObject))
 	for name, object := range r.nameToObject {
 		out[name] = object.obj
 	}

@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
@@ -525,7 +524,7 @@ func (e *etcd) getExistingStatefulSet(ctx context.Context, name string) (*appsv1
 	return nil, found, err
 }
 
-func (e *etcd) getExistingResource(ctx context.Context, name string, obj client.Object) (runtime.Object, bool, error) {
+func (e *etcd) getExistingResource(ctx context.Context, name string, obj client.Object) (client.Object, bool, error) {
 	if err := e.client.Get(ctx, kutil.Key(e.namespace, name), obj); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return nil, false, err

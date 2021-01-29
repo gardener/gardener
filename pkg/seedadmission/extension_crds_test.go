@@ -316,8 +316,8 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range crdResources {
 						prepareRequestAndObjectWithResource(&request, obj, resource)
 
-						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
-							prepareObjectWithLabelsAnnotations(o, resource, nil, nil)
+						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
+							prepareObjectWithLabelsAnnotations(obj, resource, nil, nil)
 							return nil
 						})
 
@@ -329,8 +329,8 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range crdResources {
 						prepareRequestAndObjectWithResource(&request, obj, resource)
 
-						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
-							prepareObjectWithLabelsAnnotations(o, resource, deletionUnprotectedLabels, nil)
+						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
+							prepareObjectWithLabelsAnnotations(obj, resource, deletionUnprotectedLabels, nil)
 							return nil
 						})
 
@@ -342,8 +342,8 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range crdResources {
 						prepareRequestAndObjectWithResource(&request, obj, resource)
 
-						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
-							prepareObjectWithLabelsAnnotations(o, resource, deletionProtectedLabels, nil)
+						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
+							prepareObjectWithLabelsAnnotations(obj, resource, deletionProtectedLabels, nil)
 							return nil
 						})
 
@@ -355,8 +355,8 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range crdResources {
 						prepareRequestAndObjectWithResource(&request, obj, resource)
 
-						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
-							prepareObjectWithLabelsAnnotations(o, resource, deletionProtectedLabels, deletionConfirmedAnnotations)
+						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
+							prepareObjectWithLabelsAnnotations(obj, resource, deletionProtectedLabels, deletionConfirmedAnnotations)
 							return nil
 						})
 
@@ -375,8 +375,8 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range otherResources {
 						prepareRequestAndObjectWithResource(&request, obj, resource)
 
-						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
-							prepareObjectWithLabelsAnnotations(o, resource, nil, nil)
+						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
+							prepareObjectWithLabelsAnnotations(obj, resource, nil, nil)
 							return nil
 						})
 
@@ -388,8 +388,8 @@ var _ = Describe("Extension CRDs", func() {
 					for _, resource := range otherResources {
 						prepareRequestAndObjectWithResource(&request, obj, resource)
 
-						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
-							prepareObjectWithLabelsAnnotations(o, resource, nil, deletionConfirmedAnnotations)
+						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
+							prepareObjectWithLabelsAnnotations(obj, resource, nil, deletionConfirmedAnnotations)
 							return nil
 						})
 
@@ -442,8 +442,8 @@ var _ = Describe("Extension CRDs", func() {
 						prepareRequestAndObjectWithResource(&request, obj, resource)
 						obj.SetKind(obj.GetKind() + "List")
 
-						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
-							prepareObjectWithLabelsAnnotations(o, resource, nil, nil)
+						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+							prepareObjectWithLabelsAnnotations(list, resource, nil, nil)
 							return nil
 						})
 
@@ -456,8 +456,8 @@ var _ = Describe("Extension CRDs", func() {
 						prepareRequestAndObjectWithResource(&request, obj, resource)
 						obj.SetKind(obj.GetKind() + "List")
 
-						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
-							prepareObjectWithLabelsAnnotations(o, resource, deletionUnprotectedLabels, nil)
+						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+							prepareObjectWithLabelsAnnotations(list, resource, deletionUnprotectedLabels, nil)
 							return nil
 						})
 
@@ -470,8 +470,8 @@ var _ = Describe("Extension CRDs", func() {
 						prepareRequestAndObjectWithResource(&request, obj, resource)
 						obj.SetKind(obj.GetKind() + "List")
 
-						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
-							prepareObjectWithLabelsAnnotations(o, resource, deletionProtectedLabels, nil)
+						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+							prepareObjectWithLabelsAnnotations(list, resource, deletionProtectedLabels, nil)
 							return nil
 						})
 
@@ -484,8 +484,8 @@ var _ = Describe("Extension CRDs", func() {
 						prepareRequestAndObjectWithResource(&request, obj, resource)
 						obj.SetKind(obj.GetKind() + "List")
 
-						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
-							prepareObjectWithLabelsAnnotations(o, resource, deletionProtectedLabels, deletionConfirmedAnnotations)
+						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+							prepareObjectWithLabelsAnnotations(list, resource, deletionProtectedLabels, deletionConfirmedAnnotations)
 							return nil
 						})
 
@@ -504,8 +504,8 @@ var _ = Describe("Extension CRDs", func() {
 						prepareRequestAndObjectWithResource(&request, obj, resource)
 						obj.SetKind(obj.GetKind() + "List")
 
-						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
-							prepareObjectWithLabelsAnnotations(o, resource, nil, nil)
+						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+							prepareObjectWithLabelsAnnotations(list, resource, nil, nil)
 							return nil
 						})
 
@@ -518,8 +518,8 @@ var _ = Describe("Extension CRDs", func() {
 						prepareRequestAndObjectWithResource(&request, obj, resource)
 						obj.SetKind(obj.GetKind() + "List")
 
-						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
-							prepareObjectWithLabelsAnnotations(o, resource, nil, deletionConfirmedAnnotations)
+						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+							prepareObjectWithLabelsAnnotations(list, resource, nil, deletionConfirmedAnnotations)
 							return nil
 						})
 

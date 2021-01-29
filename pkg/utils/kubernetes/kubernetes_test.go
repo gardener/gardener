@@ -42,7 +42,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -609,7 +608,7 @@ var _ = Describe("kubernetes", func() {
 
 			gomock.InOrder(
 				c.EXPECT().Get(ctx, key, configMap),
-				c.EXPECT().Get(ctx, key, configMap).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ runtime.Object) error {
+				c.EXPECT().Get(ctx, key, configMap).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ client.Object) error {
 					cancel()
 					return nil
 				}),
@@ -653,7 +652,7 @@ var _ = Describe("kubernetes", func() {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			c.EXPECT().List(ctx, configMapList).DoAndReturn(func(_ context.Context, _ runtime.Object, _ ...client.ListOption) error {
+			c.EXPECT().List(ctx, configMapList).DoAndReturn(func(_ context.Context, _ client.ObjectList, _ ...client.ListOption) error {
 				cancel()
 				configMapList.Items = append(configMapList.Items, configMap)
 				return nil

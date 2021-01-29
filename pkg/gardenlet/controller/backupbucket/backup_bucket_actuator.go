@@ -32,7 +32,6 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kretry "k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -228,7 +227,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 		defaultInterval,
 		defaultSevereThreshold,
 		defaultTimeout,
-		func(obj runtime.Object) error {
+		func(obj client.Object) error {
 			backupBucket, ok := obj.(*extensionsv1alpha1.BackupBucket)
 			if !ok {
 				return fmt.Errorf("expected extensionsv1alpha1.BackupBucket but got %T", backupBucket)

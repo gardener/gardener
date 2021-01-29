@@ -16,6 +16,7 @@ package managedresources_test
 
 import (
 	. "github.com/gardener/gardener/pkg/utils/managedresources"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -128,7 +129,7 @@ roleRef:
 			Expect(registry.Add(secret)).To(Succeed())
 			Expect(registry.Add(roleBinding)).To(Succeed())
 
-			Expect(registry.RegisteredObjects()).To(Equal(map[string]runtime.Object{
+			Expect(registry.RegisteredObjects()).To(Equal(map[string]client.Object{
 				secretFilename:      secret,
 				roleBindingFilename: roleBinding,
 			}))
