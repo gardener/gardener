@@ -35,6 +35,7 @@ import (
 
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardenercorescheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
+	seedmanagementscheme "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/scheme"
 	settingsscheme "github.com/gardener/gardener/pkg/client/settings/clientset/versioned/scheme"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -53,6 +54,7 @@ func init() {
 	// enable protobuf for Gardener API for controller-runtime clients
 	protobufSchemeBuilder := runtime.NewSchemeBuilder(
 		gardenercorescheme.AddToScheme,
+		seedmanagementscheme.AddToScheme,
 		settingsscheme.AddToScheme,
 	)
 
