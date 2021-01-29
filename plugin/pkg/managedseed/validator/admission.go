@@ -47,7 +47,7 @@ import (
 
 const (
 	// PluginName is the name of this admission plugin.
-	PluginName = "ManagedSeedValidator"
+	PluginName = "ManagedSeed"
 )
 
 // Register registers a plugin.
@@ -57,8 +57,8 @@ func Register(plugins *admission.Plugins) {
 	})
 }
 
-// ValidateManagedSeed contains listers and and admission handler.
-type ValidateManagedSeed struct {
+// ManagedSeed contains listers and and admission handler.
+type ManagedSeed struct {
 	*admission.Handler
 	shootLister          corelisters.ShootLister
 	secretBindingLister  corelisters.SecretBindingLister
@@ -69,29 +69,29 @@ type ValidateManagedSeed struct {
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ValidateManagedSeed{})
-	_ = admissioninitializer.WantsInternalCoreClientset(&ValidateManagedSeed{})
-	_ = admissioninitializer.WantsSeedManagementClientset(&ValidateManagedSeed{})
-	_ = admissioninitializer.WantsKubeInformerFactory(&ValidateManagedSeed{})
+	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ManagedSeed{})
+	_ = admissioninitializer.WantsInternalCoreClientset(&ManagedSeed{})
+	_ = admissioninitializer.WantsSeedManagementClientset(&ManagedSeed{})
+	_ = admissioninitializer.WantsKubeInformerFactory(&ManagedSeed{})
 
 	readyFuncs = []admission.ReadyFunc{}
 )
 
-// New creates a new ValidateManagedSeed admission plugin.
-func New() (*ValidateManagedSeed, error) {
-	return &ValidateManagedSeed{
+// New creates a new ManagedSeed admission plugin.
+func New() (*ManagedSeed, error) {
+	return &ManagedSeed{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
 	}, nil
 }
 
 // AssignReadyFunc assigns the ready function to the admission handler.
-func (v *ValidateManagedSeed) AssignReadyFunc(f admission.ReadyFunc) {
+func (v *ManagedSeed) AssignReadyFunc(f admission.ReadyFunc) {
 	v.readyFunc = f
 	v.SetReadyFunc(f)
 }
 
 // SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
-func (v *ValidateManagedSeed) SetInternalCoreInformerFactory(f coreinformers.SharedInformerFactory) {
+func (v *ManagedSeed) SetInternalCoreInformerFactory(f coreinformers.SharedInformerFactory) {
 	shootInformer := f.Core().InternalVersion().Shoots()
 	v.shootLister = shootInformer.Lister()
 
@@ -102,7 +102,7 @@ func (v *ValidateManagedSeed) SetInternalCoreInformerFactory(f coreinformers.Sha
 }
 
 // SetKubeInformerFactory gets Lister from SharedInformerFactory.
-func (v *ValidateManagedSeed) SetKubeInformerFactory(f kubeinformers.SharedInformerFactory) {
+func (v *ManagedSeed) SetKubeInformerFactory(f kubeinformers.SharedInformerFactory) {
 	secretInformer := f.Core().V1().Secrets()
 	v.secretLister = secretInformer.Lister()
 
@@ -110,17 +110,17 @@ func (v *ValidateManagedSeed) SetKubeInformerFactory(f kubeinformers.SharedInfor
 }
 
 // SetInternalCoreClientset sets the garden core clientset.
-func (v *ValidateManagedSeed) SetInternalCoreClientset(c coreclientset.Interface) {
+func (v *ManagedSeed) SetInternalCoreClientset(c coreclientset.Interface) {
 	v.coreClient = c
 }
 
 // SetSeedManagementClientset sets the garden seedmanagement clientset.
-func (v *ValidateManagedSeed) SetSeedManagementClientset(c seedmanagementclientset.Interface) {
+func (v *ManagedSeed) SetSeedManagementClientset(c seedmanagementclientset.Interface) {
 	v.seedManagementClient = c
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
-func (v *ValidateManagedSeed) ValidateInitialization() error {
+func (v *ManagedSeed) ValidateInitialization() error {
 	if v.shootLister == nil {
 		return errors.New("missing shoot lister")
 	}
@@ -139,10 +139,10 @@ func (v *ValidateManagedSeed) ValidateInitialization() error {
 	return nil
 }
 
-var _ admission.MutationInterface = &ValidateManagedSeed{}
+var _ admission.MutationInterface = &ManagedSeed{}
 
 // Admit validates and if appropriate mutates the given managed seed against the shoot that it references.
-func (v *ValidateManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
+func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if v.readyFunc == nil {
 		v.AssignReadyFunc(func() bool {
@@ -203,21 +203,21 @@ func (v *ValidateManagedSeed) Admit(ctx context.Context, a admission.Attributes,
 		return apierrors.NewInternalError(fmt.Errorf("could not get managed seed for shoot %s/%s: %v", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err))
 	}
 	if ms != nil && ms.Name != managedSeed.Name {
-		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s already registered as seed", kutil.ObjectName(shoot)))))
+		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Invalid(shootNamePath, managedSeed.Spec.Shoot.Name, fmt.Sprintf("shoot %s already registered as seed by managed seed %s", kutil.ObjectName(shoot), kutil.ObjectName(ms)))))
 	}
 
 	switch {
 	case managedSeed.Spec.SeedTemplate != nil:
 		// Admit seed spec against shoot
-		errs, err := v.admitSeedSpec(ctx, &managedSeed.Spec.SeedTemplate.Spec, shoot, field.NewPath("spec", "seedTemplate", "spec"))
+		errs, err := v.admitSeedSpec(&managedSeed.Spec.SeedTemplate.Spec, shoot, field.NewPath("spec", "seedTemplate", "spec"))
 		if err != nil {
 			return err
 		}
 		allErrs = append(allErrs, errs...)
 
 	case managedSeed.Spec.Gardenlet != nil:
-		// Admit gardelnet against shoot
-		errs, err := v.admitGardenlet(ctx, managedSeed.Spec.Gardenlet, shoot, field.NewPath("spec", "gardenlet"))
+		// Admit gardenlet against shoot
+		errs, err := v.admitGardenlet(managedSeed.Spec.Gardenlet, shoot, field.NewPath("spec", "gardenlet"))
 		if err != nil {
 			return err
 		}
@@ -231,7 +231,7 @@ func (v *ValidateManagedSeed) Admit(ctx context.Context, a admission.Attributes,
 	return nil
 }
 
-func (v *ValidateManagedSeed) admitGardenlet(ctx context.Context, gardenlet *seedmanagement.Gardenlet, shoot *gardencore.Shoot, fldPath *field.Path) (field.ErrorList, error) {
+func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.Gardenlet, shoot *gardencore.Shoot, fldPath *field.Path) (field.ErrorList, error) {
 	var allErrs field.ErrorList
 
 	if gardenlet.Config != nil {
@@ -254,7 +254,7 @@ func (v *ValidateManagedSeed) admitGardenlet(ctx context.Context, gardenlet *see
 			}
 
 			// Admit seed spec against shoot
-			errs, err := v.admitSeedSpec(ctx, &seed.Spec, shoot, seedConfigPath.Child("spec"))
+			errs, err := v.admitSeedSpec(&seed.Spec, shoot, seedConfigPath.Child("spec"))
 			if err != nil {
 				return allErrs, err
 			}
@@ -275,7 +275,7 @@ func (v *ValidateManagedSeed) admitGardenlet(ctx context.Context, gardenlet *see
 	return allErrs, nil
 }
 
-func (v *ValidateManagedSeed) admitSeedSpec(ctx context.Context, spec *gardencore.SeedSpec, shoot *gardencore.Shoot, fldPath *field.Path) (field.ErrorList, error) {
+func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore.Shoot, fldPath *field.Path) (field.ErrorList, error) {
 	var allErrs field.ErrorList
 
 	// Initialize backup provider
@@ -291,7 +291,7 @@ func (v *ValidateManagedSeed) admitSeedSpec(ctx context.Context, spec *gardencor
 		}
 
 		if spec.DNS.Provider == nil {
-			dnsProvider, err := v.getSeedDNSProvider(ctx, shoot)
+			dnsProvider, err := v.getSeedDNSProvider(shoot)
 			if err != nil {
 				if apierrors.IsInternalError(err) {
 					return allErrs, err
@@ -300,8 +300,6 @@ func (v *ValidateManagedSeed) admitSeedSpec(ctx context.Context, spec *gardencor
 			}
 			spec.DNS.Provider = dnsProvider
 		}
-		// TODO If spec.DNS.Provider is not nil should we check if the user specified exactly the DNS provider we found above?
-		// I assume not, since the shoot may have multiple DNS providers
 
 		if spec.Ingress.Domain == "" {
 			spec.Ingress.Domain = ingressDomain
@@ -309,10 +307,10 @@ func (v *ValidateManagedSeed) admitSeedSpec(ctx context.Context, spec *gardencor
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("ingress", "domain"), spec.Ingress.Domain, fmt.Sprintf("seed ingress domain must be equal to shoot DNS domain %s", ingressDomain)))
 		}
 	} else {
-		if spec.DNS.IngressDomain == nil || *spec.DNS.IngressDomain == "" {
+		if (spec.DNS.IngressDomain == nil || *spec.DNS.IngressDomain == "") && gardencorehelper.NginxIngressEnabled(shoot.Spec.Addons) {
 			spec.DNS.IngressDomain = &ingressDomain
-		} else if *spec.DNS.IngressDomain != ingressDomain {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "ingressDomain"), spec.DNS.IngressDomain, fmt.Sprintf("seed ingress domain must be equal to shoot DNS domain %s", ingressDomain)))
+		} else if !strings.HasSuffix(*spec.DNS.IngressDomain, *shoot.Spec.DNS.Domain) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "ingressDomain"), spec.DNS.IngressDomain, fmt.Sprintf("seed ingress domain must be a subdomain of shoot DNS domain %s", *shoot.Spec.DNS.Domain)))
 		}
 	}
 
@@ -348,13 +346,13 @@ func (v *ValidateManagedSeed) admitSeedSpec(ctx context.Context, spec *gardencor
 	return allErrs, nil
 }
 
-func (v *ValidateManagedSeed) getSeedDNSProvider(ctx context.Context, shoot *gardencore.Shoot) (*gardencore.SeedDNSProvider, error) {
-	dnsProvider, err := v.getSeedDNSProviderForCustomDomain(ctx, shoot)
+func (v *ManagedSeed) getSeedDNSProvider(shoot *gardencore.Shoot) (*gardencore.SeedDNSProvider, error) {
+	dnsProvider, err := v.getSeedDNSProviderForCustomDomain(shoot)
 	if err != nil {
 		return nil, err
 	}
 	if dnsProvider == nil {
-		dnsProvider, err = v.getSeedDNSProviderForDefaultDomain(ctx, shoot)
+		dnsProvider, err = v.getSeedDNSProviderForDefaultDomain(shoot)
 		if err != nil {
 			return nil, err
 		}
@@ -365,7 +363,7 @@ func (v *ValidateManagedSeed) getSeedDNSProvider(ctx context.Context, shoot *gar
 	return dnsProvider, nil
 }
 
-func (v *ValidateManagedSeed) getSeedDNSProviderForCustomDomain(ctx context.Context, shoot *gardencore.Shoot) (*gardencore.SeedDNSProvider, error) {
+func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencore.Shoot) (*gardencore.SeedDNSProvider, error) {
 	// Find a primary DNS provider in the list of shoot DNS providers
 	primaryProvider := gardencorehelper.FindPrimaryDNSProvider(shoot.Spec.DNS.Providers)
 	if primaryProvider == nil {
@@ -402,7 +400,7 @@ func (v *ValidateManagedSeed) getSeedDNSProviderForCustomDomain(ctx context.Cont
 	}, nil
 }
 
-func (v *ValidateManagedSeed) getSeedDNSProviderForDefaultDomain(ctx context.Context, shoot *gardencore.Shoot) (*gardencore.SeedDNSProvider, error) {
+func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencore.Shoot) (*gardencore.SeedDNSProvider, error) {
 	// Get all default domain secrets in the garden namespace
 	defaultDomainSecrets, err := v.getSecrets(v1beta1constants.GardenNamespace, labels.SelectorFromValidatedSet(map[string]string{
 		v1beta1constants.GardenRole: common.GardenRoleDefaultDomain,
@@ -444,7 +442,7 @@ func (v *ValidateManagedSeed) getSeedDNSProviderForDefaultDomain(ctx context.Con
 	return nil, nil
 }
 
-func (v *ValidateManagedSeed) getShoot(ctx context.Context, namespace, name string) (*gardencore.Shoot, error) {
+func (v *ManagedSeed) getShoot(ctx context.Context, namespace, name string) (*gardencore.Shoot, error) {
 	shoot, err := v.shootLister.Shoots(namespace).Get(name)
 	if err != nil && apierrors.IsNotFound(err) {
 		// Read from the client to ensure that if the managed seed has been created shortly after the shoot
@@ -454,10 +452,10 @@ func (v *ValidateManagedSeed) getShoot(ctx context.Context, namespace, name stri
 	return shoot, err
 }
 
-func (v *ValidateManagedSeed) getSecretBinding(namespace, name string) (*gardencore.SecretBinding, error) {
+func (v *ManagedSeed) getSecretBinding(namespace, name string) (*gardencore.SecretBinding, error) {
 	return v.secretBindingLister.SecretBindings(namespace).Get(name)
 }
 
-func (v *ValidateManagedSeed) getSecrets(namespace string, selector labels.Selector) ([]*corev1.Secret, error) {
+func (v *ManagedSeed) getSecrets(namespace string, selector labels.Selector) ([]*corev1.Secret, error) {
 	return v.secretLister.Secrets(namespace).List(selector)
 }

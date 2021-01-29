@@ -49,6 +49,7 @@ var (
 		extensionvalidation.PluginName,             // ExtensionValidator
 		shoottolerationrestriction.PluginName,      // ShootTolerationRestriction
 		shootdns.PluginName,                        // ShootDNS
+		shootmanagedseed.PluginName,                // ShootManagedSeed
 		shootquotavalidator.PluginName,             // ShootQuotaValidator
 		shootvalidator.PluginName,                  // ShootValidator
 		seedvalidator.PluginName,                   // SeedValidator
@@ -80,6 +81,7 @@ var (
 		extensionvalidation.PluginName,             // ExtensionValidator
 		shoottolerationrestriction.PluginName,      // ShootTolerationRestriction
 		shootdns.PluginName,                        // ShootDNS
+		shootmanagedseed.PluginName,                // ShootManagedSeed
 		shootquotavalidator.PluginName,             // ShootQuotaValidator
 		shootvalidator.PluginName,                  // ShootValidator
 		seedvalidator.PluginName,                   // SeedValidator
@@ -90,6 +92,7 @@ var (
 		clusteropenidconnectpreset.PluginName,      // ClusterOpenIDConnectPreset
 		shootstatedeletionvalidator.PluginName,     // ShootStateDeletionValidator
 		customverbauthorizer.PluginName,            // CustomVerbAuthorizer
+		managedseedvalidator.PluginName,            // ManagedSeed
 		mutatingwebhook.PluginName,                 // MutatingAdmissionWebhook
 		validatingwebhook.PluginName,               // ValidatingAdmissionWebhook
 		resourcequota.PluginName,                   // ResourceQuota

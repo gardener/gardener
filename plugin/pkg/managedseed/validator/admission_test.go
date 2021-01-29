@@ -54,18 +54,18 @@ const (
 	dnsProvider = "dns-provider"
 )
 
-var _ = Describe("ValidateManagedSeed", func() {
+var _ = Describe("ManagedSeed", func() {
 	Describe("#Admit", func() {
 		var (
 			managedSeed          *seedmanagement.ManagedSeed
 			shoot                *core.Shoot
 			secret               *corev1.Secret
-			seed                 func(withIngress bool) *core.Seed
+			seed                 func(bool) *core.Seed
 			coreInformerFactory  coreinformers.SharedInformerFactory
 			coreClient           *corefake.Clientset
 			seedManagementClient *seedmanagementfake.Clientset
 			kubeInformerFactory  kubeinformers.SharedInformerFactory
-			admissionHandler     *ValidateManagedSeed
+			admissionHandler     *ManagedSeed
 		)
 
 		BeforeEach(func() {
@@ -99,6 +99,13 @@ var _ = Describe("ValidateManagedSeed", func() {
 						Type: provider,
 					},
 					Region: region,
+					Addons: &core.Addons{
+						NginxIngress: &core.NginxIngress{
+							Addon: core.Addon{
+								Enabled: true,
+							},
+						},
+					},
 				},
 			}
 
@@ -167,7 +174,9 @@ var _ = Describe("ValidateManagedSeed", func() {
 				}
 			}
 
-			admissionHandler, _ = New()
+			var err error
+			admissionHandler, err = New()
+			Expect(err).ToNot(HaveOccurred())
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
 			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
@@ -287,6 +296,7 @@ var _ = Describe("ValidateManagedSeed", func() {
 			})
 
 			It("should allow the ManagedSeed creation if the Shoot exists and can be registered as Seed (w/ ingress)", func() {
+				shoot.Spec.Addons = nil
 				managedSeed.Spec.SeedTemplate.Spec = core.SeedSpec{
 					Backup: &core.SeedBackup{},
 					Ingress: &core.Ingress{

@@ -136,7 +136,7 @@ func (v *ManagedSeed) validateDeleteCollection(ctx context.Context, a admission.
 		return err
 	}
 	for _, shoot := range shoots {
-		if err := v.validateDelete(ctx, v.newAttributesWithName(a, shoot.Name)); err != nil {
+		if err := v.validateDelete(ctx, newAttributesWithName(a, shoot.Name)); err != nil {
 			return err
 		}
 	}
@@ -156,7 +156,7 @@ func (v *ManagedSeed) validateDelete(ctx context.Context, a admission.Attributes
 	return admission.NewForbidden(a, fmt.Errorf("cannot delete shoot %s/%s since it is still referenced by a managed seed", a.GetNamespace(), a.GetName()))
 }
 
-func (d *ManagedSeed) newAttributesWithName(a admission.Attributes, name string) admission.Attributes {
+func newAttributesWithName(a admission.Attributes, name string) admission.Attributes {
 	return admission.NewAttributesRecord(a.GetObject(),
 		a.GetOldObject(),
 		a.GetKind(),
