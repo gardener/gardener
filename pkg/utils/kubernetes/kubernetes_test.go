@@ -101,23 +101,6 @@ var _ = Describe("kubernetes", func() {
 		})
 	})
 
-	Describe("#HasDeletionTimestamp", func() {
-		var namespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
-		}
-		It("should return false if no deletion timestamp is set", func() {
-			Expect(HasDeletionTimestamp(namespace)).To(BeFalse())
-		})
-
-		It("should return true if timestamp is set", func() {
-			now := metav1.Now()
-			namespace.ObjectMeta.DeletionTimestamp = &now
-			Expect(HasDeletionTimestamp(namespace)).To(BeTrue())
-		})
-	})
-
 	Describe("#CreateTwoWayMergePatch", func() {
 		It("should fail for two different object types", func() {
 			_, err := CreateTwoWayMergePatch(&corev1.ConfigMap{}, &corev1.Secret{})

@@ -76,11 +76,6 @@ func HasMetaDataAnnotation(meta metav1.Object, key, value string) bool {
 	return ok && val == value
 }
 
-// HasDeletionTimestamp checks if an object has a deletion timestamp
-func HasDeletionTimestamp(obj client.Object) bool {
-	return obj.GetDeletionTimestamp() != nil
-}
-
 func nameAndNamespace(namespaceOrName string, nameOpt ...string) (namespace, name string) {
 	if len(nameOpt) > 1 {
 		panic(fmt.Sprintf("more than name/namespace for key specified: %s/%v", namespaceOrName, nameOpt))
