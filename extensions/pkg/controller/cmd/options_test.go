@@ -199,15 +199,17 @@ var _ = Describe("Options", func() {
 
 	Context("ManagerOptions", func() {
 		const (
-			name                    = "foo"
-			leaderElectionID        = "id"
-			leaderElectionNamespace = "namespace"
+			name                       = "foo"
+			leaderElectionResourceLock = "leases"
+			leaderElectionID           = "id"
+			leaderElectionNamespace    = "namespace"
 		)
 		command := test.NewCommandBuilder(name).
 			Flags(
-				test.BoolFlag(LeaderElectionFlag, true),
-				test.StringFlag(LeaderElectionIDFlag, leaderElectionID),
-				test.StringFlag(LeaderElectionNamespaceFlag, leaderElectionNamespace),
+				test.BoolFlag("leader-election", true),
+				test.StringFlag("leader-election-resource-lock", leaderElectionResourceLock),
+				test.StringFlag("leader-election-id", leaderElectionID),
+				test.StringFlag("leader-election-namespace", leaderElectionNamespace),
 			).
 			Command().
 			Slice()
@@ -221,9 +223,34 @@ var _ = Describe("Options", func() {
 
 				Expect(fs.Parse(command)).NotTo(HaveOccurred())
 				Expect(opts).To(Equal(ManagerOptions{
-					LeaderElection:          true,
-					LeaderElectionID:        leaderElectionID,
-					LeaderElectionNamespace: leaderElectionNamespace,
+					LeaderElection:             true,
+					LeaderElectionResourceLock: leaderElectionResourceLock,
+					LeaderElectionID:           leaderElectionID,
+					LeaderElectionNamespace:    leaderElectionNamespace,
+				}))
+			})
+
+			It("should default resource lock to configmapsleases", func() {
+				fs := pflag.NewFlagSet(name, pflag.ExitOnError)
+				opts := ManagerOptions{}
+
+				opts.AddFlags(fs)
+
+				Expect(fs.Parse(
+					test.NewCommandBuilder(name).
+						Flags(
+							test.BoolFlag("leader-election", true),
+							test.StringFlag("leader-election-id", leaderElectionID),
+							test.StringFlag("leader-election-namespace", leaderElectionNamespace),
+						).
+						Command().
+						Slice(),
+				)).NotTo(HaveOccurred())
+				Expect(opts).To(Equal(ManagerOptions{
+					LeaderElection:             true,
+					LeaderElectionResourceLock: "configmapsleases",
+					LeaderElectionID:           leaderElectionID,
+					LeaderElectionNamespace:    leaderElectionNamespace,
 				}))
 			})
 		})
@@ -250,9 +277,10 @@ var _ = Describe("Options", func() {
 				Expect(fs.Parse(command)).NotTo(HaveOccurred())
 				Expect(opts.Complete()).NotTo(HaveOccurred())
 				Expect(opts.Completed()).To(Equal(&ManagerConfig{
-					LeaderElection:          true,
-					LeaderElectionID:        leaderElectionID,
-					LeaderElectionNamespace: leaderElectionNamespace,
+					LeaderElection:             true,
+					LeaderElectionResourceLock: leaderElectionResourceLock,
+					LeaderElectionID:           leaderElectionID,
+					LeaderElectionNamespace:    leaderElectionNamespace,
 				}))
 			})
 		})
@@ -498,25 +526,28 @@ var _ = Describe("Options", func() {
 
 	Context("ManagerConfig", func() {
 		const (
-			leaderElectionID        = "id"
-			leaderElectionNamespace = "namespace"
+			leaderElectionResourceLock = "leases"
+			leaderElectionID           = "id"
+			leaderElectionNamespace    = "namespace"
 		)
 
 		Describe("#Apply", func() {
 			It("should apply the values to the given manager.Options", func() {
 				cfg := &ManagerConfig{
-					LeaderElection:          true,
-					LeaderElectionID:        leaderElectionID,
-					LeaderElectionNamespace: leaderElectionNamespace,
+					LeaderElection:             true,
+					LeaderElectionResourceLock: leaderElectionResourceLock,
+					LeaderElectionID:           leaderElectionID,
+					LeaderElectionNamespace:    leaderElectionNamespace,
 				}
 
 				opts := manager.Options{}
 				cfg.Apply(&opts)
 
 				Expect(opts).To(Equal(manager.Options{
-					LeaderElection:          true,
-					LeaderElectionID:        leaderElectionID,
-					LeaderElectionNamespace: leaderElectionNamespace,
+					LeaderElection:             true,
+					LeaderElectionResourceLock: leaderElectionResourceLock,
+					LeaderElectionID:           leaderElectionID,
+					LeaderElectionNamespace:    leaderElectionNamespace,
 				}))
 			})
 		})
@@ -524,14 +555,16 @@ var _ = Describe("Options", func() {
 		Describe("#Options", func() {
 			It("should return manager.Options with the given values set", func() {
 				cfg := &ManagerConfig{
-					LeaderElection:          true,
-					LeaderElectionID:        leaderElectionID,
-					LeaderElectionNamespace: leaderElectionNamespace,
+					LeaderElection:             true,
+					LeaderElectionResourceLock: leaderElectionResourceLock,
+					LeaderElectionID:           leaderElectionID,
+					LeaderElectionNamespace:    leaderElectionNamespace,
 				}
 
 				opts := cfg.Options()
 
 				Expect(opts.LeaderElection).To(BeTrue())
+				Expect(opts.LeaderElectionResourceLock).To(Equal(leaderElectionResourceLock))
 				Expect(opts.LeaderElectionID).To(Equal(leaderElectionID))
 				Expect(opts.LeaderElectionNamespace).To(Equal(leaderElectionNamespace))
 			})
