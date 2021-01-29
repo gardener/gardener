@@ -56,6 +56,14 @@ spec:
           value: kube-apiserver
         - name: KUBERNETES_SERVICE_PORT
           value: "443"
+{{- else }}
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+{{- end }}
+{{- if not .Values.updater.enableServiceAccount }}
         volumeMounts:
         - name: vpa-updater
           mountPath: /var/run/secrets/kubernetes.io/serviceaccount
