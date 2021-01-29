@@ -143,7 +143,7 @@ func newMachineToObjectMapper(newObjListFunc func() client.ObjectList, predicate
 	return &machineToObjectMapper{newObjListFunc: newObjListFunc, predicates: predicates}
 }
 
-func getReconcileRequestsFromObjectList(objList runtime.Object, predicates []predicate.Predicate) []reconcile.Request {
+func getReconcileRequestsFromObjectList(objList client.ObjectList, predicates []predicate.Predicate) []reconcile.Request {
 	var requests []reconcile.Request
 
 	utilruntime.HandleError(meta.EachListItem(objList, func(obj runtime.Object) error {

@@ -17,12 +17,6 @@ package csimigration
 import (
 	"context"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -31,12 +25,17 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("reconciler", func() {
@@ -91,7 +90,7 @@ var _ = Describe("reconciler", func() {
 			c.EXPECT().Patch(ctx, kubeControllerManagerDeployment, emptyPatch)
 			c.EXPECT().Patch(ctx, kubeSchedulerDeployment, emptyPatch)
 
-			c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(func(_ context.Context, obj runtime.Object, _ ...client.UpdateOption) error {
+			c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) error {
 				cluster, ok := obj.(*extensionsv1alpha1.Cluster)
 				Expect(ok).To(BeTrue())
 				Expect(cluster.Annotations).To(HaveKeyWithValue(AnnotationKeyNeedsComplete, "true"))
@@ -106,7 +105,7 @@ var _ = Describe("reconciler", func() {
 		It("should behave as expected for new clusters", func() {
 			c.EXPECT().Get(ctx, kutil.Key(cluster.Name, shoot.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{})).Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("controlplane"), shoot.Name))
 
-			c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(func(_ context.Context, obj runtime.Object, _ ...client.UpdateOption) error {
+			c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) error {
 				cluster, ok := obj.(*extensionsv1alpha1.Cluster)
 				Expect(ok).To(BeTrue())
 				Expect(cluster.Annotations).To(HaveKeyWithValue(AnnotationKeyNeedsComplete, "true"))
@@ -152,7 +151,7 @@ var _ = Describe("reconciler", func() {
 					return nil, shootClient, nil
 				}
 
-				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
+				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
 					obj := &corev1.NodeList{
 						Items: []corev1.Node{
 							{
@@ -182,7 +181,7 @@ var _ = Describe("reconciler", func() {
 					return nil, shootClient, nil
 				}
 
-				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
+				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.NodeList{})).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
 					obj := &corev1.NodeList{
 						Items: []corev1.Node{
 							{
@@ -204,7 +203,7 @@ var _ = Describe("reconciler", func() {
 					},
 					Provisioner: storageClassProvisioner,
 				}
-				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&storagev1.StorageClassList{})).DoAndReturn(func(_ context.Context, list runtime.Object, _ ...client.ListOption) error {
+				shootClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&storagev1.StorageClassList{})).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
 					obj := &storagev1.StorageClassList{
 						Items: []storagev1.StorageClass{*storageClass},
 					}
@@ -213,7 +212,7 @@ var _ = Describe("reconciler", func() {
 				})
 				shootClient.EXPECT().Delete(ctx, storageClass)
 
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(func(_ context.Context, obj runtime.Object, _ ...client.UpdateOption) error {
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) error {
 					cluster, ok := obj.(*extensionsv1alpha1.Cluster)
 					Expect(ok).To(BeTrue())
 					Expect(cluster.Annotations).To(HaveKeyWithValue(AnnotationKeyNeedsComplete, "true"))
@@ -225,7 +224,7 @@ var _ = Describe("reconciler", func() {
 				c.EXPECT().Patch(ctx, kubeControllerManagerDeployment, emptyPatch)
 				c.EXPECT().Patch(ctx, kubeSchedulerDeployment, emptyPatch)
 
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(func(_ context.Context, obj runtime.Object, _ ...client.UpdateOption) error {
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).DoAndReturn(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) error {
 					cluster, ok := obj.(*extensionsv1alpha1.Cluster)
 					Expect(ok).To(BeTrue())
 					Expect(cluster.Annotations).To(HaveKeyWithValue(AnnotationKeyNeedsComplete, "true"))

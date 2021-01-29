@@ -18,7 +18,6 @@ import (
 	"context"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -53,7 +52,7 @@ type GetExtensionObjectFunc = func() extensionsv1alpha1.Object
 type GetExtensionObjectListFunc = func() client.ObjectList
 
 // PreCheckFunc checks whether the health check shall be performed based on the given object and cluster.
-type PreCheckFunc = func(runtime.Object, *extensionscontroller.Cluster) bool
+type PreCheckFunc = func(client.Object, *extensionscontroller.Cluster) bool
 
 // ConditionTypeToHealthCheck registers a HealthCheck for the given ConditionType. If the PreCheckFunc is not nil it will
 // be executed with the given object before the health check if performed. Otherwise, the health check will always be

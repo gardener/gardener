@@ -16,14 +16,14 @@ package worker
 
 import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 // MachineStatusHasChanged is a predicate deciding whether the status of a Machine has been changed.
 func MachineStatusHasChanged() predicate.Predicate {
-	statusHasChanged := func(oldObj runtime.Object, newObj runtime.Object) bool {
+	statusHasChanged := func(oldObj client.Object, newObj client.Object) bool {
 		oldMachine, ok := oldObj.(*machinev1alpha1.Machine)
 		if !ok {
 			return false

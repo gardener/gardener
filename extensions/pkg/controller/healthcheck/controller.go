@@ -57,7 +57,7 @@ type AddArgs struct {
 	// The Gardenlet reads the conditions on the extension Resource.
 	// Through this mechanism, the extension can contribute to the Shoot's HealthStatus.
 	registeredExtension *RegisteredExtension
-	// GetExtensionObjListFunc returns a list of the runtime.Object representation of the extension to register
+	// GetExtensionObjListFunc returns a client.ObjectList representation of the extension to register
 	GetExtensionObjListFunc GetExtensionObjectListFunc
 }
 
@@ -85,8 +85,8 @@ type RegisteredExtension struct {
 // the NewActuator reconciles a single extension with a specific type and writes conditions for each distinct healthConditionTypes.
 // extensionType (e.g aws) defines the spec.type of the extension to watch
 // kind defines the GroupVersionKind of the extension
-// GetExtensionObjListFunc returns a list of the runtime.Object representation of the extension to register
-// getExtensionObjFunc returns a runtime.Object representation of the extension to register
+// GetExtensionObjListFunc returns a client.ObjectList representation of the extension to register
+// getExtensionObjFunc returns a extensionsv1alpha1.Object representation of the extension to register
 // mgr is the controller runtime manager
 // opts contain config for the healthcheck controller
 // custom predicates allow for fine-grained control which resources to watch
