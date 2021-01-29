@@ -292,7 +292,6 @@ func newClientSet(conf *Config) (Interface, error) {
 
 	cs := &clientSet{
 		config:     conf.restConfig,
-		restMapper: conf.clientOptions.Mapper,
 		restClient: kubernetes.Discovery().RESTClient(),
 
 		applier: NewApplier(runtimeClient, conf.clientOptions.Mapper),

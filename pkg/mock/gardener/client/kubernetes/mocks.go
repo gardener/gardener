@@ -13,7 +13,6 @@ import (
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	gomock "github.com/golang/mock/gomock"
 	clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	meta "k8s.io/apimachinery/pkg/api/meta"
 	version "k8s.io/apimachinery/pkg/version"
 	kubernetes0 "k8s.io/client-go/kubernetes"
 	rest "k8s.io/client-go/rest"
@@ -255,20 +254,6 @@ func (m *MockInterface) RESTConfig() *rest.Config {
 func (mr *MockInterfaceMockRecorder) RESTConfig() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RESTConfig", reflect.TypeOf((*MockInterface)(nil).RESTConfig))
-}
-
-// RESTMapper mocks base method.
-func (m *MockInterface) RESTMapper() meta.RESTMapper {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RESTMapper")
-	ret0, _ := ret[0].(meta.RESTMapper)
-	return ret0
-}
-
-// RESTMapper indicates an expected call of RESTMapper.
-func (mr *MockInterfaceMockRecorder) RESTMapper() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RESTMapper", reflect.TypeOf((*MockInterface)(nil).RESTMapper))
 }
 
 // Start mocks base method.

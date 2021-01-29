@@ -28,7 +28,6 @@ import (
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -136,7 +135,6 @@ type Applier interface {
 // of several Kubernetes versions.
 type Interface interface {
 	RESTConfig() *rest.Config
-	RESTMapper() meta.RESTMapper
 	RESTClient() rest.Interface
 
 	// Client returns the ClientSet's controller-runtime client. This client should be used by default, as it carries
