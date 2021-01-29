@@ -159,7 +159,6 @@ func (b *ClientSetBuilder) Build() *ClientSet {
 		client:                b.client,
 		directClient:          b.directClient,
 		cache:                 b.cache,
-		restMapper:            b.restMapper,
 		kubernetes:            b.kubernetes,
 		gardenCore:            b.gardenCore,
 		apiextension:          b.apiextension,

@@ -22,7 +22,6 @@ import (
 	gardencorefake "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
-	"github.com/gardener/gardener/pkg/mock/apimachinery/api/meta"
 	mockdiscovery "github.com/gardener/gardener/pkg/mock/client-go/discovery"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -101,13 +100,6 @@ var _ = Describe("Fake ClientSet", func() {
 		cs := builder.WithCache(cache).Build()
 
 		Expect(cs.Cache()).To(BeIdenticalTo(cache))
-	})
-
-	It("should correctly set restMapper attribute", func() {
-		restMapper := meta.NewMockRESTMapper(ctrl)
-		cs := builder.WithRESTMapper(restMapper).Build()
-
-		Expect(cs.RESTMapper()).To(BeIdenticalTo(restMapper))
 	})
 
 	It("should correctly set kubernetes attribute", func() {

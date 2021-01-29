@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 
 	apiextensionclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -41,7 +40,6 @@ import (
 // The version string contains only the major/minor part in the form <major>.<minor>.
 type clientSet struct {
 	config     *rest.Config
-	restMapper meta.RESTMapper
 	restClient rest.Interface
 
 	applier       Applier
@@ -101,11 +99,6 @@ func (c *clientSet) DirectClient() client.Client {
 // Cache returns the ClientSet's controller-runtime cache. It can be used to get Informers for arbitrary objects.
 func (c *clientSet) Cache() cache.Cache {
 	return c.cache
-}
-
-// RESTMapper returns the restMapper of this ClientSet.
-func (c *clientSet) RESTMapper() meta.RESTMapper {
-	return c.restMapper
 }
 
 // Kubernetes will return the kubernetes attribute of the Client object.

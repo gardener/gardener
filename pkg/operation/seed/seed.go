@@ -243,7 +243,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	vpaEnabled := seed.Info.Spec.Settings == nil || seed.Info.Spec.Settings.VerticalPodAutoscaler == nil || seed.Info.Spec.Settings.VerticalPodAutoscaler.Enabled
 	if !vpaEnabled {
 		// VPA is a prerequisite. If it's not enabled via the seed spec it must be provided through some other mechanism.
-		if _, err := k8sSeedClient.RESTMapper().RESTMapping(vpaGK); err != nil {
+		if _, err := k8sSeedClient.Client().RESTMapper().RESTMapping(vpaGK); err != nil {
 			return fmt.Errorf("VPA is required for seed cluster: %s", err)
 		}
 
