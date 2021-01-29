@@ -38,7 +38,6 @@ import (
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
@@ -250,7 +249,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 			},
 		}
 
-		resourcesToAdd = []runtime.Object{
+		resourcesToAdd = []client.Object{
 			serviceAccount,
 			clusterRole,
 			clusterRoleBinding,

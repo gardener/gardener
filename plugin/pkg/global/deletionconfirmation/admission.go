@@ -22,6 +22,12 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/hashicorp/go-multierror"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apiserver/pkg/admission"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/apis/core"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
@@ -29,12 +35,6 @@ import (
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
-
-	multierror "github.com/hashicorp/go-multierror"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apiserver/pkg/admission"
 )
 
 const (
@@ -113,34 +113,34 @@ var _ admission.ValidationInterface = &DeletionConfirmation{}
 // Validate makes admissions decisions based on deletion confirmation annotation.
 func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
 	var (
-		obj         metav1.Object
-		listFunc    func() ([]metav1.Object, error)
-		cacheLookup func() (metav1.Object, error)
-		liveLookup  func() (metav1.Object, error)
-		checkFunc   func(metav1.Object) error
+		obj         client.Object
+		listFunc    func() ([]client.Object, error)
+		cacheLookup func() (client.Object, error)
+		liveLookup  func() (client.Object, error)
+		checkFunc   func(client.Object) error
 	)
 
 	// Ignore all kinds other than Shoot or Project.
 	switch a.GetKind().GroupKind() {
 	case core.Kind("Shoot"):
-		listFunc = func() ([]metav1.Object, error) {
+		listFunc = func() ([]client.Object, error) {
 			list, err := d.shootLister.Shoots(a.GetNamespace()).List(labels.Everything())
 			if err != nil {
 				return nil, err
 			}
-			result := make([]metav1.Object, 0, len(list))
+			result := make([]client.Object, 0, len(list))
 			for _, obj := range list {
 				result = append(result, obj)
 			}
 			return result, nil
 		}
-		cacheLookup = func() (metav1.Object, error) {
+		cacheLookup = func() (client.Object, error) {
 			return d.shootLister.Shoots(a.GetNamespace()).Get(a.GetName())
 		}
-		liveLookup = func() (metav1.Object, error) {
+		liveLookup = func() (client.Object, error) {
 			return d.gardenCoreClient.Core().Shoots(a.GetNamespace()).Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
 		}
-		checkFunc = func(obj metav1.Object) error {
+		checkFunc = func(obj client.Object) error {
 			if shootIgnored(obj) {
 				return fmt.Errorf("cannot delete shoot if %s annotation is set", common.ShootIgnore)
 			}
@@ -148,21 +148,21 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 		}
 
 	case core.Kind("Project"):
-		listFunc = func() ([]metav1.Object, error) {
+		listFunc = func() ([]client.Object, error) {
 			list, err := d.projectLister.List(labels.Everything())
 			if err != nil {
 				return nil, err
 			}
-			result := make([]metav1.Object, 0, len(list))
+			result := make([]client.Object, 0, len(list))
 			for _, obj := range list {
 				result = append(result, obj)
 			}
 			return result, nil
 		}
-		cacheLookup = func() (metav1.Object, error) {
+		cacheLookup = func() (client.Object, error) {
 			return d.projectLister.Get(a.GetName())
 		}
-		liveLookup = func() (metav1.Object, error) {
+		liveLookup = func() (client.Object, error) {
 			return d.gardenCoreClient.Core().Projects().Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
 		}
 		checkFunc = common.CheckIfDeletionIsConfirmed
@@ -207,7 +207,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 		for _, obj := range objList {
 			wg.Add(1)
 
-			go func(obj metav1.Object) {
+			go func(obj client.Object) {
 				defer wg.Done()
 				output <- d.Validate(ctx, admission.NewAttributesRecord(a.GetObject(), a.GetOldObject(), a.GetKind(), a.GetNamespace(), obj.GetName(), a.GetResource(), a.GetSubresource(), a.GetOperation(), a.GetOperationOptions(), a.IsDryRun(), a.GetUserInfo()), o)
 			}(obj)
@@ -254,7 +254,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 	return nil
 }
 
-func shootIgnored(obj metav1.Object) bool {
+func shootIgnored(obj client.Object) bool {
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		return false

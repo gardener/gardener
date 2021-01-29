@@ -109,17 +109,13 @@ var _ = Describe("kubernetes", func() {
 			},
 		}
 		It("should return false if no deletion timestamp is set", func() {
-			result, err := HasDeletionTimestamp(namespace)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(BeFalse())
+			Expect(HasDeletionTimestamp(namespace)).To(BeFalse())
 		})
 
 		It("should return true if timestamp is set", func() {
 			now := metav1.Now()
 			namespace.ObjectMeta.DeletionTimestamp = &now
-			result, err := HasDeletionTimestamp(namespace)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(BeTrue())
+			Expect(HasDeletionTimestamp(namespace)).To(BeTrue())
 		})
 	})
 
@@ -1120,7 +1116,7 @@ var _ = Describe("kubernetes", func() {
 	})
 
 	DescribeTable("#OwnedBy",
-		func(obj runtime.Object, apiVersion, kind, name string, uid types.UID, matcher gomegatypes.GomegaMatcher) {
+		func(obj client.Object, apiVersion, kind, name string, uid types.UID, matcher gomegatypes.GomegaMatcher) {
 			Expect(OwnedBy(obj, apiVersion, kind, name, uid)).To(matcher)
 		},
 		Entry("no owner references", &corev1.Pod{}, "apiVersion", "kind", "name", types.UID("uid"), BeFalse()),
@@ -1170,7 +1166,7 @@ var _ = Describe("kubernetes", func() {
 		})
 
 		It("should return the newest object w/ filter func", func() {
-			filterFn := func(o runtime.Object) bool {
+			filterFn := func(o client.Object) bool {
 				obj := o.(*corev1.Pod)
 				return obj.Name != "obj2"
 			}
