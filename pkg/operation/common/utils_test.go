@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
-	"github.com/gardener/gardener/pkg/version"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 
 	"github.com/golang/mock/gomock"
@@ -47,6 +46,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

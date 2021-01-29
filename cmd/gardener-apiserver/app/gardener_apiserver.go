@@ -39,8 +39,6 @@ import (
 	settingsclientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
 	"github.com/gardener/gardener/pkg/openapi"
-	"github.com/gardener/gardener/pkg/version"
-	"github.com/gardener/gardener/pkg/version/verflag"
 	"github.com/gardener/gardener/third_party/forked/kubernetes/pkg/quota/v1/generic"
 
 	"github.com/spf13/cobra"
@@ -62,6 +60,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/component-base/version"
+	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

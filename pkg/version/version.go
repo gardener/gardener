@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Deprecated: use k8s.io/component-base/version instead.
 package version
 
 import (

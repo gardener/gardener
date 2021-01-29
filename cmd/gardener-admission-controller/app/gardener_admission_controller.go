@@ -32,13 +32,13 @@ import (
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
-	"github.com/gardener/gardener/pkg/version/verflag"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/component-base/version/verflag"
 )
 
 // options has all the context and parameters needed to run a Gardener admission controller.
