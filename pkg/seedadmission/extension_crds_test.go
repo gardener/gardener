@@ -581,7 +581,7 @@ var _ = Describe("Extension Deletion Protection", func() {
 			c         client.Client
 			namespace = "shoot--foo--bar"
 
-			objects = []client.Object{
+			crdObjects = []client.Object{
 				&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "backupbuckets.extensions.gardener.cloud"}},
 				&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "backupentries.extensions.gardener.cloud"}},
 				&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "containerruntimes.extensions.gardener.cloud"}},
@@ -591,6 +591,8 @@ var _ = Describe("Extension Deletion Protection", func() {
 				&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "networks.extensions.gardener.cloud"}},
 				&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "operatingsystemconfigs.extensions.gardener.cloud"}},
 				&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "workers.extensions.gardener.cloud"}},
+			}
+			extensionObjects = []client.Object{
 				&extensionsv1alpha1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: "foo"}},
 				&extensionsv1alpha1.BackupEntry{ObjectMeta: metav1.ObjectMeta{Name: namespace}},
 				&extensionsv1alpha1.ContainerRuntime{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
@@ -601,9 +603,7 @@ var _ = Describe("Extension Deletion Protection", func() {
 				&extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
 				&extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
 			}
-			crdObjects       = objects[0:9]
-			extensionObjects = objects[9:]
-			podObject        = &corev1.Pod{
+			podObject = &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: namespace},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
