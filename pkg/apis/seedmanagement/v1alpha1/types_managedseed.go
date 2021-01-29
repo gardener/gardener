@@ -59,7 +59,7 @@ type ManagedSeedSpec struct {
 	// Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster
 	// and an existing gardenlet reconciling the new Seed is required.
 	// +optional
-	SeedTemplate *SeedTemplate `json:"seedTemplate,omitempty" protobuf:"bytes,2,opt,name=seedTemplate"`
+	SeedTemplate *gardencorev1beta1.SeedTemplate `json:"seedTemplate,omitempty" protobuf:"bytes,2,opt,name=seedTemplate"`
 	// Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
 	// with the given deployment parameters and GardenletConfiguration.
 	// +optional
@@ -70,16 +70,6 @@ type ManagedSeedSpec struct {
 type Shoot struct {
 	// Name is the name of the Shoot that will be registered as Seed.
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-}
-
-// SeedTemplate is a template for creating a Seed object, when registering a cluster as a ManagedSeed.
-type SeedTemplate struct {
-	// Standard object metadata.
-	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	// Specification of the desired behavior of the Seed.
-	// +optional
-	Spec gardencorev1beta1.SeedSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 }
 
 // Gardenlet specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.

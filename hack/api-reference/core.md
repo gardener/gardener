@@ -7484,7 +7484,8 @@ SeedSettingVerticalPodAutoscaler
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.Seed">Seed</a>)
+<a href="#core.gardener.cloud/v1beta1.Seed">Seed</a>, 
+<a href="#core.gardener.cloud/v1beta1.SeedTemplate">SeedTemplate</a>)
 </p>
 <p>
 <p>SeedSpec is the specification of a Seed.</p>
@@ -7777,6 +7778,182 @@ string
 <td>
 <em>(Optional)</em>
 <p>Value is the taint value corresponding to the taint key.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.SeedTemplate">SeedTemplate
+</h3>
+<p>
+<p>SeedTemplate is a template for creating a Seed object.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Standard object metadata.</p>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSpec">
+SeedSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Specification of the desired behavior of the Seed.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>backup</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedBackup">
+SeedBackup
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Backup holds the object store configuration for the backups of shoot (currently only etcd).
+If it is not specified, then there won&rsquo;t be any backups taken for shoots associated with this seed.
+If backup field is present in seed, then backups of the etcd from shoot control plane will be stored
+under the configured object store.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>dns</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedDNS">
+SeedDNS
+</a>
+</em>
+</td>
+<td>
+<p>DNS contains DNS-relevant information about this seed cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>networks</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedNetworks">
+SeedNetworks
+</a>
+</em>
+</td>
+<td>
+<p>Networks defines the pod, service and worker network of the Seed cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>provider</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedProvider">
+SeedProvider
+</a>
+</em>
+</td>
+<td>
+<p>Provider defines the provider type and region for this Seed cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
+the account the Seed cluster has been deployed to.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>taints</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedTaint">
+[]SeedTaint
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Taints describes taints on the seed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>volume</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedVolume">
+SeedVolume
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Volume contains settings for persistentvolumes created in the seed cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>settings</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettings">
+SeedSettings
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Settings contains certain settings for this seed cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ingress</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Ingress">
+Ingress
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Ingress configures Ingress specific settings of the Seed cluster.</p>
+</td>
+</tr>
+</table>
 </td>
 </tr>
 </tbody>

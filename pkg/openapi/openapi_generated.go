@@ -283,6 +283,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSpec":                               schema_pkg_apis_core_v1beta1_SeedSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedStatus":                             schema_pkg_apis_core_v1beta1_SeedStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint":                              schema_pkg_apis_core_v1beta1_SeedTaint(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTemplate":                           schema_pkg_apis_core_v1beta1_SeedTemplate(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume":                             schema_pkg_apis_core_v1beta1_SeedVolume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolumeProvider":                     schema_pkg_apis_core_v1beta1_SeedVolumeProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig":                   schema_pkg_apis_core_v1beta1_ServiceAccountConfig(ref),
@@ -307,7 +308,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedList":             schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedList(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSpec":             schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedStatus":           schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.SeedTemplate":                schema_pkg_apis_seedmanagement_v1alpha1_SeedTemplate(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Shoot":                       schema_pkg_apis_seedmanagement_v1alpha1_Shoot(ref),
 		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPreset":        schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPreset(ref),
 		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPresetList":    schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetList(ref),
@@ -11790,6 +11790,33 @@ func schema_pkg_apis_core_v1beta1_SeedTaint(ref common.ReferenceCallback) common
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_SeedTemplate(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedTemplate is a template for creating a Seed object.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specification of the desired behavior of the Seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_SeedVolume(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -13058,7 +13085,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSpec(ref common.Referenc
 					"seedTemplate": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed. Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster and an existing gardenlet reconciling the new Seed is required.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.SeedTemplate"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTemplate"),
 						},
 					},
 					"gardenlet": {
@@ -13072,7 +13099,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSpec(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Gardenlet", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.SeedTemplate", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Shoot"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTemplate", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Gardenlet", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Shoot"},
 	}
 }
 
@@ -13114,33 +13141,6 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedStatus(ref common.Refere
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition"},
-	}
-}
-
-func schema_pkg_apis_seedmanagement_v1alpha1_SeedTemplate(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "SeedTemplate is a template for creating a Seed object, when registering a cluster as a ManagedSeed.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object metadata.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
-						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the desired behavior of the Seed.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSpec"),
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 

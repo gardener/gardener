@@ -22,6 +22,7 @@ import (
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
@@ -49,6 +50,26 @@ func ValidateSeedUpdate(newSeed, oldSeed *core.Seed) field.ErrorList {
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newSeed.ObjectMeta, &oldSeed.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeed.Spec, &oldSeed.Spec, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateSeed(newSeed)...)
+
+	return allErrs
+}
+
+// ValidateSeedTemplate validates a SeedTemplate.
+func ValidateSeedTemplate(seedTemplate *core.SeedTemplate, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, metav1validation.ValidateLabels(seedTemplate.Labels, fldPath.Child("metadata", "labels"))...)
+	allErrs = append(allErrs, apivalidation.ValidateAnnotations(seedTemplate.Annotations, fldPath.Child("metadata", "annotations"))...)
+	allErrs = append(allErrs, ValidateSeedSpec(&seedTemplate.Spec, fldPath.Child("spec"))...)
+
+	return allErrs
+}
+
+// ValidateSeedTemplateUpdate validates a SeedTemplate before an update.
+func ValidateSeedTemplateUpdate(newSeedTemplate, oldSeedTemplate *core.SeedTemplate, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, ValidateSeedSpecUpdate(&newSeedTemplate.Spec, &oldSeedTemplate.Spec, fldPath.Child("spec"))...)
 
 	return allErrs
 }

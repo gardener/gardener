@@ -47,6 +47,14 @@ type SeedList struct {
 	Items []Seed
 }
 
+// SeedTemplate is a template for creating a Seed object.
+type SeedTemplate struct {
+	// Standard object metadata.
+	metav1.ObjectMeta
+	// Specification of the desired behavior of the Seed.
+	Spec SeedSpec
+}
+
 // SeedSpec is the specification of a Seed.
 type SeedSpec struct {
 	// Backup holds the object store configuration for the backups of shoot (currently only etcd).

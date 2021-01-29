@@ -17,11 +17,10 @@ package helper_test
 import (
 	"encoding/json"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
 	. "github.com/onsi/ginkgo"
@@ -39,19 +38,11 @@ var _ = Describe("Helper", func() {
 				Kind:       "GardenletConfiguration",
 			},
 		}
-
-		seed  = &gardencore.Seed{}
-		seedx = &gardencorev1beta1.Seed{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-				Kind:       "Seed",
-			},
-		}
 	)
 
-	Describe("#DecodeGardenletConfig", func() {
+	Describe("#DecodeGardenletConfiguration", func() {
 		It("should decode the raw config to an internal GardenletConfiguration version without defaults", func() {
-			result, err := DecodeGardenletConfig(&runtime.RawExtension{Raw: encode(configx)}, false)
+			result, err := DecodeGardenletConfiguration(&runtime.RawExtension{Raw: encode(configx)}, false)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(config))
@@ -60,26 +51,26 @@ var _ = Describe("Helper", func() {
 		It("should decode the raw config to an internal GardenletConfiguration version with defaults", func() {
 			configxWithDefaults := configx.DeepCopy()
 			configv1alpha1.SetObjectDefaults_GardenletConfiguration(configxWithDefaults)
-			configWithDefaults, err := ConvertGardenletConfig(configxWithDefaults)
+			configWithDefaults, err := confighelper.ConvertGardenletConfiguration(configxWithDefaults)
 			Expect(err).ToNot(HaveOccurred())
 
-			result, err := DecodeGardenletConfig(&runtime.RawExtension{Raw: encode(configx)}, true)
+			result, err := DecodeGardenletConfiguration(&runtime.RawExtension{Raw: encode(configx)}, true)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(configWithDefaults))
 		})
 
 		It("should return the raw config object if it's already set", func() {
-			result, err := DecodeGardenletConfig(&runtime.RawExtension{Object: configx}, true)
+			result, err := DecodeGardenletConfiguration(&runtime.RawExtension{Object: configx}, true)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(config))
 		})
 	})
 
-	Describe("#DecodeGardenletConfigExternal", func() {
+	Describe("#DecodeGardenletConfigurationExternal", func() {
 		It("should decode the raw config to an external GardenletConfiguration version without defaults", func() {
-			result, err := DecodeGardenletConfigExternal(&runtime.RawExtension{Raw: encode(configx)}, false)
+			result, err := DecodeGardenletConfigurationExternal(&runtime.RawExtension{Raw: encode(configx)}, false)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(configx))
@@ -89,53 +80,17 @@ var _ = Describe("Helper", func() {
 			configxWithDefaults := configx.DeepCopy()
 			configv1alpha1.SetObjectDefaults_GardenletConfiguration(configxWithDefaults)
 
-			result, err := DecodeGardenletConfigExternal(&runtime.RawExtension{Raw: encode(configx)}, true)
+			result, err := DecodeGardenletConfigurationExternal(&runtime.RawExtension{Raw: encode(configx)}, true)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(configxWithDefaults))
 		})
 
 		It("should return the raw config object if it's already set", func() {
-			result, err := DecodeGardenletConfigExternal(&runtime.RawExtension{Object: configx}, true)
+			result, err := DecodeGardenletConfigurationExternal(&runtime.RawExtension{Object: configx}, true)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(configx))
-		})
-	})
-
-	Describe("#ConvertGardenletConfig", func() {
-		It("should convert the external GardenletConfiguration version to an internal one", func() {
-			result, err := ConvertGardenletConfig(configx)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(config))
-		})
-	})
-
-	Describe("#ConvertGardenletConfigExternal", func() {
-		It("should convert the internal GardenletConfiguration version to an external one", func() {
-			result, err := ConvertGardenletConfigExternal(config)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(configx))
-		})
-	})
-
-	Describe("#ConvertSeed", func() {
-		It("should convert the external Seed version to an internal one", func() {
-			result, err := ConvertSeed(seedx)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(seed))
-		})
-	})
-
-	Describe("#ConvertSeedExternal", func() {
-		It("should convert the internal Seed version to an external one", func() {
-			result, err := ConvertSeedExternal(seed)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(seedx))
 		})
 	})
 

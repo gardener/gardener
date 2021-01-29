@@ -18,10 +18,13 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
@@ -306,4 +309,38 @@ func KubernetesDashboardEnabled(addons *core.Addons) bool {
 // NginxIngressEnabled returns true if the nginx-ingress addon is enabled in the Shoot manifest.
 func NginxIngressEnabled(addons *core.Addons) bool {
 	return addons != nil && addons.NginxIngress != nil && addons.NginxIngress.Enabled
+}
+
+var scheme *runtime.Scheme
+
+func init() {
+	scheme = runtime.NewScheme()
+	utilruntime.Must(core.AddToScheme(scheme))
+	utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
+}
+
+// ConvertSeed converts the given external Seed version to an internal version.
+func ConvertSeed(obj runtime.Object) (*core.Seed, error) {
+	obj, err := scheme.ConvertToVersion(obj, core.SchemeGroupVersion)
+	if err != nil {
+		return nil, err
+	}
+	result, ok := obj.(*core.Seed)
+	if !ok {
+		return nil, fmt.Errorf("could not convert Seed to internal version")
+	}
+	return result, nil
+}
+
+// ConvertSeedExternal converts the given internal Seed version to an external version.
+func ConvertSeedExternal(obj runtime.Object) (*gardencorev1beta1.Seed, error) {
+	obj, err := scheme.ConvertToVersion(obj, gardencorev1beta1.SchemeGroupVersion)
+	if err != nil {
+		return nil, err
+	}
+	result, ok := obj.(*gardencorev1beta1.Seed)
+	if !ok {
+		return nil, fmt.Errorf("could not convert Seed to version %s", gardencorev1beta1.SchemeGroupVersion.String())
+	}
+	return result, nil
 }

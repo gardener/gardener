@@ -86,15 +86,15 @@ func setDefaultsGardenlet(obj *Gardenlet, name, namespace string) {
 
 	// Decode / initialize gardenlet config
 	var gardenletConfig *configv1alpha1.GardenletConfiguration
-	var err error
 	if obj.Config != nil {
 		// Decode gardenlet config to an external version
 		// Without defaults, since we don't want to set gardenlet config defaults in the resource at this point
-		gardenletConfig, err = helper.DecodeGardenletConfigExternal(obj.Config, false)
-		if err != nil {
-			return
-		}
-	} else {
+		// Ignoring errors, since this package does not support proper error reporting
+		// and if we just return here obj.Config will remain uninitialized, resulting in no error message but
+		// wrong behavior later on
+		gardenletConfig, _ = helper.DecodeGardenletConfigurationExternal(obj.Config, false)
+	}
+	if gardenletConfig == nil {
 		gardenletConfig = &configv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: configv1alpha1.SchemeGroupVersion.String(),
@@ -128,7 +128,7 @@ func setDefaultsGardenletConfiguration(obj *configv1alpha1.GardenletConfiguratio
 	}
 
 	// Set seed spec defaults
-	setDefaultsSeedSpec(&obj.SeedConfig.Seed.Spec, name, namespace, false)
+	setDefaultsSeedSpec(&obj.SeedConfig.SeedTemplate.Spec, name, namespace, false)
 }
 
 func setDefaultsSeedSpec(spec *gardencorev1beta1.SeedSpec, name, namespace string, withSecretRef bool) {

@@ -54,7 +54,7 @@ type ManagedSeedSpec struct {
 	// SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed.
 	// Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster
 	// and an existing gardenlet reconciling the new Seed is required.
-	SeedTemplate *SeedTemplate
+	SeedTemplate *gardencore.SeedTemplate
 	// Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
 	// with the given deployment parameters and GardenletConfiguration.
 	Gardenlet *Gardenlet
@@ -64,14 +64,6 @@ type ManagedSeedSpec struct {
 type Shoot struct {
 	// Name is the name of the Shoot that will be registered as Seed.
 	Name string
-}
-
-// SeedTemplate is a template for creating a Seed object, when registering a cluster as a ManagedSeed.
-type SeedTemplate struct {
-	// Standard object metadata.
-	metav1.ObjectMeta
-	// Specification of the desired behavior of the Seed.
-	Spec gardencore.SeedSpec
 }
 
 // Gardenlet specifies gardenlet deployment parameters and the GardenletConfiguration used to configure gardenlet.

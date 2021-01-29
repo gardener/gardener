@@ -15,9 +15,16 @@
 package helper
 
 import (
+	"fmt"
+
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 // SeedNameFromSeedConfig returns an empty string if the given seed config is nil, or the
@@ -26,7 +33,7 @@ func SeedNameFromSeedConfig(seedConfig *config.SeedConfig) string {
 	if seedConfig == nil {
 		return ""
 	}
-	return seedConfig.Seed.Name
+	return seedConfig.SeedTemplate.Name
 }
 
 // StaleExtensionHealthChecksThreshold returns nil if the given config is nil or the check
@@ -37,4 +44,41 @@ func StaleExtensionHealthChecksThreshold(c *config.StaleExtensionHealthChecks) *
 	}
 
 	return nil
+}
+
+var scheme *runtime.Scheme
+
+func init() {
+	scheme = runtime.NewScheme()
+	// core schemes are needed here to properly convert the embedded SeedTemplate objects
+	utilruntime.Must(gardencore.AddToScheme(scheme))
+	utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
+	utilruntime.Must(config.AddToScheme(scheme))
+	utilruntime.Must(configv1alpha1.AddToScheme(scheme))
+}
+
+// ConvertGardenletConfiguration converts the given object to an internal GardenletConfiguration version.
+func ConvertGardenletConfiguration(obj runtime.Object) (*config.GardenletConfiguration, error) {
+	obj, err := scheme.ConvertToVersion(obj, config.SchemeGroupVersion)
+	if err != nil {
+		return nil, err
+	}
+	result, ok := obj.(*config.GardenletConfiguration)
+	if !ok {
+		return nil, fmt.Errorf("could not convert GardenletConfiguration to internal version")
+	}
+	return result, nil
+}
+
+// ConvertGardenletConfigurationExternal converts the given object to an external  GardenletConfiguration version.
+func ConvertGardenletConfigurationExternal(obj runtime.Object) (*configv1alpha1.GardenletConfiguration, error) {
+	obj, err := scheme.ConvertToVersion(obj, configv1alpha1.SchemeGroupVersion)
+	if err != nil {
+		return nil, err
+	}
+	result, ok := obj.(*configv1alpha1.GardenletConfiguration)
+	if !ok {
+		return nil, fmt.Errorf("could not convert GardenletConfiguration to version %s", configv1alpha1.SchemeGroupVersion.String())
+	}
+	return result, nil
 }

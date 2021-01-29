@@ -25,13 +25,13 @@ import (
 	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
+	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -237,39 +237,28 @@ func (v *ManagedSeed) admitGardenlet(gardenlet *seedmanagement.Gardenlet, shoot 
 	if gardenlet.Config != nil {
 		configPath := fldPath.Child("config")
 
-		// Decode gardenlet config to an internal version
-		// Without defaults, since we don't want to set gardenlet config defaults in the resource at this point
-		gardenletConfig, err := helper.ConvertGardenletConfigExternal(gardenlet.Config)
+		// Convert gardenlet config to an internal version
+		gardenletConfig, err := confighelper.ConvertGardenletConfiguration(gardenlet.Config)
 		if err != nil {
-			return append(allErrs, field.Invalid(configPath, gardenlet.Config, fmt.Sprintf("could not decode config: %v", err))), nil
+			return allErrs, apierrors.NewInternalError(fmt.Errorf("could not convert config: %v", err))
 		}
 
 		if gardenletConfig.SeedConfig != nil {
-			seedConfigPath := fldPath.Child("seedConfig")
-
-			// Convert seed config to internal version
-			seed, err := helper.ConvertSeed(&gardenletConfig.SeedConfig.Seed)
-			if err != nil {
-				return allErrs, apierrors.NewInternalError(fmt.Errorf("could not convert seed config: %v", err))
-			}
+			seedConfigPath := configPath.Child("seedConfig")
 
 			// Admit seed spec against shoot
-			errs, err := v.admitSeedSpec(&seed.Spec, shoot, seedConfigPath.Child("spec"))
+			errs, err := v.admitSeedSpec(&gardenletConfig.SeedConfig.Spec, shoot, seedConfigPath.Child("spec"))
 			if err != nil {
 				return allErrs, err
 			}
 			allErrs = append(allErrs, errs...)
-
-			// Set seed config back to gardenletConfig.SeedConfig.Seed
-			seedx, err := helper.ConvertSeedExternal(seed)
-			if err != nil {
-				return allErrs, apierrors.NewInternalError(fmt.Errorf("could not convert seed config: %v", err))
-			}
-			gardenletConfig.SeedConfig.Seed = *seedx
 		}
 
-		// Set gardenlet config back to gardenlet.Config
-		gardenlet.Config = gardenletConfig
+		// Convert gardenlet config to an external version and set it back to gardenlet.Config
+		gardenlet.Config, err = confighelper.ConvertGardenletConfigurationExternal(gardenletConfig)
+		if err != nil {
+			return allErrs, apierrors.NewInternalError(fmt.Errorf("could not convert config: %v", err))
+		}
 	}
 
 	return allErrs, nil
@@ -309,7 +298,7 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 	} else {
 		if (spec.DNS.IngressDomain == nil || *spec.DNS.IngressDomain == "") && gardencorehelper.NginxIngressEnabled(shoot.Spec.Addons) {
 			spec.DNS.IngressDomain = &ingressDomain
-		} else if !strings.HasSuffix(*spec.DNS.IngressDomain, *shoot.Spec.DNS.Domain) {
+		} else if spec.DNS.IngressDomain == nil || !strings.HasSuffix(*spec.DNS.IngressDomain, *shoot.Spec.DNS.Domain) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "ingressDomain"), spec.DNS.IngressDomain, fmt.Sprintf("seed ingress domain must be a subdomain of shoot DNS domain %s", *shoot.Spec.DNS.Domain)))
 		}
 	}

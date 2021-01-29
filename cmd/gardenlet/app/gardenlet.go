@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/cmd/utils"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -95,6 +96,12 @@ func NewOptions() (*Options, error) {
 		return nil, err
 	}
 	if err := configv1alpha1.AddToScheme(o.scheme); err != nil {
+		return nil, err
+	}
+	if err := gardencore.AddToScheme(o.scheme); err != nil {
+		return nil, err
+	}
+	if err := gardencorev1beta1.AddToScheme(o.scheme); err != nil {
 		return nil, err
 	}
 

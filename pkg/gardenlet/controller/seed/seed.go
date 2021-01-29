@@ -187,7 +187,14 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 			seed.Labels = utils.MergeStringMaps(map[string]string{
 				v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
 			}, c.config.SeedConfig.Labels)
-			seed.Spec = c.config.SeedConfig.Seed.Spec
+
+			// Convert gardenlet config to an external version
+			cfg, err := confighelper.ConvertGardenletConfigurationExternal(c.config)
+			if err != nil {
+				return err
+			}
+
+			seed.Spec = cfg.SeedConfig.Spec
 			return nil
 		}); err != nil {
 			panic(fmt.Errorf("could not register seed %q: %+v", seed.Name, err))

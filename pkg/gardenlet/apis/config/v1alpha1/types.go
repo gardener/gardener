@@ -347,7 +347,7 @@ type LeaderElectionConfiguration struct {
 
 // SeedConfig contains configuration for the seed cluster.
 type SeedConfig struct {
-	gardencorev1beta1.Seed `json:",inline"`
+	gardencorev1beta1.SeedTemplate `json:",inline"`
 }
 
 // FluentBit contains configuration for Fluent Bit.

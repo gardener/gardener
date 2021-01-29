@@ -17,6 +17,7 @@ package helper_test
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo"
@@ -25,6 +26,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -509,4 +511,32 @@ var _ = Describe("helper", func() {
 		Entry("nginxIngress disabled", &core.Addons{NginxIngress: &core.NginxIngress{Addon: core.Addon{Enabled: false}}}, BeFalse()),
 		Entry("nginxIngress enabled", &core.Addons{NginxIngress: &core.NginxIngress{Addon: core.Addon{Enabled: true}}}, BeTrue()),
 	)
+
+	Describe("#ConvertSeed", func() {
+		It("should convert the external Seed version to an internal one", func() {
+			result, err := ConvertSeed(&gardencorev1beta1.Seed{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+					Kind:       "Seed",
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(&core.Seed{}))
+		})
+	})
+
+	Describe("#ConvertSeedExternal", func() {
+		It("should convert the internal Seed version to an external one", func() {
+			result, err := ConvertSeedExternal(&core.Seed{})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(&gardencorev1beta1.Seed{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+					Kind:       "Seed",
+				},
+			}))
+		})
+	})
 })
