@@ -845,15 +845,12 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 	if err != nil {
 		return nil, err
 	}
-	oneMinute := time.Minute
-	oneHour := time.Hour
 	cfg := resourcemanager.Values{
 		ConcurrentSyncs:  pointer.Int32Ptr(20),
-		ClusterRoleName:  pointer.StringPtr("gardener-resource-manager-seed"),
-		HealthSyncPeriod: &oneMinute,
+		HealthSyncPeriod: utils.DurationPtr(time.Minute),
 		ResourceClass:    pointer.StringPtr(v1beta1constants.SeedResourceManagerClass),
 
-		SyncPeriod: &oneHour,
+		SyncPeriod: utils.DurationPtr(time.Hour),
 	}
 	rm := resourcemanager.New(c.Client(), namespace, image.String(), 1, cfg)
 	components = append(components, rm)

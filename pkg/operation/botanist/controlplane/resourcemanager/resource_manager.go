@@ -44,13 +44,15 @@ const (
 	SecretName = "gardener-resource-manager"
 	// UserName is the name that should be used for the secret that the gardener resource manager uses to
 	// authenticate itself with the kube-apiserver (e.g., the common name in its client certificate).
-	UserName = "gardener-resource-manager"
+	UserName = "gardener.cloud:system:gardener-resource-manager"
 
-	containerName      = v1beta1constants.DeploymentNameGardenerResourceManager
-	healthPort         = 8081
-	metricsPort        = 8080
-	roleName           = "gardener-resource-manager"
-	serviceAccountName = "gardener-resource-manager"
+	clusterRoleName           = "gardener-resource-manager-seed"
+	containerName             = v1beta1constants.DeploymentNameGardenerResourceManager
+	healthPort                = 8081
+	metricsPort               = 8080
+	roleName                  = "gardener-resource-manager"
+	serviceAccountName        = "gardener-resource-manager"
+	volumeMountPathKubeconfig = "/etc/gardener-resource-manager"
 )
 
 var (
@@ -80,31 +82,31 @@ var (
 	}}
 )
 
+// ResourceManager contains functions for a gardener-resource-manager deployer.
+type ResourceManager interface {
+	component.DeployWaiter
+	// SetSecrets sets the secrets.
+	SetSecrets(Secrets)
+}
+
 // New creates a new instance of the gardener-resource-manager.
 func New(
 	client client.Client,
 	namespace string,
 	image string,
 	replicas int32,
-	config Values,
-) *ResourceManager {
-	if config.Labels == nil {
-		config.Labels = appLabel()
-	} else {
-		defaultLabelsWithAppLabel := utils.MergeStringMaps(config.Labels, appLabel())
-		config.Labels = defaultLabelsWithAppLabel
-	}
-	return &ResourceManager{
+	values Values,
+) ResourceManager {
+	return &resourceManager{
 		client:    client,
 		image:     image,
 		namespace: namespace,
 		replicas:  replicas,
-		values:    config,
+		values:    values,
 	}
 }
 
-// ResourceManager defines an instance of a gardener-resource-manager
-type ResourceManager struct {
+type resourceManager struct {
 	client    client.Client
 	namespace string
 	image     string
@@ -118,15 +120,11 @@ type Values struct {
 	AlwaysUpdate *bool
 	// ConcurrentSyncs are the number of worker threads for concurrent reconciliation of resources
 	ConcurrentSyncs *int32
-	// ClusterRoleName defines the name of the ClusterRole used by the gardener-resource-manager. If the rbac configuration requires a ClusterRole this field must be set
-	ClusterRoleName *string
-	// Labels defines the labels added to all resources belonging to the deployment of the gardener-resource-manager
-	Labels map[string]string
 	// HealthSyncPeriod describes the duration of how often the health of existing resources should be synced
 	HealthSyncPeriod *time.Duration
-	// KubeConfig configures the gardener-resource-manager to target another cluster for creating resources.
+	// Kubeconfig configures the gardener-resource-manager to target another cluster for creating resources.
 	// If this is not set resources are created in the cluster the gardener-resource-manager is deployed in
-	KubeConfig *component.Secret
+	Kubeconfig *component.Secret
 	// LeaseDuration configures the lease duration for leader election
 	LeaseDuration *time.Duration
 	// MaxConcurrentHealthWorkers configures the number of worker threads for concurrent health reconciliation of resources
@@ -146,7 +144,7 @@ type Values struct {
 	WatchedNamespace *string
 }
 
-func (r *ResourceManager) Deploy(ctx context.Context) error {
+func (r *resourceManager) Deploy(ctx context.Context) error {
 	if err := r.ensureServiceAccount(ctx); err != nil {
 		return err
 	}
@@ -166,12 +164,14 @@ func (r *ResourceManager) Deploy(ctx context.Context) error {
 	return r.ensureVPA(ctx)
 }
 
-func (r *ResourceManager) Destroy(ctx context.Context) error {
+func (r *resourceManager) Destroy(ctx context.Context) error {
 	objectsToDelete := []client.Object{
 		r.emptyVPA(),
 		r.emptyDeployment(),
 		r.emptyService(),
 		r.emptyServiceAccount(),
+		r.emptyClusterRole(),
+		r.emptyClusterRoleBinding(),
 	}
 	role, err := r.emptyRoleInWatchedNamespace()
 	if err == nil {
@@ -181,14 +181,6 @@ func (r *ResourceManager) Destroy(ctx context.Context) error {
 	if err == nil {
 		objectsToDelete = append(objectsToDelete, rb)
 	}
-	cr, err := r.emptyClusterRole()
-	if err == nil {
-		objectsToDelete = append(objectsToDelete, cr)
-	}
-	crb, err := r.emptyClusterRoleBinding()
-	if err == nil {
-		objectsToDelete = append(objectsToDelete, crb)
-	}
 
 	return kutil.DeleteObjects(
 		ctx,
@@ -197,9 +189,9 @@ func (r *ResourceManager) Destroy(ctx context.Context) error {
 	)
 }
 
-func (r *ResourceManager) ensureRBAC(ctx context.Context) error {
-	deployResourcesIntoAnotherCluster := r.values.KubeConfig != nil
-	if deployResourcesIntoAnotherCluster {
+func (r *resourceManager) ensureRBAC(ctx context.Context) error {
+	targetDiffersFromSourceCluster := r.values.Kubeconfig != nil
+	if targetDiffersFromSourceCluster {
 		if r.values.WatchedNamespace == nil {
 			if err := r.ensureClusterRole(ctx, allowManagedResources); err != nil {
 				return err
@@ -226,41 +218,32 @@ func (r *ResourceManager) ensureRBAC(ctx context.Context) error {
 	return nil
 }
 
-func (r *ResourceManager) ensureClusterRole(ctx context.Context, policies []rbacv1.PolicyRule) error {
-	clusterRole, err := r.emptyClusterRole()
-	if err != nil {
-		return err
-	}
-	_, err = controllerutil.CreateOrUpdate(ctx, r.client, clusterRole, func() error {
-		clusterRole.Labels = r.values.Labels
+func (r *resourceManager) ensureClusterRole(ctx context.Context, policies []rbacv1.PolicyRule) error {
+	clusterRole := r.emptyClusterRole()
+	_, err := controllerutil.CreateOrUpdate(ctx, r.client, clusterRole, func() error {
+		clusterRole.Labels = r.getLabels()
 		clusterRole.Rules = policies
 		return nil
 	})
 	return err
 }
 
-func (r *ResourceManager) emptyClusterRole() (*rbacv1.ClusterRole, error) {
-	if r.values.ClusterRoleName == nil {
-		return nil, errors.New("creating Cluster Role failed - no name defined for the Cluster Role")
-	}
-	return &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: *r.values.ClusterRoleName}}, nil
+func (r *resourceManager) emptyClusterRole() *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}
 }
 
-func (r *ResourceManager) ensureClusterRoleBinding(ctx context.Context) error {
-	clusterRoleBinding, err := r.emptyClusterRoleBinding()
-	if err != nil {
-		return err
-	}
-	_, err = controllerutil.CreateOrUpdate(ctx, r.client, clusterRoleBinding, func() error {
-		clusterRoleBinding.Labels = r.values.Labels
+func (r *resourceManager) ensureClusterRoleBinding(ctx context.Context) error {
+	clusterRoleBinding := r.emptyClusterRoleBinding()
+	_, err := controllerutil.CreateOrUpdate(ctx, r.client, clusterRoleBinding, func() error {
+		clusterRoleBinding.Labels = r.getLabels()
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     *r.values.ClusterRoleName,
+			Name:     clusterRoleName,
 		}
 		clusterRoleBinding.Subjects = []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,
-			Name:      UserName,
+			Name:      serviceAccountName,
 			Namespace: r.namespace,
 		}}
 		return nil
@@ -268,40 +251,37 @@ func (r *ResourceManager) ensureClusterRoleBinding(ctx context.Context) error {
 	return err
 }
 
-func (r *ResourceManager) emptyClusterRoleBinding() (*rbacv1.ClusterRoleBinding, error) {
-	if r.values.ClusterRoleName == nil {
-		return nil, errors.New("creating Cluster Role Binding failed - no name defined for the Cluster Role")
-	}
-	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: *r.values.ClusterRoleName}}, nil
+func (r *resourceManager) emptyClusterRoleBinding() *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}
 }
 
-func (r *ResourceManager) ensureRoleInWatchedNamespace(ctx context.Context, policies []rbacv1.PolicyRule) error {
+func (r *resourceManager) ensureRoleInWatchedNamespace(ctx context.Context, policies []rbacv1.PolicyRule) error {
 	role, err := r.emptyRoleInWatchedNamespace()
 	if err != nil {
 		return err
 	}
 	_, err = controllerutil.CreateOrUpdate(ctx, r.client, role, func() error {
-		role.Labels = r.values.Labels
+		role.Labels = r.getLabels()
 		role.Rules = policies
 		return nil
 	})
 	return err
 }
 
-func (r *ResourceManager) emptyRoleInWatchedNamespace() (*rbacv1.Role, error) {
+func (r *resourceManager) emptyRoleInWatchedNamespace() (*rbacv1.Role, error) {
 	if r.values.WatchedNamespace == nil {
 		return nil, errors.New("creating Role in watched namespace failed - no namespace defined")
 	}
 	return &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: roleName, Namespace: *r.values.WatchedNamespace}}, nil
 }
 
-func (r *ResourceManager) ensureRoleBinding(ctx context.Context) error {
+func (r *resourceManager) ensureRoleBinding(ctx context.Context) error {
 	roleBinding, err := r.emptyRoleBindingInWatchedNamespace()
 	if err != nil {
 		return err
 	}
 	_, err = controllerutil.CreateOrUpdate(ctx, r.client, roleBinding, func() error {
-		roleBinding.Labels = r.values.Labels
+		roleBinding.Labels = r.getLabels()
 		roleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "Role",
@@ -317,14 +297,14 @@ func (r *ResourceManager) ensureRoleBinding(ctx context.Context) error {
 	return err
 }
 
-func (r *ResourceManager) emptyRoleBindingInWatchedNamespace() (*rbacv1.RoleBinding, error) {
+func (r *resourceManager) emptyRoleBindingInWatchedNamespace() (*rbacv1.RoleBinding, error) {
 	if r.values.WatchedNamespace == nil {
 		return nil, errors.New("creating RoleBinding in watched namespace failed - no namespace defined")
 	}
 	return &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: *r.values.WatchedNamespace}}, nil
 }
 
-func (r *ResourceManager) ensureService(ctx context.Context) error {
+func (r *resourceManager) ensureService(ctx context.Context) error {
 	const (
 		healthPortName  = "health"
 		metricsPortName = "metrics"
@@ -332,7 +312,7 @@ func (r *ResourceManager) ensureService(ctx context.Context) error {
 
 	service := r.emptyService()
 	_, err := controllerutil.CreateOrUpdate(ctx, r.client, service, func() error {
-		service.Labels = r.values.Labels
+		service.Labels = r.getLabels()
 		service.Spec.Selector = appLabel()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.ClusterIP = corev1.ClusterIPNone
@@ -353,17 +333,15 @@ func (r *ResourceManager) ensureService(ctx context.Context) error {
 	return err
 }
 
-func (r *ResourceManager) emptyService() *corev1.Service {
+func (r *resourceManager) emptyService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}}
 }
 
-func (r *ResourceManager) ensureDeployment(ctx context.Context) error {
-	const volumeMountPathKubeconfig = "/etc/gardener-resource-manager"
-
+func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 	deployment := r.emptyDeployment()
 
 	_, err := controllerutil.CreateOrUpdate(ctx, r.client, deployment, func() error {
-		deployment.Labels = r.values.Labels
+		deployment.Labels = r.getLabels()
 
 		deployment.Spec.Replicas = &r.replicas
 		deployment.Spec.RevisionHistoryLimit = pointer.Int32Ptr(1)
@@ -371,7 +349,7 @@ func (r *ResourceManager) ensureDeployment(ctx context.Context) error {
 
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels: utils.MergeStringMaps(r.values.Labels, map[string]string{
+				Labels: utils.MergeStringMaps(r.getLabels(), map[string]string{
 					v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
 					v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 					v1beta1constants.LabelNetworkPolicyToSeedAPIServer:  v1beta1constants.LabelNetworkPolicyAllowed,
@@ -384,7 +362,7 @@ func (r *ResourceManager) ensureDeployment(ctx context.Context) error {
 						Name:            containerName,
 						Image:           r.image,
 						ImagePullPolicy: corev1.PullIfNotPresent,
-						Command:         r.computeCommand(volumeMountPathKubeconfig),
+						Command:         r.computeCommand(),
 						Ports: []corev1.ContainerPort{
 							{
 								Name:          "metrics",
@@ -426,16 +404,16 @@ func (r *ResourceManager) ensureDeployment(ctx context.Context) error {
 			},
 		}
 
-		if r.values.KubeConfig != nil {
+		if r.values.Kubeconfig != nil {
 			deployment.Spec.Template.ObjectMeta.Annotations = map[string]string{
-				"checksum/secret-" + r.values.KubeConfig.Name: r.values.KubeConfig.Checksum,
+				"checksum/secret-" + r.values.Kubeconfig.Name: r.values.Kubeconfig.Checksum,
 			}
 			deployment.Spec.Template.Spec.Volumes = []corev1.Volume{
 				{
 					Name: "gardener-resource-manager",
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
-							SecretName:  r.values.KubeConfig.Name,
+							SecretName:  r.values.Kubeconfig.Name,
 							DefaultMode: pointer.Int32Ptr(420),
 						},
 					},
@@ -463,11 +441,11 @@ func (r *ResourceManager) ensureDeployment(ctx context.Context) error {
 	return err
 }
 
-func (r *ResourceManager) emptyDeployment() *appsv1.Deployment {
+func (r *resourceManager) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameGardenerResourceManager, Namespace: r.namespace}}
 }
 
-func (r *ResourceManager) computeCommand(volumeMountPathKubeconfig string) []string {
+func (r *resourceManager) computeCommand() []string {
 	cmd := []string{
 		"/gardener-resource-manager",
 	}
@@ -508,31 +486,31 @@ func (r *ResourceManager) computeCommand(volumeMountPathKubeconfig string) []str
 	if r.values.TargetDisableCache != nil {
 		cmd = append(cmd, "--target-disable-cache")
 	}
-	if r.values.KubeConfig != nil {
+	if r.values.Kubeconfig != nil {
 		cmd = append(cmd, fmt.Sprintf("--target-kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig))
 	}
 	return cmd
 }
 
-func (r *ResourceManager) ensureServiceAccount(ctx context.Context) error {
+func (r *resourceManager) ensureServiceAccount(ctx context.Context) error {
 	serviceAccount := r.emptyServiceAccount()
 	_, err := controllerutil.CreateOrUpdate(ctx, r.client, serviceAccount, func() error {
-		serviceAccount.Labels = r.values.Labels
+		serviceAccount.Labels = r.getLabels()
 		return nil
 	})
 	return err
 }
 
-func (r *ResourceManager) emptyServiceAccount() *corev1.ServiceAccount {
+func (r *resourceManager) emptyServiceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: serviceAccountName, Namespace: r.namespace}}
 }
 
-func (r *ResourceManager) ensureVPA(ctx context.Context) error {
+func (r *resourceManager) ensureVPA(ctx context.Context) error {
 	vpa := r.emptyVPA()
 	vpaUpdateMode := autoscalingv1beta2.UpdateModeAuto
 
 	_, err := controllerutil.CreateOrUpdate(ctx, r.client, vpa, func() error {
-		vpa.Labels = r.values.Labels
+		vpa.Labels = r.getLabels()
 		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 			Kind:       "Deployment",
@@ -546,8 +524,19 @@ func (r *ResourceManager) ensureVPA(ctx context.Context) error {
 	return err
 }
 
-func (r *ResourceManager) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
+func (r *resourceManager) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
 	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}}
+}
+
+func (r *resourceManager) getLabels() map[string]string {
+	partOfShootControlPlane := r.values.Kubeconfig != nil
+	if partOfShootControlPlane {
+		return utils.MergeStringMaps(appLabel(), map[string]string{
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+		})
+	}
+
+	return appLabel()
 }
 
 func appLabel() map[string]string {
@@ -556,17 +545,17 @@ func appLabel() map[string]string {
 	}
 }
 
-// SetSecrets sets the secrets for the gardener-resource-manager.
-func (r *ResourceManager) SetSecrets(s Secrets) { r.values.KubeConfig = &s.KubeConfig }
-
 // Wait signals whether a deployment is ready or needs more time to be deployed. Gardener-Resource-Manager is ready immediately.
-func (r *ResourceManager) Wait(_ context.Context) error { return nil }
+func (r *resourceManager) Wait(_ context.Context) error { return nil }
 
 // WaitCleanup for destruction to finish and component to be fully removed. Gardener-Resource-manager does not need to wait for cleanup.
-func (r *ResourceManager) WaitCleanup(_ context.Context) error { return nil }
+func (r *resourceManager) WaitCleanup(_ context.Context) error { return nil }
+
+// SetSecrets sets the secrets for the gardener-resource-manager.
+func (r *resourceManager) SetSecrets(s Secrets) { r.values.Kubeconfig = &s.Kubeconfig }
 
 // Secrets is collection of secrets for the gardener-resource-manager.
 type Secrets struct {
-	// KubeConfig enables the ResourceManager to deploy resources into a different cluster than the one it is running in.
-	KubeConfig component.Secret
+	// Kubeconfig enables the gardener-resource-manager to deploy resources into a different cluster than the one it is running in.
+	Kubeconfig component.Secret
 }

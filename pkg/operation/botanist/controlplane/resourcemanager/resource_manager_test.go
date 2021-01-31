@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/resourcemanager"
@@ -47,7 +48,7 @@ var _ = Describe("ResourceManager", func() {
 	var (
 		ctrl            *gomock.Controller
 		c               *mockclient.MockClient
-		resourceManager *resourcemanager.ResourceManager
+		resourceManager resourcemanager.ResourceManager
 
 		ctx                   = context.TODO()
 		deployNamespace       = "fake-ns"
@@ -58,17 +59,13 @@ var _ = Describe("ResourceManager", func() {
 		replicas        int32 = 1
 
 		// optional configuration
-		secretNameKubeconfig           = "kubeconfig-secret"
-		secretMountPath                = "/etc/gardener-resource-manager"
-		secretChecksumKubeconfig       = "1234"
-		kubeCfg                        = component.Secret{Name: secretNameKubeconfig, Checksum: secretChecksumKubeconfig}
-		alwaysUpdate                   = true
-		concurrentSyncs          int32 = 20
-		clusterRoleName                = "fake-cr-name"
-		defaultLabels                  = map[string]string{
-			"fake-label-name": "fake-value",
-			"app":             "gardener-resource-manager",
-		}
+		secretNameKubeconfig             = "kubeconfig-secret"
+		secretMountPath                  = "/etc/gardener-resource-manager"
+		secretChecksumKubeconfig         = "1234"
+		kubeCfg                          = component.Secret{Name: secretNameKubeconfig, Checksum: secretChecksumKubeconfig}
+		alwaysUpdate                     = true
+		concurrentSyncs            int32 = 20
+		clusterRoleName                  = "gardener-resource-manager-seed"
 		healthSyncPeriod                 = time.Minute
 		leaseDuration                    = time.Second * 40
 		maxConcurrentHealthWorkers int32 = 20
@@ -88,6 +85,7 @@ var _ = Describe("ResourceManager", func() {
 		cmdWithoutKubeconfig       []string
 		cmdWithoutWatchedNamespace []string
 		deployment                 *appsv1.Deployment
+		defaultLabels              map[string]string
 		roleBinding                *rbacv1.RoleBinding
 		role                       *rbacv1.Role
 		service                    *corev1.Service
@@ -123,6 +121,10 @@ var _ = Describe("ResourceManager", func() {
 			ResourceNames: []string{"gardener-resource-manager"},
 			Verbs:         []string{"get", "watch", "update", "patch"},
 		}}
+		defaultLabels = map[string]string{
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.LabelApp:   "gardener-resource-manager",
+		}
 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -196,10 +198,8 @@ var _ = Describe("ResourceManager", func() {
 		cfg = resourcemanager.Values{
 			AlwaysUpdate:               &alwaysUpdate,
 			ConcurrentSyncs:            &concurrentSyncs,
-			ClusterRoleName:            &clusterRoleName,
-			Labels:                     defaultLabels,
 			HealthSyncPeriod:           &healthSyncPeriod,
-			KubeConfig:                 &kubeCfg,
+			Kubeconfig:                 &kubeCfg,
 			LeaseDuration:              &leaseDuration,
 			MaxConcurrentHealthWorkers: &maxConcurrentHealthWorkers,
 			RenewDeadline:              &renewDeadline,
@@ -277,8 +277,9 @@ var _ = Describe("ResourceManager", func() {
 							"networking.gardener.cloud/to-dns":             "allowed",
 							"networking.gardener.cloud/to-seed-apiserver":  "allowed",
 							"networking.gardener.cloud/to-shoot-apiserver": "allowed",
-							"fake-label-name":                              "fake-value",
-							"app":                                          "gardener-resource-manager",
+							v1beta1constants.GardenRole:                    v1beta1constants.GardenRoleControlPlane,
+							v1beta1constants.LabelApp:                      "gardener-resource-manager",
+							v1beta1constants.DeprecatedGardenRole:          v1beta1constants.GardenRoleControlPlane,
 						},
 					},
 					Spec: corev1.PodSpec{
@@ -375,7 +376,6 @@ var _ = Describe("ResourceManager", func() {
 
 		Context("kubeconfig is set; watched namespace is set", func() {
 			BeforeEach(func() {
-				cfg.ClusterRoleName = nil
 				role.Namespace = watchedNamespace
 				resourceManager = resourcemanager.New(c, deployNamespace, image, replicas, cfg)
 			})
@@ -409,9 +409,9 @@ var _ = Describe("ResourceManager", func() {
 				Expect(resourceManager.Deploy(ctx)).To(Succeed())
 			})
 			It("is also possible to set the kubeconfig via SetSecrets", func() {
-				cfg.KubeConfig = nil
+				cfg.Kubeconfig = nil
 				rm := resourcemanager.New(c, deployNamespace, image, replicas, cfg)
-				rm.SetSecrets(resourcemanager.Secrets{KubeConfig: kubeCfg})
+				rm.SetSecrets(resourcemanager.Secrets{Kubeconfig: kubeCfg})
 
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
@@ -589,7 +589,17 @@ var _ = Describe("ResourceManager", func() {
 				deployment.Spec.Template.Spec.Volumes = nil
 				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = nil
 				delete(deployment.Spec.Template.ObjectMeta.Annotations, "checksum/secret-"+secretNameKubeconfig)
-				cfg.KubeConfig = nil
+				cfg.Kubeconfig = nil
+
+				// Remove controlplane label from resources
+				delete(serviceAccount.ObjectMeta.Labels, v1beta1constants.GardenRole)
+				delete(clusterRole.ObjectMeta.Labels, v1beta1constants.GardenRole)
+				delete(clusterRoleBinding.ObjectMeta.Labels, v1beta1constants.GardenRole)
+				delete(service.ObjectMeta.Labels, v1beta1constants.GardenRole)
+				delete(deployment.ObjectMeta.Labels, v1beta1constants.GardenRole)
+				delete(deployment.Spec.Template.ObjectMeta.Labels, v1beta1constants.GardenRole)
+				delete(deployment.Spec.Template.ObjectMeta.Labels, v1beta1constants.DeprecatedGardenRole)
+				delete(vpa.ObjectMeta.Labels, v1beta1constants.GardenRole)
 
 				resourceManager = resourcemanager.New(c, deployNamespace, image, replicas, cfg)
 			})
@@ -626,9 +636,8 @@ var _ = Describe("ResourceManager", func() {
 	})
 
 	Describe("#Destroy", func() {
-		Context("kubeconfig is set; watched namespace is set", func() {
+		Context("watched namespace is set", func() {
 			BeforeEach(func() {
-				cfg.ClusterRoleName = nil
 				resourceManager = resourcemanager.New(c, deployNamespace, image, replicas, cfg)
 			})
 			It("should delete all created resources", func() {
@@ -637,6 +646,8 @@ var _ = Describe("ResourceManager", func() {
 					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
+					c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
 					c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 				)
@@ -677,50 +688,6 @@ var _ = Describe("ResourceManager", func() {
 
 				Expect(resourceManager.Destroy(ctx)).To(MatchError(fakeErr))
 			})
-			It("should fail because the role cannot be deleted", func() {
-				gomock.InOrder(
-					c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}).Return(fakeErr),
-				)
-
-				Expect(resourceManager.Destroy(ctx)).To(MatchError(fakeErr))
-			})
-			It("should fail because the role binding account cannot be deleted", func() {
-				gomock.InOrder(
-					c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}).Return(fakeErr),
-				)
-
-				Expect(resourceManager.Destroy(ctx)).To(MatchError(fakeErr))
-			})
-
-		})
-
-		Context("kubeconfig is set; watched namespace is not set", func() {
-			BeforeEach(func() {
-				cfg.WatchedNamespace = nil
-				deployment.Spec.Template.Spec.Containers[0].Command = cmdWithoutWatchedNamespace
-				resourceManager = resourcemanager.New(c, deployNamespace, image, replicas, cfg)
-			})
-			It("should delete all created resources", func() {
-				gomock.InOrder(
-					c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
-					c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
-				)
-
-				Expect(resourceManager.Destroy(ctx)).To(Succeed())
-			})
 			It("should fail because the cluster role cannot be deleted", func() {
 				gomock.InOrder(
 					c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
@@ -744,15 +711,40 @@ var _ = Describe("ResourceManager", func() {
 
 				Expect(resourceManager.Destroy(ctx)).To(MatchError(fakeErr))
 			})
+			It("should fail because the role cannot be deleted", func() {
+				gomock.InOrder(
+					c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
+					c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
+					c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}).Return(fakeErr),
+				)
+
+				Expect(resourceManager.Destroy(ctx)).To(MatchError(fakeErr))
+			})
+			It("should fail because the role binding cannot be deleted", func() {
+				gomock.InOrder(
+					c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
+					c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
+					c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
+					c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}).Return(fakeErr),
+				)
+
+				Expect(resourceManager.Destroy(ctx)).To(MatchError(fakeErr))
+			})
+
 		})
 
-		Context("kubeconfig is not set", func() {
+		Context("watched namespace is not set", func() {
 			BeforeEach(func() {
-				cfg.KubeConfig = nil
-				deployment.Spec.Template.Spec.Containers[0].Command = cmdWithoutKubeconfig
-				deployment.Spec.Template.Spec.Volumes = nil
-				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = nil
-
+				cfg.WatchedNamespace = nil
+				deployment.Spec.Template.Spec.Containers[0].Command = cmdWithoutWatchedNamespace
 				resourceManager = resourcemanager.New(c, deployNamespace, image, replicas, cfg)
 			})
 			It("should delete all created resources", func() {
@@ -761,8 +753,6 @@ var _ = Describe("ResourceManager", func() {
 					c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
-					c.EXPECT().Delete(ctx, &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: deployNamespace, Name: "gardener-resource-manager"}}),
 					c.EXPECT().Delete(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
 					c.EXPECT().Delete(ctx, &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: clusterRoleName}}),
 				)

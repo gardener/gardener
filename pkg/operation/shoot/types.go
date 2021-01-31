@@ -105,8 +105,8 @@ type ControlPlane struct {
 	KubeAPIServerSNIPhase component.Phase
 	KubeScheduler         kubescheduler.KubeScheduler
 	KubeControllerManager kubecontrollermanager.KubeControllerManager
-	ResourceManager       *resourcemanager.ResourceManager
 	ClusterAutoscaler     clusterautoscaler.ClusterAutoscaler
+	ResourceManager       *resourcemanager.ResourceManager
 	KonnectivityServer    konnectivity.KonnectivityServer
 }
 
