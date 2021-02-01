@@ -102,3 +102,11 @@ func BeInternalServerError() types.GomegaMatcher {
 		message:   "",
 	}
 }
+
+// BeInvalidError checks if error is an InvalidError.
+func BeInvalidError() types.GomegaMatcher {
+	return &kubernetesErrors{
+		checkFunc: apierrors.IsInvalid,
+		message:   "Invalid",
+	}
+}
