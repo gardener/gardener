@@ -697,7 +697,7 @@ func GetSecretFromSecretRef(ctx context.Context, c client.Client, secretRef *cor
 }
 
 // CheckIfDeletionIsConfirmed returns whether the deletion of an object is confirmed or not.
-func CheckIfDeletionIsConfirmed(obj metav1.Object) error {
+func CheckIfDeletionIsConfirmed(obj client.Object) error {
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		return annotationRequiredError()
@@ -725,13 +725,8 @@ func ConfirmDeletion(ctx context.Context, c client.Client, obj client.Object) er
 		}
 
 		existing := obj.DeepCopyObject()
-
-		acc, err := meta.Accessor(obj)
-		if err != nil {
-			return err
-		}
-		kutil.SetMetaDataAnnotation(acc, ConfirmationDeletion, "true")
-		kutil.SetMetaDataAnnotation(acc, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+		kutil.SetMetaDataAnnotation(obj, ConfirmationDeletion, "true")
+		kutil.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 
 		if reflect.DeepEqual(existing, obj) {
 			return nil

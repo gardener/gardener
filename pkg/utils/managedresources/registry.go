@@ -19,11 +19,11 @@ import (
 	"reflect"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
@@ -36,7 +36,7 @@ type Registry struct {
 }
 
 type object struct {
-	obj           runtime.Object
+	obj           client.Object
 	serialization []byte
 }
 
@@ -57,7 +57,7 @@ func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializ
 
 // Add adds the given object the registry. It computes a filename based on its type, namespace, and name. It serializes
 // the object to YAML and stores both representations (object and serialization) in the registry.
-func (r *Registry) Add(obj runtime.Object) error {
+func (r *Registry) Add(obj client.Object) error {
 	if obj == nil || reflect.ValueOf(obj) == reflect.Zero(reflect.TypeOf(obj)) {
 		return nil
 	}
@@ -95,7 +95,7 @@ func (r *Registry) SerializedObjects() map[string][]byte {
 }
 
 // AddAllAndSerialize calls Add() for all the given objects before calling SerializedObjects().
-func (r *Registry) AddAllAndSerialize(objects ...runtime.Object) (map[string][]byte, error) {
+func (r *Registry) AddAllAndSerialize(objects ...client.Object) (map[string][]byte, error) {
 	for _, resource := range objects {
 		if err := r.Add(resource); err != nil {
 			return nil, err
@@ -105,8 +105,8 @@ func (r *Registry) AddAllAndSerialize(objects ...runtime.Object) (map[string][]b
 }
 
 // RegisteredObjects returns a map whose keys are filenames and whose values are objects.
-func (r *Registry) RegisteredObjects() map[string]runtime.Object {
-	out := make(map[string]runtime.Object, len(r.nameToObject))
+func (r *Registry) RegisteredObjects() map[string]client.Object {
+	out := make(map[string]client.Object, len(r.nameToObject))
 	for name, object := range r.nameToObject {
 		out[name] = object.obj
 	}
@@ -122,13 +122,8 @@ func (r *Registry) String() string {
 	return strings.Join(out, "\n\n")
 }
 
-func (r *Registry) objectName(obj runtime.Object) (string, error) {
+func (r *Registry) objectName(obj client.Object) (string, error) {
 	gvk, err := apiutil.GVKForObject(obj, r.scheme)
-	if err != nil {
-		return "", err
-	}
-
-	acc, err := meta.Accessor(obj)
 	if err != nil {
 		return "", err
 	}
@@ -136,7 +131,7 @@ func (r *Registry) objectName(obj runtime.Object) (string, error) {
 	return fmt.Sprintf(
 		"%s__%s__%s",
 		strings.ToLower(gvk.Kind),
-		acc.GetNamespace(),
-		strings.Replace(acc.GetName(), ":", "_", -1),
+		obj.GetNamespace(),
+		strings.Replace(obj.GetName(), ":", "_", -1),
 	), nil
 }

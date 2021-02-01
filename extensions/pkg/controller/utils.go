@@ -20,7 +20,6 @@ import (
 	"reflect"
 
 	controllererror "github.com/gardener/gardener/extensions/pkg/controller/error"
-	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -216,13 +215,8 @@ func RemoveAnnotation(ctx context.Context, c client.Client, obj client.Object, a
 }
 
 // IsMigrated checks if an extension object has been migrated
-func IsMigrated(obj runtime.Object) bool {
-	acc, err := extensions.Accessor(obj)
-	if err != nil {
-		return false
-	}
-
-	lastOp := acc.GetExtensionStatus().GetLastOperation()
+func IsMigrated(obj extensionsv1alpha1.Object) bool {
+	lastOp := obj.GetExtensionStatus().GetLastOperation()
 	return lastOp != nil &&
 		lastOp.Type == gardencorev1beta1.LastOperationTypeMigrate &&
 		lastOp.State == gardencorev1beta1.LastOperationStateSucceeded

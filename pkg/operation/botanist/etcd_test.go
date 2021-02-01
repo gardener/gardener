@@ -42,7 +42,6 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -345,7 +344,7 @@ var _ = Describe("Etcd", func() {
 
 			It("should set the secrets and deploy", func() {
 				kubernetesClient.EXPECT().Client().Return(c)
-				c.EXPECT().Get(ctx, kutil.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				c.EXPECT().Get(ctx, kutil.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					backupSecret.DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})
@@ -371,7 +370,7 @@ var _ = Describe("Etcd", func() {
 
 			It("should fail when the backup schedule cannot be determined", func() {
 				kubernetesClient.EXPECT().Client().Return(c)
-				c.EXPECT().Get(ctx, kutil.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				c.EXPECT().Get(ctx, kutil.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					backupSecret.DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})

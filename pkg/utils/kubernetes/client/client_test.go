@@ -54,12 +54,11 @@ var _ = Describe("Cleaner", func() {
 		cm2    corev1.ConfigMap
 		cmList corev1.ConfigMapList
 		ns     corev1.Namespace
-		//cmObjects []runtime.Object
 
 		cm2WithFinalizer corev1.ConfigMap
 		nsWithFinalizer  corev1.Namespace
-		//cmListWithFinalizer corev1.ConfigMapList
 	)
+
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)

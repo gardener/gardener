@@ -148,10 +148,10 @@ var _ = Describe("Utils", func() {
 			})
 
 			It("Shoul return the looked up resource", func() {
-				c.EXPECT().Get(ctx, kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
-					ob, ok := o.(*unstructured.Unstructured)
+				c.EXPECT().Get(ctx, kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
+					ob, ok := obj.(*unstructured.Unstructured)
 					if !ok {
-						return fmt.Errorf("Error casting %v to Unstructured object", o)
+						return fmt.Errorf("Error casting %v to Unstructured object", obj)
 					}
 					ob.SetAPIVersion(fmt.Sprintf("%s/%s", resource.Group, resource.Version))
 					ob.SetKind(resource.Resource)
@@ -187,10 +187,10 @@ var _ = Describe("Utils", func() {
 			})
 
 			It("Shoul return the looked up resource", func() {
-				c.EXPECT().List(ctx, obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, o runtime.Object, _ ...client.ListOption) error {
-					ob, ok := o.(*unstructured.UnstructuredList)
+				c.EXPECT().List(ctx, obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+					ob, ok := list.(*unstructured.UnstructuredList)
 					if !ok {
-						return fmt.Errorf("Error casting %v to UnstructuredList object", o)
+						return fmt.Errorf("Error casting %v to UnstructuredList object", list)
 					}
 					ob.SetAPIVersion(request.Kind.Group + "/" + request.Kind.Version)
 					ob.SetKind(request.Kind.Kind + "List")

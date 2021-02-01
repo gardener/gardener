@@ -34,7 +34,6 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	kretry "k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -199,7 +198,7 @@ func (a *actuator) waitUntilBackupBucketReconciled(ctx context.Context) error {
 		defaultInterval,
 		defaultSevereThreshold,
 		defaultTimeout,
-		func(obj runtime.Object) error {
+		func(obj client.Object) error {
 			bb, ok := obj.(*gardencorev1beta1.BackupBucket)
 			if !ok {
 				return fmt.Errorf("expected gardencorev1beta1.BackupBucket but got %T", obj)

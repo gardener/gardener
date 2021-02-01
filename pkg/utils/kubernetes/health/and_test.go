@@ -20,23 +20,23 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 )
 
 var _ = Describe("And", func() {
 	var (
-		obj                runtime.Object
+		obj                client.Object
 		healthy, unhealthy health.Func
 	)
 
 	BeforeEach(func() {
 		obj = &corev1.Pod{}
-		healthy = func(o runtime.Object) error {
+		healthy = func(o client.Object) error {
 			return nil
 		}
-		unhealthy = func(o runtime.Object) error {
+		unhealthy = func(o client.Object) error {
 			return fmt.Errorf("unhealthy")
 		}
 	})

@@ -42,7 +42,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -99,27 +98,6 @@ var _ = Describe("kubernetes", func() {
 
 		It("should panic if nameOpt is longer than 1", func() {
 			Expect(func() { ObjectMeta("foo", "bar", "baz") }).To(Panic())
-		})
-	})
-
-	Describe("#HasDeletionTimestamp", func() {
-		var namespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
-		}
-		It("should return false if no deletion timestamp is set", func() {
-			result, err := HasDeletionTimestamp(namespace)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(BeFalse())
-		})
-
-		It("should return true if timestamp is set", func() {
-			now := metav1.Now()
-			namespace.ObjectMeta.DeletionTimestamp = &now
-			result, err := HasDeletionTimestamp(namespace)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(BeTrue())
 		})
 	})
 
@@ -613,7 +591,7 @@ var _ = Describe("kubernetes", func() {
 
 			gomock.InOrder(
 				c.EXPECT().Get(ctx, key, configMap),
-				c.EXPECT().Get(ctx, key, configMap).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ runtime.Object) error {
+				c.EXPECT().Get(ctx, key, configMap).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ client.Object) error {
 					cancel()
 					return nil
 				}),
@@ -657,7 +635,7 @@ var _ = Describe("kubernetes", func() {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			c.EXPECT().List(ctx, configMapList).DoAndReturn(func(_ context.Context, _ runtime.Object, _ ...client.ListOption) error {
+			c.EXPECT().List(ctx, configMapList).DoAndReturn(func(_ context.Context, _ client.ObjectList, _ ...client.ListOption) error {
 				cancel()
 				configMapList.Items = append(configMapList.Items, configMap)
 				return nil
@@ -1120,7 +1098,7 @@ var _ = Describe("kubernetes", func() {
 	})
 
 	DescribeTable("#OwnedBy",
-		func(obj runtime.Object, apiVersion, kind, name string, uid types.UID, matcher gomegatypes.GomegaMatcher) {
+		func(obj client.Object, apiVersion, kind, name string, uid types.UID, matcher gomegatypes.GomegaMatcher) {
 			Expect(OwnedBy(obj, apiVersion, kind, name, uid)).To(matcher)
 		},
 		Entry("no owner references", &corev1.Pod{}, "apiVersion", "kind", "name", types.UID("uid"), BeFalse()),
@@ -1170,7 +1148,7 @@ var _ = Describe("kubernetes", func() {
 		})
 
 		It("should return the newest object w/ filter func", func() {
-			filterFn := func(o runtime.Object) bool {
+			filterFn := func(o client.Object) bool {
 				obj := o.(*corev1.Pod)
 				return obj.Name != "obj2"
 			}

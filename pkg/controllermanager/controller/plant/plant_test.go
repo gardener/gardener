@@ -37,7 +37,6 @@ import (
 	"github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/rest"
 	fakerestclient "k8s.io/client-go/rest/fake"
@@ -94,7 +93,7 @@ var _ = Describe("Plant", func() {
 				testLogger          = logger.NewFieldLogger(logger.NewLogger("info"), "test", "test-plant")
 			)
 
-			runtimeClient.EXPECT().List(context.TODO(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+			runtimeClient.EXPECT().List(context.TODO(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 				Expect(list).To(BeAssignableToTypeOf(&corev1.NodeList{}))
 				list.(*corev1.NodeList).Items = []corev1.Node{mockNode}
 				return nil
@@ -161,7 +160,7 @@ var _ = Describe("Plant", func() {
 				)
 
 				healthChecker = plant.NewHealthChecker(runtimeClient, discoveryMockclient)
-				runtimeClient.EXPECT().List(context.TODO(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+				runtimeClient.EXPECT().List(context.TODO(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 					Expect(list).To(BeAssignableToTypeOf(&corev1.NodeList{}))
 					list.(*corev1.NodeList).Items = []corev1.Node{*node}
 					return nil
@@ -186,7 +185,7 @@ var _ = Describe("Plant", func() {
 				)
 
 				healthChecker = plant.NewHealthChecker(runtimeClient, discoveryMockclient)
-				runtimeClient.EXPECT().List(context.TODO(), gomock.Any()).DoAndReturn(func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+				runtimeClient.EXPECT().List(context.TODO(), gomock.Any()).DoAndReturn(func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
 					return fmt.Errorf("Some Error")
 				})
 

@@ -28,7 +28,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -66,8 +65,8 @@ var _ = Describe("Waiter", func() {
 		It("should return an error when not all required etcds are created", func() {
 			etcdList := &druidv1alpha1.EtcdList{}
 
-			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"gardener.cloud/role": "controlplane"}).DoAndReturn(func(ctx context.Context, obj runtime.Object, opts ...client.ListOption) error {
-				etcdList.DeepCopyInto(obj.(*druidv1alpha1.EtcdList))
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"gardener.cloud/role": "controlplane"}).DoAndReturn(func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+				etcdList.DeepCopyInto(list.(*druidv1alpha1.EtcdList))
 				return nil
 			}).AnyTimes()
 
@@ -92,8 +91,8 @@ var _ = Describe("Waiter", func() {
 				},
 			}
 
-			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"gardener.cloud/role": "controlplane"}).DoAndReturn(func(ctx context.Context, obj runtime.Object, opts ...client.ListOption) error {
-				etcdList.DeepCopyInto(obj.(*druidv1alpha1.EtcdList))
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"gardener.cloud/role": "controlplane"}).DoAndReturn(func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+				etcdList.DeepCopyInto(list.(*druidv1alpha1.EtcdList))
 				return nil
 			}).AnyTimes()
 
@@ -114,8 +113,8 @@ var _ = Describe("Waiter", func() {
 				}
 			)
 
-			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"gardener.cloud/role": "controlplane"}).DoAndReturn(func(ctx context.Context, obj runtime.Object, opts ...client.ListOption) error {
-				etcdList.DeepCopyInto(obj.(*druidv1alpha1.EtcdList))
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"gardener.cloud/role": "controlplane"}).DoAndReturn(func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+				etcdList.DeepCopyInto(list.(*druidv1alpha1.EtcdList))
 				return nil
 			}).AnyTimes()
 
@@ -150,8 +149,8 @@ var _ = Describe("Waiter", func() {
 				},
 			}
 
-			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"gardener.cloud/role": "controlplane"}).DoAndReturn(func(ctx context.Context, obj runtime.Object, opts ...client.ListOption) error {
-				etcdList.DeepCopyInto(obj.(*druidv1alpha1.EtcdList))
+			c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{}), gomock.AssignableToTypeOf(client.InNamespace(namespace)), client.MatchingLabels{"gardener.cloud/role": "controlplane"}).DoAndReturn(func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+				etcdList.DeepCopyInto(list.(*druidv1alpha1.EtcdList))
 				return nil
 			}).AnyTimes()
 

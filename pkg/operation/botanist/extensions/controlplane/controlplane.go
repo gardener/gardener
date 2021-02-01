@@ -195,7 +195,7 @@ func (c *controlPlane) Wait(ctx context.Context) error {
 		c.waitInterval,
 		c.waitSevereThreshold,
 		c.waitTimeout,
-		func(obj runtime.Object) error {
+		func(obj client.Object) error {
 			controlPlane, ok := obj.(*extensionsv1alpha1.ControlPlane)
 			if !ok {
 				return fmt.Errorf("expected extensionsv1alpha1.ControlPlane but got %T", controlPlane)

@@ -26,7 +26,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -42,7 +41,7 @@ var (
 	configMapTypeMeta = metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"}
 )
 
-func mkManifest(objs ...runtime.Object) []byte {
+func mkManifest(objs ...client.Object) []byte {
 	var out bytes.Buffer
 	for _, obj := range objs {
 		data, err := yaml.Marshal(obj)

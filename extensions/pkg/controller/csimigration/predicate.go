@@ -15,16 +15,17 @@
 package csimigration
 
 import (
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 // ClusterCSIMigrationControllerNotFinished is a predicate for an annotation on the cluster.
 func ClusterCSIMigrationControllerNotFinished() predicate.Predicate {
-	f := func(obj runtime.Object) bool {
+	f := func(obj client.Object) bool {
 		if obj == nil {
 			return false
 		}

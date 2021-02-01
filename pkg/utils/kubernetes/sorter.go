@@ -19,25 +19,25 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ByName returns a comparison function for sorting by name.
 func ByName() SortBy {
-	return func(o1, o2 controllerutil.Object) bool {
+	return func(o1, o2 client.Object) bool {
 		return o1.GetName() < o2.GetName()
 	}
 }
 
 // ByCreationTimestamp returns a comparison function for sorting by creation timestamp.
 func ByCreationTimestamp() SortBy {
-	return func(o1, o2 controllerutil.Object) bool {
+	return func(o1, o2 client.Object) bool {
 		return o1.GetCreationTimestamp().Time.Before(o2.GetCreationTimestamp().Time)
 	}
 }
 
 // SortBy the type of a "less" function that defines the ordering of its object arguments.
-type SortBy func(o1, o2 controllerutil.Object) bool
+type SortBy func(o1, o2 client.Object) bool
 
 // Sort sorts the items in the provided list objects according to the sort-by function.
 func (sortBy SortBy) Sort(objList runtime.Object) {
@@ -73,7 +73,7 @@ func (s *objectSorter) Swap(i, j int) {
 
 func (s *objectSorter) Less(i, j int) bool {
 	return s.compareFn(
-		s.objects[i].(controllerutil.Object),
-		s.objects[j].(controllerutil.Object),
+		s.objects[i].(client.Object),
+		s.objects[j].(client.Object),
 	)
 }

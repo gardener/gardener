@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
@@ -141,7 +140,7 @@ var _ = Describe("Certificates", func() {
 
 			// mock update of secret in seed with the rotated kubeconfig
 			mockSeedClient.EXPECT().Get(ctx, kutil.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
-			mockSeedClient.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj runtime.Object, _ ...client.UpdateOption) error {
+			mockSeedClient.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) error {
 				secret, ok := obj.(*corev1.Secret)
 				Expect(ok).To(BeTrue())
 				Expect(secret.Name).To(Equal(gardenClientConnection.KubeconfigSecret.Name))

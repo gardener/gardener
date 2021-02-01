@@ -17,13 +17,13 @@ package kubernetes_test
 import (
 	"time"
 
-	. "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	. "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Sort", func() {
@@ -74,7 +74,7 @@ var _ = Describe("Sort", func() {
 
 	Describe("SortBy", func() {
 		It("should sort correctly", func() {
-			sortByContainers := func(o1, o2 controllerutil.Object) bool {
+			sortByContainers := func(o1, o2 client.Object) bool {
 				obj1, ok1 := o1.(*corev1.Pod)
 				obj2, ok2 := o2.(*corev1.Pod)
 

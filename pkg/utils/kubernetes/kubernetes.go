@@ -76,15 +76,6 @@ func HasMetaDataAnnotation(meta metav1.Object, key, value string) bool {
 	return ok && val == value
 }
 
-// HasDeletionTimestamp checks if an object has a deletion timestamp
-func HasDeletionTimestamp(obj runtime.Object) (bool, error) {
-	metadata, err := meta.Accessor(obj)
-	if err != nil {
-		return false, err
-	}
-	return metadata.GetDeletionTimestamp() != nil, nil
-}
-
 func nameAndNamespace(namespaceOrName string, nameOpt ...string) (namespace, name string) {
 	if len(nameOpt) > 1 {
 		panic(fmt.Sprintf("more than name/namespace for key specified: %s/%v", namespaceOrName, nameOpt))
@@ -414,13 +405,8 @@ func MergeOwnerReferences(references []metav1.OwnerReference, newReferences ...m
 }
 
 // OwnedBy checks if the given object's owner reference contains an entry with the provided attributes.
-func OwnedBy(obj runtime.Object, apiVersion, kind, name string, uid types.UID) bool {
-	acc, err := meta.Accessor(obj)
-	if err != nil {
-		return false
-	}
-
-	for _, ownerReference := range acc.GetOwnerReferences() {
+func OwnedBy(obj client.Object, apiVersion, kind, name string, uid types.UID) bool {
+	for _, ownerReference := range obj.GetOwnerReferences() {
 		return ownerReference.APIVersion == apiVersion &&
 			ownerReference.Kind == kind &&
 			ownerReference.Name == name &&
@@ -434,7 +420,7 @@ func OwnedBy(obj runtime.Object, apiVersion, kind, name string, uid types.UID) b
 // is provided then it will be applied for each object right after listing all objects. If no object remains then nil
 // is returned. The Items field in the list object will be populated with the result returned from the server after
 // applying the filter function (if provided).
-func NewestObject(ctx context.Context, c client.Client, listObj client.ObjectList, filterFn func(runtime.Object) bool, listOpts ...client.ListOption) (runtime.Object, error) {
+func NewestObject(ctx context.Context, c client.Client, listObj client.ObjectList, filterFn func(client.Object) bool, listOpts ...client.ListOption) (client.Object, error) {
 	if err := c.List(ctx, listObj, listOpts...); err != nil {
 		return nil, err
 	}
@@ -442,7 +428,12 @@ func NewestObject(ctx context.Context, c client.Client, listObj client.ObjectLis
 	if filterFn != nil {
 		var items []runtime.Object
 
-		if err := meta.EachListItem(listObj, func(obj runtime.Object) error {
+		if err := meta.EachListItem(listObj, func(object runtime.Object) error {
+			obj, ok := object.(client.Object)
+			if !ok {
+				return fmt.Errorf("%T does not implement client.Object", object)
+			}
+
 			if filterFn(obj) {
 				items = append(items, obj)
 			}
@@ -467,7 +458,13 @@ func NewestObject(ctx context.Context, c client.Client, listObj client.ObjectLis
 		return nil, err
 	}
 
-	return items[meta.LenList(listObj)-1], nil
+	newestObject := items[meta.LenList(listObj)-1]
+	obj, ok := newestObject.(client.Object)
+	if !ok {
+		return nil, fmt.Errorf("%T does not implement client.Object", newestObject)
+	}
+
+	return obj, nil
 }
 
 // NewestPodForDeployment returns the most recently created Pod object for the given deployment.
@@ -481,7 +478,7 @@ func NewestPodForDeployment(ctx context.Context, c client.Client, deployment *ap
 		ctx,
 		c,
 		&appsv1.ReplicaSetList{},
-		func(obj runtime.Object) bool {
+		func(obj client.Object) bool {
 			return OwnedBy(obj, appsv1.SchemeGroupVersion.String(), "Deployment", deployment.Name, deployment.UID)
 		},
 		listOpts...,
@@ -502,7 +499,7 @@ func NewestPodForDeployment(ctx context.Context, c client.Client, deployment *ap
 		ctx,
 		c,
 		&corev1.PodList{},
-		func(obj runtime.Object) bool {
+		func(obj client.Object) bool {
 			return OwnedBy(obj, appsv1.SchemeGroupVersion.String(), "ReplicaSet", newestReplicaSet.Name, newestReplicaSet.UID)
 		},
 		listOpts...,

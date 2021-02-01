@@ -16,6 +16,7 @@ package managedresources_test
 
 import (
 	. "github.com/gardener/gardener/pkg/utils/managedresources"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -86,14 +87,6 @@ roleRef:
 			Expect(registry.Add(nil)).To(Succeed())
 		})
 
-		It("should return an error when the object name cannot be computed", func() {
-			Expect(registry.Add(&metav1.APIGroup{})).To(MatchError(ContainSubstring("cannot create group-version-kind for unversioned type")))
-		})
-
-		It("should return an error when the object name cannot be computed", func() {
-			Expect(registry.Add(&corev1.SecretList{})).To(MatchError(ContainSubstring("does not implement the Object interfaces")))
-		})
-
 		It("should return an error due to duplicates in registry", func() {
 			Expect(registry.Add(&corev1.Secret{})).To(Succeed())
 			Expect(registry.Add(&corev1.Secret{})).To(MatchError(ContainSubstring("duplicate filename in registry")))
@@ -136,7 +129,7 @@ roleRef:
 			Expect(registry.Add(secret)).To(Succeed())
 			Expect(registry.Add(roleBinding)).To(Succeed())
 
-			Expect(registry.RegisteredObjects()).To(Equal(map[string]runtime.Object{
+			Expect(registry.RegisteredObjects()).To(Equal(map[string]client.Object{
 				secretFilename:      secret,
 				roleBindingFilename: roleBinding,
 			}))

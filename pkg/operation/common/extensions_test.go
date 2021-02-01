@@ -150,7 +150,7 @@ var _ = Describe("extensions", func() {
 				ctx, c, log,
 				func() client.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
 				namespace, name,
-				defaultInterval, defaultThreshold, defaultTimeout, func(runtime.Object) error {
+				defaultInterval, defaultThreshold, defaultTimeout, func(client.Object) error {
 					val++
 					return nil
 				},
@@ -164,7 +164,7 @@ var _ = Describe("extensions", func() {
 		It("should return error if object does not exist error", func() {
 			err := WaitUntilObjectReadyWithHealthFunction(
 				ctx, c, log,
-				func(obj runtime.Object) error {
+				func(obj client.Object) error {
 					return nil
 				},
 				func() client.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
@@ -179,7 +179,7 @@ var _ = Describe("extensions", func() {
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
 			err := WaitUntilObjectReadyWithHealthFunction(
 				ctx, c, log,
-				func(obj runtime.Object) error {
+				func(obj client.Object) error {
 					return errors.New("error")
 				},
 				func() client.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
@@ -194,7 +194,7 @@ var _ = Describe("extensions", func() {
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
 			err := WaitUntilObjectReadyWithHealthFunction(
 				ctx, c, log,
-				func(obj runtime.Object) error {
+				func(obj client.Object) error {
 					return nil
 				},
 				func() client.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
@@ -209,7 +209,7 @@ var _ = Describe("extensions", func() {
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
 			err := WaitUntilObjectReadyWithHealthFunction(
 				ctx, c, log,
-				func(obj runtime.Object) error {
+				func(obj client.Object) error {
 					Expect(obj).To(Equal(expected))
 					return nil
 				},
@@ -231,12 +231,12 @@ var _ = Describe("extensions", func() {
 			val := 0
 			err := WaitUntilObjectReadyWithHealthFunction(
 				ctx, c, log,
-				func(obj runtime.Object) error {
+				func(obj client.Object) error {
 					return nil
 				},
 				func() client.Object { return &extensionsv1alpha1.Worker{} }, extensionsv1alpha1.WorkerResource,
 				namespace, name,
-				defaultInterval, defaultThreshold, defaultTimeout, func(runtime.Object) error {
+				defaultInterval, defaultThreshold, defaultTimeout, func(client.Object) error {
 					val++
 					return nil
 				},

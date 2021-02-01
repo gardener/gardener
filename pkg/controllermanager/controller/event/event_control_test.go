@@ -29,7 +29,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -199,7 +198,7 @@ func mockClientGet(k8sGardenRuntimeClient *mockclient.MockClient, key client.Obj
 	k8sGardenRuntimeClient.
 		EXPECT().
 		Get(context.TODO(), key, &corev1.Event{}).
-		DoAndReturn(func(_ context.Context, _ client.ObjectKey, o runtime.Object) error {
+		DoAndReturn(func(_ context.Context, _ client.ObjectKey, o client.Object) error {
 			event, ok := o.(*corev1.Event)
 			Expect(ok).To(BeTrue())
 			result.DeepCopyInto(event)

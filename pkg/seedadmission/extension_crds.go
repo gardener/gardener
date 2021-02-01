@@ -134,19 +134,19 @@ func admitObjectDeletion(logger logrus.FieldLogger, obj runtime.Object, kind str
 
 // checkIfObjectDeletionIsConfirmed checks if the object was annotated with the deletion confirmation. If it is a custom
 // resource definition then it is only considered if the CRD has the deletion protection label.
-func checkIfObjectDeletionIsConfirmed(logger logrus.FieldLogger, obj runtime.Object, kind string) error {
-	acc, err := meta.Accessor(obj)
-	if err != nil {
-		return err
+func checkIfObjectDeletionIsConfirmed(logger logrus.FieldLogger, object runtime.Object, kind string) error {
+	obj, ok := object.(client.Object)
+	if !ok {
+		return fmt.Errorf("%T does not implement client.Object", object)
 	}
 
-	logger = logger.WithField("name", acc.GetName())
+	logger = logger.WithField("name", obj.GetName())
 
-	if kind == "CustomResourceDefinition" && !crdMustBeConsidered(logger, acc.GetLabels()) {
+	if kind == "CustomResourceDefinition" && !crdMustBeConsidered(logger, obj.GetLabels()) {
 		return nil
 	}
 
-	if err := common.CheckIfDeletionIsConfirmed(acc); err != nil {
+	if err := common.CheckIfDeletionIsConfirmed(obj); err != nil {
 		logger.Info("Deletion is not confirmed - preventing deletion")
 		return err
 	}

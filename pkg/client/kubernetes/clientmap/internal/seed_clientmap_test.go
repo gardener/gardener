@@ -34,7 +34,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	baseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -155,7 +154,7 @@ var _ = Describe("SeedClientMap", func() {
 		It("should fail if Seed object does not have a secretRef", func() {
 			seed.Spec.SecretRef = nil
 			c.EXPECT().Get(ctx, client.ObjectKey{Name: seed.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					seed.DeepCopyInto(obj.(*gardencorev1beta1.Seed))
 					return nil
 				})
@@ -168,7 +167,7 @@ var _ = Describe("SeedClientMap", func() {
 		It("should fail if NewClientFromSecret fails", func() {
 			fakeErr := fmt.Errorf("fake")
 			c.EXPECT().Get(ctx, client.ObjectKey{Name: seed.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					seed.DeepCopyInto(obj.(*gardencorev1beta1.Seed))
 					return nil
 				})
@@ -184,12 +183,12 @@ var _ = Describe("SeedClientMap", func() {
 		It("should correctly construct a new ClientSet", func() {
 			fakeCS := fakeclientset.NewClientSet()
 			c.EXPECT().Get(ctx, client.ObjectKey{Name: seed.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					seed.DeepCopyInto(obj.(*gardencorev1beta1.Seed))
 					return nil
 				}).Times(2)
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seed.Spec.SecretRef.Namespace, Name: seed.Spec.SecretRef.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					return nil
 				})
 			internal.NewClientFromSecret = func(ctx context.Context, c client.Client, namespace, secretName string, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
@@ -231,12 +230,12 @@ var _ = Describe("SeedClientMap", func() {
 		It("should fail if Get Seed Secret fails", func() {
 			fakeErr := fmt.Errorf("fake")
 			c.EXPECT().Get(ctx, client.ObjectKey{Name: seed.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					seed.DeepCopyInto(obj.(*gardencorev1beta1.Seed))
 					return nil
 				})
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seed.Spec.SecretRef.Namespace, Name: seed.Spec.SecretRef.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					return fakeErr
 				})
 
@@ -247,12 +246,12 @@ var _ = Describe("SeedClientMap", func() {
 
 		It("should correctly calculate hash", func() {
 			c.EXPECT().Get(ctx, client.ObjectKey{Name: seed.Name}, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					seed.DeepCopyInto(obj.(*gardencorev1beta1.Seed))
 					return nil
 				})
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: seed.Spec.SecretRef.Namespace, Name: seed.Spec.SecretRef.Name}, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					(&corev1.Secret{}).DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})

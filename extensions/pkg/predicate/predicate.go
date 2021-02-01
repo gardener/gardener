@@ -115,7 +115,7 @@ func HasOperationAnnotation() predicate.Predicate {
 
 // LastOperationNotSuccessful is a predicate for unsuccessful last operations **only** for creation events.
 func LastOperationNotSuccessful() predicate.Predicate {
-	operationNotSucceeded := func(obj runtime.Object) bool {
+	operationNotSucceeded := func(obj client.Object) bool {
 		acc, err := extensions.Accessor(obj)
 		if err != nil {
 			return false
@@ -191,7 +191,7 @@ func HasPurpose(purpose extensionsv1alpha1.Purpose) predicate.Predicate {
 
 // ClusterShootProviderType is a predicate for the provider type of the shoot in the cluster resource.
 func ClusterShootProviderType(decoder runtime.Decoder, providerType string) predicate.Predicate {
-	f := func(obj runtime.Object) bool {
+	f := func(obj client.Object) bool {
 		if obj == nil {
 			return false
 		}
@@ -227,7 +227,7 @@ func ClusterShootProviderType(decoder runtime.Decoder, providerType string) pred
 
 // GardenCoreProviderType is a predicate for the provider type of a `gardencore.Object` implementation.
 func GardenCoreProviderType(providerType string) predicate.Predicate {
-	f := func(obj runtime.Object) bool {
+	f := func(obj client.Object) bool {
 		if obj == nil {
 			return false
 		}
@@ -258,7 +258,7 @@ func GardenCoreProviderType(providerType string) predicate.Predicate {
 
 // ClusterShootKubernetesVersionAtLeast is a predicate for the kubernetes version of the shoot in the cluster resource.
 func ClusterShootKubernetesVersionAtLeast(decoder runtime.Decoder, kubernetesVersion string) predicate.Predicate {
-	f := func(obj runtime.Object) bool {
+	f := func(obj client.Object) bool {
 		if obj == nil {
 			return false
 		}
