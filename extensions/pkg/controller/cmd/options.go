@@ -18,19 +18,23 @@ import (
 	"fmt"
 	"os"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 )
 
 const (
 	// LeaderElectionFlag is the name of the command line flag to specify whether to do leader election or not.
 	LeaderElectionFlag = "leader-election"
+	// LeaderElectionResourceLockFlag is the name of the command line flag to specify the resource type used for leader
+	// election.
+	LeaderElectionResourceLockFlag = "leader-election-resource-lock"
 	// LeaderElectionIDFlag is the name of the command line flag to specify the leader election ID.
 	LeaderElectionIDFlag = "leader-election-id"
 	// LeaderElectionNamespaceFlag is the name of the command line flag to specify the leader election namespace.
@@ -146,6 +150,20 @@ func (b *OptionAggregator) Complete() error {
 type ManagerOptions struct {
 	// LeaderElection is whether leader election is turned on or not.
 	LeaderElection bool
+	// LeaderElectionResourceLock is the resource type used for leader election (defaults to `configmapsleases`).
+	//
+	// When changing the default resource lock, please make sure to migrate via multilocks to
+	// avoid situations where multiple running instances of your controller have each acquired leadership
+	// through different resource locks (e.g. during upgrades) and thus act on the same resources concurrently.
+	// For example, if you want to migrate to the "leases" resource lock, you might do so by migrating
+	// to the respective multilock first ("configmapsleases" or "endpointsleases"), which will acquire
+	// a leader lock on both resources. After one release with the multilock as a default, you can
+	// go ahead and migrate to "leases". Please also keep in mind, that users might skip versions
+	// of your controller, so at least add a flashy release note when changing the default lock.
+	//
+	// Note: before controller-runtime version v0.7, the resource lock was set to "configmaps".
+	// Please keep this in mind, when planning a proper migration path for your controller.
+	LeaderElectionResourceLock string
 	// LeaderElectionID is the id to do leader election with.
 	LeaderElectionID string
 	// LeaderElectionNamespace is the namespace to do leader election in.
@@ -162,7 +180,18 @@ type ManagerOptions struct {
 
 // AddFlags implements Flagger.AddFlags.
 func (m *ManagerOptions) AddFlags(fs *pflag.FlagSet) {
+	defaultLeaderElectionResourceLock := m.LeaderElectionResourceLock
+	if defaultLeaderElectionResourceLock == "" {
+		// explicitly default to configmapleases if no default is specified for migration purposes
+		// same as in controller-runtime, see
+		// https://github.com/kubernetes-sigs/controller-runtime/blob/a763c9a36c6f18660799384c9765348942bda53a/pkg/leaderelection/leader_election.go#L59-L64
+		// we might consider changing this default after many releases
+		defaultLeaderElectionResourceLock = resourcelock.ConfigMapsLeasesResourceLock
+	}
+
 	fs.BoolVar(&m.LeaderElection, LeaderElectionFlag, m.LeaderElection, "Whether to use leader election or not when running this controller manager.")
+	fs.StringVar(&m.LeaderElectionResourceLock, LeaderElectionResourceLockFlag, defaultLeaderElectionResourceLock, "Which resource type to use for leader election. "+
+		"Supported options are 'endpoints', 'configmaps', 'leases', 'endpointsleases' and 'configmapsleases'.")
 	fs.StringVar(&m.LeaderElectionID, LeaderElectionIDFlag, m.LeaderElectionID, "The leader election id to use.")
 	fs.StringVar(&m.LeaderElectionNamespace, LeaderElectionNamespaceFlag, m.LeaderElectionNamespace, "The namespace to do leader election in.")
 	fs.StringVar(&m.WebhookServerHost, WebhookServerHostFlag, m.WebhookServerHost, "The webhook server host.")
@@ -172,7 +201,7 @@ func (m *ManagerOptions) AddFlags(fs *pflag.FlagSet) {
 
 // Complete implements Completer.Complete.
 func (m *ManagerOptions) Complete() error {
-	m.config = &ManagerConfig{m.LeaderElection, m.LeaderElectionID, m.LeaderElectionNamespace, m.WebhookServerHost, m.WebhookServerPort, m.WebhookCertDir}
+	m.config = &ManagerConfig{m.LeaderElection, m.LeaderElectionResourceLock, m.LeaderElectionID, m.LeaderElectionNamespace, m.WebhookServerHost, m.WebhookServerPort, m.WebhookCertDir}
 	return nil
 }
 
@@ -185,6 +214,8 @@ func (m *ManagerOptions) Completed() *ManagerConfig {
 type ManagerConfig struct {
 	// LeaderElection is whether leader election is turned on or not.
 	LeaderElection bool
+	// LeaderElectionResourceLock is the resource type used for leader election.
+	LeaderElectionResourceLock string
 	// LeaderElectionID is the id to do leader election with.
 	LeaderElectionID string
 	// LeaderElectionNamespace is the namespace to do leader election in.
@@ -200,6 +231,7 @@ type ManagerConfig struct {
 // Apply sets the values of this ManagerConfig in the given manager.Options.
 func (c *ManagerConfig) Apply(opts *manager.Options) {
 	opts.LeaderElection = c.LeaderElection
+	opts.LeaderElectionResourceLock = c.LeaderElectionResourceLock
 	opts.LeaderElectionID = c.LeaderElectionID
 	opts.LeaderElectionNamespace = c.LeaderElectionNamespace
 	opts.Host = c.WebhookServerHost
