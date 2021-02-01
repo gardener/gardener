@@ -50,7 +50,7 @@ resources:
     memory: 512Mi
   requests:
     cpu: 200m
-    memory: 64Mi
+    memory: 300Mi
 
 securityContext:
   fsGroup: 10001
@@ -70,7 +70,7 @@ hvpa:
     memory: 2G
   minAllowed:
     cpu: 200m
-    memory: 64M
+    memory: 300M
   targetAverageUtilizationCpu: 80
   targetAverageUtilizationMemory: 80
   scaleUpStabilization:
@@ -80,21 +80,21 @@ hvpa:
         value: "100m"
         percentage: 80
       memory:
-        value: 200M
+        value: 300M
         percentage: 80
   scaleDownStabilization:
-    stabilizationDuration: "15m"
+    stabilizationDuration: "2h"
     minChange:
       cpu:
-        value: "100m"
+        value: "200m"
         percentage: 80
       memory:
-        value: 200M
+        value: 500M
         percentage: 80
   limitsRequestsGapScaleParams:
     cpu:
       value: "300m"
       percentage: 40
     memory:
-      value: "400M"
+      value: "1000M"
       percentage: 40
