@@ -127,6 +127,9 @@ func DeleteAllFinalizers(ctx context.Context, client client.Client, obj client.O
 	})
 }
 
+// GetSecretByReference returns the Secret object matching the given SecretReference.
+var GetSecretByReference = kutil.GetSecretByReference
+
 // TryPatch tries to apply the given transformation function onto the given object, and to patch it afterwards with optimistic locking.
 // It retries the patch with an exponential backoff.
 var TryPatch = kutil.TryPatch
