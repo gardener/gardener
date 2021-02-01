@@ -63,7 +63,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.SNI.Ingress.ServiceName).To(PointTo(Equal("istio-ingressgateway")))
 		})
 
-		Describe("GardenClientConnection", func() {
+		Describe("ClientConnection settings", func() {
 			It("should not default ContentType and AcceptContentTypes", func() {
 				SetObjectDefaults_GardenletConfiguration(obj)
 
@@ -72,10 +72,26 @@ var _ = Describe("Defaults", func() {
 				// logic will be overwritten
 				Expect(obj.GardenClientConnection.ContentType).To(BeEmpty())
 				Expect(obj.GardenClientConnection.AcceptContentTypes).To(BeEmpty())
+				Expect(obj.SeedClientConnection.ContentType).To(BeEmpty())
+				Expect(obj.SeedClientConnection.AcceptContentTypes).To(BeEmpty())
+				Expect(obj.ShootClientConnection.ContentType).To(BeEmpty())
+				Expect(obj.ShootClientConnection.AcceptContentTypes).To(BeEmpty())
 			})
 			It("should correctly default GardenClientConnection", func() {
 				SetObjectDefaults_GardenletConfiguration(obj)
 				Expect(obj.GardenClientConnection).To(Equal(&GardenClientConnection{
+					ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+						QPS:   50.0,
+						Burst: 100,
+					},
+				}))
+				Expect(obj.SeedClientConnection).To(Equal(&SeedClientConnection{
+					ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+						QPS:   50.0,
+						Burst: 100,
+					},
+				}))
+				Expect(obj.ShootClientConnection).To(Equal(&ShootClientConnection{
 					ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 						QPS:   50.0,
 						Burst: 100,
