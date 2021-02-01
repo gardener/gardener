@@ -67,7 +67,7 @@ var _ = Describe("Defaults", func() {
 			It("should not default ContentType and AcceptContentTypes", func() {
 				SetObjectDefaults_GardenletConfiguration(obj)
 
-				// ContentType fields will be defaulted by client constructors / controller-runtime based on wether a
+				// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
 				// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
 				// logic will be overwritten
 				Expect(obj.GardenClientConnection.ContentType).To(BeEmpty())
