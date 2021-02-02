@@ -28,11 +28,13 @@ package shoot_creation
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gardener/gardener/test/framework"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 const (
@@ -54,7 +56,24 @@ var _ = Describe("Shoot Creation testing", func() {
 	})
 
 	f.CIt("Create and Reconcile Shoot", func(ctx context.Context) {
-		_, err := f.CreateShoot(ctx, true, true)
+		actual, err := f.CreateShoot(ctx, true, true)
 		framework.ExpectNoError(err)
+
+		// Verify Shoot status
+		var (
+			expectedTechnicalID           = fmt.Sprintf("shoot--%s--%s", f.GetShootFramework().Project.Name, actual.Name)
+			expectedClusterIdentityPrefix = fmt.Sprintf("%s-%s", actual.Status.TechnicalID, actual.Status.UID)
+		)
+
+		Expect(actual.Status.Gardener.ID).NotTo(BeEmpty())
+		Expect(actual.Status.Gardener.Name).NotTo(BeEmpty())
+		Expect(actual.Status.Gardener.Version).NotTo(BeEmpty())
+		Expect(actual.Status.LastErrors).To(BeEmpty())
+		Expect(actual.Status.SeedName).NotTo(BeNil())
+		Expect(*actual.Status.SeedName).NotTo(BeEmpty())
+		Expect(actual.Status.TechnicalID).To(Equal(expectedTechnicalID))
+		Expect(actual.Status.UID).NotTo(BeEmpty())
+		Expect(actual.Status.ClusterIdentity).NotTo(BeNil())
+		Expect(*actual.Status.ClusterIdentity).To(HavePrefix(expectedClusterIdentityPrefix))
 	}, CreateAndReconcileTimeout)
 })
