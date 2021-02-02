@@ -17,18 +17,18 @@ package v1alpha1_test
 import (
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog"
-
-	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	"k8s.io/klog"
+
+	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 var _ = Describe("Defaults", func() {
-	Describe("#SetDefaults_GardenletConfiguration", func() {
+	Describe("GardenletConfiguration", func() {
 		var obj *GardenletConfiguration
 
 		BeforeEach(func() {
@@ -61,6 +61,43 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.SNI.Ingress.Labels).To(Equal(map[string]string{"istio": "ingressgateway"}))
 			Expect(obj.SNI.Ingress.Namespace).To(PointTo(Equal("istio-ingress")))
 			Expect(obj.SNI.Ingress.ServiceName).To(PointTo(Equal("istio-ingressgateway")))
+		})
+
+		Describe("ClientConnection settings", func() {
+			It("should not default ContentType and AcceptContentTypes", func() {
+				SetObjectDefaults_GardenletConfiguration(obj)
+
+				// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
+				// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
+				// logic will be overwritten
+				Expect(obj.GardenClientConnection.ContentType).To(BeEmpty())
+				Expect(obj.GardenClientConnection.AcceptContentTypes).To(BeEmpty())
+				Expect(obj.SeedClientConnection.ContentType).To(BeEmpty())
+				Expect(obj.SeedClientConnection.AcceptContentTypes).To(BeEmpty())
+				Expect(obj.ShootClientConnection.ContentType).To(BeEmpty())
+				Expect(obj.ShootClientConnection.AcceptContentTypes).To(BeEmpty())
+			})
+			It("should correctly default GardenClientConnection", func() {
+				SetObjectDefaults_GardenletConfiguration(obj)
+				Expect(obj.GardenClientConnection).To(Equal(&GardenClientConnection{
+					ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+						QPS:   50.0,
+						Burst: 100,
+					},
+				}))
+				Expect(obj.SeedClientConnection).To(Equal(&SeedClientConnection{
+					ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+						QPS:   50.0,
+						Burst: 100,
+					},
+				}))
+				Expect(obj.ShootClientConnection).To(Equal(&ShootClientConnection{
+					ClientConnectionConfiguration: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+						QPS:   50.0,
+						Burst: 100,
+					},
+				}))
+			})
 		})
 	})
 

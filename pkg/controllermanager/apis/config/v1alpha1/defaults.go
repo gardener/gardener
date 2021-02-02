@@ -127,16 +127,8 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	}
 }
 
-// SetDefaults_GardenClientConnection sets defaults for the client connection.
-func SetDefaults_GardenClientConnection(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
-	//componentbaseconfigv1alpha1.RecommendedDefaultClientConnectionConfiguration(obj)
-	// https://github.com/kubernetes/client-go/issues/76#issuecomment-396170694
-	if len(obj.AcceptContentTypes) == 0 {
-		obj.AcceptContentTypes = "application/json"
-	}
-	if len(obj.ContentType) == 0 {
-		obj.ContentType = "application/json"
-	}
+// SetDefaults_ClientConnectionConfiguration sets defaults for the garden client connection.
+func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
 	if obj.QPS == 0.0 {
 		obj.QPS = 50.0
 	}

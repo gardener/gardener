@@ -272,8 +272,8 @@ global:
     vpa: false
     config:
       gardenClientConnection:
-        acceptContentTypes: application/json
-        contentType: application/json
+       # acceptContentTypes: application/json
+       # contentType: application/json
         qps: 100
         burst: 130
       server:
@@ -328,8 +328,8 @@ global:
     vpa: false
     config:
       gardenClientConnection:
-        acceptContentTypes: application/json
-        contentType: application/json
+      # acceptContentTypes: application/json
+      # contentType: application/json
         qps: 100
         burst: 130
       controllers:
@@ -421,8 +421,8 @@ global:
     vpa: false
     config:
       clientConnection:
-        acceptContentTypes: application/json
-        contentType: application/json
+      # acceptContentTypes: application/json
+      # contentType: application/json
         qps: 100
         burst: 130
       leaderElection:

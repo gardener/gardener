@@ -35,15 +35,12 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 	SetDefaults_GardenletConfiguration(in)
 	if in.GardenClientConnection != nil {
-		SetDefaults_GardenClientConnection(in.GardenClientConnection)
 		SetDefaults_ClientConnectionConfiguration(&in.GardenClientConnection.ClientConnectionConfiguration)
 	}
 	if in.SeedClientConnection != nil {
-		SetDefaults_SeedClientConnection(in.SeedClientConnection)
 		SetDefaults_ClientConnectionConfiguration(&in.SeedClientConnection.ClientConnectionConfiguration)
 	}
 	if in.ShootClientConnection != nil {
-		SetDefaults_ShootClientConnection(in.ShootClientConnection)
 		SetDefaults_ClientConnectionConfiguration(&in.ShootClientConnection.ClientConnectionConfiguration)
 	}
 	if in.Controllers != nil {

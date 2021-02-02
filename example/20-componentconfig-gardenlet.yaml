@@ -2,18 +2,12 @@
 apiVersion: gardenlet.config.gardener.cloud/v1alpha1
 kind: GardenletConfiguration
 gardenClientConnection:
-  acceptContentTypes: application/json
-  contentType: application/json
   qps: 100
   burst: 130
 seedClientConnection:
-  acceptContentTypes: application/json
-  contentType: application/json
   qps: 100
   burst: 130
 shootClientConnection:
-  acceptContentTypes: application/json
-  contentType: application/json
   qps: 25
   burst: 50
 controllers:

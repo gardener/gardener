@@ -109,31 +109,8 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 	}
 }
 
-// SetDefaults_GardenClientConnection sets defaults for the client connection objects.
-func SetDefaults_GardenClientConnection(obj *GardenClientConnection) {
-	SetDefaults_ClientConnectionConfiguration(&obj.ClientConnectionConfiguration)
-}
-
-// SetDefaults_SeedClientConnection sets defaults for the client connection objects.
-func SetDefaults_SeedClientConnection(obj *SeedClientConnection) {
-	SetDefaults_ClientConnectionConfiguration(&obj.ClientConnectionConfiguration)
-}
-
-// SetDefaults_ShootClientConnection sets defaults for the client connection objects.
-func SetDefaults_ShootClientConnection(obj *ShootClientConnection) {
-	SetDefaults_ClientConnectionConfiguration(&obj.ClientConnectionConfiguration)
-}
-
 // SetDefaults_ClientConnectionConfiguration sets defaults for the client connection objects.
 func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.ClientConnectionConfiguration) {
-	// componentbaseconfigv1alpha1.RecommendedDefaultClientConnectionConfiguration(obj)
-	// https://github.com/kubernetes/client-go/issues/76#issuecomment-396170694
-	if len(obj.AcceptContentTypes) == 0 {
-		obj.AcceptContentTypes = "application/json"
-	}
-	if len(obj.ContentType) == 0 {
-		obj.ContentType = "application/json"
-	}
 	if obj.QPS == 0.0 {
 		obj.QPS = 50.0
 	}

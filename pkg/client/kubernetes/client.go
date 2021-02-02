@@ -19,11 +19,10 @@ import (
 	"errors"
 	"fmt"
 
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
-
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -32,6 +31,13 @@ import (
 	apiserviceclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardenercorescheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
+	seedmanagementscheme "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/scheme"
+	settingsscheme "github.com/gardener/gardener/pkg/client/settings/clientset/versioned/scheme"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 var (
@@ -43,6 +49,17 @@ var (
 
 // KubeConfig is the key to the kubeconfig
 const KubeConfig = "kubeconfig"
+
+func init() {
+	// enable protobuf for Gardener API for controller-runtime clients
+	protobufSchemeBuilder := runtime.NewSchemeBuilder(
+		gardenercorescheme.AddToScheme,
+		seedmanagementscheme.AddToScheme,
+		settingsscheme.AddToScheme,
+	)
+
+	utilruntime.Must(apiutil.AddToProtobufScheme(protobufSchemeBuilder.AddToScheme))
+}
 
 // NewClientFromFile creates a new Client struct for a given kubeconfig. The kubeconfig will be
 // read from the filesystem at location <kubeconfigPath>. If given, <masterURL> overrides the
@@ -270,22 +287,26 @@ func newClientSet(conf *Config) (Interface, error) {
 		runtimeClient = directClient
 	}
 
-	kubernetes, err := kubernetesclientset.NewForConfig(conf.restConfig)
+	// prepare rest config with contentType defaulted to protobuf for client-go style clients that either talk to
+	// kubernetes or aggregated APIs that support protobuf.
+	cfg := defaultContentTypeProtobuf(conf.restConfig)
+
+	kubernetes, err := kubernetesclientset.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	gardenCore, err := gardencoreclientset.NewForConfig(conf.restConfig)
+	gardenCore, err := gardencoreclientset.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	apiRegistration, err := apiserviceclientset.NewForConfig(conf.restConfig)
+	apiRegistration, err := apiserviceclientset.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	apiExtension, err := apiextensionsclientset.NewForConfig(conf.restConfig)
+	apiExtension, err := apiextensionsclientset.NewForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -314,5 +335,16 @@ func newClientSet(conf *Config) (Interface, error) {
 }
 
 func setConfigDefaults(conf *Config) error {
+	// we can't default to protobuf ContentType here, otherwise controller-runtime clients will also try to talk to
+	// CRD resources (e.g. extension CRs in the Seed) using protobuf, but CRDs don't support protobuf
+	// see https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#advanced-features-and-flexibility
 	return setClientOptionsDefaults(conf.restConfig, &conf.clientOptions)
+}
+
+func defaultContentTypeProtobuf(c *rest.Config) *rest.Config {
+	config := *c
+	if config.ContentType == "" {
+		config.ContentType = runtime.ContentTypeProtobuf
+	}
+	return &config
 }

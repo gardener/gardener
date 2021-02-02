@@ -17,16 +17,17 @@ package v1alpha1_test
 import (
 	"time"
 
-	. "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+
+	. "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 )
 
 var _ = Describe("Defaults", func() {
-	Describe("#SetDefaults_ControllerManagerConfiguration", func() {
+	Describe("ControllerManagerConfiguration", func() {
 		var obj *ControllerManagerConfiguration
 
 		BeforeEach(func() {
@@ -34,7 +35,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should correctly default the controller manager configuration", func() {
-			SetDefaults_ControllerManagerConfiguration(obj)
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
 			Expect(obj.Server.HTTP.BindAddress).To(Equal("0.0.0.0"))
 			Expect(obj.Server.HTTP.Port).To(Equal(2718))
@@ -88,10 +89,29 @@ var _ = Describe("Defaults", func() {
 					},
 				},
 			}
-			SetDefaults_ControllerManagerConfiguration(obj)
+			SetObjectDefaults_ControllerManagerConfiguration(obj)
 
 			Expect(obj.Controllers.Project.Quotas[0].ProjectSelector).To(Equal(fooSelector))
 			Expect(obj.Controllers.Project.Quotas[1].ProjectSelector).To(Equal(&metav1.LabelSelector{}))
+		})
+
+		Describe("GardenClientConnection", func() {
+			It("should not default ContentType and AcceptContentTypes", func() {
+				SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+				// ContentType fields will be defaulted by client constructors / controller-runtime based on whether a
+				// given APIGroup supports protobuf or not. defaults must not touch these, otherwise the integelligent
+				// logic will be overwritten
+				Expect(obj.GardenClientConnection.ContentType).To(BeEmpty())
+				Expect(obj.GardenClientConnection.AcceptContentTypes).To(BeEmpty())
+			})
+			It("should correctly default GardenClientConnection", func() {
+				SetObjectDefaults_ControllerManagerConfiguration(obj)
+				Expect(obj.GardenClientConnection).To(Equal(componentbaseconfigv1alpha1.ClientConnectionConfiguration{
+					QPS:   50.0,
+					Burst: 100,
+				}))
+			})
 		})
 	})
 	Describe("#SetDefaults_EventControllerConfiguration", func() {
