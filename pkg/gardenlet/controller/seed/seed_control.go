@@ -425,7 +425,7 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 		backupBucket.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 		backupBucket.Spec = gardencorev1beta1.BackupBucketSpec{
 			Provider: gardencorev1beta1.BackupBucketProvider{
-				Type:   string(seed.Spec.Backup.Provider),
+				Type:   seed.Spec.Backup.Provider,
 				Region: region,
 			},
 			ProviderConfig: seed.Spec.Backup.ProviderConfig,

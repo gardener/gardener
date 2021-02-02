@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 )
 
@@ -1763,4 +1764,20 @@ var _ = Describe("helper", func() {
 		Entry("nginxIngress disabled", &gardencorev1beta1.Addons{NginxIngress: &gardencorev1beta1.NginxIngress{Addon: gardencorev1beta1.Addon{Enabled: false}}}, BeFalse()),
 		Entry("nginxIngress enabled", &gardencorev1beta1.Addons{NginxIngress: &gardencorev1beta1.NginxIngress{Addon: gardencorev1beta1.Addon{Enabled: true}}}, BeTrue()),
 	)
+
+	Describe("#ConstantConditionPatch", func() {
+		It("should calculate the correct patch", func() {
+			condition := gardencorev1beta1.Condition{
+				Type:   gardencorev1beta1.SeedGardenletReady,
+				Status: gardencorev1beta1.ConditionFalse,
+			}
+
+			expectedPatchData := []byte(`{"status":{"conditions":[{"type":"GardenletReady","status":"False","lastTransitionTime":null,"lastUpdateTime":null,"reason":"","message":""}]}}`)
+
+			patch, err := ConstantConditionPatch(condition)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(patch.Type()).To(Equal(apitypes.StrategicMergePatchType))
+			Expect(patch.Data(nil)).To(Equal(expectedPatchData))
+		})
+	})
 })

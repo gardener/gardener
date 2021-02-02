@@ -477,6 +477,14 @@ This helm chart creates:
         "reason": "BootstrappingSucceeded",
         "status": "True",
         "type": "Bootstrapped"
+      },
+      {
+        "lastTransitionTime": "2020-07-17T09:17:49Z",
+        "lastUpdateTime": "2020-07-17T09:53:17Z",
+        "message": "Backup Bucket has been reconciled successfully.",
+        "reason": "BackupBucketAvailable",
+        "status": "True",
+        "type": "BackupBucketReady"
       }
     ]
     ```

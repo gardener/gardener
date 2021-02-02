@@ -311,6 +311,8 @@ const (
 	SeedExtensionsReady ConditionType = "ExtensionsReady"
 	// SeedGardenletReady is a constant for a condition type indicating that the Gardenlet is ready.
 	SeedGardenletReady ConditionType = "GardenletReady"
+	// SeedBackupBucketReady is a constant for a condition type indicating that the associated BackupBucket is ready.
+	SeedBackupBucketReady ConditionType = "BackupBucketReady"
 )
 
 // Resource constants for Gardener object types

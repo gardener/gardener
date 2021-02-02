@@ -116,10 +116,18 @@ func (r *reconciler) reconcileBackupBucket(ctx context.Context, gardenClient kub
 		return reconcile.Result{}, err
 	}
 
-	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(*backupBucket.Spec.SeedName))
+	seed := &gardencorev1beta1.Seed{}
+	if err := gardenClient.Client().Get(ctx, kutil.Key(*backupBucket.Spec.SeedName), seed); err != nil {
+		backupBucketLogger.Errorf("Failed to get seed: %+v", err)
+		return reconcile.Result{}, err
+	}
+
+	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(seed.Name))
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get seed client: %w", err)
 	}
+
+	conditionBackupBucketReady := gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketReady)
 
 	a := newActuator(gardenClient, seedClient, backupBucket, r.logger)
 	if err := a.Reconcile(ctx); err != nil {
@@ -132,18 +140,38 @@ func (r *reconciler) reconcileBackupBucket(ctx context.Context, gardenClient kub
 		r.recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", reconcileErr.Description)
 
 		if updateErr := updateBackupBucketStatusError(ctx, gardenClient.DirectClient(), backupBucket, reconcileErr.Description+" Operation will be retried.", reconcileErr); updateErr != nil {
-			backupBucketLogger.Errorf("Could not update the BackupBucket status after deletion error: %+v", updateErr)
-			return reconcile.Result{}, updateErr
+			backupBucketLogger.Errorf("Could not update the BackupBucket status: %+v", updateErr)
 		}
+
+		if updateErr := patchSeedCondition(ctx, gardenClient.Client(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketReady,
+			gardencorev1beta1.ConditionFalse, "BackupBucketReconciliationError", reconcileErr.Description)); updateErr != nil {
+			backupBucketLogger.Errorf("Could not update Seed status: %+v", updateErr)
+		}
+
 		return reconcile.Result{}, errors.New(reconcileErr.Description)
 	}
 
-	if updateErr := updateBackupBucketStatusSucceeded(ctx, gardenClient.DirectClient(), backupBucket, "Backup Bucket has been successfully reconciled."); updateErr != nil {
+	msg := "Backup Bucket has been reconciled successfully."
+	if updateErr := updateBackupBucketStatusSucceeded(ctx, gardenClient.DirectClient(), backupBucket, msg); updateErr != nil {
 		backupBucketLogger.Errorf("Could not update the Shoot status after reconciliation success: %+v", updateErr)
 		return reconcile.Result{}, updateErr
 	}
 
+	if updateErr := patchSeedCondition(ctx, gardenClient.Client(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketReady,
+		gardencorev1beta1.ConditionTrue, "BackupBucketAvailable", msg)); updateErr != nil {
+		return reconcile.Result{}, updateErr
+	}
+
 	return reconcile.Result{}, nil
+}
+
+func patchSeedCondition(ctx context.Context, c client.Client, seed *gardencorev1beta1.Seed, condition gardencorev1beta1.Condition) error {
+	conditionPatch, err := gardencorev1beta1helper.ConstantConditionPatch(condition)
+	if err != nil {
+		return err
+	}
+
+	return c.Status().Patch(ctx, seed, conditionPatch)
 }
 
 func (r *reconciler) deleteBackupBucket(ctx context.Context, gardenClient kubernetes.Interface, backupBucket *gardencorev1beta1.BackupBucket) (reconcile.Result, error) {
