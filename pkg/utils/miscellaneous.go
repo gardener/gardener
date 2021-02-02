@@ -143,3 +143,12 @@ func QuantityPtr(q resource.Quantity) *resource.Quantity {
 func Indent(str string, spaces int) string {
 	return strings.ReplaceAll(str, "\n", "\n"+strings.Repeat(" ", spaces))
 }
+
+// ShallowCopyMapStringInterface creates a shallow copy of the given map.
+func ShallowCopyMapStringInterface(values map[string]interface{}) map[string]interface{} {
+	copiedValues := make(map[string]interface{}, len(values))
+	for k, v := range values {
+		copiedValues[k] = v
+	}
+	return copiedValues
+}

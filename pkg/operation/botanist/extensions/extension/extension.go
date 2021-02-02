@@ -152,8 +152,8 @@ func (e *extension) Restore(ctx context.Context, shootState *gardencorev1alpha1.
 
 		return common.RestoreExtensionWithDeployFunction(
 			ctx,
-			shootState,
 			e.client,
+			shootState,
 			extensionsv1alpha1.ExtensionResource,
 			e.values.Namespace,
 			deployer.deploy,

@@ -152,8 +152,8 @@ func (c *controlPlane) deploy(ctx context.Context, operation string) (extensions
 func (c *controlPlane) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
 	return common.RestoreExtensionWithDeployFunction(
 		ctx,
-		shootState,
 		c.client,
+		shootState,
 		extensionsv1alpha1.ControlPlaneResource,
 		c.values.Namespace,
 		c.deploy,

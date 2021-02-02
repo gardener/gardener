@@ -26,6 +26,8 @@ import (
 	mockshoot "github.com/gardener/gardener/pkg/mock/gardener/operation/shoot"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig"
+	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
@@ -42,24 +44,26 @@ import (
 
 var _ = Describe("Worker", func() {
 	var (
-		ctrl     *gomock.Controller
-		c        *mockclient.MockClient
-		worker   *mockshoot.MockExtensionWorker
-		botanist *Botanist
+		ctrl                  *gomock.Controller
+		c                     *mockclient.MockClient
+		worker                *mockshoot.MockExtensionWorker
+		operatingSystemConfig *mockoperatingsystemconfig.MockInterface
+		botanist              *Botanist
 
-		ctx                          = context.TODO()
-		fakeErr                      = fmt.Errorf("fake")
-		shootState                   = &gardencorev1alpha1.ShootState{}
-		sshPublicKey                 = []byte("key")
-		infrastructureProviderStatus = []byte("infrastatus")
-		operatingSystemConfigMaps    = map[string]shootpkg.OperatingSystemConfigs{"foo": {}}
-		labelSelectorCloudConfigRole = client.MatchingLabels{"gardener.cloud/role": "cloud-config"}
+		ctx                                   = context.TODO()
+		fakeErr                               = fmt.Errorf("fake")
+		shootState                            = &gardencorev1alpha1.ShootState{}
+		sshPublicKey                          = []byte("key")
+		infrastructureProviderStatus          = []byte("infrastatus")
+		workerNameToOperatingSystemConfigMaps = map[string]*operatingsystemconfig.OperatingSystemConfigs{"foo": {}}
+		labelSelectorCloudConfigRole          = client.MatchingLabels{"gardener.cloud/role": "cloud-config"}
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 		worker = mockshoot.NewMockExtensionWorker(ctrl)
+		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
 		botanist = &Botanist{Operation: &operation.Operation{
 			Secrets: map[string]*corev1.Secret{
 				"ssh-keypair": {Data: map[string][]byte{"id_rsa.pub": sshPublicKey}},
@@ -67,11 +71,11 @@ var _ = Describe("Worker", func() {
 			Shoot: &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					Extensions: &shootpkg.Extensions{
-						Worker: worker,
+						OperatingSystemConfig: operatingSystemConfig,
+						Worker:                worker,
 					},
 				},
-				InfrastructureStatus:      infrastructureProviderStatus,
-				OperatingSystemConfigsMap: operatingSystemConfigMaps,
+				InfrastructureStatus: infrastructureProviderStatus,
 			},
 			ShootState: shootState,
 		}}
@@ -83,9 +87,10 @@ var _ = Describe("Worker", func() {
 
 	Describe("#DeployWorker", func() {
 		BeforeEach(func() {
+			operatingSystemConfig.EXPECT().WorkerNameToOperatingSystemConfigsMap().Return(workerNameToOperatingSystemConfigMaps)
 			worker.EXPECT().SetSSHPublicKey(sshPublicKey)
 			worker.EXPECT().SetInfrastructureProviderStatus(&runtime.RawExtension{Raw: infrastructureProviderStatus})
-			worker.EXPECT().SetOperatingSystemConfigMaps(operatingSystemConfigMaps)
+			worker.EXPECT().SetWorkerNameToOperatingSystemConfigsMap(workerNameToOperatingSystemConfigMaps)
 		})
 
 		Context("deploy", func() {

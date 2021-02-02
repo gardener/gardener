@@ -199,18 +199,18 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		})
 		annotateExtensionCRsForMigration = g.Add(flow.Task{
 			Name:         "Annotating Extensions CRs with operation - migration",
-			Fn:           botanist.AnnotateExtensionCRsForMigration,
+			Fn:           botanist.MigrateAllExtensionResources,
 			Dependencies: flow.NewTaskIDs(ensureResourceManagerScaledUp),
 		})
 		waitForExtensionCRsOperationMigrateToSucceed = g.Add(flow.Task{
 			Name:         "Waiting until all extension CRs are with lastOperation Status Migrate = Succeeded",
-			Fn:           botanist.WaitForExtensionsOperationMigrateToSucceed,
+			Fn:           botanist.WaitUntilAllExtensionResourcesMigrated,
 			Dependencies: flow.NewTaskIDs(annotateExtensionCRsForMigration),
 		})
 		deleteAllExtensionCRs = g.Add(flow.Task{
 			Name:         "Deleting all extension CRs from the Shoot namespace",
 			Dependencies: flow.NewTaskIDs(waitForExtensionCRsOperationMigrateToSucceed),
-			Fn:           botanist.DeleteAllExtensionCRs,
+			Fn:           botanist.DestroyAllExtensionResources,
 		})
 		keepManagedResourcesObjectsInShoot = g.Add(flow.Task{
 			Name:         "Configuring Managed Resources objects to be kept in the Shoot",

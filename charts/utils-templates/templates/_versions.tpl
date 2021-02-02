@@ -1,7 +1,3 @@
-{{- define "kubeletcomponentconfigversion" -}}
-kubelet.config.k8s.io/v1beta1
-{{- end -}}
-
 {{- define "proxycomponentconfigversion" -}}
 kubeproxy.config.k8s.io/v1alpha1
 {{- end -}}

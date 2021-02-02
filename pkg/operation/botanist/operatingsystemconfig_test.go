@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,95 +16,496 @@ package botanist_test
 
 import (
 	"context"
-	"time"
+	"fmt"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mock "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
-	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
+	mockkubernetes "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/shoot"
+	. "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig"
+	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/mock"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/test"
 
+	"github.com/Masterminds/semver"
+	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
+	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("operatingsystemconfig", func() {
 	var (
-		ctrl                 *gomock.Controller
-		k8sSeedClient        *mock.MockInterface
-		k8sSeedRuntimeClient *mockclient.MockClient
+		ctrl                  *gomock.Controller
+		operatingSystemConfig *mockoperatingsystemconfig.MockInterface
+		botanist              *Botanist
+
+		ctx        = context.TODO()
+		fakeErr    = fmt.Errorf("fake")
+		shootState = &gardencorev1alpha1.ShootState{}
+
+		ca             = []byte("ca")
+		caKubelet      = []byte("ca-kubelet")
+		caCloudProfile = "ca-cloud-profile"
+		sshPublicKey   = []byte("ssh-public-key")
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-
-		k8sSeedClient = mock.NewMockInterface(ctrl)
-		k8sSeedRuntimeClient = mockclient.NewMockClient(ctrl)
+		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
+		botanist = &Botanist{Operation: &operation.Operation{
+			Secrets: map[string]*corev1.Secret{
+				"ca":          {Data: map[string][]byte{"ca.crt": ca}},
+				"ca-kubelet":  {Data: map[string][]byte{"ca.crt": caKubelet}},
+				"ssh-keypair": {Data: map[string][]byte{"id_rsa.pub": sshPublicKey}},
+			},
+			Shoot: &shootpkg.Shoot{
+				CloudProfile: &gardencorev1beta1.CloudProfile{},
+				Components: &shootpkg.Components{
+					Extensions: &shootpkg.Extensions{
+						OperatingSystemConfig: operatingSystemConfig,
+					},
+				},
+			},
+			ShootState: shootState,
+		}}
 	})
 
 	AfterEach(func() {
 		ctrl.Finish()
 	})
 
-	Describe("#DeleteStaleOperatingSystemConfigs()", func() {
-		It("should cleanup unused operating system configs", func() {
-			var (
-				ctx              = context.TODO()
-				now              time.Time
-				mockNow          = mocktime.NewMockNow(ctrl)
-				newDownloaderOsc = extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-new-worker-9f0e7-downloader"}}
-				newOriginalOsc   = extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-new-worker-9f0e7-original"}}
-				oldDownloaderOsc = extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-old-worker-9f0e7-downloader"}}
-				oldOriginalOsc   = extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Name: "cloud-config-old-worker-9f0e7-original"}}
-			)
+	Describe("#DeployOperatingSystemConfig", func() {
+		BeforeEach(func() {
+			operatingSystemConfig.EXPECT().SetKubeletCACertificate(string(caKubelet))
+			operatingSystemConfig.EXPECT().SetSSHPublicKey(string(sshPublicKey))
+		})
 
-			k8sSeedClient.EXPECT().Client().Return(k8sSeedRuntimeClient)
-			k8sSeedRuntimeClient.EXPECT().List(ctx, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, list *extensionsv1alpha1.OperatingSystemConfigList, _ ...client.ListOption) error {
-				list.Items = []extensionsv1alpha1.OperatingSystemConfig{newDownloaderOsc, newOriginalOsc, oldDownloaderOsc, oldOriginalOsc}
-				return nil
+		Context("deploy", func() {
+			It("should deploy successfully (no CA)", func() {
+				botanist.Secrets["ca"].Data["ca.crt"] = nil
+				operatingSystemConfig.EXPECT().SetCABundle(nil)
+
+				operatingSystemConfig.EXPECT().Deploy(ctx)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
 			})
 
-			defer test.WithVars(
-				&common.TimeNow, mockNow.Do,
-			)()
+			It("should deploy successfully (only cluster CA)", func() {
+				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr("\n" + string(ca)))
 
-			// Expect that the old OperatingSystemConfigs will be cleaned up
-			oldDownloaderOscCopy := oldDownloaderOsc.DeepCopy()
-			oldDownloaderOscCopy.Annotations = map[string]string{common.ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
-			oldOriginalOscCopy := oldOriginalOsc.DeepCopy()
-			oldOriginalOscCopy.Annotations = map[string]string{common.ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
+				operatingSystemConfig.EXPECT().Deploy(ctx)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
+			})
 
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			It("should deploy successfully (only CloudProfile CA)", func() {
+				botanist.Shoot.CloudProfile.Spec.CABundle = &caCloudProfile
+				botanist.Secrets["ca"].Data["ca.crt"] = nil
+				operatingSystemConfig.EXPECT().SetCABundle(&caCloudProfile)
 
-			k8sSeedRuntimeClient.EXPECT().Get(ctx, kutil.Key(oldOriginalOsc.Namespace, oldOriginalOsc.Name), &oldOriginalOsc)
-			k8sSeedRuntimeClient.EXPECT().Update(ctx, oldOriginalOscCopy)
-			k8sSeedRuntimeClient.EXPECT().Delete(ctx, oldOriginalOscCopy)
+				operatingSystemConfig.EXPECT().Deploy(ctx)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
+			})
 
-			k8sSeedRuntimeClient.EXPECT().Get(ctx, kutil.Key(oldDownloaderOsc.Namespace, oldDownloaderOsc.Name), &oldDownloaderOsc)
-			k8sSeedRuntimeClient.EXPECT().Update(ctx, oldDownloaderOscCopy)
-			k8sSeedRuntimeClient.EXPECT().Delete(ctx, oldDownloaderOscCopy)
+			It("should deploy successfully (both cluster and CloudProfile CA)", func() {
+				botanist.Shoot.CloudProfile.Spec.CABundle = &caCloudProfile
+				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr(caCloudProfile + "\n" + string(ca)))
 
-			op := &operation.Operation{
-				K8sSeedClient: k8sSeedClient,
-				Shoot: &shoot.Shoot{
-					SeedNamespace: "shoot--foo--bar",
+				operatingSystemConfig.EXPECT().Deploy(ctx)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
+			})
+
+			It("should return the error during deployment", func() {
+				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr("\n" + string(ca)))
+
+				operatingSystemConfig.EXPECT().Deploy(ctx).Return(fakeErr)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(MatchError(fakeErr))
+			})
+		})
+
+		Context("restore", func() {
+			BeforeEach(func() {
+				botanist.Shoot.Info = &gardencorev1beta1.Shoot{
+					Status: gardencorev1beta1.ShootStatus{
+						LastOperation: &gardencorev1beta1.LastOperation{
+							Type: gardencorev1beta1.LastOperationTypeRestore,
+						},
+					},
+				}
+
+				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr("\n" + string(ca)))
+			})
+
+			It("should restore successfully", func() {
+				operatingSystemConfig.EXPECT().Restore(ctx, shootState)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
+			})
+
+			It("should return the error during restoration", func() {
+				operatingSystemConfig.EXPECT().Restore(ctx, shootState).Return(fakeErr)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(MatchError(fakeErr))
+			})
+		})
+	})
+
+	Describe("#DeployManagedResourceForCloudConfigExecutor", func() {
+		var (
+			kubernetesInterfaceSeed  *mockkubernetes.MockInterface
+			kubernetesClientSeed     *mockclient.MockClient
+			kubernetesInterfaceShoot *mockkubernetes.MockInterface
+			kubernetesClientShoot    *mockclient.MockClient
+
+			namespace = "shoot--foo--bar"
+			imageVec  = imagevector.ImageVector{{Name: "hyperkube"}}
+
+			bootstrapTokenID     = "123"
+			bootstrapTokenSecret = "456"
+
+			worker1Name            = "worker1"
+			worker1OriginalContent = "w1content"
+			worker1OriginalCommand = "/foo"
+			worker1OriginalUnits   = []string{"w1u1", "w1u2"}
+			worker1Key             = "cloud-config-" + worker1Name + "-77ac3"
+
+			worker2Name                  = "worker2"
+			worker2OriginalContent       = "w2content"
+			worker2OriginalCommand       = "/bar"
+			worker2OriginalUnits         = []string{"w2u2", "w2u2", "w2u3"}
+			worker2Key                   = "cloud-config-" + worker2Name + "-77ac3"
+			worker2KubeletDataVolumeName = "vol"
+
+			workerNameToOperatingSystemConfigMaps = map[string]*operatingsystemconfig.OperatingSystemConfigs{
+				worker1Name: {
+					Original: operatingsystemconfig.Data{
+						Content: worker1OriginalContent,
+						Command: &worker1OriginalCommand,
+						Units:   worker1OriginalUnits,
+					},
+				},
+				worker2Name: {
+					Original: operatingsystemconfig.Data{
+						Content: worker2OriginalContent,
+						Command: &worker2OriginalCommand,
+						Units:   worker2OriginalUnits,
+					},
 				},
 			}
-			botanist := botanist.Botanist{Operation: op}
 
-			err := botanist.DeleteStaleOperatingSystemConfigs(ctx, sets.NewString(newDownloaderOsc.Name, newOriginalOsc.Name))
+			oldSecret1Name = "old-secret-1"
+			oldSecret2Name = "old-secret-2"
+		)
 
-			Expect(err).NotTo(HaveOccurred())
+		BeforeEach(func() {
+			kubernetesInterfaceSeed = mockkubernetes.NewMockInterface(ctrl)
+			kubernetesClientSeed = mockclient.NewMockClient(ctrl)
+			botanist.K8sSeedClient = kubernetesInterfaceSeed
+
+			kubernetesInterfaceShoot = mockkubernetes.NewMockInterface(ctrl)
+			kubernetesClientShoot = mockclient.NewMockClient(ctrl)
+			botanist.K8sShootClient = kubernetesInterfaceShoot
+
+			botanist.Shoot.SeedNamespace = namespace
+			botanist.Shoot.KubernetesVersion = semver.MustParse("1.2.3")
+			botanist.Shoot.Info = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Provider: gardencorev1beta1.Provider{
+						Workers: []gardencorev1beta1.Worker{
+							{
+								Name: worker1Name,
+							},
+							{
+								Name:                  worker2Name,
+								KubeletDataVolumeName: &worker2KubeletDataVolumeName,
+								DataVolumes: []gardencorev1beta1.DataVolume{
+									{Name: worker2KubeletDataVolumeName},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			kubernetesInterfaceShoot.EXPECT().Client().Return(kubernetesClientShoot).AnyTimes()
+			kubernetesInterfaceSeed.EXPECT().Client().Return(kubernetesClientSeed).AnyTimes()
 		})
+
+		type tableTestParams struct {
+			downloaderGenerateRBACResourcesFnError error
+			executorScriptFnError                  error
+
+			imageVector                           imagevector.ImageVector
+			workerNameToOperatingSystemConfigMaps map[string]*operatingsystemconfig.OperatingSystemConfigs
+
+			bootstrapTokenSecretReadError            error
+			managedResourceSecretReconciliationError error
+			managedResourceReadError                 error
+			staleSecretListingError                  error
+			staleSecretDeletionError                 error
+		}
+
+		DescribeTable("table tests",
+			func(params tableTestParams, matcherFn func(error)) {
+				// fake function for generating downloader rbac resources
+				oldDownloaderGenerateRBACResourcesDataFn := DownloaderGenerateRBACResourcesDataFn
+				defer func() { DownloaderGenerateRBACResourcesDataFn = oldDownloaderGenerateRBACResourcesDataFn }()
+				DownloaderGenerateRBACResourcesDataFn = func(secretNames []string) (map[string][]byte, error) {
+					return map[string][]byte{"out": []byte(fmt.Sprintf("%s", secretNames))}, params.downloaderGenerateRBACResourcesFnError
+				}
+
+				// fake function for generation of executor script
+				oldExecutorScriptFn := ExecutorScriptFn
+				defer func() { ExecutorScriptFn = oldExecutorScriptFn }()
+				ExecutorScriptFn = func(bootstrapToken string, cloudConfigUserData []byte, images map[string]interface{}, kubeletDataVolume *gardencorev1beta1.DataVolume, reloadConfigCommand string, units []string) ([]byte, error) {
+					return []byte(fmt.Sprintf("%s_%s_%s_%s_%s_%s", bootstrapToken, cloudConfigUserData, images, kubeletDataVolume, reloadConfigCommand, units)), params.executorScriptFnError
+				}
+
+				// bootstrap token secret generation/retrieval
+				kubernetesClientShoot.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes().Return(params.bootstrapTokenSecretReadError)
+
+				if params.bootstrapTokenSecretReadError == nil {
+					kubernetesClientShoot.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, _ ...client.UpdateOption) error {
+						(&corev1.Secret{Data: map[string][]byte{
+							"token-id":     []byte(bootstrapTokenID),
+							"token-secret": []byte(bootstrapTokenSecret),
+						}}).DeepCopyInto(obj)
+						return nil
+					})
+
+					// image vector for retrieval of required images
+					botanist.ImageVector = params.imageVector
+
+					if params.imageVector != nil {
+						// operating system config maps retrieval for the worker pools
+						operatingSystemConfig.EXPECT().WorkerNameToOperatingSystemConfigsMap().Return(params.workerNameToOperatingSystemConfigMaps)
+
+						if params.downloaderGenerateRBACResourcesFnError == nil &&
+							params.executorScriptFnError == nil &&
+							params.workerNameToOperatingSystemConfigMaps != nil {
+
+							// managed resource secret reconciliation for executor scripts for worker pools
+							// worker pool 1
+							worker1ExecutorScript, _ := ExecutorScriptFn(bootstrapTokenID+"."+bootstrapTokenSecret, []byte(worker1OriginalContent), map[string]interface{}{"hyperkube": ":v"}, nil, worker1OriginalCommand, worker1OriginalUnits)
+							kubernetesClientSeed.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker1Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+							kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "managedresource-shoot-cloud-config-execution-" + worker1Name,
+									Namespace: namespace,
+									Labels:    map[string]string{"managed-resource": "shoot-cloud-config-execution"},
+								},
+								Type: corev1.SecretTypeOpaque,
+								Data: map[string][]byte{"secret__kube-system__" + worker1Key + ".yaml": []byte(`apiVersion: v1
+data:
+  script: ` + utils.EncodeBase64(worker1ExecutorScript) + `
+kind: Secret
+metadata:
+  annotations:
+    checksum/data-script: ` + utils.ComputeSecretCheckSum(map[string][]byte{"script": worker1ExecutorScript}) + `
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: cloud-config
+    worker.gardener.cloud/pool: ` + worker1Name + `
+  name: ` + worker1Key + `
+  namespace: kube-system
+`)},
+							})
+
+							// worker pool 2
+							worker2ExecutorScript, _ := ExecutorScriptFn(bootstrapTokenID+"."+bootstrapTokenSecret, []byte(worker2OriginalContent), map[string]interface{}{"hyperkube": ":v"}, &gardencorev1beta1.DataVolume{Name: worker2KubeletDataVolumeName}, worker2OriginalCommand, worker2OriginalUnits)
+							kubernetesClientSeed.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker2Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
+							kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "managedresource-shoot-cloud-config-execution-" + worker2Name,
+									Namespace: namespace,
+									Labels:    map[string]string{"managed-resource": "shoot-cloud-config-execution"},
+								},
+								Type: corev1.SecretTypeOpaque,
+								Data: map[string][]byte{"secret__kube-system__" + worker2Key + ".yaml": []byte(`apiVersion: v1
+data:
+  script: ` + utils.EncodeBase64(worker2ExecutorScript) + `
+kind: Secret
+metadata:
+  annotations:
+    checksum/data-script: ` + utils.ComputeSecretCheckSum(map[string][]byte{"script": worker2ExecutorScript}) + `
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: cloud-config
+    worker.gardener.cloud/pool: ` + worker2Name + `
+  name: ` + worker2Key + `
+  namespace: kube-system
+`)},
+							})
+
+							// managed resource secret reconciliation for RBAC resources
+							downloaderRBACResourcesData, _ := DownloaderGenerateRBACResourcesDataFn([]string{worker1Key, worker2Key})
+							kubernetesClientSeed.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-shoot-cloud-config-rbac"), gomock.AssignableToTypeOf(&corev1.Secret{}))
+							kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "managedresource-shoot-cloud-config-rbac",
+									Namespace: namespace,
+									Labels:    map[string]string{"managed-resource": "shoot-cloud-config-execution"},
+								},
+								Type: corev1.SecretTypeOpaque,
+								Data: downloaderRBACResourcesData,
+							}).Return(params.managedResourceSecretReconciliationError)
+
+							if params.managedResourceSecretReconciliationError == nil {
+								// managed resource reconciliation
+								kubernetesClientSeed.EXPECT().Get(ctx, kutil.Key(namespace, "shoot-cloud-config-execution"), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(params.managedResourceReadError)
+
+								if params.managedResourceReadError == nil {
+									kubernetesClientSeed.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).DoAndReturn(func(_ context.Context, obj *resourcesv1alpha1.ManagedResource, _ ...client.UpdateOption) error {
+										Expect(obj.ObjectMeta).To(Equal(metav1.ObjectMeta{
+											Name:      "shoot-cloud-config-execution",
+											Namespace: namespace,
+											Labels:    map[string]string{"origin": "gardener"},
+										}))
+										Expect(obj.Spec.SecretRefs).To(ConsistOf(
+											corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-execution-" + worker1Name},
+											corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-execution-" + worker2Name},
+											corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-rbac"},
+										))
+										Expect(obj.Spec.InjectLabels).To(Equal(map[string]string{"shoot.gardener.cloud/no-cleanup": "true"}))
+										Expect(obj.Spec.KeepObjects).To(Equal(pointer.BoolPtr(false)))
+										return nil
+									})
+
+									// listing/finding of no longer required managed resource secrets
+									kubernetesClientSeed.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespace), client.MatchingLabels(map[string]string{"managed-resource": "shoot-cloud-config-execution"})).DoAndReturn(func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
+										*list = corev1.SecretList{Items: []corev1.Secret{
+											{ObjectMeta: metav1.ObjectMeta{Name: oldSecret1Name, Namespace: namespace}},
+											{ObjectMeta: metav1.ObjectMeta{Name: oldSecret2Name, Namespace: namespace}},
+										}}
+										return nil
+									}).Return(params.staleSecretListingError)
+
+									if params.staleSecretListingError == nil {
+										// cleanup of no longer required managed resource secrets
+										kubernetesClientSeed.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: oldSecret1Name, Namespace: namespace}}).Return(params.staleSecretDeletionError)
+										kubernetesClientSeed.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: oldSecret2Name, Namespace: namespace}})
+									}
+								}
+							}
+						}
+					}
+				}
+
+				matcherFn(botanist.DeployManagedResourceForCloudConfigExecutor(ctx))
+			},
+
+			Entry("should fail because the bootstrap token cannot be computed",
+				tableTestParams{
+					bootstrapTokenSecretReadError: fakeErr,
+				},
+				func(err error) {
+					Expect(err).To(MatchError(ContainSubstring("error computing bootstrap token for shoot cloud config")))
+				},
+			),
+
+			Entry("should fail because the images cannot be found",
+				tableTestParams{
+					imageVector: nil,
+				},
+				func(err error) {
+					Expect(err).To(MatchError(ContainSubstring("could not find image")))
+				},
+			),
+
+			Entry("should fail because the operating system config maps for a worker pool are not available",
+				tableTestParams{
+					imageVector:                           imageVec,
+					workerNameToOperatingSystemConfigMaps: nil,
+				},
+				func(err error) {
+					Expect(err).To(MatchError(ContainSubstring("did not find osc data for worker pool")))
+				},
+			),
+
+			Entry("should fail because the executor script generation fails",
+				tableTestParams{
+					imageVector:                           imageVec,
+					workerNameToOperatingSystemConfigMaps: workerNameToOperatingSystemConfigMaps,
+					executorScriptFnError:                 fakeErr,
+				},
+				func(err error) {
+					Expect(err).To(MatchError(fakeErr))
+				},
+			),
+
+			Entry("should fail because the downloader RBAC resources generation fails",
+				tableTestParams{
+					imageVector:                            imageVec,
+					workerNameToOperatingSystemConfigMaps:  workerNameToOperatingSystemConfigMaps,
+					downloaderGenerateRBACResourcesFnError: fakeErr,
+				},
+				func(err error) {
+					Expect(err).To(MatchError(fakeErr))
+				},
+			),
+
+			Entry("should fail because the managed resource secret reconciliation fails",
+				tableTestParams{
+					imageVector:                              imageVec,
+					workerNameToOperatingSystemConfigMaps:    workerNameToOperatingSystemConfigMaps,
+					managedResourceSecretReconciliationError: fakeErr,
+				},
+				func(err error) {
+					Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
+					Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(fakeErr)))
+				},
+			),
+
+			Entry("should fail because the managed resource reconciliation fails",
+				tableTestParams{
+					imageVector:                           imageVec,
+					workerNameToOperatingSystemConfigMaps: workerNameToOperatingSystemConfigMaps,
+					managedResourceReadError:              fakeErr,
+				},
+				func(err error) {
+					Expect(err).To(MatchError(fakeErr))
+				},
+			),
+
+			Entry("should fail because the stale secret listing fails",
+				tableTestParams{
+					imageVector:                           imageVec,
+					workerNameToOperatingSystemConfigMaps: workerNameToOperatingSystemConfigMaps,
+					staleSecretListingError:               fakeErr,
+				},
+				func(err error) {
+					Expect(err).To(MatchError(fakeErr))
+				},
+			),
+
+			Entry("should fail because the stale secret deletion fails",
+				tableTestParams{
+					imageVector:                           imageVec,
+					workerNameToOperatingSystemConfigMaps: workerNameToOperatingSystemConfigMaps,
+					staleSecretDeletionError:              fakeErr,
+				},
+				func(err error) {
+					Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
+					Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(fakeErr)))
+				},
+			),
+
+			Entry("should successfully compute the resources",
+				tableTestParams{
+					imageVector:                           imageVec,
+					workerNameToOperatingSystemConfigMaps: workerNameToOperatingSystemConfigMaps,
+				},
+				func(err error) {
+					Expect(err).To(Succeed())
+				},
+			),
+		)
 	})
 })

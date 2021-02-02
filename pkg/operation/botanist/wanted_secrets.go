@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -421,9 +422,9 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		// Secret definition for cloud-config-downloader
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "cloud-config-downloader",
+				Name: downloader.SecretName,
 
-				CommonName:   "cloud-config-downloader",
+				CommonName:   downloader.SecretName,
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,

@@ -57,7 +57,7 @@ var _ = ginkgo.Describe("Shoot container runtime testing", func() {
 		containerdWorker.Maximum = 1
 		containerdWorker.Minimum = 1
 		containerdWorker.CRI = &gardencorev1beta1.CRI{
-			Name:              extensionsv1alpha1.CRINameContainerD,
+			Name:              gardencorev1beta1.CRINameContainerD,
 			ContainerRuntimes: nil,
 		}
 
@@ -95,7 +95,7 @@ var _ = ginkgo.Describe("Shoot container runtime testing", func() {
 		for _, node := range nodeList.Items {
 			value, found := node.Labels[extensionsv1alpha1.CRINameWorkerLabel]
 			g.Expect(found).To(g.BeTrue())
-			g.Expect(value).To(g.Equal(extensionsv1alpha1.CRINameContainerD))
+			g.Expect(value).To(g.Equal(string(extensionsv1alpha1.CRINameContainerD)))
 		}
 
 		// deploy root pod

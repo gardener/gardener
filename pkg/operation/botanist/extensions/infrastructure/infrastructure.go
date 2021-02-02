@@ -150,8 +150,8 @@ func (i *infrastructure) deploy(ctx context.Context, operation string) (extensio
 func (i *infrastructure) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
 	return common.RestoreExtensionWithDeployFunction(
 		ctx,
-		shootState,
 		i.client,
+		shootState,
 		extensionsv1alpha1.InfrastructureResource,
 		i.values.Namespace,
 		i.deploy,

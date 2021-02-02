@@ -92,6 +92,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.Extensions.Extension = b.DefaultExtension(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.Infrastructure = b.DefaultInfrastructure(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.Network = b.DefaultNetwork(b.K8sSeedClient.DirectClient())
+	o.Shoot.Components.Extensions.OperatingSystemConfig, err = b.DefaultOperatingSystemConfig(b.K8sSeedClient.DirectClient())
+	if err != nil {
+		return nil, err
+	}
 	o.Shoot.Components.Extensions.Worker = b.DefaultWorker(b.K8sSeedClient.DirectClient())
 
 	sniPhase, err := b.SNIPhase(ctx)
