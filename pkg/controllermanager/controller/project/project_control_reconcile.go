@@ -17,31 +17,25 @@ package project
 import (
 	"context"
 	"fmt"
-	"path/filepath"
-	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/operation/botanist/projectrbac"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -120,66 +114,21 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 		}
 	}
 
-	// Create RBAC rules to allow project owner and project members to read, update, and delete the project.
-	// We also create a RoleBinding in the namespace that binds all members to the gardener.cloud:system:project-member
-	// role to ensure access for listing shoots, creating secrets, etc.
-	var (
-		admins     []rbacv1.Subject
-		uams       []rbacv1.Subject
-		viewers    []rbacv1.Subject
-		extensions []map[string]interface{}
-
-		extensionRoleToSubjects = map[string][]rbacv1.Subject{}
-		extensionRoles          = sets.NewString()
-	)
-
-	for _, member := range project.Spec.Members {
-		allRoles := append([]string{member.Role}, member.Roles...)
-
-		for _, role := range allRoles {
-			if role == gardencorev1beta1.ProjectMemberAdmin || role == gardencorev1beta1.ProjectMemberOwner {
-				admins = append(admins, member.Subject)
-			}
-			if role == gardencorev1beta1.ProjectMemberUserAccessManager {
-				uams = append(uams, member.Subject)
-			}
-			if role == gardencorev1beta1.ProjectMemberViewer {
-				viewers = append(viewers, member.Subject)
-			}
-
-			if strings.HasPrefix(role, gardencorev1beta1.ProjectMemberExtensionPrefix) {
-				extensionRoleName := strings.TrimPrefix(role, gardencorev1beta1.ProjectMemberExtensionPrefix)
-				extensionRoleToSubjects[extensionRoleName] = append(extensionRoleToSubjects[extensionRoleName], member.Subject)
-				extensionRoles.Insert(extensionRoleName)
-			}
-		}
-	}
-
-	for _, name := range extensionRoles.List() {
-		extensions = append(extensions, map[string]interface{}{
-			"name":     name,
-			"subjects": extensionRoleToSubjects[name],
-		})
-	}
-
-	if err := gardenClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "garden-project", "charts", "project-rbac"), namespace.Name, "project-rbac", kubernetes.Values(map[string]interface{}{
-		"project": map[string]interface{}{
-			"name":       project.Name,
-			"uid":        project.UID,
-			"owner":      project.Spec.Owner,
-			"members":    admins,
-			"uams":       uams,
-			"viewers":    viewers,
-			"extensions": extensions,
-		},
-	})); err != nil {
-		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while creating RBAC rules for namespace %q: %+v", namespace.Name, err)
+	// Create RBAC rules to allow project members to interact with it.
+	rbac, err := projectrbac.New(gardenClient.Client(), project)
+	if err != nil {
+		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while preparing for reconciling RBAC resources for namespace %q: %+v", namespace.Name, err)
 		_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 		return err
 	}
 
-	// Delete all remaining/stale extension clusterroles and rolebindings
-	if err := deleteStaleExtensionRoles(ctx, gardenClient.Client(), extensionRoles, project.Name, namespace.Name); err != nil {
+	if err := rbac.Deploy(ctx); err != nil {
+		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while reconciling RBAC resources for namespace %q: %+v", namespace.Name, err)
+		_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
+		return err
+	}
+
+	if err := rbac.DeleteStaleExtensionRolesResources(ctx); err != nil {
 		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while deleting stale RBAC rules for extension roles: %+v", err)
 		_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 		return err
@@ -331,40 +280,4 @@ func createOrUpdateResourceQuota(ctx context.Context, c client.Client, projectNa
 	}
 
 	return nil
-}
-
-func deleteStaleExtensionRoles(ctx context.Context, c client.Client, nonStaleExtensionRoles sets.String, projectName, namespace string) error {
-	for _, list := range []client.ObjectList{
-		&rbacv1.RoleBindingList{},
-		&rbacv1.ClusterRoleList{},
-	} {
-		if err := c.List(
-			ctx,
-			list,
-			client.InNamespace(namespace),
-			client.MatchingLabels{
-				v1beta1constants.GardenRole: v1beta1constants.LabelExtensionProjectRole,
-				common.ProjectName:          projectName,
-			},
-		); err != nil {
-			return err
-		}
-
-		if err := meta.EachListItem(list, func(obj runtime.Object) error {
-			o := obj.(client.Object)
-			if nonStaleExtensionRoles.Has(getExtensionRoleNameFromRBAC(o.GetName(), projectName)) {
-				return nil
-			}
-
-			return client.IgnoreNotFound(c.Delete(ctx, o))
-		}); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func getExtensionRoleNameFromRBAC(resourceName, projectName string) string {
-	return strings.TrimPrefix(resourceName, fmt.Sprintf("gardener.cloud:extension:project:%s:", projectName))
 }
