@@ -39,6 +39,10 @@ type AdmissionControllerConfiguration struct {
 type ServerConfiguration struct {
 	// HTTPS is the configuration for the HTTPS server.
 	HTTPS HTTPSServer `json:"https"`
+	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
+	HealthProbes Server `json:"healthProbes,omitempty"`
+	// Metrics is the configuration for serving the metrics endpoint.
+	Metrics Server `json:"metrics,omitempty"`
 	// ResourceAdmissionConfiguration is the configuration for the resource admission.
 	// +optional
 	ResourceAdmissionConfiguration *ResourceAdmissionConfiguration `json:"resourceAdmissionConfiguration,omitempty"`

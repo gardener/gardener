@@ -248,6 +248,12 @@ func autoConvert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration(in *
 	if err := Convert_v1alpha1_HTTPSServer_To_config_HTTPSServer(&in.HTTPS, &out.HTTPS, s); err != nil {
 		return err
 	}
+	if err := Convert_v1alpha1_Server_To_config_Server(&in.HealthProbes, &out.HealthProbes, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_Server_To_config_Server(&in.Metrics, &out.Metrics, s); err != nil {
+		return err
+	}
 	out.ResourceAdmissionConfiguration = (*config.ResourceAdmissionConfiguration)(unsafe.Pointer(in.ResourceAdmissionConfiguration))
 	return nil
 }
@@ -259,6 +265,12 @@ func Convert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration(in *Serv
 
 func autoConvert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *config.ServerConfiguration, out *ServerConfiguration, s conversion.Scope) error {
 	if err := Convert_config_HTTPSServer_To_v1alpha1_HTTPSServer(&in.HTTPS, &out.HTTPS, s); err != nil {
+		return err
+	}
+	if err := Convert_config_Server_To_v1alpha1_Server(&in.HealthProbes, &out.HealthProbes, s); err != nil {
+		return err
+	}
+	if err := Convert_config_Server_To_v1alpha1_Server(&in.Metrics, &out.Metrics, s); err != nil {
 		return err
 	}
 	out.ResourceAdmissionConfiguration = (*ResourceAdmissionConfiguration)(unsafe.Pointer(in.ResourceAdmissionConfiguration))

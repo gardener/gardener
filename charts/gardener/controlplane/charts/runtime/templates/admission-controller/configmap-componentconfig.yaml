@@ -37,6 +37,12 @@ data:
         tls:
           serverCertDir: /etc/gardener-admission-controller/srv
       {{- if .Values.global.admission.config.server.resourceAdmissionConfiguration }}
+      healthProbes:
+        bindAddress: {{ required ".Values.global.admission.config.server.healthProbes.bindAddress is required" .Values.global.admission.config.server.healthProbes.bindAddress }}
+        port: {{ required ".Values.global.admission.config.server.healthProbes.port is required" .Values.global.admission.config.server.healthProbes.port }}
+      metrics:
+        bindAddress: {{ required ".Values.global.admission.config.server.metrics.bindAddress is required" .Values.global.admission.config.server.metrics.bindAddress }}
+        port: {{ required ".Values.global.admission.config.server.metrics.port is required" .Values.global.admission.config.server.metrics.port }}
       resourceAdmissionConfiguration:
         limits:
 {{ toYaml .Values.global.admission.config.server.resourceAdmissionConfiguration.limits | indent 8 }}
