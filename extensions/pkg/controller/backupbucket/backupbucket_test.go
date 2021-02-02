@@ -19,12 +19,14 @@ import (
 	"fmt"
 	"time"
 
+	backupbucketcontroller "github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
 	testactuator "github.com/gardener/gardener/extensions/pkg/controller/backupbucket/test"
 	"github.com/gardener/gardener/extensions/pkg/controller/test"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -178,35 +180,11 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 
 	var cleanupHandle framework.CleanupActionHandle
 	cleanupHandle = framework.AddCleanupAction(func() {
-		By("provoke error in deletion")
-		Expect(updateBackupBucketObject(ctx, c, backupBucket, func() {
-			metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, test.AnnotationKeyDesiredOperationState, test.AnnotationValueDesiredOperationStateError)
-		})).To(Succeed())
-
 		By("delete backupbucket")
 		Expect(client.IgnoreNotFound(c.Delete(ctx, backupBucket))).To(Succeed())
 
-		By("verify backupbucket status transitioned to error")
-		Expect(waitForBackupBucketToBeErroneous(ctx, c, gardencorev1beta1.LastOperationTypeDelete, backupBucketObjectKey)).To(Succeed())
-
-		By("fixing deletion error")
-		Expect(updateBackupBucketObject(ctx, c, backupBucket, func() {
-			metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, test.AnnotationKeyDesiredOperationState, "")
-		})).To(Succeed())
-
-		By("wait until backupbucket is deleted")
-		Expect(waitForBackupBucketToBeDeleted(ctx, c, logger, backupBucket)).NotTo(HaveOccurred())
-
-		By("verify deletion of backupbucket")
-		Expect(c.Get(ctx, client.ObjectKey{Name: namespaceName}, namespace)).To(Succeed())
-		Expect(namespace.Annotations[test.AnnotationKeyDesiredOperation]).To(Equal(test.AnnotationValueOperationDelete))
-
-		By("check if finalizer has been released from secret")
-		secret = &corev1.Secret{}
-		Expect(c.Get(ctx, secretObjectKey, secret)).To(Succeed())
-		Expect(secret.Finalizers).NotTo(ConsistOf("extensions.gardener.cloud/backupbucket"))
-
 		By("delete secret")
+		Expect(controllerutils.RemoveFinalizer(ctx, c, secret, backupbucketcontroller.FinalizerName)).To(Succeed())
 		Expect(client.IgnoreNotFound(c.Delete(ctx, secret))).To(Succeed())
 
 		By("delete cluster")
@@ -237,18 +215,22 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 
 	By("verify secret handling")
 	Expect(c.Get(ctx, secretObjectKey, secret)).To(Succeed())
-	Expect(secret.Finalizers).To(ConsistOf("extensions.gardener.cloud/backupbucket"))
+	Expect(secret.Finalizers).To(ConsistOf(backupbucketcontroller.FinalizerName))
 
 	By("verify backupbucket readiness (reconciliation should have happened)")
 	backupBucket = &extensionsv1alpha1.BackupBucket{}
 	Expect(c.Get(ctx, backupBucketObjectKey, backupBucket)).To(Succeed())
 	// When the operation annotation is ignored then there is the secret mapper which may lead to multiple
 	// reconciliations, hence we are okay with both Create/Reconcile last operation types.
+	// Due to the same reason, the time when the BackupBucket is read it can be under reconciliation.
+	// Still, the `Succeeded` state is ensured by each call of waitForBackupBucketToBeReady.
 	lastOperationTypeMatcher := Equal(gardencorev1beta1.LastOperationTypeCreate)
+	lastOperationStateMatcher := Equal(gardencorev1beta1.LastOperationStateSucceeded)
 	if ignoreOperationAnnotation {
 		lastOperationTypeMatcher = Or(Equal(gardencorev1beta1.LastOperationTypeCreate), Equal(gardencorev1beta1.LastOperationTypeReconcile))
+		lastOperationStateMatcher = Or(Equal(gardencorev1beta1.LastOperationStateSucceeded), Equal(gardencorev1beta1.LastOperationStateProcessing))
 	}
-	verifyBackupBucket(backupBucket, 1, 1, timeIn1, lastOperationTypeMatcher)
+	verifyBackupBucket(backupBucket, 1, 1, timeIn1, lastOperationTypeMatcher, lastOperationStateMatcher)
 
 	By("provoke error in reconciliation")
 	Expect(updateBackupBucketObject(ctx, c, backupBucket, func() {
@@ -275,7 +257,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 	By("verify backupbucket (reconciliation should have happened successfully)")
 	backupBucket = &extensionsv1alpha1.BackupBucket{}
 	Expect(c.Get(ctx, backupBucketObjectKey, backupBucket)).To(Succeed())
-	verifyBackupBucket(backupBucket, 2, 2, timeIn1, Equal(gardencorev1beta1.LastOperationTypeReconcile))
+	verifyBackupBucket(backupBucket, 2, 2, timeIn1, Equal(gardencorev1beta1.LastOperationTypeReconcile), lastOperationStateMatcher)
 
 	By("update time-in annotation (no generation change and no operation annotation -> no reconciliation)")
 	timeIn2 := time.Now().String()
@@ -289,7 +271,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 	By("verify backupbucket (nothing should have changed)")
 	backupBucket = &extensionsv1alpha1.BackupBucket{}
 	Expect(c.Get(ctx, backupBucketObjectKey, backupBucket)).To(Succeed())
-	verifyBackupBucket(backupBucket, 2, 2, timeIn1, Equal(gardencorev1beta1.LastOperationTypeReconcile))
+	verifyBackupBucket(backupBucket, 2, 2, timeIn1, Equal(gardencorev1beta1.LastOperationTypeReconcile), lastOperationStateMatcher)
 
 	if ignoreOperationAnnotation {
 		By("update backupbucket spec (generation change -> reconciliation)")
@@ -305,7 +287,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 		By("verify backupbucket readiness (reconciliation should have happened)")
 		backupBucket = &extensionsv1alpha1.BackupBucket{}
 		Expect(c.Get(ctx, backupBucketObjectKey, backupBucket)).To(Succeed())
-		verifyBackupBucket(backupBucket, 3, 3, timeIn3, Equal(gardencorev1beta1.LastOperationTypeReconcile))
+		verifyBackupBucket(backupBucket, 3, 3, timeIn3, Equal(gardencorev1beta1.LastOperationTypeReconcile), lastOperationStateMatcher)
 
 		By("update time-in annotation (to test secret mapping)")
 		timeIn4 := time.Now().String()
@@ -319,7 +301,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 		By("verify backupbucket readiness")
 		backupBucket = &extensionsv1alpha1.BackupBucket{}
 		Expect(c.Get(ctx, backupBucketObjectKey, backupBucket)).To(Succeed())
-		verifyBackupBucket(backupBucket, 3, 3, timeIn3, Equal(gardencorev1beta1.LastOperationTypeReconcile))
+		verifyBackupBucket(backupBucket, 3, 3, timeIn3, Equal(gardencorev1beta1.LastOperationTypeReconcile), lastOperationStateMatcher)
 
 		By("generate secret event")
 		metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "foo", "bar")
@@ -333,7 +315,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 		By("verify backupbucket readiness (reconciliation should have happened due to secret mapping)")
 		backupBucket = &extensionsv1alpha1.BackupBucket{}
 		Expect(c.Get(ctx, backupBucketObjectKey, backupBucket)).To(Succeed())
-		verifyBackupBucket(backupBucket, 3, 3, timeIn4, Equal(gardencorev1beta1.LastOperationTypeReconcile))
+		verifyBackupBucket(backupBucket, 3, 3, timeIn4, Equal(gardencorev1beta1.LastOperationTypeReconcile), lastOperationStateMatcher)
 	} else {
 		By("update backupbucket spec (generation change but no operation annotation -> no reconciliation)")
 		timeIn3 := time.Now().String()
@@ -345,7 +327,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 		By("verify backupbucket (nothing should have changed)")
 		backupBucket = &extensionsv1alpha1.BackupBucket{}
 		Expect(c.Get(ctx, backupBucketObjectKey, backupBucket)).To(Succeed())
-		verifyBackupBucket(backupBucket, 3, 2, timeIn1, Equal(gardencorev1beta1.LastOperationTypeReconcile))
+		verifyBackupBucket(backupBucket, 3, 2, timeIn1, Equal(gardencorev1beta1.LastOperationTypeReconcile), lastOperationStateMatcher)
 
 		By("add operation annotation (should trigger reconciliation)")
 		Expect(updateBackupBucketObject(ctx, c, backupBucket, func() {
@@ -358,9 +340,37 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 		By("verify backupbucket (reconciliation should have happened due to operation annotation)")
 		backupBucket = &extensionsv1alpha1.BackupBucket{}
 		Expect(c.Get(ctx, backupBucketObjectKey, backupBucket)).To(Succeed())
-		verifyBackupBucket(backupBucket, 3, 3, timeIn3, Equal(gardencorev1beta1.LastOperationTypeReconcile))
+		verifyBackupBucket(backupBucket, 3, 3, timeIn3, Equal(gardencorev1beta1.LastOperationTypeReconcile), lastOperationStateMatcher)
 		Expect(backupBucket.Annotations).ToNot(HaveKey(v1beta1constants.GardenerOperation))
 	}
+
+	By("provoke error in deletion")
+	Expect(updateBackupBucketObject(ctx, c, backupBucket, func() {
+		metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, test.AnnotationKeyDesiredOperationState, test.AnnotationValueDesiredOperationStateError)
+	})).To(Succeed())
+
+	By("delete backupbucket")
+	Expect(client.IgnoreNotFound(c.Delete(ctx, backupBucket))).To(Succeed())
+
+	By("verify backupbucket status transitioned to error")
+	Expect(waitForBackupBucketToBeErroneous(ctx, c, gardencorev1beta1.LastOperationTypeDelete, backupBucketObjectKey)).To(Succeed())
+
+	By("fixing deletion error")
+	Expect(updateBackupBucketObject(ctx, c, backupBucket, func() {
+		metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, test.AnnotationKeyDesiredOperationState, "")
+	})).To(Succeed())
+
+	By("wait until backupbucket is deleted")
+	Expect(waitForBackupBucketToBeDeleted(ctx, c, logger, backupBucket)).NotTo(HaveOccurred())
+
+	By("verify deletion of backupbucket")
+	Expect(c.Get(ctx, client.ObjectKey{Name: namespaceName}, namespace)).To(Succeed())
+	Expect(namespace.Annotations[test.AnnotationKeyDesiredOperation]).To(Equal(test.AnnotationValueOperationDelete))
+
+	By("check if finalizer has been released from secret")
+	secret = &corev1.Secret{}
+	Expect(c.Get(ctx, secretObjectKey, secret)).To(Succeed())
+	Expect(secret.Finalizers).NotTo(ConsistOf(backupbucketcontroller.FinalizerName))
 }
 
 func updateBackupBucketObject(ctx context.Context, c client.Client, backupBucket *extensionsv1alpha1.BackupBucket, transform func()) error {
@@ -425,11 +435,11 @@ func waitForBackupBucketToBeErroneous(ctx context.Context, c client.Client, last
 	})
 }
 
-func verifyBackupBucket(backupBucket *extensionsv1alpha1.BackupBucket, generation, observedGeneration int64, expectedTimeOut string, expectedLastOperationType gomegatypes.GomegaMatcher) {
+func verifyBackupBucket(backupBucket *extensionsv1alpha1.BackupBucket, generation, observedGeneration int64, expectedTimeOut string, expectedLastOperationType, expectedLastOperationState gomegatypes.GomegaMatcher) {
 	ExpectWithOffset(1, backupBucket.Generation).To(Equal(generation))
-	ExpectWithOffset(1, backupBucket.Finalizers).To(ConsistOf("extensions.gardener.cloud/backupbucket"))
+	ExpectWithOffset(1, backupBucket.Finalizers).To(ConsistOf(backupbucketcontroller.FinalizerName))
 	ExpectWithOffset(1, backupBucket.Status.LastOperation.Type).To(expectedLastOperationType)
-	ExpectWithOffset(1, backupBucket.Status.LastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+	ExpectWithOffset(1, backupBucket.Status.LastOperation.State).To(expectedLastOperationState)
 	ExpectWithOffset(1, backupBucket.Status.ObservedGeneration).To(Equal(observedGeneration))
 	ExpectWithOffset(1, backupBucket.Annotations[test.AnnotationKeyTimeOut]).To(Equal(expectedTimeOut))
 }
