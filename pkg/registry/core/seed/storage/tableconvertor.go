@@ -76,12 +76,14 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 
 		gardenletReadyCondition := helper.GetCondition(seed.Status.Conditions, core.SeedGardenletReady)
 		seedBootstrappedCondition := helper.GetCondition(seed.Status.Conditions, core.SeedBootstrapped)
+		backupbucketCondition := helper.GetCondition(seed.Status.Conditions, core.SeedBackupBucketsReady)
 
 		cells = append(cells, seed.Name)
 		if gardenletReadyCondition != nil && gardenletReadyCondition.Status == core.ConditionUnknown {
 			cells = append(cells, "Unknown")
 		} else if (gardenletReadyCondition == nil || gardenletReadyCondition.Status != core.ConditionTrue) ||
-			(seedBootstrappedCondition == nil || seedBootstrappedCondition.Status != core.ConditionTrue) {
+			(seedBootstrappedCondition == nil || seedBootstrappedCondition.Status != core.ConditionTrue) ||
+			(backupbucketCondition != nil && backupbucketCondition.Status != core.ConditionTrue) {
 			cells = append(cells, "NotReady")
 		} else {
 			cells = append(cells, "Ready")

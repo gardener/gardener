@@ -20,22 +20,21 @@ import (
 	"strings"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/json"
-	"k8s.io/utils/pointer"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/utils/pointer"
 )
 
 // Now determines the current metav1.Time.
@@ -1195,4 +1194,17 @@ func KubernetesDashboardEnabled(addons *gardencorev1beta1.Addons) bool {
 // NginxIngressEnabled returns true if the nginx-ingress addon is enabled in the Shoot manifest.
 func NginxIngressEnabled(addons *gardencorev1beta1.Addons) bool {
 	return addons != nil && addons.NginxIngress != nil && addons.NginxIngress.Enabled
+}
+
+// BackupBucketIsErroneous returns `true` if the given BackupBucket has a last error.
+// It also returns the error description if available.
+func BackupBucketIsErroneous(bb *gardencorev1beta1.BackupBucket) (bool, string) {
+	if bb == nil {
+		return false, ""
+	}
+	lastErr := bb.Status.LastError
+	if lastErr == nil {
+		return false, ""
+	}
+	return true, lastErr.Description
 }

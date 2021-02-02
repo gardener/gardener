@@ -62,9 +62,8 @@ type Controller struct {
 	seedLeaseControl      lease.Controller
 
 	seedLister gardencorelisters.SeedLister
-	seedSynced cache.InformerSynced
 
-	controllerInstallationSynced cache.InformerSynced
+	hasSyncedFuncs []cache.InformerSynced
 
 	seedQueue               workqueue.RateLimitingInterface
 	seedLeaseQueue          workqueue.RateLimitingInterface
@@ -140,7 +139,6 @@ func NewSeedController(
 			AddFunc: seedController.seedLeaseAdd,
 		},
 	})
-	seedController.seedSynced = seedInformer.Informer().HasSynced
 
 	controllerInstallationInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister, config.SeedSelector),
@@ -150,7 +148,11 @@ func NewSeedController(
 			DeleteFunc: seedController.controllerInstallationOfSeedDelete,
 		},
 	})
-	seedController.controllerInstallationSynced = controllerInstallationInformer.Informer().HasSynced
+
+	seedController.hasSyncedFuncs = []cache.InformerSynced{
+		seedInformer.Informer().HasSynced,
+		controllerInstallationInformer.Informer().HasSynced,
+	}
 
 	return seedController
 }
@@ -159,7 +161,7 @@ func NewSeedController(
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.seedSynced, c.controllerInstallationSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}

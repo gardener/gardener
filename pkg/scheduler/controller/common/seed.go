@@ -27,5 +27,14 @@ func VerifySeedReadiness(seed *gardencorev1beta1.Seed) bool {
 	if cond := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady); cond == nil || cond.Status != gardencorev1beta1.ConditionTrue {
 		return false
 	}
+
+	if seed.Spec.Backup != nil {
+		// Only consider condition if it's found because we haven't maintained it in previous releases.
+		// TODO: Handle this condition more conservatively in the future i.e., cond == nil || cond.Status != gardencorev1beta1.ConditionTrue
+		if cond := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady); cond != nil && cond.Status != gardencorev1beta1.ConditionTrue {
+			return false
+		}
+	}
+
 	return true
 }
