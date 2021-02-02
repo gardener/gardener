@@ -15,12 +15,13 @@
 package helper
 
 import (
-	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core"
+	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,83 +34,37 @@ var scheme *runtime.Scheme
 
 func init() {
 	scheme = runtime.NewScheme()
+	// core schemes are needed here to properly decode the embedded SeedTemplate objects
+	utilruntime.Must(core.AddToScheme(scheme))
+	utilruntime.Must(corev1beta1.AddToScheme(scheme))
 	utilruntime.Must(config.AddToScheme(scheme))
 	utilruntime.Must(configv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(gardencore.AddToScheme(scheme))
-	utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
 }
 
-// DecodeGardenletConfig decodes the given raw extension into an internal GardenletConfiguration version.
-func DecodeGardenletConfig(rawConfig *runtime.RawExtension, withDefaults bool) (*config.GardenletConfiguration, error) {
-	cfg, err := DecodeGardenletConfigExternal(rawConfig, withDefaults)
+// DecodeGardenletConfiguration decodes the given raw extension into an internal GardenletConfiguration version.
+func DecodeGardenletConfiguration(rawConfig *runtime.RawExtension, withDefaults bool) (*config.GardenletConfiguration, error) {
+	cfg, err := DecodeGardenletConfigurationExternal(rawConfig, withDefaults)
 	if err != nil {
 		return nil, err
 	}
-	return ConvertGardenletConfig(cfg)
+	return confighelper.ConvertGardenletConfiguration(cfg)
 }
 
-// DecodeGardenletConfig decodes the given raw extension into an external GardenletConfiguration version.
-func DecodeGardenletConfigExternal(rawConfig *runtime.RawExtension, withDefaults bool) (*configv1alpha1.GardenletConfiguration, error) {
+// DecodeGardenletConfigurationExternal decodes the given raw extension into an external GardenletConfiguration version.
+func DecodeGardenletConfigurationExternal(rawConfig *runtime.RawExtension, withDefaults bool) (*configv1alpha1.GardenletConfiguration, error) {
 	if cfg, ok := rawConfig.Object.(*configv1alpha1.GardenletConfiguration); ok {
 		return cfg, nil
 	}
-	cfg := &configv1alpha1.GardenletConfiguration{}
+	cfg := &configv1alpha1.GardenletConfiguration{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: configv1alpha1.SchemeGroupVersion.String(),
+			Kind:       "GardenletConfiguration",
+		},
+	}
 	if _, _, err := getDecoder(withDefaults).Decode(rawConfig.Raw, nil, cfg); err != nil {
 		return nil, err
 	}
 	return cfg, nil
-}
-
-// ConvertGardenletConfig converts the given object to an internal GardenletConfiguration version.
-func ConvertGardenletConfig(obj runtime.Object) (*config.GardenletConfiguration, error) {
-	obj, err := scheme.ConvertToVersion(obj, config.SchemeGroupVersion)
-	if err != nil {
-		return nil, err
-	}
-	result, ok := obj.(*config.GardenletConfiguration)
-	if !ok {
-		return nil, fmt.Errorf("could not convert GardenletConfiguration to internal version")
-	}
-	return result, nil
-}
-
-// ConvertGardenletConfigExternal converts the given object to an external  GardenletConfiguration version.
-func ConvertGardenletConfigExternal(obj runtime.Object) (*configv1alpha1.GardenletConfiguration, error) {
-	obj, err := scheme.ConvertToVersion(obj, configv1alpha1.SchemeGroupVersion)
-	if err != nil {
-		return nil, err
-	}
-	result, ok := obj.(*configv1alpha1.GardenletConfiguration)
-	if !ok {
-		return nil, fmt.Errorf("could not convert GardenletConfiguration to version %s", configv1alpha1.SchemeGroupVersion.String())
-	}
-	return result, nil
-}
-
-// ConvertSeed converts the given external Seed version to an internal version.
-func ConvertSeed(obj runtime.Object) (*gardencore.Seed, error) {
-	obj, err := scheme.ConvertToVersion(obj, gardencore.SchemeGroupVersion)
-	if err != nil {
-		return nil, err
-	}
-	result, ok := obj.(*gardencore.Seed)
-	if !ok {
-		return nil, fmt.Errorf("could not convert Seed to internal version")
-	}
-	return result, nil
-}
-
-// ConvertSeedExternal converts the given internal Seed version to an external version.
-func ConvertSeedExternal(obj runtime.Object) (*gardencorev1beta1.Seed, error) {
-	obj, err := scheme.ConvertToVersion(obj, gardencorev1beta1.SchemeGroupVersion)
-	if err != nil {
-		return nil, err
-	}
-	result, ok := obj.(*gardencorev1beta1.Seed)
-	if !ok {
-		return nil, fmt.Errorf("could not convert Seed to version %s", gardencorev1beta1.SchemeGroupVersion.String())
-	}
-	return result, nil
 }
 
 func getDecoder(withDefaulter bool) runtime.Decoder {

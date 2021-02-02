@@ -18,10 +18,11 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	seedmanagement "github.com/gardener/gardener/pkg/apis/seedmanagement"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	corefake "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -276,7 +277,7 @@ var _ = Describe("ManagedSeed", func() {
 
 		Context("seed template", func() {
 			BeforeEach(func() {
-				managedSeed.Spec.SeedTemplate = &seedmanagement.SeedTemplate{
+				managedSeed.Spec.SeedTemplate = &gardencore.SeedTemplate{
 					Spec: core.SeedSpec{
 						Backup: &core.SeedBackup{},
 					},
@@ -290,7 +291,7 @@ var _ = Describe("ManagedSeed", func() {
 
 				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(managedSeed.Spec.SeedTemplate).To(Equal(&seedmanagement.SeedTemplate{
+				Expect(managedSeed.Spec.SeedTemplate).To(Equal(&gardencore.SeedTemplate{
 					Spec: seed(false).Spec,
 				}))
 			})
@@ -313,7 +314,7 @@ var _ = Describe("ManagedSeed", func() {
 
 				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(managedSeed.Spec.SeedTemplate).To(Equal(&seedmanagement.SeedTemplate{
+				Expect(managedSeed.Spec.SeedTemplate).To(Equal(&gardencore.SeedTemplate{
 					Spec: seed(true).Spec,
 				}))
 			})
@@ -419,7 +420,7 @@ var _ = Describe("ManagedSeed", func() {
 							Kind:       "GardenletConfiguration",
 						},
 						SeedConfig: &configv1alpha1.SeedConfig{
-							Seed: gardencorev1beta1.Seed{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
 									Backup: &gardencorev1beta1.SeedBackup{},
 								},
@@ -428,7 +429,7 @@ var _ = Describe("ManagedSeed", func() {
 					},
 				}
 
-				seedx, err = helper.ConvertSeedExternal(seed(false))
+				seedx, err = gardencorehelper.ConvertSeedExternal(seed(false))
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -446,10 +447,31 @@ var _ = Describe("ManagedSeed", func() {
 							Kind:       "GardenletConfiguration",
 						},
 						SeedConfig: &configv1alpha1.SeedConfig{
-							Seed: *seedx,
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
+								ObjectMeta: seedx.ObjectMeta,
+								Spec:       seedx.Spec,
+							},
 						},
 					},
 				}))
+			})
+
+			It("should fail if config could not be converted to GardenletConfiguration", func() {
+				coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, shoot, nil
+				})
+
+				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
+					Config: &corev1.Pod{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Pod",
+						},
+					},
+				}
+
+				err := admissionHandler.Admit(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
+				Expect(err).To(BeInternalServerError())
 			})
 		})
 	})

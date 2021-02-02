@@ -17,6 +17,7 @@ package validation_test
 import (
 	"time"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/validation"
 
@@ -48,7 +49,28 @@ var _ = Describe("GardenletConfiguration", func() {
 					DNSEntryTTLSeconds:   pointer.Int64Ptr(120),
 				},
 			},
-			SeedConfig: &config.SeedConfig{},
+			SeedConfig: &config.SeedConfig{
+				SeedTemplate: gardencore.SeedTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"foo": "bar",
+						},
+					},
+					Spec: gardencore.SeedSpec{
+						DNS: gardencore.SeedDNS{
+							IngressDomain: pointer.StringPtr("ingress.test.example.com"),
+						},
+						Networks: gardencore.SeedNetworks{
+							Pods:     "100.96.0.0/11",
+							Services: "100.64.0.0/13",
+						},
+						Provider: gardencore.SeedProvider{
+							Type:   "foo",
+							Region: "some-region",
+						},
+					},
+				},
+			},
 			Resources: &config.ResourcesConfiguration{
 				Capacity: corev1.ResourceList{
 					"foo": resource.MustParse("42"),
@@ -137,7 +159,6 @@ var _ = Describe("GardenletConfiguration", func() {
 
 			It("should forbid specifying both a seed selector and a seed config", func() {
 				cfg.SeedSelector = &metav1.LabelSelector{}
-				cfg.SeedConfig = &config.SeedConfig{}
 
 				errorList := ValidateGardenletConfiguration(cfg, nil)
 
@@ -145,6 +166,21 @@ var _ = Describe("GardenletConfiguration", func() {
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("seedConfig"),
 				}))))
+			})
+		})
+
+		Context("seed template", func() {
+			It("should forbid invalid fields in seed template", func() {
+				cfg.SeedConfig.Spec.Provider.Type = ""
+
+				errorList := ValidateGardenletConfiguration(cfg, nil)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("seedConfig.spec.provider.type"),
+					})),
+				))
 			})
 		})
 
@@ -167,37 +203,62 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 		})
 
-		It("should forbid reserved greater than capacity", func() {
-			cfg.Resources = &config.ResourcesConfiguration{
-				Capacity: corev1.ResourceList{
-					"foo": resource.MustParse("42"),
-				},
-				Reserved: corev1.ResourceList{
-					"foo": resource.MustParse("43"),
-				},
-			}
+		Context("resources", func() {
+			It("should forbid reserved greater than capacity", func() {
+				cfg.Resources = &config.ResourcesConfiguration{
+					Capacity: corev1.ResourceList{
+						"foo": resource.MustParse("42"),
+					},
+					Reserved: corev1.ResourceList{
+						"foo": resource.MustParse("43"),
+					},
+				}
 
-			errorList := ValidateGardenletConfiguration(cfg, nil)
+				errorList := ValidateGardenletConfiguration(cfg, nil)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("resources.reserved.foo"),
-			}))))
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("resources.reserved.foo"),
+				}))))
+			})
+
+			It("should forbid reserved without capacity", func() {
+				cfg.Resources = &config.ResourcesConfiguration{
+					Reserved: corev1.ResourceList{
+						"foo": resource.MustParse("42"),
+					},
+				}
+
+				errorList := ValidateGardenletConfiguration(cfg, nil)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("resources.reserved.foo"),
+				}))))
+			})
+		})
+	})
+
+	Describe("#ValidateGardenletConfigurationUpdate", func() {
+		It("should allow valid configuration updates", func() {
+			errorList := ValidateGardenletConfigurationUpdate(cfg, cfg, nil)
+
+			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should forbid reserved without capacity", func() {
-			cfg.Resources = &config.ResourcesConfiguration{
-				Reserved: corev1.ResourceList{
-					"foo": resource.MustParse("42"),
-				},
-			}
+		It("should forbid changes to immutable fields in seed template", func() {
+			newCfg := cfg.DeepCopy()
+			newCfg.SeedConfig.Spec.Networks.Pods = "100.97.0.0/11"
 
-			errorList := ValidateGardenletConfiguration(cfg, nil)
+			errorList := ValidateGardenletConfigurationUpdate(newCfg, cfg, nil)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("resources.reserved.foo"),
-			}))))
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("seedConfig.spec.networks.pods"),
+					"Detail": Equal("field is immutable"),
+				})),
+			))
 		})
 	})
 })

@@ -48,6 +48,16 @@ type SeedList struct {
 	Items []Seed `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
+// SeedTemplate is a template for creating a Seed object.
+type SeedTemplate struct {
+	// Standard object metadata.
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	// Specification of the desired behavior of the Seed.
+	// +optional
+	Spec SeedSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+}
+
 // SeedSpec is the specification of a Seed.
 type SeedSpec struct {
 	// Backup holds the object store configuration for the backups of shoot (currently only etcd).

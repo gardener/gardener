@@ -15,7 +15,7 @@
 package config
 
 import (
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -287,7 +287,7 @@ type LeaderElectionConfiguration struct {
 
 // SeedConfig contains configuration for the seed cluster.
 type SeedConfig struct {
-	gardencorev1beta1.Seed
+	gardencore.SeedTemplate
 }
 
 // FluentBit contains configuration for Fluent Bit.

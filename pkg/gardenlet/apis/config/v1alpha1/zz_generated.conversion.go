@@ -557,7 +557,15 @@ func autoConvert_v1alpha1_GardenletConfiguration_To_config_GardenletConfiguratio
 	out.KubernetesLogLevel = (*klog.Level)(unsafe.Pointer(in.KubernetesLogLevel))
 	out.Server = (*config.ServerConfiguration)(unsafe.Pointer(in.Server))
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
-	out.SeedConfig = (*config.SeedConfig)(unsafe.Pointer(in.SeedConfig))
+	if in.SeedConfig != nil {
+		in, out := &in.SeedConfig, &out.SeedConfig
+		*out = new(config.SeedConfig)
+		if err := Convert_v1alpha1_SeedConfig_To_config_SeedConfig(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.SeedConfig = nil
+	}
 	out.SeedSelector = (*v1.LabelSelector)(unsafe.Pointer(in.SeedSelector))
 	out.Logging = (*config.Logging)(unsafe.Pointer(in.Logging))
 	out.SNI = (*config.SNI)(unsafe.Pointer(in.SNI))
@@ -612,7 +620,15 @@ func autoConvert_config_GardenletConfiguration_To_v1alpha1_GardenletConfiguratio
 	out.KubernetesLogLevel = (*klog.Level)(unsafe.Pointer(in.KubernetesLogLevel))
 	out.Server = (*ServerConfiguration)(unsafe.Pointer(in.Server))
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
-	out.SeedConfig = (*SeedConfig)(unsafe.Pointer(in.SeedConfig))
+	if in.SeedConfig != nil {
+		in, out := &in.SeedConfig, &out.SeedConfig
+		*out = new(SeedConfig)
+		if err := Convert_config_SeedConfig_To_v1alpha1_SeedConfig(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.SeedConfig = nil
+	}
 	out.SeedSelector = (*v1.LabelSelector)(unsafe.Pointer(in.SeedSelector))
 	out.Logging = (*Logging)(unsafe.Pointer(in.Logging))
 	out.SNI = (*SNI)(unsafe.Pointer(in.SNI))
@@ -849,7 +865,10 @@ func Convert_config_SeedClientConnection_To_v1alpha1_SeedClientConnection(in *co
 }
 
 func autoConvert_v1alpha1_SeedConfig_To_config_SeedConfig(in *SeedConfig, out *config.SeedConfig, s conversion.Scope) error {
-	out.Seed = in.Seed
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.SeedTemplate, &out.SeedTemplate, 0); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -859,7 +878,10 @@ func Convert_v1alpha1_SeedConfig_To_config_SeedConfig(in *SeedConfig, out *confi
 }
 
 func autoConvert_config_SeedConfig_To_v1alpha1_SeedConfig(in *config.SeedConfig, out *SeedConfig, s conversion.Scope) error {
-	out.Seed = in.Seed
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.SeedTemplate, &out.SeedTemplate, 0); err != nil {
+		return err
+	}
 	return nil
 }
 

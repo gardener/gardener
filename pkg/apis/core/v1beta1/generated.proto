@@ -1869,6 +1869,17 @@ message SeedTaint {
   optional string value = 2;
 }
 
+// SeedTemplate is a template for creating a Seed object.
+message SeedTemplate {
+  // Standard object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Specification of the desired behavior of the Seed.
+  // +optional
+  optional SeedSpec spec = 2;
+}
+
 // SeedVolume contains settings for persistentvolumes created in the seed cluster.
 message SeedVolume {
   // MinimumSize defines the minimum size that should be used for PVCs in the seed.

@@ -762,7 +762,7 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 					"featureGates":          featureGates,
 					"server":                serverConfig,
 					"seedConfig": &configv1alpha1.SeedConfig{
-						Seed: gardencorev1beta1.Seed{
+						SeedTemplate: gardencorev1beta1.SeedTemplate{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:   shoot.Name,
 								Labels: shoot.Labels,

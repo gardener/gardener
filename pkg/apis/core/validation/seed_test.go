@@ -32,57 +32,66 @@ import (
 )
 
 var _ = Describe("Seed Validation Tests", func() {
-	Describe("#ValidateSeed, #ValidateSeedUpdate", func() {
-		var (
-			seed   *core.Seed
-			backup *core.SeedBackup
-		)
+	var (
+		seed         *core.Seed
+		seedTemplate *core.SeedTemplate
+		backup       *core.SeedBackup
+	)
 
-		BeforeEach(func() {
-			region := "some-region"
-			pods := "10.240.0.0/16"
-			services := "10.241.0.0/16"
-			nodesCIDR := "10.250.0.0/16"
-			seed = &core.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "seed-1",
+	BeforeEach(func() {
+		region := "some-region"
+		pods := "10.240.0.0/16"
+		services := "10.241.0.0/16"
+		nodesCIDR := "10.250.0.0/16"
+		seed = &core.Seed{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "seed-1",
+			},
+			Spec: core.SeedSpec{
+				Provider: core.SeedProvider{
+					Type:   "foo",
+					Region: "eu-west-1",
 				},
-				Spec: core.SeedSpec{
-					Provider: core.SeedProvider{
-						Type:   "foo",
-						Region: "eu-west-1",
+				DNS: core.SeedDNS{
+					IngressDomain: pointer.StringPtr("ingress.my-seed-1.example.com"),
+				},
+				SecretRef: &corev1.SecretReference{
+					Name:      "seed-foo",
+					Namespace: "garden",
+				},
+				Taints: []core.SeedTaint{
+					{Key: "foo"},
+				},
+				Networks: core.SeedNetworks{
+					Nodes:    &nodesCIDR,
+					Pods:     "100.96.0.0/11",
+					Services: "100.64.0.0/13",
+					ShootDefaults: &core.ShootNetworks{
+						Pods:     &pods,
+						Services: &services,
 					},
-					DNS: core.SeedDNS{
-						IngressDomain: pointer.StringPtr("ingress.my-seed-1.example.com"),
-					},
-					SecretRef: &corev1.SecretReference{
-						Name:      "seed-foo",
+				},
+				Backup: &core.SeedBackup{
+					Provider: "foo",
+					Region:   &region,
+					SecretRef: corev1.SecretReference{
+						Name:      "backup-foo",
 						Namespace: "garden",
 					},
-					Taints: []core.SeedTaint{
-						{Key: "foo"},
-					},
-					Networks: core.SeedNetworks{
-						Nodes:    &nodesCIDR,
-						Pods:     "100.96.0.0/11",
-						Services: "100.64.0.0/13",
-						ShootDefaults: &core.ShootNetworks{
-							Pods:     &pods,
-							Services: &services,
-						},
-					},
-					Backup: &core.SeedBackup{
-						Provider: "foo",
-						Region:   &region,
-						SecretRef: corev1.SecretReference{
-							Name:      "backup-foo",
-							Namespace: "garden",
-						},
-					},
 				},
-			}
-		})
+			},
+		}
+		seedTemplate = &core.SeedTemplate{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					"foo": "bar",
+				},
+			},
+			Spec: seed.Spec,
+		}
+	})
 
+	Describe("#ValidateSeed, #ValidateSeedUpdate", func() {
 		It("should not return any errors", func() {
 			errorList := ValidateSeed(seed)
 
@@ -652,6 +661,60 @@ var _ = Describe("Seed Validation Tests", func() {
 				allErrs := ValidateSeedStatusUpdate(newSeed, oldSeed)
 				Expect(allErrs).To(BeEmpty())
 			})
+		})
+	})
+
+	Describe("#ValidateSeedTemplate", func() {
+		It("should allow valid resources", func() {
+			errorList := ValidateSeedTemplate(seedTemplate, nil)
+
+			Expect(errorList).To(HaveLen(0))
+		})
+
+		It("should forbid invalid metadata or spec fields", func() {
+			seedTemplate.Labels = map[string]string{"foo!": "bar"}
+			seedTemplate.Annotations = map[string]string{"foo!": "bar"}
+			seedTemplate.Spec.Provider.Type = ""
+
+			errorList := ValidateSeedTemplate(seedTemplate, nil)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.labels"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.annotations"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.provider.type"),
+				})),
+			))
+		})
+	})
+
+	Describe("#ValidateSeedTemplateUpdate", func() {
+		It("should allow valid updates", func() {
+			errorList := ValidateSeedTemplateUpdate(seedTemplate, seedTemplate, nil)
+
+			Expect(errorList).To(HaveLen(0))
+		})
+
+		It("should forbid changes to immutable fields in spec", func() {
+			newSeedTemplate := *seedTemplate
+			newSeedTemplate.Spec.Networks.Pods = "100.97.0.0/11"
+
+			errorList := ValidateSeedTemplateUpdate(&newSeedTemplate, seedTemplate, nil)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.networks.pods"),
+					"Detail": Equal("field is immutable"),
+				})),
+			))
 		})
 	})
 })

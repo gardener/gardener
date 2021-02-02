@@ -90,9 +90,7 @@ Shoot
 <td>
 <code>seedTemplate</code></br>
 <em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.SeedTemplate">
-SeedTemplate
-</a>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTemplate
 </em>
 </td>
 <td>
@@ -474,9 +472,7 @@ Shoot
 <td>
 <code>seedTemplate</code></br>
 <em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.SeedTemplate">
-SeedTemplate
-</a>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTemplate
 </em>
 </td>
 <td>
@@ -542,168 +538,6 @@ int64
 <td>
 <p>ObservedGeneration is the most recent generation observed for this ManagedSeed. It corresponds to the
 ManagedSeed&rsquo;s generation, which is updated on mutation by the API Server.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="seedmanagement.gardener.cloud/v1alpha1.SeedTemplate">SeedTemplate
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSpec">ManagedSeedSpec</a>)
-</p>
-<p>
-<p>SeedTemplate is a template for creating a Seed object, when registering a cluster as a ManagedSeed.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>metadata</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectmeta-v1-meta">
-Kubernetes meta/v1.ObjectMeta
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Standard object metadata.</p>
-Refer to the Kubernetes API documentation for the fields of the
-<code>metadata</code> field.
-</td>
-</tr>
-<tr>
-<td>
-<code>spec</code></br>
-<em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSpec
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Specification of the desired behavior of the Seed.</p>
-<br/>
-<br/>
-<table>
-<tr>
-<td>
-<code>backup</code></br>
-<em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedBackup
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Backup holds the object store configuration for the backups of shoot (currently only etcd).
-If it is not specified, then there won&rsquo;t be any backups taken for shoots associated with this seed.
-If backup field is present in seed, then backups of the etcd from shoot control plane will be stored
-under the configured object store.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>dns</code></br>
-<em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedDNS
-</em>
-</td>
-<td>
-<p>DNS contains DNS-relevant information about this seed cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>networks</code></br>
-<em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks
-</em>
-</td>
-<td>
-<p>Networks defines the pod, service and worker network of the Seed cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>provider</code></br>
-<em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider
-</em>
-</td>
-<td>
-<p>Provider defines the provider type and region for this Seed cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>secretRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#secretreference-v1-core">
-Kubernetes core/v1.SecretReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
-the account the Seed cluster has been deployed to.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>taints</code></br>
-<em>
-[]github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTaint
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Taints describes taints on the seed.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>volume</code></br>
-<em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolume
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Volume contains settings for persistentvolumes created in the seed cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>settings</code></br>
-<em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettings
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Settings contains certain settings for this seed cluster.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>ingress</code></br>
-<em>
-github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Ingress configures Ingress specific settings of the Seed cluster.</p>
-</td>
-</tr>
-</table>
 </td>
 </tr>
 </tbody>

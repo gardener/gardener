@@ -49,7 +49,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should default seed template secret reference", func() {
-			obj.Spec.SeedTemplate = &SeedTemplate{}
+			obj.Spec.SeedTemplate = &gardencorev1beta1.SeedTemplate{}
 
 			SetDefaults_ManagedSeed(obj)
 
@@ -59,7 +59,7 @@ var _ = Describe("Defaults", func() {
 					Namespace: namespace,
 				},
 				Spec: ManagedSeedSpec{
-					SeedTemplate: &SeedTemplate{
+					SeedTemplate: &gardencorev1beta1.SeedTemplate{
 						Spec: gardencorev1beta1.SeedSpec{
 							SecretRef: &corev1.SecretReference{
 								Name:      fmt.Sprintf("seed-%s", name),
@@ -72,7 +72,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should default seed template backup secret reference if backup is specified", func() {
-			obj.Spec.SeedTemplate = &SeedTemplate{
+			obj.Spec.SeedTemplate = &gardencorev1beta1.SeedTemplate{
 				Spec: gardencorev1beta1.SeedSpec{
 					Backup: &gardencorev1beta1.SeedBackup{},
 				},
@@ -86,7 +86,7 @@ var _ = Describe("Defaults", func() {
 					Namespace: namespace,
 				},
 				Spec: ManagedSeedSpec{
-					SeedTemplate: &SeedTemplate{
+					SeedTemplate: &gardencorev1beta1.SeedTemplate{
 						Spec: gardencorev1beta1.SeedSpec{
 							Backup: &gardencorev1beta1.SeedBackup{
 								SecretRef: corev1.SecretReference{
@@ -142,7 +142,7 @@ var _ = Describe("Defaults", func() {
 							Kind:       "GardenletConfiguration",
 						},
 						SeedConfig: &configv1alpha1.SeedConfig{
-							Seed: gardencorev1beta1.Seed{
+							SeedTemplate: gardencorev1beta1.SeedTemplate{
 								Spec: gardencorev1beta1.SeedSpec{
 									Backup: &gardencorev1beta1.SeedBackup{},
 								},
@@ -169,7 +169,7 @@ var _ = Describe("Defaults", func() {
 									Kind:       "GardenletConfiguration",
 								},
 								SeedConfig: &configv1alpha1.SeedConfig{
-									Seed: gardencorev1beta1.Seed{
+									SeedTemplate: gardencorev1beta1.SeedTemplate{
 										Spec: gardencorev1beta1.SeedSpec{
 											Backup: &gardencorev1beta1.SeedBackup{
 												SecretRef: corev1.SecretReference{

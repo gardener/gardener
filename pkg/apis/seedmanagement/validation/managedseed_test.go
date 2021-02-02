@@ -15,12 +15,10 @@
 package validation_test
 
 import (
-	"k8s.io/component-base/config/v1alpha1"
-
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
@@ -30,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
 )
 
@@ -94,7 +93,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				Shoot: seedmanagement.Shoot{
 					Name: name,
 				},
-				SeedTemplate: &seedmanagement.SeedTemplate{
+				SeedTemplate: &core.SeedTemplate{
 					ObjectMeta: seed.ObjectMeta,
 					Spec:       seed.Spec,
 				},
@@ -198,7 +197,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			)
 
 			BeforeEach(func() {
-				seedx, err = helper.ConvertSeedExternal(seed)
+				seedx, err = gardencorehelper.ConvertSeedExternal(seed)
 				Expect(err).NotTo(HaveOccurred())
 
 				managedSeed.Spec.SeedTemplate = nil
@@ -426,7 +425,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			)
 
 			BeforeEach(func() {
-				seedx, err = helper.ConvertSeedExternal(seed)
+				seedx, err = gardencorehelper.ConvertSeedExternal(seed)
 				Expect(err).NotTo(HaveOccurred())
 
 				managedSeed.Spec.SeedTemplate = nil
@@ -485,7 +484,10 @@ func gardenletConfiguration(seed *gardencorev1beta1.Seed, gcc *configv1alpha1.Ga
 			Kind:       "GardenletConfiguration",
 		},
 		SeedConfig: &configv1alpha1.SeedConfig{
-			Seed: *seed,
+			SeedTemplate: gardencorev1beta1.SeedTemplate{
+				ObjectMeta: seed.ObjectMeta,
+				Spec:       seed.Spec,
+			},
 		},
 		GardenClientConnection: gcc,
 	}

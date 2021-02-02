@@ -17,6 +17,7 @@ package validation
 import (
 	"fmt"
 
+	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -35,6 +36,10 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 
 	if (cfg.SeedConfig == nil && cfg.SeedSelector == nil) || (cfg.SeedConfig != nil && cfg.SeedSelector != nil) {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedConfig"), cfg, "either seed config or seed selector is required"))
+	}
+
+	if cfg.SeedConfig != nil {
+		allErrs = append(allErrs, corevalidation.ValidateSeedTemplate(&cfg.SeedConfig.SeedTemplate, fldPath.Child("seedConfig"))...)
 	}
 
 	serverPath := fldPath.Child("server")
@@ -59,6 +64,17 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 				allErrs = append(allErrs, field.Invalid(resourcesPath.Child("reserved", string(resourceName)), cfg.Resources.Reserved[resourceName], "reserved without capacity"))
 			}
 		}
+	}
+
+	return allErrs
+}
+
+// ValidateGardenletConfigurationUpdate validates a GardenletConfiguration object before an update.
+func ValidateGardenletConfigurationUpdate(newCfg, oldCfg *config.GardenletConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if newCfg.SeedConfig != nil && oldCfg.SeedConfig != nil {
+		allErrs = append(allErrs, corevalidation.ValidateSeedTemplateUpdate(&newCfg.SeedConfig.SeedTemplate, &oldCfg.SeedConfig.SeedTemplate, fldPath.Child("seedConfig"))...)
 	}
 
 	return allErrs

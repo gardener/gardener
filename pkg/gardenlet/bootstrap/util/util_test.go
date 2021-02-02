@@ -37,7 +37,7 @@ import (
 	baseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -261,9 +261,11 @@ var _ = Describe("Util", func() {
 	Describe("GetSeedName", func() {
 		It("should return the configured name", func() {
 			name := "test-name"
-			result := bootstraputil.GetSeedName(&config.SeedConfig{Seed: gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{Name: name},
-			}})
+			result := bootstraputil.GetSeedName(&config.SeedConfig{
+				SeedTemplate: gardencore.SeedTemplate{
+					ObjectMeta: metav1.ObjectMeta{Name: name},
+				},
+			})
 			Expect(result).To(Equal("test-name"))
 		})
 
