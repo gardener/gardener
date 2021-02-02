@@ -271,8 +271,7 @@ func Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *conf
 }
 
 func autoConvert_v1alpha1_TLSServer_To_config_TLSServer(in *TLSServer, out *config.TLSServer, s conversion.Scope) error {
-	out.ServerCertPath = in.ServerCertPath
-	out.ServerKeyPath = in.ServerKeyPath
+	out.ServerCertDir = in.ServerCertDir
 	return nil
 }
 
@@ -282,8 +281,7 @@ func Convert_v1alpha1_TLSServer_To_config_TLSServer(in *TLSServer, out *config.T
 }
 
 func autoConvert_config_TLSServer_To_v1alpha1_TLSServer(in *config.TLSServer, out *TLSServer, s conversion.Scope) error {
-	out.ServerCertPath = in.ServerCertPath
-	out.ServerKeyPath = in.ServerKeyPath
+	out.ServerCertDir = in.ServerCertDir
 	return nil
 }
 

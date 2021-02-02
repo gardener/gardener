@@ -94,8 +94,7 @@ type HTTPSServer struct {
 
 // TLSServer contains information about the TLS configuration for a HTTPS server.
 type TLSServer struct {
-	// ServerCertPath is the path to the server certificate file.
-	ServerCertPath string `json:"serverCertPath"`
-	// ServerKeyPath is the path to the private key file.
-	ServerKeyPath string `json:"serverKeyPath"`
+	// ServerCertDir is the path to a directory containing the server's TLS certificate and key (the files must be
+	// named tls.crt and tls.key respectively).
+	ServerCertDir string `json:"serverCertDir"`
 }

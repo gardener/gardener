@@ -35,8 +35,7 @@ data:
         bindAddress: {{ required ".Values.global.admission.config.server.https.bindAddress is required" .Values.global.admission.config.server.https.bindAddress }}
         port: {{ required ".Values.global.admission.config.server.https.port is required" .Values.global.admission.config.server.https.port }}
         tls:
-          serverCertPath: /etc/gardener-admission-controller/srv/gardener-admission-controller.crt
-          serverKeyPath: /etc/gardener-admission-controller/srv/gardener-admission-controller.key
+          serverCertDir: /etc/gardener-admission-controller/srv
       {{- if .Values.global.admission.config.server.resourceAdmissionConfiguration }}
       resourceAdmissionConfiguration:
         limits:
