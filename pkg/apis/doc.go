@@ -12,7 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate ../../hack/update-protobuf.sh
-//go:generate ../../hack/update-codegen.sh
-
 package apis

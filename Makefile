@@ -161,7 +161,15 @@ check:
 
 .PHONY: generate
 generate:
+	@hack/update-protobuf.sh
+	@hack/update-codegen.sh
 	@hack/generate.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
+
+.PHONY: generate-parallel
+generate-parallel:
+	@hack/update-protobuf.sh
+	@hack/update-codegen-parallel.sh
+	@hack/generate-parallel.sh
 
 .PHONY: generate-extensions-crds
 generate-extensions-crds:
