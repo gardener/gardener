@@ -25,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -77,7 +76,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1a
 		return nil
 	}
 
-	backupSecret, err := extensionscontroller.GetSecretByReference(ctx, a.client, &be.Spec.SecretRef)
+	backupSecret, err := kutil.GetSecretByReference(ctx, a.client, &be.Spec.SecretRef)
 	if err != nil {
 		a.logger.Error(err, "failed to read backup extension secret")
 		return err
