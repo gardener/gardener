@@ -1,0 +1,8 @@
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: OperatingSystemConfig
+metadata:
+  name: foo
+  namespace: shoot--foo--bar
+spec:
+  purpose: provision
+  type: gardenlinux

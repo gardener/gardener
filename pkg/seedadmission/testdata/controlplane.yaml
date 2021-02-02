@@ -1,0 +1,28 @@
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: ControlPlane
+metadata:
+  name: foo
+  namespace: shoot--foo--bar
+spec:
+  infrastructureProviderStatus:
+    apiVersion: gcp.provider.extensions.gardener.cloud/v1alpha1
+    kind: InfrastructureStatus
+    networks:
+      subnets:
+      - name: shoot--foo--bar-nodes
+        purpose: nodes
+      vpc:
+        cloudRouter:
+          name: shoot--foo--bar-cloud-router
+        name: shoot--foo--bar
+    serviceAccountEmail: shoot--foo--bar@my-gardener-project.iam.gserviceaccount.com
+  providerConfig:
+    apiVersion: gcp.provider.extensions.gardener.cloud/v1alpha1
+    kind: ControlPlaneConfig
+    zone: europe-west1-b
+  purpose: normal
+  region: europe-west1
+  secretRef:
+    name: cloudprovider
+    namespace: shoot--foo--bar
+  type: gcp

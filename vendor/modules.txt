@@ -52,7 +52,6 @@ github.com/dsnet/compress/internal
 github.com/dsnet/compress/internal/errors
 github.com/dsnet/compress/internal/prefix
 # github.com/emicklei/go-restful v2.9.6+incompatible => github.com/emicklei/go-restful v2.9.5+incompatible
-## explicit
 github.com/emicklei/go-restful
 github.com/emicklei/go-restful/log
 # github.com/envoyproxy/go-control-plane v0.9.7-0.20200730005029-803dd64f0468 => github.com/envoyproxy/go-control-plane v0.9.4
@@ -786,8 +785,6 @@ k8s.io/apiserver/pkg/admission/plugin/webhook/namespace
 k8s.io/apiserver/pkg/admission/plugin/webhook/object
 k8s.io/apiserver/pkg/admission/plugin/webhook/request
 k8s.io/apiserver/pkg/admission/plugin/webhook/rules
-k8s.io/apiserver/pkg/admission/plugin/webhook/testcerts
-k8s.io/apiserver/pkg/admission/plugin/webhook/testing
 k8s.io/apiserver/pkg/admission/plugin/webhook/validating
 k8s.io/apiserver/pkg/apis/apiserver
 k8s.io/apiserver/pkg/apis/apiserver/install

@@ -1,0 +1,10 @@
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: BackupBucket
+metadata:
+  name: foo
+spec:
+  region: eu-west1
+  secretRef:
+    name: bucket-foo
+    namespace: garden
+  type: gcp

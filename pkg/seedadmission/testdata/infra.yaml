@@ -1,0 +1,17 @@
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: Infrastructure
+metadata:
+  name: foo
+  namespace: shoot--foo--bar
+spec:
+  providerConfig:
+    apiVersion: gcp.provider.extensions.gardener.cloud/v1alpha1
+    kind: InfrastructureConfig
+    networks:
+      worker: 10.250.0.0/19
+  region: europe-west1
+  secretRef:
+    name: cloudprovider
+    namespace: shoot--foo--bar
+  sshPublicKey: MTIzNDU2Nzg=
+  type: gcp

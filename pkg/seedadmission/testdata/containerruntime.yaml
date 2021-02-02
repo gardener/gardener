@@ -1,0 +1,13 @@
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: ContainerRuntime
+metadata:
+  name: foo
+  namespace: shoot--foo--bar
+spec:
+  binaryPath: /var/bin/containerruntimes
+  type: gvisor
+  workerPool:
+    name: worker-cpu
+    selector:
+      matchLabels:
+        worker.gardener.cloud/pool: worker-cpu

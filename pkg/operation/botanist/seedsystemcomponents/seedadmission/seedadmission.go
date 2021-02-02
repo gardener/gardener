@@ -19,14 +19,9 @@ import (
 	"fmt"
 	"time"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
-
 	"github.com/Masterminds/semver"
+	admissionv1 "k8s.io/api/admission/v1"
+	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -42,6 +37,14 @@ import (
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/seedadmission"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 const (
@@ -204,8 +207,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 							Command: []string{
 								"/gardener-seed-admission-controller",
 								fmt.Sprintf("--port=%d", port),
-								fmt.Sprintf("--tls-cert-path=%s/%s", volumeMountPath, corev1.TLSCertKey),
-								fmt.Sprintf("--tls-private-key-path=%s/%s", volumeMountPath, corev1.TLSPrivateKeyKey),
+								fmt.Sprintf("--tls-cert-dir=%s", volumeMountPath),
 							},
 							Ports: []corev1.ContainerPort{{
 								ContainerPort: int32(port),
@@ -276,9 +278,8 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 		failurePolicy                  = admissionregistrationv1beta1.Fail
 		validatingWebhookConfiguration = &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      Name,
-				Namespace: g.namespace,
-				Labels:    getLabels(),
+				Name:   Name,
+				Labels: getLabels(),
 			},
 			Webhooks: []admissionregistrationv1beta1.ValidatingWebhook{
 				{
@@ -298,9 +299,11 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 						Service: &admissionregistrationv1beta1.ServiceReference{
 							Name:      service.Name,
 							Namespace: service.Namespace,
-							Path:      pointer.StringPtr("/webhooks/validate-extension-crd-deletion"),
+							Path:      pointer.StringPtr(seedadmission.ExtensionDeletionProtectionWebhookPath),
 						},
 					},
+					AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+					TimeoutSeconds:          pointer.Int32Ptr(10),
 				},
 				{
 					Name: "crs.seed.admission.core.gardener.cloud",
@@ -329,9 +332,11 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 						Service: &admissionregistrationv1beta1.ServiceReference{
 							Name:      service.Name,
 							Namespace: service.Namespace,
-							Path:      pointer.StringPtr("/webhooks/validate-extension-crd-deletion"),
+							Path:      pointer.StringPtr(seedadmission.ExtensionDeletionProtectionWebhookPath),
 						},
 					},
+					AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+					TimeoutSeconds:          pointer.Int32Ptr(10),
 				},
 			},
 		}

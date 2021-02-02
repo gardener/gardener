@@ -16,53 +16,98 @@ package app
 
 import (
 	"context"
-	"errors"
+	"flag"
 	"fmt"
-	"net/http"
 	"time"
-
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenerlogger "github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/seedadmission"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"k8s.io/component-base/version/verflag"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/seedadmission"
 )
 
-var logger = gardenerlogger.NewLogger("info")
+const (
+	// Name is a const for the name of this component.
+	Name = "gardener-seed-admission-controller"
+)
 
-// Options has all the context and parameters needed to run a Gardener seed admission controller.
+var (
+	gracefulShutdownTimeout = 5 * time.Second
+)
+
+// NewSeedAdmissionControllerCommand creates a new *cobra.Command able to run gardener-seed-admission-controller.
+func NewSeedAdmissionControllerCommand() *cobra.Command {
+	var (
+		log = logzap.New(logzap.UseDevMode(false), func(opts *logzap.Options) {
+			encCfg := zap.NewProductionEncoderConfig()
+			// overwrite time encoding to human readable format
+			encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+			opts.Encoder = zapcore.NewJSONEncoder(encCfg)
+		})
+		opts = &Options{}
+	)
+
+	logf.SetLogger(log)
+
+	cmd := &cobra.Command{
+		Use:   Name,
+		Short: "Launch the " + Name,
+		Long:  Name + " serves validating and mutating webhook endpoints for resources in seed clusters.",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			verflag.PrintAndExitIfRequested()
+
+			if err := opts.validate(); err != nil {
+				return err
+			}
+
+			cmd.SilenceUsage = true
+
+			log.Info("Starting " + Name + "...")
+			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value))
+			})
+
+			return opts.Run(cmd.Context())
+		},
+	}
+
+	flags := cmd.Flags()
+	flags.AddGoFlagSet(flag.CommandLine)
+	verflag.AddFlags(flags)
+	opts.AddFlags(flags)
+	return cmd
+}
+
+// Options has all the context and parameters needed to run gardener-seed-admission-controller.
 type Options struct {
 	// BindAddress is the address the HTTP server should bind to.
 	BindAddress string
 	// Port is the port that should be opened by the HTTP server.
 	Port int
-	// ServerCertPath is the path to a server certificate.
-	ServerCertPath string
-	// ServerKeyPath is the path to a TLS private key.
-	ServerKeyPath string
-	// Kubeconfig is path to a kubeconfig file. If not given it uses the in-cluster config.
-	Kubeconfig string
+	// ServerCertDir is the path to server TLS cert and key.
+	ServerCertDir string
 }
 
-// AddFlags adds flags for a specific Scheduler to the specified FlagSet.
+// AddFlags adds gardener-seed-admission-controller's flags to the specified FlagSet.
 func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.BindAddress, "bind-address", "0.0.0.0", "address to bind to")
-	fs.IntVar(&o.Port, "port", 9443, "server port")
-	fs.StringVar(&o.ServerCertPath, "tls-cert-path", "", "path to server certificate")
-	fs.StringVar(&o.ServerKeyPath, "tls-private-key-path", "", "path to client certificate")
-	fs.StringVar(&o.Kubeconfig, "kubeconfig", "", "path to a kubeconfig")
+	fs.IntVar(&o.Port, "port", 9443, "webhook server port")
+	fs.StringVar(&o.ServerCertDir, "tls-cert-dir", "", "directory with server TLS certificate and key (must contain a tls.crt and tls.key file)")
 }
 
-// Validate validates all the required options.
-func (o *Options) validate(args []string) error {
+// validate validates all the required options.
+func (o *Options) validate() error {
 	if len(o.BindAddress) == 0 {
 		return fmt.Errorf("missing bind address")
 	}
@@ -71,122 +116,53 @@ func (o *Options) validate(args []string) error {
 		return fmt.Errorf("missing port")
 	}
 
-	if len(o.ServerCertPath) == 0 {
+	if len(o.ServerCertDir) == 0 {
 		return fmt.Errorf("missing server tls cert path")
-	}
-
-	if len(o.ServerKeyPath) == 0 {
-		return fmt.Errorf("missing server tls key path")
-	}
-
-	if len(args) != 0 {
-		return errors.New("arguments are not supported")
 	}
 
 	return nil
 }
 
-func (o *Options) run(ctx context.Context) {
-	run(ctx, o.BindAddress, o.Port, o.ServerCertPath, o.ServerKeyPath, o.Kubeconfig)
-}
+// Run runs gardener-seed-admission-controller using the specified options.
+func (o *Options) Run(ctx context.Context) error {
+	log := logf.Log
 
-// NewCommandStartGardenerSeedAdmissionController creates a *cobra.Command object with default parameters
-func NewCommandStartGardenerSeedAdmissionController() *cobra.Command {
-	opts := &Options{}
-
-	cmd := &cobra.Command{
-		Use:   "gardener-seed-admission-controller",
-		Short: "Launch the Gardener seed admission controller",
-		Long:  `The Gardener seed admission controller serves a validation webhook endpoint for resources in the seed clusters.`,
-		Run: func(cmd *cobra.Command, args []string) {
-			verflag.PrintAndExitIfRequested()
-
-			utilruntime.Must(opts.validate(args))
-
-			logger.Infof("Starting Gardener seed admission controller...")
-			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-				logger.Infof("FLAG: --%s=%s", flag.Name, flag.Value)
-			})
-
-			opts.run(cmd.Context())
-		},
-	}
-
-	flags := cmd.Flags()
-	verflag.AddFlags(flags)
-	opts.AddFlags(flags)
-	return cmd
-}
-
-// run runs the Gardener seed admission controller. This should never exit.
-func run(ctx context.Context, bindAddress string, port int, certPath, keyPath, kubeconfigPath string) {
-	var (
-		log = logzap.New(logzap.UseDevMode(false))
-		mux = http.NewServeMux()
-	)
-
-	k8sClient, err := kubernetes.NewClientFromFile("", kubeconfigPath, kubernetes.WithClientOptions(client.Options{
-		Scheme: kubernetes.SeedScheme,
-	}))
+	log.Info("getting rest config")
+	restConfig, err := config.GetConfig()
 	if err != nil {
-		logger.Errorf("unable to create kubernetes client: %+v", err)
-		panic(err)
+		return err
 	}
 
-	// prepare an injection func that will inject needed dependencies into webhook and handler.
-	var setFields inject.Func
-	setFields = func(i interface{}) error {
-		if _, err := inject.InjectorInto(setFields, i); err != nil {
-			return err
-		}
-		if _, err := inject.ClientInto(k8sClient.DirectClient(), i); err != nil {
-			return err
-		}
-		if _, err := inject.LoggerInto(log, i); err != nil {
-			return err
-		}
-		// inject scheme into webhook, needed to construct and a decoder for decoding the included objects
-		// decoder will be inject by webhook into handler
-		if _, err := inject.SchemeInto(kubernetes.SeedScheme, i); err != nil {
-			return err
-		}
-		return nil
+	log.Info("setting up manager")
+	mgr, err := manager.New(restConfig, manager.Options{
+		Scheme:                  kubernetes.SeedScheme,
+		LeaderElection:          false,
+		MetricsBindAddress:      "0", // disable for now, as we don't scrape the component
+		Host:                    o.BindAddress,
+		Port:                    o.Port,
+		CertDir:                 o.ServerCertDir,
+		GracefulShutdownTimeout: &gracefulShutdownTimeout,
+	})
+	if err != nil {
+		return err
 	}
 
-	extensionDeletionProtection := &webhook.Admission{Handler: seedadmission.NewExtensionDeletionProtection(logger)}
-	defaultSchedulerName := &webhook.Admission{Handler: admission.HandlerFunc(seedadmission.DefaultShootControlPlanePodsSchedulerName)}
-	if err := setFields(extensionDeletionProtection); err != nil {
-		panic(fmt.Errorf("error injecting dependencies into webhook handler: %w", err))
-	}
-	if err := setFields(defaultSchedulerName); err != nil {
-		panic(fmt.Errorf("error injecting dependencies into webhook handler: %w", err))
-	}
+	log.Info("setting up webhook server")
+	server := mgr.GetWebhookServer()
 
-	mux.Handle("/webhooks/validate-extension-crd-deletion", extensionDeletionProtection)
-	mux.Handle(
+	server.Register(seedadmission.ExtensionDeletionProtectionWebhookPath, &webhook.Admission{Handler: &seedadmission.ExtensionDeletionProtection{}})
+	server.Register(
 		// in the future we might want to have additional scheduler names
 		// so lets have the handler be of pattern "/webhooks/default-pod-scheduler-name/{scheduler-name}"
-		fmt.Sprintf(seedadmission.GardenerShootControlPlaneSchedulerWebhookPath),
-		defaultSchedulerName,
+		seedadmission.GardenerShootControlPlaneSchedulerWebhookPath,
+		&webhook.Admission{Handler: admission.HandlerFunc(seedadmission.DefaultShootControlPlanePodsSchedulerName)},
 	)
 
-	srv := &http.Server{
-		Addr:    fmt.Sprintf("%s:%d", bindAddress, port),
-		Handler: mux,
+	log.Info("starting manager")
+	if err := mgr.Start(ctx); err != nil {
+		log.Error(err, "error running manager")
+		return err
 	}
 
-	go func() {
-		if err := srv.ListenAndServeTLS(certPath, keyPath); err != http.ErrServerClosed {
-			logger.Errorf("Could not start HTTPS server: %v", err)
-			panic(err)
-		}
-	}()
-
-	<-ctx.Done()
-	timeoutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(timeoutCtx); err != nil {
-		logger.Errorf("Error when shutting down HTTPS server: %v", err)
-	}
-	logger.Info("HTTPS servers stopped.")
+	return nil
 }

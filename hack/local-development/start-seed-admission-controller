@@ -26,5 +26,4 @@ GO111MODULE=on \
       -ldflags "$(./hack/get-build-ld-flags.sh)" \
       "$(dirname $0)"/../../cmd/gardener-seed-admission-controller/main.go \
       --kubeconfig="${KUBECONFIG:-$kubeconfig}" \
-      --tls-cert-path="$(dirname $0)/../../example/seed-admission-controller/tls.crt" \
-      --tls-private-key-path="$(dirname $0)/../../example/seed-admission-controller/tls.key"
+      --tls-cert-dir="$(dirname $0)/../../example/seed-admission-controller"
