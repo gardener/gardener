@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -212,19 +211,18 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 // Gardenlet represents all the parameters required to start the
 // Gardenlet.
 type Gardenlet struct {
-	Config                     *config.GardenletConfiguration
-	Identity                   *gardencorev1beta1.Gardener
-	GardenNamespace            string
-	GardenClusterIdentity      string
-	ClientMap                  clientmap.ClientMap
-	K8sGardenCoreInformers     gardencoreinformers.SharedInformerFactory
-	K8sSeedManagementInformers seedmanagementinformers.SharedInformerFactory
-	KubeInformerFactory        informers.SharedInformerFactory
-	Logger                     *logrus.Logger
-	Recorder                   record.EventRecorder
-	LeaderElection             *leaderelection.LeaderElectionConfig
-	HealthManager              healthz.Manager
-	CertificateManager         *certificate.Manager
+	Config                 *config.GardenletConfiguration
+	Identity               *gardencorev1beta1.Gardener
+	GardenNamespace        string
+	GardenClusterIdentity  string
+	ClientMap              clientmap.ClientMap
+	K8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
+	KubeInformerFactory    informers.SharedInformerFactory
+	Logger                 *logrus.Logger
+	Recorder               record.EventRecorder
+	LeaderElection         *leaderelection.LeaderElectionConfig
+	HealthManager          healthz.Manager
+	CertificateManager     *certificate.Manager
 }
 
 // NewGardenlet is the main entry point of instantiating a new Gardenlet.
@@ -375,18 +373,17 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	}
 
 	return &Gardenlet{
-		Identity:                   identity,
-		GardenClusterIdentity:      clusterIdentity,
-		GardenNamespace:            gardenNamespace,
-		Config:                     cfg,
-		Logger:                     logger,
-		Recorder:                   recorder,
-		ClientMap:                  clientMap,
-		K8sGardenCoreInformers:     gardencoreinformers.NewSharedInformerFactory(k8sGardenClient.GardenCore(), 0),
-		K8sSeedManagementInformers: seedmanagementinformers.NewSharedInformerFactory(k8sGardenClient.GardenSeedManagement(), 0),
-		KubeInformerFactory:        kubeinformers.NewSharedInformerFactory(k8sGardenClient.Kubernetes(), 0),
-		LeaderElection:             leaderElectionConfig,
-		CertificateManager:         certificateManager,
+		Identity:               identity,
+		GardenClusterIdentity:  clusterIdentity,
+		GardenNamespace:        gardenNamespace,
+		Config:                 cfg,
+		Logger:                 logger,
+		Recorder:               recorder,
+		ClientMap:              clientMap,
+		K8sGardenCoreInformers: gardencoreinformers.NewSharedInformerFactory(k8sGardenClient.GardenCore(), 0),
+		KubeInformerFactory:    kubeinformers.NewSharedInformerFactory(k8sGardenClient.Kubernetes(), 0),
+		LeaderElection:         leaderElectionConfig,
+		CertificateManager:     certificateManager,
 	}, nil
 }
 
@@ -480,7 +477,6 @@ func (g *Gardenlet) startControllers(ctx context.Context) error {
 	return controller.NewGardenletControllerFactory(
 		g.ClientMap,
 		g.K8sGardenCoreInformers,
-		g.K8sSeedManagementInformers,
 		g.KubeInformerFactory,
 		g.Config,
 		g.Identity,

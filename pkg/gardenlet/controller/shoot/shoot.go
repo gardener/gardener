@@ -268,7 +268,9 @@ func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
 }
 
 func (c *Controller) getShootQueue(obj interface{}) workqueue.RateLimitingInterface {
-	if shoot, ok := obj.(*gardencorev1beta1.Shoot); ok && c.shootIsSeed(context.TODO(), shoot) {
+	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+	defer cancel()
+	if shoot, ok := obj.(*gardencorev1beta1.Shoot); ok && c.shootIsSeed(ctx, shoot) {
 		return c.shootSeedQueue
 	}
 	return c.shootQueue

@@ -136,15 +136,15 @@ func (c *defaultSeedRegistrationControl) Reconcile(ctx context.Context, shoot *g
 		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	isOwnedBy, err := isManagedSeedOwnedBy(ctx, gardenClient.Client(), shoot)
+	exists, isOwnedBy, err := isManagedSeedOwnedBy(ctx, gardenClient.Client(), shoot)
 	if err != nil {
 		message := fmt.Sprintf("Could not get ManagedSeed object for shoot %q: %+v", kutil.ObjectName(shoot), err)
 		shootLogger.Errorf(message)
 		c.recorder.Event(shoot, corev1.EventTypeWarning, "ManagedSeedGet", message)
 		return reconcile.Result{}, err
 	}
-	if !isOwnedBy {
-		logger.Logger.Infof("[SHOOTED SEED REGISTRATION] Skipping ManagedSeed object for shoot %s because it's not owned by this shoot", kutil.ObjectName(shoot))
+	if exists && !isOwnedBy {
+		logger.Logger.Infof("[SHOOTED SEED REGISTRATION] Skipping ManagedSeed object update or deletion for shoot %s because it's not owned by this shoot", kutil.ObjectName(shoot))
 		return reconcile.Result{}, nil
 	}
 
@@ -169,18 +169,18 @@ func (c *defaultSeedRegistrationControl) Reconcile(ctx context.Context, shoot *g
 	return reconcile.Result{}, nil
 }
 
-func isManagedSeedOwnedBy(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot) (bool, error) {
+func isManagedSeedOwnedBy(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot) (bool, bool, error) {
 	// Get managed seed
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
 	if err := c.Get(ctx, kutil.Key(shoot.Namespace, shoot.Name), managedSeed); err != nil {
 		if apierrors.IsNotFound(err) {
-			return true, nil
+			return false, false, nil
 		}
-		return false, err
+		return false, false, err
 	}
 
 	// Check if managed seed is controlled by shoot
-	return metav1.IsControlledBy(managedSeed, shoot), nil
+	return true, metav1.IsControlledBy(managedSeed, shoot), nil
 }
 
 func createOrUpdateManagedSeed(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev1beta1helper.ShootedSeed) error {

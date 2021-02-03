@@ -15,8 +15,6 @@
 package managedseed
 
 import (
-	"time"
-
 	"k8s.io/client-go/tools/cache"
 
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -32,14 +30,14 @@ func (c *Controller) managedSeedAdd(obj interface{}, immediately bool) {
 
 	if immediately {
 		logger.Logger.Debugf("Added ManagedSeed %s without delay to the queue", key)
-		c.managedSeedQueue.AddAfter(key, 1*time.Second)
+		c.managedSeedQueue.Add(key)
 	} else {
-		// Spread registration of shooted seeds (including gardenlet updates/rollouts) across the configured sync jitter
-		// period to avoid overloading the gardener-apiserver if all gardenlets in all shooted seeds are (re)starting
+		// Spread reconciliation of managed seeds (including gardenlet updates/rollouts) across the configured sync jitter
+		// period to avoid overloading the gardener-apiserver if all gardenlets in all managed seeds are (re)starting
 		// roughly at the same time
 		duration := utils.RandomDurationWithMetaDuration(c.config.Controllers.ManagedSeed.SyncJitterPeriod)
 		logger.Logger.Infof("Added ManagedSeed %s with delay %s to the queue", key, duration)
-		c.managedSeedQueue.AddAfter(key, 10*time.Second)
+		c.managedSeedQueue.AddAfter(key, duration)
 	}
 }
 

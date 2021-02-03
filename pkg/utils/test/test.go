@@ -151,7 +151,7 @@ func WithFeatureGate(gate featuregate.FeatureGate, f featuregate.Feature, value 
 //
 // Example usage:
 //  var fileName string
-//  defer WithTempFile("", "test", "test file content", &fileName)()
+//  defer WithTempFile("", "test", []byte("test file content"), &fileName)()
 func WithTempFile(dir, pattern string, content []byte, fileName *string) func() {
 	file, err := ioutil.TempFile(dir, pattern)
 	if err != nil {

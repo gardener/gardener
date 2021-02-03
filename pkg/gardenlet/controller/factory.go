@@ -25,7 +25,6 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -57,23 +56,21 @@ const DefaultImageVector = "images.yaml"
 
 // GardenletControllerFactory contains information relevant to controllers for the Garden API group.
 type GardenletControllerFactory struct {
-	cfg                        *config.GardenletConfiguration
-	gardenClusterIdentity      string
-	identity                   *gardencorev1beta1.Gardener
-	gardenNamespace            string
-	clientMap                  clientmap.ClientMap
-	k8sGardenCoreInformers     gardencoreinformers.SharedInformerFactory
-	k8sSeedManagementInformers seedmanagementinformers.SharedInformerFactory
-	k8sInformers               kubeinformers.SharedInformerFactory
-	recorder                   record.EventRecorder
-	healthManager              healthz.Manager
+	cfg                    *config.GardenletConfiguration
+	gardenClusterIdentity  string
+	identity               *gardencorev1beta1.Gardener
+	gardenNamespace        string
+	clientMap              clientmap.ClientMap
+	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
+	k8sInformers           kubeinformers.SharedInformerFactory
+	recorder               record.EventRecorder
+	healthManager          healthz.Manager
 }
 
 // NewGardenletControllerFactory creates a new factory for controllers for the Garden API group.
 func NewGardenletControllerFactory(
 	clientMap clientmap.ClientMap,
 	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
-	seedManagementInformerFactory seedmanagementinformers.SharedInformerFactory,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	cfg *config.GardenletConfiguration, identity *gardencorev1beta1.Gardener,
 	gardenClusterIdentity, gardenNamespace string,
@@ -81,16 +78,15 @@ func NewGardenletControllerFactory(
 	healthManager healthz.Manager,
 ) *GardenletControllerFactory {
 	return &GardenletControllerFactory{
-		cfg:                        cfg,
-		identity:                   identity,
-		gardenClusterIdentity:      gardenClusterIdentity,
-		gardenNamespace:            gardenNamespace,
-		clientMap:                  clientMap,
-		k8sGardenCoreInformers:     gardenCoreInformerFactory,
-		k8sSeedManagementInformers: seedManagementInformerFactory,
-		k8sInformers:               kubeInformerFactory,
-		recorder:                   recorder,
-		healthManager:              healthManager,
+		cfg:                    cfg,
+		identity:               identity,
+		gardenClusterIdentity:  gardenClusterIdentity,
+		gardenNamespace:        gardenNamespace,
+		clientMap:              clientMap,
+		k8sGardenCoreInformers: gardenCoreInformerFactory,
+		k8sInformers:           kubeInformerFactory,
+		recorder:               recorder,
+		healthManager:          healthManager,
 	}
 }
 
@@ -107,8 +103,6 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		secretBindingInformer          = f.k8sGardenCoreInformers.Core().V1beta1().SecretBindings().Informer()
 		seedInformer                   = f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Informer()
 		shootInformer                  = f.k8sGardenCoreInformers.Core().V1beta1().Shoots().Informer()
-		// Garden seedmanagement informers
-		managedSeedInformer = f.k8sSeedManagementInformers.Seedmanagement().V1alpha1().ManagedSeeds().Informer()
 		// Kubernetes core informers
 		namespaceInformer = f.k8sInformers.Core().V1().Namespaces().Informer()
 		secretInformer    = f.k8sInformers.Core().V1().Secrets().Informer()
@@ -127,11 +121,6 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	f.k8sGardenCoreInformers.Start(ctx.Done())
 	if !cache.WaitForCacheSync(ctx.Done(), backupBucketInformer.HasSynced, backupEntryInformer.HasSynced, cloudProfileInformer.HasSynced, controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, projectInformer.HasSynced, secretBindingInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
 		return fmt.Errorf("timed out waiting for Garden core caches to sync")
-	}
-
-	f.k8sSeedManagementInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), managedSeedInformer.HasSynced) {
-		return fmt.Errorf("timed out waiting for Garden seedmanagement caches to sync")
 	}
 
 	f.k8sInformers.Start(ctx.Done())

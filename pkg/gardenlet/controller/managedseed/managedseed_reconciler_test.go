@@ -17,6 +17,8 @@ package managedseed
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardenerlogger "github.com/gardener/gardener/pkg/logger"
@@ -57,6 +59,7 @@ var _ = Describe("Reconciler", func() {
 
 		managedSeed *seedmanagementv1alpha1.ManagedSeed
 		shoot       *gardencorev1beta1.Shoot
+		seed        *gardencorev1beta1.Seed
 	)
 
 	BeforeEach(func() {
@@ -102,6 +105,20 @@ var _ = Describe("Reconciler", func() {
 				ObservedGeneration: 1,
 			},
 		}
+		seed = &gardencorev1beta1.Seed{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+			},
+			Status: gardencorev1beta1.SeedStatus{
+				Conditions: []gardencorev1beta1.Condition{
+					{
+						Type:   gardencorev1beta1.SeedBootstrapped,
+						Status: gardencorev1beta1.ConditionTrue,
+						Reason: "SeedBootstrapped",
+					},
+				},
+			},
+		}
 	})
 
 	AfterEach(func() {
@@ -130,7 +147,16 @@ var _ = Describe("Reconciler", func() {
 						return nil
 					},
 				)
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "%s", gomock.AssignableToTypeOf("")).Times(2)
 				actuator.EXPECT().Reconcile(ctx, managedSeed, shoot).Return(nil)
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, "%s", gomock.AssignableToTypeOf(""))
+				c.EXPECT().Get(ctx, kutil.Key(name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
+					func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Seed) error {
+						*s = *seed
+						return nil
+					},
+				)
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, "%s", gomock.AssignableToTypeOf(""))
 				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
 					func(_ context.Context, _ client.ObjectKey, ms *seedmanagementv1alpha1.ManagedSeed) error {
 						*ms = *managedSeed
@@ -154,6 +180,11 @@ var _ = Describe("Reconciler", func() {
 								"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
 								"Status": Equal(gardencorev1beta1.ConditionTrue),
 								"Reason": Equal("SeedRegistered"),
+							}),
+							MatchFields(IgnoreExtras, Fields{
+								"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedBootstrapped),
+								"Status": Equal(gardencorev1beta1.ConditionTrue),
+								"Reason": Equal("SeedBootstrapped"),
 							}),
 						))
 						Expect(ms.Status.ObservedGeneration).To(Equal(int64(1)))
@@ -188,7 +219,9 @@ var _ = Describe("Reconciler", func() {
 						return nil
 					},
 				)
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "%s", gomock.AssignableToTypeOf(""))
 				actuator.EXPECT().Delete(ctx, managedSeed, shoot).Return(nil)
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, "%s", gomock.AssignableToTypeOf(""))
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(
 					func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ client.Patch) error {
 						Expect(ms.Finalizers).To(BeEmpty())

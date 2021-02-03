@@ -15,6 +15,7 @@
 package v1alpha1
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
@@ -53,6 +54,10 @@ func Convert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(in *seedmanagement.G
 	if err := autoConvert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(in, out, s); err != nil {
 		return err
 	}
-	out.Config = &runtime.RawExtension{Object: in.Config}
+	raw, err := json.Marshal(in.Config)
+	if err != nil {
+		return err
+	}
+	out.Config = &runtime.RawExtension{Object: in.Config, Raw: raw}
 	return nil
 }

@@ -66,77 +66,76 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
+	managedSeedLogger := logger.NewFieldLogger(r.logger, "managedSeed", kutil.ObjectName(managedSeed))
+
 	if managedSeed.DeletionTimestamp != nil {
-		return r.delete(ctx, managedSeed)
+		return r.delete(ctx, managedSeed, managedSeedLogger)
 	}
-	return r.reconcile(ctx, managedSeed)
+	return r.reconcile(ctx, managedSeed, managedSeedLogger)
 }
 
-func (r *reconciler) reconcile(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) (reconcile.Result, error) {
-	managedSeedLogger := logger.NewFieldLogger(r.logger, "managedSeed", kutil.ObjectName(managedSeed))
+func (r *reconciler) reconcile(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed, logger *logrus.Entry) (reconcile.Result, error) {
 
 	// Ensure gardener finalizer
 	if err := controllerutils.PatchFinalizers(ctx, r.gardenClient.Client(), managedSeed, gardencorev1beta1.GardenerName); err != nil {
-		managedSeedLogger.Errorf("Could not ensure gardener finalizer: %+v", err)
+		logger.Errorf("Could not ensure gardener finalizer: %+v", err)
 		return reconcile.Result{}, err
 	}
 
 	conditionShootExists := gardencorev1beta1helper.GetOrInitCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedShootExists)
 	conditionShootReconciled := gardencorev1beta1helper.GetOrInitCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedShootReconciled)
 	conditionSeedRegistered := gardencorev1beta1helper.GetOrInitCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedSeedRegistered)
+	conditionSeedBootstrapped := gardencorev1beta1helper.GetOrInitCondition(managedSeed.Status.Conditions, seedmanagementv1alpha1.ManagedSeedSeedBootstrapped)
 
 	defer func() {
-		if err := updateStatus(ctx, r.gardenClient.Client(), managedSeed, conditionShootExists, conditionShootReconciled, conditionSeedRegistered); err != nil {
-			managedSeedLogger.Errorf("Could not update status: %+v", err)
+		if err := updateStatus(ctx, r.gardenClient.Client(), managedSeed, conditionShootExists, conditionShootReconciled, conditionSeedRegistered, conditionSeedBootstrapped); err != nil {
+			logger.Errorf("Could not update status: %+v", err)
 		}
 	}()
 
-	// Get shoot
-	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.gardenClient.DirectClient().Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
-		if apierrors.IsNotFound(err) {
-			message := fmt.Sprintf("Shoot %s/%s not found", managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
-			conditionShootExists = gardencorev1beta1helper.UpdatedCondition(conditionShootExists, gardencorev1beta1.ConditionFalse, "ShootNotFound", message)
-			managedSeedLogger.Error(message)
-			r.recorder.Eventf(managedSeed, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", message)
-			return reconcile.Result{}, fmt.Errorf("shoot %s/%s not found: %w", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err)
-		}
-		return reconcile.Result{}, fmt.Errorf("could not get shoot %s/%s: %w", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err)
+	// Ensure the shoot exists and update the ShootExists condition
+	shoot, err := r.ensureShootExists(ctx, managedSeed, &conditionShootExists, logger)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
-	conditionShootExists = gardencorev1beta1helper.UpdatedCondition(conditionShootExists, gardencorev1beta1.ConditionTrue, "ShootFound",
-		fmt.Sprintf("Shoot %s found", kutil.ObjectName(shoot)))
 
-	// Check if the shoot is reconciled
+	// Check if the shoot is reconciled and update the ShootReconciled condition
+	// If the shoot is not reconciled yet, requeue for another check in 10s
 	if shoot.Generation != shoot.Status.ObservedGeneration || shoot.Status.LastOperation == nil || shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
-		message := fmt.Sprintf("Shoot %s is still reconciling", kutil.ObjectName(shoot))
-		conditionShootReconciled = gardencorev1beta1helper.UpdatedCondition(conditionShootReconciled, gardencorev1beta1.ConditionFalse, "ShootStillReconciling", message)
-		managedSeedLogger.Info(message)
+		r.recordAndLog(managedSeed, fmt.Sprintf("Shoot %s is still reconciling", kutil.ObjectName(shoot)), &conditionShootReconciled,
+			gardencorev1beta1.ConditionFalse, "ShootStillReconciling", corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, logger, logrus.InfoLevel)
 		return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
 	}
-	conditionShootReconciled = gardencorev1beta1helper.UpdatedCondition(conditionShootReconciled, gardencorev1beta1.ConditionTrue, "ShootReconciled",
-		fmt.Sprintf("Shoot %s is reconciled", kutil.ObjectName(shoot)))
+	r.recordAndLog(managedSeed, fmt.Sprintf("Shoot %s is reconciled", kutil.ObjectName(shoot)), &conditionShootReconciled,
+		gardencorev1beta1.ConditionTrue, "ShootReconciled", corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, logger, logrus.InfoLevel)
 
-	// Reconcile creation or update
+	// Reconcile creation or update and update the SeedRegistered condition
 	if err := r.actuator.Reconcile(ctx, managedSeed, shoot); err != nil {
-		message := fmt.Sprintf("Could not register seed: %+v", err)
-		conditionSeedRegistered = gardencorev1beta1helper.UpdatedCondition(conditionSeedRegistered, gardencorev1beta1.ConditionFalse, "SeedRegistrationFailed", message)
-		managedSeedLogger.Error(message)
-		r.recorder.Eventf(managedSeed, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", message)
+		r.recordAndLog(managedSeed, fmt.Sprintf("Could not register seed: %+v", err), &conditionSeedRegistered,
+			gardencorev1beta1.ConditionFalse, "SeedRegistrationFailed", corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, logger, logrus.ErrorLevel)
 		return reconcile.Result{}, fmt.Errorf("could not register seed: %w", err)
 	}
-	conditionSeedRegistered = gardencorev1beta1helper.UpdatedCondition(conditionSeedRegistered, gardencorev1beta1.ConditionTrue, "SeedRegistered",
-		fmt.Sprintf("Shoot %s registered as seed", kutil.ObjectName(shoot)))
+	r.recordAndLog(managedSeed, fmt.Sprintf("Shoot %s registered as seed", kutil.ObjectName(shoot)), &conditionSeedRegistered,
+		gardencorev1beta1.ConditionTrue, "SeedRegistered", corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, logger, logrus.InfoLevel)
+
+	// Check if the seed has been successfully bootstrapped and update the SeedBootstrapped condition
+	// If the seed is not bootstrapped yet, requeue for another check in 10s
+	bootstrapped, err := r.checkSeedBootstrapped(ctx, managedSeed, &conditionSeedBootstrapped, logger)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if !bootstrapped {
+		return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
+	}
 
 	// Return success result
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) delete(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) (reconcile.Result, error) {
-	managedSeedLogger := logger.NewFieldLogger(r.logger, "managedSeed", kutil.ObjectName(managedSeed))
-
+func (r *reconciler) delete(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed, logger *logrus.Entry) (reconcile.Result, error) {
 	// Check gardener finalizer
 	if !controllerutil.ContainsFinalizer(managedSeed, gardencorev1beta1.GardenerName) {
-		managedSeedLogger.Debug("Skipping ManagedSeed as it does not have a finalizer")
+		logger.Debug("Skipping ManagedSeed as it does not have a finalizer")
 		return reconcile.Result{}, nil
 	}
 
@@ -145,38 +144,81 @@ func (r *reconciler) delete(ctx context.Context, managedSeed *seedmanagementv1al
 
 	defer func() {
 		if err := updateStatus(ctx, r.gardenClient.Client(), managedSeed, conditionShootExists, conditionSeedRegistered); err != nil {
-			managedSeedLogger.Errorf("Could not update status: %+v", err)
+			logger.Errorf("Could not update status: %+v", err)
 		}
 	}()
 
-	// Get shoot
-	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.gardenClient.DirectClient().Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
-		if apierrors.IsNotFound(err) {
-			message := fmt.Sprintf("Shoot %s/%s not found", managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
-			conditionShootExists = gardencorev1beta1helper.UpdatedCondition(conditionShootExists, gardencorev1beta1.ConditionFalse, "ShootNotFound", message)
-			managedSeedLogger.Error(message)
-			r.recorder.Eventf(managedSeed, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", message)
-			return reconcile.Result{}, fmt.Errorf("shoot %s/%s not found: %w", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err)
-		}
-		return reconcile.Result{}, fmt.Errorf("could not get shoot %s/%s: %w", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err)
+	// Ensure the shoot exists and update the ShootExists condition
+	shoot, err := r.ensureShootExists(ctx, managedSeed, &conditionShootExists, logger)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
-	conditionShootExists = gardencorev1beta1helper.UpdatedCondition(conditionShootExists, gardencorev1beta1.ConditionTrue, "ShootFound",
-		fmt.Sprintf("Shoot %s found", kutil.ObjectName(shoot)))
 
-	// Reconcile deletion
+	// Reconcile deletion and update the SeedRegistered condition
 	if err := r.actuator.Delete(ctx, managedSeed, shoot); err != nil {
-		message := fmt.Sprintf("Could not unregister seed: %+v", err)
-		conditionSeedRegistered = gardencorev1beta1helper.UpdatedCondition(conditionSeedRegistered, gardencorev1beta1.ConditionFalse, "SeedUnregistrationFailed", message)
-		managedSeedLogger.Error(message)
-		r.recorder.Eventf(managedSeed, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", message)
+		r.recordAndLog(managedSeed, fmt.Sprintf("Could not unregister seed: %+v", err), &conditionSeedRegistered,
+			gardencorev1beta1.ConditionTrue, "SeedUnregistrationFailed", corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, logger, logrus.ErrorLevel)
 		return reconcile.Result{}, fmt.Errorf("could not unregister seed: %w", err)
 	}
-	conditionSeedRegistered = gardencorev1beta1helper.UpdatedCondition(conditionSeedRegistered, gardencorev1beta1.ConditionFalse, "SeedUnregistered",
-		fmt.Sprintf("Shoot %s unregistered as seed", kutil.ObjectName(shoot)))
+	r.recordAndLog(managedSeed, fmt.Sprintf("Shoot %s unregistered as seed", kutil.ObjectName(shoot)), &conditionSeedRegistered,
+		gardencorev1beta1.ConditionFalse, "SeedUnregistered", corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, logger, logrus.InfoLevel)
 
 	// Return success result and remove finalizer
 	return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient.Client(), managedSeed, gardencorev1beta1.GardenerName)
+}
+
+func (r *reconciler) ensureShootExists(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed, condition *gardencorev1beta1.Condition, logger *logrus.Entry) (*gardencorev1beta1.Shoot, error) {
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := r.gardenClient.DirectClient().Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.recordAndLog(managedSeed, fmt.Sprintf("Shoot %s/%s not found", managedSeed.Namespace, managedSeed.Spec.Shoot.Name), condition,
+				gardencorev1beta1.ConditionFalse, "ShootNotFound", corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, logger, logrus.ErrorLevel)
+			return nil, fmt.Errorf("shoot %s/%s not found: %w", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err)
+		}
+		r.recordAndLog(managedSeed, fmt.Sprintf("Could not get shoot %s/%s: %+v", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err), condition,
+			gardencorev1beta1.ConditionFalse, "CouldNotGetShoot", corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, logger, logrus.ErrorLevel)
+		return nil, fmt.Errorf("could not get shoot %s/%s: %w", managedSeed.Namespace, managedSeed.Spec.Shoot.Name, err)
+	}
+	r.recordAndLog(managedSeed, fmt.Sprintf("Shoot %s found", kutil.ObjectName(shoot)), condition,
+		gardencorev1beta1.ConditionTrue, "ShootFound", corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, logger, logrus.InfoLevel)
+
+	return shoot, nil
+}
+
+func (r *reconciler) checkSeedBootstrapped(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed, condition *gardencorev1beta1.Condition, logger *logrus.Entry) (bool, error) {
+	// Get seed
+	seed := &gardencorev1beta1.Seed{}
+	if err := r.gardenClient.DirectClient().Get(ctx, kutil.Key(managedSeed.Name), seed); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.recordAndLog(managedSeed, fmt.Sprintf("Seed %s not found", managedSeed.Name), condition,
+				gardencorev1beta1.ConditionFalse, "SeedNotFound", corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, logger, logrus.InfoLevel)
+			return false, nil
+		}
+		r.recordAndLog(managedSeed, fmt.Sprintf("Could not get seed %s", managedSeed.Name), condition,
+			gardencorev1beta1.ConditionFalse, "CouldNotGetSeed", corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, logger, logrus.ErrorLevel)
+		return false, fmt.Errorf("could not get seed %s: %w", managedSeed.Name, err)
+	}
+
+	// Get seed condition
+	sc := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
+	if sc == nil {
+		return false, nil
+	}
+
+	if sc.Status != gardencorev1beta1.ConditionTrue {
+		r.recordAndLog(managedSeed, fmt.Sprintf("Seed %s not bootstrapped: %s", managedSeed.Name, sc.Message), condition,
+			sc.Status, "SeedNotBootstrapped", corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, logger, logrus.InfoLevel)
+		return false, nil
+	}
+	r.recordAndLog(managedSeed, fmt.Sprintf("Seed %s bootstrapped: %s", managedSeed.Name, sc.Message), condition,
+		sc.Status, "SeedBootstrapped", corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, logger, logrus.InfoLevel)
+	return true, nil
+}
+
+func (r *reconciler) recordAndLog(managedSeed *seedmanagementv1alpha1.ManagedSeed, message string, condition *gardencorev1beta1.Condition, conditionStatus gardencorev1beta1.ConditionStatus, conditionReason, eventType, eventReason string, logger *logrus.Entry, logLevel logrus.Level) {
+	*condition = gardencorev1beta1helper.UpdatedCondition(*condition, conditionStatus, conditionReason, message)
+	logger.Log(logLevel, message)
+	r.recorder.Eventf(managedSeed, eventType, eventReason, "%s", message)
 }
 
 func updateStatus(ctx context.Context, c client.Client, managedSeed *seedmanagementv1alpha1.ManagedSeed, conditions ...gardencorev1beta1.Condition) error {

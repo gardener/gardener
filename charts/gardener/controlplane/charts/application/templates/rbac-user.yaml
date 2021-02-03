@@ -9,6 +9,7 @@ metadata:
 rules:
 - apiGroups:
   - core.gardener.cloud
+  - seedmanagement.gardener.cloud
   - dashboard.gardener.cloud
   - settings.gardener.cloud
   resources:

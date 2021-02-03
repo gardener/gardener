@@ -127,7 +127,7 @@ func (a *actuator) Delete(ctx context.Context, managedSeed *seedmanagementv1alph
 		// Unregister the shoot as seed
 		managedSeedLogger.Infof("Unregistering shoot %s as seed", kutil.ObjectName(shoot))
 		if err := a.unregisterAsSeed(ctx, managedSeed); err != nil {
-			return fmt.Errorf("could not unreigster shoot %q as seed: %+v", kutil.ObjectName(shoot), err)
+			return fmt.Errorf("could not unregister shoot %q as seed: %+v", kutil.ObjectName(shoot), err)
 		}
 
 	case managedSeed.Spec.Gardenlet != nil:
@@ -460,12 +460,7 @@ func (a *actuator) prepareGardenletChartValues(
 	gardenletConfig.SeedSelector = nil
 
 	// Get gardenlet chart values
-	values, err := a.vp.GetGardenletChartValues(deployment, gardenletConfig, bootstrapKubeconfig, mergeWithParent)
-	if err != nil {
-		return nil, err
-	}
-
-	return values, nil
+	return a.vp.GetGardenletChartValues(deployment, gardenletConfig, bootstrapKubeconfig, mergeWithParent)
 }
 
 const (
@@ -503,12 +498,7 @@ func (a *actuator) prepareGardenClientConnectionWithBootstrap(ctx context.Contex
 	}
 
 	// Prepare bootstrap kubeconfig
-	bootstrapKubeconfig, err := a.prepareBootstrapKubeconfig(ctx, name, bootstrap, gcc.GardenClusterAddress, gcc.GardenClusterCACert)
-	if err != nil {
-		return "", err
-	}
-
-	return bootstrapKubeconfig, nil
+	return a.prepareBootstrapKubeconfig(ctx, name, bootstrap, gcc.GardenClusterAddress, gcc.GardenClusterCACert)
 }
 
 func (a *actuator) prepareGardenClientConnectionWithoutBootstrap(gcc *configv1alpha1.GardenClientConnection) {

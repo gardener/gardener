@@ -288,11 +288,11 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 	// Also read the managed seed API server settings from the managed-seed-api-server annotation.
 	operation.ManagedSeed, err = kutil.GetManagedSeed(ctx, gardenClient.GardenSeedManagement(), shoot.Info.Namespace, shoot.Info.Name)
 	if err != nil {
-		logger.Warnf("Cannot use shoot %s/%s as managed seed: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
+		return nil, fmt.Errorf("could not get managed seed for shoot %s/%s: %w", shoot.Info.Namespace, shoot.Info.Name, err)
 	}
 	operation.ManagedSeedAPIServer, err = gardencorev1beta1helper.ReadManagedSeedAPIServer(shoot.Info)
 	if err != nil {
-		logger.Warnf("Cannot read managed seed API server settings of shoot %s/%s: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
+		return nil, fmt.Errorf("could not read managed seed API server settings of shoot %s/%s: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
 	}
 
 	// If the managed-seed-api-server annotation is not present, try to read the managed seed API server settings
@@ -301,7 +301,7 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 	if operation.ManagedSeedAPIServer == nil {
 		shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(shoot.Info)
 		if err != nil {
-			logger.Warnf("Cannot read managed seed API server settings of shoot %s/%s: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
+			return nil, fmt.Errorf("could not read managed seed API server settings of shoot %s/%s: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
 		}
 		if shootedSeed != nil {
 			operation.ManagedSeedAPIServer = shootedSeed.APIServer

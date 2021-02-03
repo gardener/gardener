@@ -150,4 +150,6 @@ const (
 	// ManagedSeedSeedRegistered is a condition type for indicating whether the ManagedSeed's seed has been registered,
 	// either directly or by deploying gardenlet into the shoot.
 	ManagedSeedSeedRegistered gardencore.ConditionType = "SeedRegistered"
+	// ManagedSeedSeedBootstrapped is a condition type for indicating whether the ManagedSeed's seed has been bootstrapped successfully.
+	ManagedSeedSeedBootstrapped gardencore.ConditionType = "SeedBootstrapped"
 )
