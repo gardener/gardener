@@ -36,13 +36,12 @@ import (
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/version"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
@@ -338,7 +337,7 @@ func (b *Botanist) PrepareKubeAPIServerForMigration(ctx context.Context) error {
 }
 
 // DefaultControlPlane creates the default deployer for the ControlPlane custom resource with the given purpose.
-func (b *Botanist) DefaultControlPlane(seedClient client.Client, purpose extensionsv1alpha1.Purpose) shoot.ExtensionControlPlane {
+func (b *Botanist) DefaultControlPlane(seedClient client.Client, purpose extensionsv1alpha1.Purpose) extensionscontrolplane.Interface {
 	values := &extensionscontrolplane.Values{
 		Name:      b.Shoot.Info.Name,
 		Namespace: b.Shoot.SeedNamespace,
@@ -379,7 +378,7 @@ func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
 	return b.deployOrRestoreControlPlane(ctx, b.Shoot.Components.Extensions.ControlPlaneExposure)
 }
 
-func (b *Botanist) deployOrRestoreControlPlane(ctx context.Context, controlPlane shoot.ExtensionControlPlane) error {
+func (b *Botanist) deployOrRestoreControlPlane(ctx context.Context, controlPlane extensionscontrolplane.Interface) error {
 	if b.isRestorePhase() {
 		return controlPlane.Restore(ctx, b.ShootState)
 	}

@@ -23,8 +23,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 
 	"github.com/sirupsen/logrus"
@@ -47,6 +47,12 @@ const (
 // TimeNow returns the current time. Exposed for testing.
 var TimeNow = time.Now
 
+// Interface is an interface for managing ContainerRuntimes.
+type Interface interface {
+	component.DeployMigrateWaiter
+	DeleteStaleResources(ctx context.Context) error
+}
+
 // Values contains the values used to create a ContainerRuntime resources.
 type Values struct {
 	// Namespace is the namespace for the ContainerRuntime resource.
@@ -64,7 +70,7 @@ type containerRuntime struct {
 	waitTimeout         time.Duration
 }
 
-// New creates a new instance of ExtensionContainerRuntime deployer.
+// New creates a new instance of Interface.
 func New(
 	logger logrus.FieldLogger,
 	client client.Client,
@@ -72,7 +78,7 @@ func New(
 	waitInterval time.Duration,
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
-) shoot.ExtensionContainerRuntime {
+) Interface {
 	return &containerRuntime{
 		values:              values,
 		client:              client,

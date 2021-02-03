@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -package backupentry -destination=mocks.go github.com/gardener/gardener/pkg/operation/botanist/extensions/backupentry Interface
+//go:generate mockgen -package infrastructure -destination=mocks.go github.com/gardener/gardener/pkg/operation/botanist/extensions/infrastructure Interface
 
-package backupentry
+package infrastructure

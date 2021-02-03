@@ -23,7 +23,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/worker"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -36,7 +35,7 @@ import (
 )
 
 // DefaultWorker creates the default deployer for the Worker custom resource.
-func (b *Botanist) DefaultWorker(seedClient client.Client) shoot.ExtensionWorker {
+func (b *Botanist) DefaultWorker(seedClient client.Client) worker.Interface {
 	return worker.New(
 		b.Logger,
 		seedClient,

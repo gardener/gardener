@@ -23,11 +23,11 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mockkubernetes "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
-	mockshoot "github.com/gardener/gardener/pkg/mock/gardener/operation/shoot"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig"
 	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/mock"
+	mockworker "github.com/gardener/gardener/pkg/operation/botanist/extensions/worker/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
@@ -46,7 +46,7 @@ var _ = Describe("Worker", func() {
 	var (
 		ctrl                  *gomock.Controller
 		c                     *mockclient.MockClient
-		worker                *mockshoot.MockExtensionWorker
+		worker                *mockworker.MockInterface
 		operatingSystemConfig *mockoperatingsystemconfig.MockInterface
 		botanist              *Botanist
 
@@ -62,7 +62,7 @@ var _ = Describe("Worker", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
-		worker = mockshoot.NewMockExtensionWorker(ctrl)
+		worker = mockworker.NewMockInterface(ctrl)
 		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
 		botanist = &Botanist{Operation: &operation.Operation{
 			Secrets: map[string]*corev1.Secret{

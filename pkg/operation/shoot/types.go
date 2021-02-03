@@ -19,7 +19,6 @@ import (
 	"net"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
@@ -27,8 +26,12 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/extensions/backupentry"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/containerruntime"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/extension"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/worker"
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -36,7 +39,6 @@ import (
 	"github.com/Masterminds/semver"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -110,16 +112,16 @@ type ControlPlane struct {
 
 // Extensions contains references to extension resources.
 type Extensions struct {
-	BackupEntry           extensionsbackupentry.BackupEntry
-	ContainerRuntime      ExtensionContainerRuntime
-	ControlPlane          ExtensionControlPlane
-	ControlPlaneExposure  ExtensionControlPlane
+	BackupEntry           extensionsbackupentry.Interface
+	ContainerRuntime      containerruntime.Interface
+	ControlPlane          controlplane.Interface
+	ControlPlaneExposure  controlplane.Interface
 	DNS                   *DNS
 	Extension             extension.Interface
-	Infrastructure        ExtensionInfrastructure
+	Infrastructure        infrastructure.Interface
 	Network               component.DeployMigrateWaiter
 	OperatingSystemConfig operatingsystemconfig.Interface
-	Worker                ExtensionWorker
+	Worker                worker.Interface
 }
 
 // SystemComponents contains references to system components.
@@ -139,37 +141,6 @@ type DNS struct {
 	AdditionalProviders map[string]component.DeployWaiter
 	NginxOwner          component.DeployWaiter
 	NginxEntry          component.DeployWaiter
-}
-
-// ExtensionInfrastructure contains references to an Infrastructure extension deployer and its generated provider
-// status.
-type ExtensionInfrastructure interface {
-	component.DeployMigrateWaiter
-	SetSSHPublicKey([]byte)
-	ProviderStatus() *runtime.RawExtension
-	NodesCIDR() *string
-}
-
-// ExtensionControlPlane contains references to a ControlPlane extension deployer and its generated provider status.
-type ExtensionControlPlane interface {
-	component.DeployMigrateWaiter
-	SetInfrastructureProviderStatus(*runtime.RawExtension)
-	ProviderStatus() *runtime.RawExtension
-}
-
-// ExtensionContainerRuntime contains references to a ContainerRuntime extension deployer.
-type ExtensionContainerRuntime interface {
-	component.DeployMigrateWaiter
-	DeleteStaleResources(ctx context.Context) error
-}
-
-// ExtensionWorker contains references to a Worker extension deployer.
-type ExtensionWorker interface {
-	component.DeployMigrateWaiter
-	SetSSHPublicKey([]byte)
-	SetInfrastructureProviderStatus(*runtime.RawExtension)
-	SetWorkerNameToOperatingSystemConfigsMap(map[string]*operatingsystemconfig.OperatingSystemConfigs)
-	MachineDeployments() []extensionsv1alpha1.MachineDeployment
 }
 
 // Networks contains pre-calculated subnets and IP address for various components.

@@ -59,7 +59,7 @@ type actuator struct {
 	seedClient   kubernetes.Interface
 	backupBucket *gardencorev1beta1.BackupBucket
 	backupEntry  *gardencorev1beta1.BackupEntry
-	component    extensionsbackupentry.BackupEntry
+	component    extensionsbackupentry.Interface
 }
 
 func newActuator(gardenClient, seedClient kubernetes.Interface, be *gardencorev1beta1.BackupEntry, logger logrus.FieldLogger) Actuator {

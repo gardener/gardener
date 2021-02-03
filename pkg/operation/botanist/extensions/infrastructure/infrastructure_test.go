@@ -28,7 +28,6 @@ import (
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
@@ -49,7 +48,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("#ExtensionInfrastructure", func() {
+var _ = Describe("#Interface", func() {
 	const (
 		namespace    = "test-namespace"
 		name         = "test-deploy"
@@ -72,7 +71,7 @@ var _ = Describe("#ExtensionInfrastructure", func() {
 		infra        *extensionsv1alpha1.Infrastructure
 		infraSpec    extensionsv1alpha1.InfrastructureSpec
 		values       *infrastructure.Values
-		deployWaiter shoot.ExtensionInfrastructure
+		deployWaiter infrastructure.Interface
 		waiter       *retryfake.Ops
 
 		cleanupFunc func()

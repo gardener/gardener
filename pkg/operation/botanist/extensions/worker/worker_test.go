@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/worker"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -112,7 +111,7 @@ var _ = Describe("Worker", func() {
 		}
 		wSpec extensionsv1alpha1.WorkerSpec
 
-		defaultDepWaiter shoot.ExtensionWorker
+		defaultDepWaiter worker.Interface
 		values           *worker.Values
 	)
 

@@ -21,14 +21,13 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DefaultInfrastructure creates the default deployer for the Infrastructure custom resource.
-func (b *Botanist) DefaultInfrastructure(seedClient client.Client) shoot.ExtensionInfrastructure {
+func (b *Botanist) DefaultInfrastructure(seedClient client.Client) infrastructure.Interface {
 	return infrastructure.New(
 		b.Logger,
 		seedClient,
