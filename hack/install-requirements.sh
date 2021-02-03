@@ -24,7 +24,18 @@ export GO111MODULE=on
 curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.27.0
 curl -s "https://raw.githubusercontent.com/helm/helm/v2.17.0/scripts/get" | bash -s -- --version 'v2.17.0'
 
-if [[ "$(uname -s)" == *"Darwin"* ]]; then
+platform=$(uname -s)
+if [[ ${platform} == "Linux" ]]
+then
+  if ! which jq &>/dev/null
+  then
+    echo "Installing jq ..."
+    curl -L -o /usr/local/bin/jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+    chmod +x /usr/local/bin/jq
+  fi
+fi
+
+if [[ ${platform} == *"Darwin"* ]]; then
   cat <<EOM
 You are running in a MAC OS environment!
 
@@ -35,7 +46,7 @@ Please make sure you have installed the following requirements:
 - GNU Sed
 
 Brew command:
-$ brew install coreutils gnu-tar gnu-sed
+$ brew install coreutils gnu-tar gnu-sed jq
 
 Please allow them to be used without their "g" prefix:
 $ export PATH=/usr/local/opt/coreutils/libexec/gnubin:\$PATH
