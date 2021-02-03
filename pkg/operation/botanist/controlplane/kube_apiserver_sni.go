@@ -29,15 +29,14 @@ import (
 
 // kubeAPIServiceValues configure the kube-apiserver service SNI.
 type KubeAPIServerSNIValues struct {
-	Hosts                    []string            `json:"hosts,omitempty"`
-	Name                     string              `json:"name,omitempty"`
-	NamespaceUID             types.UID           `json:"namespaceUID,omitempty"`
-	ApiserverClusterIP       string              `json:"apiserverClusterIP,omitempty"`
-	IstioIngressGateway      IstioIngressGateway `json:"istioIngressGateway,omitempty"`
-	EnableKonnectivityTunnel bool                `json:"enableKonnectivityTunnel,omitempty"`
+	Hosts               []string            `json:"hosts,omitempty"`
+	Name                string              `json:"name,omitempty"`
+	NamespaceUID        types.UID           `json:"namespaceUID,omitempty"`
+	ApiserverClusterIP  string              `json:"apiserverClusterIP,omitempty"`
+	IstioIngressGateway IstioIngressGateway `json:"istioIngressGateway,omitempty"`
 }
 
-// IstioIngressGateway contain the values for istio ingress gateway configuration.
+// IstioIngressGateway contains the values for istio ingress gateway configuration.
 type IstioIngressGateway struct {
 	Namespace string            `json:"namespace,omitempty"`
 	Labels    map[string]string `json:"labels,omitempty"`

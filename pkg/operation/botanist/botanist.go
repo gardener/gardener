@@ -127,6 +127,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
+	o.Shoot.Components.ControlPlane.KonnectivityServer, err = b.DefaultKonnectivityServer()
+	if err != nil {
+		return nil, err
+	}
 
 	// system components
 	o.Shoot.Components.SystemComponents.Namespaces = b.DefaultShootNamespaces()

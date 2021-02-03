@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/extensions/backupentry"
@@ -104,6 +105,7 @@ type ControlPlane struct {
 	KubeScheduler         kubescheduler.KubeScheduler
 	KubeControllerManager kubecontrollermanager.KubeControllerManager
 	ClusterAutoscaler     clusterautoscaler.ClusterAutoscaler
+	KonnectivityServer    konnectivity.KonnectivityServer
 }
 
 // Extensions contains references to extension resources.

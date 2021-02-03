@@ -21,7 +21,28 @@ import (
 	"strconv"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/konnectivity"
+	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane"
+	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
+	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/version"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
@@ -41,26 +62,6 @@ import (
 	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
-	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
-	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
@@ -603,7 +604,9 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"securePort":                443,
 			"podAnnotations":            podAnnotations,
 			"konnectivityTunnel": map[string]interface{}{
-				"enabled": b.Shoot.KonnectivityTunnelEnabled,
+				"enabled":    b.Shoot.KonnectivityTunnelEnabled,
+				"name":       konnectivity.ServerName,
+				"serverPort": konnectivity.ServerHTTPSPort,
 			},
 			"hvpa": map[string]interface{}{
 				"enabled": hvpaEnabled,
@@ -622,7 +625,11 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	)
 
 	if b.Shoot.KonnectivityTunnelEnabled {
-		podAnnotations["checksum/secret-konnectivity-server"] = b.CheckSums["konnectivity-server"]
+		if b.APIServerSNIEnabled() {
+			podAnnotations["checksum/secret-"+konnectivity.SecretNameServerTLSClient] = b.CheckSums[konnectivity.SecretNameServerTLSClient]
+		} else {
+			podAnnotations["checksum/secret-konnectivity-server"] = b.CheckSums[konnectivity.ServerName]
+		}
 	} else {
 		podAnnotations["checksum/secret-vpn-seed"] = b.CheckSums["vpn-seed"]
 		podAnnotations["checksum/secret-vpn-seed-tlsauth"] = b.CheckSums["vpn-seed-tlsauth"]
@@ -825,7 +832,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 
 	tunnelComponentImageName := common.VPNSeedImageName
 	if b.Shoot.KonnectivityTunnelEnabled {
-		tunnelComponentImageName = common.KonnectivityServerImageName
+		tunnelComponentImageName = konnectivity.ServerImageName
 	}
 
 	values, err := b.InjectSeedShootImages(defaultValues,
@@ -1032,7 +1039,6 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 				Namespace: *b.Config.SNI.Ingress.Namespace,
 				Labels:    b.Config.SNI.Ingress.Labels,
 			},
-			EnableKonnectivityTunnel: b.Shoot.KonnectivityTunnelEnabled,
 		},
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),

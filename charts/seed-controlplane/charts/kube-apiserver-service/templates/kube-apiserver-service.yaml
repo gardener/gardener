@@ -31,7 +31,7 @@ spec:
 {{- if .Values.nodePort }}
     nodePort: {{ .Values.nodePort }}
 {{- end }}
-{{- if .Values.enableKonnectivityTunnel }}
+{{- if and .Values.enableKonnectivityTunnel (not .Values.enableSNI) }}
   - name: konnectivity-server
     protocol: TCP
     port: 8132

@@ -51,7 +51,7 @@ spec:
         networking.gardener.cloud/to-shoot-networks: allowed
         networking.gardener.cloud/from-prometheus: allowed
     spec:
-      {{- if .Values.konnectivityTunnel.enabled }}
+      {{- if and .Values.konnectivityTunnel.enabled (not .Values.sni.enabled) }}
       serviceAccountName: kube-apiserver
       {{- end }}
       affinity:
@@ -224,9 +224,14 @@ spec:
         {{- if .Values.konnectivityTunnel.enabled }}
         - name: egress-selection-config
           mountPath: /etc/kubernetes/konnectivity
+        {{- if .Values.sni.enabled }}
+        - name: konnectivity-server-client-tls
+          mountPath: /etc/srv/kubernetes/konnectivity-server-client-tls
+        {{- else }}
         - name: konnectivity-uds
           mountPath: /etc/srv/kubernetes/konnectivity-server
           readOnly: false
+        {{- end }}
         {{- end }}
         - name: audit-policy-config
           mountPath: /etc/kubernetes/audit
@@ -321,7 +326,7 @@ spec:
         - name: kube-apiserver
           mountPath: /srv/kubernetes/apiserver
       {{- end }}
-      {{- if .Values.konnectivityTunnel.enabled }}
+      {{- if and .Values.konnectivityTunnel.enabled (not .Values.sni.enabled ) }}
       - name: konnectivity-server
         image: {{ index .Values.images "konnectivity-server" }}
         command:
@@ -346,7 +351,8 @@ spec:
         - --log-file-max-size=0
         - --delete-existing-uds-file=true
         - --mode=http-connect
-        - --server-port={{ .Values.konnectivityTunnel.serverPort }}
+        # the server port should always be 0 when using UDS
+        - --server-port=0
         - --agent-port={{ .Values.konnectivityTunnel.agentPort }}
         - --admin-port={{ .Values.konnectivityTunnel.adminPort }}
         - --health-port={{ .Values.konnectivityTunnel.healthPort }}
@@ -381,7 +387,7 @@ spec:
         - name: konnectivity-uds
           mountPath: /etc/srv/kubernetes/konnectivity-server
           readOnly: false
-      {{- else }}
+      {{- else if not .Values.konnectivityTunnel.enabled }}
       - name: vpn-seed
         image: {{ index .Values.images "vpn-seed" }}
         imagePullPolicy: IfNotPresent
@@ -486,6 +492,14 @@ spec:
         configMap:
           name: kube-apiserver-admission-config
       {{- if .Values.konnectivityTunnel.enabled }}
+      - name: egress-selection-config
+        configMap:
+          name: kube-apiserver-egress-selector-configuration
+      {{- if .Values.sni.enabled }}
+      - name: konnectivity-server-client-tls
+        secret:
+          secretName: konnectivity-server-client-tls
+      {{- else }}
       - name: konnectivity-server-certs
         secret:
           secretName: konnectivity-server
@@ -494,9 +508,7 @@ spec:
           secretName: konnectivity-server-kubeconfig
       - name: konnectivity-uds
         emptyDir: {}
-      - name: egress-selection-config
-        configMap:
-          name: kube-apiserver-egress-selector-configuration
+      {{- end }}
       {{- else }}
       - name: vpn-seed
         secret:
