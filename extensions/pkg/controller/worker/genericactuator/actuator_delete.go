@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -253,11 +254,10 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 					return retryutils.SevereError(fmt.Errorf("could not get the secret referenced by worker: %+v", err))
 				}
 
-				hasFinalizer, err := controller.HasFinalizer(secret, mcmFinalizer)
-				if err != nil {
-					return retryutils.SevereError(fmt.Errorf("could not check whether machine class credentials secret has finalizer: %+v", err))
-				}
-				if hasFinalizer {
+				// We need to check for both mcmFinalizer and mcmProviderFinalizer:
+				// - mcmFinalizer is the finalizer used by machine controller manager and its in-tree providers
+				// - mcmProviderFinalizer is the finalizer used by out-of-tree machine controller providers
+				if controllerutil.ContainsFinalizer(secret, mcmFinalizer) || controllerutil.ContainsFinalizer(secret, mcmProviderFinalizer) {
 					msg += "1 machine class credentials secret, "
 				} else {
 					releasedMachineClassCredentialsSecret = true
