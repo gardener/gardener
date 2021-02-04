@@ -349,11 +349,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels: utils.MergeStringMaps(r.getLabels(), map[string]string{
-					v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
-					v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-					v1beta1constants.LabelNetworkPolicyToSeedAPIServer:  v1beta1constants.LabelNetworkPolicyAllowed,
-				}),
+				Labels: r.getDeploymentTemplateLabels(),
 			},
 			Spec: corev1.PodSpec{
 				ServiceAccountName: serviceAccountName,
@@ -533,6 +529,20 @@ func (r *resourceManager) getLabels() map[string]string {
 	if partOfShootControlPlane {
 		return utils.MergeStringMaps(appLabel(), map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+		})
+	}
+
+	return appLabel()
+}
+
+func (r *resourceManager) getDeploymentTemplateLabels() map[string]string {
+	partOfShootControlPlane := r.values.Kubeconfig != nil
+	if partOfShootControlPlane {
+		return utils.MergeStringMaps(appLabel(), map[string]string{
+			v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToSeedAPIServer:  v1beta1constants.LabelNetworkPolicyAllowed,
 		})
 	}
 

@@ -600,6 +600,10 @@ var _ = Describe("ResourceManager", func() {
 				delete(deployment.Spec.Template.ObjectMeta.Labels, v1beta1constants.GardenRole)
 				delete(deployment.Spec.Template.ObjectMeta.Labels, v1beta1constants.DeprecatedGardenRole)
 				delete(vpa.ObjectMeta.Labels, v1beta1constants.GardenRole)
+				// Remove networking label from deployment template
+				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-dns")
+				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-seed-apiserver")
+				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-shoot-apiserver")
 
 				resourceManager = resourcemanager.New(c, deployNamespace, image, replicas, cfg)
 			})
