@@ -101,6 +101,16 @@ go get -u github.com/bronze1man/yaml2json
 brew install jq
 ```
 
+## Installing GNU Parallel
+
+[GNU Parallel](https://www.gnu.org/software/parallel/) is a shell tool for executing jobs in parallel, used by the code generation scripts (`make generate`).
+
+On MacOS run
+
+```bash
+brew install parallel
+```
+
 ## [MacOS only] Install GNU core utilities
 
 When running on MacOS you have to install the GNU core utilities:

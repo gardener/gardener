@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+# Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ if [ "${PROJECT_ROOT#/}" == "${PROJECT_ROOT}" ]; then
 fi
 
 pushd "$PROJECT_ROOT" > /dev/null
-ROOTS=${ROOTS:-$(git grep --files-with-matches -e '//go:generate' cmd extensions pkg plugin test | \
+ROOTS=${ROOTS:-$(git grep --files-with-matches -e '//go:generate' "$@" | \
 	xargs -n 1 dirname | \
 	sed 's,^,github.com/gardener/gardener/,;' | \
 	sort | uniq
@@ -34,4 +34,6 @@ popd > /dev/null
 
 read -ra PACKAGES <<< $(echo ${ROOTS})
 
-GO111MODULE=on parallel echo Generate {}';' go generate -mod=vendor {} ::: ${PACKAGES[@]}
+# We need to explicitly pass GO111MODULE=off to k8s.io/code-generator as it is significantly slower otherwise,
+# see https://github.com/kubernetes/code-generator/issues/100.
+GO111MODULE=off parallel --will-cite echo Generate {}';' go generate -mod=vendor {} ::: ${PACKAGES[@]}
