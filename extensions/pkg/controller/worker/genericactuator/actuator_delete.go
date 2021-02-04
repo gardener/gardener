@@ -255,7 +255,10 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 					return retryutils.SevereError(fmt.Errorf("could not get the secret referenced by worker: %+v", err))
 				}
 
-				if controllerutil.ContainsFinalizer(secret, mcmFinalizer) {
+				// We need to check for both mcmFinalizer and mcmProviderFinalizer:
+				// - mcmFinalizer is the finalizer used by machine controller manager and its in-tree providers
+				// - mcmProviderFinalizer is the finalizer used by out-of-tree machine controller providers
+				if controllerutil.ContainsFinalizer(secret, mcmFinalizer) || controllerutil.ContainsFinalizer(secret, mcmProviderFinalizer) {
 					msg += "1 machine class credentials secret, "
 				} else {
 					releasedMachineClassCredentialsSecret = true
