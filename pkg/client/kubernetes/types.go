@@ -17,6 +17,10 @@ package kubernetes
 import (
 	"context"
 
+	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
+	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
+	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
+
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencorescheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
@@ -107,6 +111,9 @@ func init() {
 		druidv1alpha1.AddToScheme,
 		apiextensionsscheme.AddToScheme,
 		istionetworkingv1beta1.AddToScheme,
+		auditv1.AddToScheme,
+		auditv1beta1.AddToScheme,
+		apiserverv1alpha1.AddToScheme,
 	)
 	utilruntime.Must(seedSchemeBuilder.AddToScheme(SeedScheme))
 

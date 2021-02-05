@@ -20,14 +20,15 @@ import (
 	"reflect"
 	"sync"
 
-	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils/infodata"
-	"github.com/gardener/gardener/pkg/utils/secrets"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	kubeapiserverdeployment "github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubeapiserver/deployment"
+	"github.com/gardener/gardener/pkg/utils/infodata"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // SecretConfigGeneratorFunc is a func used to generate secret configurations
@@ -192,7 +193,7 @@ func (s *SecretsManager) generateStaticTokenAndUpdateResourceList() error {
 	}
 
 	newStaticTokenConfig := secrets.StaticTokenSecretConfig{
-		Name:   common.StaticTokenSecretName,
+		Name:   kubeapiserverdeployment.StaticTokenSecretName,
 		Tokens: make(map[string]secrets.TokenConfig),
 	}
 

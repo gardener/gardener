@@ -16,24 +16,17 @@ package botanist
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"time"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
-	errorspkg "github.com/pkg/errors"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
 )
 
 // WaitUntilNginxIngressServiceIsReady waits until the external load balancer of the nginx ingress controller has been created.
@@ -55,78 +48,6 @@ func (b *Botanist) WaitUntilVpnShootServiceIsReady(ctx context.Context) error {
 
 	_, err := kutil.WaitUntilLoadBalancerIsReady(ctx, b.K8sShootClient, metav1.NamespaceSystem, "vpn-shoot", timeout, b.Logger)
 	return err
-}
-
-// WaitUntilKubeAPIServerIsDeleted waits until the kube-apiserver is deleted
-func (b *Botanist) WaitUntilKubeAPIServerIsDeleted(ctx context.Context) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
-		deploy := &appsv1.Deployment{}
-		err = b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploy)
-		switch {
-		case apierrors.IsNotFound(err):
-			return retry.Ok()
-		case err == nil:
-			return retry.MinorError(err)
-		default:
-			return retry.SevereError(err)
-		}
-	})
-}
-
-// WaitUntilKubeAPIServerReady waits until the kube-apiserver pod(s) indicate readiness in their statuses.
-func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
-	deployment := &appsv1.Deployment{}
-
-	if err := retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
-		if err := b.K8sSeedClient.DirectClient().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
-			return retry.SevereError(err)
-		}
-		if deployment.Generation != deployment.Status.ObservedGeneration {
-			return retry.MinorError(fmt.Errorf("kube-apiserver not observed at latest generation (%d/%d)",
-				deployment.Status.ObservedGeneration, deployment.Generation))
-		}
-
-		replicas := int32(0)
-		if deployment.Spec.Replicas != nil {
-			replicas = *deployment.Spec.Replicas
-		}
-		if replicas != deployment.Status.UpdatedReplicas {
-			return retry.MinorError(fmt.Errorf("kube-apiserver does not have enough updated replicas (%d/%d)",
-				deployment.Status.UpdatedReplicas, replicas))
-		}
-		if replicas != deployment.Status.Replicas {
-			return retry.MinorError(fmt.Errorf("kube-apiserver deployment has outdated replicas"))
-		}
-		if replicas != deployment.Status.AvailableReplicas {
-			return retry.MinorError(fmt.Errorf("kube-apiserver does not have enough available replicas (%d/%d",
-				deployment.Status.AvailableReplicas, replicas))
-		}
-
-		return retry.Ok()
-	}); err != nil {
-		var retryError *retry.Error
-		if !errors.As(err, &retryError) {
-			return err
-		}
-
-		newestPod, err2 := kutil.NewestPodForDeployment(ctx, b.K8sSeedClient.DirectClient(), deployment)
-		if err2 != nil {
-			return errorspkg.Wrapf(err, "failure to find the newest pod for deployment to read the logs: %s", err2.Error())
-		}
-		if newestPod == nil {
-			return err
-		}
-
-		logs, err2 := kutil.MostRecentCompleteLogs(ctx, b.K8sSeedClient.Kubernetes().CoreV1().Pods(newestPod.Namespace), newestPod, "kube-apiserver", pointer.Int64Ptr(10))
-		if err2 != nil {
-			return errorspkg.Wrapf(err, "failure to read the logs: %s", err2.Error())
-		}
-
-		errWithLogs := fmt.Errorf("%s, logs of newest pod:\n%s", err.Error(), logs)
-		return gardencorev1beta1helper.DetermineError(errWithLogs, errWithLogs.Error())
-	}
-
-	return nil
 }
 
 // WaitUntilTunnelConnectionExists waits until a port forward connection to the tunnel pod (vpn-shoot or konnectivity-agent) in the kube-system

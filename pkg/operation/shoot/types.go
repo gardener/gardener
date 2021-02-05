@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/konnectivity"
+	kubeapiserverdeployment "github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubeapiserver/deployment"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/resourcemanager"
@@ -103,6 +104,7 @@ type ControlPlane struct {
 	EtcdMain              etcd.Etcd
 	EtcdEvents            etcd.Etcd
 	KubeAPIServerService  component.DeployWaiter
+	KubeAPIServer         kubeapiserverdeployment.KubeAPIServer
 	KubeAPIServerSNI      component.DeployWaiter
 	KubeAPIServerSNIPhase component.Phase
 	KubeScheduler         kubescheduler.KubeScheduler

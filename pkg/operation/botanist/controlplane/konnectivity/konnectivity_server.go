@@ -46,13 +46,15 @@ import (
 const (
 	// ServerName is the name of kubernetes resources associated with konnectivity-server.
 	ServerName = "konnectivity-server"
+	// ServiceName is the name of the service for the konnectivity-server.
+	ServiceName = ServerName
 	// SecretNameServerKubeconfig is the name for the konnectivity-server's kubeconfig secret.
 	SecretNameServerKubeconfig = "konnectivity-server-kubeconfig"
 	// SecretNameServerTLS is the name of the konnectivity-server server certificate secret.
 	SecretNameServerTLS = ServerName
 	// SecretNameServerCA is the name of the konnectivity-server server certificate authority secret.
 	SecretNameServerCA = ServerName + "-ca"
-	// ServerCASecretName is the name of the konnectivity-server server certificate authority secret.
+	// ServerCASecretName is the name of the konnectivity-server client certificate .
 	SecretNameServerTLSClient = ServerName + "-client-tls"
 	// ServerImageName is the name of the konnectivity-server image.
 	ServerImageName = ServerName
@@ -62,6 +64,10 @@ const (
 	ServerHTTPSPort int32 = 9443
 	// ServerAgentPort is the port on which konnectivity-server receives traffic from konnectivity-agents.
 	ServerAgentPort int32 = 8132
+	// ServerAdminPort is a constant for the port used by an administrator to connect to the konectivity server in the Control Plane.
+	ServerAdminPort = int32(8133)
+	// ServerHealthPort is a constant for the port used for liveness probe of the konnectivity server pod.
+	ServerHealthPort = int32(8134)
 )
 
 // KonnectivityServer contains functions for a konnectivity-server deployer.
@@ -162,13 +168,11 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 	}
 
 	const (
-		name                          = ServerName
-		adminPort               int32 = 8133
-		healthPort              int32 = 8134
-		serverAgentPortUnsigned       = uint32(ServerAgentPort)
-		serverMountPath               = "/certs/konnectivity-server"
-		clientCAMountPath             = "/certs/client-ca"
-		kubeconfigMountPath           = "/auth"
+		name                    = ServerName
+		serverAgentPortUnsigned = uint32(ServerAgentPort)
+		serverMountPath         = "/certs/konnectivity-server"
+		clientCAMountPath       = "/certs/client-ca"
+		kubeconfigMountPath     = "/auth"
 	)
 
 	var (
@@ -179,18 +183,18 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 		serviceAccount = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: k.Namespace,
-			Labels:    getLabels(),
+			Labels:    GetLabels(),
 		}}
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: k.Namespace,
-				Labels:    getLabels(),
+				Labels:    GetLabels(),
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas:             pointer.Int32Ptr(k.Replicas),
 				RevisionHistoryLimit: pointer.Int32Ptr(1),
-				Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
+				Selector:             &metav1.LabelSelector{MatchLabels: GetLabels()},
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -205,7 +209,7 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 							"checksum/secret-" + k.secrets.Server.Name:     k.secrets.Server.Checksum,
 							"checksum/secret-" + k.secrets.ClientCA.Name:   k.secrets.ClientCA.Checksum,
 						},
-						Labels: utils.MergeStringMaps(getLabels(), map[string]string{
+						Labels: utils.MergeStringMaps(GetLabels(), map[string]string{
 							v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
 							v1beta1constants.LabelNetworkPolicyFromShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 							v1beta1constants.LabelNetworkPolicyToShootAPIServer:   v1beta1constants.LabelNetworkPolicyAllowed,
@@ -219,7 +223,7 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 									Weight: 100,
 									PodAffinityTerm: corev1.PodAffinityTerm{
 										TopologyKey:   corev1.LabelHostname,
-										LabelSelector: &metav1.LabelSelector{MatchLabels: getLabels()},
+										LabelSelector: &metav1.LabelSelector{MatchLabels: GetLabels()},
 									},
 								}},
 							},
@@ -253,8 +257,8 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 								"--mode=http-connect",
 								fmt.Sprintf("--server-port=%d", ServerHTTPSPort),
 								fmt.Sprintf("--agent-port=%d", ServerAgentPort),
-								fmt.Sprintf("--admin-port=%d", adminPort),
-								fmt.Sprintf("--health-port=%d", healthPort),
+								fmt.Sprintf("--admin-port=%d", ServerAdminPort),
+								fmt.Sprintf("--health-port=%d", ServerHealthPort),
 								"--v=2",
 								"--server-count",
 							},
@@ -262,7 +266,7 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 								Handler: corev1.Handler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/healthz",
-										Port:   intstr.IntOrString{Type: intstr.Int, IntVal: healthPort},
+										Port:   intstr.IntOrString{Type: intstr.Int, IntVal: ServerHealthPort},
 										Host:   "127.0.0.1",
 										Scheme: corev1.URISchemeHTTP,
 									},
@@ -288,12 +292,12 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 								HostPort:      ServerAgentPort,
 							}, {
 								Name:          "admin",
-								ContainerPort: adminPort,
-								HostPort:      adminPort,
+								ContainerPort: ServerAdminPort,
+								HostPort:      ServerAdminPort,
 							}, {
 								Name:          "health",
-								ContainerPort: healthPort,
-								HostPort:      healthPort,
+								ContainerPort: ServerHealthPort,
+								HostPort:      ServerHealthPort,
 							}},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -344,7 +348,7 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: k.Namespace,
-				Labels:    getLabels(),
+				Labels:    GetLabels(),
 			},
 			Spec: istionetworkingv1beta1.Gateway{
 				Selector: k.IstioIngressLabels,
@@ -365,7 +369,7 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: k.Namespace,
-				Labels:    getLabels(),
+				Labels:    GetLabels(),
 			},
 			Spec: istionetworkingv1beta1.VirtualService{
 				Hosts:    k.Hosts,
@@ -391,7 +395,7 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: k.Namespace,
-				Labels:    getLabels(),
+				Labels:    GetLabels(),
 			},
 			Spec: istionetworkingv1beta1.DestinationRule{
 				ExportTo: []string{"*"},
@@ -416,24 +420,24 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: k.Namespace,
-				Labels:    getLabels(),
+				Labels:    GetLabels(),
 			},
 			Spec: policyv1beta1.PodDisruptionBudgetSpec{
 				MinAvailable: &minAvailable,
 				Selector: &metav1.LabelSelector{
-					MatchLabels: getLabels(),
+					MatchLabels: GetLabels(),
 				},
 			},
 		}
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        name,
+				Name:        ServiceName,
 				Namespace:   k.Namespace,
 				Annotations: map[string]string{"networking.istio.io/exportTo": "*"},
-				Labels:      getLabels(),
+				Labels:      GetLabels(),
 			},
 			Spec: corev1.ServiceSpec{
-				Selector: getLabels(),
+				Selector: GetLabels(),
 				Type:     corev1.ServiceTypeClusterIP,
 				Ports: []corev1.ServicePort{
 					{
@@ -452,7 +456,7 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: k.Namespace,
-				Labels:    getLabels(),
+				Labels:    GetLabels(),
 			},
 			Rules: []rbacv1.PolicyRule{{
 				Verbs:         []string{"get", "list", "watch"},
@@ -465,7 +469,7 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: k.Namespace,
-				Labels:    getLabels(),
+				Labels:    GetLabels(),
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
@@ -482,11 +486,11 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: k.Namespace,
-				Labels:    getLabels(),
+				Labels:    GetLabels(),
 			},
 			Spec: networkingv1.NetworkPolicySpec{
 				PodSelector: metav1.LabelSelector{
-					MatchLabels: getLabels(),
+					MatchLabels: GetLabels(),
 				},
 				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
 				Egress:      []networkingv1.NetworkPolicyEgressRule{},
@@ -554,7 +558,8 @@ type opDestroy struct {
 
 func (_ *opDestroy) SetSecrets(ServerSecrets) {}
 
-func getLabels() map[string]string {
+// GetLabels returns the labels of the Konnectivity server resources
+func GetLabels() map[string]string {
 	return map[string]string{
 		"app": ServerName,
 	}

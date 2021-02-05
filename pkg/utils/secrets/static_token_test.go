@@ -15,11 +15,11 @@
 package secrets_test
 
 import (
-	"github.com/gardener/gardener/pkg/operation/common"
-
-	. "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	kubeapiserverdeployment "github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubeapiserver/deployment"
+	. "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 var _ = Describe("Static Token Secrets", func() {
@@ -32,7 +32,7 @@ var _ = Describe("Static Token Secrets", func() {
 
 		BeforeEach(func() {
 			staticTokenConfig = &StaticTokenSecretConfig{
-				Name: common.StaticTokenSecretName,
+				Name: kubeapiserverdeployment.StaticTokenSecretName,
 				Tokens: map[string]TokenConfig{
 					username: {
 						Username: username,

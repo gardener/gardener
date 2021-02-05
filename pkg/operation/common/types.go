@@ -29,9 +29,6 @@ const (
 	// KonnectivityTunnel dictates that a konnectivity proxy is used as a tunnel between seed and shoot networks.
 	KonnectivityTunnel string = "konnectivity-agent"
 
-	// BasicAuthSecretName is the name of the secret containing basic authentication credentials for the kube-apiserver.
-	BasicAuthSecretName = "kube-apiserver-basic-auth"
-
 	// ChartPath is the path to the Helm charts.
 	ChartPath = "charts"
 
@@ -70,7 +67,6 @@ const (
 	// EtcdEncryptionSecretName is the name of the shoot-specific secret which contains
 	// that shoot's EncryptionConfiguration. The EncryptionConfiguration contains a key
 	// which the shoot's apiserver uses for encrypting selected etcd content.
-	// Should match charts/seed-controlplane/charts/kube-apiserver/templates/deployment.yaml
 	EtcdEncryptionSecretName = "etcd-encryption-secret"
 
 	// EtcdEncryptionSecretFileName is the name of the file within the EncryptionConfiguration
@@ -202,9 +198,6 @@ const (
 
 	// KubeAPIServerHealthCheck is a key for the kube-apiserver-health-check user.
 	KubeAPIServerHealthCheck = "kube-apiserver-health-check"
-
-	// StaticTokenSecretName is the name of the secret containing static tokens for the kube-apiserver.
-	StaticTokenSecretName = "static-token"
 
 	// VPASecretName is the name of the secret used by VPA
 	VPASecretName = "vpa-tls-certs"

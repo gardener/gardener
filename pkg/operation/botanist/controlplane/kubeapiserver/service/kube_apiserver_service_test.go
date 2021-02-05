@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controlplane_test
+package service_test
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubeapiserver/service"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/sirupsen/logrus"
@@ -113,8 +113,8 @@ var _ = Describe("#KubeAPIServerService", func() {
 	})
 
 	JustBeforeEach(func() {
-		defaultDepWaiter = NewKubeAPIService(
-			&KubeAPIServiceValues{
+		defaultDepWaiter = service.NewKubeAPIService(
+			&service.KubeAPIServiceValues{
 				Annotations:               map[string]string{"foo": "bar"},
 				KonnectivityTunnelEnabled: enableKonnectivity,
 				SNIPhase:                  sniPhase,

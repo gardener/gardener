@@ -16,6 +16,8 @@ package kubernetes
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
@@ -78,6 +80,21 @@ func getAdmissionPluginsForVersionInternal(v string) []gardencorev1beta1.Admissi
 	// to handle decrementing the major part at all, as if Gardener supports Kubernetes 2.X (independent of the fact
 	// that it's anyway unclear when/whether that will come) many parts have to be adapted anyway.
 	return GetAdmissionPluginsForVersion(formatMajorMinor(version.Major(), version.Minor()-1))
+}
+
+// AdmissionPluginsToCommandLineParameter transforms admission plugins to a command line parameter that
+// is understood by Kubernetes components.
+func AdmissionPluginsToCommandLineParameter(ap []gardencorev1beta1.AdmissionPlugin) string {
+	if len(ap) == 0 {
+		return ""
+	}
+
+	names := make([]string, 0, len(ap))
+	for _, k := range ap {
+		names = append(names, k.Name)
+	}
+	sort.Strings(names)
+	return fmt.Sprintf("--enable-admission-plugins=%s", strings.Join(names, ","))
 }
 
 func formatMajorMinor(major, minor int64) string {

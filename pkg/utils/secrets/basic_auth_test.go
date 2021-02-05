@@ -15,12 +15,11 @@
 package secrets_test
 
 import (
-	"github.com/gardener/gardener/pkg/operation/common"
-
-	. "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+
+	. "github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 var _ = Describe("Basic Auth Secrets", func() {
@@ -48,7 +47,7 @@ var _ = Describe("Basic Auth Secrets", func() {
 
 		BeforeEach(func() {
 			basicAuthConfiguration = &BasicAuthSecretConfig{
-				Name:           common.BasicAuthSecretName,
+				Name:           "kube-apiserver-basic-auth",
 				Format:         BasicAuthFormatCSV,
 				Username:       "admin",
 				PasswordLength: 32,
@@ -59,7 +58,7 @@ var _ = Describe("Basic Auth Secrets", func() {
 			}
 
 			expectedBasicAuthObject = &BasicAuth{
-				Name:     common.BasicAuthSecretName,
+				Name:     "kube-apiserver-basic-auth",
 				Format:   BasicAuthFormatCSV,
 				Username: "admin",
 				Password: "foo",

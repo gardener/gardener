@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controlplane_test
+package sni_test
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubeapiserver/sni"
 
 	"github.com/golang/mock/gomock"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -63,10 +63,10 @@ var _ = Describe("#KubeAPIServerSNI", func() {
 			kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})),
 		)
 
-		defaultDepWaiter = NewKubeAPIServerSNI(&KubeAPIServerSNIValues{
+		defaultDepWaiter = sni.NewKubeAPIServerSNI(&sni.KubeAPIServerSNIValues{
 			Hosts:              []string{"foo.bar"},
 			ApiserverClusterIP: "1.1.1.1",
-			IstioIngressGateway: IstioIngressGateway{
+			IstioIngressGateway: sni.IstioIngressGateway{
 				Namespace: "istio-foo",
 				Labels:    map[string]string{"foo": "bar"},
 			},
@@ -166,14 +166,14 @@ var _ = Describe("#AnyDeployedSNI", func() {
 
 		It("returns true when exists", func() {
 			Expect(c.Create(ctx, createVS("kube-apiserver", "test"))).NotTo(HaveOccurred())
-			any, err := AnyDeployedSNI(ctx, c)
+			any, err := sni.AnyDeployedSNI(ctx, c)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(any).To(BeTrue())
 		})
 
 		It("returns false when does not exists", func() {
-			any, err := AnyDeployedSNI(ctx, c)
+			any, err := sni.AnyDeployedSNI(ctx, c)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(any).To(BeFalse())
@@ -197,7 +197,7 @@ var _ = Describe("#AnyDeployedSNI", func() {
 
 		It("returns false", func() {
 			client.EXPECT().List(ctx, gomock.AssignableToTypeOf(&unstructured.UnstructuredList{}), gomock.Any()).Return(&meta.NoKindMatchError{})
-			any, err := AnyDeployedSNI(ctx, client)
+			any, err := sni.AnyDeployedSNI(ctx, client)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(any).To(BeFalse())

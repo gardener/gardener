@@ -158,10 +158,10 @@ var _ = Describe("NewServer", func() {
 				secrets.Kubeconfig.Checksum = ""
 			})
 
-			It("fails when serveer secret has no name", func() {
+			It("fails when server secret has no name", func() {
 				secrets.Server.Name = ""
 			})
-			It("fails when serveer secret has no checksum", func() {
+			It("fails when server secret has no checksum", func() {
 				secrets.Server.Checksum = ""
 			})
 

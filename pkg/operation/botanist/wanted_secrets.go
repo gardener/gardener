@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/konnectivity"
+	kubeapiserverdeployment "github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubeapiserver/deployment"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/resourcemanager"
@@ -36,7 +37,7 @@ import (
 )
 
 var basicAuthSecretAPIServer = &secrets.BasicAuthSecretConfig{
-	Name:           common.BasicAuthSecretName,
+	Name:           kubeapiserverdeployment.BasicAuthSecretName,
 	Format:         secrets.BasicAuthFormatCSV,
 	Username:       "admin",
 	PasswordLength: 32,
@@ -54,8 +55,8 @@ func (b *Botanist) wantedCertificateAuthorities() map[string]*secrets.Certificat
 			CommonName: "etcd",
 			CertType:   secrets.CACert,
 		},
-		v1beta1constants.SecretNameCAFrontProxy: {
-			Name:       v1beta1constants.SecretNameCAFrontProxy,
+		kubeapiserverdeployment.SecretNameCAFrontProxy: {
+			Name:       kubeapiserverdeployment.SecretNameCAFrontProxy,
 			CommonName: "front-proxy",
 			CertType:   secrets.CACert,
 		},
@@ -90,7 +91,7 @@ var vpaSecrets = map[string]string{
 
 func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig {
 	staticTokenConfig := &secrets.StaticTokenSecretConfig{
-		Name: common.StaticTokenSecretName,
+		Name: kubeapiserverdeployment.StaticTokenSecretName,
 		Tokens: map[string]secrets.TokenConfig{
 			common.KubecfgUsername: {
 				Username: common.KubecfgUsername,
@@ -170,7 +171,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		// Secret definition for kube-apiserver
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "kube-apiserver",
+				Name: kubeapiserverdeployment.SecretNameTLSServer,
 
 				CommonName:   user.APIServerUser,
 				Organization: nil,
@@ -184,7 +185,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		// Secret definition for kube-apiserver to kubelets communication
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "kube-apiserver-kubelet",
+				Name: kubeapiserverdeployment.SecretNameKubeAPIserverKubelet,
 
 				CommonName:   "system:kube-apiserver:kubelet",
 				Organization: nil,
@@ -199,7 +200,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		// Secret definition for kube-aggregator
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "kube-aggregator",
+				Name: kubeapiserverdeployment.SecretNameKubeAggregator,
 
 				CommonName:   "system:kube-aggregator",
 				Organization: nil,
@@ -207,7 +208,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCAFrontProxy],
+				SigningCA: certificateAuthorities[kubeapiserverdeployment.SecretNameCAFrontProxy],
 			},
 		},
 
@@ -681,7 +682,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		secretList = append(secretList,
 			// Secret definition for vpn-shoot (OpenVPN server side)
 			&secrets.CertificateSecretConfig{
-				Name:       "vpn-shoot",
+				Name:       kubeapiserverdeployment.SecretNameVPNShoot,
 				CommonName: "vpn-shoot",
 				CertType:   secrets.ServerCert,
 				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
@@ -689,14 +690,14 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 			// Secret definition for vpn-seed (OpenVPN client side)
 			&secrets.CertificateSecretConfig{
-				Name:       "vpn-seed",
+				Name:       kubeapiserverdeployment.SecretNameVPNSeed,
 				CommonName: "vpn-seed",
 				CertType:   secrets.ClientCert,
 				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 
 			&secrets.VPNTLSAuthConfig{
-				Name: "vpn-seed-tlsauth",
+				Name: kubeapiserverdeployment.SecretNameVPNSeedTLSAuth,
 			},
 		)
 	}

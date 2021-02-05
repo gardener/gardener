@@ -27,6 +27,7 @@ import (
 	netpol "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/konnectivity"
+	kubeapiserverdeployment "github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubeapiserver/deployment"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -419,8 +420,8 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		}
 	} else {
 		var (
-			vpnTLSAuthSecret = b.Secrets["vpn-seed-tlsauth"]
-			vpnShootSecret   = b.Secrets["vpn-shoot"]
+			vpnTLSAuthSecret = b.Secrets[kubeapiserverdeployment.SecretNameVPNSeedTLSAuth]
+			vpnShootSecret   = b.Secrets[kubeapiserverdeployment.SecretNameVPNShoot]
 			vpnShootConfig   = map[string]interface{}{
 				"podNetwork":     b.Shoot.Networks.Pods.String(),
 				"serviceNetwork": b.Shoot.Networks.Services.String(),

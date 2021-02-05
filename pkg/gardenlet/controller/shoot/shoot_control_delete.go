@@ -288,7 +288,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server reports readiness",
-			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerReady).DoIf(cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServer.Wait).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
 		deployControlPlaneExposure = g.Add(flow.Task{

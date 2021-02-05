@@ -33,9 +33,10 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
+	kubeapiserverdeployment "github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubeapiserver/deployment"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubeapiserver/sni"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/resourcemanager"
@@ -433,11 +434,11 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			clusterautoscaler.CentralLoggingConfiguration,
 			kubescheduler.CentralLoggingConfiguration,
 			kubecontrollermanager.CentralLoggingConfiguration,
+			kubeapiserverdeployment.CentralLoggingConfiguration,
 			// shoot system components
 			metricsserver.CentralLoggingConfiguration,
 		}
 		userAllowedComponents := []string{
-			v1beta1constants.DeploymentNameKubeAPIServer,
 			v1beta1constants.DeploymentNameVPAExporter, v1beta1constants.DeploymentNameVPARecommender,
 			v1beta1constants.DeploymentNameVPAAdmissionController,
 		}
@@ -614,7 +615,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		imageVectorOverwrites[name] = data
 	}
 
-	anySNI, err := controlplane.AnyDeployedSNI(ctx, k8sSeedClient.Client())
+	anySNI, err := sni.AnyDeployedSNI(ctx, k8sSeedClient.Client())
 	if err != nil {
 		return err
 	}

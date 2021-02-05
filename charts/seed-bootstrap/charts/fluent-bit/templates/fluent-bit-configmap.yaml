@@ -67,13 +67,6 @@ data:
     # Shoot controlplane filters
     [FILTER]
         Name                parser
-        Match               kubernetes.*kube-apiserver*kube-apiserver*
-        Key_Name            log
-        Parser              kubeapiserverParser
-        Reserve_Data        True
-
-    [FILTER]
-        Name                parser
         Match               kubernetes.*kube-apiserver*vpn-seed*
         Key_Name            log
         Parser              vpnshootParser
@@ -227,13 +220,6 @@ data:
         # Command      |  Decoder | Field | Optional Action
         # =============|==================|=================
         Decode_Field_As   escaped    log
-
-    [PARSER]
-        Name        kubeapiserverParser
-        Format      regex
-        Regex       ^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<log>.*)$
-        Time_Key    time
-        Time_Format %m%d %H:%M:%S.%L
 
     [PARSER]
         Name        alertmanagerParser

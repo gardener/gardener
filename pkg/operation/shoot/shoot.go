@@ -375,7 +375,7 @@ func ComputeTechnicalID(projectName string, shoot *gardencorev1beta1.Shoot) stri
 	return fmt.Sprintf("%s%s--%s", TechnicalIDPrefix, projectName, shoot.Name)
 }
 
-// ConstructInternalClusterDomain constructs the internal base domain pof this shoot cluster.
+// ConstructInternalClusterDomain constructs the internal base domain of this shoot cluster.
 // It is only used for internal purposes (all kubeconfigs except the one which is received by the
 // user will only talk with the kube-apiserver via a DNS record of domain). In case the given <internalDomain>
 // already contains "internal", the result is constructed as "<shootName>.<shootProject>.<internalDomain>."

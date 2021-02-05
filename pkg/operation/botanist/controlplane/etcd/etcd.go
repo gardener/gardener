@@ -248,7 +248,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 							// TODO: Replace below map with a function call to the to-be-introduced prometheus package.
 							MatchLabels: map[string]string{
 								v1beta1constants.DeprecatedGardenRole: "monitoring",
-								v1beta1constants.LabelApp:             "prometheus",
+								v1beta1constants.LabelApp:             v1beta1constants.LabelPrometheus,
 								v1beta1constants.LabelRole:            "monitoring",
 							},
 						},

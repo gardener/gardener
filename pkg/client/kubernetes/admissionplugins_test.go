@@ -86,4 +86,25 @@ var _ = Describe("kubernetes", func() {
 			}
 		})
 	})
+
+	Describe("#AdmissionPluginsToCommandLineParameter", func() {
+		It("should return the correct command line parameters", func() {
+			expected := "--enable-admission-plugins=DefaultStorageClass,DefaultTolerationSeconds,LimitRanger,MutatingAdmissionWebhook,NamespaceLifecycle,NodeRestriction,PodSecurityPolicy,Priority,ResourceQuota,ServiceAccount,StorageObjectInUseProtection,ValidatingAdmissionWebhook"
+			result := AdmissionPluginsToCommandLineParameter([]gardencorev1beta1.AdmissionPlugin{
+				{Name: "Priority"},
+				{Name: "NamespaceLifecycle"},
+				{Name: "LimitRanger"},
+				{Name: "PodSecurityPolicy"},
+				{Name: "ServiceAccount"},
+				{Name: "NodeRestriction"},
+				{Name: "DefaultStorageClass"},
+				{Name: "DefaultTolerationSeconds"},
+				{Name: "ResourceQuota"},
+				{Name: "StorageObjectInUseProtection"},
+				{Name: "MutatingAdmissionWebhook"},
+				{Name: "ValidatingAdmissionWebhook"},
+			})
+			Expect(result).To(Equal(expected))
+		})
+	})
 })

@@ -21,9 +21,6 @@ const (
 	// SecretNameCAETCD is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of the etcd of a shoot cluster.
 	SecretNameCAETCD = "ca-etcd"
-	// SecretNameCAFrontProxy is a constant for the name of a Kubernetes secret object that contains the CA
-	// certificate of the kube-aggregator a shoot cluster.
-	SecretNameCAFrontProxy = "ca-front-proxy"
 	// SecretNameCAKubelet is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of the kubelet of a shoot cluster.
 	SecretNameCAKubelet = "ca-kubelet"
@@ -38,6 +35,7 @@ const (
 	SecretNameSSHKeyPair = "ssh-keypair"
 	// SecretNameServiceAccountKey is a constant for the name of a Kubernetes secret object that contains a
 	// PEM-encoded private RSA or ECDSA key used by the Kube Controller Manager to sign service account tokens
+	// Also used by the kube-apiserver to verify service account tokens.
 	SecretNameServiceAccountKey = "service-account-key"
 
 	// SecretNameGardener is a constant for the name of a Kubernetes secret object that contains the client
@@ -185,6 +183,8 @@ const (
 	LabelLogging = "logging"
 	// LabelMonitoring is a constant for a label for monitoring stack configurations
 	LabelMonitoring = "monitoring"
+	// LabelPrometheus is a constant for a label for the prometheus pod.
+	LabelPrometheus = "prometheus"
 
 	// LabelNetworkPolicyToBlockedCIDRs allows Egress from pods labeled with 'networking.gardener.cloud/to-blocked-cidrs=allowed'.
 	LabelNetworkPolicyToBlockedCIDRs = "networking.gardener.cloud/to-blocked-cidrs"
@@ -205,6 +205,8 @@ const (
 	// LabelNetworkPolicyToShootAPIServer allows Egress from pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed' to talk to Shoot's
 	// Kubernetes API Server.
 	LabelNetworkPolicyToShootAPIServer = "networking.gardener.cloud/to-shoot-apiserver"
+	// LabelNetworkPolicyToShootAPIServer allows Egress from pods labeled with 'networking.gardener.cloud/to-shoot-networks: allowed' to talk to pods in the Shoot VPC.
+	LabelNetworkPolicyToShootNetworks = "networking.gardener.cloud/to-shoot-networks"
 	// LabelNetworkPolicyFromShootAPIServer allows Egress from Shoot's Kubernetes API Server to talk to pods labeled with
 	// 'networking.gardener.cloud/from-shoot-apiserver=allowed'.
 	LabelNetworkPolicyFromShootAPIServer = "networking.gardener.cloud/from-shoot-apiserver"
