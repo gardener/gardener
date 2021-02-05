@@ -317,6 +317,9 @@ const (
 	// mcmFinalizer is the finalizer used by the machine controller manager
 	// not imported from the MCM to reduce dependencies
 	mcmFinalizer = "machine.sapcloud.io/machine-controller-manager"
+	// mcmProviderFinalizer is the finalizer used by the out-of-tree machine controller provider
+	// not imported from the out-of-tree MCM provider to reduce dependencies
+	mcmProviderFinalizer = "machine.sapcloud.io/machine-controller"
 )
 
 // isMachineControllerStuck determines if the machine controller pod is stuck.
