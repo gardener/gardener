@@ -180,20 +180,6 @@ data:
         Parser              kubeapiserverParser
         Reserve_Data        True
 
-    [FILTER]
-        Name                parser
-        Match               kubernetes.*gardener-resource-manager*gardener-resource-manager*
-        Key_Name            log
-        Parser              gardenerResourceManagerParser
-        Reserve_Data        True
-
-    [FILTER]
-        Name                modify
-        Match               kubernetes.*gardener-resource-manager*gardener-resource-manager*
-        Rename              level  severity
-        Rename              msg    log
-        Rename              logger source
-
     # Extension filters
     [FILTER]
         Name                parser
@@ -290,12 +276,6 @@ data:
         Regex       ^t=(?<time>\d{4}-\d{2}-\d{2}T[^ ]*)\s+lvl=(?<severity>\w+)\smsg="(?<log>.*)"\s+logger=(?<source>.*)
         Time_Key    time
         Time_Format %Y-%m-%dT%H:%M:%S%z
-
-    [PARSER]
-        Name        gardenerResourceManagerParser
-        Format      json
-        Time_Key    ts
-        Time_Format %Y-%m-%dT%H:%M:%S.%L
 
     [PARSER]
         Name        extensionsParser

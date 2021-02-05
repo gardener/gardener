@@ -293,18 +293,3 @@ nginxIngress:
 
 global-network-policies:
   denyAll: false
-
-gardenerResourceManager:
-  resources:
-    requests:
-      cpu: 23m
-      memory: 47Mi
-    limits:
-      cpu: 400m
-      memory: 512Mi
-  replicas: 1
-  resourceClass: seed
-  syncPeriod: 1h0m0s
-  healthSyncPeriod: 1m0s
-  concurrentSyncs: 20
-  podAnnotations: {}

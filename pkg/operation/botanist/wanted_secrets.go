@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -302,9 +303,9 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		// Secret definition for gardener-resource-manager
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "gardener-resource-manager",
+				Name: resourcemanager.SecretName,
 
-				CommonName:   "gardener.cloud:system:gardener-resource-manager",
+				CommonName:   resourcemanager.UserName,
 				Organization: []string{user.SystemPrivilegedGroup},
 				DNSNames:     nil,
 				IPAddresses:  nil,

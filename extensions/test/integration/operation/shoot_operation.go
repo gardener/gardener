@@ -21,6 +21,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/sirupsen/logrus"
@@ -60,5 +61,5 @@ func WaitForExtensionCondition(ctx context.Context, logger *logrus.Logger, seedC
 
 // ScaleGardenerResourceManager scales the gardener-resource-manager to the desired replicas
 func ScaleGardenerResourceManager(setupContextTimeout time.Duration, namespace string, client client.Client, desiredReplicas *int32) (*int32, error) {
-	return framework.ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-resource-manager", namespace)
+	return framework.ScaleDeployment(setupContextTimeout, client, desiredReplicas, v1beta1constants.DeploymentNameGardenerResourceManager, namespace)
 }
