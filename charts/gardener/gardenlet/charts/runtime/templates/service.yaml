@@ -1,0 +1,23 @@
+{{- if .Values.global.gardenlet.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: gardenlet
+  namespace: garden
+  labels:
+    app: gardener
+    role: gardenlet
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  selector:
+    app: gardener
+    role: gardenlet
+    release: {{ .Release.Name }}
+  ports:
+  - name: https
+    protocol: TCP
+    port: 443
+    targetPort: {{ required ".Values.global.gardenlet.config.server.https.port is required" .Values.global.gardenlet.config.server.https.port }}
+{{- end }}
