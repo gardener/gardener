@@ -125,7 +125,7 @@ func (a *genericActuator) waitUntilMachineControllerManagerIsDeleted(ctx context
 
 func (a *genericActuator) scaleMachineControllerManager(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker, replicas int32) error {
 	logger.Info("Scaling machine-controller-manager", "replicas", replicas)
-	return kubernetes.ScaleDeployment(ctx, a.client, kutil.Key(worker.Namespace, McmDeploymentName), replicas)
+	return client.IgnoreNotFound(kubernetes.ScaleDeployment(ctx, a.client, kutil.Key(worker.Namespace, McmDeploymentName), replicas))
 }
 
 func (a *genericActuator) applyMachineControllerManagerShootChart(ctx context.Context, workerDelegate WorkerDelegate, workerObj *extensionsv1alpha1.Worker, cluster *controller.Cluster) error {

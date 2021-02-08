@@ -34,7 +34,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // WaitUntilNginxIngressServiceIsReady waits until the external load balancer of the nginx ingress controller has been created.
@@ -246,30 +245,5 @@ func (b *Botanist) WaitUntilRequiredExtensionsReady(ctx context.Context) error {
 			return retry.MinorError(err)
 		}
 		return retry.Ok()
-	})
-}
-
-// WaitUntilDeploymentScaledToDesiredReplicas waits for the number of available replicas to be equal to the deployment's desired replicas count.
-func WaitUntilDeploymentScaledToDesiredReplicas(ctx context.Context, client client.Client, namespace, name string, desiredReplicas int32) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
-		deployment := &appsv1.Deployment{}
-		if err := client.Get(ctx, kutil.Key(namespace, name), deployment); err != nil {
-			return retry.SevereError(err)
-		}
-
-		if deployment.Generation != deployment.Status.ObservedGeneration {
-			return retry.MinorError(fmt.Errorf("%q not observed at latest generation (%d/%d)", name,
-				deployment.Status.ObservedGeneration, deployment.Generation))
-		}
-
-		if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas != desiredReplicas {
-			return retry.SevereError(fmt.Errorf("waiting for deployment %q to scale failed. spec.replicas does not match the desired replicas", name))
-		}
-
-		if deployment.Status.Replicas == desiredReplicas && deployment.Status.AvailableReplicas == desiredReplicas {
-			return retry.Ok()
-		}
-
-		return retry.MinorError(fmt.Errorf("deployment %q currently has '%d' replicas. Desired: %d", name, deployment.Status.AvailableReplicas, desiredReplicas))
 	})
 }
