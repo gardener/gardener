@@ -858,9 +858,13 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 	}
 
 	// gardener-resource-manager
-	image, err := imageVector.FindImage(common.GardenerResourceManagerImageName, imagevector.RuntimeVersion(c.Version()), imagevector.TargetVersion(c.Version()))
-	if err != nil {
-		return nil, err
+	var grmImage string
+	if imageVector != nil {
+		image, err := imageVector.FindImage(common.GardenerResourceManagerImageName, imagevector.RuntimeVersion(c.Version()), imagevector.TargetVersion(c.Version()))
+		if err != nil {
+			return nil, err
+		}
+		grmImage = image.String()
 	}
 	cfg := resourcemanager.Values{
 		ConcurrentSyncs:  pointer.Int32Ptr(20),
@@ -869,7 +873,7 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 
 		SyncPeriod: utils.DurationPtr(time.Hour),
 	}
-	rm := resourcemanager.New(c.Client(), namespace, image.String(), 1, cfg)
+	rm := resourcemanager.New(c.Client(), namespace, grmImage, 1, cfg)
 	components = append(components, rm)
 
 	// cluster-autoscaler
