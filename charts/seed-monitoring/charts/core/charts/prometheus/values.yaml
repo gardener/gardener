@@ -103,6 +103,12 @@ allowedMetrics:
   - kube_deployment_status_replicas_available
   - kube_deployment_status_replicas_unavailable
   - kube_deployment_status_replicas_updated
+  - kube_replicaset_metadata_generation
+  - kube_replicaset_owner
+  - kube_replicaset_spec_replicas
+  - kube_replicaset_status_observed_generation
+  - kube_replicaset_status_replicas
+  - kube_replicaset_status_ready_replicas
   - kube_node_info
   - kube_node_labels
   - kube_node_spec_unschedulable
