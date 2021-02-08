@@ -15,14 +15,12 @@
 package kubernetes
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/mock/go/context"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
@@ -32,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 const (
