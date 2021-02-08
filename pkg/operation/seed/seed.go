@@ -384,9 +384,6 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 
 	if loggingEnabled {
 		lokiValues["authEnabled"] = false
-		lokiValues["hvpa"] = map[string]interface{}{
-			"enabled": hvpaEnabled,
-		}
 
 		lokiVpa := &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "loki-vpa", Namespace: v1beta1constants.GardenNamespace}}
 		if err := k8sSeedClient.Client().Delete(ctx, lokiVpa); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
@@ -394,6 +391,26 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		}
 
 		if hvpaEnabled {
+			shootInfo := &corev1.ConfigMap{}
+			maintenanceBegin := "220000-0000"
+			maintenanceEnd := "230000-0000"
+			if err := k8sSeedClient.Client().Get(ctx, kutil.Key(metav1.NamespaceSystem, "shoot-info"), shootInfo); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return err
+				}
+			} else {
+				maintenanceBegin = shootInfo.Data["maintenanceBegin"]
+				maintenanceEnd = shootInfo.Data["maintenanceEnd"]
+			}
+
+			lokiValues["hvpa"] = map[string]interface{}{
+				"enabled": true,
+				"maintenanceTimeWindow": map[string]interface{}{
+					"begin": maintenanceBegin,
+					"end":   maintenanceEnd,
+				},
+			}
+
 			currentResources, err := common.GetContainerResourcesInStatefulSet(ctx, k8sSeedClient.Client(), kutil.Key(v1beta1constants.GardenNamespace, "loki"))
 			if err != nil {
 				return err
