@@ -382,14 +382,6 @@ func (c *defaultControl) updateSeedStatus(
 ) error {
 	seedCopy := seed.DeepCopy()
 
-	// remove "available condition"
-	for i, c := range seed.Status.Conditions {
-		if c.Type == "Available" {
-			seed.Status.Conditions = append(seed.Status.Conditions[:i], seed.Status.Conditions[i+1:]...)
-			break
-		}
-	}
-
 	seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, updateConditions...)
 	seed.Status.ObservedGeneration = seed.Generation
 	seed.Status.Gardener = c.identity
