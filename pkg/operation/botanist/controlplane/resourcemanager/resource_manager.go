@@ -521,7 +521,7 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 }
 
 func (r *resourceManager) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
-	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}}
+	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-vpa", Namespace: r.namespace}}
 }
 
 func (r *resourceManager) getLabels() map[string]string {
