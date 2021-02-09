@@ -15,19 +15,19 @@
 # limitations under the License.
 
 import pathlib
-import yaml
 
 import util
-import product.model
+
 
 dependency_type = util.check_env('DEPENDENCY_TYPE')
 if not dependency_type == 'component':
-    util.fail('don\'t know how to upgrade dependency type: ' + str(dependency_type))
+    util.fail(
+        "don't know how to upgrade dependency type: "
+        f'{dependency_type}'
+    )
 
-component_reference = product.model.ComponentReference.create(
-    name=util.check_env('DEPENDENCY_NAME'),
-    version=util.check_env('DEPENDENCY_VERSION'),
-)
+dependency_name = util.check_env('DEPENDENCY_NAME')
+dependency_version = util.check_env('DEPENDENCY_VERSION')
 
 images_file = pathlib.Path(
         util.check_env('REPO_DIR'),
@@ -35,10 +35,12 @@ images_file = pathlib.Path(
         'images.yaml',
 )
 
+
 class ImagesParser(object):
     '''
     a naive YAML-parser crafted for the special case of processing
-    gardener's images.yaml file; crafted that way to preserve comments/empty lines
+    gardener's images.yaml file; crafted that way to preserve
+    comments/empty lines
     '''
     def __init__(
         self,
@@ -90,7 +92,9 @@ class ImagesParser(object):
             self._skip_to_next_tag()
             tag_line = self._line()
             indent = len(tag_line) - len(tag_line.lstrip())
-            patched_line = ' ' * indent + 'tag: "{version}"'.format(version=self.target_version)
+            patched_line = ' ' * indent + 'tag: "{version}"'.format(
+                version=self.target_version,
+            )
             self.lines[self._line_idx] = patched_line
 
     def write_updated_file(self):
@@ -100,7 +104,7 @@ class ImagesParser(object):
 
 
 # handle special cases
-name = component_reference.github_repo()
+name = dependency_name.split('/')[-1]
 if name == 'autoscaler':
     names = ['cluster-autoscaler']
 elif name == 'vpn':
@@ -118,7 +122,7 @@ else:
 parser = ImagesParser(
     images_file=images_file,
     names=names,
-    target_version=str(component_reference.version()),
+    target_version=dependency_version,
 )
 
 parser.set_versions()
