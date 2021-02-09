@@ -17,7 +17,6 @@ package seed
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -674,8 +673,10 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			return err
 		}
 
+		seedCopy := seed.Info.DeepCopy()
 		seed.Info.Status.ClusterIdentity = &seedClusterIdentity
-		if err := k8sGardenClient.Client().Status().Update(ctx, seed.Info); err != nil {
+
+		if err := k8sGardenClient.Client().Status().Patch(ctx, seed.Info, client.MergeFrom(seedCopy)); err != nil {
 			return err
 		}
 	}
@@ -1159,8 +1160,10 @@ func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, see
 		}
 	}
 
+	seedCopy := seed.Info.DeepCopy()
 	metav1.SetMetaDataAnnotation(&seed.Info.ObjectMeta, annotationSeedIngressClass, newClass)
-	return gardenClient.Update(ctx, seed.Info)
+
+	return gardenClient.Patch(ctx, seed.Info, client.MergeFrom(seedCopy))
 }
 
 func switchIngressClass(ctx context.Context, seedClient client.Client, ingressKey types.NamespacedName, newClass string) error {
@@ -1180,10 +1183,6 @@ func copySecretFromGardenerToSeed(ctx context.Context, gardenClient, seedClient 
 	gardenSecret := &corev1.Secret{}
 	if err := gardenClient.Get(ctx, secretKey, gardenSecret); err != nil {
 		return err
-	}
-
-	if gardenSecret == nil {
-		return errors.New("error during seed bootstrap: secret referenced in dns.provider.SecretRef not found")
 	}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, seedClient, targetSecret, func() error {
