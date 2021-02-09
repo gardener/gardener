@@ -167,7 +167,7 @@ For the development of Gardener you need some kind of Kubernetes cluster, which 
 I.e. you need a Kubernetes API server on which you can register a `APIService` Gardener's own Extension API Server.  
 For this you can use a standard tool from the community to setup a local cluster like minikube, kind or the Kubernetes Cluster feature in Docker for Desktop.
 
-However, if you develop and run Gardener's components locally, you don't actually a fully fledged Kubernetes Cluster,
+However, if you develop and run Gardener's components locally, you don't actually need a fully fledged Kubernetes Cluster,
 i.e. you don't actually need to run Pods on it. If you want to use a more lightweight approach for development purposes,
 you can use the "nodeless Garden cluster setup" residing in `hack/local-garden`. This is the easiest way to get your
 Gardener development setup up and running.
