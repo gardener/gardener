@@ -139,6 +139,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 				lokiSts.Spec.Template.Spec.Containers[index].Resources = r
 			}
 		}
+		lokiSts.Spec.Template.Spec.Affinity = nil
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), lokiSts))
 
 		ginkgo.By("Wait until Loki StatefulSet is ready")
