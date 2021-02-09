@@ -123,7 +123,7 @@ images:
 - name: metrics-server
   sourceRepository: github.com/kubernetes-incubator/metrics-server
   repository: k8s.gcr.io/metrics-server/metrics-server
-  tag: v0.4.1
+  tag: v0.4.2
   targetVersion: ">= 1.11"
 - name: metrics-server
   sourceRepository: github.com/kubernetes-incubator/metrics-server
