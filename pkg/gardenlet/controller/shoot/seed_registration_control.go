@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
@@ -55,7 +56,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -636,20 +636,9 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 	}
 
 	// convert config from internal version to v1alpha1 as Helm chart is based on v1alpha1
-	scheme := runtime.NewScheme()
-	if err := config.AddToScheme(scheme); err != nil {
-		return err
-	}
-	if err := configv1alpha1.AddToScheme(scheme); err != nil {
-		return err
-	}
-	external, err := scheme.ConvertToVersion(cfg, configv1alpha1.SchemeGroupVersion)
+	externalConfig, err := confighelper.ConvertGardenletConfigurationExternal(cfg)
 	if err != nil {
 		return err
-	}
-	externalConfig, ok := external.(*configv1alpha1.GardenletConfiguration)
-	if !ok {
-		return fmt.Errorf("error converting config to external version")
 	}
 
 	var secretRef *corev1.SecretReference
