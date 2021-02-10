@@ -62,24 +62,40 @@ var (
 		Verbs:     []string{"*"},
 	}}
 
-	allowManagedResources = []rbacv1.PolicyRule{{
-		APIGroups: []string{"resources.gardener.cloud"},
-		Resources: []string{"managedresources", "managedresources/status"},
-		Verbs:     []string{"get", "list", "watch", "update", "patch"},
-	}, {
-		APIGroups: []string{""},
-		Resources: []string{"secrets"},
-		Verbs:     []string{"get", "list", "watch", "update", "patch"},
-	}, {
-		APIGroups: []string{""},
-		Resources: []string{"configmaps", "events"},
-		Verbs:     []string{"create"},
-	}, {
-		APIGroups:     []string{""},
-		Resources:     []string{"configmaps"},
-		ResourceNames: []string{"gardener-resource-manager"},
-		Verbs:         []string{"get", "watch", "update", "patch"},
-	}}
+	allowManagedResources = []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{"resources.gardener.cloud"},
+			Resources: []string{"managedresources", "managedresources/status"},
+			Verbs:     []string{"get", "list", "watch", "update", "patch"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"secrets"},
+			Verbs:     []string{"get", "list", "watch", "update", "patch"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"configmaps", "events"},
+			Verbs:     []string{"create"},
+		},
+		{
+			APIGroups:     []string{""},
+			Resources:     []string{"configmaps"},
+			ResourceNames: []string{"gardener-resource-manager"},
+			Verbs:         []string{"get", "watch", "update", "patch"},
+		},
+		{
+			APIGroups: []string{"coordination.k8s.io"},
+			Resources: []string{"leases"},
+			Verbs:     []string{"create"},
+		},
+		{
+			APIGroups:     []string{"coordination.k8s.io"},
+			Resources:     []string{"leases"},
+			ResourceNames: []string{"gardener-resource-manager"},
+			Verbs:         []string{"get", "watch", "update"},
+		},
+	}
 )
 
 // ResourceManager contains functions for a gardener-resource-manager deployer.
@@ -118,6 +134,8 @@ type resourceManager struct {
 type Values struct {
 	// AlwaysUpdate if set to false then a resource will only be updated if its desired state differs from the actual state. otherwise, an update request will be always sent
 	AlwaysUpdate *bool
+	// ClusterIdentity is the identity of the managing cluster.
+	ClusterIdentity *string
 	// ConcurrentSyncs are the number of worker threads for concurrent reconciliation of resources
 	ConcurrentSyncs *int32
 	// HealthSyncPeriod describes the duration of how often the health of existing resources should be synced
@@ -447,6 +465,9 @@ func (r *resourceManager) computeCommand() []string {
 	}
 	if r.values.AlwaysUpdate != nil {
 		cmd = append(cmd, fmt.Sprintf("--always-update=%v", *r.values.AlwaysUpdate))
+	}
+	if r.values.ClusterIdentity != nil {
+		cmd = append(cmd, fmt.Sprintf("--cluster-id=%s", *r.values.ClusterIdentity))
 	}
 	cmd = append(cmd, fmt.Sprintf("--health-bind-address=:%v", healthPort))
 	if r.values.MaxConcurrentHealthWorkers != nil {

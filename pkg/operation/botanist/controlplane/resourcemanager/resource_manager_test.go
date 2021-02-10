@@ -59,6 +59,7 @@ var _ = Describe("ResourceManager", func() {
 		replicas        int32 = 1
 
 		// optional configuration
+		clusterIdentity                  = "foo"
 		secretNameKubeconfig             = "kubeconfig-secret"
 		secretMountPath                  = "/etc/gardener-resource-manager"
 		secretChecksumKubeconfig         = "1234"
@@ -103,24 +104,40 @@ var _ = Describe("ResourceManager", func() {
 			Resources: []string{"*"},
 			Verbs:     []string{"*"},
 		}}
-		allowManagedResources = []rbacv1.PolicyRule{{
-			APIGroups: []string{"resources.gardener.cloud"},
-			Resources: []string{"managedresources", "managedresources/status"},
-			Verbs:     []string{"get", "list", "watch", "update", "patch"},
-		}, {
-			APIGroups: []string{""},
-			Resources: []string{"secrets"},
-			Verbs:     []string{"get", "list", "watch", "update", "patch"},
-		}, {
-			APIGroups: []string{""},
-			Resources: []string{"configmaps", "events"},
-			Verbs:     []string{"create"},
-		}, {
-			APIGroups:     []string{""},
-			Resources:     []string{"configmaps"},
-			ResourceNames: []string{"gardener-resource-manager"},
-			Verbs:         []string{"get", "watch", "update", "patch"},
-		}}
+		allowManagedResources = []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{"resources.gardener.cloud"},
+				Resources: []string{"managedresources", "managedresources/status"},
+				Verbs:     []string{"get", "list", "watch", "update", "patch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"secrets"},
+				Verbs:     []string{"get", "list", "watch", "update", "patch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"configmaps", "events"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups:     []string{""},
+				Resources:     []string{"configmaps"},
+				ResourceNames: []string{"gardener-resource-manager"},
+				Verbs:         []string{"get", "watch", "update", "patch"},
+			},
+			{
+				APIGroups: []string{"coordination.k8s.io"},
+				Resources: []string{"leases"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups:     []string{"coordination.k8s.io"},
+				Resources:     []string{"leases"},
+				ResourceNames: []string{"gardener-resource-manager"},
+				Verbs:         []string{"get", "watch", "update"},
+			},
+		}
 		defaultLabels = map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 			v1beta1constants.LabelApp:   "gardener-resource-manager",
@@ -197,6 +214,7 @@ var _ = Describe("ResourceManager", func() {
 		}
 		cfg = resourcemanager.Values{
 			AlwaysUpdate:               &alwaysUpdate,
+			ClusterIdentity:            &clusterIdentity,
 			ConcurrentSyncs:            &concurrentSyncs,
 			HealthSyncPeriod:           &healthSyncPeriod,
 			Kubeconfig:                 &kubeCfg,
@@ -213,6 +231,7 @@ var _ = Describe("ResourceManager", func() {
 
 		cmd = []string{"/gardener-resource-manager",
 			"--always-update=true",
+			"--cluster-id=" + clusterIdentity,
 			fmt.Sprintf("--health-bind-address=:%v", healthPort),
 			fmt.Sprintf("--health-max-concurrent-workers=%v", maxConcurrentHealthWorkers),
 			fmt.Sprintf("--health-sync-period=%v", healthSyncPeriod),
@@ -232,6 +251,7 @@ var _ = Describe("ResourceManager", func() {
 		cmdWithoutKubeconfig = cmd[:len(cmd)-1]
 		cmdWithoutWatchedNamespace = []string{"/gardener-resource-manager",
 			"--always-update=true",
+			"--cluster-id=" + clusterIdentity,
 			fmt.Sprintf("--health-bind-address=:%v", healthPort),
 			fmt.Sprintf("--health-max-concurrent-workers=%v", maxConcurrentHealthWorkers),
 			fmt.Sprintf("--health-sync-period=%v", healthSyncPeriod),
