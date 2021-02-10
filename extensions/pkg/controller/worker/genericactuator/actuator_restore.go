@@ -29,6 +29,8 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	workercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	gardeneretry "github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -65,13 +67,13 @@ func (a *genericActuator) Restore(ctx context.Context, worker *extensionsv1alpha
 
 	wantedMachineDeployments = removeWantedDeploymentWithoutState(wantedMachineDeployments)
 
-	// Delete the machine-controller-manager. During restoration MCM must not exist
-	if err := a.deleteMachineControllerManager(ctx, logger, worker); err != nil {
-		return errors.Wrap(err, "failed deleting machine-controller-manager")
+	// Scale the machine-controller-manager to 0. During restoration MCM must not be working
+	if err := a.scaleMachineControllerManager(ctx, logger, worker, 0); err != nil {
+		return errors.Wrap(err, "failed scale down machine-controller-manager")
 	}
 
-	if err := a.waitUntilMachineControllerManagerIsDeleted(ctx, logger, worker.Namespace); err != nil {
-		return errors.Wrap(err, "failed deleting machine-controller-manager")
+	if err := kubernetes.WaitUntilDeploymentScaledToDesiredReplicas(ctx, a.client, kutil.Key(worker.Namespace, McmDeploymentName), 0); err != nil && !apierrors.IsNotFound(err) {
+		return errors.Wrap(err, "deadline exceeded while scaling down machine-controller-manager")
 	}
 
 	// Do the actual restoration

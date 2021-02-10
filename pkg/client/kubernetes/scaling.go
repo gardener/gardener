@@ -17,8 +17,10 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/retry"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -69,4 +71,29 @@ func scaleResource(ctx context.Context, c client.Client, obj client.Object, repl
 	// TODO: replace this with call to scale subresource once controller-runtime supports it
 	// see: https://github.com/kubernetes-sigs/controller-runtime/issues/172
 	return c.Patch(ctx, obj, client.RawPatch(types.MergePatchType, patch))
+}
+
+// WaitUntilDeploymentScaledToDesiredReplicas waits for the number of available replicas to be equal to the deployment's desired replicas count.
+func WaitUntilDeploymentScaledToDesiredReplicas(ctx context.Context, client client.Client, key types.NamespacedName, desiredReplicas int32) error {
+	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
+		deployment := &appsv1.Deployment{}
+		if err := client.Get(ctx, key, deployment); err != nil {
+			return retry.SevereError(err)
+		}
+
+		if deployment.Generation != deployment.Status.ObservedGeneration {
+			return retry.MinorError(fmt.Errorf("%q not observed at latest generation (%d/%d)", key.Name,
+				deployment.Status.ObservedGeneration, deployment.Generation))
+		}
+
+		if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas != desiredReplicas {
+			return retry.SevereError(fmt.Errorf("waiting for deployment %q to scale failed. spec.replicas does not match the desired replicas", key.Name))
+		}
+
+		if deployment.Status.Replicas == desiredReplicas && deployment.Status.AvailableReplicas == desiredReplicas {
+			return retry.Ok()
+		}
+
+		return retry.MinorError(fmt.Errorf("deployment %q currently has '%d' replicas. Desired: %d", key.Name, deployment.Status.AvailableReplicas, desiredReplicas))
+	})
 }
