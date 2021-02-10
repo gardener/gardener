@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	"k8s.io/utils/pointer"
 
 	. "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 )
@@ -111,6 +112,38 @@ var _ = Describe("Defaults", func() {
 					QPS:   50.0,
 					Burst: 100,
 				}))
+			})
+		})
+
+		Describe("leader election settings", func() {
+			It("should correctly default leader election settings", func() {
+				SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+				Expect(obj.LeaderElection).NotTo(BeNil())
+				Expect(obj.LeaderElection.LeaderElect).To(PointTo(BeTrue()))
+				Expect(obj.LeaderElection.LeaseDuration).To(Equal(metav1.Duration{Duration: 15 * time.Second}))
+				Expect(obj.LeaderElection.RenewDeadline).To(Equal(metav1.Duration{Duration: 10 * time.Second}))
+				Expect(obj.LeaderElection.RetryPeriod).To(Equal(metav1.Duration{Duration: 2 * time.Second}))
+				Expect(obj.LeaderElection.ResourceLock).To(Equal("configmapsleases"))
+				Expect(obj.LeaderElection.LockObjectNamespace).To(Equal("garden"))
+				Expect(obj.LeaderElection.LockObjectName).To(Equal("gardener-controller-manager-leader-election"))
+			})
+			It("should not overwrite custom settings", func() {
+				expectedLeaderElection := &LeaderElectionConfiguration{
+					LeaderElectionConfiguration: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
+						LeaderElect:   pointer.BoolPtr(true),
+						ResourceLock:  "foo",
+						RetryPeriod:   metav1.Duration{Duration: 40 * time.Second},
+						RenewDeadline: metav1.Duration{Duration: 41 * time.Second},
+						LeaseDuration: metav1.Duration{Duration: 42 * time.Second},
+					},
+					LockObjectName:      "lock-object",
+					LockObjectNamespace: "other-garden-ns",
+				}
+				obj.LeaderElection = *expectedLeaderElection.DeepCopy()
+				SetObjectDefaults_ControllerManagerConfiguration(obj)
+
+				Expect(obj.LeaderElection).To(Equal(*expectedLeaderElection))
 			})
 		})
 	})

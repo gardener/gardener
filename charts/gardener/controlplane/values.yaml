@@ -377,7 +377,7 @@ global:
         leaseDuration: 15s
         renewDeadline: 10s
         retryPeriod: 2s
-        resourceLock: configmaps
+        resourceLock: configmapsleases
       logLevel: info
       kubernetesLogLevel: 0
       server:
@@ -430,7 +430,7 @@ global:
         leaseDuration: 15s
         renewDeadline: 10s
         retryPeriod: 2s
-        resourceLock: configmaps
+        resourceLock: configmapsleases
       logLevel: info
       server:
         http:
