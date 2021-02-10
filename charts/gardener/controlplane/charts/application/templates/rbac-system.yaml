@@ -191,6 +191,22 @@ rules:
     - list
     - watch
     - update
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  resourceNames:
+  - gardener-scheduler-leader-election
+  verbs:
+  - get
+  - watch
+  - update
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
