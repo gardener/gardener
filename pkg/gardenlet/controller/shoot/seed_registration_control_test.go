@@ -277,7 +277,7 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 										Name: name,
 									},
 									Gardenlet: &seedmanagementv1alpha1.Gardenlet{
-										Config: &runtime.RawExtension{
+										Config: runtime.RawExtension{
 											Object: &configv1alpha1.GardenletConfiguration{
 												TypeMeta: metav1.TypeMeta{
 													APIVersion: "gardenlet.config.gardener.cloud/v1alpha1",
@@ -350,7 +350,7 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 										Name: name,
 									},
 									Gardenlet: &seedmanagementv1alpha1.Gardenlet{
-										Config: &runtime.RawExtension{
+										Config: runtime.RawExtension{
 											Object: &configv1alpha1.GardenletConfiguration{
 												TypeMeta: metav1.TypeMeta{
 													APIVersion: "gardenlet.config.gardener.cloud/v1alpha1",

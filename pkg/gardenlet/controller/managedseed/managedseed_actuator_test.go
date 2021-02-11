@@ -211,7 +211,7 @@ var _ = Describe("Actuator", func() {
 				},
 				VPA: pointer.BoolPtr(true),
 			},
-			Config: &runtime.RawExtension{
+			Config: runtime.RawExtension{
 				Object: &configv1alpha1.GardenletConfiguration{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: configv1alpha1.SchemeGroupVersion.String(),

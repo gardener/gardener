@@ -117,7 +117,7 @@ var _ = Describe("Defaults", func() {
 				Spec: ManagedSeedSpec{
 					Gardenlet: &Gardenlet{
 						Deployment: &GardenletDeployment{},
-						Config: &runtime.RawExtension{
+						Config: runtime.RawExtension{
 							Object: &configv1alpha1.GardenletConfiguration{
 								TypeMeta: metav1.TypeMeta{
 									APIVersion: configv1alpha1.SchemeGroupVersion.String(),
@@ -135,7 +135,7 @@ var _ = Describe("Defaults", func() {
 
 		It("should default gardenlet deployment, configuration, and backup secret reference if backup is specified", func() {
 			obj.Spec.Gardenlet = &Gardenlet{
-				Config: &runtime.RawExtension{
+				Config: runtime.RawExtension{
 					Raw: encode(&configv1alpha1.GardenletConfiguration{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: configv1alpha1.SchemeGroupVersion.String(),
@@ -162,7 +162,7 @@ var _ = Describe("Defaults", func() {
 				Spec: ManagedSeedSpec{
 					Gardenlet: &Gardenlet{
 						Deployment: &GardenletDeployment{},
-						Config: &runtime.RawExtension{
+						Config: runtime.RawExtension{
 							Object: &configv1alpha1.GardenletConfiguration{
 								TypeMeta: metav1.TypeMeta{
 									APIVersion: configv1alpha1.SchemeGroupVersion.String(),

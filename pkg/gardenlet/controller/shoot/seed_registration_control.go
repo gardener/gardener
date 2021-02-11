@@ -275,7 +275,7 @@ func getManagedSeedSpec(shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev
 
 		// Initialize gardenlet configuraton and parameters
 		gardenlet = &seedmanagementv1alpha1.Gardenlet{
-			Config:          &runtime.RawExtension{Object: config},
+			Config:          runtime.RawExtension{Object: config},
 			Bootstrap:       &bootstrap,
 			MergeWithParent: pointer.BoolPtr(true),
 		}

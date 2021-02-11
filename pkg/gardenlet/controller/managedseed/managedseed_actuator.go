@@ -223,7 +223,7 @@ func (a *actuator) ensureSeedDeleted(ctx context.Context, managedSeed *seedmanag
 
 func (a *actuator) deployGardenlet(ctx context.Context, shootClient kubernetes.Interface, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
 	// Decode gardenlet configuration
-	gardenletConfig, err := helper.DecodeGardenletConfigurationExternal(managedSeed.Spec.Gardenlet.Config, false)
+	gardenletConfig, err := helper.DecodeGardenletConfiguration(&managedSeed.Spec.Gardenlet.Config, false)
 	if err != nil {
 		return err
 	}
@@ -246,7 +246,7 @@ func (a *actuator) deployGardenlet(ctx context.Context, shootClient kubernetes.I
 
 func (a *actuator) deleteGardenlet(ctx context.Context, shootClient kubernetes.Interface, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
 	// Decode gardenlet configuration
-	gardenletConfig, err := helper.DecodeGardenletConfigurationExternal(managedSeed.Spec.Gardenlet.Config, false)
+	gardenletConfig, err := helper.DecodeGardenletConfiguration(&managedSeed.Spec.Gardenlet.Config, false)
 	if err != nil {
 		return err
 	}

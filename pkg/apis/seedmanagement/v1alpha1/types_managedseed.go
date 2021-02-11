@@ -80,7 +80,7 @@ type Gardenlet struct {
 	Deployment *GardenletDeployment `json:"deployment,omitempty" protobuf:"bytes,1,opt,name=deployment"`
 	// Config is the GardenletConfiguration used to configure gardenlet.
 	// +optional
-	Config *runtime.RawExtension `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`
+	Config runtime.RawExtension `json:"config,omitempty" protobuf:"bytes,2,opt,name=config"`
 	// Bootstrap is the mechanism that should be used for bootstrapping gardenlet connection to the Garden cluster. One of ServiceAccount, BootstrapToken, None.
 	// If set to ServiceAccount or BootstrapToken, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig.
 	// If set to None, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster. Defaults to BootstrapToken.
