@@ -206,6 +206,20 @@ func (mr *MockTerraformerMockRecorder) NumberOfResources(arg0 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NumberOfResources", reflect.TypeOf((*MockTerraformer)(nil).NumberOfResources), arg0)
 }
 
+// RemoveTerraformerFinalizerFromConfig mocks base method.
+func (m *MockTerraformer) RemoveTerraformerFinalizerFromConfig(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveTerraformerFinalizerFromConfig", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveTerraformerFinalizerFromConfig indicates an expected call of RemoveTerraformerFinalizerFromConfig.
+func (mr *MockTerraformerMockRecorder) RemoveTerraformerFinalizerFromConfig(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveTerraformerFinalizerFromConfig", reflect.TypeOf((*MockTerraformer)(nil).RemoveTerraformerFinalizerFromConfig), arg0)
+}
+
 // SetDeadlineCleaning mocks base method.
 func (m *MockTerraformer) SetDeadlineCleaning(arg0 time.Duration) terraformer.Terraformer {
 	m.ctrl.T.Helper()
