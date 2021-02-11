@@ -32,13 +32,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (c *Controller) backupBucketEnqueue(obj client.Object) {
-	key := client.ObjectKeyFromObject(obj)
-	c.seedBackupBucketQueue.Add(key.String())
+func (c *Controller) backupBucketEnqueue(bb *gardencorev1beta1.BackupBucket) {
+	seedName := bb.Spec.SeedName
+	if seedName == nil {
+		return
+	}
+
+	c.seedBackupBucketQueue.Add(seedName)
 }
 
 func (c *Controller) backupBucketAdd(obj interface{}) {
@@ -61,29 +64,18 @@ func (c *Controller) backupBucketUpdate(oldObj, newObj interface{}) {
 	if apiequality.Semantic.DeepEqual(oldBackupBucket.Spec, newBackupBucket.Spec) || apiequality.Semantic.DeepEqual(oldBackupBucket.Status, newBackupBucket.Status) {
 		c.backupBucketEnqueue(newBackupBucket)
 	}
+
+	var (
+		oldSeedName = oldBackupBucket.Spec.SeedName
+		newSeedName = newBackupBucket.Spec.SeedName
+	)
+
+	if oldSeedName != nil && (newSeedName == nil || *oldSeedName != *newSeedName) {
+		c.backupBucketEnqueue(oldBackupBucket)
+	}
 }
 
-func (c *Controller) reconcileBackupBucket(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	bb, err := c.backupBucketLister.Get(req.Name)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			logger.Logger.Debugf("[BACKUPBUCKET SEED RECONCILE] %s - skipping because BackupBucket has been deleted", req.NamespacedName)
-			return reconcile.Result{}, nil
-		}
-		logger.Logger.Infof("[BACKUPBUCKET SEED RECONCILE] %s - unable to retrieve backupbucket object from store: %v", req.NamespacedName, err)
-		return reconcile.Result{}, err
-	}
-
-	seedName := bb.Spec.SeedName
-	if seedName == nil {
-		logger.Logger.Debugf("[BACKUPBUCKET SEED RECONCILE] %s - skipping because BackupBucket does not belong to a seed", req.NamespacedName)
-		return reconcile.Result{}, nil
-	}
-
-	return c.seedBackupControl.Reconcile(ctx, reconcile.Request{NamespacedName: kutil.Key(*seedName)})
-}
-
-type backupBucketControl struct {
+type backupBucketReconciler struct {
 	clientMap clientmap.ClientMap
 
 	seedLister         gardencorelisters.SeedLister
@@ -99,7 +91,7 @@ func (b *backupBucketInfo) String() string {
 	return fmt.Sprintf("Name: %s, Error: %s", b.name, b.errorMsg)
 }
 
-func (b *backupBucketControl) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+func (b *backupBucketReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	seed, err := b.seedLister.Get(req.Name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -184,8 +176,8 @@ func patchSeedCondition(ctx context.Context, gardenClientSet gardencoreclientset
 }
 
 // NewDefaultBackupBucketControl returns a new default control to checks backup buckets of related seeds.
-func NewDefaultBackupBucketControl(clientMap clientmap.ClientMap, bbLister gardencorelisters.BackupBucketLister, seedLister gardencorelisters.SeedLister) *backupBucketControl {
-	return &backupBucketControl{
+func NewDefaultBackupBucketControl(clientMap clientmap.ClientMap, bbLister gardencorelisters.BackupBucketLister, seedLister gardencorelisters.SeedLister) *backupBucketReconciler {
+	return &backupBucketReconciler{
 		clientMap: clientMap,
 
 		backupBucketLister: bbLister,

@@ -44,7 +44,7 @@ type Controller struct {
 	control  ControlInterface
 	recorder record.EventRecorder
 
-	seedBackupControl reconcile.Reconciler
+	seedBackupReconciler reconcile.Reconciler
 
 	backupBucketLister    gardencorelisters.BackupBucketLister
 	seedBackupBucketQueue workqueue.RateLimitingInterface
@@ -91,7 +91,7 @@ func NewSeedController(
 		config:                 config,
 		control:                NewDefaultControl(clientMap, leaseLister, shootLister, config),
 		recorder:               recorder,
-		seedBackupControl:      NewDefaultBackupBucketControl(clientMap, backupBucketLister, seedLister),
+		seedBackupReconciler:   NewDefaultBackupBucketControl(clientMap, backupBucketLister, seedLister),
 		backupBucketLister:     backupBucketLister,
 		seedBackupBucketQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Backup Bucket"),
 		seedLister:             seedLister,
@@ -140,7 +140,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for i := 0; i < workers; i++ {
 		controllerutils.DeprecatedCreateWorker(ctx, c.seedQueue, "Seed", c.reconcileSeedKey, &waitGroup, c.workerCh)
-		controllerutils.CreateWorker(ctx, c.seedBackupBucketQueue, "Seed Backup Bucket", reconcile.Func(c.reconcileBackupBucket), &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedBackupBucketQueue, "Seed Backup Bucket", c.seedBackupReconciler, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
