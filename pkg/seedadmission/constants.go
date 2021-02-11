@@ -20,6 +20,8 @@ const (
 	GardenerShootControlPlaneSchedulerName = "gardener-shoot-controlplane-scheduler"
 	// GardenerShootControlPlaneSchedulerWebhookPath is the path of the webhook server
 	// that sets the "gardener-shoot-controlplane-scheduler" schedulerName for Pods.
+	// Note: In the future we might want to have additional scheduler names
+	// so lets have the handler be of pattern "/webhooks/default-pod-scheduler-name/{scheduler-name}"
 	GardenerShootControlPlaneSchedulerWebhookPath = "/webhooks/default-pod-scheduler-name/" + GardenerShootControlPlaneSchedulerName
 	// ExtensionDeletionProtectionWebhookPath is the path of the webhook endpoint
 	// that validates DELETE requests for extension CRDs and extension
