@@ -49,6 +49,8 @@ const (
 	variablesName     = "variables"
 	stateName         = "state"
 	infraUID          = "2a540a5c-1b8c-11e8-b291-0a580a2c025a"
+	purpose           = "purpose"
+	image             = "image"
 )
 
 var _ = Describe("terraformer", func() {
@@ -384,27 +386,6 @@ var _ = Describe("terraformer", func() {
 					}
 				})
 
-				It("should create all resources", func() {
-					gomock.InOrder(
-						c.EXPECT().
-							Get(gomock.Any(), configurationKey, getConfiguration.DeepCopy()).
-							Return(configurationNotFound),
-						c.EXPECT().
-							Create(gomock.Any(), createConfiguration.DeepCopy()),
-
-						c.EXPECT().
-							Get(gomock.Any(), variablesKey, getVariables.DeepCopy()).
-							Return(variablesNotFound),
-						c.EXPECT().
-							Create(gomock.Any(), createVariables.DeepCopy()),
-
-						c.EXPECT().
-							Create(gomock.Any(), createState.DeepCopy()),
-					)
-
-					Expect(runInitializer(ctx, true)).NotTo(HaveOccurred())
-				})
-
 				It("should not initialize state when initializeState is false", func() {
 					gomock.InOrder(
 						c.EXPECT().
@@ -499,7 +480,7 @@ var _ = Describe("terraformer", func() {
 
 	Describe("#Apply", func() {
 		It("should return err when config is not defined", func() {
-			tf := New(log, c, nil, "purpose", "namespace", "name", "image")
+			tf := New(log, c, nil, purpose, namespace, name, image)
 
 			err := tf.Apply(ctx)
 			Expect(err).To(HaveOccurred())
@@ -507,11 +488,6 @@ var _ = Describe("terraformer", func() {
 	})
 
 	Describe("#GetStateOutputVariables", func() {
-		const (
-			purpose = "purpose"
-			image   = "image"
-		)
-
 		var (
 			stateName = fmt.Sprintf("%s.%s.tf-state", name, purpose)
 			stateKey  = kutil.Key(namespace, stateName)
@@ -604,6 +580,76 @@ var _ = Describe("terraformer", func() {
 			}
 			Expect(actual).To(Equal(expected))
 			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("Cleanup", func() {
+		var (
+			prefix = fmt.Sprintf("%s.%s", name, purpose)
+
+			configName    = prefix + ConfigSuffix
+			variablesName = prefix + VariablesSuffix
+			stateName     = prefix + StateSuffix
+
+			secret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: variablesName},
+			}
+			config = &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: configName},
+			}
+			state = &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: stateName},
+			}
+		)
+
+		It("should delete all resources", func() {
+			t := New(log, c, nil, purpose, namespace, name, image)
+
+			gomock.InOrder(
+				c.EXPECT().
+					Delete(gomock.Any(), secret.DeepCopy()),
+				c.EXPECT().
+					Delete(gomock.Any(), config.DeepCopy()),
+				c.EXPECT().
+					Delete(gomock.Any(), state.DeepCopy()),
+			)
+
+			Expect(t.CleanupConfiguration(ctx)).NotTo(HaveOccurred())
+		})
+
+		It("should remove the terraform finalizer from all resources", func() {
+			t := New(log, c, nil, purpose, namespace, name, image)
+
+			gomock.InOrder(
+				c.EXPECT().
+					Get(gomock.Any(), kutil.Key(namespace, variablesName), gomock.AssignableToTypeOf(&corev1.Secret{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
+						s.SetFinalizers([]string{TerraformerFinalizer})
+						return nil
+					}),
+				c.EXPECT().
+					Patch(gomock.Any(), gomock.AssignableToTypeOf(secret.DeepCopyObject()), gomock.AssignableToTypeOf(client.MergeFromWithOptions(secret.DeepCopyObject(), client.MergeFromWithOptimisticLock{}))),
+
+				c.EXPECT().
+					Get(gomock.Any(), kutil.Key(namespace, stateName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, configMap *corev1.ConfigMap) error {
+						configMap.SetFinalizers([]string{TerraformerFinalizer})
+						return nil
+					}),
+				c.EXPECT().
+					Patch(gomock.Any(), gomock.AssignableToTypeOf(config.DeepCopyObject()), gomock.AssignableToTypeOf(client.MergeFromWithOptions(config.DeepCopyObject(), client.MergeFromWithOptimisticLock{}))),
+
+				c.EXPECT().
+					Get(gomock.Any(), kutil.Key(namespace, configName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, configMap *corev1.ConfigMap) error {
+						configMap.SetFinalizers([]string{TerraformerFinalizer})
+						return nil
+					}),
+				c.EXPECT().
+					Patch(gomock.Any(), gomock.AssignableToTypeOf(state.DeepCopyObject()), gomock.AssignableToTypeOf(client.MergeFromWithOptions(state.DeepCopyObject(), client.MergeFromWithOptimisticLock{}))),
+			)
+
+			Expect(t.RemoveTerraformerFinalizerFromConfig(ctx)).NotTo(HaveOccurred())
 		})
 	})
 })
