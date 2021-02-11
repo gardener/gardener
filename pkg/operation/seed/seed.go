@@ -17,11 +17,13 @@ package seed
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -814,6 +816,10 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		return err
 	}
 
+	if err := deployGardenerResourceManager(ctx, k8sSeedClient, v1beta1constants.GardenNamespace, imageVector); err != nil {
+		return err
+	}
+
 	// Deploy component specific resources
 	bootstrapComponents, err := bootstrapComponents(k8sSeedClient, v1beta1constants.GardenNamespace, imageVector, imageVectorOverwrites)
 	if err != nil {
@@ -847,7 +853,39 @@ func DebootstrapCluster(ctx context.Context, k8sSeedClient kubernetes.Interface)
 		})
 	}
 
-	return flow.Parallel(debootstrapFunctions...)(ctx)
+	if err = flow.Parallel(debootstrapFunctions...)(ctx); err != nil {
+		return err
+	}
+
+	return destroyGardenerResourceManager(ctx, k8sSeedClient)
+}
+
+func destroyGardenerResourceManager(ctx context.Context, c kubernetes.Interface) error {
+	managedResources := &v1alpha1.ManagedResourceList{}
+	if err := c.Client().List(ctx, managedResources, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
+		return err
+	}
+	if len(managedResources.Items) == 0 {
+		rm := resourcemanager.New(c.Client(), v1beta1constants.GardenNamespace, "", 0, resourcemanager.Values{})
+		return rm.Destroy(ctx)
+	}
+	return errors.New("cannot delete gardener-resource-manager there are managed resources in the garden namespace left")
+}
+
+func deployGardenerResourceManager(ctx context.Context, c kubernetes.Interface, namespace string, imageVector imagevector.ImageVector) error {
+	image, err := imageVector.FindImage(common.GardenerResourceManagerImageName, imagevector.RuntimeVersion(c.Version()), imagevector.TargetVersion(c.Version()))
+	if err != nil {
+		return err
+	}
+	cfg := resourcemanager.Values{
+		ConcurrentSyncs:  pointer.Int32Ptr(20),
+		HealthSyncPeriod: utils.DurationPtr(time.Minute),
+		ResourceClass:    pointer.StringPtr(v1beta1constants.SeedResourceManagerClass),
+
+		SyncPeriod: utils.DurationPtr(time.Hour),
+	}
+	rm := resourcemanager.New(c.Client(), namespace, image.String(), 1, cfg)
+	return rm.Deploy(ctx)
 }
 
 func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector imagevector.ImageVector, imageVectorOverwrites map[string]string) ([]component.DeployWaiter, error) {
@@ -857,25 +895,6 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 	if err != nil {
 		return nil, err
 	}
-
-	// gardener-resource-manager
-	var grmImage string
-	if imageVector != nil {
-		image, err := imageVector.FindImage(common.GardenerResourceManagerImageName, imagevector.RuntimeVersion(c.Version()), imagevector.TargetVersion(c.Version()))
-		if err != nil {
-			return nil, err
-		}
-		grmImage = image.String()
-	}
-	cfg := resourcemanager.Values{
-		ConcurrentSyncs:  pointer.Int32Ptr(20),
-		HealthSyncPeriod: utils.DurationPtr(time.Minute),
-		ResourceClass:    pointer.StringPtr(v1beta1constants.SeedResourceManagerClass),
-
-		SyncPeriod: utils.DurationPtr(time.Hour),
-	}
-	rm := resourcemanager.New(c.Client(), namespace, grmImage, 1, cfg)
-	components = append(components, rm)
 
 	// cluster-autoscaler
 	components = append(components, clusterautoscaler.NewBootstrapper(c.Client(), namespace))
