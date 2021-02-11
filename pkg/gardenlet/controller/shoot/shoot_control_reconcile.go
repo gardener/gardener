@@ -333,7 +333,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying gardener-resource-manager",
 			Fn:           flow.TaskFn(botanist.DeployGardenerResourceManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(initializeShootClients),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, deployKubeControllerManager),
 		})
 		deployNetwork = g.Add(flow.Task{
 			Name:         "Deploying shoot network plugin",
