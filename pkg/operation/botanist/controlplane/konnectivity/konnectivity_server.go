@@ -247,7 +247,7 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 								fmt.Sprintf("--agent-service-account=%s", AgentName),
 								fmt.Sprintf("--kubeconfig=%s/kubeconfig", kubeconfigMountPath),
 								fmt.Sprintf("--authentication-audience=%s", ServerAudience),
-								"--keepalive-time=1h",
+								"--keepalive-time=1m",
 								"--log-file-max-size=0",
 								"--delete-existing-uds-file=true",
 								"--mode=http-connect",
