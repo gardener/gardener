@@ -25,6 +25,7 @@ spec:
         networking.gardener.cloud/to-seed-apiserver: allowed
         networking.gardener.cloud/to-all-shoot-apiservers: allowed
         networking.gardener.cloud/to-public-networks: allowed
+        networking.gardener.cloud/to-private-networks: allowed
     spec:
       serviceAccountName: dependency-watchdog-probe
       terminationGracePeriodSeconds: 5
