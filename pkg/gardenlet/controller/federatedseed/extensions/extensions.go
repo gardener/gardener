@@ -43,7 +43,7 @@ type Controller struct {
 
 	controllerArtifacts           controllerArtifacts
 	controllerInstallationControl controllerInstallationControl
-	shootStateControl             shootStateControl
+	shootStateControl             ShootStateControl
 }
 
 // NewController creates new controller that syncs extensions states to ShootState
@@ -64,7 +64,7 @@ func NewController(ctx context.Context, gardenClient, seedClient kubernetes.Inte
 			lock:                        &sync.RWMutex{},
 			kindToRequiredTypes:         make(map[string]sets.String),
 		},
-		shootStateControl: shootStateControl{
+		shootStateControl: ShootStateControl{
 			k8sGardenClient: gardenClient,
 			seedClient:      seedClient,
 			log:             log,
@@ -126,10 +126,10 @@ func (s *Controller) createControllerInstallationWorkers(ctx context.Context, co
 	}
 }
 
-func (s *Controller) createShootStateWorkers(ctx context.Context, control shootStateControl) {
+func (s *Controller) createShootStateWorkers(ctx context.Context, control ShootStateControl) {
 	for kind, artifact := range s.controllerArtifacts.stateArtifacts {
 		workerName := fmt.Sprintf("ShootState-%s", kind)
-		controllerutils.CreateWorker(ctx, artifact.queue, workerName, control.createShootStateSyncReconcileFunc(kind, artifact.newObjFunc), &s.waitGroup, s.workerCh)
+		controllerutils.CreateWorker(ctx, artifact.queue, workerName, control.CreateShootStateSyncReconcileFunc(kind, artifact.newObjFunc), &s.waitGroup, s.workerCh)
 	}
 }
 
