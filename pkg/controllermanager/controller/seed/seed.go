@@ -40,17 +40,18 @@ type Controller struct {
 	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
-	config   *config.ControllerManagerConfiguration
-	control  ControlInterface
-	recorder record.EventRecorder
+	config              *config.ControllerManagerConfiguration
+	lifeCycleReconciler reconcile.Reconciler
+	recorder            record.EventRecorder
 
 	seedBackupReconciler reconcile.Reconciler
 
 	backupBucketLister    gardencorelisters.BackupBucketLister
 	seedBackupBucketQueue workqueue.RateLimitingInterface
 
-	seedLister gardencorelisters.SeedLister
-	seedQueue  workqueue.RateLimitingInterface
+	seedLister         gardencorelisters.SeedLister
+	seedQueue          workqueue.RateLimitingInterface
+	seedLifecycleQueue workqueue.RateLimitingInterface
 
 	shootLister gardencorelisters.ShootLister
 
@@ -89,13 +90,14 @@ func NewSeedController(
 		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenInformerFactory,
 		config:                 config,
-		control:                NewDefaultControl(clientMap, leaseLister, shootLister, config),
+		lifeCycleReconciler:    NewLifecycleDefaultControl(clientMap, leaseLister, seedLister, shootLister, config),
 		recorder:               recorder,
 		seedBackupReconciler:   NewDefaultBackupBucketControl(clientMap, backupBucketLister, seedLister),
 		backupBucketLister:     backupBucketLister,
 		seedBackupBucketQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Backup Bucket"),
 		seedLister:             seedLister,
 		shootLister:            shootLister,
+		seedLifecycleQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
 		seedQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed"),
 		workerCh:               make(chan int),
 	}
@@ -106,7 +108,7 @@ func NewSeedController(
 	})
 
 	seedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: seedController.seedAdd,
+		AddFunc: seedController.seedLifecycleAdd,
 	})
 
 	seedController.hasSyncedFuncs = []cache.InformerSynced{
@@ -139,7 +141,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("Seed controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.seedQueue, "Seed", c.reconcileSeedKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedLifecycleQueue, "Seed Lifecycle", c.lifeCycleReconciler, &waitGroup, c.workerCh)
 		controllerutils.CreateWorker(ctx, c.seedBackupBucketQueue, "Seed Backup Bucket", c.seedBackupReconciler, &waitGroup, c.workerCh)
 	}
 
@@ -147,6 +149,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	<-ctx.Done()
 	c.seedQueue.ShutDown()
 	c.seedBackupBucketQueue.ShutDown()
+	c.seedLifecycleQueue.ShutDown()
 
 	for {
 		if c.seedQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
