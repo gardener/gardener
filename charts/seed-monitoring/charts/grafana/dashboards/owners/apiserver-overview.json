@@ -540,7 +540,7 @@
         {
           "expr": "sum(rate(apiserver_audit_event_total{job=~\"$apiserver\"}[$__rate_interval]))",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "Events",
           "refId": "A"
         }
       ],
@@ -637,7 +637,7 @@
         {
           "expr": "sum(rate(apiserver_audit_requests_rejected_total{job=~\"$apiserver\"}[$__rate_interval]))",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "Events",
           "refId": "A"
         }
       ],
@@ -748,7 +748,7 @@
         {
           "expr": "sum(rate(authenticated_user_requests{job=~\"$apiserver\"}[$__rate_interval]))",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "Requests",
           "refId": "A"
         }
       ],
@@ -1419,7 +1419,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_request_total{job=~\"$apiserver\"}[$__rate_interval])) by(scope)",
+          "expr": "sum(rate(apiserver_request_total{job=~\"$apiserver\",scope!=\"\"}[$__rate_interval])) by(scope)",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -2063,9 +2063,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(apiserver_request_terminations_total{job=~\"$apiserver\",verb=~\"$verb\"}[$__rate_interval])) by (resource,code)",
+          "expr": "sum(rate(apiserver_request_terminations_total{job=~\"$apiserver\",verb=~\"$verb\"}[$__rate_interval])) by (resource,subresource,code)",
           "interval": "",
-          "legendFormat": "{{ resource }} ({{code}})",
+          "legendFormat": "{{ resource }}{{subresource}} ({{code}})",
           "refId": "A"
         }
       ],
@@ -2176,7 +2176,7 @@
         {
           "expr": "sum(etcd_db_total_size_in_bytes{job=~\"$apiserver\"})",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "Size",
           "refId": "A"
         }
       ],
@@ -2591,7 +2591,7 @@
           "hide": false,
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{operation}} {{type}}",
+          "legendFormat": "{{type}}",
           "refId": "A"
         }
       ],

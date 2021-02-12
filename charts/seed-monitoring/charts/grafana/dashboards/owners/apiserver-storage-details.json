@@ -60,7 +60,7 @@
           "highlightCards": true,
           "id": 2,
           "legend": {
-            "show": false
+            "show": true
           },
           "pluginVersion": "7.3.7",
           "repeat": "type",
@@ -89,6 +89,7 @@
             "show": true,
             "showHistogram": false
           },
+          "tooltipDecimals": 5,
           "type": "heatmap",
           "xAxis": {
             "show": true
