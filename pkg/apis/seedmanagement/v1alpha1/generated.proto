@@ -46,8 +46,8 @@ message Gardenlet {
   // +optional
   optional string bootstrap = 3;
 
-  // MergeWithParent specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet
-  // should be merged with the specified deployment parameters and GardenletConfiguration. Defaults to true.
+  // MergeWithParent specifies whether the GardenletConfiguration of the parent gardenlet
+  // should be merged with the specified GardenletConfiguration. Defaults to true.
   // +optional
   optional bool mergeWithParent = 4;
 }

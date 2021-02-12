@@ -331,13 +331,13 @@ var _ = Describe("ValuesHelper", func() {
 
 	Describe("#GetGardenletChartValues", func() {
 		It("should compute the correct gardenlet chart values with bootstrap", func() {
-			result, err := vh.GetGardenletChartValues(mergedDeployment, mergedGardenletConfig(true), "bootstrap kubeconfig", true)
+			result, err := vh.GetGardenletChartValues(mergedDeployment, mergedGardenletConfig(true), "bootstrap kubeconfig")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(gardenletChartValues(true, "bootstrap kubeconfig")))
 		})
 
 		It("should compute the correct gardenlet chart values without bootstrap", func() {
-			result, err := vh.GetGardenletChartValues(mergedDeployment, mergedGardenletConfig(false), "", true)
+			result, err := vh.GetGardenletChartValues(mergedDeployment, mergedGardenletConfig(false), "")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(gardenletChartValues(false, "")))
 		})

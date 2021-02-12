@@ -212,8 +212,8 @@ bool
 </td>
 <td>
 <em>(Optional)</em>
-<p>MergeWithParent specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet
-should be merged with the specified deployment parameters and GardenletConfiguration. Defaults to true.</p>
+<p>MergeWithParent specifies whether the GardenletConfiguration of the parent gardenlet
+should be merged with the specified GardenletConfiguration. Defaults to true.</p>
 </td>
 </tr>
 </tbody>

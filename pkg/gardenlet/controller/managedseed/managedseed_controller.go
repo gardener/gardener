@@ -18,44 +18,55 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-func (c *Controller) managedSeedAdd(obj interface{}, immediately bool) {
+func (c *Controller) managedSeedAdd(obj interface{}) {
+	managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
+	if !ok {
+		return
+	}
+
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		return
 	}
 
-	if immediately {
-		logger.Logger.Debugf("Added ManagedSeed %s without delay to the queue", key)
+	if managedSeed.Generation != managedSeed.Status.ObservedGeneration || managedSeed.DeletionTimestamp != nil {
+		c.logger.Debugf("Added ManagedSeed %s without delay to the queue", key)
 		c.managedSeedQueue.Add(key)
 	} else {
 		// Spread reconciliation of managed seeds (including gardenlet updates/rollouts) across the configured sync jitter
 		// period to avoid overloading the gardener-apiserver if all gardenlets in all managed seeds are (re)starting
 		// roughly at the same time
 		duration := utils.RandomDurationWithMetaDuration(c.config.Controllers.ManagedSeed.SyncJitterPeriod)
-		logger.Logger.Infof("Added ManagedSeed %s with delay %s to the queue", key, duration)
+		c.logger.Infof("Added ManagedSeed %s with delay %s to the queue", key, duration)
 		c.managedSeedQueue.AddAfter(key, duration)
 	}
 }
 
 func (c *Controller) managedSeedUpdate(_, newObj interface{}) {
-	newManagedSeed, ok := newObj.(*seedmanagementv1alpha1.ManagedSeed)
+	managedSeed, ok := newObj.(*seedmanagementv1alpha1.ManagedSeed)
 	if !ok {
 		return
 	}
-	if newManagedSeed.Generation == newManagedSeed.Status.ObservedGeneration {
+	if managedSeed.Generation == managedSeed.Status.ObservedGeneration {
 		return
 	}
-	c.managedSeedAdd(newObj, true)
+
+	c.managedSeedAdd(newObj)
 }
 
 func (c *Controller) managedSeedDelete(obj interface{}) {
+	_, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
+	if !ok {
+		return
+	}
+
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
 		return
 	}
+
 	c.managedSeedQueue.Add(key)
 }

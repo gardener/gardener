@@ -174,7 +174,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing federated seed controller: %w", err)
 	}
 
-	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, f.clientMap, f.cfg, imageVector, f.recorder)
+	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, f.clientMap, f.cfg, imageVector, f.recorder, logger.Logger)
 	if err != nil {
 		return fmt.Errorf("failed initializing managed seed controller: %w", err)
 	}

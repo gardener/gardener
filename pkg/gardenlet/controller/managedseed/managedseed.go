@@ -27,10 +27,10 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -50,10 +50,12 @@ type Controller struct {
 
 	numberOfRunningWorkers int
 	workerCh               chan int
+
+	logger *logrus.Logger
 }
 
 // NewManagedSeedController creates a new Gardener controller for ManagedSeeds.
-func NewManagedSeedController(ctx context.Context, clientMap clientmap.ClientMap, config *config.GardenletConfiguration, imageVector imagevector.ImageVector, recorder record.EventRecorder) (*Controller, error) {
+func NewManagedSeedController(ctx context.Context, clientMap clientmap.ClientMap, config *config.GardenletConfiguration, imageVector imagevector.ImageVector, recorder record.EventRecorder, logger *logrus.Logger) (*Controller, error) {
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return nil, fmt.Errorf("could not get garden client: %w", err)
@@ -67,10 +69,11 @@ func NewManagedSeedController(ctx context.Context, clientMap clientmap.ClientMap
 	return &Controller{
 		gardenClient:        gardenClient.Client(),
 		config:              config,
-		reconciler:          newReconciler(gardenClient, newActuator(gardenClient, clientMap, newValuesHelper(config, imageVector), logger.Logger), recorder, logger.Logger),
+		reconciler:          newReconciler(gardenClient, newActuator(gardenClient, clientMap, newValuesHelper(config, imageVector), logger), recorder, logger),
 		managedSeedInformer: managedSeedInformer,
 		managedSeedQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ManagedSeed"),
 		workerCh:            make(chan int),
+		logger:              logger,
 	}, nil
 }
 
@@ -81,16 +84,14 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	c.managedSeedInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controllerutils.ManagedSeedFilterFunc(ctx, c.gardenClient, confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.config.SeedSelector),
 		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc: func(obj interface{}) {
-				c.managedSeedAdd(obj, false)
-			},
+			AddFunc:    c.managedSeedAdd,
 			UpdateFunc: c.managedSeedUpdate,
 			DeleteFunc: c.managedSeedDelete,
 		},
 	})
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.managedSeedInformer.HasSynced) {
-		logger.Logger.Error("Timed out waiting for caches to sync")
+		c.logger.Error("Timed out waiting for caches to sync")
 		return
 	}
 
@@ -98,11 +99,11 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	go func() {
 		for res := range c.workerCh {
 			c.numberOfRunningWorkers += res
-			logger.Logger.Debugf("Current number of running ManagedSeed workers is %d", c.numberOfRunningWorkers)
+			c.logger.Debugf("Current number of running ManagedSeed workers is %d", c.numberOfRunningWorkers)
 		}
 	}()
 
-	logger.Logger.Info("ManagedSeed controller initialized.")
+	c.logger.Info("ManagedSeed controller initialized.")
 
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.managedSeedQueue, "ManagedSeed", c.reconciler, &waitGroup, c.workerCh)
@@ -114,10 +115,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for {
 		if c.managedSeedQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Debug("No running ManagedSeed worker and no items left in the queues. Terminated ManagedSeed controller...")
+			c.logger.Debug("No running ManagedSeed worker and no items left in the queues. Terminated ManagedSeed controller...")
 			break
 		}
-		logger.Logger.Debugf("Waiting for %d ManagedSeed worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.managedSeedQueue.Len())
+		c.logger.Debugf("Waiting for %d ManagedSeed worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.managedSeedQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

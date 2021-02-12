@@ -86,8 +86,8 @@ type Gardenlet struct {
 	// If set to None, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster. Defaults to BootstrapToken.
 	// +optional
 	Bootstrap *Bootstrap `json:"bootstrap,omitempty" protobuf:"bytes,3,opt,name=bootstrap"`
-	// MergeWithParent specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet
-	// should be merged with the specified deployment parameters and GardenletConfiguration. Defaults to true.
+	// MergeWithParent specifies whether the GardenletConfiguration of the parent gardenlet
+	// should be merged with the specified GardenletConfiguration. Defaults to true.
 	// +optional
 	MergeWithParent *bool `json:"mergeWithParent,omitempty" protobuf:"varint,4,opt,name=mergeWithParent"`
 }
@@ -177,6 +177,4 @@ const (
 	// ManagedSeedSeedRegistered is a condition type for indicating whether the ManagedSeed's seed has been registered,
 	// either directly or by deploying gardenlet into the shoot.
 	ManagedSeedSeedRegistered gardencorev1beta1.ConditionType = "SeedRegistered"
-	// ManagedSeedSeedBootstrapped is a condition type for indicating whether the ManagedSeed's seed has been bootstrapped successfully.
-	ManagedSeedSeedBootstrapped gardencorev1beta1.ConditionType = "SeedBootstrapped"
 )

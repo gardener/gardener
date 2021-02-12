@@ -20,6 +20,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/features"
@@ -277,40 +278,38 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 										Name: name,
 									},
 									Gardenlet: &seedmanagementv1alpha1.Gardenlet{
-										Config: runtime.RawExtension{
-											Object: &configv1alpha1.GardenletConfiguration{
-												TypeMeta: metav1.TypeMeta{
-													APIVersion: "gardenlet.config.gardener.cloud/v1alpha1",
-													Kind:       "GardenletConfiguration",
+										Config: rawExtension(&configv1alpha1.GardenletConfiguration{
+											TypeMeta: metav1.TypeMeta{
+												APIVersion: "gardenlet.config.gardener.cloud/v1alpha1",
+												Kind:       "GardenletConfiguration",
+											},
+											Resources: &configv1alpha1.ResourcesConfiguration{
+												Capacity: corev1.ResourceList{
+													gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
 												},
-												Resources: &configv1alpha1.ResourcesConfiguration{
-													Capacity: corev1.ResourceList{
-														gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
+											},
+											SeedConfig: &configv1alpha1.SeedConfig{
+												SeedTemplate: gardencorev1beta1.SeedTemplate{
+													ObjectMeta: metav1.ObjectMeta{
+														Labels: shoot.Labels,
 													},
-												},
-												SeedConfig: &configv1alpha1.SeedConfig{
-													SeedTemplate: gardencorev1beta1.SeedTemplate{
-														ObjectMeta: metav1.ObjectMeta{
-															Labels: shoot.Labels,
-														},
-														Spec: gardencorev1beta1.SeedSpec{
-															Backup: &gardencorev1beta1.SeedBackup{},
-															Settings: &gardencorev1beta1.SeedSettings{
-																ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{
-																	Enabled: true,
-																},
-																Scheduling: &gardencorev1beta1.SeedSettingScheduling{
-																	Visible: true,
-																},
-																ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
-																	Enabled: true,
-																},
+													Spec: gardencorev1beta1.SeedSpec{
+														Backup: &gardencorev1beta1.SeedBackup{},
+														Settings: &gardencorev1beta1.SeedSettings{
+															ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{
+																Enabled: true,
+															},
+															Scheduling: &gardencorev1beta1.SeedSettingScheduling{
+																Visible: true,
+															},
+															ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
+																Enabled: true,
 															},
 														},
 													},
 												},
 											},
-										},
+										}),
 										Bootstrap:       bootstrapPtr(seedmanagementv1alpha1.BootstrapToken),
 										MergeWithParent: pointer.BoolPtr(true),
 									},
@@ -350,73 +349,71 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 										Name: name,
 									},
 									Gardenlet: &seedmanagementv1alpha1.Gardenlet{
-										Config: runtime.RawExtension{
-											Object: &configv1alpha1.GardenletConfiguration{
-												TypeMeta: metav1.TypeMeta{
-													APIVersion: "gardenlet.config.gardener.cloud/v1alpha1",
-													Kind:       "GardenletConfiguration",
+										Config: rawExtension(&configv1alpha1.GardenletConfiguration{
+											TypeMeta: metav1.TypeMeta{
+												APIVersion: "gardenlet.config.gardener.cloud/v1alpha1",
+												Kind:       "GardenletConfiguration",
+											},
+											Resources: &configv1alpha1.ResourcesConfiguration{
+												Capacity: corev1.ResourceList{
+													gardencorev1beta1.ResourceShoots: resource.MustParse("100"),
 												},
-												Resources: &configv1alpha1.ResourcesConfiguration{
-													Capacity: corev1.ResourceList{
-														gardencorev1beta1.ResourceShoots: resource.MustParse("100"),
+											},
+											FeatureGates: map[string]bool{
+												string(features.Logging): false,
+											},
+											SeedConfig: &configv1alpha1.SeedConfig{
+												SeedTemplate: gardencorev1beta1.SeedTemplate{
+													ObjectMeta: metav1.ObjectMeta{
+														Labels: shoot.Labels,
 													},
-												},
-												FeatureGates: map[string]bool{
-													string(features.Logging): false,
-												},
-												SeedConfig: &configv1alpha1.SeedConfig{
-													SeedTemplate: gardencorev1beta1.SeedTemplate{
-														ObjectMeta: metav1.ObjectMeta{
-															Labels: shoot.Labels,
+													Spec: gardencorev1beta1.SeedSpec{
+														Backup: &gardencorev1beta1.SeedBackup{
+															Provider: "gcp",
+															Region:   pointer.StringPtr("europe-north1"),
 														},
-														Spec: gardencorev1beta1.SeedSpec{
-															Backup: &gardencorev1beta1.SeedBackup{
-																Provider: "gcp",
-																Region:   pointer.StringPtr("europe-north1"),
+														Networks: gardencorev1beta1.SeedNetworks{
+															ShootDefaults: &gardencorev1beta1.ShootNetworks{
+																Pods:     pointer.StringPtr("100.96.0.0/11"),
+																Services: pointer.StringPtr("100.64.0.0/13"),
 															},
-															Networks: gardencorev1beta1.SeedNetworks{
-																ShootDefaults: &gardencorev1beta1.ShootNetworks{
-																	Pods:     pointer.StringPtr("100.96.0.0/11"),
-																	Services: pointer.StringPtr("100.64.0.0/13"),
-																},
-																BlockCIDRs: []string{"169.254.169.254/32"},
+															BlockCIDRs: []string{"169.254.169.254/32"},
+														},
+														SecretRef: &corev1.SecretReference{
+															Name:      "seed-" + name,
+															Namespace: v1beta1constants.GardenNamespace,
+														},
+														Taints: []gardencorev1beta1.SeedTaint{
+															{
+																Key: gardencorev1beta1.SeedTaintProtected,
 															},
-															SecretRef: &corev1.SecretReference{
-																Name:      "seed-" + name,
-																Namespace: v1beta1constants.GardenNamespace,
+														},
+														Volume: &gardencorev1beta1.SeedVolume{
+															MinimumSize: quantityPtr(resource.MustParse("20Gi")),
+														},
+														Settings: &gardencorev1beta1.SeedSettings{
+															ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{
+																Enabled: false,
 															},
-															Taints: []gardencorev1beta1.SeedTaint{
-																{
-																	Key: gardencorev1beta1.SeedTaintProtected,
-																},
+															Scheduling: &gardencorev1beta1.SeedSettingScheduling{
+																Visible: false,
 															},
-															Volume: &gardencorev1beta1.SeedVolume{
-																MinimumSize: quantityPtr(resource.MustParse("20Gi")),
+															ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
+																Enabled: false,
 															},
-															Settings: &gardencorev1beta1.SeedSettings{
-																ExcessCapacityReservation: &gardencorev1beta1.SeedSettingExcessCapacityReservation{
-																	Enabled: false,
-																},
-																Scheduling: &gardencorev1beta1.SeedSettingScheduling{
-																	Visible: false,
-																},
-																ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
-																	Enabled: false,
-																},
-																LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
-																	Annotations: map[string]string{"foo": "bar"},
-																},
+															LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
+																Annotations: map[string]string{"foo": "bar"},
 															},
-															Ingress: &gardencorev1beta1.Ingress{
-																Controller: gardencorev1beta1.IngressController{
-																	Kind: "nginx",
-																},
+														},
+														Ingress: &gardencorev1beta1.Ingress{
+															Controller: gardencorev1beta1.IngressController{
+																Kind: "nginx",
 															},
 														},
 													},
 												},
 											},
-										},
+										}),
 										Bootstrap:       bootstrapPtr(seedmanagementv1alpha1.BootstrapServiceAccount),
 										MergeWithParent: pointer.BoolPtr(true),
 									},
@@ -469,6 +466,11 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 		})
 	})
 })
+
+func rawExtension(cfg *configv1alpha1.GardenletConfiguration) runtime.RawExtension {
+	re, _ := helper.EncodeGardenletConfiguration(cfg)
+	return *re
+}
 
 func quantityPtr(v resource.Quantity) *resource.Quantity { return &v }
 

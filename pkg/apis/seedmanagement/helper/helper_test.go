@@ -73,6 +73,17 @@ var _ = Describe("Helper", func() {
 		})
 	})
 
+	Describe("#EncodeGardenletConfiguration", func() {
+		It("should encode the GardenletConfiguration into a raw extension", func() {
+			result, err := EncodeGardenletConfiguration(configx)
+
+			Expect(err).NotTo(HaveOccurred())
+			// Test for equality doesn't work since there is one extra byte at the end of result compared to json.Marshal
+			Expect(strings.HasPrefix(string(result.Raw), string(encode(configx)))).To(BeTrue())
+			Expect(result.Object).To(Equal(configx))
+		})
+	})
+
 	Describe("#EncodeGardenletConfigurationToBytes", func() {
 		It("should encode the GardenletConfiguration into a byte slice", func() {
 			result, err := EncodeGardenletConfigurationToBytes(configx)

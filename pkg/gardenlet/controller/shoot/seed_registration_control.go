@@ -21,6 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -33,7 +34,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/pointer"
@@ -88,7 +88,7 @@ func (c *Controller) reconcileShootedSeedRegistrationKey(ctx context.Context, re
 			logger.Logger.Debugf("[SHOOTED SEED REGISTRATION] Skipping Shoot %s because it has been deleted", req.NamespacedName)
 			return reconcile.Result{}, nil
 		}
-		logger.Logger.Errorf("[SHOOTED SEED REGISTRATION] Could not get Shoot %s from store: %v", req.NamespacedName, err)
+		logger.Logger.Errorf("[SHOOTED SEED REGISTRATION] Could not get Shoot %s from store: %+v", req.NamespacedName, err)
 		return reconcile.Result{}, err
 	}
 
@@ -138,7 +138,7 @@ func (c *defaultSeedRegistrationControl) Reconcile(ctx context.Context, shoot *g
 
 	exists, isOwnedBy, err := isManagedSeedOwnedBy(ctx, gardenClient.Client(), shoot)
 	if err != nil {
-		message := fmt.Sprintf("Could not get ManagedSeed object for shoot %q: %+v", kutil.ObjectName(shoot), err)
+		message := fmt.Sprintf("Could not get ManagedSeed object for shoot %s: %+v", kutil.ObjectName(shoot), err)
 		shootLogger.Errorf(message)
 		c.recorder.Event(shoot, corev1.EventTypeWarning, "ManagedSeedGet", message)
 		return reconcile.Result{}, err
@@ -151,15 +151,15 @@ func (c *defaultSeedRegistrationControl) Reconcile(ctx context.Context, shoot *g
 	if shoot.DeletionTimestamp == nil && shootedSeed != nil {
 		shootLogger.Infof("[SHOOTED SEED REGISTRATION] Creating or updating ManagedSeed object for shoot %s", kutil.ObjectName(shoot))
 		if err := createOrUpdateManagedSeed(ctx, gardenClient.Client(), shoot, shootedSeed); err != nil {
-			message := fmt.Sprintf("Could not create or update ManagedSeed object for shoot %q: %+v", kutil.ObjectName(shoot), err)
+			message := fmt.Sprintf("Could not create or update ManagedSeed object for shoot %s: %+v", kutil.ObjectName(shoot), err)
 			shootLogger.Errorf(message)
 			c.recorder.Event(shoot, corev1.EventTypeWarning, "ManagedSeedCreationOrUpdate", message)
 			return reconcile.Result{}, err
 		}
-	} else {
+	} else if exists {
 		shootLogger.Infof("[SHOOTED SEED REGISTRATION] Deleting ManagedSeed object for shoot %s", kutil.ObjectName(shoot))
 		if err := deleteManagedSeed(ctx, gardenClient.Client(), shoot); err != nil {
-			message := fmt.Sprintf("Could not delete ManagedSeed object for shoot %q: %+v", kutil.ObjectName(shoot), err)
+			message := fmt.Sprintf("Could not delete ManagedSeed object for shoot %s: %+v", kutil.ObjectName(shoot), err)
 			shootLogger.Errorf(message)
 			c.recorder.Event(shoot, corev1.EventTypeWarning, "ManagedSeedDeletion", message)
 			return reconcile.Result{}, err
@@ -267,6 +267,12 @@ func getManagedSeedSpec(shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev
 			},
 		}
 
+		// Encode gardenlet config to raw extension
+		re, err := helper.EncodeGardenletConfiguration(config)
+		if err != nil {
+			return nil, err
+		}
+
 		// Initialize the garden connection bootstrap mechanism
 		bootstrap := seedmanagementv1alpha1.BootstrapToken
 		if shootedSeed.UseServiceAccountBootstrapping {
@@ -275,7 +281,7 @@ func getManagedSeedSpec(shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev
 
 		// Initialize gardenlet configuraton and parameters
 		gardenlet = &seedmanagementv1alpha1.Gardenlet{
-			Config:          runtime.RawExtension{Object: config},
+			Config:          *re,
 			Bootstrap:       &bootstrap,
 			MergeWithParent: pointer.BoolPtr(true),
 		}

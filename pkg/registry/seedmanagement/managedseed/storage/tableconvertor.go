@@ -74,15 +74,14 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 		)
 
 		seedRegisteredCondition := helper.GetCondition(managedSeed.Status.Conditions, seedmanagement.ManagedSeedSeedRegistered)
-		seedBootstrappedCondition := helper.GetCondition(managedSeed.Status.Conditions, seedmanagement.ManagedSeedSeedBootstrapped)
 
 		cells = append(cells, managedSeed.Name)
 		if seedRegisteredCondition == nil || seedRegisteredCondition.Status == core.ConditionUnknown {
 			cells = append(cells, "Unknown")
-		} else if seedRegisteredCondition.Status != core.ConditionTrue || seedBootstrappedCondition == nil || seedBootstrappedCondition.Status != core.ConditionTrue {
-			cells = append(cells, "NotReady")
+		} else if seedRegisteredCondition.Status != core.ConditionTrue {
+			cells = append(cells, "NotRegistered")
 		} else {
-			cells = append(cells, "Ready")
+			cells = append(cells, "Registered")
 		}
 		cells = append(cells, managedSeed.Spec.Shoot.Name)
 		if managedSeed.Spec.Gardenlet != nil {

@@ -64,6 +64,18 @@ func DecodeGardenletConfigurationFromBytes(bytes []byte, withDefaults bool) (*co
 	return cfg, nil
 }
 
+// EncodeGardenletConfiguration encodes the given external GardenletConfiguration version into a raw extension.
+func EncodeGardenletConfiguration(cfg *configv1alpha1.GardenletConfiguration) (*runtime.RawExtension, error) {
+	raw, err := EncodeGardenletConfigurationToBytes(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &runtime.RawExtension{
+		Raw:    raw,
+		Object: cfg,
+	}, nil
+}
+
 // EncodeGardenletConfigurationToBytes encodes the given external GardenletConfiguration version into a byte slice.
 func EncodeGardenletConfigurationToBytes(cfg *configv1alpha1.GardenletConfiguration) ([]byte, error) {
 	encoder, err := getEncoder(configv1alpha1.SchemeGroupVersion, runtime.ContentTypeJSON)
@@ -88,11 +100,11 @@ func getDecoder(withDefaulter bool) runtime.Decoder {
 
 func getEncoder(gv runtime.GroupVersioner, mediaType string) (runtime.Encoder, error) {
 	codec := serializer.NewCodecFactory(scheme)
-	si, ok := runtime.SerializerInfoForMediaType(codec.SupportedMediaTypes(), runtime.ContentTypeJSON)
+	si, ok := runtime.SerializerInfoForMediaType(codec.SupportedMediaTypes(), mediaType)
 	if !ok {
 		return nil, fmt.Errorf("could not find encoder for media type %q", runtime.ContentTypeJSON)
 	}
-	return codec.EncoderForVersion(si.Serializer, configv1alpha1.SchemeGroupVersion), nil
+	return codec.EncoderForVersion(si.Serializer, gv), nil
 }
 
 // GetBootstrap returns the value of the given Bootstrap, or None if nil.

@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/logger"
@@ -83,14 +82,13 @@ func (a *actuator) Reconcile(ctx context.Context, managedSeed *seedmanagementv1a
 	// Get shoot client
 	shootClient, err := a.clientMap.GetClient(ctx, keys.ForShoot(shoot))
 	if err != nil {
-		return fmt.Errorf("could not get shoot client for shoot %q: %+v", kutil.ObjectName(shoot), err)
+		return fmt.Errorf("could not get shoot client for shoot %s: %w", kutil.ObjectName(shoot), err)
 	}
 
-	// Create garden namespace in the shoot
-	managedSeedLogger.Infof("Creating garden namespace in shoot %s", kutil.ObjectName(shoot))
-	gardenNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.GardenNamespace}}
-	if err := shootClient.Client().Create(ctx, gardenNamespace); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fmt.Errorf("could not create garden namespace in shoot %q: %+v", kutil.ObjectName(shoot), err)
+	// Create or update garden namespace in the shoot
+	managedSeedLogger.Infof("Creating or updating garden namespace in shoot %s", kutil.ObjectName(shoot))
+	if err := a.createOrUpdateGardenNamespace(ctx, shootClient); err != nil {
+		return fmt.Errorf("could not create or update garden namespace in shoot %s: %w", kutil.ObjectName(shoot), err)
 	}
 
 	switch {
@@ -98,14 +96,14 @@ func (a *actuator) Reconcile(ctx context.Context, managedSeed *seedmanagementv1a
 		// Register the shoot as seed
 		managedSeedLogger.Infof("Registering shoot %s as seed", kutil.ObjectName(shoot))
 		if err := a.registerAsSeed(ctx, managedSeed, shoot); err != nil {
-			return fmt.Errorf("could not register shoot %q as seed: %+v", kutil.ObjectName(shoot), err)
+			return fmt.Errorf("could not register shoot %s as seed: %w", kutil.ObjectName(shoot), err)
 		}
 
 	case managedSeed.Spec.Gardenlet != nil:
 		// Deploy gardenlet into the shoot, it will register the seed automatically
 		managedSeedLogger.Infof("Deploying gardenlet into shoot %s", kutil.ObjectName(shoot))
 		if err := a.deployGardenlet(ctx, shootClient, managedSeed, shoot); err != nil {
-			return fmt.Errorf("could not deploy gardenlet into shoot %q: %+v", kutil.ObjectName(shoot), err)
+			return fmt.Errorf("could not deploy gardenlet into shoot %s: %w", kutil.ObjectName(shoot), err)
 		}
 	}
 
@@ -119,7 +117,7 @@ func (a *actuator) Delete(ctx context.Context, managedSeed *seedmanagementv1alph
 	// Get shoot client
 	shootClient, err := a.clientMap.GetClient(ctx, keys.ForShoot(shoot))
 	if err != nil {
-		return fmt.Errorf("could not get shoot client for shoot %q: %+v", kutil.ObjectName(shoot), err)
+		return fmt.Errorf("could not get shoot client for shoot %s: %w", kutil.ObjectName(shoot), err)
 	}
 
 	switch {
@@ -127,37 +125,75 @@ func (a *actuator) Delete(ctx context.Context, managedSeed *seedmanagementv1alph
 		// Unregister the shoot as seed
 		managedSeedLogger.Infof("Unregistering shoot %s as seed", kutil.ObjectName(shoot))
 		if err := a.unregisterAsSeed(ctx, managedSeed); err != nil {
-			return fmt.Errorf("could not unregister shoot %q as seed: %+v", kutil.ObjectName(shoot), err)
+			return fmt.Errorf("could not unregister shoot %s as seed: %w", kutil.ObjectName(shoot), err)
 		}
 
 	case managedSeed.Spec.Gardenlet != nil:
 		// Ensure the seed is deleted
 		managedSeedLogger.Infof("Ensuring seed %s is deleted", managedSeed.Name)
 		if err := a.ensureSeedDeleted(ctx, managedSeed); err != nil {
-			return fmt.Errorf("could not ensure seed %q is deleted: %+v", managedSeed.Name, err)
+			return fmt.Errorf("could not ensure seed %s is deleted: %w", managedSeed.Name, err)
 		}
 
 		// Delete gardenlet from the shoot
 		managedSeedLogger.Infof("Deleting gardenlet from shoot %s", kutil.ObjectName(shoot))
 		if err := a.deleteGardenlet(ctx, shootClient, managedSeed, shoot); err != nil {
-			return fmt.Errorf("could not delete gardenlet from shoot %q: %+v", kutil.ObjectName(shoot), err)
+			return fmt.Errorf("could not delete gardenlet from shoot %s: %w", kutil.ObjectName(shoot), err)
 		}
 	}
 
-	// Delete garden namespace from the shoot
-	managedSeedLogger.Infof("Deleting garden namespace from shoot %s", kutil.ObjectName(shoot))
-	gardenNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.GardenNamespace}}
+	// Ensure garden namespace is deleted from the shoot
+	managedSeedLogger.Infof("Ensuring garden namespace is deleted from shoot %s", kutil.ObjectName(shoot))
+	if err := a.ensureGardenNamespaceDeleted(ctx, shootClient); err != nil {
+		return fmt.Errorf("could not ensure garden namespace is deleted from shoot %s: %w", kutil.ObjectName(shoot), err)
+	}
+
+	return nil
+}
+
+func (a *actuator) createOrUpdateGardenNamespace(ctx context.Context, shootClient kubernetes.Interface) error {
+	gardenNamespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: v1beta1constants.GardenNamespace,
+		},
+	}
+	_, err := controllerutil.CreateOrUpdate(ctx, shootClient.Client(), gardenNamespace, func() error {
+		return nil
+	})
+	return err
+}
+
+func (a *actuator) ensureGardenNamespaceDeleted(ctx context.Context, shootClient kubernetes.Interface) error {
+	// Delete garden namespace
+	gardenNamespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: v1beta1constants.GardenNamespace,
+		},
+	}
 	if err := shootClient.Client().Delete(ctx, gardenNamespace); client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("could not delete garden namespace from shoot %q: %+v", kutil.ObjectName(shoot), err)
+		return err
+	}
+
+	// Check if garden namespace still exists
+	err := shootClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), &corev1.Namespace{})
+	if client.IgnoreNotFound(err) != nil {
+		return err
+	}
+	if err == nil {
+		return fmt.Errorf("namespace %s still exists", v1beta1constants.GardenNamespace)
 	}
 
 	return nil
 }
 
 func (a *actuator) registerAsSeed(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
-	// Check seed spec and create or update the seed secrets if needed
-	err := a.prepareSeedSpec(ctx, &managedSeed.Spec.SeedTemplate.Spec, managedSeed, shoot)
-	if err != nil {
+	// Check seed spec
+	if err := a.checkSeedSpec(ctx, &managedSeed.Spec.SeedTemplate.Spec, shoot); err != nil {
+		return err
+	}
+
+	// Create or update seed secrets
+	if err := a.createOrUpdateSeedSecrets(ctx, &managedSeed.Spec.SeedTemplate.Spec, managedSeed, shoot); err != nil {
 		return err
 	}
 
@@ -171,8 +207,8 @@ func (a *actuator) unregisterAsSeed(ctx context.Context, managedSeed *seedmanage
 		return err
 	}
 
-	// Delete seed secrets if needed
-	return a.unprepareSeedSpec(ctx, &managedSeed.Spec.SeedTemplate.Spec, managedSeed)
+	// Ensure seed secrets are deleted
+	return a.ensureSeedSecretsDeleted(ctx, &managedSeed.Spec.SeedTemplate.Spec, managedSeed)
 }
 
 func (a *actuator) createOrUpdateSeed(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
@@ -206,19 +242,16 @@ func (a *actuator) ensureSeedDeleted(ctx context.Context, managedSeed *seedmanag
 		return err
 	}
 
-	// Check if there are any remaining objects associated with the seed
-	if err := a.checkSeedAssociations(ctx, managedSeed.Name); err != nil {
+	// Check if the seed still exists
+	err := a.gardenClient.Client().Get(ctx, kutil.Key(managedSeed.Name), &gardencorev1beta1.Seed{})
+	if client.IgnoreNotFound(err) != nil {
 		return err
+	}
+	if err == nil {
+		return fmt.Errorf("seed %s still exists", managedSeed.Name)
 	}
 
-	// Check if the seed still exists
-	if err := a.gardenClient.Client().Get(ctx, kutil.Key(managedSeed.Name), &gardencorev1beta1.Seed{}); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	return fmt.Errorf("seed %q still exists", managedSeed.Name)
+	return nil
 }
 
 func (a *actuator) deployGardenlet(ctx context.Context, shootClient kubernetes.Interface, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
@@ -228,8 +261,13 @@ func (a *actuator) deployGardenlet(ctx context.Context, shootClient kubernetes.I
 		return err
 	}
 
-	// Check seed spec and create or update the seed secrets if needed
-	if err := a.prepareSeedSpec(ctx, &gardenletConfig.SeedConfig.SeedTemplate.Spec, managedSeed, shoot); err != nil {
+	// Check seed spec
+	if err := a.checkSeedSpec(ctx, &gardenletConfig.SeedConfig.SeedTemplate.Spec, shoot); err != nil {
+		return err
+	}
+
+	// Create or update seed secrets
+	if err := a.createOrUpdateSeedSecrets(ctx, &gardenletConfig.SeedConfig.SeedTemplate.Spec, managedSeed, shoot); err != nil {
 		return err
 	}
 
@@ -251,8 +289,8 @@ func (a *actuator) deleteGardenlet(ctx context.Context, shootClient kubernetes.I
 		return err
 	}
 
-	// Delete the seed secrets if needed
-	if err := a.unprepareSeedSpec(ctx, &gardenletConfig.SeedConfig.SeedTemplate.Spec, managedSeed); err != nil {
+	// Ensure seed secrets are deleted
+	if err := a.ensureSeedSecretsDeleted(ctx, &gardenletConfig.SeedConfig.SeedTemplate.Spec, managedSeed); err != nil {
 		return err
 	}
 
@@ -267,11 +305,11 @@ func (a *actuator) deleteGardenlet(ctx context.Context, shootClient kubernetes.I
 	return shootClient.ChartApplier().Delete(ctx, filepath.Join(common.ChartPath, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(values))
 }
 
-func (a *actuator) prepareSeedSpec(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
+func (a *actuator) checkSeedSpec(ctx context.Context, spec *gardencorev1beta1.SeedSpec, shoot *gardencorev1beta1.Shoot) error {
 	// Get seed client
 	seedClient, err := a.clientMap.GetClient(ctx, keys.ForSeedWithName(*shoot.Spec.SeedName))
 	if err != nil {
-		return fmt.Errorf("could not get seed client for seed %s: %+v", *shoot.Spec.SeedName, err)
+		return fmt.Errorf("could not get seed client for seed %s: %w", *shoot.Spec.SeedName, err)
 	}
 
 	// If VPA is enabled, check if the shoot namespace in the seed contains a vpa-admission-controller deployment
@@ -296,6 +334,10 @@ func (a *actuator) prepareSeedSpec(ctx context.Context, spec *gardencorev1beta1.
 		}
 	}
 
+	return nil
+}
+
+func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
 	// Get shoot secret
 	shootSecret, err := a.getShootSecret(ctx, shoot)
 	if err != nil {
@@ -345,17 +387,14 @@ func (a *actuator) prepareSeedSpec(ctx context.Context, spec *gardencorev1beta1.
 	return nil
 }
 
-func (a *actuator) unprepareSeedSpec(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
+func (a *actuator) ensureSeedSecretsDeleted(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
 	// If backup is specified, delete the backup secret if it exists and is owned by the managed seed
 	if spec.Backup != nil {
-		// Get backup secret
 		backupSecret, err := kutil.GetSecretByReference(ctx, a.gardenClient.Client(), &spec.Backup.SecretRef)
 		if client.IgnoreNotFound(err) != nil {
 			return err
 		}
-
-		// Delete backup secret if it exists and is owned by the managed seed
-		if !apierrors.IsNotFound(err) && metav1.IsControlledBy(backupSecret, managedSeed) {
+		if err == nil && metav1.IsControlledBy(backupSecret, managedSeed) {
 			if err := kutil.DeleteSecretByReference(ctx, a.gardenClient.Client(), &spec.Backup.SecretRef); err != nil {
 				return err
 			}
@@ -366,6 +405,28 @@ func (a *actuator) unprepareSeedSpec(ctx context.Context, spec *gardencorev1beta
 	if spec.SecretRef != nil {
 		if err := kutil.DeleteSecretByReference(ctx, a.gardenClient.Client(), spec.SecretRef); err != nil {
 			return err
+		}
+	}
+
+	// If backup is specified, check if the backup secret still exists and is owned by the managed seed
+	if spec.Backup != nil {
+		backupSecret, err := kutil.GetSecretByReference(ctx, a.gardenClient.Client(), &spec.Backup.SecretRef)
+		if client.IgnoreNotFound(err) != nil {
+			return err
+		}
+		if err == nil && metav1.IsControlledBy(backupSecret, managedSeed) {
+			return fmt.Errorf("backup secret %s still exists", kutil.ObjectName(backupSecret))
+		}
+	}
+
+	// If secret reference is specified, check if the corresponding secret still exists
+	if spec.SecretRef != nil {
+		secret, err := kutil.GetSecretByReference(ctx, a.gardenClient.Client(), spec.SecretRef)
+		if client.IgnoreNotFound(err) != nil {
+			return err
+		}
+		if err == nil {
+			return fmt.Errorf("seed secret %s still exists", kutil.ObjectName(secret))
 		}
 	}
 
@@ -420,12 +481,14 @@ func (a *actuator) prepareGardenletChartValues(
 ) (map[string]interface{}, error) {
 	var err error
 
-	// Merge gardenlet deployment and configuration with parent if specified
+	// Merge gardenlet deployment with parent values
+	deployment, err = a.vp.MergeGardenletDeployment(deployment, shoot)
+	if err != nil {
+		return nil, err
+	}
+
+	// Merge gardenlet configuration with parent if specified
 	if mergeWithParent {
-		deployment, err = a.vp.MergeGardenletDeployment(deployment, shoot)
-		if err != nil {
-			return nil, err
-		}
 		gardenletConfig, err = a.vp.MergeGardenletConfiguration(gardenletConfig)
 		if err != nil {
 			return nil, err
@@ -460,7 +523,7 @@ func (a *actuator) prepareGardenletChartValues(
 	gardenletConfig.SeedSelector = nil
 
 	// Get gardenlet chart values
-	return a.vp.GetGardenletChartValues(deployment, gardenletConfig, bootstrapKubeconfig, mergeWithParent)
+	return a.vp.GetGardenletChartValues(deployment, gardenletConfig, bootstrapKubeconfig)
 }
 
 const (
@@ -615,22 +678,4 @@ func (a *actuator) prepareBootstrapKubeconfig(ctx context.Context, name string, 
 	}
 
 	return string(bootstrapKubeconfig), nil
-}
-
-func (a *actuator) checkSeedAssociations(ctx context.Context, seedName string) error {
-	for name, f := range map[string]func(context.Context, client.Client, string) ([]string, error){
-		"BackupBuckets":           controllerutils.DetermineBackupBucketAssociations,
-		"BackupEntries":           controllerutils.DetermineBackupEntryAssociations,
-		"ControllerInstallations": controllerutils.DetermineControllerInstallationAssociations,
-		"Shoots":                  controllerutils.DetermineShootAssociations,
-	} {
-		results, err := f(ctx, a.gardenClient.Client(), seedName)
-		if err != nil {
-			return err
-		}
-		if len(results) > 0 {
-			return fmt.Errorf("%s still associated with seed %q: %+v", name, seedName, results)
-		}
-	}
-	return nil
 }

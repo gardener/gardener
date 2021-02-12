@@ -43,7 +43,7 @@ type ValuesHelper interface {
 	// MergeGardenletConfiguration merges the given GardenletConfiguration with the parent GardenletConfiguration.
 	MergeGardenletConfiguration(config *configv1alpha1.GardenletConfiguration) (*configv1alpha1.GardenletConfiguration, error)
 	// GetGardenletChartValues computes the values to be used when applying the gardenlet chart.
-	GetGardenletChartValues(*seedmanagementv1alpha1.GardenletDeployment, *configv1alpha1.GardenletConfiguration, string, bool) (map[string]interface{}, error)
+	GetGardenletChartValues(*seedmanagementv1alpha1.GardenletDeployment, *configv1alpha1.GardenletConfiguration, string) (map[string]interface{}, error)
 }
 
 // valuesHelper is a concrete implementation of ValuesHelper
@@ -131,12 +131,11 @@ func (vp *valuesHelper) GetGardenletChartValues(
 	deployment *seedmanagementv1alpha1.GardenletDeployment,
 	config *configv1alpha1.GardenletConfiguration,
 	bootstrapKubeconfig string,
-	mergeWithParent bool,
 ) (map[string]interface{}, error) {
 	var err error
 
 	// Get deployment values
-	deploymentValues, err := vp.getGardenletDeploymentValues(deployment, mergeWithParent)
+	deploymentValues, err := vp.getGardenletDeploymentValues(deployment)
 	if err != nil {
 		return nil, err
 	}
@@ -168,23 +167,21 @@ func (vp *valuesHelper) GetGardenletChartValues(
 }
 
 // getGardenletDeploymentValues computes and returns the gardenlet deployment values from the given GardenletDeployment.
-func (vp *valuesHelper) getGardenletDeploymentValues(deployment *seedmanagementv1alpha1.GardenletDeployment, mergeWithParent bool) (map[string]interface{}, error) {
+func (vp *valuesHelper) getGardenletDeploymentValues(deployment *seedmanagementv1alpha1.GardenletDeployment) (map[string]interface{}, error) {
 	// Convert deployment object to values
 	deploymentValues, err := utils.ToValuesMap(deployment)
 	if err != nil {
 		return nil, err
 	}
 
-	if mergeWithParent {
-		// Set imageVectorOverwrite and componentImageVectorOverwrites from parent
-		deploymentValues["imageVectorOverwrite"], err = getParentImageVectorOverwrite()
-		if err != nil {
-			return nil, err
-		}
-		deploymentValues["componentImageVectorOverwrites"], err = getParentComponentImageVectorOverwrites()
-		if err != nil {
-			return nil, err
-		}
+	// Set imageVectorOverwrite and componentImageVectorOverwrites from parent
+	deploymentValues["imageVectorOverwrite"], err = getParentImageVectorOverwrite()
+	if err != nil {
+		return nil, err
+	}
+	deploymentValues["componentImageVectorOverwrites"], err = getParentComponentImageVectorOverwrites()
+	if err != nil {
+		return nil, err
 	}
 
 	return deploymentValues, nil

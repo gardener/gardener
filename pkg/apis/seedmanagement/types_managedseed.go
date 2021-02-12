@@ -77,8 +77,8 @@ type Gardenlet struct {
 	// If set to ServiceAccount or BootstrapToken, a service account or a bootstrap token will be created in the garden cluster and used to compute the bootstrap kubeconfig.
 	// If set to None, the gardenClientConnection.kubeconfig field will be used to connect to the Garden cluster. Defaults to BootstrapToken.
 	Bootstrap *Bootstrap
-	// MergeWithParent specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet
-	// should be merged with the specified deployment parameters and GardenletConfiguration. Defaults to true.
+	// MergeWithParent specifies whether the GardenletConfiguration of the parent gardenlet
+	// should be merged with the specified GardenletConfiguration. Defaults to true.
 	MergeWithParent *bool
 }
 
@@ -150,6 +150,4 @@ const (
 	// ManagedSeedSeedRegistered is a condition type for indicating whether the ManagedSeed's seed has been registered,
 	// either directly or by deploying gardenlet into the shoot.
 	ManagedSeedSeedRegistered gardencore.ConditionType = "SeedRegistered"
-	// ManagedSeedSeedBootstrapped is a condition type for indicating whether the ManagedSeed's seed has been bootstrapped successfully.
-	ManagedSeedSeedBootstrapped gardencore.ConditionType = "SeedBootstrapped"
 )

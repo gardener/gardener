@@ -89,18 +89,18 @@ func (m *MockValuesHelper) EXPECT() *MockValuesHelperMockRecorder {
 }
 
 // GetGardenletChartValues mocks base method.
-func (m *MockValuesHelper) GetGardenletChartValues(arg0 *v1alpha1.GardenletDeployment, arg1 *v1alpha10.GardenletConfiguration, arg2 string, arg3 bool) (map[string]interface{}, error) {
+func (m *MockValuesHelper) GetGardenletChartValues(arg0 *v1alpha1.GardenletDeployment, arg1 *v1alpha10.GardenletConfiguration, arg2 string) (map[string]interface{}, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetGardenletChartValues", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "GetGardenletChartValues", arg0, arg1, arg2)
 	ret0, _ := ret[0].(map[string]interface{})
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetGardenletChartValues indicates an expected call of GetGardenletChartValues.
-func (mr *MockValuesHelperMockRecorder) GetGardenletChartValues(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockValuesHelperMockRecorder) GetGardenletChartValues(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGardenletChartValues", reflect.TypeOf((*MockValuesHelper)(nil).GetGardenletChartValues), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGardenletChartValues", reflect.TypeOf((*MockValuesHelper)(nil).GetGardenletChartValues), arg0, arg1, arg2)
 }
 
 // MergeGardenletConfiguration mocks base method.
