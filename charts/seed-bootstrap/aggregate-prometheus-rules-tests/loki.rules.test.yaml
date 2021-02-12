@@ -12,7 +12,7 @@ tests:
   - series: 'up{app="loki"}'
     values: '0+0x30'
   alert_rule_test:
-  - eval_time: 15m
+  - eval_time: 30m
     alertname: LokiDown
     exp_alerts:
     - exp_labels:

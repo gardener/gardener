@@ -3,7 +3,7 @@ groups:
   rules:
   - alert: LokiDown
     expr: absent(up{app="loki"} == 1)
-    for: 15m
+    for: 30m
     labels:
       service: logging
       severity: warning
