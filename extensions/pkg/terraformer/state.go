@@ -100,20 +100,8 @@ func (t *terraformer) GetStateOutputVariables(ctx context.Context, variables ...
 // IsStateEmpty returns true if the Terraform state is empty and the terraformer finalizer
 // is not present on any of the used configmaps and secrets. Otherwise, it returns false.
 func (t *terraformer) IsStateEmpty(ctx context.Context) bool {
-	for _, obj := range []client.Object{
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.configName}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.stateName}},
-		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.variablesName}},
-	} {
-		resourceName := obj.GetName()
-		if err := t.client.Get(ctx, kutil.Key(t.namespace, resourceName), obj); client.IgnoreNotFound(err) != nil {
-			t.logger.Error(err, "failed to get resource", "name", resourceName)
-			return false
-		}
-
-		if controllerutil.ContainsFinalizer(obj, TerraformerFinalizer) {
-			return false
-		}
+	if !t.resourcesAreFinalized(ctx) {
+		return false
 	}
 
 	state, err := t.GetState(ctx)

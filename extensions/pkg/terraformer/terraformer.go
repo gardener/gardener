@@ -141,7 +141,16 @@ func (t *terraformer) Destroy(ctx context.Context) error {
 	if err := t.execute(ctx, "destroy"); err != nil {
 		return err
 	}
-	return t.CleanupConfiguration(ctx)
+
+	if err := t.CleanupConfiguration(ctx); err != nil {
+		return err
+	}
+
+	if !t.resourcesAreFinalized(ctx) {
+		return fmt.Errorf("terraformer finalizers are still present, needs to retry")
+	}
+
+	return nil
 }
 
 // execute creates a Terraform Pod which runs the provided scriptName (apply or destroy), waits for the Pod to be completed
@@ -484,4 +493,26 @@ func (t *terraformer) deleteTerraformerPods(ctx context.Context, podList *corev1
 
 func (t *terraformer) computePodGenerateName(command string) string {
 	return fmt.Sprintf("%s.%s.tf-%s-", t.name, t.purpose, command)
+}
+
+// resourcesAreFinalized checks whether the terraformer resources have the terraformer finalizer.
+// If it is not present on any of the used configmaps and secrets returns true, otherwise it returns false.
+func (t *terraformer) resourcesAreFinalized(ctx context.Context) bool {
+	for _, obj := range []client.Object{
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.configName}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.stateName}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.variablesName}},
+	} {
+		resourceName := obj.GetName()
+		if err := t.client.Get(ctx, kutil.Key(t.namespace, resourceName), obj); client.IgnoreNotFound(err) != nil {
+			t.logger.Error(err, "failed to get resource", "name", resourceName)
+			return false
+		}
+
+		if controllerutil.ContainsFinalizer(obj, TerraformerFinalizer) {
+			return false
+		}
+	}
+
+	return true
 }
