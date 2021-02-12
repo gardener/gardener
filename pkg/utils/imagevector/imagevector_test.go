@@ -42,6 +42,7 @@ var _ = Describe("imagevector", func() {
 			k8s180                         = "1.8.0"
 			k8s113                         = "1.13"
 			k8s1142                        = "1.14.2"
+			k8s114x                        = "1.14.x"
 			k8s1170                        = "1.17.0"
 			k8s164RuntimeVersion           = RuntimeVersion(k8s164)
 			k8s164WithSuffixRuntimeVersion = RuntimeVersion(k8s164WithSuffix)
@@ -52,8 +53,8 @@ var _ = Describe("imagevector", func() {
 			k8s113TargetVersion            = TargetVersion(k8s113)
 			k8s1142TargetVersion           = TargetVersion(k8s1142)
 
-			tag1, tag2, tag3, tag4, tag5 string
-			repo1, repo2, repo3, repo4   string
+			tag1, tag2, tag3, tag4, tag5, tag6, tag7 string
+			repo1, repo2, repo3, repo4               string
 
 			greaterEquals16Smaller18, greaterEquals18, equals117 string
 
@@ -66,8 +67,8 @@ var _ = Describe("imagevector", func() {
 			image3Name string
 			image3Src1 *ImageSource
 
-			image4Name                                                 string
-			image4Src1, image4Src2, image4Src3, image4Src4, image4Src5 *ImageSource
+			image4Name                                                                         string
+			image4Src1, image4Src2, image4Src3, image4Src4, image4Src5, image4Src6, image4Src7 *ImageSource
 		)
 
 		resetValues := func() {
@@ -83,6 +84,8 @@ var _ = Describe("imagevector", func() {
 			tag3 = "tag3"
 			tag4 = "tag4"
 			tag5 = "tag5"
+			tag6 = "tag6"
+			tag7 = "tag7"
 
 			repo1 = "repo1"
 			repo2 = "repo2"
@@ -173,6 +176,18 @@ var _ = Describe("imagevector", func() {
 				Repository:    repo4,
 				Tag:           &tag5,
 				TargetVersion: &equals117,
+			}
+			image4Src6 = &ImageSource{
+				Name:          image4Name,
+				Repository:    repo4,
+				Tag:           &tag6,
+				TargetVersion: &k8s114x,
+			}
+			image4Src7 = &ImageSource{
+				Name:          image4Name,
+				Repository:    repo4,
+				Tag:           &tag7,
+				TargetVersion: &k8s1142,
 			}
 
 			image1Src1Vector = ImageVector{image1Src1}
@@ -279,6 +294,7 @@ images:
 			Entry("two entries, runtime and target version, no match", ImageVector{image4Src1, image4Src4}, image4Name, []FindOptionFunc{k8s164RuntimeVersion, k8s1142TargetVersion}, BeNil(), HaveOccurred()),
 			Entry("two entries, runtime and target version, match with both", ImageVector{image4Src1, image4Src4}, image4Name, []FindOptionFunc{k8s164RuntimeVersion, k8s113TargetVersion}, Equal(image4Src4.ToImage(nil)), Not(HaveOccurred())),
 			Entry("two entries, runtime and target version, match with both, prio equal match", ImageVector{image4Src1, image4Src2, image4Src3, image4Src5}, image4Name, []FindOptionFunc{k8s1170TargetVersion}, Equal(image4Src5.ToImage(nil)), Not(HaveOccurred())),
+			Entry("two entries, no runtime version, exact match with target version", ImageVector{image4Src6, image4Src7}, image4Name, []FindOptionFunc{k8s1142TargetVersion}, Equal(image4Src7.ToImage(nil)), Not(HaveOccurred())),
 			Entry("three entries, no runtime version, match with target version", ImageVector{image4Src1, image4Src2, image4Src3}, image4Name, []FindOptionFunc{k8s113TargetVersion}, Equal(image4Src2.ToImage(nil)), Not(HaveOccurred())),
 			Entry("three entries, no runtime version, match with target version", ImageVector{image4Src1, image4Src2, image4Src3}, image4Name, []FindOptionFunc{k8s1142TargetVersion}, Equal(image4Src3.ToImage(nil)), Not(HaveOccurred())),
 		)
