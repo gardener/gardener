@@ -41,7 +41,7 @@ func (c *Controller) backupBucketEnqueue(bb *gardencorev1beta1.BackupBucket) {
 		return
 	}
 
-	c.seedBackupBucketQueue.Add(seedName)
+	c.seedBackupBucketQueue.Add(*seedName)
 }
 
 func (c *Controller) backupBucketAdd(obj interface{}) {
