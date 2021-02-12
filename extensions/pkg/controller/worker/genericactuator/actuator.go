@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -41,8 +42,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // GardenPurposeMachineClass is a constant for the 'machineclass' value in a label.
@@ -250,6 +253,29 @@ func (a *genericActuator) shallowDeleteMachineClassSecrets(ctx context.Context, 
 	}
 
 	return nil
+}
+
+// removeFinalizerFromWorkerSecretRef removes the MCM finalizers from the secret that is referenced by the worker
+func (a *genericActuator) removeFinalizerFromWorkerSecretRef(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker) error {
+	logger.Info("Removing MCM finalizers from worker`s secret")
+	secret, err := kutil.GetSecretByReference(ctx, a.client, &worker.Spec.SecretRef)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	finalizersToRemove := []string{}
+	if controllerutil.ContainsFinalizer(secret, mcmFinalizer) {
+		finalizersToRemove = append(finalizersToRemove, mcmFinalizer)
+	}
+	if controllerutil.ContainsFinalizer(secret, mcmProviderFinalizer) {
+		finalizersToRemove = append(finalizersToRemove, mcmProviderFinalizer)
+	}
+	if len(finalizersToRemove) == 0 {
+		return nil
+	}
+	return controllerutils.PatchRemoveFinalizers(ctx, a.client, secret, finalizersToRemove...)
 }
 
 // cleanupMachineSets deletes MachineSets having number of desired and actual replicas equaling 0

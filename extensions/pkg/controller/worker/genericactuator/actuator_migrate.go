@@ -73,6 +73,10 @@ func (a *genericActuator) Migrate(ctx context.Context, worker *extensionsv1alpha
 		return errors.Wrap(err, "cleaning up machine class secrets failed")
 	}
 
+	if err := a.removeFinalizerFromWorkerSecretRef(ctx, logger, worker); err != nil {
+		return errors.Wrap(err, "unable to remove the finalizers from worker`s secret")
+	}
+
 	// Wait until all machine resources have been properly deleted.
 	if err := a.waitUntilMachineResourcesDeleted(ctx, logger, worker, workerDelegate); err != nil {
 		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error()))
