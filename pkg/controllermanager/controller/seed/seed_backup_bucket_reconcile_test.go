@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var _ = Describe("BackupBucketControl", func() {
+var _ = Describe("BackupBucketReconciler", func() {
 	var ctrl *gomock.Controller
 
 	BeforeEach(func() {

@@ -122,7 +122,24 @@ Further checks might be added in the future.
 
 ### Seed Controller
 
-The Seed controller in the Gardener Controller Manager reconciles `Seed` objects with the help of the following reconcilers. 
+The Seed controller in the Gardener Controller Manager reconciles `Seed` objects with the help of the following reconcilers.
+
+#### "Main" Reconciler
+
+This reconciliation loop takes care about seed related operations in the Garden cluster. When a new `Seed` object is created
+the reconciler creates a new `Namespace` in the garden cluster `seed-<seed-name>`. `Namespaces` dedicated to single
+seed clusters allow us to segregate access permissions i.e., a Gardenlet must not have permissions to access objects in
+all `Namespaces` in the Garden cluster.
+There are objects in a Garden environment which are created once by the operator e.g., default domain secret,
+alerting credentials, and required for operations happening in the Gardenlet. Therefore, we not only need a seed specific
+`Namespace` but also a copy of these "shared" objects.
+
+The "main" reconciler takes care about this replication:
+
+| Kind   | Namespace  |Label Selector  |
+|:-------:|:---------:|:-----:|
+| Secret | garden | gardener.cloud/role |
+
 
 #### "Backup Bucket" Reconciler
 

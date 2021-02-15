@@ -81,11 +81,11 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	seedObj, err := c.seedLister.Get(req.Name)
 	if apierrors.IsNotFound(err) {
 		logger.Logger.Infof("[SEED LIFECYCLE] Stopping lifecycle operations for Seed %s since it has been deleted", req.Name)
-		return reconcile.Result{}, nil
+		return reconcileResult(nil)
 	}
 	if err != nil {
 		logger.Logger.Infof("[SEED LIFECYCLE] %s - unable to retrieve object from store: %v", req.Name, err)
-		return reconcile.Result{}, err
+		return reconcileResult(err)
 	}
 
 	var (
@@ -100,12 +100,12 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 
 	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
-		return reconcileError(fmt.Errorf("failed to get garden client: %w", err))
+		return reconcileResult(fmt.Errorf("failed to get garden client: %w", err))
 	}
 
 	observedSeedLease, err := c.leaseLister.Leases(gardencorev1beta1.GardenerSeedLeaseNamespace).Get(seed.Name)
 	if client.IgnoreNotFound(err) != nil {
-		return reconcileError(err)
+		return reconcileResult(err)
 	}
 
 	if observedSeedLease != nil && observedSeedLease.Spec.RenewTime != nil {
@@ -116,7 +116,7 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 		// Get the latest Lease object in cases which the LeaseLister cache is outdated, to ensure that the lease is really expired
 		latestLeaseObject := &coordinationv1.Lease{}
 		if err := gardenClient.Client().Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), latestLeaseObject); err != nil {
-			return reconcileError(err)
+			return reconcileResult(err)
 		}
 
 		if latestLeaseObject.Spec.RenewTime.UTC().After(time.Now().UTC().Add(-c.config.Controllers.Seed.MonitorPeriod.Duration)) {
@@ -128,7 +128,7 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 
 	bldr, err := gardencorev1beta1helper.NewConditionBuilder(gardencorev1beta1.SeedGardenletReady)
 	if err != nil {
-		return reconcileError(err)
+		return reconcileResult(err)
 	}
 
 	conditionGardenletReady := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
@@ -142,7 +142,7 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	if newCondition, update := bldr.WithNowFunc(metav1.Now).Build(); update {
 		seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, newCondition)
 		if err := gardenClient.Client().Status().Update(ctx, seed); err != nil {
-			return reconcileError(err)
+			return reconcileResult(err)
 		}
 	}
 
@@ -158,7 +158,7 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 
 	shootList, err := c.shootLister.List(labels.Everything())
 	if err != nil {
-		return reconcileError(err)
+		return reconcileResult(err)
 	}
 
 	var fns []flow.TaskFn
@@ -174,7 +174,7 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	}
 
 	if err := flow.Parallel(fns...)(ctx); err != nil {
-		return reconcileError(err)
+		return reconcileResult(err)
 	}
 
 	return reconcileAfter(1 * time.Minute)
@@ -228,12 +228,4 @@ func conditionMapToConditions(m map[gardencorev1beta1.ConditionType]gardencorev1
 	}
 
 	return output
-}
-
-func reconcileAfter(d time.Duration) (reconcile.Result, error) {
-	return reconcile.Result{RequeueAfter: d}, nil
-}
-
-func reconcileError(err error) (reconcile.Result, error) {
-	return reconcile.Result{}, err
 }
