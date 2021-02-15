@@ -199,7 +199,7 @@ func TargetVersion(version string) FindOptionFunc {
 	}
 }
 
-var r = regexp.MustCompile(`^(v?[0-9]+|=)`)
+var r = regexp.MustCompile(`^(v?[0-9]+\.[0-9]+\.[0-9]+|=)`)
 
 func checkConstraint(constraint, version *string) (score int, ok bool, err error) {
 	if constraint == nil || version == nil {
