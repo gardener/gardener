@@ -26,7 +26,7 @@ require (
 	github.com/json-iterator/go v1.1.10
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/onsi/ginkgo v1.14.1
-	github.com/onsi/gomega v1.10.2
+	github.com/onsi/gomega v1.10.5
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
 	github.com/robfig/cron v1.2.0
