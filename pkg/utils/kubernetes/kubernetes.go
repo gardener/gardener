@@ -38,6 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 // TruncateLabelValue truncates a string at 63 characters so it's suitable for a label value.
@@ -186,7 +187,8 @@ func WaitUntilLoadBalancerIsReady(ctx context.Context, kubeClient kubernetes.Int
 
 		eventsErrorMessage, err2 := FetchEventMessages(ctx, kubeClient.DirectClient(), service, corev1.EventTypeWarning, eventsLimit)
 		if err2 != nil {
-			return "", fmt.Errorf("error '%v' occured while fetching more details on error '%v'", err2, err)
+			logger.Errorf("error %q occured while fetching events for error %q", err2, err)
+			return "", fmt.Errorf("'%w' occurred but could not fetch events for more information", err)
 		}
 		if eventsErrorMessage != "" {
 			errorMessage := err.Error() + "\n\n" + eventsErrorMessage
@@ -300,7 +302,15 @@ func ReconcileServicePorts(existingPorts []corev1.ServicePort, desiredPorts []co
 // FetchEventMessages gets events for the given object of the given `eventType` and returns them as a formatted output.
 // The function expects that the given `obj` is specified with a proper `metav1.TypeMeta`.
 func FetchEventMessages(ctx context.Context, c client.Client, obj client.Object, eventType string, eventsLimit int) (string, error) {
-	apiVersion, kind := obj.GetObjectKind().GroupVersionKind().ToAPIVersionAndKind()
+	if c.Scheme() == nil {
+		return "", errors.New("scheme is not provided")
+	}
+	gvk, err := apiutil.GVKForObject(obj, c.Scheme())
+	if err != nil {
+		return "", fmt.Errorf("failed identify GVK for object: %w", err)
+	}
+
+	apiVersion, kind := gvk.ToAPIVersionAndKind()
 	if apiVersion == "" {
 		return "", fmt.Errorf("apiVersion not specified for object %s/%s", obj.GetNamespace(), obj.GetName())
 	}

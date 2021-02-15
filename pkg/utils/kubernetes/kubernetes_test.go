@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
@@ -42,6 +43,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -893,7 +895,9 @@ var _ = Describe("kubernetes", func() {
 					Count:          1,
 					Type:           corev1.EventTypeWarning,
 				}
+				scheme = runtime.NewScheme()
 			)
+			Expect(corev1.AddToScheme(scheme)).To(Succeed())
 
 			gomock.InOrder(
 				k8sShootClient.EXPECT().Client().Return(k8sShootRuntimeClient),
@@ -903,6 +907,7 @@ var _ = Describe("kubernetes", func() {
 						return nil
 					}),
 				k8sShootClient.EXPECT().DirectClient().Return(k8sShootRuntimeClient),
+				k8sShootRuntimeClient.EXPECT().Scheme().Return(scheme).Times(2),
 				k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
 					func(_ context.Context, list *corev1.EventList, _ ...client.ListOption) error {
 						list.Items = append(list.Items, event)
@@ -924,6 +929,7 @@ var _ = Describe("kubernetes", func() {
 			k8sShootRuntimeClient *mockclient.MockClient
 			events                []corev1.Event
 			serviceObj            *corev1.Service
+			scheme                *runtime.Scheme
 		)
 
 		BeforeEach(func() {
@@ -966,112 +972,140 @@ var _ = Describe("kubernetes", func() {
 			ctrl.Finish()
 		})
 
-		It("should return an event message with only the latest event", func() {
-			var listOpts []client.ListOption
-			gomock.InOrder(
-				k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
-					func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
-						list.Items = append(list.Items, events...)
-						listOpts = listOptions
-						return nil
-					}),
-			)
-
-			msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, serviceObj, corev1.EventTypeWarning, 1)
-
-			Expect(listOpts).To(ContainElement(client.MatchingFields{
-				"involvedObject.apiVersion": serviceObj.APIVersion,
-				"involvedObject.kind":       serviceObj.Kind,
-				"involvedObject.name":       serviceObj.Name,
-				"involvedObject.namespace":  serviceObj.Namespace,
-				"type":                      corev1.EventTypeWarning,
-			}))
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(msg).To(ContainSubstring("-> Events:\n* service-controller reported"))
-			Expect(msg).To(ContainSubstring("second error occurred"))
+		JustBeforeEach(func() {
+			k8sShootRuntimeClient.EXPECT().Scheme().Return(scheme).AnyTimes()
 		})
-		It("should return an event message with all events", func() {
-			var listOpts []client.ListOption
-			gomock.InOrder(
-				k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
-					func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
-						list.Items = append(list.Items, events...)
-						listOpts = listOptions
-						return nil
-					}),
-			)
 
-			msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, serviceObj, corev1.EventTypeWarning, len(events))
+		Context("when no scheme is provided", func() {
+			BeforeEach(func() {
+				scheme = nil
+			})
 
-			Expect(listOpts).To(ContainElement(client.MatchingFields{
-				"involvedObject.apiVersion": serviceObj.APIVersion,
-				"involvedObject.kind":       serviceObj.Kind,
-				"involvedObject.name":       serviceObj.Name,
-				"involvedObject.namespace":  serviceObj.Namespace,
-				"type":                      corev1.EventTypeWarning,
-			}))
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(msg).To(ContainSubstring("-> Events:\n* service-controller reported"))
-			Expect(msg).To(ContainSubstring("first error occurred"))
-			Expect(msg).To(ContainSubstring("second error occurred"))
+			It("should return an error", func() {
+				msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, serviceObj, corev1.EventTypeWarning, 1)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("scheme is not provided"))
+				Expect(msg).To(BeEmpty())
+			})
 		})
-		It("should not return a message because no events exist", func() {
-			var listOpts []client.ListOption
-			gomock.InOrder(
-				k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
-					func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
-						listOpts = listOptions
-						return nil
-					}),
-			)
 
-			msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, serviceObj, corev1.EventTypeWarning, len(events))
+		Context("when only objects of available scheme are used", func() {
+			BeforeEach(func() {
+				scheme = runtime.NewScheme()
+				Expect(corev1.AddToScheme(scheme)).To(Succeed())
+			})
 
-			Expect(listOpts).To(ContainElement(client.MatchingFields{
-				"involvedObject.apiVersion": serviceObj.APIVersion,
-				"involvedObject.kind":       serviceObj.Kind,
-				"involvedObject.name":       serviceObj.Name,
-				"involvedObject.namespace":  serviceObj.Namespace,
-				"type":                      corev1.EventTypeWarning,
-			}))
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(msg).To(BeEmpty())
+			It("should return an event message with only the latest event", func() {
+				var listOpts []client.ListOption
+				gomock.InOrder(
+					k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
+						func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
+							list.Items = append(list.Items, events...)
+							listOpts = listOptions
+							return nil
+						}),
+				)
+
+				msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, serviceObj, corev1.EventTypeWarning, 1)
+
+				Expect(listOpts).To(ContainElement(client.MatchingFields{
+					"involvedObject.apiVersion": serviceObj.APIVersion,
+					"involvedObject.kind":       serviceObj.Kind,
+					"involvedObject.name":       serviceObj.Name,
+					"involvedObject.namespace":  serviceObj.Namespace,
+					"type":                      corev1.EventTypeWarning,
+				}))
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(msg).To(ContainSubstring("-> Events:\n* service-controller reported"))
+				Expect(msg).To(ContainSubstring("second error occurred"))
+			})
+
+			It("should return an event message with all events", func() {
+				var listOpts []client.ListOption
+				gomock.InOrder(
+					k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
+						func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
+							list.Items = append(list.Items, events...)
+							listOpts = listOptions
+							return nil
+						}),
+				)
+
+				msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, serviceObj, corev1.EventTypeWarning, len(events))
+
+				Expect(listOpts).To(ContainElement(client.MatchingFields{
+					"involvedObject.apiVersion": serviceObj.APIVersion,
+					"involvedObject.kind":       serviceObj.Kind,
+					"involvedObject.name":       serviceObj.Name,
+					"involvedObject.namespace":  serviceObj.Namespace,
+					"type":                      corev1.EventTypeWarning,
+				}))
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(msg).To(ContainSubstring("-> Events:\n* service-controller reported"))
+				Expect(msg).To(ContainSubstring("first error occurred"))
+				Expect(msg).To(ContainSubstring("second error occurred"))
+			})
+
+			It("should not return a message because no events exist", func() {
+				var listOpts []client.ListOption
+				gomock.InOrder(
+					k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
+						func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
+							listOpts = listOptions
+							return nil
+						}),
+				)
+
+				msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, serviceObj, corev1.EventTypeWarning, len(events))
+
+				Expect(listOpts).To(ContainElement(client.MatchingFields{
+					"involvedObject.apiVersion": serviceObj.APIVersion,
+					"involvedObject.kind":       serviceObj.Kind,
+					"involvedObject.name":       serviceObj.Name,
+					"involvedObject.namespace":  serviceObj.Namespace,
+					"type":                      corev1.EventTypeWarning,
+				}))
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(msg).To(BeEmpty())
+			})
+
+			It("should not return a message because an error occurred", func() {
+				var listOpts []client.ListOption
+				gomock.InOrder(
+					k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
+						func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
+							listOpts = listOptions
+							return errors.New("foo")
+						}),
+				)
+
+				msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, serviceObj, corev1.EventTypeWarning, len(events))
+
+				Expect(listOpts).To(ContainElement(client.MatchingFields{
+					"involvedObject.apiVersion": serviceObj.APIVersion,
+					"involvedObject.kind":       serviceObj.Kind,
+					"involvedObject.name":       serviceObj.Name,
+					"involvedObject.namespace":  serviceObj.Namespace,
+					"type":                      corev1.EventTypeWarning,
+				}))
+				Expect(err).To(MatchError("error 'foo' occurred while fetching more details"))
+				Expect(msg).To(BeEmpty())
+			})
 		})
-		It("should not return a message because an error occurred", func() {
-			var listOpts []client.ListOption
-			gomock.InOrder(
-				k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
-					func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
-						listOpts = listOptions
-						return errors.New("foo")
-					}),
-			)
 
-			msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, serviceObj, corev1.EventTypeWarning, len(events))
+		Context("when object type is not in provided scheme", func() {
+			BeforeEach(func() {
+				scheme = runtime.NewScheme()
+				Expect(gardencorev1beta1.AddToScheme(scheme)).To(Succeed())
+			})
 
-			Expect(listOpts).To(ContainElement(client.MatchingFields{
-				"involvedObject.apiVersion": serviceObj.APIVersion,
-				"involvedObject.kind":       serviceObj.Kind,
-				"involvedObject.name":       serviceObj.Name,
-				"involvedObject.namespace":  serviceObj.Namespace,
-				"type":                      corev1.EventTypeWarning,
-			}))
-			Expect(err).To(MatchError("error 'foo' occurred while fetching more details"))
-			Expect(msg).To(BeEmpty())
-		})
-		It("should not return a message because type apiVersion is not specified", func() {
-			msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, &corev1.Service{}, corev1.EventTypeWarning, len(events))
+			It("should not return a message because type kind is not in scheme", func() {
+				msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, &corev1.Service{}, corev1.EventTypeWarning, len(events))
 
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("apiVersion not specified"))
-			Expect(msg).To(BeEmpty())
-		})
-		It("should not return a message because type kind is not specified", func() {
-			msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, &corev1.Service{TypeMeta: metav1.TypeMeta{APIVersion: "v1"}}, corev1.EventTypeWarning, len(events))
-
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("kind not specified"))
-			Expect(msg).To(BeEmpty())
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("failed identify GVK for object"))
+				Expect(msg).To(BeEmpty())
+			})
 		})
 	})
 
