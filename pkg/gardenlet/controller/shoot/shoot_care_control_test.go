@@ -517,6 +517,94 @@ var _ = Describe("Shoot Care Control", func() {
 				})
 
 			})
+
+			Context("when conditions / constraints are changed to healthy", func() {
+				var (
+					conditions, constraints []gardencorev1beta1.Condition
+
+					revertFns []func()
+				)
+
+				BeforeEach(func() {
+					conditions = []gardencorev1beta1.Condition{
+						{
+							Type:   gardencorev1beta1.ShootAPIServerAvailable,
+							Status: gardencorev1beta1.ConditionTrue,
+							Reason: "foo",
+						},
+						{
+							Type:   gardencorev1beta1.ShootControlPlaneHealthy,
+							Status: gardencorev1beta1.ConditionTrue,
+							Reason: "bar",
+						},
+						{
+							Type:           gardencorev1beta1.ShootEveryNodeReady,
+							Status:         gardencorev1beta1.ConditionTrue,
+							LastUpdateTime: metav1.Now(),
+						},
+						{
+							Type:    gardencorev1beta1.ShootSystemComponentsHealthy,
+							Status:  gardencorev1beta1.ConditionTrue,
+							Message: "foo bar",
+						},
+					}
+
+					constraints = []gardencorev1beta1.Condition{
+						{
+							Type:   gardencorev1beta1.ShootHibernationPossible,
+							Status: gardencorev1beta1.ConditionTrue,
+							Reason: "foo",
+						},
+						{
+							Type:   gardencorev1beta1.ShootMaintenancePreconditionsSatisfied,
+							Status: gardencorev1beta1.ConditionTrue,
+							Reason: "bar",
+						},
+					}
+
+					revertFns = append(revertFns,
+						test.WithVars(&NewHealthCheck,
+							healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+								return conditions
+							}),
+						),
+						test.WithVars(&NewConstraintCheck,
+							constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+								return constraints
+							}),
+						),
+					)
+				})
+
+				AfterEach(func() {
+					for _, fn := range revertFns {
+						fn()
+					}
+				})
+
+				Context("when shoot has a successful last operation", func() {
+					BeforeEach(func() {
+						shoot.Status = gardencorev1beta1.ShootStatus{
+							LastOperation: &gardencorev1beta1.LastOperation{
+								Type:  gardencorev1beta1.LastOperationTypeReconcile,
+								State: gardencorev1beta1.LastOperationStateSucceeded,
+							},
+						}
+					})
+					It("should set shoot to healthy", func() {
+						var updatedShoot *gardencorev1beta1.Shoot
+						gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
+							func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+								updatedShoot = shoot
+								return nil
+							})
+						Expect(careControl.Care(shoot, key)).To(Succeed())
+						Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
+						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusHealthy)))
+					})
+				})
+
+			})
 		})
 	})
 })
