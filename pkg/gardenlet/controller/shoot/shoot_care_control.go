@@ -369,7 +369,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 	kutil.SetMetaDataLabel(&shoot.ObjectMeta, common.ShootStatus, string(shootpkg.ComputeStatus(
 		shoot.Status.LastOperation,
 		shoot.Status.LastErrors,
-		conditions...,
+		updatedConditions...,
 	)))
 	if err := gardenClient.Client().Patch(ctx, shoot, client.MergeFrom(oldObj)); err != nil {
 		operation.Logger.Errorf("Could not update Shoot health label: %+v", err)
