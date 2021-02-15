@@ -74,6 +74,8 @@ spec:
               minAllowed:
                 memory: {{ .Values.hvpa.minAllowed.memory }}
                 cpu: "{{ .Values.hvpa.minAllowed.cpu }}"
+            - containerName: curator
+              mode: "Off"
   weightBasedScalingIntervals:
     - vpaWeight: 100
       startReplicaCount: {{ .Values.replicas }}

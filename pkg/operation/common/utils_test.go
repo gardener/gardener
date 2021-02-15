@@ -553,7 +553,7 @@ var _ = Describe("common", func() {
 
 			statefulSet.Spec.Template.Spec.Containers = []corev1.Container{
 				{
-					Name:      "contaienr-1",
+					Name:      "container-1",
 					Resources: *expectedResources,
 				},
 			}
@@ -563,7 +563,7 @@ var _ = Describe("common", func() {
 			rr, err := GetContainerResourcesInStatefulSet(ctx, c, kutil.Key(testNamespace, testStatefulset))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rr).To(HaveLen(len(statefulSet.Spec.Template.Spec.Containers)))
-			Expect(rr[0]).To(Equal(expectedResources))
+			Expect(rr["container-1"]).To(Equal(expectedResources))
 		})
 
 		It("should return all container resources when statefulset contains two containers", func() {
@@ -587,8 +587,8 @@ var _ = Describe("common", func() {
 			rr, err := GetContainerResourcesInStatefulSet(ctx, c, kutil.Key(testNamespace, testStatefulset))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rr).To(HaveLen(len(statefulSet.Spec.Template.Spec.Containers)))
-			Expect(rr[0]).To(Equal(expectedResources))
-			Expect(rr[1]).To(Equal(expectedResources))
+			Expect(rr["container-1"]).To(Equal(expectedResources))
+			Expect(rr["container-2"]).To(Equal(expectedResources))
 		})
 
 		It("should return error if statefulSet is not found", func() {

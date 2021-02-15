@@ -307,6 +307,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			common.AlpineImageName,
 			common.ConfigMapReloaderImageName,
 			common.LokiImageName,
+			common.CuratorImageName,
 			common.FluentBitImageName,
 			common.FluentBitPluginInstaller,
 			common.GardenerResourceManagerImageName,
@@ -416,8 +417,10 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			if err != nil {
 				return err
 			}
-			if len(currentResources) != 0 && currentResources[0] != nil {
-				lokiValues["resources"] = currentResources[0]
+			if len(currentResources) != 0 && currentResources["loki"] != nil {
+				lokiValues["resources"] = map[string]interface{}{
+					"loki": currentResources["loki"],
+				}
 			}
 		}
 
