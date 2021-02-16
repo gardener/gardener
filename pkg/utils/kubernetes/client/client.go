@@ -240,6 +240,7 @@ func DefaultGoneEnsurer() GoneEnsurer {
 }
 
 // GoneBeforeEnsurer returns an implementation of `GoneEnsurer` which is time aware.
+// It ensures that only resources created <before> are deleted.
 func GoneBeforeEnsurer(before time.Time) GoneEnsurer {
 	return &beforeGoneEnsurer{
 		time: before,
@@ -250,7 +251,7 @@ type beforeGoneEnsurer struct {
 	time time.Time
 }
 
-// EnsureGoneBefore ensures that no given object or objects in the list exist before the given time.
+// EnsureGone ensures that no given object or objects in the list are deleted, if they were created before the given time.
 func (b *beforeGoneEnsurer) EnsureGone(ctx context.Context, c client.Client, obj runtime.Object, opts ...client.ListOption) error {
 	if err := EnsureGone(ctx, c, obj, opts...); err != nil {
 		remainingObjs, ok := err.(objectsRemaining)
@@ -305,11 +306,11 @@ func ensureCollectionGone(ctx context.Context, c client.Client, list client.Obje
 }
 
 func (cl *cleaner) clean(ctx context.Context, c client.Client, obj client.Object, cleanOptions *CleanOptions) error {
-	if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
+	if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
-	return cl.doClean(ctx, c, obj, cleanOptions)
+	return client.IgnoreNotFound(cl.doClean(ctx, c, obj, cleanOptions))
 }
 
 func (cl *cleaner) cleanCollection(
