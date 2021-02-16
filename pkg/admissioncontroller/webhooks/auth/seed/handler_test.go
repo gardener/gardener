@@ -83,7 +83,7 @@ var _ = Describe("Handler", func() {
 `))
 		})
 
-		It("should write an erroneous response because the body is not decodeable", func() {
+		It("should write an erroneous response because the body is invalid", func() {
 			req := &http.Request{
 				Header: http.Header{"Content-Type": []string{"application/json"}},
 				Body:   nopCloser{Reader: bytes.NewBufferString("{")},
@@ -95,13 +95,25 @@ var _ = Describe("Handler", func() {
 `))
 		})
 
+		It("should write an erroneous response because the body is not decodeable", func() {
+			req := &http.Request{
+				Header: http.Header{"Content-Type": []string{"application/json"}},
+				Body:   nopCloser{Reader: bytes.NewBufferString("{}")},
+			}
+
+			handler(respRecorder, req)
+
+			Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1beta1","metadata":{"creationTimestamp":null},"spec":{},"status":{"allowed":false,"evaluationError":"400 unmarshalerDecoder: Object 'Kind' is missing in '{}', error found in #2 byte of ...|{}|..., bigger context ...|{}|..."}}
+`))
+		})
+
 		DescribeTable("authorizer consultation",
 			func(fn func(context.Context, authorizer.Attributes) (authorizer.Decision, string, error), timeout time.Duration, expectedStatus string) {
 				defer test.WithVar(&DecisionTimeout, timeout)()
 
 				req := &http.Request{
 					Header: http.Header{"Content-Type": []string{"application/json"}},
-					Body:   nopCloser{Reader: bytes.NewBufferString("{}")},
+					Body:   nopCloser{Reader: bytes.NewBufferString(`{"apiVersion":"authorization.k8s.io/v1beta1","kind":"SubjectAccessReview"}`)},
 				}
 
 				handler = NewHandler(logger, &fakeAuthorizer{fn: fn})

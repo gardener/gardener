@@ -26,6 +26,7 @@ import (
 	"github.com/go-logr/logr"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	authorizationv1beta1 "k8s.io/api/authorization/v1beta1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -94,14 +95,8 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Both v1 and v1beta1 SubjectAccessReview types are exactly the same, so the v1beta1 type can be decoded into the
-	// v1 type. However the runtime codec's decoder guesses which type to decode into by type name if an Object's
-	// TypeMeta isn't set. By setting TypeMeta of an unregistered type to the v1 GVK, the decoder will coerce a v1beta1
-	// SubjectAccessReview to v1. The actual SubjectAccessReview GVK will be used to write a typed response in case the
-	// webhook config permits multiple versions, otherwise this response will fail.
-	sar := unversionedSubjectAccessReview{}
-	sar.SetGroupVersionKind(authorizationv1beta1.SchemeGroupVersion.WithKind("SubjectAccessReview"))
-	_, gvk, err := codecs.UniversalDeserializer().Decode(body, nil, &sar)
+	// Decode request body into authorizationv1beta1.SubjectAccessReviewSpec structure
+	sarSpec, gvk, err := h.decodeRequestBody(body)
 	if err != nil {
 		h.logger.Error(err, "unable to decode the request")
 		h.writeResponse(w, nil, Errored(http.StatusBadRequest, err))
@@ -109,12 +104,12 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log request information
-	keysAndValues := []interface{}{"user", sar.Spec.User, "groups", sar.Spec.Groups}
-	if sar.Spec.ResourceAttributes != nil {
-		keysAndValues = append(keysAndValues, "resourceAttributes", sar.Spec.ResourceAttributes.String())
+	keysAndValues := []interface{}{"user", sarSpec.User, "groups", sarSpec.Groups}
+	if sarSpec.ResourceAttributes != nil {
+		keysAndValues = append(keysAndValues, "resourceAttributes", sarSpec.ResourceAttributes.String())
 	}
-	if sar.Spec.NonResourceAttributes != nil {
-		keysAndValues = append(keysAndValues, "nonResourceAttributes", sar.Spec.NonResourceAttributes.String())
+	if sarSpec.NonResourceAttributes != nil {
+		keysAndValues = append(keysAndValues, "nonResourceAttributes", sarSpec.NonResourceAttributes.String())
 	}
 	h.logger.V(1).Info("received request", keysAndValues...)
 
@@ -122,7 +117,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), DecisionTimeout)
 	defer cancel()
 
-	decision, reason, err := h.authorizer.Authorize(ctx, AuthorizationAttributesFrom(sar.Spec))
+	decision, reason, err := h.authorizer.Authorize(ctx, AuthorizationAttributesFrom(*sarSpec))
 	if err != nil {
 		h.logger.Error(err, "error when consulting authorizer for opinion")
 		h.writeResponse(w, gvk, Errored(http.StatusInternalServerError, err))
@@ -146,6 +141,9 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) writeResponse(w io.Writer, gvk *schema.GroupVersionKind, status authorizationv1beta1.SubjectAccessReviewStatus) {
+	// The SubjectAccessReviewStatus type is exactly the same for both authorization.k8s.io/v1beta1 and
+	// authorization.k8s.io/v1, so we can just overwrite the apiVersion/kind with the same version like the object in
+	// the request.
 	response := authorizationv1beta1.SubjectAccessReview{Status: status}
 	if gvk == nil || *gvk == (schema.GroupVersionKind{}) {
 		response.SetGroupVersionKind(authorizationv1beta1.SchemeGroupVersion.WithKind("SubjectAccessReview"))
@@ -170,9 +168,65 @@ func (h *handler) writeResponse(w io.Writer, gvk *schema.GroupVersionKind, statu
 	}
 }
 
-// unversionedSubjectAccessReview is used to decode both v1 and v1beta1 SubjectAccessReview types.
-type unversionedSubjectAccessReview struct {
-	authorizationv1beta1.SubjectAccessReview
-}
+func (h *handler) decodeRequestBody(body []byte) (*authorizationv1beta1.SubjectAccessReviewSpec, *schema.GroupVersionKind, error) {
+	var (
+		obj     unstructured.Unstructured
+		sarSpec authorizationv1beta1.SubjectAccessReviewSpec
+	)
 
-var _ runtime.Object = &unversionedSubjectAccessReview{}
+	_, gvk, err := codecs.UniversalDeserializer().Decode(body, nil, &obj)
+	if err != nil {
+		return nil, nil, err
+	}
+	if gvk == nil {
+		return nil, nil, fmt.Errorf("could not determine GVK for object in the request body")
+	}
+
+	switch *gvk {
+	case authorizationv1beta1.SchemeGroupVersion.WithKind("SubjectAccessReview"):
+		var tmp authorizationv1beta1.SubjectAccessReview
+		if err := scheme.Convert(&obj, &tmp, nil); err != nil {
+			return nil, nil, err
+		}
+		return &tmp.Spec, gvk, nil
+
+	case authorizationv1.SchemeGroupVersion.WithKind("SubjectAccessReview"):
+		var tmp authorizationv1.SubjectAccessReview
+		if err := scheme.Convert(&obj, &tmp, nil); err != nil {
+			return nil, nil, err
+		}
+
+		// "convert" authorizationv1.SubjectAccessReviewSpec to authorizationv1beta1.SubjectAccessReviewSpec
+		sarSpec.User = tmp.Spec.User
+		sarSpec.Groups = tmp.Spec.Groups
+		sarSpec.UID = tmp.Spec.UID
+		for k, v := range tmp.Spec.Extra {
+			var extra []string
+			for _, e := range v {
+				extra = append(extra, e)
+			}
+			sarSpec.Extra[k] = extra
+		}
+		if v := tmp.Spec.NonResourceAttributes; v != nil {
+			sarSpec.NonResourceAttributes = &authorizationv1beta1.NonResourceAttributes{
+				Path: v.Path,
+				Verb: v.Verb,
+			}
+		}
+		if v := tmp.Spec.ResourceAttributes; v != nil {
+			sarSpec.ResourceAttributes = &authorizationv1beta1.ResourceAttributes{
+				Namespace:   v.Namespace,
+				Verb:        v.Verb,
+				Group:       v.Group,
+				Version:     v.Version,
+				Resource:    v.Resource,
+				Subresource: v.Subresource,
+				Name:        v.Name,
+			}
+		}
+
+		return &sarSpec, gvk, nil
+	}
+
+	return nil, nil, fmt.Errorf("unexpected group version kind: %+v", *gvk)
+}
