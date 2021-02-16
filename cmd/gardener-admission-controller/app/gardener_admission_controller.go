@@ -36,9 +36,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
-	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	configv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	configvalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks"
+	seedauthorizer "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 )
@@ -58,7 +59,7 @@ func init() {
 	configScheme := runtime.NewScheme()
 	schemeBuilder := runtime.NewSchemeBuilder(
 		config.AddToScheme,
-		admissioncontrollerconfigv1alpha1.AddToScheme,
+		configv1alpha1.AddToScheme,
 	)
 	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
 	configDecoder = serializer.NewCodecFactory(configScheme).UniversalDecoder()
@@ -154,7 +155,9 @@ func (o *options) run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	logSeedAuth := logf.Log.WithName(seedauthorizer.PluginName)
 
+	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth)))
 	server.Register("/webhooks/validate-namespace-deletion", &webhook.Admission{Handler: namespaceValidationHandler})
 	server.Register("/webhooks/validate-kubeconfig-secrets", &webhook.Admission{Handler: &webhooks.KubeconfigSecretValidator{}})
 	server.Register("/webhooks/validate-resource-size", &webhook.Admission{Handler: &webhooks.ObjectSizeHandler{Config: o.config.Server.ResourceAdmissionConfiguration}})

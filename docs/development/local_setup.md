@@ -192,6 +192,8 @@ clusterrolebinding.rbac.authorization.k8s.io/front-proxy-client created
 This will start all minimally required components of a Kubernetes cluster (`etcd`, `kube-apiserver`, `kube-controller-manager`)
 and an `etcd` Instance for the `gardener-apiserver` as Docker containers.
 
+ℹ️ [Optional] If you want to develop the `SeedAuthorization` feature then you have to run `make ACTIVATE_SEEDAUTHORIZER=true local-garden-up`. However, please note that this forces you to start the `gardener-admission-controller` via `make start-admission-controller`.
+
 To tear down the local Garden cluster and remove the Docker containers, simply run:
 ```bash
 make local-garden-down

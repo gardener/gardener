@@ -19,6 +19,8 @@ set -o nounset
 set -o pipefail
 
 LOCAL_GARDEN_LABEL=${1:-local-garden}
+ACTIVATE_SEEDAUTHORIZER=${2:-false}
+
 KUBECONFIGPATH="$(dirname $0)/kubeconfigs/default-admin.conf"
 
 echo "# Remove old containers and create the docker user network"
@@ -27,7 +29,7 @@ docker network create gardener-dev --label $LOCAL_GARDEN_LABEL
 
 echo "# Start the nodeless kubernetes environment"
 $(dirname $0)/run-kube-etcd $LOCAL_GARDEN_LABEL
-$(dirname $0)/run-kube-apiserver $LOCAL_GARDEN_LABEL
+$(dirname $0)/run-kube-apiserver $LOCAL_GARDEN_LABEL $ACTIVATE_SEEDAUTHORIZER
 $(dirname $0)/run-kube-controller-manager $LOCAL_GARDEN_LABEL
 
 echo "# This etcd will be used to storge gardener resources (e.g., seeds, shoots)"
