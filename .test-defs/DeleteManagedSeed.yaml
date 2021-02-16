@@ -1,0 +1,16 @@
+kind: TestDefinition
+metadata:
+  name: delete-managed-seed
+spec:
+  owner: gardener-oq@listserv.sap.com
+  description: Tests the deletion of a managed seed.
+  activeDeadlineSeconds: 4200
+
+  command: [bash, -c]
+  args:
+  - >-
+    go test -timeout=0 -mod=vendor ./test/system/managed_seed_deletion
+    --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
+    -kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
+    -managed-seed-name=$MANAGED_SEED_NAME
+  image: golang:1.15.3

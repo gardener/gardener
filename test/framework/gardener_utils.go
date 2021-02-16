@@ -22,6 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
@@ -664,5 +665,77 @@ func (f *GardenerFramework) WaitForSeedToBeDeleted(ctx context.Context, seed *ga
 		}
 		f.Logger.Infof("waiting for seed %s to be deleted", seed.Name)
 		return retry.MinorError(fmt.Errorf("seed %q still exists", seed.Name))
+	})
+}
+
+// CreateManagedSeed creates a new managed seed and waits for it to be created and successfully reconciled.
+func (f *GardenerFramework) CreateManagedSeed(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
+	// Create the managed seed
+	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
+		err = f.GardenClient.Client().Create(ctx, managedSeed)
+		if apierrors.IsInvalid(err) || apierrors.IsForbidden(err) || apierrors.IsAlreadyExists(err) {
+			return retry.SevereError(err)
+		}
+		if err != nil {
+			f.Logger.Debugf("Could not create managed seed %s: %s", managedSeed.Name, err.Error())
+			return retry.MinorError(err)
+		}
+		return retry.Ok()
+	})
+	if err != nil {
+		return err
+	}
+
+	// Wait for the managed seed to be created and successfully reconciled
+	return f.WaitForManagedSeedToBeCreated(ctx, managedSeed)
+}
+
+// WaitForManagedSeedToBeCreated waits for the given managed seed to be created and successfully reconciled.
+func (f *GardenerFramework) WaitForManagedSeedToBeCreated(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
+	return retry.UntilTimeout(ctx, 30*time.Second, 60*time.Minute, func(ctx context.Context) (done bool, err error) {
+		err = f.GardenClient.DirectClient().Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)
+		if err != nil {
+			f.Logger.Debugf("Could not get managed seed %s: %s", managedSeed.Name, err.Error())
+			return retry.MinorError(err)
+		}
+		err = health.CheckManagedSeed(managedSeed)
+		if err != nil {
+			return retry.MinorError(fmt.Errorf("managed seed %s not reconciled successfully: %w", managedSeed.Name, err))
+		}
+		return retry.Ok()
+	})
+}
+
+// DeleteSeed deletes the given managed seed and waits for it to be deleted.
+func (f *GardenerFramework) DeleteManagedSeed(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
+	// Delete the managed seed
+	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
+		err = f.GardenClient.Client().Delete(ctx, managedSeed)
+		if err != nil {
+			f.Logger.Debugf("Could not delete managed seed %s: %s", managedSeed.Name, err.Error())
+			return retry.MinorError(err)
+		}
+		return retry.Ok()
+	})
+	if err != nil {
+		return err
+	}
+
+	// Wait for the managed seed to be deleted
+	return f.WaitForManagedSeedToBeDeleted(ctx, managedSeed)
+}
+
+// WaitForManagedSeedToBeDeleted waits for the given managed seed to be deleted.
+func (f *GardenerFramework) WaitForManagedSeedToBeDeleted(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
+	return retry.UntilTimeout(ctx, 30*time.Second, 60*time.Minute, func(ctx context.Context) (done bool, err error) {
+		err = f.GardenClient.DirectClient().Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return retry.Ok()
+			}
+			f.Logger.Debugf("Could not get managed seed %s: %s", managedSeed.Name, err.Error())
+			return retry.MinorError(err)
+		}
+		return retry.MinorError(fmt.Errorf("managed seed %s still exists", managedSeed.Name))
 	})
 }

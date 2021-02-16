@@ -157,6 +157,11 @@ func ParseFileAsWorkers(filepath string) ([]gardencorev1beta1.Worker, error) {
 	return workers, nil
 }
 
+// GetTestRunID returns the current testmachinery testrun ID.
+func GetTestRunID() string {
+	return os.Getenv(TestMachineryTestRunIDEnvVarName)
+}
+
 // TextValidation is a map of regular expression to description
 // that is used to validate texts based on allowed or denied regexps.
 type TextValidation map[string]string
