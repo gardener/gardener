@@ -55,7 +55,7 @@ func NewActuator(backupEntryDelegate BackupEntryDelegate, logger logr.Logger) ba
 	}
 }
 
-// Reconcile reconciles the update of a BackupEntry
+// Reconcile reconciles the update of a BackupEntry.
 func (a *actuator) Reconcile(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
 	return a.deployEtcdBackupSecret(ctx, be)
 }
@@ -103,17 +103,17 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1a
 	return err
 }
 
-// Delete deletes the BackupEntry
+// Delete deletes the BackupEntry.
 func (a *actuator) Delete(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
 	return a.backupEntryDelegate.Delete(ctx, be)
 }
 
-// Restore restores the update of a BackupEntry
+// Restore restores the BackupEntry.
 func (a *actuator) Restore(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
 	return a.Reconcile(ctx, be)
 }
 
-// Migrate migrates the BackupEntry
-func (a *actuator) Migrate(ctx context.Context, be *extensionsv1alpha1.BackupEntry) error {
+// Migrate migrates the BackupEntry.
+func (a *actuator) Migrate(_ context.Context, _ *extensionsv1alpha1.BackupEntry) error {
 	return nil
 }

@@ -27,7 +27,6 @@ import (
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -71,7 +70,7 @@ var _ = Describe("ControlPlane", func() {
 		}
 		cpSpec extensionsv1alpha1.ControlPlaneSpec
 
-		defaultDepWaiter shoot.ExtensionControlPlane
+		defaultDepWaiter controlplane.Interface
 		values           *controlplane.Values
 	)
 

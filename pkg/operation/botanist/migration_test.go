@@ -19,12 +19,15 @@ import (
 	"fmt"
 
 	mockcomponent "github.com/gardener/gardener/pkg/mock/gardener/operation/botanist/component"
-	mockextension "github.com/gardener/gardener/pkg/mock/gardener/operation/botanist/extensions/extension"
-	mockshoot "github.com/gardener/gardener/pkg/mock/gardener/operation/shoot"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	mockbackupentry "github.com/gardener/gardener/pkg/operation/botanist/extensions/backupentry/mock"
+	mockcontainerruntime "github.com/gardener/gardener/pkg/operation/botanist/extensions/containerruntime/mock"
+	mockcontrolplane "github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane/mock"
+	mockextension "github.com/gardener/gardener/pkg/operation/botanist/extensions/extension/mock"
+	mockinfrastructure "github.com/gardener/gardener/pkg/operation/botanist/extensions/infrastructure/mock"
 	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/mock"
+	mockworker "github.com/gardener/gardener/pkg/operation/botanist/extensions/worker/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 
 	"github.com/golang/mock/gomock"
@@ -37,15 +40,15 @@ var _ = Describe("migration", func() {
 	var (
 		ctrl *gomock.Controller
 
-		backupEntry           *mockbackupentry.MockBackupEntry
-		containerRuntime      *mockshoot.MockExtensionContainerRuntime
-		controlPlane          *mockshoot.MockExtensionControlPlane
-		controlPlaneExposure  *mockshoot.MockExtensionControlPlane
+		backupEntry           *mockbackupentry.MockInterface
+		containerRuntime      *mockcontainerruntime.MockInterface
+		controlPlane          *mockcontrolplane.MockInterface
+		controlPlaneExposure  *mockcontrolplane.MockInterface
 		extension             *mockextension.MockInterface
-		infrastructure        *mockshoot.MockExtensionInfrastructure
+		infrastructure        *mockinfrastructure.MockInterface
 		network               *mockcomponent.MockDeployMigrateWaiter
 		operatingSystemConfig *mockoperatingsystemconfig.MockInterface
-		worker                *mockshoot.MockExtensionWorker
+		worker                *mockworker.MockInterface
 
 		botanist *Botanist
 
@@ -56,15 +59,15 @@ var _ = Describe("migration", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		backupEntry = mockbackupentry.NewMockBackupEntry(ctrl)
-		containerRuntime = mockshoot.NewMockExtensionContainerRuntime(ctrl)
-		controlPlane = mockshoot.NewMockExtensionControlPlane(ctrl)
-		controlPlaneExposure = mockshoot.NewMockExtensionControlPlane(ctrl)
+		backupEntry = mockbackupentry.NewMockInterface(ctrl)
+		containerRuntime = mockcontainerruntime.NewMockInterface(ctrl)
+		controlPlane = mockcontrolplane.NewMockInterface(ctrl)
+		controlPlaneExposure = mockcontrolplane.NewMockInterface(ctrl)
 		extension = mockextension.NewMockInterface(ctrl)
-		infrastructure = mockshoot.NewMockExtensionInfrastructure(ctrl)
+		infrastructure = mockinfrastructure.NewMockInterface(ctrl)
 		network = mockcomponent.NewMockDeployMigrateWaiter(ctrl)
 		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
-		worker = mockshoot.NewMockExtensionWorker(ctrl)
+		worker = mockworker.NewMockInterface(ctrl)
 
 		botanist = &Botanist{Operation: &operation.Operation{
 			Shoot: &shootpkg.Shoot{

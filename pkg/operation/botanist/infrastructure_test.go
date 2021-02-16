@@ -22,9 +22,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mockkubernetes "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
-	mockshoot "github.com/gardener/gardener/pkg/mock/gardener/operation/shoot"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	mockinfrastructure "github.com/gardener/gardener/pkg/operation/botanist/extensions/infrastructure/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -40,7 +40,7 @@ import (
 var _ = Describe("Infrastructure", func() {
 	var (
 		ctrl           *gomock.Controller
-		infrastructure *mockshoot.MockExtensionInfrastructure
+		infrastructure *mockinfrastructure.MockInterface
 		botanist       *Botanist
 
 		ctx          = context.TODO()
@@ -51,7 +51,7 @@ var _ = Describe("Infrastructure", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		infrastructure = mockshoot.NewMockExtensionInfrastructure(ctrl)
+		infrastructure = mockinfrastructure.NewMockInterface(ctrl)
 		botanist = &Botanist{Operation: &operation.Operation{
 			Secrets: map[string]*corev1.Secret{
 				"ssh-keypair": {Data: map[string][]byte{"id_rsa.pub": sshPublicKey}},

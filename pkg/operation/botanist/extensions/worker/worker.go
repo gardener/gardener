@@ -24,9 +24,9 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/Masterminds/semver"
@@ -53,6 +53,15 @@ const (
 // TimeNow returns the current time. Exposed for testing.
 var TimeNow = time.Now
 
+// Interface is an interface for managing Workers.
+type Interface interface {
+	component.DeployMigrateWaiter
+	SetSSHPublicKey([]byte)
+	SetInfrastructureProviderStatus(*runtime.RawExtension)
+	SetWorkerNameToOperatingSystemConfigsMap(map[string]*operatingsystemconfig.OperatingSystemConfigs)
+	MachineDeployments() []extensionsv1alpha1.MachineDeployment
+}
+
 // Values contains the values used to create a Worker resources.
 type Values struct {
 	// Namespace is the Shoot namespace in the seed.
@@ -76,7 +85,7 @@ type Values struct {
 	WorkerNameToOperatingSystemConfigsMap map[string]*operatingsystemconfig.OperatingSystemConfigs
 }
 
-// New creates a new instance of a Worker deployer.
+// New creates a new instance of Interface.
 func New(
 	logger logrus.FieldLogger,
 	client client.Client,
@@ -84,7 +93,7 @@ func New(
 	waitInterval time.Duration,
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
-) shoot.ExtensionWorker {
+) Interface {
 	return &worker{
 		client:              client,
 		logger:              logger,

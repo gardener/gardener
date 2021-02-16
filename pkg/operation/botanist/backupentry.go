@@ -49,7 +49,7 @@ func (b *Botanist) DefaultCoreBackupEntry(gardenClient client.Client) component.
 
 // DefaultExtensionsBackupEntry creates the default deployer for the extensions.gardener.cloud/v1alpha1.BackupEntry
 // custom resource.
-func (b *Botanist) DefaultExtensionsBackupEntry(seedClient client.Client) extensionsbackupentry.BackupEntry {
+func (b *Botanist) DefaultExtensionsBackupEntry(seedClient client.Client) extensionsbackupentry.Interface {
 	return extensionsbackupentry.New(
 		b.Logger,
 		seedClient,

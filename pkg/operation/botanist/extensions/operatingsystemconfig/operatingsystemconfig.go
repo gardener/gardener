@@ -45,6 +45,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+const (
+	// DefaultInterval is the default interval for retry operations.
+	DefaultInterval = 5 * time.Second
+	// DefaultSevereThreshold is the default threshold until an error reported by another component is treated as
+	// 'severe'.
+	DefaultSevereThreshold = 30 * time.Second
+	// DefaultTimeout is the default timeout and defines how long Gardener should wait for a successful reconciliation
+	// of an OperatingSystemConfig resource.
+	DefaultTimeout = 3 * time.Minute
+)
+
+// TimeNow returns the current time. Exposed for testing.
+var TimeNow = time.Now
+
 // Interface is an interface for managing OperatingSystemConfigs.
 type Interface interface {
 	component.DeployMigrateWaiter
@@ -60,20 +74,6 @@ type Interface interface {
 	// containing both the downloader as well as the original operating system config data.
 	WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs
 }
-
-const (
-	// DefaultInterval is the default interval for retry operations.
-	DefaultInterval = 5 * time.Second
-	// DefaultSevereThreshold is the default threshold until an error reported by another component is treated as
-	// 'severe'.
-	DefaultSevereThreshold = 30 * time.Second
-	// DefaultTimeout is the default timeout and defines how long Gardener should wait for a successful reconciliation
-	// of an OperatingSystemConfig resource.
-	DefaultTimeout = 3 * time.Minute
-)
-
-// TimeNow returns the current time. Exposed for testing.
-var TimeNow = time.Now
 
 // Values contains the values used to create an OperatingSystemConfig resource.
 type Values struct {
@@ -121,7 +121,7 @@ type OriginalValues struct {
 	SSHPublicKey string
 }
 
-// New creates a new instance of DeployMigrateWaiter for an OperatingSystemConfig.
+// New creates a new instance of Interface.
 func New(
 	logger logrus.FieldLogger,
 	client client.Client,

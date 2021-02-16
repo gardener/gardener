@@ -20,9 +20,9 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockshoot "github.com/gardener/gardener/pkg/mock/gardener/operation/shoot"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	mockcontainerruntime "github.com/gardener/gardener/pkg/operation/botanist/extensions/containerruntime/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 
 	"github.com/golang/mock/gomock"
@@ -33,7 +33,7 @@ import (
 var _ = Describe("ContainerRuntime", func() {
 	var (
 		ctrl             *gomock.Controller
-		containerRuntime *mockshoot.MockExtensionContainerRuntime
+		containerRuntime *mockcontainerruntime.MockInterface
 		botanist         *Botanist
 
 		ctx        = context.TODO()
@@ -43,7 +43,7 @@ var _ = Describe("ContainerRuntime", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		containerRuntime = mockshoot.NewMockExtensionContainerRuntime(ctrl)
+		containerRuntime = mockcontainerruntime.NewMockInterface(ctrl)
 		botanist = &Botanist{Operation: &operation.Operation{
 			Shoot: &shootpkg.Shoot{
 				Components: &shootpkg.Components{

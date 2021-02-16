@@ -30,8 +30,8 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/shoot"
 )
 
 const (
@@ -46,6 +46,14 @@ const (
 
 // TimeNow returns the current time. Exposed for testing.
 var TimeNow = time.Now
+
+// Interface is an interface for managing Infrastructures.
+type Interface interface {
+	component.DeployMigrateWaiter
+	SetSSHPublicKey([]byte)
+	ProviderStatus() *runtime.RawExtension
+	NodesCIDR() *string
+}
 
 // Values contains the values used to create an Infrastructure resources.
 type Values struct {
@@ -68,7 +76,7 @@ type Values struct {
 	AnnotateOperation bool
 }
 
-// New creates a new instance of an ExtensionInfrastructure deployer.
+// New creates a new instance of Interface.
 func New(
 	logger logrus.FieldLogger,
 	client client.Client,
@@ -76,7 +84,7 @@ func New(
 	waitInterval time.Duration,
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
-) shoot.ExtensionInfrastructure {
+) Interface {
 	return &infrastructure{
 		client:              client,
 		logger:              logger,

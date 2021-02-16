@@ -36,7 +36,6 @@ import (
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/extensions/containerruntime"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -62,7 +61,7 @@ var _ = Describe("#ContainerRuntimee", func() {
 		values   *containerruntime.Values
 		log      logrus.FieldLogger
 
-		defaultDepWaiter shoot.ExtensionContainerRuntime
+		defaultDepWaiter containerruntime.Interface
 		workers          []gardencorev1beta1.Worker
 
 		mockNow *mocktime.MockNow

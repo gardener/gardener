@@ -45,8 +45,8 @@ const (
 // TimeNow returns the current time. Exposed for testing.
 var TimeNow = time.Now
 
-// BackupEntry is an interface for managing BackupEntries.
-type BackupEntry interface {
+// Interface is an interface for managing BackupEntries.
+type Interface interface {
 	component.DeployMigrateWaiter
 	SetType(string)
 	SetProviderConfig(*runtime.RawExtension)
@@ -72,7 +72,7 @@ type Values struct {
 	BackupBucketProviderStatus *runtime.RawExtension
 }
 
-// New creates a new instance of DeployWaiter for a BackupEntry.
+// New creates a new instance of Interface.
 func New(
 	logger logrus.FieldLogger,
 	client client.Client,
@@ -80,7 +80,7 @@ func New(
 	waitInterval time.Duration,
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
-) BackupEntry {
+) Interface {
 	return &backupEntry{
 		client:              client,
 		logger:              logger,
