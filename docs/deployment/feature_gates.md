@@ -67,7 +67,7 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 
 * `Logging` enables logging stack for Seed clusters.
 * `HVPA` enables simultaneous horizontal and vertical scaling in Seed Clusters.
-* `HVPAForShootedSeed`  enables simultaneous horizontal and vertical scaling in shooted Seed clusters.
+* `HVPAForShootedSeed`  enables simultaneous horizontal and vertical scaling in managed seed (aka "shooted seed") clusters.
 * `ManagedIstio` enables a Gardener-tailored [Istio](https://istio.io) in each Seed cluster. Disable this feature if Istio is already installed in the cluster. Istio is not automatically removed if this feature is disabled. See the [detailed documentation](../usage/istio.md) for more information.
 * `APIServerSNI` enables only one LoadBalancer to be used for every Shoot cluster API server in a Seed. Enable this feature when `ManagedIstio` is enabled or Istio is manually deployed in Seed cluster. See [GEP-8](../proposals/08-shoot-apiserver-via-sni.md) for more details.
 * `MountHostCADirectories` enables mounting common CA certificate directories in the Shoot API server pod that might be required for webhooks or OIDC.

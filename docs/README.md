@@ -23,7 +23,7 @@
 
 ## Usage
 
-* [Add a Shooted Seed](usage/shooted_seed.md)
+* [Register Shoot as Seed](usage/managed_seed.md)
 * [API Server Network Proxy Reverse Tunneling](usage/reverse-tunnel.md)
 * [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
 * [Auto-Scaling for shoot clusters](usage/shoot_autoscaling.md)

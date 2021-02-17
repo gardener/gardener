@@ -265,7 +265,7 @@ We refer to the global configuration values as _gardenlet configuration_ in the 
 A seed cluster can either be registered by manually creating 
 the [`Seed` resource](../../example/50-seed.yaml) 
 or automatically by the gardenlet.  
-This functionality is useful for shooted seed clusters, 
+This functionality is useful for managed seed clusters, 
 as the gardenlet in the garden cluster deploys a copy of itself 
 into the cluster with automatic registration of the `Seed` configured.  
 However, it can also be used to have a streamlined seed cluster registration process when manually deploying the gardenlet.
