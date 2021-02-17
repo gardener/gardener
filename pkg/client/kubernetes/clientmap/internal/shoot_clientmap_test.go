@@ -78,7 +78,7 @@ var _ = Describe("ShootClientMap", func() {
 			},
 		}
 
-		internal.ProjectForNamespaceWithClient = func(ctx context.Context, c client.Client, namespaceName string) (*gardencorev1beta1.Project, error) {
+		internal.ProjectForNamespaceWithClient = func(ctx context.Context, c client.Reader, namespaceName string) (*gardencorev1beta1.Project, error) {
 			return &gardencorev1beta1.Project{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eden",
@@ -186,7 +186,7 @@ var _ = Describe("ShootClientMap", func() {
 					shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
 					return nil
 				})
-			internal.ProjectForNamespaceWithClient = func(ctx context.Context, c client.Client, namespaceName string) (*gardencorev1beta1.Project, error) {
+			internal.ProjectForNamespaceWithClient = func(ctx context.Context, c client.Reader, namespaceName string) (*gardencorev1beta1.Project, error) {
 				return nil, fakeErr
 			}
 
