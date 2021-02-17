@@ -24,6 +24,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -48,6 +49,7 @@ var (
 	targetSeedName *string
 	shootName      *string
 	shootNamespace *string
+	mrExcludeList  *string
 	gardenerConfig *GardenerConfig
 )
 
@@ -56,6 +58,7 @@ func init() {
 	targetSeedName = flag.String("target-seed-name", "", "name of the seed to which the shoot will be migrated")
 	shootName = flag.String("shoot-name", "", "name of the shoot")
 	shootNamespace = flag.String("shoot-namespace", "", "namespace of the shoot")
+	mrExcludeList = flag.String("mr-exclude-list", "", "comma-separated values of the ManagedResources that will be exlude during the 'CreationTimestamp' check")
 }
 
 var _ = ginkgo.Describe("Shoot migration testing", func() {
@@ -220,7 +223,7 @@ func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp app
 	guestBookApp.Cleanup(ctx)
 
 	ginkgo.By("Checking timestamps of all resources...")
-	if err := t.CheckObjectsTimestamp(ctx); err != nil {
+	if err := t.CheckObjectsTimestamp(ctx, strings.Split(*mrExcludeList, ",")); err != nil {
 		return err
 	}
 	return nil
