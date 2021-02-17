@@ -48,14 +48,4 @@ var (
 			"reason",
 		},
 	)
-
-	// InvalidWebhookRequest defines the counter invalid_webhook_requests_total.
-	InvalidWebhookRequest = factory.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: namespace,
-			Name:      "invalid_webhook_requests_total",
-			Help:      "Total number of invalid webhook requests.",
-		},
-		[]string{},
-	)
 )
