@@ -98,7 +98,8 @@ global:
         shootStateSync:
           concurrentSyncs: 5
           syncPeriod: 30s
-        shootedSeedRegistration:
+        managedSeed:
+          concurrentSyncs: 5
           syncJitterPeriod: 5m
       resources:
         capacity:

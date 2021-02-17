@@ -476,7 +476,7 @@ func (b *Botanist) deployNetworkPolicies(ctx context.Context, denyAll bool) erro
 		values      = map[string]interface{}{}
 	)
 
-	switch b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase { //nolint:exhaustive
+	switch b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase { // nolint:exhaustive
 	case component.PhaseEnabled, component.PhaseEnabling, component.PhaseDisabling:
 		// Enable network policies for SNI
 		// When disabling SNI (previously enabled), the control plane is transitioning between states, thus
@@ -537,7 +537,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		memoryMetricForHpaEnabled = false
 	)
 
-	if b.ShootedSeed != nil {
+	if b.ManagedSeed != nil {
 		// Override for shooted seeds
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 		memoryMetricForHpaEnabled = true
@@ -631,19 +631,14 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		foundDeployment = false
 	}
 
-	if b.ShootedSeed != nil {
-		var (
-			apiServer  = b.ShootedSeed.APIServer
-			autoscaler = apiServer.Autoscaler
-		)
+	if b.ManagedSeed != nil && b.ManagedSeedAPIServer != nil {
+		autoscaler := b.ManagedSeedAPIServer.Autoscaler
 		minReplicas = *autoscaler.MinReplicas
 		maxReplicas = autoscaler.MaxReplicas
 	}
 
-	if b.ShootedSeed != nil && !hvpaEnabled {
-		apiServer := b.ShootedSeed.APIServer
-
-		defaultValues["replicas"] = *apiServer.Replicas
+	if b.ManagedSeed != nil && b.ManagedSeedAPIServer != nil && !hvpaEnabled {
+		defaultValues["replicas"] = *b.ManagedSeedAPIServer.Replicas
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"requests": map[string]interface{}{
 				"cpu":    "1750m",

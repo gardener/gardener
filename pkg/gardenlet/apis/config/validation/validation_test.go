@@ -48,6 +48,10 @@ var _ = Describe("GardenletConfiguration", func() {
 					RetryDuration:        &metav1.Duration{Duration: time.Hour},
 					DNSEntryTTLSeconds:   pointer.Int64Ptr(120),
 				},
+				ManagedSeed: &config.ManagedSeedControllerConfiguration{
+					ConcurrentSyncs:  &concurrentSyncs,
+					SyncJitterPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+				},
 			},
 			SeedConfig: &config.SeedConfig{
 				SeedTemplate: gardencore.SeedTemplate{
@@ -141,6 +145,28 @@ var _ = Describe("GardenletConfiguration", func() {
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("controllers.shoot.dnsEntryTTLSeconds"),
 				}))))
+			})
+		})
+
+		Context("managed seed controller", func() {
+			It("should forbid invalid configuration", func() {
+				invalidConcurrentSyncs := -1
+
+				cfg.Controllers.ManagedSeed.ConcurrentSyncs = &invalidConcurrentSyncs
+				cfg.Controllers.ManagedSeed.SyncJitterPeriod = &metav1.Duration{Duration: -1}
+
+				errorList := ValidateGardenletConfiguration(cfg, nil)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.managedSeed.concurrentSyncs"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.managedSeed.syncJitterPeriod"),
+					})),
+				))
 			})
 		})
 

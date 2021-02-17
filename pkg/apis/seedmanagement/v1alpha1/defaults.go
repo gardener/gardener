@@ -84,16 +84,15 @@ func setDefaultsGardenlet(obj *Gardenlet, name, namespace string) {
 		obj.Deployment = &GardenletDeployment{}
 	}
 
-	// Decode / initialize gardenlet config
-	var gardenletConfig *configv1alpha1.GardenletConfiguration
-	if obj.Config != nil {
-		// Decode gardenlet config to an external version
-		// Without defaults, since we don't want to set gardenlet config defaults in the resource at this point
-		// Ignoring errors, since this package does not support proper error reporting
-		// and if we just return here obj.Config will remain uninitialized, resulting in no error message but
-		// wrong behavior later on
-		gardenletConfig, _ = helper.DecodeGardenletConfigurationExternal(obj.Config, false)
+	// Decode gardenlet config to an external version
+	// Without defaults, since we don't want to set gardenlet config defaults in the resource at this point
+	gardenletConfig, err := helper.DecodeGardenletConfiguration(&obj.Config, false)
+	if err != nil {
+		return
 	}
+
+	// If the gardenlet config was decoded without errors to nil,
+	// initialize it with an empty config
 	if gardenletConfig == nil {
 		gardenletConfig = &configv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
@@ -107,7 +106,8 @@ func setDefaultsGardenlet(obj *Gardenlet, name, namespace string) {
 	setDefaultsGardenletConfiguration(gardenletConfig, name, namespace)
 
 	// Set gardenlet config back to obj.Config
-	obj.Config = &runtime.RawExtension{Object: gardenletConfig}
+	// Encoding back to bytes is not needed, it will be done by the custom conversion code
+	obj.Config = runtime.RawExtension{Object: gardenletConfig}
 
 	// Set default garden connection bootstrap
 	if obj.Bootstrap == nil {

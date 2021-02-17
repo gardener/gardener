@@ -285,20 +285,7 @@ func parseInt32(s string) (int32, error) {
 }
 
 func parseShootedSeed(annotation string) (*ShootedSeed, error) {
-	var (
-		flags    = make(map[string]struct{})
-		settings = make(map[string]string)
-	)
-
-	for _, fragment := range strings.Split(annotation, ",") {
-		parts := strings.SplitN(fragment, "=", 2)
-		if len(parts) == 1 {
-			flags[fragment] = struct{}{}
-			continue
-		}
-
-		settings[parts[0]] = parts[1]
-	}
+	flags, settings := getFlagsAndSettings(annotation)
 
 	if _, ok := flags["true"]; !ok {
 		return nil, nil
@@ -383,6 +370,24 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	}
 
 	return &shootedSeed, nil
+}
+
+func getFlagsAndSettings(annotation string) (map[string]struct{}, map[string]string) {
+	var (
+		flags    = make(map[string]struct{})
+		settings = make(map[string]string)
+	)
+
+	for _, fragment := range strings.Split(annotation, ",") {
+		parts := strings.SplitN(fragment, "=", 2)
+		if len(parts) == 1 {
+			flags[fragment] = struct{}{}
+			continue
+		}
+		settings[parts[0]] = parts[1]
+	}
+
+	return flags, settings
 }
 
 func parseShootedSeedBlockCIDRs(settings map[string]string) ([]string, error) {
@@ -767,6 +772,35 @@ func ReadShootedSeed(shoot *gardencorev1beta1.Shoot) (*ShootedSeed, error) {
 	}
 
 	return shootedSeed, nil
+}
+
+// ReadManagedSeedAPIServer reads the managed seed API server settings from the corresponding annotation.
+func ReadManagedSeedAPIServer(shoot *gardencorev1beta1.Shoot) (*ShootedSeedAPIServer, error) {
+	if shoot.Namespace != v1beta1constants.GardenNamespace || shoot.Annotations == nil {
+		return nil, nil
+	}
+
+	val, ok := shoot.Annotations[v1beta1constants.AnnotationManagedSeedAPIServer]
+	if !ok {
+		return nil, nil
+	}
+
+	_, settings := getFlagsAndSettings(val)
+	apiServer, err := parseShootedSeedAPIServer(settings)
+	if err != nil {
+		return nil, err
+	}
+	if apiServer == nil {
+		return nil, nil
+	}
+
+	setDefaults_ShootedSeedAPIServer(apiServer)
+
+	if errs := validateShootedSeedAPIServer(apiServer, nil); len(errs) > 0 {
+		return nil, errs.ToAggregate()
+	}
+
+	return apiServer, nil
 }
 
 // HibernationIsEnabled checks if the given shoot's desired state is hibernated.

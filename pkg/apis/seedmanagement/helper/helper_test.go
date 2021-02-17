@@ -16,11 +16,10 @@ package helper_test
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
 	. "github.com/onsi/ginkgo"
@@ -31,7 +30,6 @@ import (
 
 var _ = Describe("Helper", func() {
 	var (
-		config  = &config.GardenletConfiguration{}
 		configx = &configv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: configv1alpha1.SchemeGroupVersion.String(),
@@ -41,56 +39,58 @@ var _ = Describe("Helper", func() {
 	)
 
 	Describe("#DecodeGardenletConfiguration", func() {
-		It("should decode the raw config to an internal GardenletConfiguration version without defaults", func() {
+		It("should decode the raw config to a GardenletConfiguration without defaults", func() {
 			result, err := DecodeGardenletConfiguration(&runtime.RawExtension{Raw: encode(configx)}, false)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(config))
-		})
-
-		It("should decode the raw config to an internal GardenletConfiguration version with defaults", func() {
-			configxWithDefaults := configx.DeepCopy()
-			configv1alpha1.SetObjectDefaults_GardenletConfiguration(configxWithDefaults)
-			configWithDefaults, err := confighelper.ConvertGardenletConfiguration(configxWithDefaults)
-			Expect(err).ToNot(HaveOccurred())
-
-			result, err := DecodeGardenletConfiguration(&runtime.RawExtension{Raw: encode(configx)}, true)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(configWithDefaults))
-		})
-
-		It("should return the raw config object if it's already set", func() {
-			result, err := DecodeGardenletConfiguration(&runtime.RawExtension{Object: configx}, true)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(result).To(Equal(config))
-		})
-	})
-
-	Describe("#DecodeGardenletConfigurationExternal", func() {
-		It("should decode the raw config to an external GardenletConfiguration version without defaults", func() {
-			result, err := DecodeGardenletConfigurationExternal(&runtime.RawExtension{Raw: encode(configx)}, false)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(configx))
 		})
 
-		It("should decode the raw config to an external GardenletConfiguration version with defaults", func() {
+		It("should decode the raw config to a GardenletConfiguration with defaults", func() {
 			configxWithDefaults := configx.DeepCopy()
 			configv1alpha1.SetObjectDefaults_GardenletConfiguration(configxWithDefaults)
 
-			result, err := DecodeGardenletConfigurationExternal(&runtime.RawExtension{Raw: encode(configx)}, true)
+			result, err := DecodeGardenletConfiguration(&runtime.RawExtension{Raw: encode(configx)}, true)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(configxWithDefaults))
 		})
 
 		It("should return the raw config object if it's already set", func() {
-			result, err := DecodeGardenletConfigurationExternal(&runtime.RawExtension{Object: configx}, true)
+			result, err := DecodeGardenletConfiguration(&runtime.RawExtension{Object: configx}, true)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(configx))
+		})
+	})
+
+	Describe("#DecodeGardenletConfigurationFromBytes", func() {
+		It("should decode the byte slice into a GardenletConfiguration", func() {
+			result, err := DecodeGardenletConfigurationFromBytes(encode(configx), false)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(configx))
+		})
+	})
+
+	Describe("#EncodeGardenletConfiguration", func() {
+		It("should encode the GardenletConfiguration into a raw extension", func() {
+			result, err := EncodeGardenletConfiguration(configx)
+
+			Expect(err).NotTo(HaveOccurred())
+			// Test for equality doesn't work since there is one extra byte at the end of result compared to json.Marshal
+			Expect(strings.HasPrefix(string(result.Raw), string(encode(configx)))).To(BeTrue())
+			Expect(result.Object).To(Equal(configx))
+		})
+	})
+
+	Describe("#EncodeGardenletConfigurationToBytes", func() {
+		It("should encode the GardenletConfiguration into a byte slice", func() {
+			result, err := EncodeGardenletConfigurationToBytes(configx)
+
+			Expect(err).NotTo(HaveOccurred())
+			// Test for equality doesn't work since there is one extra byte at the end of result compared to json.Marshal
+			Expect(strings.HasPrefix(string(result), string(encode(configx)))).To(BeTrue())
 		})
 	})
 

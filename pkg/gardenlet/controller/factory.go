@@ -32,6 +32,7 @@ import (
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	controllerinstallationcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
 	federatedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed"
+	managedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/healthz"
@@ -173,6 +174,11 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing federated seed controller: %w", err)
 	}
 
+	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, f.clientMap, f.cfg, imageVector, f.recorder, logger.Logger)
+	if err != nil {
+		return fmt.Errorf("failed initializing managed seed controller: %w", err)
+	}
+
 	// Initialize the Controller metrics collection.
 	gardenmetrics.RegisterControllerMetrics(
 		gardenlet.ControllerWorkerSum,
@@ -182,6 +188,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		controllerInstallationController,
 		seedController,
 		shootController,
+		managedSeedController,
 	)
 
 	go federatedSeedController.Run(ctx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
@@ -190,6 +197,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	go controllerInstallationController.Run(ctx, *f.cfg.Controllers.ControllerInstallation.ConcurrentSyncs, *f.cfg.Controllers.ControllerInstallationCare.ConcurrentSyncs)
 	go seedController.Run(ctx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(ctx, *f.cfg.Controllers.Shoot.ConcurrentSyncs, *f.cfg.Controllers.ShootCare.ConcurrentSyncs)
+	go managedSeedController.Run(ctx, *f.cfg.Controllers.ManagedSeed.ConcurrentSyncs)
 
 	logger.Logger.Infof("Gardenlet (version %s) initialized.", version.Get().GitVersion)
 

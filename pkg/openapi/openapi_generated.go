@@ -12802,7 +12802,7 @@ func schema_pkg_apis_seedmanagement_v1alpha1_Gardenlet(ref common.ReferenceCallb
 					},
 					"mergeWithParent": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MergeWithParent specifies whether the deployment parameters and GardenletConfiguration of the parent gardenlet should be merged with the specified deployment parameters and GardenletConfiguration. Defaults to true.",
+							Description: "MergeWithParent specifies whether the GardenletConfiguration of the parent gardenlet should be merged with the specified GardenletConfiguration. Defaults to true.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},

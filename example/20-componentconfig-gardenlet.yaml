@@ -56,11 +56,12 @@ controllers:
   shootStateSync:
     concurrentSyncs: 1
     syncPeriod: 30s
-  shootedSeedRegistration:
-    syncJitterPeriod: 5m
   seed:
     concurrentSyncs: 5
     syncPeriod: 1m
+  managedSeed:
+    concurrentSyncs: 5
+    syncJitterPeriod: 5m
 resources:
   capacity:
     shoots: 200

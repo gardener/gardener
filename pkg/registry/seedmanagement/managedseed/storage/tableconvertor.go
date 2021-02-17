@@ -79,9 +79,9 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 		if seedRegisteredCondition == nil || seedRegisteredCondition.Status == core.ConditionUnknown {
 			cells = append(cells, "Unknown")
 		} else if seedRegisteredCondition.Status != core.ConditionTrue {
-			cells = append(cells, "NotReady")
+			cells = append(cells, "NotRegistered")
 		} else {
-			cells = append(cells, "Ready")
+			cells = append(cells, "Registered")
 		}
 		cells = append(cells, managedSeed.Spec.Shoot.Name)
 		if managedSeed.Spec.Gardenlet != nil {

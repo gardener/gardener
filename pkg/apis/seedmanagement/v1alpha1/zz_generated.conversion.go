@@ -123,7 +123,9 @@ func RegisterConversions(s *runtime.Scheme) error {
 
 func autoConvert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet(in *Gardenlet, out *seedmanagement.Gardenlet, s conversion.Scope) error {
 	out.Deployment = (*seedmanagement.GardenletDeployment)(unsafe.Pointer(in.Deployment))
-	// WARNING: in.Config requires manual conversion: inconvertible types (*k8s.io/apimachinery/pkg/runtime.RawExtension vs k8s.io/apimachinery/pkg/runtime.Object)
+	if err := runtime.Convert_runtime_RawExtension_To_runtime_Object(&in.Config, &out.Config, s); err != nil {
+		return err
+	}
 	out.Bootstrap = (*seedmanagement.Bootstrap)(unsafe.Pointer(in.Bootstrap))
 	out.MergeWithParent = (*bool)(unsafe.Pointer(in.MergeWithParent))
 	return nil
@@ -131,7 +133,9 @@ func autoConvert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet(in *Gardenlet, o
 
 func autoConvert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(in *seedmanagement.Gardenlet, out *Gardenlet, s conversion.Scope) error {
 	out.Deployment = (*GardenletDeployment)(unsafe.Pointer(in.Deployment))
-	// WARNING: in.Config requires manual conversion: inconvertible types (k8s.io/apimachinery/pkg/runtime.Object vs *k8s.io/apimachinery/pkg/runtime.RawExtension)
+	if err := runtime.Convert_runtime_Object_To_runtime_RawExtension(&in.Config, &out.Config, s); err != nil {
+		return err
+	}
 	out.Bootstrap = (*Bootstrap)(unsafe.Pointer(in.Bootstrap))
 	out.MergeWithParent = (*bool)(unsafe.Pointer(in.MergeWithParent))
 	return nil

@@ -326,6 +326,9 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 			return nil
 		},
 		// Fetch seed conditions if shoot is a seed
+		// TODO This logic could be moved to the managed seed controller.
+		// It should watch Seed objects and enqueue them if they belong to a ManagedSeed and the conditions have changed.
+		// Then it should update the conditions on the Shoot object.
 		func(ctx context.Context) error {
 			seedConditions, err = retrieveSeedConditions(ctx, operation)
 			if err != nil {
@@ -390,7 +393,7 @@ func updateShootStatus(ctx context.Context, g gardencore.Interface, shoot *garde
 }
 
 func retrieveSeedConditions(ctx context.Context, operation *operation.Operation) ([]gardencorev1beta1.Condition, error) {
-	if operation.ShootedSeed == nil {
+	if operation.ManagedSeed == nil {
 		return nil, nil
 	}
 
