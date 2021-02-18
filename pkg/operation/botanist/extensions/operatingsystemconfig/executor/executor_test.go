@@ -125,7 +125,9 @@ PATH_CLOUDCONFIG_DOWNLOADER_CA_CERT="/var/lib/cloud-config-downloader/credential
 PATH_CLOUDCONFIG="/var/lib/cloud-config-downloader/downloads/cloud_config"
 PATH_CLOUDCONFIG_OLD="${PATH_CLOUDCONFIG}.old"
 PATH_CHECKSUM="/var/lib/cloud-config-downloader/downloaded_checksum"
-
+PATH_CCD_SCRIPT="/var/lib/cloud-config-downloader/download-cloud-config.sh"
+PATH_CCD_SCRIPT_CHECKSUM="/var/lib/cloud-config-downloader/download-cloud-config.md5"
+PATH_CCD_SCRIPT_CHECKSUM_OLD="${PATH_CCD_SCRIPT_CHECKSUM}.old"
 mkdir -p "/var/lib/cloud-config-downloader/downloads" "/var/lib/kubelet"
 
 function docker-preload() {
@@ -186,6 +188,10 @@ if [ ! -f "$PATH_CLOUDCONFIG_OLD" ]; then
   touch "$PATH_CLOUDCONFIG_OLD"
 fi
 
+if [ ! -f "$PATH_CCD_SCRIPT_CHECKSUM_OLD" ]; then
+  touch "$PATH_CCD_SCRIPT_CHECKSUM_OLD"
+fi
+
 if [[ ! -f "/var/lib/kubelet/kubeconfig-real" ]] || [[ ! -f "/var/lib/kubelet/pki/kubelet-client-current.pem" ]]; then
   cat <<EOF > "/var/lib/kubelet/kubeconfig-bootstrap"
 ---
@@ -213,8 +219,10 @@ else
   rm -f "/var/lib/kubelet/kubeconfig-bootstrap"
 fi
 
-if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null; then
-  echo "Seen newer cloud config version"
+md5sum ${PATH_CCD_SCRIPT} > ${PATH_CCD_SCRIPT_CHECKSUM}
+
+if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || ! diff "$PATH_CCD_SCRIPT_CHECKSUM" "$PATH_CCD_SCRIPT_CHECKSUM_OLD" >/dev/null; then
+  echo "Seen newer cloud config or cloud config downloder version"
   if ` + reloadConfigCommand + `; then
     echo "Successfully applied new cloud config version"
     systemctl daemon-reload
@@ -229,10 +237,11 @@ if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null; then
 
 	footerPart += `    echo "Successfully restarted all units referenced in the cloud config."
     cp "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD"
+    cp "$PATH_CCD_SCRIPT_CHECKSUM" "$PATH_CCD_SCRIPT_CHECKSUM_OLD"
   fi
 fi
 
-rm "$PATH_CLOUDCONFIG"
+rm "$PATH_CLOUDCONFIG" "$PATH_CCD_SCRIPT_CHECKSUM"
 
 ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-services"
 
