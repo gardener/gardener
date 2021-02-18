@@ -200,6 +200,10 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 			controllerutils.AddTasks(s.Annotations, common.ShootTaskRestartControlPlanePods)
 		}
 
+		if utils.IsTrue(c.config.EnableShootCoreAddonRestarter) {
+			controllerutils.AddTasks(s.Annotations, common.ShootTaskRestartCoreAddons)
+		}
+
 		if updatedMachineImages != nil {
 			gardencorev1beta1helper.UpdateMachineImages(s.Spec.Provider.Workers, updatedMachineImages)
 		}

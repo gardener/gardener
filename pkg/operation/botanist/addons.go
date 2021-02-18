@@ -19,11 +19,13 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	netpol "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/konnectivity"
@@ -32,14 +34,19 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// SecretLabelKeyManagedResource is a key for a label on a secret with the value 'managed-resource'.
-const SecretLabelKeyManagedResource = "managed-resource"
+const (
+	// SecretLabelKeyManagedResource is a key for a label on a secret with the value 'managed-resource'.
+	SecretLabelKeyManagedResource = "managed-resource"
+	// gardenerRestartedAtKey is annotation key for timestamp used to restart components.
+	gardenerRestartedAtKey = "gardener.cloud/restarted-at"
+)
 
 // GenerateKubernetesDashboardConfig generates the values which are required to render the chart of
 // the kubernetes-dashboard properly.
@@ -311,6 +318,20 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	}
 	shootInfo["extensions"] = strings.Join(extensions, ",")
 
+	coreDNSRestartTimestamp, err := b.getCoreDNSRestartTimestamp(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(coreDNSRestartTimestamp) != 0 {
+		coreDNSConfig["deployment"] = map[string]interface{}{
+			"spec": map[string]interface{}{
+				"podAnnotations": map[string]interface{}{
+					gardenerRestartedAtKey: coreDNSRestartTimestamp,
+				},
+			},
+		}
+	}
+
 	coreDNS, err := b.InjectShootShootImages(coreDNSConfig, common.CoreDNSImageName)
 	if err != nil {
 		return nil, err
@@ -503,4 +524,30 @@ func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrendere
 // available.
 func (b *Botanist) outOfClusterAPIServerFQDN() string {
 	return fmt.Sprintf("%s.", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true))
+}
+
+// getCoreDNSRestartTimestamp returns a timestamp that can potentially restart the CoreDNS deployment.
+func (b *Botanist) getCoreDNSRestartTimestamp(ctx context.Context) (string, error) {
+	if controllerutils.HasTask(b.Shoot.Info.Annotations, common.ShootTaskRestartCoreAddons) {
+		return time.Now().UTC().Format(time.RFC3339), nil
+	}
+
+	coreDNSDeployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      common.CoreDNSDeploymentName,
+			Namespace: metav1.NamespaceSystem,
+		},
+	}
+	if err := b.K8sShootClient.Client().Get(ctx, client.ObjectKeyFromObject(coreDNSDeployment), coreDNSDeployment); err != nil {
+		if apierrors.IsNotFound(err) {
+			return "", nil
+		}
+		return "", err
+	}
+
+	val, ok := coreDNSDeployment.Spec.Template.ObjectMeta.Annotations[gardenerRestartedAtKey]
+	if !ok {
+		return "", nil
+	}
+	return val, nil
 }

@@ -94,3 +94,10 @@ Please note that these are exceptional cases but they are observed from time to 
 Gardener, for example, takes this precautionary measure for `kube-controller-manager` pods.
 
 See [this document](../extensions/shoot-maintenance.md) to see how extension developers can extend this behaviour.
+
+### Restart Some Core Addons
+
+Gardener operators can make Gardener restart some core addons, at the moment only CoreDNS, during a shoot maintenance.
+
+CoreDNS benefits from this feature as it automatically solve problems with clients stuck to single replica of the deployment and thus overloading it.
+Please note that these are exceptional cases but they are observed from time to time.

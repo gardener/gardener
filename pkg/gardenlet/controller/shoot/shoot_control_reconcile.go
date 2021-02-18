@@ -356,8 +356,16 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity, waitUntilOperatingSystemConfigReady),
 		})
 		deployManagedResourcesForAddons = g.Add(flow.Task{
-			Name:         "Deploying managed resources for system components and optional addons",
-			Fn:           flow.TaskFn(botanist.DeployManagedResourceForAddons).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
+			Name: "Deploying managed resources for system components and optional addons",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				if err := botanist.DeployManagedResourceForAddons(ctx); err != nil {
+					return err
+				}
+				if controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskRestartCoreAddons) {
+					return removeTaskAnnotation(ctx, o, generation, common.ShootTaskRestartCoreAddons)
+				}
+				return nil
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity),
 		})
 		deployManagedResourceForCloudConfigExecutor = g.Add(flow.Task{

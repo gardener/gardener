@@ -414,6 +414,11 @@ func (in *ShootMaintenanceControllerConfiguration) DeepCopyInto(out *ShootMainte
 		*out = new(bool)
 		**out = **in
 	}
+	if in.EnableShootCoreAddonRestarter != nil {
+		in, out := &in.EnableShootCoreAddonRestarter, &out.EnableShootCoreAddonRestarter
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

@@ -95,6 +95,9 @@ data:
         {{- if .Values.global.controller.config.controllers.shootMaintenance.enableShootControlPlaneRestarter }}
         enableShootControlPlaneRestarter: {{ .Values.global.controller.config.controllers.shootMaintenance.enableShootControlPlaneRestarter }}
         {{- end }}
+        {{- if .Values.global.controller.config.controllers.shootMaintenance.enableShootCoreAddonRestarter }}
+        enableShootCoreAddonRestarter: {{ .Values.global.controller.config.controllers.shootMaintenance.enableShootCoreAddonRestarter }}
+        {{- end }}
       shootQuota:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.shootQuota.concurrentSyncs is required" .Values.global.controller.config.controllers.shootQuota.concurrentSyncs }}
         syncPeriod: {{ required ".Values.global.controller.config.controllers.shootQuota.syncPeriod is required" .Values.global.controller.config.controllers.shootQuota.syncPeriod }}

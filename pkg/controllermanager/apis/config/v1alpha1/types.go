@@ -203,6 +203,9 @@ type ShootMaintenanceControllerConfiguration struct {
 	// EnableShootControlPlaneRestarter configures whether adequate pods of the shoot control plane are restarted during maintenance.
 	// +optional
 	EnableShootControlPlaneRestarter *bool `json:"enableShootControlPlaneRestarter"`
+	// EnableShootCoreAddonRestarter configures whether some core addons to be restarted during maintenance.
+	// +optional
+	EnableShootCoreAddonRestarter *bool `json:"enableShootCoreAddonRestarter"`
 }
 
 // ShootQuotaControllerConfiguration defines the configuration of the
