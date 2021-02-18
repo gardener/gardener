@@ -108,8 +108,12 @@ func (vp *valuesHelper) MergeGardenletConfiguration(config *configv1alpha1.Garde
 		return nil, err
 	}
 
-	// Delete seedClientConnection.kubeconfig in parent config values
+	// Delete seedClientConnection.kubeconfig and seedConfig in parent config values
 	parentConfigValues, err = utils.DeleteFromValuesMap(parentConfigValues, "seedClientConnection", "kubeconfig")
+	if err != nil {
+		return nil, err
+	}
+	parentConfigValues, err = utils.DeleteFromValuesMap(parentConfigValues, "seedConfig")
 	if err != nil {
 		return nil, err
 	}
