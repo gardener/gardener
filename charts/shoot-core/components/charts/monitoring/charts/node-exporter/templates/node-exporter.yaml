@@ -84,6 +84,7 @@ spec:
         - --collector.filesystem.ignored-mount-points=^/.+$
         - --collector.loadavg
         - --collector.meminfo
+        - --collector.uname
         ports:
         - containerPort: {{ .Values.ports.metrics }}
           protocol: TCP
