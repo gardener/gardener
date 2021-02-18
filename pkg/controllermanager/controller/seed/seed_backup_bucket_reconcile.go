@@ -61,17 +61,8 @@ func (c *Controller) backupBucketUpdate(oldObj, newObj interface{}) {
 		return
 	}
 
-	if apiequality.Semantic.DeepEqual(oldBackupBucket.Spec, newBackupBucket.Spec) || apiequality.Semantic.DeepEqual(oldBackupBucket.Status, newBackupBucket.Status) {
+	if !apiequality.Semantic.DeepEqual(oldBackupBucket.Status, newBackupBucket.Status) || !apiequality.Semantic.DeepEqual(oldBackupBucket.Spec, newBackupBucket.Spec) {
 		c.backupBucketEnqueue(newBackupBucket)
-	}
-
-	var (
-		oldSeedName = oldBackupBucket.Spec.SeedName
-		newSeedName = newBackupBucket.Spec.SeedName
-	)
-
-	if oldSeedName != nil && (newSeedName == nil || *oldSeedName != *newSeedName) {
-		c.backupBucketEnqueue(oldBackupBucket)
 	}
 }
 
