@@ -40,9 +40,9 @@ type ServerConfiguration struct {
 	// HTTPS is the configuration for the HTTPS server.
 	HTTPS HTTPSServer
 	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
-	HealthProbes Server
+	HealthProbes *Server
 	// Metrics is the configuration for serving the metrics endpoint.
-	Metrics Server
+	Metrics *Server
 	// ResourceAdmissionConfiguration is the configuration for the resource admission.
 	ResourceAdmissionConfiguration *ResourceAdmissionConfiguration
 }

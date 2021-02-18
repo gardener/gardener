@@ -187,7 +187,7 @@ func NewGardenerAdmissionControllerCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   Name,
 		Short: "Launch the " + Name,
-		Long:  Name + " serves a validation webhook endpoint for resources in the garden cluster.",
+		Long:  Name + " serves webhook endpoints for resources in the garden cluster.",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			verflag.PrintAndExitIfRequested()

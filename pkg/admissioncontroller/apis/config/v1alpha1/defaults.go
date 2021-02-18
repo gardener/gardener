@@ -40,8 +40,15 @@ func SetDefaults_AdmissionControllerConfiguration(obj *AdmissionControllerConfig
 		obj.Server.ResourceAdmissionConfiguration = &ResourceAdmissionConfiguration{}
 	}
 
+	if obj.Server.HealthProbes == nil {
+		obj.Server.HealthProbes = &Server{}
+	}
 	if obj.Server.HealthProbes.Port == 0 {
 		obj.Server.HealthProbes.Port = 2722
+	}
+
+	if obj.Server.Metrics == nil {
+		obj.Server.Metrics = &Server{}
 	}
 	if obj.Server.Metrics.Port == 0 {
 		obj.Server.Metrics.Port = 2723

@@ -155,8 +155,16 @@ func (in *Server) DeepCopy() *Server {
 func (in *ServerConfiguration) DeepCopyInto(out *ServerConfiguration) {
 	*out = *in
 	out.HTTPS = in.HTTPS
-	out.HealthProbes = in.HealthProbes
-	out.Metrics = in.Metrics
+	if in.HealthProbes != nil {
+		in, out := &in.HealthProbes, &out.HealthProbes
+		*out = new(Server)
+		**out = **in
+	}
+	if in.Metrics != nil {
+		in, out := &in.Metrics, &out.Metrics
+		*out = new(Server)
+		**out = **in
+	}
 	if in.ResourceAdmissionConfiguration != nil {
 		in, out := &in.ResourceAdmissionConfiguration, &out.ResourceAdmissionConfiguration
 		*out = new(ResourceAdmissionConfiguration)
