@@ -184,19 +184,19 @@ var _ = Describe("namespaceDeletionHandler", func() {
 			})
 
 			It("should fail because listing shoots fails", func() {
-				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
 					return fmt.Errorf("fake")
 				})
 				test(admissionv1.Delete, false, statusCodeInternalError, "fake")
 			})
 			It("should pass because namespace is does not contain any shoots", func() {
-				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
 					return nil
 				})
 				test(admissionv1.Delete, true, statusCodeAllowed, "namespace doesn't contain any shoots")
 			})
 			It("should forbid namespace deletion because it still contain shoots", func() {
-				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
 					list.Items = []metav1.PartialObjectMetadata{
 						shootMetadata(namespaceName, "shoot1"),
 					}

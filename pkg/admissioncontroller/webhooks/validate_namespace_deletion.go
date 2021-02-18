@@ -153,7 +153,7 @@ func (h *namespaceDeletionHandler) admitNamespace(ctx context.Context, request a
 func (h *namespaceDeletionHandler) isNamespaceEmpty(ctx context.Context, namespace string) (bool, error) {
 	shoots := &metav1.PartialObjectMetadataList{}
 	shoots.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
-	if err := h.apiReader.List(ctx, shoots, client.InNamespace(namespace)); err != nil {
+	if err := h.apiReader.List(ctx, shoots, client.InNamespace(namespace), client.Limit(1)); err != nil {
 		return false, err
 	}
 
