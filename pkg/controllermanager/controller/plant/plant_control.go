@@ -245,12 +245,13 @@ func (c *defaultPlantControl) delete(ctx context.Context, plant *gardencorev1bet
 	}
 
 	secret := &corev1.Secret{}
-	if err := gardenClient.Client().Get(ctx, kutil.Key(plant.Namespace, plant.Spec.SecretRef.Name), secret); client.IgnoreNotFound(err) != nil {
+	err = gardenClient.Client().Get(ctx, kutil.Key(plant.Namespace, plant.Spec.SecretRef.Name), secret)
+	if err == nil {
+		if err2 := controllerutils.RemoveFinalizer(ctx, gardenClient.DirectClient(), secret, FinalizerName); err2 != nil {
+			return fmt.Errorf("failed to remove finalizer from plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err2)
+		}
+	} else if !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to get plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
-	}
-
-	if err := controllerutils.RemoveFinalizer(ctx, gardenClient.DirectClient(), secret, FinalizerName); err != nil {
-		return fmt.Errorf("failed to remove finalizer from plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
 	}
 
 	if err := controllerutils.RemoveFinalizer(ctx, gardenClient.DirectClient(), plant, FinalizerName); err != nil {
