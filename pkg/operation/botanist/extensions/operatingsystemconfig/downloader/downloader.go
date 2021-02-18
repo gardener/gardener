@@ -77,6 +77,8 @@ const (
 	// PathCCDScript is a constant for the path of the script containing the instructions to download the cloud-config
 	// user-data.
 	PathCCDScript = PathCCDDirectory + "/download-cloud-config.sh"
+	// PathCCDScriptChecksum is a constant for the path of the file containing md5 has of PathCCDScript.
+	PathCCDScriptChecksum = PathCCDDirectory + "/download-cloud-config.md5"
 	// PathCredentialsServer is a constant for a path containing the 'server' part for the download.
 	PathCredentialsServer = PathCredentialsDirectory + "/server"
 	// PathCredentialsCACert is a constant for a path containing the 'CA certificate' credentials part for the download.
