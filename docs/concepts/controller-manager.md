@@ -119,3 +119,25 @@ The Shoot Reference Controller can inspect the following references:
 > If you want to enable the audit policy configmap protection then you can set the `.controllers.shootReference.protectAuditPolicyConfigMaps` to `true` in the component configuration.
 
 Further checks might be added in the future.
+
+### Seed Controller
+
+The Seed controller in the Gardener Controller Manager reconciles `Seed` objects with the help of the following reconcilers. 
+
+#### "Backup Bucket" Reconciler
+
+Every time a `BackupBucket` object is created or updated, the referenced `Seed` object is enqueued for reconciliation.
+It's the reconciler's task to check the `status` subresource of all existing `BackupBuckets` that belong to this seed.
+If at least one `BackupBucket` has `.status.lastError`, the seed condition `BackupBucketsReady` will turn `false` and
+consequently the seed is considered as `NotReady`. Once the `BackupBucket` is healthy again, the seed will be re-queued
+and the condition will turn `true`.
+
+#### "Lifecycle" Reconciler
+
+The "Lifecycle" reconciler processes `Seed` objects which are enqueued every 10 seconds in order to check if the responsible 
+Gardenlet is still responding and operable. Therefore, it checks renewals via `Lease` objects of the seed in the garden cluster
+which are renewed regularly by the Gardenlet.
+In case a `Lease` is not renewed for the configured amount in `config.controllers.seed.monitorPeriod.duration`, the reconciler
+assumes that the Gardenlet stopped operating and updates the `GardenletReady` condition to `Unknown`.
+Additionally, conditions and constraints of all `Shoot` resources scheduled on the affected seed are set to `Unknown` as well
+because a striking Gardenlet won't be able to maintain these conditions any more.

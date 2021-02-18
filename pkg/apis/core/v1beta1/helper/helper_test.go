@@ -1763,4 +1763,19 @@ var _ = Describe("helper", func() {
 		Entry("nginxIngress disabled", &gardencorev1beta1.Addons{NginxIngress: &gardencorev1beta1.NginxIngress{Addon: gardencorev1beta1.Addon{Enabled: false}}}, BeFalse()),
 		Entry("nginxIngress enabled", &gardencorev1beta1.Addons{NginxIngress: &gardencorev1beta1.NginxIngress{Addon: gardencorev1beta1.Addon{Enabled: true}}}, BeTrue()),
 	)
+
+	DescribeTable("#BackupBucketIsErroneous",
+		func(bb *gardencorev1beta1.BackupBucket, matcher1, matcher2 gomegatypes.GomegaMatcher) {
+			erroneous, msg := BackupBucketIsErroneous(bb)
+			Expect(erroneous).To(matcher1)
+			Expect(msg).To(matcher2)
+		},
+		Entry("W/o BackupBucket", nil, BeFalse(), BeEmpty()),
+		Entry("W/o last error", &gardencorev1beta1.BackupBucket{}, BeFalse(), BeEmpty()),
+		Entry("W/ last error",
+			&gardencorev1beta1.BackupBucket{Status: gardencorev1beta1.BackupBucketStatus{LastError: &gardencorev1beta1.LastError{Description: "foo"}}},
+			BeTrue(),
+			Equal("foo"),
+		),
+	)
 })
