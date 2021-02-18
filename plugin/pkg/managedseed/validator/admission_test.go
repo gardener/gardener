@@ -100,13 +100,6 @@ var _ = Describe("ManagedSeed", func() {
 						Type: provider,
 					},
 					Region: region,
-					Addons: &core.Addons{
-						NginxIngress: &core.NginxIngress{
-							Addon: core.Addon{
-								Enabled: true,
-							},
-						},
-					},
 				},
 			}
 
@@ -297,7 +290,6 @@ var _ = Describe("ManagedSeed", func() {
 			})
 
 			It("should allow the ManagedSeed creation if the Shoot exists and can be registered as Seed (w/ ingress)", func() {
-				shoot.Spec.Addons = nil
 				managedSeed.Spec.SeedTemplate.Spec = core.SeedSpec{
 					Backup: &core.SeedBackup{},
 					Ingress: &core.Ingress{
