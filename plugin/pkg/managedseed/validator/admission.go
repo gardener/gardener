@@ -296,9 +296,9 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("ingress", "domain"), spec.Ingress.Domain, fmt.Sprintf("seed ingress domain must be equal to shoot DNS domain %s", ingressDomain)))
 		}
 	} else {
-		if (spec.DNS.IngressDomain == nil || *spec.DNS.IngressDomain == "") && gardencorehelper.NginxIngressEnabled(shoot.Spec.Addons) {
+		if spec.DNS.IngressDomain == nil || *spec.DNS.IngressDomain == "" {
 			spec.DNS.IngressDomain = &ingressDomain
-		} else if spec.DNS.IngressDomain == nil || !strings.HasSuffix(*spec.DNS.IngressDomain, *shoot.Spec.DNS.Domain) {
+		} else if !strings.HasSuffix(*spec.DNS.IngressDomain, *shoot.Spec.DNS.Domain) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "ingressDomain"), spec.DNS.IngressDomain, fmt.Sprintf("seed ingress domain must be a subdomain of shoot DNS domain %s", *shoot.Spec.DNS.Domain)))
 		}
 	}
