@@ -19,7 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	authorizationv1beta1 "k8s.io/api/authorization/v1beta1"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	userpkg "k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 )
@@ -30,7 +30,7 @@ var _ = Describe("Attributes", func() {
 		userID               = "uid"
 		userGroups           = []string{"foo", "bar"}
 		userExtraStringSlice = map[string][]string{"baz": {"foo"}}
-		userExtra            = map[string]authorizationv1beta1.ExtraValue{"baz": {"foo"}}
+		userExtra            = map[string]authorizationv1.ExtraValue{"baz": {"foo"}}
 		user                 = &userpkg.DefaultInfo{
 			Name:   userName,
 			UID:    userID,
@@ -53,16 +53,16 @@ var _ = Describe("Attributes", func() {
 		subresource = "subresource"
 		path        = "/path"
 
-		resourceAttributes    authorizationv1beta1.ResourceAttributes
-		nonResourceAttributes authorizationv1beta1.NonResourceAttributes
-		sarSpec               authorizationv1beta1.SubjectAccessReviewSpec
+		resourceAttributes    authorizationv1.ResourceAttributes
+		nonResourceAttributes authorizationv1.NonResourceAttributes
+		sarSpec               authorizationv1.SubjectAccessReviewSpec
 
 		expectedResourceAttributesRecord    authorizer.AttributesRecord
 		expectedNonResourceAttributesRecord authorizer.AttributesRecord
 	)
 
 	BeforeEach(func() {
-		resourceAttributes = authorizationv1beta1.ResourceAttributes{
+		resourceAttributes = authorizationv1.ResourceAttributes{
 			Verb:        verb,
 			Namespace:   namespace,
 			Group:       group,
@@ -71,11 +71,11 @@ var _ = Describe("Attributes", func() {
 			Subresource: subresource,
 			Name:        name,
 		}
-		nonResourceAttributes = authorizationv1beta1.NonResourceAttributes{
+		nonResourceAttributes = authorizationv1.NonResourceAttributes{
 			Verb: verb,
 			Path: path,
 		}
-		sarSpec = authorizationv1beta1.SubjectAccessReviewSpec{
+		sarSpec = authorizationv1.SubjectAccessReviewSpec{
 			User:   userName,
 			Groups: userGroups,
 			UID:    userID,

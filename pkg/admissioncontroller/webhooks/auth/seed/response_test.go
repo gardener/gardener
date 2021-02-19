@@ -21,7 +21,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	authorizationv1beta1 "k8s.io/api/authorization/v1beta1"
+	authorizationv1 "k8s.io/api/authorization/v1"
 )
 
 var _ = Describe("Response", func() {
@@ -33,7 +33,7 @@ var _ = Describe("Response", func() {
 
 	Describe("#Allowed", func() {
 		It("should return the expected status", func() {
-			Expect(Allowed()).To(Equal(authorizationv1beta1.SubjectAccessReviewStatus{
+			Expect(Allowed()).To(Equal(authorizationv1.SubjectAccessReviewStatus{
 				Allowed: true,
 			}))
 		})
@@ -41,7 +41,7 @@ var _ = Describe("Response", func() {
 
 	Describe("#Denied", func() {
 		It("should return the expected status", func() {
-			Expect(Denied(reason)).To(Equal(authorizationv1beta1.SubjectAccessReviewStatus{
+			Expect(Denied(reason)).To(Equal(authorizationv1.SubjectAccessReviewStatus{
 				Allowed: false,
 				Denied:  true,
 				Reason:  reason,
@@ -51,7 +51,7 @@ var _ = Describe("Response", func() {
 
 	Describe("#NoOpinion", func() {
 		It("should return the expected status", func() {
-			Expect(NoOpinion(reason)).To(Equal(authorizationv1beta1.SubjectAccessReviewStatus{
+			Expect(NoOpinion(reason)).To(Equal(authorizationv1.SubjectAccessReviewStatus{
 				Allowed: false,
 				Reason:  reason,
 			}))
@@ -60,7 +60,7 @@ var _ = Describe("Response", func() {
 
 	Describe("#Errored", func() {
 		It("should return the expected status", func() {
-			Expect(Errored(code, fakeErr)).To(Equal(authorizationv1beta1.SubjectAccessReviewStatus{
+			Expect(Errored(code, fakeErr)).To(Equal(authorizationv1.SubjectAccessReviewStatus{
 				EvaluationError: fmt.Sprintf("%d %s", code, fakeErr),
 			}))
 		})

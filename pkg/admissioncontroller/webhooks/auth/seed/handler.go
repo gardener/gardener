@@ -26,7 +26,6 @@ import (
 	"github.com/go-logr/logr"
 	authorizationv1 "k8s.io/api/authorization/v1"
 	authorizationv1beta1 "k8s.io/api/authorization/v1beta1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -124,7 +123,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var status authorizationv1beta1.SubjectAccessReviewStatus
+	var status authorizationv1.SubjectAccessReviewStatus
 	switch decision {
 	case authorizer.DecisionAllow:
 		status = Allowed()
@@ -140,13 +139,13 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	h.writeResponse(w, gvk, status)
 }
 
-func (h *handler) writeResponse(w io.Writer, gvk *schema.GroupVersionKind, status authorizationv1beta1.SubjectAccessReviewStatus) {
+func (h *handler) writeResponse(w io.Writer, gvk *schema.GroupVersionKind, status authorizationv1.SubjectAccessReviewStatus) {
 	// The SubjectAccessReviewStatus type is exactly the same for both authorization.k8s.io/v1beta1 and
 	// authorization.k8s.io/v1, so we can just overwrite the apiVersion/kind with the same version like the object in
 	// the request.
-	response := authorizationv1beta1.SubjectAccessReview{Status: status}
+	response := authorizationv1.SubjectAccessReview{Status: status}
 	if gvk == nil || *gvk == (schema.GroupVersionKind{}) {
-		response.SetGroupVersionKind(authorizationv1beta1.SchemeGroupVersion.WithKind("SubjectAccessReview"))
+		response.SetGroupVersionKind(authorizationv1.SchemeGroupVersion.WithKind("SubjectAccessReview"))
 	} else {
 		response.SetGroupVersionKind(*gvk)
 	}
@@ -168,11 +167,14 @@ func (h *handler) writeResponse(w io.Writer, gvk *schema.GroupVersionKind, statu
 	}
 }
 
-func (h *handler) decodeRequestBody(body []byte) (*authorizationv1beta1.SubjectAccessReviewSpec, *schema.GroupVersionKind, error) {
-	var (
-		obj     unstructured.Unstructured
-		sarSpec authorizationv1beta1.SubjectAccessReviewSpec
-	)
+func (h *handler) decodeRequestBody(body []byte) (*authorizationv1.SubjectAccessReviewSpec, *schema.GroupVersionKind, error) {
+	// v1 and v1beta1 SubjectAccessReview types are almost exactly the same (the only difference is the JSON key for the
+	// 'Groups' field). We decode the object into a v1 type and "manually" convert the 'Groups' field (see below).
+	// However, the runtime codec's decoder guesses which type to decode into by type name if an Object's TypeMeta
+	// isn't set. By setting TypeMeta of an unregistered type to the v1 GVK, the decoder will coerce a v1beta1
+	// SubjectAccessReview to v1.
+	var obj unversionedAdmissionReview
+	obj.SetGroupVersionKind(authorizationv1.SchemeGroupVersion.WithKind("SubjectAccessReview"))
 
 	_, gvk, err := codecs.UniversalDeserializer().Decode(body, nil, &obj)
 	if err != nil {
@@ -182,51 +184,21 @@ func (h *handler) decodeRequestBody(body []byte) (*authorizationv1beta1.SubjectA
 		return nil, nil, fmt.Errorf("could not determine GVK for object in the request body")
 	}
 
+	// The only difference in v1beta1 is that the JSON key name of the 'Groups' field is different. Hence, when we
+	// detect that v1beta1 was sent, we decode it once again into the "correct" type and manually "convert" the 'Groups'
+	// information.
 	switch *gvk {
 	case authorizationv1beta1.SchemeGroupVersion.WithKind("SubjectAccessReview"):
 		var tmp authorizationv1beta1.SubjectAccessReview
-		if err := scheme.Convert(&obj, &tmp, nil); err != nil {
+		if _, _, err := codecs.UniversalDeserializer().Decode(body, nil, &tmp); err != nil {
 			return nil, nil, err
 		}
-		return &tmp.Spec, gvk, nil
-
-	case authorizationv1.SchemeGroupVersion.WithKind("SubjectAccessReview"):
-		var tmp authorizationv1.SubjectAccessReview
-		if err := scheme.Convert(&obj, &tmp, nil); err != nil {
-			return nil, nil, err
-		}
-
-		// "convert" authorizationv1.SubjectAccessReviewSpec to authorizationv1beta1.SubjectAccessReviewSpec
-		sarSpec.User = tmp.Spec.User
-		sarSpec.Groups = tmp.Spec.Groups
-		sarSpec.UID = tmp.Spec.UID
-		for k, v := range tmp.Spec.Extra {
-			var extra []string
-			for _, e := range v {
-				extra = append(extra, e)
-			}
-			sarSpec.Extra[k] = extra
-		}
-		if v := tmp.Spec.NonResourceAttributes; v != nil {
-			sarSpec.NonResourceAttributes = &authorizationv1beta1.NonResourceAttributes{
-				Path: v.Path,
-				Verb: v.Verb,
-			}
-		}
-		if v := tmp.Spec.ResourceAttributes; v != nil {
-			sarSpec.ResourceAttributes = &authorizationv1beta1.ResourceAttributes{
-				Namespace:   v.Namespace,
-				Verb:        v.Verb,
-				Group:       v.Group,
-				Version:     v.Version,
-				Resource:    v.Resource,
-				Subresource: v.Subresource,
-				Name:        v.Name,
-			}
-		}
-
-		return &sarSpec, gvk, nil
+		obj.Spec.Groups = tmp.Spec.Groups
 	}
 
-	return nil, nil, fmt.Errorf("unexpected group version kind: %+v", *gvk)
+	return &obj.Spec, gvk, nil
+}
+
+type unversionedAdmissionReview struct {
+	authorizationv1.SubjectAccessReview
 }

@@ -94,6 +94,7 @@ webhooks:
 {{- end }}
 {{- if .Values.global.admission.seedRestriction.enabled }}
 - name: seed-restriction.gardener.cloud
+  admissionReviewVersions: ["v1", "v1beta1"]
   rules: []
   failurePolicy: Fail
   clientConfig:

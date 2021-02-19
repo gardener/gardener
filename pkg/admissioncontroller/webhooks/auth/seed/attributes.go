@@ -22,14 +22,14 @@ Modifications Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights 
 package seed
 
 import (
-	authorizationv1beta1 "k8s.io/api/authorization/v1beta1"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 )
 
 // ResourceAttributesFrom combines the API object information and the user.Info from the context to build a full
 // authorizer.AttributesRecord for resource access.
-func ResourceAttributesFrom(user user.Info, in authorizationv1beta1.ResourceAttributes) authorizer.AttributesRecord {
+func ResourceAttributesFrom(user user.Info, in authorizationv1.ResourceAttributes) authorizer.AttributesRecord {
 	return authorizer.AttributesRecord{
 		User:            user,
 		Verb:            in.Verb,
@@ -45,7 +45,7 @@ func ResourceAttributesFrom(user user.Info, in authorizationv1beta1.ResourceAttr
 
 // NonResourceAttributesFrom combines the API object information and the user.Info from the context to build a full
 // authorizer.AttributesRecord for non resource access.
-func NonResourceAttributesFrom(user user.Info, in authorizationv1beta1.NonResourceAttributes) authorizer.AttributesRecord {
+func NonResourceAttributesFrom(user user.Info, in authorizationv1.NonResourceAttributes) authorizer.AttributesRecord {
 	return authorizer.AttributesRecord{
 		User:            user,
 		ResourceRequest: false,
@@ -55,7 +55,7 @@ func NonResourceAttributesFrom(user user.Info, in authorizationv1beta1.NonResour
 }
 
 // AuthorizationAttributesFrom takes a spec and returns the proper authz attributes to check it.
-func AuthorizationAttributesFrom(spec authorizationv1beta1.SubjectAccessReviewSpec) authorizer.AttributesRecord {
+func AuthorizationAttributesFrom(spec authorizationv1.SubjectAccessReviewSpec) authorizer.AttributesRecord {
 	userToCheck := &user.DefaultInfo{
 		Name:   spec.User,
 		Groups: spec.Groups,
@@ -73,7 +73,7 @@ func AuthorizationAttributesFrom(spec authorizationv1beta1.SubjectAccessReviewSp
 	return authorizationAttributes
 }
 
-func convertToUserInfoExtra(extra map[string]authorizationv1beta1.ExtraValue) map[string][]string {
+func convertToUserInfoExtra(extra map[string]authorizationv1.ExtraValue) map[string][]string {
 	if extra == nil {
 		return nil
 	}
