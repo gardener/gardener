@@ -128,10 +128,7 @@ func (r *reconciler) cleanupStaleSecrets(ctx context.Context, gardenClient kuber
 			continue
 		}
 		fns = append(fns, func(ctx context.Context) error {
-			if err := gardenClient.Client().Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
-				return err
-			}
-			return nil
+			return client.IgnoreNotFound(gardenClient.Client().Delete(ctx, secret))
 		})
 	}
 
@@ -178,14 +175,7 @@ func (r *reconciler) syncGardenSecrets(ctx context.Context, gardenClient kuberne
 		})
 	}
 
-	for _, f := range fns {
-		if err := f(ctx); err != nil {
-			return nil, err
-		}
-	}
-
-	//return secretNames, flow.Parallel(fns...)(ctx)
-	return secretNames, nil
+	return secretNames, flow.Parallel(fns...)(ctx)
 }
 
 // NewDefaultControl returns a new instance of the default implementation that
