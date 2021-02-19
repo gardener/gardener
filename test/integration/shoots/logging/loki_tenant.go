@@ -19,17 +19,22 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/operation/botanist/seedsystemcomponents/seedadmission"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
 	"github.com/onsi/ginkgo"
+	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -52,15 +57,42 @@ var (
 var _ = ginkgo.Describe("Seed logging testing", func() {
 
 	f := framework.NewShootFramework(nil)
-	grafanaOperatorsIngress := &extensionsv1beta1.Ingress{}
-	grafanaUsersIngress := &extensionsv1beta1.Ingress{}
+
+	var (
+		grafanaOperatorsIngress  = &extensionsv1beta1.Ingress{}
+		grafanaUsersIngress      = &extensionsv1beta1.Ingress{}
+		shootNamespace           = &corev1.Namespace{}
+		shootNamespaceLabelKey   = "gardener.cloud/test"
+		shootNamespaceLabelValue = "logging"
+	)
 
 	framework.CBeforeEach(func(ctx context.Context) {
 		checkRequiredResources(ctx, f.SeedClient)
+		//Get shoot namespace name
+		shootNamespace.ObjectMeta.Name = f.ShootSeedNamespace()
 		//Get the grafana-operators Ingress
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafanaOperators}, grafanaOperatorsIngress))
 		//Get the grafana-users Ingress
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafanaUsers}, grafanaUsersIngress))
+		//Set label to the testing namespace
+		_, err := controllerutil.CreateOrUpdate(ctx, f.SeedClient.Client(), shootNamespace, func() error {
+			if shootNamespace.Labels == nil {
+				shootNamespace.Labels = map[string]string{}
+			}
+			shootNamespace.Labels[shootNamespaceLabelKey] = shootNamespaceLabelValue
+
+			return nil
+		})
+		framework.ExpectNoError(err)
+
+		//Deploy Loki ValidatingWebhookConfiguration
+		validatingWebhookParams := map[string]interface{}{
+			"NamespaceLabelKey":   shootNamespaceLabelKey,
+			"NamespaceLabelValue": shootNamespaceLabelValue,
+			"CABundle":            utils.EncodeBase64([]byte(seedadmission.TLSCACert)),
+		}
+		err = f.RenderAndDeployTemplate(ctx, f.SeedClient, templates.BlockLokiValidatingWebhookConfiguration, validatingWebhookParams)
+		framework.ExpectNoError(err)
 	}, tenantInitializationTimeout)
 
 	f.Beta().CIt("should get container logs from loki by tenant", func(ctx context.Context) {
@@ -74,14 +106,17 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		userID := getXScopeOrgID(grafanaUsersIngress.Annotations)
 		operatorID := getXScopeOrgID(grafanaOperatorsIngress.Annotations)
 
-		ginkgo.By("Get existing user Loki tenant IDs")
+		ginkgo.By("Wait until Loki StatefulSet is ready")
+		framework.ExpectNoError(f.WaitUntilStatefulSetIsRunning(ctx, lokiName, f.ShootSeedNamespace(), f.SeedClient))
+
+		ginkgo.By("Compute expected logs for the user tenant")
 		search, err := f.GetLokiLogs(ctx, userID, f.ShootSeedNamespace(), "pod_name", userLoggerRegex, f.SeedClient)
 		framework.ExpectNoError(err)
 		initialUsersLogs, err := getLogCountFromResult(search)
 		framework.ExpectNoError(err)
 		expectedUserLogs := tenantLogsCount + initialUsersLogs
 
-		ginkgo.By("Get existing operator Loki tenant IDs")
+		ginkgo.By("Compute expected logs for the operator tenant")
 		search, err = f.GetLokiLogs(ctx, operatorID, f.ShootSeedNamespace(), "pod_name", operatorLoggerRegex, f.SeedClient)
 		framework.ExpectNoError(err)
 		initialOperatorsLogs, err := getLogCountFromResult(search)
@@ -96,6 +131,9 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			"LogsCount":           tenantLogsCount,
 			"LogsDuration":        tenantLogsDuration,
 		}
+
+		ginkgo.By("Check again if Loki StatefulSet is ready")
+		framework.ExpectNoError(f.WaitUntilStatefulSetIsRunning(ctx, lokiName, f.ShootSeedNamespace(), f.SeedClient))
 
 		err = f.RenderAndDeployTemplate(ctx, f.SeedClient, templates.LoggerAppName, loggerParams)
 		framework.ExpectNoError(err)
@@ -159,5 +197,22 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		}
 		err = kutil.DeleteObject(ctx, f.SeedClient.Client(), loggerDeploymentToDelete)
 		framework.ExpectNoError(err)
+
+		ginkgo.By("Cleaning up loki's MutatingWebhook and the additional label")
+		webhookToDelete := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "block-loki-updates",
+			},
+		}
+		err = kutil.DeleteObject(ctx, f.SeedClient.Client(), webhookToDelete)
+		framework.ExpectNoError(err)
+
+		_, err = controllerutil.CreateOrUpdate(ctx, f.SeedClient.Client(), shootNamespace, func() error {
+			delete(shootNamespace.Labels, shootNamespaceLabelKey)
+
+			return nil
+		})
+		framework.ExpectNoError(err)
+
 	}, tenantLoggerDeploymentCleanupTimeout))
 })
