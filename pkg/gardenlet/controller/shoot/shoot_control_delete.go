@@ -508,7 +508,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		destroyExternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying external domain DNS record",
 			Fn:           flow.TaskFn(botanist.DestroyExternalDNS),
-			Dependencies: flow.NewTaskIDs(syncPointCleaned),
+			Dependencies: flow.NewTaskIDs(syncPointCleaned, deleteKubeAPIServer),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deleting shoot monitoring stack in Seed",
