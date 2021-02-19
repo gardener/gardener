@@ -127,9 +127,18 @@ if [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
   fi
 
   # Restart systemd services if requested
+  restart_ccd=n
   for service in $(echo "$SYSTEMD_SERVICES_TO_RESTART" | sed "s/,/ /g"); do
+    if [[ ${service} == cloud-config-downloader* ]]; then
+      restart_ccd=y
+      continue
+    fi
     echo "Restarting systemd service $service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
     systemctl restart "$service" || true
   done
   /opt/bin/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
+  if [[ ${restart_ccd} == "y" ]]; then
+    echo "Restarting systemd service cloud-config-downloader due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
+    systemctl restart "cloud-config-downloader" || true
+  fi
 fi
