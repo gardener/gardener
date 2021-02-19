@@ -88,8 +88,6 @@ func (h *ObjectSizeHandler) Handle(_ context.Context, request admission.Request)
 // admitRequestSize only allows the request if the object in the request does not exceed a configured limit.
 func (h *ObjectSizeHandler) admitRequestSize(request admission.Request, requestLogger logr.Logger) admission.Response {
 	if request.SubResource != "" {
-		// TODO: why do we have `shoot/status` in the dev-setup webhhok then?
-		// https://github.com/gardener/gardener/blob/1202ab60796a3ef98ca81da0f80d1a885fc782e4/hack/local-development/dev-setup-register-gardener#L324
 		return admissionAllowed("subresources are not handled")
 	}
 

@@ -324,7 +324,6 @@ $ADMISSION_CONTROLLER_PORT_STRING
     - UPDATE
     resources:
     - shoots
-    - shoots/status
     - secretbindings
     - quotas
     - plants

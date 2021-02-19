@@ -140,9 +140,6 @@ func (o *options) run(ctx context.Context) error {
 	}
 
 	log.Info("setting up healthcheck endpoints")
-	if err := mgr.AddReadyzCheck("ping", healthz.Ping); err != nil {
-		return err
-	}
 	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
 		return err
 	}
