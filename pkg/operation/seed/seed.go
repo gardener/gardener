@@ -436,9 +436,11 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			// shoot system components
 			metricsserver.CentralLoggingConfiguration,
 		}
-		userAllowedComponents := []string{v1beta1constants.DeploymentNameKubeAPIServer,
+		userAllowedComponents := []string{
+			v1beta1constants.DeploymentNameKubeAPIServer,
 			v1beta1constants.DeploymentNameVPAExporter, v1beta1constants.DeploymentNameVPARecommender,
-			v1beta1constants.DeploymentNameVPAAdmissionController}
+			v1beta1constants.DeploymentNameVPAAdmissionController,
+		}
 
 		// Fetch component specific logging configurations
 		for _, componentFn := range componentsFunctions {
@@ -656,14 +658,11 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 				igwConfig.Ports,
 				corev1.ServicePort{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
 				corev1.ServicePort{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(9443)},
+				// The KonnectivityTunnel feature can be enabled with annotation
+				// and it requires have this port open, even if the feature is disabled in
+				// gardenlet.
+				corev1.ServicePort{Name: "tls-tunnel", Port: 8132, TargetPort: intstr.FromInt(8132)},
 			)
-
-			if gardenletfeatures.FeatureGate.Enabled(features.KonnectivityTunnel) {
-				igwConfig.Ports = append(
-					igwConfig.Ports,
-					corev1.ServicePort{Name: "tls-tunnel", Port: 8132, TargetPort: intstr.FromInt(8132)},
-				)
-			}
 		}
 
 		igw := istio.NewIngressGateway(
