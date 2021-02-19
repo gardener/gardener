@@ -17,6 +17,7 @@ package metrics
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 const (
@@ -30,8 +31,11 @@ const (
 )
 
 var (
+	// factory is used for registering metrics in the controller-runtime metrics registry.
+	factory = promauto.With(metrics.Registry)
+
 	// RejectedResources defines the counter rejected_resources_total.
-	RejectedResources = promauto.NewCounterVec(
+	RejectedResources = factory.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: namespace,
 			Name:      "rejected_resources_total",
@@ -43,15 +47,5 @@ var (
 			"namespace",
 			"reason",
 		},
-	)
-
-	// InvalidWebhookRequest defines the counter invalid_webhook_requests_total.
-	InvalidWebhookRequest = promauto.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: namespace,
-			Name:      "invalid_webhook_requests_total",
-			Help:      "Total number of invalid webhook requests.",
-		},
-		[]string{},
 	)
 )

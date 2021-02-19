@@ -39,6 +39,12 @@ type AdmissionControllerConfiguration struct {
 type ServerConfiguration struct {
 	// HTTPS is the configuration for the HTTPS server.
 	HTTPS HTTPSServer `json:"https"`
+	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
+	// +optional
+	HealthProbes *Server `json:"healthProbes,omitempty"`
+	// Metrics is the configuration for serving the metrics endpoint.
+	// +optional
+	Metrics *Server `json:"metrics,omitempty"`
 	// ResourceAdmissionConfiguration is the configuration for the resource admission.
 	// +optional
 	ResourceAdmissionConfiguration *ResourceAdmissionConfiguration `json:"resourceAdmissionConfiguration,omitempty"`
@@ -94,8 +100,7 @@ type HTTPSServer struct {
 
 // TLSServer contains information about the TLS configuration for a HTTPS server.
 type TLSServer struct {
-	// ServerCertPath is the path to the server certificate file.
-	ServerCertPath string `json:"serverCertPath"`
-	// ServerKeyPath is the path to the private key file.
-	ServerKeyPath string `json:"serverKeyPath"`
+	// ServerCertDir is the path to a directory containing the server's TLS certificate and key (the files must be
+	// named tls.crt and tls.key respectively).
+	ServerCertDir string `json:"serverCertDir"`
 }

@@ -39,6 +39,10 @@ type AdmissionControllerConfiguration struct {
 type ServerConfiguration struct {
 	// HTTPS is the configuration for the HTTPS server.
 	HTTPS HTTPSServer
+	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
+	HealthProbes *Server
+	// Metrics is the configuration for serving the metrics endpoint.
+	Metrics *Server
 	// ResourceAdmissionConfiguration is the configuration for the resource admission.
 	ResourceAdmissionConfiguration *ResourceAdmissionConfiguration
 }
@@ -89,10 +93,9 @@ type HTTPSServer struct {
 
 // TLSServer contains information about the TLS configuration for a HTTPS server.
 type TLSServer struct {
-	// ServerCertPath is the path to the server certificate file.
-	ServerCertPath string
-	// ServerKeyPath is the path to the private key file.
-	ServerKeyPath string
+	// ServerCertDir is the path to a directory containing the server's TLS certificate and key (the files must be
+	// named tls.crt and tls.key respectively).
+	ServerCertDir string
 }
 
 const (

@@ -68,15 +68,15 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: {{ required ".Values.global.admission.config.server.https.port is required" .Values.global.admission.config.server.https.port }}
-            scheme: HTTPS
+            port: {{ required ".Values.global.admission.config.server.healthProbes.port is required" .Values.global.admission.config.server.healthProbes.port }}
+            scheme: HTTP
           initialDelaySeconds: 300
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /readyz
-            port: {{ required ".Values.global.admission.config.server.https.port is required" .Values.global.admission.config.server.https.port }}
-            scheme: HTTPS
+            port: {{ required ".Values.global.admission.config.server.healthProbes.port is required" .Values.global.admission.config.server.healthProbes.port }}
+            scheme: HTTP
           initialDelaySeconds: 10
           timeoutSeconds: 5
         terminationMessagePath: /dev/termination-log

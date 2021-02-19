@@ -15,13 +15,39 @@
 package webhooks_test
 
 import (
+	"context"
 	"testing"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"go.uber.org/zap/zapcore"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/gardener/gardener/cmd/utils"
 )
 
 func TestWebhooks(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Gardener Admission Controller Webhooks Suite")
 }
+
+const (
+	noSubResource = ""
+	emptyMessage  = ""
+)
+
+var (
+	ctx    context.Context
+	err    error
+	logger logr.Logger
+)
+
+var _ = BeforeSuite(func() {
+	utils.DeduplicateWarnings()
+	ctx = context.Background()
+
+	logger = logzap.New(logzap.UseDevMode(true), logzap.WriteTo(GinkgoWriter), logzap.Level(zapcore.Level(0)))
+	logf.SetLogger(logger)
+})

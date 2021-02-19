@@ -248,6 +248,8 @@ func autoConvert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration(in *
 	if err := Convert_v1alpha1_HTTPSServer_To_config_HTTPSServer(&in.HTTPS, &out.HTTPS, s); err != nil {
 		return err
 	}
+	out.HealthProbes = (*config.Server)(unsafe.Pointer(in.HealthProbes))
+	out.Metrics = (*config.Server)(unsafe.Pointer(in.Metrics))
 	out.ResourceAdmissionConfiguration = (*config.ResourceAdmissionConfiguration)(unsafe.Pointer(in.ResourceAdmissionConfiguration))
 	return nil
 }
@@ -261,6 +263,8 @@ func autoConvert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *
 	if err := Convert_config_HTTPSServer_To_v1alpha1_HTTPSServer(&in.HTTPS, &out.HTTPS, s); err != nil {
 		return err
 	}
+	out.HealthProbes = (*Server)(unsafe.Pointer(in.HealthProbes))
+	out.Metrics = (*Server)(unsafe.Pointer(in.Metrics))
 	out.ResourceAdmissionConfiguration = (*ResourceAdmissionConfiguration)(unsafe.Pointer(in.ResourceAdmissionConfiguration))
 	return nil
 }
@@ -271,8 +275,7 @@ func Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *conf
 }
 
 func autoConvert_v1alpha1_TLSServer_To_config_TLSServer(in *TLSServer, out *config.TLSServer, s conversion.Scope) error {
-	out.ServerCertPath = in.ServerCertPath
-	out.ServerKeyPath = in.ServerKeyPath
+	out.ServerCertDir = in.ServerCertDir
 	return nil
 }
 
@@ -282,8 +285,7 @@ func Convert_v1alpha1_TLSServer_To_config_TLSServer(in *TLSServer, out *config.T
 }
 
 func autoConvert_config_TLSServer_To_v1alpha1_TLSServer(in *config.TLSServer, out *TLSServer, s conversion.Scope) error {
-	out.ServerCertPath = in.ServerCertPath
-	out.ServerKeyPath = in.ServerKeyPath
+	out.ServerCertDir = in.ServerCertDir
 	return nil
 }
 

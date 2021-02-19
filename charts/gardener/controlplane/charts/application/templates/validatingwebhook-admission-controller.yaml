@@ -5,6 +5,8 @@ metadata:
   name: validate-namespace-deletion
 webhooks:
 - name: validate-namespace-deletion.gardener.cloud
+  admissionReviewVersions: ["v1", "v1beta1"]
+  timeoutSeconds: 10
   rules:
   - apiGroups:
     - ""
@@ -29,6 +31,8 @@ webhooks:
     {{- end }}
     caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
 - name: validate-kubeconfig-secrets.gardener.cloud
+  admissionReviewVersions: ["v1", "v1beta1"]
+  timeoutSeconds: 10
   rules:
   - apiGroups:
     - ""
@@ -57,6 +61,8 @@ webhooks:
   sideEffects: None
 {{- if .Values.global.admission.config.server.resourceAdmissionConfiguration }}
 - name: validate-resource-size.gardener.cloud
+  admissionReviewVersions: ["v1", "v1beta1"]
+  timeoutSeconds: 10
   rules:
     {{- range $i, $conf := .Values.global.admission.config.server.resourceAdmissionConfiguration.limits }}
   - apiGroups:

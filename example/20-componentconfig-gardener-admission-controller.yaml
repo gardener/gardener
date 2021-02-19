@@ -9,8 +9,13 @@ server:
     bindAddress: 0.0.0.0
     port: 2721
     tls:
-      serverCertPath: dev/tls/gardener-admission-controller.crt
-      serverKeyPath: dev/tls/gardener-admission-controller.key
+      serverCertDir: dev/tls/gardener-admission-controller
+  healthProbes:
+    bindAddress: 0.0.0.0
+    port: 2722
+  metrics:
+    bindAddress: 0.0.0.0
+    port: 2723
   resourceAdmissionConfiguration:
     limits:
     - apiGroups: ["core.gardener.cloud"]

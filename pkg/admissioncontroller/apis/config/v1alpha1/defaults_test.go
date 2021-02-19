@@ -39,6 +39,10 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.Server.HTTPS.BindAddress).To(Equal("0.0.0.0"))
 				Expect(obj.Server.HTTPS.Port).To(Equal(2721))
 				Expect(obj.Server.ResourceAdmissionConfiguration).To(Equal(&ResourceAdmissionConfiguration{}))
+				Expect(obj.Server.HealthProbes.BindAddress).To(BeEmpty())
+				Expect(obj.Server.HealthProbes.Port).To(Equal(2722))
+				Expect(obj.Server.Metrics.BindAddress).To(BeEmpty())
+				Expect(obj.Server.Metrics.Port).To(Equal(2723))
 			})
 		})
 

@@ -16,222 +16,194 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"time"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/component-base/version/verflag"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	configvalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
-	"github.com/gardener/gardener/pkg/admissioncontroller/server/handlers/webhooks"
+	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/healthz"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/server"
-
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/component-base/version/verflag"
+	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 )
+
+const (
+	// Name is a const for the name of this component.
+	Name = "gardener-admission-controller"
+)
+
+var (
+	configDecoder runtime.Decoder
+
+	gracefulShutdownTimeout = 5 * time.Second
+)
+
+func init() {
+	configScheme := runtime.NewScheme()
+	schemeBuilder := runtime.NewSchemeBuilder(
+		config.AddToScheme,
+		admissioncontrollerconfigv1alpha1.AddToScheme,
+	)
+	utilruntime.Must(schemeBuilder.AddToScheme(configScheme))
+	configDecoder = serializer.NewCodecFactory(configScheme).UniversalDecoder()
+}
 
 // options has all the context and parameters needed to run a Gardener admission controller.
 type options struct {
 	// configFile is the location of the Gardener controller manager's configuration file.
 	configFile string
-	scheme     *runtime.Scheme
-	codecs     serializer.CodecFactory
+
+	// config is the decoded admission controller config.
+	config *config.AdmissionControllerConfiguration
 }
 
-// addFlags adds flags for a specific Gardener controller manager to the specified FlagSet.
 func (o *options) addFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.configFile, "config", o.configFile, "Path to configuration file.")
 }
 
-// newOptions returns a new Options object.
-func newOptions() (*options, error) {
-	o := &options{
-		scheme: runtime.NewScheme(),
-	}
-
-	o.codecs = serializer.NewCodecFactory(o.scheme)
-
-	if err := config.AddToScheme(o.scheme); err != nil {
-		return nil, err
-	}
-	if err := admissioncontrollerconfigv1alpha1.AddToScheme(o.scheme); err != nil {
-		return nil, err
-	}
-
-	return o, nil
-}
-
-// loadConfigFromFile loads the contents of file and decodes it as a
-// ControllerManagerConfiguration object.
-func (o *options) loadConfigFromFile(file string) (*config.AdmissionControllerConfiguration, error) {
-	data, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-	return o.decodeConfig(data)
-}
-
-func (o *options) configFileSpecified() error {
+func (o *options) complete() error {
 	if len(o.configFile) == 0 {
-		return fmt.Errorf("missing Gardener admission controller config file")
-	}
-	return nil
-}
-
-// Validate validates all the required options.
-func (o *options) validate(args []string) error {
-	if len(args) != 0 {
-		return errors.New("arguments are not supported")
+		return fmt.Errorf("missing config file")
 	}
 
-	return nil
-}
-
-// decodeConfig decodes data as a ControllerManagerConfiguration object.
-func (o *options) decodeConfig(data []byte) (*config.AdmissionControllerConfiguration, error) {
-	configObj, gvk, err := o.codecs.UniversalDecoder().Decode(data, nil, nil)
+	data, err := ioutil.ReadFile(o.configFile)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("error reading config file: %w", err)
 	}
+
+	configObj, err := runtime.Decode(configDecoder, data)
+	if err != nil {
+		return fmt.Errorf("error decoding config: %w", err)
+	}
+
 	config, ok := configObj.(*config.AdmissionControllerConfiguration)
 	if !ok {
-		return nil, fmt.Errorf("got unexpected config type: %v", gvk)
+		return fmt.Errorf("got unexpected config type: %T", configObj)
 	}
-	return config, nil
+	o.config = config
+
+	return nil
 }
 
-// AdmissionController contains all necessary information to run the admission controller.
-type AdmissionController struct {
-	Config    *config.AdmissionControllerConfiguration
-	ClientMap clientmap.ClientMap
-}
-
-func (o *options) run(ctx context.Context) error {
-	c, err := o.loadConfigFromFile(o.configFile)
-	if err != nil {
-		return err
-	}
-
-	if errs := configvalidation.ValidateAdmissionControllerConfiguration(c); len(errs) > 0 {
+func (o *options) validate() error {
+	if errs := configvalidation.ValidateAdmissionControllerConfiguration(o.config); len(errs) > 0 {
 		return errs.ToAggregate()
 	}
 
-	admissionController, err := NewAdmissionController(c)
-	if err != nil {
-		return err
-	}
-
-	return admissionController.Run(ctx)
+	return nil
 }
 
-// NewAdmissionController creates a new AdmissionController instance.
-func NewAdmissionController(cfg *config.AdmissionControllerConfiguration) (*AdmissionController, error) {
-	if cfg == nil {
-		return nil, errors.New("config is required")
-	}
+// run runs gardener-admission-controller using the specified options.
+func (o *options) run(ctx context.Context) error {
+	log := logf.Log
 
-	// Initialize logger
-	logger := logger.NewLogger(cfg.LogLevel)
-	logger.Info("Starting Gardener admission controller...")
-
-	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets
-	// that can be used to access the Kubernetes API.
+	log.Info("getting rest config")
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
-		cfg.GardenClientConnection.Kubeconfig = kubeconfig
+		o.config.GardenClientConnection.Kubeconfig = kubeconfig
 	}
 
-	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// Enable cache globally for garden client.
-	kubernetes.UseCachedRuntimeClients = true
-
-	clientMap, err := clientmapbuilder.NewGardenClientMapBuilder().WithLogger(logger).WithRESTConfig(restCfg).Build()
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to build ClientMap: %w", err)
-	}
-
-	return &AdmissionController{
-		ClientMap: clientMap,
-		Config:    cfg,
-	}, nil
-}
-
-// Run starts the Gardener admission controller.
-func (a *AdmissionController) Run(ctx context.Context) error {
-	k8sGardenClient, err := a.ClientMap.GetClient(ctx, keys.ForGarden())
+	restConfig, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&o.config.GardenClientConnection, nil)
 	if err != nil {
 		return err
 	}
 
-	if err := a.ClientMap.Start(ctx.Done()); err != nil {
-		return err
-	}
-
-	namespaceValidationHandler, err := webhooks.NewValidateNamespaceDeletionHandler(ctx, k8sGardenClient)
+	log.Info("setting up manager")
+	mgr, err := manager.New(restConfig, manager.Options{
+		Scheme:                  kubernetes.GardenScheme,
+		LeaderElection:          false,
+		HealthProbeBindAddress:  fmt.Sprintf("%s:%d", o.config.Server.HealthProbes.BindAddress, o.config.Server.HealthProbes.Port),
+		MetricsBindAddress:      fmt.Sprintf("%s:%d", o.config.Server.Metrics.BindAddress, o.config.Server.Metrics.Port),
+		Host:                    o.config.Server.HTTPS.BindAddress,
+		Port:                    o.config.Server.HTTPS.Port,
+		CertDir:                 o.config.Server.HTTPS.TLS.ServerCertDir,
+		GracefulShutdownTimeout: &gracefulShutdownTimeout,
+		Logger:                  log,
+	})
 	if err != nil {
 		return err
 	}
 
-	healthManager := healthz.NewDefaultHealthz()
-	defer healthManager.Stop()
-	healthManager.Start()
-	// Set health manager always to `true` since we don't run any real health checks yet.
-	// It is only required to identify a healthy and ready webhook after it successfully synced required caches.
-	healthManager.Set(true)
+	log.Info("setting up healthcheck endpoints")
+	if err := mgr.AddReadyzCheck("informer-sync", gardenerhealthz.NewCacheSyncHealthz(mgr.GetCache())); err != nil {
+		return err
+	}
+	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+		return err
+	}
 
-	// Start webhook server
-	server.
-		NewBuilder().
-		WithBindAddress(a.Config.Server.HTTPS.BindAddress).
-		WithPort(a.Config.Server.HTTPS.Port).
-		WithTLS(a.Config.Server.HTTPS.TLS.ServerCertPath, a.Config.Server.HTTPS.TLS.ServerKeyPath).
-		WithHandler("/metrics", promhttp.Handler()).
-		WithHandler("/webhooks/validate-namespace-deletion", namespaceValidationHandler).
-		WithHandler("/webhooks/validate-kubeconfig-secrets", webhooks.NewValidateKubeconfigSecretsHandler()).
-		WithHandler("/webhooks/validate-resource-size", webhooks.NewValidateResourceSizeHandler(a.Config.Server.ResourceAdmissionConfiguration)).
-		WithHandlerFunc("/healthz", healthz.HandlerFunc(healthManager)).
-		WithHandlerFunc("/readyz", healthz.HandlerFunc(healthManager)).
-		Build().
-		Start(ctx)
+	log.Info("setting up webhook server")
+	server := mgr.GetWebhookServer()
+
+	namespaceValidationHandler, err := webhooks.NewValidateNamespaceDeletionHandler(ctx, mgr.GetCache())
+	if err != nil {
+		return err
+	}
+
+	server.Register("/webhooks/validate-namespace-deletion", &webhook.Admission{Handler: namespaceValidationHandler})
+	server.Register("/webhooks/validate-kubeconfig-secrets", &webhook.Admission{Handler: &webhooks.KubeconfigSecretValidator{}})
+	server.Register("/webhooks/validate-resource-size", &webhook.Admission{Handler: &webhooks.ObjectSizeHandler{Config: o.config.Server.ResourceAdmissionConfiguration}})
+
+	log.Info("starting manager")
+	if err := mgr.Start(ctx); err != nil {
+		log.Error(err, "error running manager")
+		return err
+	}
 
 	return nil
 }
 
-// NewCommandStartGardenerControllerManager creates a *cobra.Command object with default parameters.
-func NewCommandStartGardenerAdmissionController() *cobra.Command {
-	opts, err := newOptions()
-	if err != nil {
-		panic(err)
-	}
+// NewGardenerAdmissionControllerCommand creates a *cobra.Command object with default parameters.
+func NewGardenerAdmissionControllerCommand() *cobra.Command {
+	var (
+		log = logzap.New(logzap.UseDevMode(false), func(opts *logzap.Options) {
+			encCfg := zap.NewProductionEncoderConfig()
+			// overwrite time encoding to human readable format
+			encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+			opts.Encoder = zapcore.NewJSONEncoder(encCfg)
+		})
+		opts = &options{}
+	)
+	logf.SetLogger(log)
 
 	cmd := &cobra.Command{
-		Use:   "gardener-admission-controller",
-		Short: "Launch the Gardener admission controller",
-		Long:  `The Gardener admission controller serves a validation webhook endpoint for resources in the garden cluster.`,
+		Use:   Name,
+		Short: "Launch the " + Name,
+		Long:  Name + " serves webhook endpoints for resources in the garden cluster.",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			verflag.PrintAndExitIfRequested()
 
-			if err := opts.configFileSpecified(); err != nil {
+			if err := opts.complete(); err != nil {
 				return err
 			}
-			if err := opts.validate(args); err != nil {
+			if err := opts.validate(); err != nil {
 				return err
 			}
+
+			cmd.SilenceUsage = true
+			cmd.SilenceErrors = true
+
+			log.Info("Starting " + Name + "...")
+			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value))
+			})
+
 			return opts.run(cmd.Context())
 		},
 	}
