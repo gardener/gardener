@@ -310,6 +310,9 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 		kubecfgURL = common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain)
 	}
 
+	// Secrets which are created by Gardener itself are usually excluded from informers to improve performance.
+	// Hence, if new secrets are synced to the Garden cluster, please consider adding the used `gardener.cloud/role`
+	// label value to the `excludedCPSecrets` Requirements in `pkg/controllermanager/controller/factory.go`.
 	projectSecrets := []projectSecret{
 		{
 			secretName:  common.KubecfgSecretName,

@@ -19,21 +19,14 @@ import (
 	"sync"
 	"time"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
-
 	"github.com/prometheus/client_golang/prometheus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -64,27 +57,20 @@ type Controller struct {
 	shootLister gardencorelisters.ShootLister
 
 	hasSyncedFuncs         []cache.InformerSynced
-	startFuncs             []func(<-chan struct{})
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
-
-var (
-	gardenRole         = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
-	gardenRoleSelector = labels.NewSelector().Add(gardenRole)
-)
 
 // NewSeedController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <gardenInformerFactory>, and a <recorder> for
 // event recording. It creates a new Seed controller.
 func NewSeedController(
-	ctx context.Context,
 	clientMap clientmap.ClientMap,
 	gardenInformerFactory gardencoreinformers.SharedInformerFactory,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	config *config.ControllerManagerConfiguration,
 	recorder record.EventRecorder,
-) (*Controller, error) {
+) *Controller {
 	var (
 		gardenCoreV1beta1Informer = gardenInformerFactory.Core().V1beta1()
 
@@ -99,25 +85,16 @@ func NewSeedController(
 
 		leaseInformer = kubeInformerFactory.Coordination().V1().Leases()
 		leaseLister   = leaseInformer.Lister()
-	)
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, err
-	}
-
-	factory := kubeinformers.NewSharedInformerFactoryWithOptions(gardenClient.Kubernetes(), 0,
-		kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
-			opts.LabelSelector = gardenRoleSelector.String()
-		}),
+		secretInformer = kubeInformerFactory.Core().V1().Secrets()
+		secretLister   = kubeInformerFactory.Core().V1().Secrets().Lister()
 	)
-	secretInformer := factory.Core().V1().Secrets()
 
 	seedController := &Controller{
 		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenInformerFactory,
 		config:                 config,
-		seedReconciler:         NewDefaultControl(clientMap, secretInformer.Lister(), seedLister),
+		seedReconciler:         NewDefaultControl(clientMap, secretLister, seedLister),
 		lifeCycleReconciler:    NewLifecycleDefaultControl(clientMap, leaseLister, seedLister, shootLister, config),
 		recorder:               recorder,
 		seedBackupReconciler:   NewDefaultBackupBucketControl(clientMap, backupBucketLister, seedLister),
@@ -152,10 +129,6 @@ func NewSeedController(
 		},
 	})
 
-	seedController.startFuncs = []func(<-chan struct{}){
-		factory.Start,
-	}
-
 	seedController.hasSyncedFuncs = []cache.InformerSynced{
 		backupBucketInformer.Informer().HasSynced,
 		seedInformer.Informer().HasSynced,
@@ -164,15 +137,11 @@ func NewSeedController(
 		secretInformer.Informer().HasSynced,
 	}
 
-	return seedController, nil
+	return seedController
 }
 
 // Run runs the Controller until the given stop channel can be read from.
 func (c *Controller) Run(ctx context.Context, workers int) {
-	for _, start := range c.startFuncs {
-		start(ctx.Done())
-	}
-
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
