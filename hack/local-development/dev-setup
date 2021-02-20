@@ -21,6 +21,7 @@ EXAMPLE_DIR=$(dirname "${0}")/../../example
 
 source $(dirname "${0}")/common/helpers
 kubernetes_env="$(k8s_env)"
+PLATFORM='-'$( uname -m ); case $PLATFORM in -ppc64le|-arm64) ;; *) PLATFORM=;; esac 
 
 # test if we are running against a Minikube, Docker or kind Kubernetes local setup
 case "${kubernetes_env}" in
@@ -77,7 +78,7 @@ spec:
         run: etcd
     spec:
       containers:
-      - image: quay.io/coreos/etcd:v3.3.17
+      - image: quay.io/coreos/etcd:v3.3.17${PLATFORM}
         name: etcd
         command:
         - etcd
