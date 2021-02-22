@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"go/build"
 	"go/token"
 	"io"
 	"io/ioutil"
@@ -133,15 +132,14 @@ func main() {
 	// "package.X" since "package" is this package). This can happen if the mock
 	// is output into an already existing package.
 	outputPackagePath := *selfPackage
-	if len(outputPackagePath) == 0 && len(*destination) > 0 {
-		dst, _ := filepath.Abs(filepath.Dir(*destination))
-		for _, prefix := range build.Default.SrcDirs() {
-			if strings.HasPrefix(dst, prefix) {
-				if rel, err := filepath.Rel(prefix, dst); err == nil {
-					outputPackagePath = rel
-					break
-				}
-			}
+	if outputPackagePath == "" && *destination != "" {
+		dstPath, err := filepath.Abs(filepath.Dir(*destination))
+		if err != nil {
+			log.Fatalf("Unable to determine destination file path: %v", err)
+		}
+		outputPackagePath, err = parsePackageImport(dstPath)
+		if err != nil {
+			log.Fatalf("Unable to determine destination file path: %v", err)
 		}
 	}
 
@@ -330,7 +328,7 @@ func (g *generator) Generate(pkg *model.Package, outputPkgName string, outputPac
 		}
 
 		// Avoid importing package if source pkg == output pkg
-		if pth == pkg.PkgPath && outputPkgName == pkg.Name {
+		if pth == pkg.PkgPath && outputPackagePath == pkg.PkgPath {
 			continue
 		}
 
@@ -424,7 +422,14 @@ func (g *generator) GenerateMockInterface(intf *model.Interface, outputPackagePa
 	return nil
 }
 
+type byMethodName []*model.Method
+
+func (b byMethodName) Len() int           { return len(b) }
+func (b byMethodName) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
+func (b byMethodName) Less(i, j int) bool { return b[i].Name < b[j].Name }
+
 func (g *generator) GenerateMockMethods(mockType string, intf *model.Interface, pkgOverride string) {
+	sort.Sort(byMethodName(intf.Methods))
 	for _, m := range intf.Methods {
 		g.p("")
 		_ = g.GenerateMockMethod(mockType, m, pkgOverride)
