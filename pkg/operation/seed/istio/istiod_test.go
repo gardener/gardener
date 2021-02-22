@@ -22,10 +22,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/seed/istio"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 
 	"github.com/gogo/protobuf/types"
 	meshv1alpha1 "istio.io/api/mesh/v1alpha1"
@@ -33,14 +35,17 @@ import (
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	networkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
+	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -65,6 +70,8 @@ var _ = Describe("istiod", func() {
 		Expect(policyv1beta1.AddToScheme(s)).ToNot(HaveOccurred())
 		Expect(networkingv1beta1.AddToScheme(s)).NotTo(HaveOccurred())
 		Expect(networkingv1alpha3.AddToScheme(s)).NotTo(HaveOccurred())
+		Expect(autoscalingv1beta2.AddToScheme(s)).NotTo(HaveOccurred())
+		Expect(autoscalingv1.AddToScheme(s)).NotTo(HaveOccurred())
 
 		c = fake.NewFakeClientWithScheme(s)
 		renderer := cr.NewWithServerVersion(&version.Info{})
@@ -149,6 +156,62 @@ var _ = Describe("istiod", func() {
 
 		It("requires minimum one replica", func() {
 			Expect(pdb.Spec.MinAvailable.IntValue()).To(Equal(1))
+		})
+	})
+
+	Describe("vertical pod autoscaler", func() {
+		var vpa *autoscalingv1beta2.VerticalPodAutoscaler
+
+		JustBeforeEach(func() {
+			vpa = &autoscalingv1beta2.VerticalPodAutoscaler{}
+
+			Expect(c.Get(
+				ctx,
+				client.ObjectKey{Name: "istiod", Namespace: deployNS},
+				vpa),
+			).To(Succeed(), "VPA get succeeds")
+		})
+
+		It("targets correct deployment", func() {
+			Expect(vpa.Spec.TargetRef).To(PointTo(Equal(autoscalingv1.CrossVersionObjectReference{
+				Kind:       "Deployment",
+				Name:       "istiod",
+				APIVersion: "apps/v1",
+			})))
+		})
+
+		It("has auto policy", func() {
+			Expect(vpa.Spec.UpdatePolicy).ToNot(BeNil())
+			Expect(vpa.Spec.UpdatePolicy.UpdateMode).To(PointTo(Equal(autoscalingv1beta2.UpdateModeAuto)))
+		})
+
+		It("has only works on memory", func() {
+			Expect(vpa.Spec.ResourcePolicy).ToNot(BeNil())
+			Expect(vpa.Spec.ResourcePolicy.ContainerPolicies).To(ConsistOf(autoscalingv1beta2.ContainerResourcePolicy{
+				ContainerName: "discovery",
+				MinAllowed: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("128Mi"),
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+				},
+			}))
+		})
+	})
+
+	// TODO (mvladev): Remove after 1 release
+	Describe("HPA", func() {
+		BeforeEach(func() {
+			Expect(c.Create(ctx, &autoscalingv1.HorizontalPodAutoscaler{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "istiod",
+					Namespace: deployNS,
+				},
+			})).To(Succeed())
+		})
+
+		It("removes leftover HPA", func() {
+			Expect(
+				c.Get(ctx, client.ObjectKey{Name: "istio", Namespace: deployNS}, &autoscalingv1.HorizontalPodAutoscaler{}),
+			).To(BeNotFoundError())
 		})
 	})
 
