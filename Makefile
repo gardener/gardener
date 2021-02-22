@@ -95,12 +95,22 @@ install:
 .PHONY: docker-images
 docker-images:
 	@echo "Building docker images with version and tag $(EFFECTIVE_VERSION)"
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(APISERVER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)          -t $(APISERVER_IMAGE_REPOSITORY):latest          -f Dockerfile --target apiserver .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(CONTROLLER_MANAGER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION) -t $(CONTROLLER_MANAGER_IMAGE_REPOSITORY):latest -f Dockerfile --target controller-manager .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(SCHEDULER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)          -t $(SCHEDULER_IMAGE_REPOSITORY):latest          -f Dockerfile --target scheduler .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(ADMISSION_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)          -t $(ADMISSION_IMAGE_REPOSITORY):latest          -f Dockerfile --target admission-controller .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(SEED_ADMISSION_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)     -t $(SEED_ADMISSION_IMAGE_REPOSITORY):latest     -f Dockerfile --target seed-admission-controller .
-	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(GARDENLET_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)          -t $(GARDENLET_IMAGE_REPOSITORY):latest          -f Dockerfile --target gardenlet .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(APISERVER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)          -t $(APISERVER_IMAGE_REPOSITORY):latest          -f Dockerfile --target apiserver .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(CONTROLLER_MANAGER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION) -t $(CONTROLLER_MANAGER_IMAGE_REPOSITORY):latest -f Dockerfile --target controller-manager .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(SCHEDULER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)          -t $(SCHEDULER_IMAGE_REPOSITORY):latest          -f Dockerfile --target scheduler .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(ADMISSION_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)          -t $(ADMISSION_IMAGE_REPOSITORY):latest          -f Dockerfile --target admission-controller .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(SEED_ADMISSION_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)     -t $(SEED_ADMISSION_IMAGE_REPOSITORY):latest     -f Dockerfile --target seed-admission-controller .
+	@docker build --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION)  -t $(GARDENLET_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)          -t $(GARDENLET_IMAGE_REPOSITORY):latest          -f Dockerfile --target gardenlet .
+
+.PHONY: docker-images-ppc
+docker-images-ppc:
+	@echo "Building docker images for IBM's POWER(ppc64le) with version and tag $(EFFECTIVE_VERSION)"
+	@docker build --build-arg GCR_PULL_URL="" --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(APISERVER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)          -t $(APISERVER_IMAGE_REPOSITORY):latest          -f Dockerfile --target apiserver .
+	@docker build --build-arg GCR_PULL_URL="" --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(CONTROLLER_MANAGER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION) -t $(CONTROLLER_MANAGER_IMAGE_REPOSITORY):latest -f Dockerfile --target controller-manager .
+	@docker build --build-arg GCR_PULL_URL="" --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(SCHEDULER_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)          -t $(SCHEDULER_IMAGE_REPOSITORY):latest          -f Dockerfile --target scheduler .
+	@docker build --build-arg GCR_PULL_URL="" --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(ADMISSION_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)          -t $(ADMISSION_IMAGE_REPOSITORY):latest          -f Dockerfile --target admission-controller .
+	@docker build --build-arg GCR_PULL_URL="" --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(SEED_ADMISSION_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)     -t $(SEED_ADMISSION_IMAGE_REPOSITORY):latest     -f Dockerfile --target seed-admission-controller .
+	@docker build --build-arg GCR_PULL_URL="" --build-arg EFFECTIVE_VERSION=$(EFFECTIVE_VERSION) -t $(GARDENLET_IMAGE_REPOSITORY):$(EFFECTIVE_VERSION)          -t $(GARDENLET_IMAGE_REPOSITORY):latest          -f Dockerfile --target gardenlet .
 
 .PHONY: docker-login
 docker-login:
