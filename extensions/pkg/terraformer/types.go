@@ -112,6 +112,7 @@ type Terraformer interface {
 	GetState(ctx context.Context) ([]byte, error)
 	IsStateEmpty(ctx context.Context) bool
 	CleanupConfiguration(ctx context.Context) error
+	RemoveTerraformerFinalizerFromConfig(ctx context.Context) error
 	GetStateOutputVariables(ctx context.Context, variables ...string) (map[string]string, error)
 	ConfigExists(ctx context.Context) (bool, error)
 	NumberOfResources(ctx context.Context) (int, error)
