@@ -30,4 +30,6 @@ for source_tree in $@; do
   grep -lr --include="*.go" "//go:generate packr2" "$(dirname "$source_tree")" | xargs -I {} packr2 clean "{}/.."
 done
 
-find ./hack/api-reference/ -type f -name "*.md" -exec rm '{}' \;
+if [ -d "$PWD/hack/api-reference" ]; then
+  find ./hack/api-reference/ -type f -name "*.md" -exec rm '{}' \;
+fi
