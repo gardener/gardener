@@ -92,4 +92,21 @@ webhooks:
     caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
   sideEffects: None
 {{- end }}
+{{- if .Values.global.admission.seedRestriction.enabled }}
+- name: seed-restriction.gardener.cloud
+  admissionReviewVersions: ["v1", "v1beta1"]
+  rules: []
+  failurePolicy: Fail
+  clientConfig:
+    {{- if .Values.global.deployment.virtualGarden.enabled }}
+    url: https://gardener-admission-controller.garden/webhooks/validate-resource-size
+    {{- else }}
+    service:
+      namespace: garden
+      name: gardener-admission-controller
+      path: /webhooks/admission/seedrestriction
+    {{- end }}
+    caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
+  sideEffects: None
+{{- end }}
 {{- end }}

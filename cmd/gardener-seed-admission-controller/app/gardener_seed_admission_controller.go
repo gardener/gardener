@@ -149,11 +149,11 @@ func (o *Options) Run(ctx context.Context) error {
 
 	log.Info("setting up webhook server")
 	server := mgr.GetWebhookServer()
-
-	server.Register(seedadmission.ExtensionDeletionProtectionWebhookPath, &webhook.Admission{Handler: &seedadmission.ExtensionDeletionProtection{}})
 	server.Register(
-		// in the future we might want to have additional scheduler names
-		// so lets have the handler be of pattern "/webhooks/default-pod-scheduler-name/{scheduler-name}"
+		seedadmission.ExtensionDeletionProtectionWebhookPath,
+		&webhook.Admission{Handler: &seedadmission.ExtensionDeletionProtection{}},
+	)
+	server.Register(
 		seedadmission.GardenerShootControlPlaneSchedulerWebhookPath,
 		&webhook.Admission{Handler: admission.HandlerFunc(seedadmission.DefaultShootControlPlanePodsSchedulerName)},
 	)

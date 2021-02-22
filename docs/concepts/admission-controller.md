@@ -2,6 +2,11 @@
 
 While the Gardener API server works with [admission plugins](./apiserver_admission_plugins.md) to validate and mutate resources belonging to Gardener related API groups, e.g. `core.gardener.cloud`, the same is needed for resources belonging to non-Gardener API groups as well, e.g. `Secret`s in the `core` API group.
 Therefore, the Gardener Admission Controller runs a http(s) server with the following handlers which serve as validating/mutating endpoints for [admission webhooks](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/).
+It is also used to serve http(s) handlers for authorization webhooks.
+
+## Admission Webhook Handlers
+
+This section describes the admission webhook handlers that are currently served.
 
 ### Kubeconfig Secret Validator
 
@@ -60,3 +65,15 @@ Wildcard ("*") in subject `name` is supported.
 Size limitations depend on the individual Gardener setup and choosing the wrong values can affect the availability of your Gardener service.
 `resourceAdmissionConfiguration.operationMode` allows to control if a violating request is actually denied (default) or only logged.
 It's recommended to start with `log`, check the logs for exceeding requests, adjust the limits if necessary and finally switch to `block`.
+
+### SeedRestriction
+
+Please refer to [this document](../deployment/gardenlet_api_access.md) for more information.
+
+## Authorization Webhook Handlers
+
+This section describes the authorization webhook handlers that are currently served.
+
+### SeedAuthorization
+
+Please refer to [this document](../deployment/gardenlet_api_access.md) for more information.

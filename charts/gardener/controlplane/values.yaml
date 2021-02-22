@@ -310,6 +310,9 @@ global:
     #     name: gardener.cloud:system:seeds
     #     apiGroup: rbac.authorization.k8s.io
     #   operationMode: log
+    seedRestriction:
+      enabled: true
+
   # Gardener controller manager configuration values
   controller:
     enabled: true

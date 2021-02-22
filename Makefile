@@ -26,6 +26,7 @@ REPO_ROOT                           := $(shell dirname $(realpath $(lastword $(M
 LOCAL_GARDEN_LABEL                  := local-garden
 REMOTE_GARDEN_LABEL                 := remote-garden
 CR_VERSION                          := $(shell go mod edit -json | jq -r '.Require[] | select(.Path=="sigs.k8s.io/controller-runtime") | .Version')
+ACTIVATE_SEEDAUTHORIZER             := false
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
@@ -45,7 +46,7 @@ dev-setup-register-gardener:
 
 .PHONY: local-garden-up
 local-garden-up:
-	@./hack/local-development/local-garden/start.sh $(LOCAL_GARDEN_LABEL)
+	@./hack/local-development/local-garden/start.sh $(LOCAL_GARDEN_LABEL) $(ACTIVATE_SEEDAUTHORIZER)
 
 .PHONY: local-garden-down
 local-garden-down:

@@ -10,19 +10,48 @@ if ! ( [[ "$(uname -s)" == *"Darwin"* ]] || [[ "$(uname -s)" == "Linux" && "$(un
 fi
 
 LABEL=${1:-local-garden}
-
-SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
+ACTIVATE_SEEDAUTHORIZER=${2:-false}
 
 IMAGE=k8s.gcr.io/kube-apiserver:v1.20.2
-MOUNTS="-v $SCRIPTPATH/certificates/certs:/certs -v $SCRIPTPATH/certificates/keys:/keys"
+SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
+MOUNTS="-v $SCRIPTPATH/certificates/certs:/certs -v $SCRIPTPATH/certificates/keys:/keys -v $SCRIPTPATH/configs:/configs"
 ETCD_PORT=12379
 LISTEN_PORT="2443"
+
+ADMISSION_CONTROLLER_EXTERNAL_NAME=gardener.localhost
+if [[ "$(uname -s)" == *"Darwin"* ]] || [[ "$(uname -s)" == "Linux" && "$(uname -r)" =~ "microsoft-standard" ]] ; then
+  ADMISSION_CONTROLLER_EXTERNAL_NAME=host.docker.internal
+fi
+
+cat<< EOF > "$SCRIPTPATH/configs/authwebhook.yaml"
+apiVersion: v1
+kind: Config
+current-context: seedauthorizer
+clusters:
+- name: gardener-admission-controller
+  cluster:
+    insecure-skip-tls-verify: true
+    server: https://$ADMISSION_CONTROLLER_EXTERNAL_NAME:2721/webhooks/seedauthorizer
+users:
+- name: kube-apiserver
+  user: {}
+contexts:
+- name: seedauthorizer
+  context:
+    cluster: gardener-admission-controller
+    user: kube-apiserver
+EOF
+
+AUTHORIZATION_FLAGS="--authorization-mode=RBAC"
+if $ACTIVATE_SEEDAUTHORIZER; then
+  AUTHORIZATION_FLAGS="--authorization-mode=Webhook,RBAC --authorization-webhook-config-file=/configs/authwebhook.yaml"
+fi
 
 echo "Starting gardener-dev kube-apiserver!"
 docker run -d --name kube-apiserver -l $LABEL $ADD_HOSTS --network gardener-dev --rm -p $LISTEN_PORT:$LISTEN_PORT $MOUNTS $IMAGE /usr/local/bin/kube-apiserver \
   --etcd-servers="https://etcd:$ETCD_PORT" \
   --storage-media-type='application/json' \
-  --authorization-mode="Node,RBAC" \
+  $AUTHORIZATION_FLAGS \
   --etcd-cafile="/certs/ca.crt" \
   --etcd-keyfile="/keys/kube-apiserver-etcd-client.key" \
   --etcd-certfile="/certs/kube-apiserver-etcd-client.crt" \
