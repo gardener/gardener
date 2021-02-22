@@ -22,9 +22,11 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -72,6 +74,16 @@ func (i *istiod) Deploy(ctx context.Context) error {
 			},
 		},
 	); err != nil && !apierrors.IsAlreadyExists(err) {
+		return err
+	}
+
+	// TODO (mvladev): Remove this in next release
+	if err := client.IgnoreNotFound(i.client.Delete(ctx, &autoscalingv1.HorizontalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "istiod",
+			Namespace: i.namespace,
+		},
+	})); err != nil {
 		return err
 	}
 
