@@ -327,6 +327,22 @@ var _ = Describe("#IsProblematicWebhook", func() {
 	withoutSelectorsTables(schedulingv1alpha1.SchemeGroupVersion.WithResource("priorityclasses"))
 	withoutSelectorsTables(schedulingv1beta1.SchemeGroupVersion.WithResource("priorityclasses"))
 
+	withoutSelectorsTables(schema.GroupVersionResource{
+		Group:    "*",
+		Version:  "*",
+		Resource: "*",
+	})
+	withoutSelectorsTables(schema.GroupVersionResource{
+		Group:    "apps",
+		Version:  "*",
+		Resource: "*",
+	})
+	withoutSelectorsTables(schema.GroupVersionResource{
+		Group:    "apps",
+		Version:  "v1",
+		Resource: "*",
+	})
+
 	It("should not block another resource", func() {
 		wh := webhookTestCase{
 			failurePolicy: &failurePolicyFail,
