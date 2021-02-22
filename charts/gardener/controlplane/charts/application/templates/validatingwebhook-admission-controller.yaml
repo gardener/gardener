@@ -99,7 +99,7 @@ webhooks:
   failurePolicy: Fail
   clientConfig:
     {{- if .Values.global.deployment.virtualGarden.enabled }}
-    url: https://gardener-admission-controller.garden/webhooks/validate-resource-size
+    url: https://gardener-admission-controller.garden/webhooks/admission/seedrestriction
     {{- else }}
     service:
       namespace: garden
