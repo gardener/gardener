@@ -856,6 +856,11 @@ func ShootUsesUnmanagedDNS(shoot *gardencorev1beta1.Shoot) bool {
 	return shoot.Spec.DNS != nil && len(shoot.Spec.DNS.Providers) > 0 && shoot.Spec.DNS.Providers[0].Type != nil && *shoot.Spec.DNS.Providers[0].Type == "unmanaged"
 }
 
+// SeedSettingVerticalPodAutoscalerEnabled returns true if the 'verticalPodAutoscaler' setting is enabled.
+func SeedSettingVerticalPodAutoscalerEnabled(settings *gardencorev1beta1.SeedSettings) bool {
+	return settings == nil || settings.VerticalPodAutoscaler == nil || settings.VerticalPodAutoscaler.Enabled
+}
+
 // DetermineMachineImageForName finds the cloud specific machine images in the <cloudProfile> for the given <name> and
 // region. In case it does not find the machine image with the <name>, it returns false. Otherwise, true and the
 // cloud-specific machine image will be returned.

@@ -22,6 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	v1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
@@ -313,7 +314,7 @@ func (a *actuator) checkSeedSpec(ctx context.Context, spec *gardencorev1beta1.Se
 	}
 
 	// If VPA is enabled, check if the shoot namespace in the seed contains a vpa-admission-controller deployment
-	if spec.Settings != nil && spec.Settings.VerticalPodAutoscaler != nil && spec.Settings.VerticalPodAutoscaler.Enabled {
+	if gardencorev1beta1helper.SeedSettingVerticalPodAutoscalerEnabled(spec.Settings) {
 		seedVPAAdmissionControllerExists, err := a.seedVPADeploymentExists(ctx, seedClient, shoot)
 		if err != nil {
 			return err

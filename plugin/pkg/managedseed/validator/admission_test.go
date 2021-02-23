@@ -91,6 +91,11 @@ var _ = Describe("ManagedSeed", func() {
 					DNS: &core.DNS{
 						Domain: pointer.StringPtr(domain),
 					},
+					Kubernetes: core.Kubernetes{
+						VerticalPodAutoscaler: &core.VerticalPodAutoscaler{
+							Enabled: true,
+						},
+					},
 					Networking: core.Networking{
 						Pods:     pointer.StringPtr("100.96.0.0/11"),
 						Nodes:    pointer.StringPtr("10.250.0.0/16"),
@@ -162,6 +167,11 @@ var _ = Describe("ManagedSeed", func() {
 						Provider: core.SeedProvider{
 							Type:   provider,
 							Region: region,
+						},
+						Settings: &core.SeedSettings{
+							VerticalPodAutoscaler: &core.SeedSettingVerticalPodAutoscaler{
+								Enabled: false,
+							},
 						},
 						Ingress: ingress,
 					},
@@ -325,6 +335,11 @@ var _ = Describe("ManagedSeed", func() {
 						Type:   "bar-provider",
 						Region: "bar-region",
 					},
+					Settings: &core.SeedSettings{
+						VerticalPodAutoscaler: &core.SeedSettingVerticalPodAutoscaler{
+							Enabled: true,
+						},
+					},
 				}
 
 				coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
@@ -357,6 +372,10 @@ var _ = Describe("ManagedSeed", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.seedTemplate.spec.provider.region"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.seedTemplate.spec.settings.verticalPodAutoscaler.enabled"),
 					})),
 				))
 			})

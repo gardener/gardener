@@ -311,6 +311,11 @@ func NginxIngressEnabled(addons *core.Addons) bool {
 	return addons != nil && addons.NginxIngress != nil && addons.NginxIngress.Enabled
 }
 
+// ShootWantsVerticalPodAutoscaler checks if the given Shoot needs a VPA.
+func ShootWantsVerticalPodAutoscaler(shoot *core.Shoot) bool {
+	return shoot.Spec.Kubernetes.VerticalPodAutoscaler != nil && shoot.Spec.Kubernetes.VerticalPodAutoscaler.Enabled
+}
+
 var scheme *runtime.Scheme
 
 func init() {

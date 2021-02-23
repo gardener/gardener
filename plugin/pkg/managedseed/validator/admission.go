@@ -332,6 +332,19 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("provider", "region"), spec.Provider.Region, fmt.Sprintf("seed provider region must be equal to shoot region %s", shoot.Spec.Region)))
 	}
 
+	// Initialize and validate settings
+	shootVPAEnabled := gardencorehelper.ShootWantsVerticalPodAutoscaler(shoot)
+	if spec.Settings == nil || spec.Settings.VerticalPodAutoscaler == nil {
+		if spec.Settings == nil {
+			spec.Settings = &gardencore.SeedSettings{}
+		}
+		spec.Settings.VerticalPodAutoscaler = &gardencore.SeedSettingVerticalPodAutoscaler{
+			Enabled: !shootVPAEnabled,
+		}
+	} else if spec.Settings.VerticalPodAutoscaler.Enabled && shootVPAEnabled {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("settings", "verticalPodAutoscaler", "enabled"), spec.Settings.VerticalPodAutoscaler.Enabled, "seed VPA must not be enabled if shoot VPA is enabled"))
+	}
+
 	return allErrs, nil
 }
 
