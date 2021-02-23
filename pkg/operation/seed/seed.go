@@ -401,8 +401,17 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 					return err
 				}
 			} else {
-				maintenanceBegin = shootInfo.Data["maintenanceBegin"]
-				maintenanceEnd = shootInfo.Data["maintenanceEnd"]
+				shootMaintenanceBegin, err := utils.ParseMaintenanceTime(shootInfo.Data["maintenanceBegin"])
+				if err != nil {
+					return err
+				}
+				maintenanceBegin = shootMaintenanceBegin.Add(1, 0, 0).Formatted()
+
+				shootMaintenanceEnd, err := utils.ParseMaintenanceTime(shootInfo.Data["maintenanceEnd"])
+				if err != nil {
+					return err
+				}
+				maintenanceEnd = shootMaintenanceEnd.Add(1, 0, 0).Formatted()
 			}
 
 			lokiValues["hvpa"] = map[string]interface{}{
