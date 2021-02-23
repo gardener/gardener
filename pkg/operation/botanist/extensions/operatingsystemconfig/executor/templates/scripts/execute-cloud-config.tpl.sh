@@ -5,7 +5,9 @@ PATH_CLOUDCONFIG_DOWNLOADER_CA_CERT="{{ .pathCredentialsCACert }}"
 PATH_CLOUDCONFIG="{{ .pathDownloadedCloudConfig }}"
 PATH_CLOUDCONFIG_OLD="${PATH_CLOUDCONFIG}.old"
 PATH_CHECKSUM="{{ .pathDownloadedChecksum }}"
-
+PATH_CCD_SCRIPT="{{ .pathCCDScript }}"
+PATH_CCD_SCRIPT_CHECKSUM="{{ .pathCCDScriptChecksum }}"
+PATH_CCD_SCRIPT_CHECKSUM_OLD="${PATH_CCD_SCRIPT_CHECKSUM}.old"
 mkdir -p "{{ .pathDownloadsDirectory }}" "{{ .pathKubeletDirectory }}"
 
 function docker-preload() {
@@ -57,6 +59,10 @@ if [ ! -f "$PATH_CLOUDCONFIG_OLD" ]; then
   touch "$PATH_CLOUDCONFIG_OLD"
 fi
 
+if [ ! -f "$PATH_CCD_SCRIPT_CHECKSUM_OLD" ]; then
+  touch "$PATH_CCD_SCRIPT_CHECKSUM_OLD"
+fi
+
 if [[ ! -f "{{ .pathKubeletKubeconfigReal }}" ]] || [[ ! -f "{{ .pathKubeletDirectory }}/pki/kubelet-client-current.pem" ]]; then
   cat <<EOF > "{{ .pathKubeletKubeconfigBootstrap }}"
 ---
@@ -84,8 +90,10 @@ else
   rm -f "{{ .pathKubeletKubeconfigBootstrap }}"
 fi
 
-if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null; then
-  echo "Seen newer cloud config version"
+md5sum ${PATH_CCD_SCRIPT} > ${PATH_CCD_SCRIPT_CHECKSUM}
+
+if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || ! diff "$PATH_CCD_SCRIPT_CHECKSUM" "$PATH_CCD_SCRIPT_CHECKSUM_OLD" >/dev/null; then
+  echo "Seen newer cloud config or cloud config downloder version"
   if {{ .reloadConfigCommand }}; then
     echo "Successfully applied new cloud config version"
     systemctl daemon-reload
@@ -96,10 +104,11 @@ if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null; then
 {{- end }}
     echo "Successfully restarted all units referenced in the cloud config."
     cp "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD"
+    cp "$PATH_CCD_SCRIPT_CHECKSUM" "$PATH_CCD_SCRIPT_CHECKSUM_OLD"
   fi
 fi
 
-rm "$PATH_CLOUDCONFIG"
+rm "$PATH_CLOUDCONFIG" "$PATH_CCD_SCRIPT_CHECKSUM"
 
 ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-services"
 

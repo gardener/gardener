@@ -66,6 +66,8 @@ func Script(
 	values := map[string]interface{}{
 		"pathKubeletDirectory":           kubelet.PathKubeletDirectory,
 		"pathDownloadsDirectory":         downloader.PathDownloadsDirectory,
+		"pathCCDScript":                  downloader.PathCCDScript,
+		"pathCCDScriptChecksum":          downloader.PathCCDScriptChecksum,
 		"pathCredentialsServer":          downloader.PathCredentialsServer,
 		"pathCredentialsCACert":          downloader.PathCredentialsCACert,
 		"pathDownloadedCloudConfig":      downloader.PathDownloadedCloudConfig,
