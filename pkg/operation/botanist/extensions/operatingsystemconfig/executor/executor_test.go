@@ -237,7 +237,7 @@ if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || ! diff "$PAT
 
 	footerPart += `    echo "Successfully restarted all units referenced in the cloud config."
     cp "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD"
-    cp "$PATH_CCD_SCRIPT_CHECKSUM" "$PATH_CCD_SCRIPT_CHECKSUM_OLD"
+    md5sum ${PATH_CCD_SCRIPT} > "$PATH_CCD_SCRIPT_CHECKSUM_OLD" # As the file can be updated above, get fresh checksum.
   fi
 fi
 
