@@ -31,7 +31,7 @@ Another network policy to be highlighted is `allow-to-seed-apiserver`.
 Some components need access to the Seed API Server. This can be allowed by labeling the pod with `networking.gardener.cloud/to-seed-apiserver=allowed`.
 This policy allows exactly the IPs of the `kube-apiserver` of the Seed.
 While all other policies have a static set of permissions (do not change during the lifecycle of the Shoot), the policy `allow-to-seed-apiserver` is reconciled to reflect the endpoints in the `default` namespace.
-This is required because endpoint IPs are not necessarily stable (think of scaling the Seed API Server pods or hibernating the Seed cluster (acting as a shooted Seed) in a local development environment).
+This is required because endpoint IPs are not necessarily stable (think of scaling the Seed API Server pods or hibernating the Seed cluster (acting as a managed seed) in a local development environment).
 
 Furthermore, the following network policies exist in the Shoot namespace.
 These policies are the same for every Shoot control plane.

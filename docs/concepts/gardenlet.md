@@ -180,25 +180,21 @@ is available.
 However, the Gardenlet is designed to withstand such connection outages and
 retries until the connection is reestablished.
 
-## Shooted Seeds
+## Managed Seeds
 
-Gardener users can use shoot clusters as seed clusters, so-called "shooted seeds",
-by using shoot cluster annotation `shoot.gardener.cloud/use-as-seed`. 
+Gardener users can use shoot clusters as seed clusters, so-called "managed seeds" (aka "shooted seeds"),
+by creating `ManagedSeed` resources. 
 By default, the gardenlet that manages this shoot cluster then automatically 
 creates a clone of itself with the same version and the same configuration 
 that it currently has. 
-Then it deploys the gardenlet clone into the shooted seed cluster. 
+Then it deploys the gardenlet clone into the managed seed cluster. 
 
 If you want to prevent the automatic gardenlet deployment, 
-use the `no-gardenlet` value in the `shoot.gardener.cloud/use-as-seed` annotation. 
+specify the `seedTemplate` section in the `ManagedSeed` resource, and don't specify
+the `gardenlet` section. 
 In this case, you have to deploy the gardenlet on your own into the seed cluster.
 
-> For example, if you annotate the shoot cluster with 
-> `shoot.gardener.cloud/use-as-seed="true,no-gardenlet,invisible"` 
-> the shooted seed is created without gardenlet, 
-> and the `garden-scheduler` ignores it (it’s invisible).
-
-More information: [Create Shooted Seed Cluster](../usage/shooted_seed.md)
+More information: [Register Shoot as Seed](../usage/managed_seed.md)
 
 ## Migrating from Previous Gardener Versions
 
@@ -212,7 +208,7 @@ no special migration is required, but the following prerequisites must be met:
 With previous Gardener versions, you had deployed the Gardener Helm chart 
 (incorporating the API server, `controller-manager`, and scheduler).
 With v1, this stays the same, but you now have to deploy the gardenlet Helm chart as well
-into all of your seeds (if they aren’t shooted, as mentioned earlier).
+into all of your seeds (if they aren’t managed, as mentioned earlier).
 
 More information: [Deploy a Gardenlet](../deployment/deploy_gardenlet.md) for all instructions.
 

@@ -11,7 +11,7 @@ To support scaleability in an automated way, gardenlets are deployed automatical
    * Deploy it manually if you have special requirements. More information: [Deploy a Gardenlet Manually](deploy_gardenlet_manually.md)
    * Let the Gardener installer deploy it automatically otherwise. More information: [Automatic Deployment of Gardenlets](deploy_gardenlet_automatically.md)
 
-1. To add additional seed clusters, it is recommended to use regular shoot clusters. The gardenlet automatically installs itself into these so-called [shooted seed clusters](../usage/shooted_seed.md). 
+1. To add additional seed clusters, it is recommended to use regular shoot clusters. You can do this by creating a `ManagedSeed` resource with a `gardenlet` section as described in [Register Shoot as Seed](../usage/managed_seed.md). 
 
 
 
