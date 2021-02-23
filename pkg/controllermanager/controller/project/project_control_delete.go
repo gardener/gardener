@@ -19,16 +19,17 @@ import (
 	"fmt"
 	"strconv"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
-
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *defaultControl) delete(ctx context.Context, project *gardencorev1beta1.Project) (bool, error) {
@@ -38,6 +39,17 @@ func (c *defaultControl) delete(ctx context.Context, project *gardencorev1beta1.
 	}
 
 	if namespace := project.Spec.Namespace; namespace != nil {
+		isEmpty, err := isNamespaceEmpty(ctx, gardenClient.DirectClient(), *namespace)
+		if err != nil {
+			return false, fmt.Errorf("failed to check if namespace is empty: %w", err)
+		}
+
+		if !isEmpty {
+			c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceNotEmpty, "Cannot release namespace %q because it still contains Shoots.", *namespace)
+			_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectTerminating))
+			return true, nil
+		}
+
 		released, err := c.releaseNamespace(ctx, gardenClient, project, *namespace)
 		if err != nil {
 			c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceDeletionFailed, err.Error())
@@ -53,6 +65,17 @@ func (c *defaultControl) delete(ctx context.Context, project *gardencorev1beta1.
 	}
 
 	return false, controllerutils.RemoveFinalizer(ctx, gardenClient.DirectClient(), project, gardencorev1beta1.GardenerName)
+}
+
+// isNamespaceEmpty checks if there are no more Shoots left inside the given namespace.
+func isNamespaceEmpty(ctx context.Context, reader client.Reader, namespace string) (bool, error) {
+	shoots := &metav1.PartialObjectMetadataList{}
+	shoots.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
+	if err := reader.List(ctx, shoots, client.InNamespace(namespace), client.Limit(1)); err != nil {
+		return false, err
+	}
+
+	return len(shoots.Items) == 0, nil
 }
 
 func (c *defaultControl) releaseNamespace(ctx context.Context, gardenClient kubernetes.Interface, project *gardencorev1beta1.Project, namespaceName string) (bool, error) {

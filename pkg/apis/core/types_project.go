@@ -136,6 +136,8 @@ const (
 	ProjectEventNamespaceReconcileFailed = "NamespaceReconcileFailed"
 	// ProjectEventNamespaceReconcileSuccessful indicates that the namespace reconciliation has succeeded.
 	ProjectEventNamespaceReconcileSuccessful = "NamespaceReconcileSuccessful"
+	// ProjectEventNamespaceNotEmpty indicates that the namespace cannot be released because it is not empty.
+	ProjectEventNamespaceNotEmpty = "NamespaceNotEmpty"
 	// ProjectEventNamespaceDeletionFailed indicates that the namespace deletion failed.
 	ProjectEventNamespaceDeletionFailed = "NamespaceDeletionFailed"
 	// ProjectEventNamespaceMarkedForDeletion indicates that the namespace has been successfully marked for deletion.
