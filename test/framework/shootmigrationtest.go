@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/pkg/errors"
 
@@ -85,7 +86,8 @@ func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 		}
 	}
 
-	if err := t.GardenerFramework.UpdateShoot(ctx, &t.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
+	t.MigrationTime = metav1.Now()
+	return t.GardenerFramework.MigrateShoot(ctx, &t.Shoot, t.TargetSeed, func(shoot *gardencorev1beta1.Shoot) error {
 		t := gardencorev1beta1.Toleration{}
 		t.Key = core.SeedTaintProtected
 
@@ -101,12 +103,7 @@ func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 		shoot.Spec.Tolerations = append(shoot.Spec.Tolerations, t)
 
 		return nil
-	}); err != nil {
-		return err
-	}
-
-	t.MigrationTime = metav1.Now()
-	return t.GardenerFramework.MigrateShoot(ctx, &t.Shoot, t.TargetSeed)
+	})
 }
 
 // GetNodeNames uses the shootClient to fetch all Node names from the Shoot
@@ -190,7 +187,7 @@ func (t *ShootMigrationTest) CompareElementsAfterMigration() error {
 
 // Check the timestamp of all objects that the resource-manager creates in the Shoot cluster.
 // The timestamp should not be after the ShootMigrationTest.MigrationTime
-func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context) error {
+func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExcludeList []string) error {
 	mrList := &resourcesv1alpha1.ManagedResourceList{}
 	if err := t.TargetSeedClient.DirectClient().List(
 		ctx,
@@ -202,20 +199,23 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context) error {
 
 	for _, mr := range mrList.Items {
 		if mr.Spec.Class == nil || *mr.Spec.Class != "seed" {
-			t.GardenerFramework.Logger.Infof("=== Managed Resource: %s/%s ===", mr.Namespace, mr.Name)
-			for _, r := range mr.Status.Resources {
-				obj := &unstructured.Unstructured{}
-				obj.SetAPIVersion(r.APIVersion)
-				obj.SetKind(r.Kind)
+			if !utils.ValueExists(mr.GetName(), mrExcludeList) {
+				t.GardenerFramework.Logger.Infof("=== Managed Resource: %s/%s ===", mr.Namespace, mr.Name)
+				for _, r := range mr.Status.Resources {
+					obj := &unstructured.Unstructured{}
+					obj.SetAPIVersion(r.APIVersion)
+					obj.SetKind(r.Kind)
 
-				if err := t.ShootClient.Client().Get(ctx, client.ObjectKey{Namespace: r.Namespace, Name: r.Name}, obj); err != nil {
-					return err
-				}
+					if err := t.ShootClient.Client().Get(ctx, client.ObjectKey{Namespace: r.Namespace, Name: r.Name}, obj); err != nil {
+						return err
+					}
 
-				createionTimestamp := obj.GetCreationTimestamp()
-				t.GardenerFramework.Logger.Infof("Object: %s %s/%s Created At: %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), createionTimestamp)
-				if t.MigrationTime.Before(&createionTimestamp) {
-					return errors.Errorf("object: %s %s/%s Created At: %s is created after the Shoot migration %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), createionTimestamp, t.MigrationTime)
+					createionTimestamp := obj.GetCreationTimestamp()
+					t.GardenerFramework.Logger.Infof("Object: %s %s/%s Created At: %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), createionTimestamp)
+					if t.MigrationTime.Before(&createionTimestamp) {
+						t.GardenerFramework.Logger.Errorf("object: %s %s/%s Created At: %s is created after the Shoot migration %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), createionTimestamp, t.MigrationTime)
+						return errors.Errorf("object: %s %s/%s Created At: %s is created after the Shoot migration %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), createionTimestamp, t.MigrationTime)
+					}
 				}
 			}
 		}
