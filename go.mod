@@ -8,10 +8,12 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.2.0
 	github.com/coreos/go-systemd/v22 v22.1.0
 	github.com/envoyproxy/go-control-plane v0.9.7-0.20200730005029-803dd64f0468
+	github.com/gardener/component-spec/bindings-go v0.0.32
 	github.com/gardener/etcd-druid v0.3.0
 	github.com/gardener/external-dns-management v0.7.18
 	github.com/gardener/gardener-resource-manager v0.18.0
 	github.com/gardener/hvpa-controller v0.3.1
+	github.com/gardener/landscaper/apis v0.6.0
 	github.com/gardener/machine-controller-manager v0.33.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.3.0
@@ -19,11 +21,11 @@ require (
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.5.0
 	github.com/googleapis/gnostic v0.5.1
-	github.com/hashicorp/go-multierror v1.0.0
-	github.com/huandu/xstrings v1.3.1
+	github.com/hashicorp/go-multierror v1.1.0
+	github.com/huandu/xstrings v1.3.2
 	github.com/json-iterator/go v1.1.10
 	github.com/mholt/archiver v3.1.1+incompatible
-	github.com/onsi/ginkgo v1.14.1
+	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.5
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
@@ -67,6 +69,7 @@ require (
 replace (
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v2.9.5+incompatible // keep this value in sync with k8s.io/apiserver
 	github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
+	github.com/gardener/component-spec/bindings-go => github.com/danielfoehrkn/component-spec/bindings-go v0.0.33-0.20210223114240-2832eb9a4a88
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.7.1 // keep this value in sync with sigs.k8s.io/controller-runtime
 	google.golang.org/grpc => google.golang.org/grpc v1.27.0 // keep this value in sync with k8s.io/apiserver
