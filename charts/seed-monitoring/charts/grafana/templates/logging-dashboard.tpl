@@ -11,29 +11,32 @@
     "panels": [
       {
         "cacheTimeout": null,
-        "colorBackground": false,
-        "colorValue": false,
-        "colors": [
-          "rgba(245, 54, 54, 0.9)",
-          "rgba(237, 129, 40, 0.89)",
-          "rgba(50, 172, 45, 0.97)"
-        ],
         "datasource": "prometheus",
-        "description": "Current uptime status.",
-        "editable": false,
+        "description": "Shows the percentage of replicas that are up and running.",
         "fieldConfig": {
           "defaults": {
-            "custom": {}
+            "custom": {},
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "#EAB839",
+                  "value": 0.5
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                }
+              ]
+            },
+            "unit": "percentunit"
           },
           "overrides": []
-        },
-        "format": "percent",
-        "gauge": {
-          "maxValue": 100,
-          "minValue": 0,
-          "show": true,
-          "thresholdLabels": false,
-          "thresholdMarkers": true
         },
         "gridPos": {
           "h": 7,
@@ -45,59 +48,38 @@
         "id": 1,
         "interval": null,
         "links": [],
-        "mappingType": 1,
-        "mappingTypes": [
-          {
-            "name": "value to text",
-            "value": 1
-          },
-          {
-            "name": "range to text",
-            "value": 2
-          }
-        ],
         "maxDataPoints": 100,
-        "nullPointMode": "connected",
-        "nullText": null,
-        "postfix": "",
-        "postfixFontSize": "50%",
-        "prefix": "",
-        "prefixFontSize": "50%",
-        "rangeMaps": [
-          {
-            "from": "null",
-            "text": "N/A",
-            "to": "null"
-          }
-        ],
-        "sparkline": {
-          "fillColor": "rgba(31, 118, 189, 0.18)",
-          "full": false,
-          "lineColor": "rgb(31, 120, 193)",
-          "show": false
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [
+              "mean"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "textMode": "auto"
         },
-        "tableColumn": "",
+        "pluginVersion": "7.2.1",
         "targets": [
           {
-            "expr": "(sum(up{job=\"$component\"} == 1) / sum(up{job=\"$component\"})) * 100",
+            "expr": "count(up{job=\"$component\"} == 1) / count(up{job=\"$component\"})",
             "format": "time_series",
-            "intervalFactor": 2,
+            "instant": false,
+            "interval": "",
+            "intervalFactor": 1,
+            "legendFormat": "",
             "refId": "A",
             "step": 600
           }
         ],
-        "thresholds": "50, 80",
-        "title": "UP Time",
-        "type": "singlestat",
-        "valueFontSize": "80%",
-        "valueMaps": [
-          {
-            "op": "=",
-            "text": "N/A",
-            "value": "null"
-          }
-        ],
-        "valueName": "avg"
+        "timeFrom": null,
+        "timeShift": null,
+        "title": "Replicas UP",
+        "type": "stat"
       },
       {
         "aliasColors": {},
