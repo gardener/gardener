@@ -43,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/resourcesize"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/seedrestriction"
 	seedauthorizer "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed"
+	seedauthorizergraph "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
 )
@@ -148,6 +149,12 @@ func (o *options) run(ctx context.Context) error {
 		return err
 	}
 	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+		return err
+	}
+
+	log.Info("setting up graph for seed authorization handler")
+	graph := seedauthorizergraph.New(log)
+	if err := graph.Setup(ctx, mgr.GetCache()); err != nil {
 		return err
 	}
 
