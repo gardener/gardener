@@ -61,6 +61,9 @@ const (
 	// DeploymentNameKubeControllerManager is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-controller-manager pod.
 	DeploymentNameKubeControllerManager = "kube-controller-manager"
+	// DeploymentNameGardenlet is a constant for the name of a Kubernetes deployment object that contains
+	// the Gardenlet pod.
+	DeploymentNameGardenlet = "gardenlet"
 
 	// DeploymentNameKubeScheduler is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-scheduler pod.

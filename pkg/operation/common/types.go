@@ -286,4 +286,11 @@ const (
 
 	// GardenLokiPriorityClassName is the name of the PriorityClass for the Loki in the garden namespace
 	GardenLokiPriorityClassName = "garden-loki"
+
+	// GardenletDefaultKubeconfigSecretName is the default name for the field in the Gardenlet component configuration
+	// .gardenClientConnection.KubeconfigSecret.Name
+	GardenletDefaultKubeconfigSecretName = "gardenlet-kubeconfig"
+	// GardenletDefaultKubeconfigBootstrapSecretName is the default name for the field in the Gardenlet component configuration
+	// .gardenClientConnection.BootstrapKubeconfig.Name
+	GardenletDefaultKubeconfigBootstrapSecretName = "gardenlet-kubeconfig-bootstrap"
 )

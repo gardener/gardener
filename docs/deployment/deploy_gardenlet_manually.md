@@ -200,6 +200,43 @@ subjects:
   - kind: Group
     name: gardener.cloud:system:seeds
     apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gardener.cloud:system:seed-bootstrapper
+rules:
+  - apiGroups:
+      - certificates.k8s.io
+    resources:
+      - certificatesigningrequests
+    verbs:
+      - create
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - certificates.k8s.io
+    resources:
+      - certificatesigningrequests/seedclient
+    verbs:
+      - create
+---
+# A kubelet/gardenlet authenticating using bootstrap tokens is authenticated as a user in the group system:bootstrappers
+# Allows the Gardenlet to create a CSR
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: gardener.cloud:system:seed-bootstrapper
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gardener.cloud:system:seed-bootstrapper
+subjects:
+  - kind: Group
+    name: system:bootstrappers
+    apiGroup: rbac.authorization.k8s.io
 ```
 
 ## Prepare the gardenlet Helm chart
