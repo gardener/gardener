@@ -42,6 +42,7 @@ var _ = Describe("graph", func() {
 		fakeInformerShoot        *controllertest.FakeInformer
 		fakeInformerProject      *controllertest.FakeInformer
 		fakeInformerBackupBucket *controllertest.FakeInformer
+		fakeInformerBackupEntry  *controllertest.FakeInformer
 		fakeInformers            *informertest.FakeInformers
 
 		logger logr.Logger
@@ -62,6 +63,8 @@ var _ = Describe("graph", func() {
 
 		backupBucket1          *gardencorev1beta1.BackupBucket
 		backupBucket1SecretRef = corev1.SecretReference{Namespace: "baz", Name: "foo"}
+
+		backupEntry1 *gardencorev1beta1.BackupEntry
 	)
 
 	BeforeEach(func() {
@@ -72,6 +75,7 @@ var _ = Describe("graph", func() {
 		fakeInformerShoot = &controllertest.FakeInformer{}
 		fakeInformerProject = &controllertest.FakeInformer{}
 		fakeInformerBackupBucket = &controllertest.FakeInformer{}
+		fakeInformerBackupEntry = &controllertest.FakeInformer{}
 
 		fakeInformers = &informertest.FakeInformers{
 			Scheme: scheme,
@@ -80,6 +84,7 @@ var _ = Describe("graph", func() {
 				gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"):        fakeInformerShoot,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("Project"):      fakeInformerProject,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"): fakeInformerBackupBucket,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntry"):  fakeInformerBackupEntry,
 			},
 		}
 
@@ -129,6 +134,14 @@ var _ = Describe("graph", func() {
 			Spec: gardencorev1beta1.BackupBucketSpec{
 				SecretRef: backupBucket1SecretRef,
 				SeedName:  &seed1.Name,
+			},
+		}
+
+		backupEntry1 = &gardencorev1beta1.BackupEntry{
+			ObjectMeta: metav1.ObjectMeta{Name: "backupentry1", Namespace: "backupentry1namespace"},
+			Spec: gardencorev1beta1.BackupEntrySpec{
+				BucketName: backupBucket1.Name,
+				SeedName:   &seed1.Name,
 			},
 		}
 	})
@@ -415,5 +428,50 @@ var _ = Describe("graph", func() {
 		Expect(graph.graph.Edges().Len()).To(BeZero())
 		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1.Spec.SecretRef.Namespace, backupBucket1.Spec.SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName)).To(BeFalse())
+	})
+
+	It("should behave as expected for gardencorev1beta1.BackupEntry", func() {
+		By("add")
+		fakeInformerBackupEntry.Add(backupEntry1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeBackupBucket, "", backupEntry1.Spec.BucketName)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeSeed, "", *backupEntry1.Spec.SeedName)).To(BeTrue())
+
+		By("update (irrelevant change)")
+		backupEntry1Copy := backupEntry1.DeepCopy()
+		backupEntry1.Labels = map[string]string{"foo": "bar"}
+		fakeInformerBackupEntry.Update(backupEntry1Copy, backupEntry1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeBackupBucket, "", backupEntry1.Spec.BucketName)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeSeed, "", *backupEntry1.Spec.SeedName)).To(BeTrue())
+
+		By("update (seed name)")
+		backupEntry1Copy = backupEntry1.DeepCopy()
+		backupEntry1.Spec.SeedName = pointer.StringPtr("newbbseed")
+		fakeInformerBackupEntry.Update(backupEntry1Copy, backupEntry1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeBackupBucket, "", backupEntry1.Spec.BucketName)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeSeed, "", *backupEntry1Copy.Spec.SeedName)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeSeed, "", *backupEntry1.Spec.SeedName)).To(BeTrue())
+
+		By("update (bucket name")
+		backupEntry1Copy = backupEntry1.DeepCopy()
+		backupEntry1.Spec.BucketName = "newbebucket"
+		fakeInformerBackupEntry.Update(backupEntry1Copy, backupEntry1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeBackupBucket, "", backupEntry1Copy.Spec.BucketName)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeBackupBucket, "", backupEntry1.Spec.BucketName)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeSeed, "", *backupEntry1.Spec.SeedName)).To(BeTrue())
+
+		By("delete")
+		fakeInformerBackupEntry.Delete(backupEntry1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeBackupBucket, "", backupEntry1.Spec.BucketName)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeSeed, "", *backupEntry1.Spec.SeedName)).To(BeFalse())
 	})
 })
