@@ -1,0 +1,28 @@
+# Component descriptor used by the Gardenlet landscaper component
+# to obtain the image reference for the Gardenlet deployment.
+# This has a different format than the component descriptor of the landscaper.
+meta:
+  schemaVersion: 'v2'
+components:
+  - component:
+      name: 'github.com/gardener/gardener'
+      version: 'latest'
+      repositoryContexts:
+      - type: 'ociRegistry'
+        baseUrl: 'eu.gcr.io/gardener-project/gardener/gardenlet'
+      provider: 'internal'
+      resources:
+      - type: ociImage
+        name: gardenlet-landscaper
+        version: 'latest'
+        relation: 'local'
+        access:
+          type: ociRegistry
+          imageReference: eu.gcr.io/gardener-project/gardener/landscaper-gardenlet:latest
+      - type: ociImage
+        name: gardenlet
+        version: 'latest'
+        relation: 'local'
+        access:
+          type: ociRegistry
+          imageReference: eu.gcr.io/gardener-project/gardener/gardenlet:latest
