@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -87,6 +88,10 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 }
 
 func (g *graph) HasPathFrom(fromType VertexType, fromNamespace, fromName string, toType VertexType, toNamespace, toName string) bool {
+	start := time.Now()
+	defer func() {
+		metricPathCheckDuration.WithLabelValues(vertexTypes[fromType], vertexTypes[toType]).Observe(time.Since(start).Seconds())
+	}()
 	g.lock.RLock()
 	defer g.lock.RUnlock()
 

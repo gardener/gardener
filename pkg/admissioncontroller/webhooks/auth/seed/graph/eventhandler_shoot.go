@@ -15,6 +15,8 @@
 package graph
 
 import (
+	"time"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 
@@ -69,6 +71,10 @@ func (g *graph) setupShootWatch(informer cache.Informer) {
 }
 
 func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {
+	start := time.Now()
+	defer func() {
+		metricUpdateDuration.WithLabelValues("Shoot", "CreateOrUpdate").Observe(time.Since(start).Seconds())
+	}()
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
@@ -128,6 +134,10 @@ func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {
 }
 
 func (g *graph) handleShootDelete(shoot *gardencorev1beta1.Shoot) {
+	start := time.Now()
+	defer func() {
+		metricUpdateDuration.WithLabelValues("Shoot", "Delete").Observe(time.Since(start).Seconds())
+	}()
 	g.lock.Lock()
 	defer g.lock.Unlock()
 

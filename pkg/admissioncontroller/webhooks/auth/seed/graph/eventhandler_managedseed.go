@@ -15,6 +15,8 @@
 package graph
 
 import (
+	"time"
+
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 
 	toolscache "k8s.io/client-go/tools/cache"
@@ -61,6 +63,10 @@ func (g *graph) setupManagedSeedWatch(informer cache.Informer) {
 }
 
 func (g *graph) handleManagedSeedCreateOrUpdate(managedSeed *seedmanagementv1alpha1.ManagedSeed) {
+	start := time.Now()
+	defer func() {
+		metricUpdateDuration.WithLabelValues("ManagedSeed", "CreateOrUpdate").Observe(time.Since(start).Seconds())
+	}()
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
@@ -75,6 +81,10 @@ func (g *graph) handleManagedSeedCreateOrUpdate(managedSeed *seedmanagementv1alp
 }
 
 func (g *graph) handleManagedSeedDelete(managedSeed *seedmanagementv1alpha1.ManagedSeed) {
+	start := time.Now()
+	defer func() {
+		metricUpdateDuration.WithLabelValues("ManagedSeed", "Delete").Observe(time.Since(start).Seconds())
+	}()
 	g.lock.Lock()
 	defer g.lock.Unlock()
 

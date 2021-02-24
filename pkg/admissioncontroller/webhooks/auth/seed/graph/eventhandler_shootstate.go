@@ -15,6 +15,8 @@
 package graph
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -44,6 +46,10 @@ func (g *graph) setupShootStateWatch(informer cache.Informer) {
 }
 
 func (g *graph) handleShootStateCreate(partialObjectMeta *metav1.PartialObjectMetadata) {
+	start := time.Now()
+	defer func() {
+		metricUpdateDuration.WithLabelValues("ShootState", "CreateOrUpdate").Observe(time.Since(start).Seconds())
+	}()
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
@@ -56,6 +62,10 @@ func (g *graph) handleShootStateCreate(partialObjectMeta *metav1.PartialObjectMe
 }
 
 func (g *graph) handleShootStateDelete(partialObjectMeta *metav1.PartialObjectMetadata) {
+	start := time.Now()
+	defer func() {
+		metricUpdateDuration.WithLabelValues("ShootState", "Delete").Observe(time.Since(start).Seconds())
+	}()
 	g.lock.Lock()
 	defer g.lock.Unlock()
 

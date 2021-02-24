@@ -15,6 +15,8 @@
 package graph
 
 import (
+	"time"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -63,6 +65,10 @@ func (g *graph) setupBackupBucketWatch(informer cache.Informer) {
 }
 
 func (g *graph) handleBackupBucketCreateOrUpdate(backupBucket *gardencorev1beta1.BackupBucket) {
+	start := time.Now()
+	defer func() {
+		metricUpdateDuration.WithLabelValues("BackupBucket", "CreateOrUpdate").Observe(time.Since(start).Seconds())
+	}()
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
@@ -83,6 +89,10 @@ func (g *graph) handleBackupBucketCreateOrUpdate(backupBucket *gardencorev1beta1
 }
 
 func (g *graph) handleBackupBucketDelete(backupBucket *gardencorev1beta1.BackupBucket) {
+	start := time.Now()
+	defer func() {
+		metricUpdateDuration.WithLabelValues("BackupBucket", "Delete").Observe(time.Since(start).Seconds())
+	}()
 	g.lock.Lock()
 	defer g.lock.Unlock()
 

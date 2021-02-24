@@ -15,6 +15,8 @@
 package graph
 
 import (
+	"time"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -62,6 +64,10 @@ func (g *graph) setupSecretBindingWatch(informer cache.Informer) {
 }
 
 func (g *graph) handleSecretBindingCreateOrUpdate(secretBinding *gardencorev1beta1.SecretBinding) {
+	start := time.Now()
+	defer func() {
+		metricUpdateDuration.WithLabelValues("SecretBinding", "CreateOrUpdate").Observe(time.Since(start).Seconds())
+	}()
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
@@ -76,6 +82,10 @@ func (g *graph) handleSecretBindingCreateOrUpdate(secretBinding *gardencorev1bet
 }
 
 func (g *graph) handleSecretBindingDelete(secretBinding *gardencorev1beta1.SecretBinding) {
+	start := time.Now()
+	defer func() {
+		metricUpdateDuration.WithLabelValues("SecretBinding", "Delete").Observe(time.Since(start).Seconds())
+	}()
 	g.lock.Lock()
 	defer g.lock.Unlock()
 

@@ -15,6 +15,8 @@
 package graph
 
 import (
+	"time"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	toolscache "k8s.io/client-go/tools/cache"
@@ -62,6 +64,10 @@ func (g *graph) setupControllerInstallationWatch(informer cache.Informer) {
 }
 
 func (g *graph) handleControllerInstallationCreateOrUpdate(controllerInstallation *gardencorev1beta1.ControllerInstallation) {
+	start := time.Now()
+	defer func() {
+		metricUpdateDuration.WithLabelValues("ControllerInstallation", "CreateOrUpdate").Observe(time.Since(start).Seconds())
+	}()
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
@@ -78,6 +84,10 @@ func (g *graph) handleControllerInstallationCreateOrUpdate(controllerInstallatio
 }
 
 func (g *graph) handleControllerInstallationDelete(controllerInstallation *gardencorev1beta1.ControllerInstallation) {
+	start := time.Now()
+	defer func() {
+		metricUpdateDuration.WithLabelValues("ControllerInstallation", "Delete").Observe(time.Since(start).Seconds())
+	}()
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
