@@ -27,3 +27,4 @@ server:
       name: gardener.cloud:system:seeds
       apiGroup: rbac.authorization.k8s.io
     operationMode: block
+  enableDebugHandlers: true

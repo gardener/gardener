@@ -299,17 +299,18 @@ global:
         metrics:
           bindAddress: 0.0.0.0
           port: 2723
-    # resourceAdmissionConfiguration:
-    #   limits:
-    #   - apiGroups: ["core.gardener.cloud"]
-    #     apiVersions: ["*"]
-    #     resources: ["shoots", "plants"]
-    #     size: 100Ki
-    #   unrestrictedSubjects:
-    #   - kind: Group
-    #     name: gardener.cloud:system:seeds
-    #     apiGroup: rbac.authorization.k8s.io
-    #   operationMode: log
+      # resourceAdmissionConfiguration:
+      #   limits:
+      #   - apiGroups: ["core.gardener.cloud"]
+      #     apiVersions: ["*"]
+      #     resources: ["shoots", "plants"]
+      #     size: 100Ki
+      #   unrestrictedSubjects:
+      #   - kind: Group
+      #     name: gardener.cloud:system:seeds
+      #     apiGroup: rbac.authorization.k8s.io
+      #   operationMode: log
+        enableDebugHandlers: false
     seedRestriction:
       enabled: true
 

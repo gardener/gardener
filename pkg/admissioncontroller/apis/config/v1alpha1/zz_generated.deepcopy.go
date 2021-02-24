@@ -170,6 +170,11 @@ func (in *ServerConfiguration) DeepCopyInto(out *ServerConfiguration) {
 		*out = new(ResourceAdmissionConfiguration)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.EnableDebugHandlers != nil {
+		in, out := &in.EnableDebugHandlers, &out.EnableDebugHandlers
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 
