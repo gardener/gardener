@@ -38,9 +38,10 @@ var _ = Describe("graph", func() {
 	var (
 		ctx = context.TODO()
 
-		fakeInformerSeed  *controllertest.FakeInformer
-		fakeInformerShoot *controllertest.FakeInformer
-		fakeInformers     *informertest.FakeInformers
+		fakeInformerSeed    *controllertest.FakeInformer
+		fakeInformerShoot   *controllertest.FakeInformer
+		fakeInformerProject *controllertest.FakeInformer
+		fakeInformers       *informertest.FakeInformers
 
 		logger logr.Logger
 		graph  *graph
@@ -55,6 +56,8 @@ var _ = Describe("graph", func() {
 		shoot1AuditPolicyConfigMapRef = corev1.ObjectReference{Name: "auditpolicy1"}
 		shoot1Resource1               = autoscalingv1.CrossVersionObjectReference{APIVersion: "foo", Kind: "bar", Name: "resource1"}
 		shoot1Resource2               = autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "resource2"}
+
+		project1 *gardencorev1beta1.Project
 	)
 
 	BeforeEach(func() {
@@ -63,12 +66,14 @@ var _ = Describe("graph", func() {
 
 		fakeInformerSeed = &controllertest.FakeInformer{}
 		fakeInformerShoot = &controllertest.FakeInformer{}
+		fakeInformerProject = &controllertest.FakeInformer{}
 
 		fakeInformers = &informertest.FakeInformers{
 			Scheme: scheme,
 			InformersByGVK: map[schema.GroupVersionKind]toolscache.SharedIndexInformer{
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"):  fakeInformerSeed,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"): fakeInformerShoot,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"):    fakeInformerSeed,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"):   fakeInformerShoot,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Project"): fakeInformerProject,
 			},
 		}
 
@@ -103,6 +108,13 @@ var _ = Describe("graph", func() {
 				Resources:         []gardencorev1beta1.NamedResourceReference{{ResourceRef: shoot1Resource1}, {ResourceRef: shoot1Resource2}},
 				SecretBindingName: "secretbinding1",
 				SeedName:          &seed1.Name,
+			},
+		}
+
+		project1 = &gardencorev1beta1.Project{
+			ObjectMeta: metav1.ObjectMeta{Name: "project1"},
+			Spec: gardencorev1beta1.ProjectSpec{
+				Namespace: pointer.StringPtr("projectnamespace1"),
 			},
 		}
 	})
@@ -312,5 +324,37 @@ var _ = Describe("graph", func() {
 		Expect(graph.HasPathFrom(VertexTypeSecret, shoot1.Namespace, shoot1Resource2.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", "newseed")).To(BeFalse())
+	})
+
+	It("should behave as expected for gardencorev1beta1.Project", func() {
+		By("add")
+		fakeInformerProject.Add(project1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeProject, "", project1.Name, VertexTypeNamespace, "", *project1.Spec.Namespace)).To(BeTrue())
+
+		By("update (irrelevant change)")
+		project1Copy := project1.DeepCopy()
+		project1.Spec.Purpose = pointer.StringPtr("purpose")
+		fakeInformerProject.Update(project1Copy, project1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeProject, "", project1.Name, VertexTypeNamespace, "", *project1.Spec.Namespace)).To(BeTrue())
+
+		By("update (namespace)")
+		project1Copy = project1.DeepCopy()
+		project1.Spec.Namespace = pointer.StringPtr("newnamespace")
+		fakeInformerProject.Update(project1Copy, project1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeProject, "", project1.Name, VertexTypeNamespace, "", *project1Copy.Spec.Namespace)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeProject, "", project1.Name, VertexTypeNamespace, "", *project1.Spec.Namespace)).To(BeTrue())
+
+		By("delete")
+		fakeInformerProject.Delete(project1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeProject, "", project1.Name, VertexTypeNamespace, "", *project1Copy.Spec.Namespace)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeProject, "", project1.Name, VertexTypeNamespace, "", *project1.Spec.Namespace)).To(BeFalse())
 	})
 })
