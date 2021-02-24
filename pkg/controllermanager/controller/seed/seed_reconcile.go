@@ -117,8 +117,13 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 }
 
 var (
-	gardenRole         = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
-	gardenRoleSelector = labels.NewSelector().Add(gardenRole)
+	gardenRoleReq            = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
+	noControlPlaneSecretsReq = utils.MustNewRequirement(
+		v1beta1constants.GardenRole,
+		selection.NotIn,
+		v1beta1constants.ControlPlaneSecretRoles...,
+	)
+	gardenRoleSelector = labels.NewSelector().Add(gardenRoleReq).Add(noControlPlaneSecretsReq)
 )
 
 func (r *reconciler) cleanupStaleSecrets(ctx context.Context, gardenClient kubernetes.Interface, existingSecrets []string, namespace string) error {

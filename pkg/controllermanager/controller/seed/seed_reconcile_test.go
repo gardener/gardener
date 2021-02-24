@@ -127,10 +127,10 @@ var _ = Describe("SeedReconciler", func() {
 
 				seedNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("seed-%s", seed.Name)}}
 
-				oldSecret = createSecret("existing", seedNamespace.Name, "old", []byte("data"))
-				newSecret = createSecret("existing", v1beta1constants.GardenNamespace, "foo", []byte("bar"))
-				addedSecret = createSecret("new", v1beta1constants.GardenNamespace, "foo", []byte("bar"))
-				deletedSecret = createSecret("stale", seedNamespace.Name, "foo", []byte("bar"))
+				oldSecret = createSecret("existing", seedNamespace.Name, "old", "role", []byte("data"))
+				newSecret = createSecret("existing", v1beta1constants.GardenNamespace, "foo", "role", []byte("bar"))
+				addedSecret = createSecret("new", v1beta1constants.GardenNamespace, "foo", "role", []byte("bar"))
+				deletedSecret = createSecret("stale", seedNamespace.Name, "foo", "role", []byte("bar"))
 				secrets = []*corev1.Secret{addedSecret, newSecret, oldSecret, deletedSecret}
 			})
 
@@ -165,8 +165,9 @@ var _ = Describe("SeedReconciler", func() {
 		Context("when seed is new", func() {
 			BeforeEach(func() {
 				secrets = []*corev1.Secret{
-					createSecret("1", v1beta1constants.GardenNamespace, "foo", []byte("bar")),
-					createSecret("2", v1beta1constants.GardenNamespace, "foo", []byte("bar")),
+					createSecret("1", v1beta1constants.GardenNamespace, "foo", "role", []byte("bar")),
+					createSecret("2", v1beta1constants.GardenNamespace, "foo", "role", []byte("bar")),
+					createSecret("3", v1beta1constants.GardenNamespace, "foo", v1beta1constants.GardenRoleMonitoring, []byte("bar")),
 				}
 			})
 
@@ -196,11 +197,11 @@ func copySecretWithNamespace(secret *corev1.Secret, namespace string) *corev1.Se
 	return s
 }
 
-func createSecret(name, namespace, key string, data []byte) *corev1.Secret {
+func createSecret(name, namespace, key, role string, data []byte) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				v1beta1constants.GardenRole: "test",
+				v1beta1constants.GardenRole: role,
 			},
 			Name:      name,
 			Namespace: namespace,

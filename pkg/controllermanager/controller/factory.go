@@ -39,8 +39,8 @@ import (
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
-
 	"github.com/gardener/gardener/pkg/utils"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -79,9 +79,7 @@ var (
 	noControlPlaneSecrets = utils.MustNewRequirement(
 		v1beta1constants.GardenRole,
 		selection.NotIn,
-		v1beta1constants.GardenRoleKubeconfig,
-		v1beta1constants.GardenRoleSSHKeyPair,
-		v1beta1constants.GardenRoleMonitoring,
+		v1beta1constants.ControlPlaneSecretRoles...,
 	)
 
 	// uncontrolledSecretSelector is a selector for objects which are managed by operators/users and not created Gardener controllers.

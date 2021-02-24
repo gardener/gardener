@@ -332,3 +332,10 @@ const (
 	// ShootNginxIngressClass defines the ingress class for the seed nginx ingress controller
 	ShootNginxIngressClass = "nginx"
 )
+
+// ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.
+var ControlPlaneSecretRoles = []string{
+	GardenRoleKubeconfig,
+	GardenRoleSSHKeyPair,
+	GardenRoleMonitoring,
+}
