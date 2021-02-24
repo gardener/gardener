@@ -374,7 +374,7 @@ var _ = Describe("Actuator", func() {
 		},
 		Entry("should delete secrets and charts", cloudProviderConfigName, []admissionregistrationv1beta1.MutatingWebhook{{}}),
 		Entry("should delete secrets and charts (no config)", "", []admissionregistrationv1beta1.MutatingWebhook{{}}),
-		Entry("should delete secrets and charts (no webhook)", cloudProviderConfigName, []admissionregistrationv1beta1.MutatingWebhook{{}}),
+		Entry("should delete secrets and charts (no webhook)", cloudProviderConfigName, nil),
 	)
 
 	DescribeTable("#ReconcileExposure",
