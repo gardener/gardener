@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"sync"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 
@@ -26,6 +27,7 @@ import (
 	gonumgraph "gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/simple"
 	"gonum.org/v1/gonum/graph/traverse"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -57,6 +59,9 @@ func New(logger logr.Logger) *graph {
 }
 
 func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
+	shootStates := &metav1.PartialObjectMetadata{}
+	shootStates.SetGroupVersionKind(gardencorev1alpha1.SchemeGroupVersion.WithKind("ShootState"))
+
 	for _, resource := range []struct {
 		obj     client.Object
 		setupFn func(informer cache.Informer)
@@ -69,6 +74,7 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 		{&gardencorev1beta1.SecretBinding{}, g.setupSecretBindingWatch},
 		{&gardencorev1beta1.Seed{}, g.setupSeedWatch},
 		{&gardencorev1beta1.Shoot{}, g.setupShootWatch},
+		{shootStates, g.setupShootStateWatch},
 	} {
 		informer, err := c.GetInformer(ctx, resource.obj)
 		if err != nil {

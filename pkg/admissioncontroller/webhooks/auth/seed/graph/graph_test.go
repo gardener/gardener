@@ -47,6 +47,7 @@ var _ = Describe("graph", func() {
 		fakeInformerSecretBinding          *controllertest.FakeInformer
 		fakeInformerControllerInstallation *controllertest.FakeInformer
 		fakeInformerManagedSeed            *controllertest.FakeInformer
+		fakeInformerShootState             *controllertest.FakeInformer
 		fakeInformers                      *informertest.FakeInformers
 
 		logger logr.Logger
@@ -76,6 +77,8 @@ var _ = Describe("graph", func() {
 		controllerInstallation1 *gardencorev1beta1.ControllerInstallation
 
 		managedSeed1 *seedmanagementv1alpha1.ManagedSeed
+
+		shootState1 *metav1.PartialObjectMetadata
 	)
 
 	BeforeEach(func() {
@@ -90,6 +93,7 @@ var _ = Describe("graph", func() {
 		fakeInformerSecretBinding = &controllertest.FakeInformer{}
 		fakeInformerControllerInstallation = &controllertest.FakeInformer{}
 		fakeInformerManagedSeed = &controllertest.FakeInformer{}
+		fakeInformerShootState = &controllertest.FakeInformer{}
 
 		fakeInformers = &informertest.FakeInformers{
 			Scheme: scheme,
@@ -102,6 +106,7 @@ var _ = Describe("graph", func() {
 				gardencorev1beta1.SchemeGroupVersion.WithKind("SecretBinding"):          fakeInformerSecretBinding,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerInstallation"): fakeInformerControllerInstallation,
 				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed"):       fakeInformerManagedSeed,
+				metav1.SchemeGroupVersion.WithKind("PartialObjectMetadata"):             fakeInformerShootState,
 			},
 		}
 
@@ -180,6 +185,10 @@ var _ = Describe("graph", func() {
 			Spec: seedmanagementv1alpha1.ManagedSeedSpec{
 				Shoot: seedmanagementv1alpha1.Shoot{Name: shoot1.Name},
 			},
+		}
+
+		shootState1 = &metav1.PartialObjectMetadata{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "shootstate1ns", Name: "shootstate1"},
 		}
 	})
 
@@ -617,5 +626,19 @@ var _ = Describe("graph", func() {
 		Expect(graph.graph.Nodes().Len()).To(BeZero())
 		Expect(graph.graph.Edges().Len()).To(BeZero())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeFalse())
+	})
+
+	It("should behave as expected for gardencorev1beta1.ShootState", func() {
+		By("add")
+		fakeInformerShootState.Add(shootState1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeShootState, shootState1.Namespace, shootState1.Name, VertexTypeShoot, shootState1.Namespace, shootState1.Name)).To(BeTrue())
+
+		By("delete")
+		fakeInformerShootState.Delete(shootState1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeShootState, shootState1.Namespace, shootState1.Name, VertexTypeShoot, shootState1.Namespace, shootState1.Name)).To(BeFalse())
 	})
 })
