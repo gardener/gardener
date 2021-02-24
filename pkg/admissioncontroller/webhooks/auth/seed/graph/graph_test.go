@@ -38,10 +38,11 @@ var _ = Describe("graph", func() {
 	var (
 		ctx = context.TODO()
 
-		fakeInformerSeed    *controllertest.FakeInformer
-		fakeInformerShoot   *controllertest.FakeInformer
-		fakeInformerProject *controllertest.FakeInformer
-		fakeInformers       *informertest.FakeInformers
+		fakeInformerSeed         *controllertest.FakeInformer
+		fakeInformerShoot        *controllertest.FakeInformer
+		fakeInformerProject      *controllertest.FakeInformer
+		fakeInformerBackupBucket *controllertest.FakeInformer
+		fakeInformers            *informertest.FakeInformers
 
 		logger logr.Logger
 		graph  *graph
@@ -58,6 +59,9 @@ var _ = Describe("graph", func() {
 		shoot1Resource2               = autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "resource2"}
 
 		project1 *gardencorev1beta1.Project
+
+		backupBucket1          *gardencorev1beta1.BackupBucket
+		backupBucket1SecretRef = corev1.SecretReference{Namespace: "baz", Name: "foo"}
 	)
 
 	BeforeEach(func() {
@@ -67,13 +71,15 @@ var _ = Describe("graph", func() {
 		fakeInformerSeed = &controllertest.FakeInformer{}
 		fakeInformerShoot = &controllertest.FakeInformer{}
 		fakeInformerProject = &controllertest.FakeInformer{}
+		fakeInformerBackupBucket = &controllertest.FakeInformer{}
 
 		fakeInformers = &informertest.FakeInformers{
 			Scheme: scheme,
 			InformersByGVK: map[schema.GroupVersionKind]toolscache.SharedIndexInformer{
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"):    fakeInformerSeed,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"):   fakeInformerShoot,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Project"): fakeInformerProject,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"):         fakeInformerSeed,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"):        fakeInformerShoot,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Project"):      fakeInformerProject,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"): fakeInformerBackupBucket,
 			},
 		}
 
@@ -115,6 +121,14 @@ var _ = Describe("graph", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: "project1"},
 			Spec: gardencorev1beta1.ProjectSpec{
 				Namespace: pointer.StringPtr("projectnamespace1"),
+			},
+		}
+
+		backupBucket1 = &gardencorev1beta1.BackupBucket{
+			ObjectMeta: metav1.ObjectMeta{Name: "backupbucket1"},
+			Spec: gardencorev1beta1.BackupBucketSpec{
+				SecretRef: backupBucket1SecretRef,
+				SeedName:  &seed1.Name,
 			},
 		}
 	})
@@ -356,5 +370,50 @@ var _ = Describe("graph", func() {
 		Expect(graph.graph.Edges().Len()).To(BeZero())
 		Expect(graph.HasPathFrom(VertexTypeProject, "", project1.Name, VertexTypeNamespace, "", *project1Copy.Spec.Namespace)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeProject, "", project1.Name, VertexTypeNamespace, "", *project1.Spec.Namespace)).To(BeFalse())
+	})
+
+	It("should behave as expected for gardencorev1beta1.BackupBucket", func() {
+		By("add")
+		fakeInformerBackupBucket.Add(backupBucket1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretRef.Namespace, backupBucket1SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName)).To(BeTrue())
+
+		By("update (irrelevant change)")
+		backupBucket1Copy := backupBucket1.DeepCopy()
+		backupBucket1.Spec.Provider.Type = "provider-type"
+		fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretRef.Namespace, backupBucket1SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName)).To(BeTrue())
+
+		By("update (seed name)")
+		backupBucket1Copy = backupBucket1.DeepCopy()
+		backupBucket1.Spec.SeedName = pointer.StringPtr("newbbseed")
+		fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretRef.Namespace, backupBucket1SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1Copy.Spec.SeedName)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName)).To(BeTrue())
+
+		By("update (secret ref)")
+		backupBucket1Copy = backupBucket1.DeepCopy()
+		backupBucket1.Spec.SecretRef = corev1.SecretReference{Namespace: "newsecretrefnamespace", Name: "newsecretrefname"}
+		fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1SecretRef.Namespace, backupBucket1SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1.Spec.SecretRef.Namespace, backupBucket1.Spec.SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName)).To(BeTrue())
+
+		By("delete")
+		fakeInformerBackupBucket.Delete(backupBucket1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeSecret, backupBucket1.Spec.SecretRef.Namespace, backupBucket1.Spec.SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName)).To(BeFalse())
 	})
 })
