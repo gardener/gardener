@@ -40,12 +40,9 @@ import (
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
-	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -503,13 +500,13 @@ func (a *actuator) prepareGardenletChartValues(
 
 	// Prepare garden client connection
 	var bootstrapKubeconfig string
-	if bootstrap != seedmanagementv1alpha1.BootstrapNone {
+	if bootstrap == seedmanagementv1alpha1.BootstrapNone {
+		a.removeBootstrapConfigFromGardenClientConnection(gardenletConfig.GardenClientConnection)
+	} else {
 		bootstrapKubeconfig, err = a.prepareGardenClientConnectionWithBootstrap(ctx, shootClient, gardenletConfig.GardenClientConnection, name, bootstrap)
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		a.prepareGardenClientConnectionWithoutBootstrap(gardenletConfig.GardenClientConnection)
 	}
 
 	// Ensure seed config is set
@@ -527,156 +524,102 @@ func (a *actuator) prepareGardenletChartValues(
 	return a.vp.GetGardenletChartValues(deployment, gardenletConfig, bootstrapKubeconfig)
 }
 
-const (
-	gardenletKubeconfigBootstrapSecretName = "gardenlet-kubeconfig-bootstrap"
-	gardenletKubeconfigSecretName          = "gardenlet-kubeconfig"
-)
-
 func (a *actuator) prepareGardenClientConnectionWithBootstrap(ctx context.Context, shootClient kubernetes.Interface, gcc *configv1alpha1.GardenClientConnection, name string, bootstrap seedmanagementv1alpha1.Bootstrap) (string, error) {
-	// Ensure kubeconfig is not set
-	gcc.Kubeconfig = ""
-
 	// Ensure kubeconfig secret is set
 	if gcc.KubeconfigSecret == nil {
 		gcc.KubeconfigSecret = &corev1.SecretReference{
-			Name:      gardenletKubeconfigSecretName,
+			Name:      common.GardenletDefaultKubeconfigSecretName,
 			Namespace: v1beta1constants.GardenNamespace,
 		}
 	}
 
-	// If kubeconfig secret exists, return an empty result, since the bootstrap can be skipped
-	secret, err := kutil.GetSecretByReference(ctx, shootClient.Client(), gcc.KubeconfigSecret)
-	if client.IgnoreNotFound(err) != nil {
+	isAlreadyBootstrapped, err := isAlreadyBootstrapped(ctx, shootClient.Client(), gcc.KubeconfigSecret)
+	if err != nil {
 		return "", err
 	}
-	if secret != nil {
+
+	if isAlreadyBootstrapped {
 		return "", nil
 	}
+
+	// Ensure kubeconfig is not set
+	gcc.Kubeconfig = ""
 
 	// Ensure bootstrap kubeconfig secret is set
 	if gcc.BootstrapKubeconfig == nil {
 		gcc.BootstrapKubeconfig = &corev1.SecretReference{
-			Name:      gardenletKubeconfigBootstrapSecretName,
+			Name:      common.GardenletDefaultKubeconfigBootstrapSecretName,
 			Namespace: v1beta1constants.GardenNamespace,
 		}
 	}
 
-	// Prepare bootstrap kubeconfig
-	return a.prepareBootstrapKubeconfig(ctx, name, bootstrap, gcc.GardenClusterAddress, gcc.GardenClusterCACert)
+	return a.createBootstrapKubeconfig(ctx, name, bootstrap, gcc.GardenClusterAddress, gcc.GardenClusterCACert)
 }
 
-func (a *actuator) prepareGardenClientConnectionWithoutBootstrap(gcc *configv1alpha1.GardenClientConnection) {
+// isAlreadyBootstrapped checks if the gardenlet already has a valid Garden cluster certificate through TLS bootstrapping
+// by checking if the specified secret reference already exists
+func isAlreadyBootstrapped(ctx context.Context, c client.Client, s *corev1.SecretReference) (bool, error) {
+	// If kubeconfig secret exists, return an empty result, since the bootstrap can be skipped
+	secret, err := kutil.GetSecretByReference(ctx, c, s)
+	if client.IgnoreNotFound(err) != nil {
+		return false, err
+	}
+	return secret != nil, nil
+}
+
+func (a *actuator) removeBootstrapConfigFromGardenClientConnection(gcc *configv1alpha1.GardenClientConnection) {
 	// Ensure kubeconfig secret and bootstrap kubeconfig secret are not set
 	gcc.KubeconfigSecret = nil
 	gcc.BootstrapKubeconfig = nil
 }
 
-func (a *actuator) prepareBootstrapKubeconfig(ctx context.Context, name string, bootstrap seedmanagementv1alpha1.Bootstrap, address *string, caCert []byte) (string, error) {
-	var err error
+// createBootstrapKubeconfig creates a kubeconfig for the Garden cluster
+// containing either the token of a service account or a bootstrap token
+// returns the kubeconfig as a string
+func (a *actuator) createBootstrapKubeconfig(ctx context.Context, name string, bootstrap seedmanagementv1alpha1.Bootstrap, address *string, caCert []byte) (string, error) {
+	var (
+		err                 error
+		bootstrapKubeconfig []byte
+	)
 
-	// Prepare RESTConfig
-	restConfig := *a.gardenClient.RESTConfig()
-	if address != nil {
-		restConfig.Host = *address
-	}
-	if caCert != nil {
-		restConfig.TLSClientConfig = rest.TLSClientConfig{
-			CAData: caCert,
-		}
-	}
+	gardenClientRestConfig := a.prepareGardenClientRestConfig(address, caCert)
 
-	var bootstrapKubeconfig []byte
 	switch bootstrap {
 	case seedmanagementv1alpha1.BootstrapServiceAccount:
-		// Create a temporary service account with bootstrap kubeconfig in order to create CSR
-
-		// Create a temporary service account
-		saName := "gardenlet-bootstrap-" + name
-		sa := &corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      saName,
-				Namespace: v1beta1constants.GardenNamespace,
-			},
-		}
-		if _, err := controllerutil.CreateOrUpdate(ctx, a.gardenClient.Client(), sa, func() error { return nil }); err != nil {
-			return "", err
-		}
-
-		// Get the service account secret
-		if len(sa.Secrets) == 0 {
-			return "", fmt.Errorf("service account token controller has not yet created a secret for the service account")
-		}
-		saSecret := &corev1.Secret{}
-		if err := a.gardenClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, sa.Secrets[0].Name), saSecret); err != nil {
-			return "", err
-		}
-
-		// Create a ClusterRoleBinding
-		clusterRoleBinding := &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: bootstraputil.BuildBootstrapperName(name),
-			},
-		}
-		if _, err := controllerutil.CreateOrUpdate(ctx, a.gardenClient.Client(), clusterRoleBinding, func() error {
-			clusterRoleBinding.RoleRef = rbacv1.RoleRef{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "ClusterRole",
-				Name:     bootstraputil.GardenerSeedBootstrapper,
-			}
-			clusterRoleBinding.Subjects = []rbacv1.Subject{
-				{
-					Kind:      "ServiceAccount",
-					Name:      saName,
-					Namespace: v1beta1constants.GardenNamespace,
-				},
-			}
-			return nil
-		}); err != nil {
-			return "", err
-		}
-
-		// Get bootstrap kubeconfig from service account secret
-		bootstrapKubeconfig, err = bootstraputil.MarshalKubeconfigWithToken(&restConfig, string(saSecret.Data[corev1.ServiceAccountTokenKey]))
+		// Create a kubeconfig containing the token of a temporary service account as client credentials
+		serviceAccountName := "gardenlet-bootstrap-" + name
+		bootstrapKubeconfig, err = bootstraputil.ComputeGardenletKubeconfigWithServiceAccountToken(ctx, a.gardenClient.Client(), &gardenClientRestConfig, serviceAccountName)
 		if err != nil {
 			return "", err
 		}
 
 	case seedmanagementv1alpha1.BootstrapToken:
-		// Create bootstrap token with bootstrap kubeconfig in order to create CSR
+		var (
+			tokenID          = utils.ComputeSHA256Hex([]byte(name))[:6]
+			tokenDescription = fmt.Sprintf("A bootstrap token for the Gardenlet for managed seed %q.", name)
+			tokenValidity    = 24 * time.Hour
+		)
 
-		// Get bootstrap token secret
-		tokenID := utils.ComputeSHA256Hex([]byte(name))[:6]
-		secret := &corev1.Secret{}
-		if err := a.gardenClient.Client().Get(ctx, kutil.Key(metav1.NamespaceSystem, bootstraptokenutil.BootstrapTokenSecretName(tokenID)), secret); client.IgnoreNotFound(err) != nil {
-			return "", err
-		}
-
-		// Refresh bootstrap token if needed
-		refreshBootstrapToken := true
-		var bootstrapTokenSecret *corev1.Secret
-		if expirationTime, ok := secret.Data[bootstraptokenapi.BootstrapTokenExpirationKey]; ok {
-			t, err := time.Parse(time.RFC3339, string(expirationTime))
-			if err != nil {
-				return "", err
-			}
-			if !t.Before(metav1.Now().UTC()) {
-				refreshBootstrapToken = false
-				bootstrapTokenSecret = secret
-			}
-		}
-		if refreshBootstrapToken {
-			bootstrapTokenSecret, err = kutil.ComputeBootstrapToken(ctx, a.gardenClient.Client(), tokenID, fmt.Sprintf("A bootstrap token for the Gardenlet for shooted seed %q.", name), 24*time.Hour)
-			if err != nil {
-				return "", err
-			}
-		}
-
-		// Get bootstrap kubeconfig from bootstrap token
-		bootstrapKubeconfig, err = bootstraputil.MarshalKubeconfigWithToken(&restConfig, kutil.BootstrapTokenFrom(bootstrapTokenSecret.Data))
+		// Create a kubeconfig containing a valid bootstrap token as client credentials
+		bootstrapKubeconfig, err = bootstraputil.ComputeGardenletKubeconfigWithBootstrapToken(ctx, a.gardenClient.Client(), &gardenClientRestConfig, tokenID, tokenDescription, tokenValidity)
 		if err != nil {
 			return "", err
 		}
 	}
 
 	return string(bootstrapKubeconfig), nil
+}
+
+// prepareGardenClientRestConfig adds an optional host and CA certificate to the garden client rest config
+func (a *actuator) prepareGardenClientRestConfig(address *string, caCert []byte) rest.Config {
+	gardenClientRestConfig := *a.gardenClient.RESTConfig()
+	if address != nil {
+		gardenClientRestConfig.Host = *address
+	}
+	if caCert != nil {
+		gardenClientRestConfig.TLSClientConfig = rest.TLSClientConfig{
+			CAData: caCert,
+		}
+	}
+	return gardenClientRestConfig
 }

@@ -150,7 +150,7 @@ var _ = Describe("Util", func() {
 					CAFile:   "filepath",
 				}}
 
-				expectedKubeconfig, err := bootstraputil.MarshalKubeconfigWithClientCertificate(certClientConfig, nil, nil)
+				expectedKubeconfig, err := bootstraputil.CreateGardenletKubeconfigWithClientCertificate(certClientConfig, nil, nil)
 				Expect(err).ToNot(HaveOccurred())
 
 				expectedSecret := &corev1.Secret{

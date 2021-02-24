@@ -33,8 +33,12 @@ spec:
         {{- if .Values.global.gardenlet.config.gardenClientConnection.bootstrapKubeconfig }}
         checksum/secret-gardenlet-kubeconfig-garden-bootstrap: {{ include (print $.Template.BasePath "/secret-kubeconfig-garden-bootstrap.yaml") . | sha256sum }}
         {{- end }}
+        {{- if .Values.global.gardenlet.config.gardenClientConnection.kubeconfig }}
         checksum/secret-gardenlet-kubeconfig-garden: {{ include (print $.Template.BasePath "/secret-kubeconfig-garden.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if .Values.global.gardenlet.config.seedClientConnection.kubeconfig }}
         checksum/secret-gardenlet-kubeconfig-seed: {{ include (print $.Template.BasePath "/secret-kubeconfig-seed.yaml") . | sha256sum }}
+        {{- end }}
         {{- if .Values.global.gardenlet.podAnnotations }}
 {{ toYaml .Values.global.gardenlet.podAnnotations | indent 8 }}
         {{- end }}

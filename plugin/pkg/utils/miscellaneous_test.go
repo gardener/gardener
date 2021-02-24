@@ -89,7 +89,7 @@ var _ = Describe("Miscellaneous", func() {
 		Entry("operation update and object without deletion timestamp", admission.Update, metav1.ObjectMeta{Name: "obj1"}, false),
 	)
 
-	DescribeTable("#UsedByShoot",
+	DescribeTable("#IsSeedUsedByShoot",
 		func(seedName string, expected bool) {
 			Expect(utils.IsSeedUsedByShoot(seedName, shoots)).To(Equal(expected))
 		},

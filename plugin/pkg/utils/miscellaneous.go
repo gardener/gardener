@@ -46,7 +46,7 @@ func GetProject(namespace string, projectLister corelisters.ProjectLister) (*cor
 	return nil, fmt.Errorf("no project found for namespace %q", namespace)
 }
 
-// IsSeedUsedByShoot checks whether there is a shoot cluster refering the provided seed name
+// IsSeedUsedByShoot checks whether there is a shoot cluster referencing the provided seed name
 func IsSeedUsedByShoot(seedName string, shoots []*core.Shoot) bool {
 	for _, shoot := range shoots {
 		if shoot.Spec.SeedName != nil && *shoot.Spec.SeedName == seedName {
