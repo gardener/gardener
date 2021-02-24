@@ -38,12 +38,13 @@ var _ = Describe("graph", func() {
 	var (
 		ctx = context.TODO()
 
-		fakeInformerSeed         *controllertest.FakeInformer
-		fakeInformerShoot        *controllertest.FakeInformer
-		fakeInformerProject      *controllertest.FakeInformer
-		fakeInformerBackupBucket *controllertest.FakeInformer
-		fakeInformerBackupEntry  *controllertest.FakeInformer
-		fakeInformers            *informertest.FakeInformers
+		fakeInformerSeed          *controllertest.FakeInformer
+		fakeInformerShoot         *controllertest.FakeInformer
+		fakeInformerProject       *controllertest.FakeInformer
+		fakeInformerBackupBucket  *controllertest.FakeInformer
+		fakeInformerBackupEntry   *controllertest.FakeInformer
+		fakeInformerSecretBinding *controllertest.FakeInformer
+		fakeInformers             *informertest.FakeInformers
 
 		logger logr.Logger
 		graph  *graph
@@ -65,6 +66,9 @@ var _ = Describe("graph", func() {
 		backupBucket1SecretRef = corev1.SecretReference{Namespace: "baz", Name: "foo"}
 
 		backupEntry1 *gardencorev1beta1.BackupEntry
+
+		secretBinding1          *gardencorev1beta1.SecretBinding
+		secretBinding1SecretRef = corev1.SecretReference{Namespace: "foobar", Name: "bazfoo"}
 	)
 
 	BeforeEach(func() {
@@ -76,15 +80,17 @@ var _ = Describe("graph", func() {
 		fakeInformerProject = &controllertest.FakeInformer{}
 		fakeInformerBackupBucket = &controllertest.FakeInformer{}
 		fakeInformerBackupEntry = &controllertest.FakeInformer{}
+		fakeInformerSecretBinding = &controllertest.FakeInformer{}
 
 		fakeInformers = &informertest.FakeInformers{
 			Scheme: scheme,
 			InformersByGVK: map[schema.GroupVersionKind]toolscache.SharedIndexInformer{
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"):         fakeInformerSeed,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"):        fakeInformerShoot,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Project"):      fakeInformerProject,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"): fakeInformerBackupBucket,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntry"):  fakeInformerBackupEntry,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"):          fakeInformerSeed,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"):         fakeInformerShoot,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Project"):       fakeInformerProject,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"):  fakeInformerBackupBucket,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntry"):   fakeInformerBackupEntry,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("SecretBinding"): fakeInformerSecretBinding,
 			},
 		}
 
@@ -143,6 +149,11 @@ var _ = Describe("graph", func() {
 				BucketName: backupBucket1.Name,
 				SeedName:   &seed1.Name,
 			},
+		}
+
+		secretBinding1 = &gardencorev1beta1.SecretBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "secretbinding1", Namespace: "sb1namespace"},
+			SecretRef:  secretBinding1SecretRef,
 		}
 	})
 
@@ -473,5 +484,36 @@ var _ = Describe("graph", func() {
 		Expect(graph.graph.Edges().Len()).To(BeZero())
 		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeBackupBucket, "", backupEntry1.Spec.BucketName)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeSeed, "", *backupEntry1.Spec.SeedName)).To(BeFalse())
+	})
+
+	It("should behave as expected for gardencorev1beta1.SecretBinding", func() {
+		By("add")
+		fakeInformerSecretBinding.Add(secretBinding1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeSecret, secretBinding1.SecretRef.Namespace, secretBinding1.SecretRef.Name, VertexTypeSecretBinding, secretBinding1.Namespace, secretBinding1.Name)).To(BeTrue())
+
+		By("update (irrelevant change)")
+		secretBinding1Copy := secretBinding1.DeepCopy()
+		secretBinding1.Quotas = []corev1.ObjectReference{{}, {}, {}}
+		fakeInformerSecretBinding.Update(secretBinding1Copy, secretBinding1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeSecret, secretBinding1.SecretRef.Namespace, secretBinding1.SecretRef.Name, VertexTypeSecretBinding, secretBinding1.Namespace, secretBinding1.Name)).To(BeTrue())
+
+		By("update (secretref)")
+		secretBinding1Copy = secretBinding1.DeepCopy()
+		secretBinding1.SecretRef = corev1.SecretReference{Namespace: "new-sb-secret-namespace", Name: "new-sb-secret-name"}
+		fakeInformerSecretBinding.Update(secretBinding1Copy, secretBinding1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeSecret, secretBinding1Copy.SecretRef.Namespace, secretBinding1Copy.SecretRef.Name, VertexTypeSecretBinding, secretBinding1.Namespace, secretBinding1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, secretBinding1.SecretRef.Namespace, secretBinding1.SecretRef.Name, VertexTypeSecretBinding, secretBinding1.Namespace, secretBinding1.Name)).To(BeTrue())
+
+		By("delete")
+		fakeInformerSecretBinding.Delete(secretBinding1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeSecret, secretBinding1.SecretRef.Namespace, secretBinding1.SecretRef.Name, VertexTypeSecretBinding, secretBinding1.Namespace, secretBinding1.Name)).To(BeFalse())
 	})
 })
