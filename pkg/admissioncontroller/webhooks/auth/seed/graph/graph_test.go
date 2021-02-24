@@ -18,6 +18,7 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 
 	"github.com/go-logr/logr"
@@ -45,6 +46,7 @@ var _ = Describe("graph", func() {
 		fakeInformerBackupEntry            *controllertest.FakeInformer
 		fakeInformerSecretBinding          *controllertest.FakeInformer
 		fakeInformerControllerInstallation *controllertest.FakeInformer
+		fakeInformerManagedSeed            *controllertest.FakeInformer
 		fakeInformers                      *informertest.FakeInformers
 
 		logger logr.Logger
@@ -72,6 +74,8 @@ var _ = Describe("graph", func() {
 		secretBinding1SecretRef = corev1.SecretReference{Namespace: "foobar", Name: "bazfoo"}
 
 		controllerInstallation1 *gardencorev1beta1.ControllerInstallation
+
+		managedSeed1 *seedmanagementv1alpha1.ManagedSeed
 	)
 
 	BeforeEach(func() {
@@ -85,6 +89,7 @@ var _ = Describe("graph", func() {
 		fakeInformerBackupEntry = &controllertest.FakeInformer{}
 		fakeInformerSecretBinding = &controllertest.FakeInformer{}
 		fakeInformerControllerInstallation = &controllertest.FakeInformer{}
+		fakeInformerManagedSeed = &controllertest.FakeInformer{}
 
 		fakeInformers = &informertest.FakeInformers{
 			Scheme: scheme,
@@ -96,6 +101,7 @@ var _ = Describe("graph", func() {
 				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntry"):            fakeInformerBackupEntry,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("SecretBinding"):          fakeInformerSecretBinding,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerInstallation"): fakeInformerControllerInstallation,
+				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed"):       fakeInformerManagedSeed,
 			},
 		}
 
@@ -166,6 +172,13 @@ var _ = Describe("graph", func() {
 			Spec: gardencorev1beta1.ControllerInstallationSpec{
 				SeedRef:         corev1.ObjectReference{Name: seed1.Name},
 				RegistrationRef: corev1.ObjectReference{Name: "controllerregistration1"},
+			},
+		}
+
+		managedSeed1 = &seedmanagementv1alpha1.ManagedSeed{
+			ObjectMeta: metav1.ObjectMeta{Name: "managedseed1", Namespace: "managedseednamespace"},
+			Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+				Shoot: seedmanagementv1alpha1.Shoot{Name: shoot1.Name},
 			},
 		}
 	})
@@ -573,5 +586,36 @@ var _ = Describe("graph", func() {
 		Expect(graph.graph.Edges().Len()).To(BeZero())
 		Expect(graph.HasPathFrom(VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name)).To(BeFalse())
+	})
+
+	It("should behave as expected for seedmanagementv1alpha1.ManagedSeed", func() {
+		By("add")
+		fakeInformerManagedSeed.Add(managedSeed1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
+
+		By("update (irrelevant change)")
+		managedSeed1Copy := managedSeed1.DeepCopy()
+		managedSeed1.Spec.Gardenlet = &seedmanagementv1alpha1.Gardenlet{}
+		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
+
+		By("update (shoot name)")
+		managedSeed1Copy = managedSeed1.DeepCopy()
+		managedSeed1.Spec.Shoot.Name = "newshoot"
+		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1Copy.Spec.Shoot.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
+
+		By("delete")
+		fakeInformerManagedSeed.Delete(managedSeed1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeFalse())
 	})
 })
