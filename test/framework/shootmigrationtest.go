@@ -16,19 +16,29 @@ package framework
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"reflect"
 	"sort"
+	"strings"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 
 	"github.com/pkg/errors"
 
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -219,6 +229,57 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 				}
 			}
 		}
+	}
+	return nil
+}
+
+// CheckForOrphanedNonNamespacedResources checks if there are orphaned resources left on the target seed after the shoot migration.
+// The function checks for Cluster, DNSOwner, BackupEntry, ClusterRoleBinding, ClusterRole and PersistentVolume
+func (t *ShootMigrationTest) CheckForOrphanedNonNamespacedResources(ctx context.Context) error {
+	seedClientScheme := t.SourceSeedClient.DirectClient().Scheme()
+
+	if err := extensionsv1alpha1.AddToScheme(seedClientScheme); err != nil {
+		return err
+	}
+
+	leakedObjects := []string{}
+
+	for _, obj := range []client.ObjectList{
+		&extensionsv1alpha1.ClusterList{},
+		&dnsv1alpha1.DNSOwnerList{},
+		&v1alpha1.BackupEntryList{},
+		&rbacv1.ClusterRoleBindingList{},
+		&rbacv1.ClusterRoleList{},
+	} {
+		if err := t.SourceSeedClient.Client().List(ctx, obj, client.InNamespace(corev1.NamespaceAll)); err != nil {
+			return err
+		}
+
+		if err := meta.EachListItem(obj, func(object runtime.Object) error {
+			if strings.Contains(object.(client.Object).GetName(), t.SeedShootNamespace) {
+				leakedObjects = append(leakedObjects, fmt.Sprintf("%s/%s", object.(client.Object).GetObjectKind(), object.(client.Object).GetName()))
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+	}
+
+	pvList := &corev1.PersistentVolumeList{}
+	if err := t.SourceSeedClient.Client().List(ctx, pvList, client.InNamespace(corev1.NamespaceAll)); err != nil {
+		return err
+	}
+	if err := meta.EachListItem(pvList, func(obj runtime.Object) error {
+		pv := obj.(*corev1.PersistentVolume)
+		if strings.Contains(pv.Spec.ClaimRef.Namespace, t.SeedShootNamespace) {
+			leakedObjects = append(leakedObjects, fmt.Sprintf("PersistentVolume/%s", pv.GetName()))
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	if len(leakedObjects) > 0 {
+		return errors.Errorf("the following object(s) still exists in the source seed %v", leakedObjects)
 	}
 	return nil
 }
