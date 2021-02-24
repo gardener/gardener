@@ -82,7 +82,15 @@ func (s *ShootStateControl) CreateShootStateSyncReconcileFunc(kind string, objec
 		newState := extensionObj.GetExtensionStatus().GetState()
 		newResources := extensionObj.GetExtensionStatus().GetResources()
 
-		shootState, err := s.getShootState(ctx, req)
+		cluster, err := s.getClusterFromRequest(ctx, req)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return reconcile.Result{}, nil
+			}
+			return reconcile.Result{}, fmt.Errorf("could not get cluster with name %s : %v", cluster.Name, err)
+		}
+
+		shootState, err := s.getShootStateFromCluster(ctx, cluster)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -227,7 +235,7 @@ func (s *ShootStateControl) getExtensionObject(ctx context.Context, key types.Na
 	return apiextensions.Accessor(obj)
 }
 
-func (s *ShootStateControl) getShootState(ctx context.Context, req reconcile.Request) (*gardencorev1alpha1.ShootState, error) {
+func (s *ShootStateControl) getClusterFromRequest(ctx context.Context, req reconcile.Request) (*extensionsv1alpha1.Cluster, error) {
 	var clusterName string
 	if req.Namespace == "" {
 		// Handling for cluster-scoped backupentry extension resources.
@@ -238,12 +246,13 @@ func (s *ShootStateControl) getShootState(ctx context.Context, req reconcile.Req
 
 	cluster := &extensionsv1alpha1.Cluster{}
 	if err := s.seedClient.Client().Get(ctx, kutil.Key(clusterName), cluster); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("could not get cluster with name %s : %v", clusterName, err)
+		return nil, err
 	}
 
+	return cluster, nil
+}
+
+func (s *ShootStateControl) getShootStateFromCluster(ctx context.Context, cluster *extensionsv1alpha1.Cluster) (*gardencorev1alpha1.ShootState, error) {
 	shoot, err := s.shootRetriever.FromCluster(cluster)
 	if err != nil {
 		return nil, err
