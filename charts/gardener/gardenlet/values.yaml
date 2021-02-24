@@ -146,7 +146,3 @@ global:
     #   loki:
     #     garden:
     #       priority: 100
-  # Deployment related configuration
-  deployment:
-    virtualGarden:
-      enabled: false
