@@ -201,6 +201,27 @@ gardenlet_groups() {
 }
 export -f gardenlet_groups
 
+# Componentconfig for landscaper-gardenlet
+
+landscaper_groups() {
+bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+  deepcopy,defaulter \
+  github.com/gardener/gardener/pkg/client/componentconfig \
+  github.com/gardener/gardener/landscaper/gardenlet/pkg/apis \
+  github.com/gardener/gardener/landscaper/gardenlet/pkg/apis \
+  "imports:v1alpha1" \
+  -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+
+bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+  conversion \
+  github.com/gardener/gardener/pkg/client/componentconfig \
+  github.com/gardener/gardener/landscaper/gardenlet/pkg/apis \
+  github.com/gardener/gardener/landscaper/gardenlet/pkg/apis \
+  "imports:v1alpha1" \
+  --extra-peer-dirs=github.com/gardener/gardener/landscaper/gardenlet/pkg/apis/imports, github.com/gardener/gardener/pkg/gardenlet/apis/config,github.com/gardener/landscaper/apis/core/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime \
+  -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+}
+
 # Componentconfig for admission plugins
 
 shoottolerationrestriction_groups() {
@@ -264,7 +285,8 @@ if [[ $# -gt 0 && "$1" == "--parallel" ]]; then
     admissioncontroller_groups \
     scheduler_groups \
     gardenlet_groups \
-    shoottolerationrestriction_groups
+    shoottolerationrestriction_groups \
+    landscaper_groups
 else
   core_groups
   extensions_groups
@@ -274,7 +296,8 @@ else
   admissioncontroller_groups
   scheduler_groups
   gardenlet_groups
-  shoottolerationrestriction_groups  
+  shoottolerationrestriction_groups
+  landscaper_groups
 fi
 
 openapi_definitions "$@"
