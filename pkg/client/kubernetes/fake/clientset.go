@@ -83,8 +83,14 @@ func (c *ClientSet) Client() client.Client {
 	return c.client
 }
 
+// APIReader returns a client.Reader that directly reads from the API server.
+func (c *ClientSet) APIReader() client.Reader {
+	return c.directClient
+}
+
 // DirectClient returns a controller-runtime client, which can be used to talk to the API server directly
 // (without using a cache).
+// Deprecated: used APIReader instead, if the controller can't tolerate stale reads.
 func (c *ClientSet) DirectClient() client.Client {
 	return c.directClient
 }

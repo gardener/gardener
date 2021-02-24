@@ -145,8 +145,11 @@ type Interface interface {
 	// Client returns the ClientSet's controller-runtime client. This client should be used by default, as it carries
 	// a cache, which uses SharedIndexInformers to keep up-to-date.
 	Client() client.Client
+	// APIReader returns a client.Reader that directly reads from the API server.
+	APIReader() client.Reader
 	// DirectClient returns a controller-runtime client, which can be used to talk to the API server directly
 	// (without using a cache).
+	// Deprecated: used APIReader instead, if the controller can't tolerate stale reads.
 	DirectClient() client.Client
 	// Cache returns the ClientSet's controller-runtime cache. It can be used to get Informers for arbitrary objects.
 	Cache() cache.Cache

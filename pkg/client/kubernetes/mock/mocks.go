@@ -59,6 +59,20 @@ func (mr *MockInterfaceMockRecorder) APIExtension() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIExtension", reflect.TypeOf((*MockInterface)(nil).APIExtension))
 }
 
+// APIReader mocks base method.
+func (m *MockInterface) APIReader() client.Reader {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "APIReader")
+	ret0, _ := ret[0].(client.Reader)
+	return ret0
+}
+
+// APIReader indicates an expected call of APIReader.
+func (mr *MockInterfaceMockRecorder) APIReader() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIReader", reflect.TypeOf((*MockInterface)(nil).APIReader))
+}
+
 // APIRegistration mocks base method.
 func (m *MockInterface) APIRegistration() clientset0.Interface {
 	m.ctrl.T.Helper()
