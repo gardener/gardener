@@ -37,6 +37,12 @@ const (
 	// TestMachineryKubeconfigsPathEnvVarName is the name of the environment variable that holds the path to the
 	// testmachinery provided kubeconfigs.
 	TestMachineryKubeconfigsPathEnvVarName = "TM_KUBECONFIG_PATH"
+
+	// TestMachineryTestRunEnvVarName is the name of the environment variable that holds the testrun ID.
+	TestMachineryTestRunIDEnvVarName = "TM_TESTRUN_ID"
+
+	// SeedTaintTestRun is the taint used to limit shoots that can be scheduled on a seed to shoots created by the same testrun.
+	SeedTaintTestRun = "test.gardener.cloud/test-run"
 )
 
 // SearchResponse represents the response from a search query to loki

@@ -156,24 +156,24 @@ func validateShootCreationConfig(cfg *ShootCreationConfig) {
 	}
 
 	if !FileExists(cfg.infrastructureProviderConfig) {
-		ginkgo.Fail("path to the infrastructureProviderConfig of the Shoot is invalid")
+		ginkgo.Fail(fmt.Sprintf("path to the infrastructureProviderConfig of the Shoot is invalid: %s", cfg.infrastructureProviderConfig))
 	}
 
 	if StringSet(cfg.controlPlaneProviderConfig) {
 		if !FileExists(cfg.controlPlaneProviderConfig) {
-			ginkgo.Fail("path to the controlPlaneProviderConfig of the Shoot is invalid")
+			ginkgo.Fail(fmt.Sprintf("path to the controlPlaneProviderConfig of the Shoot is invalid: %s", cfg.controlPlaneProviderConfig))
 		}
 	}
 
 	if StringSet(cfg.networkingProviderConfig) {
 		if !FileExists(cfg.networkingProviderConfig) {
-			ginkgo.Fail("path to the networkingProviderConfig of the Shoot is invalid")
+			ginkgo.Fail(fmt.Sprintf("path to the networkingProviderConfig of the Shoot is invalid: %s", cfg.networkingProviderConfig))
 		}
 	}
 
 	if StringSet(cfg.workersConfig) {
 		if !FileExists(cfg.workersConfig) {
-			ginkgo.Fail("path to the worker config of the Shoot is invalid")
+			ginkgo.Fail(fmt.Sprintf("path to the worker config of the Shoot is invalid: %s", cfg.workersConfig))
 		}
 	}
 }
