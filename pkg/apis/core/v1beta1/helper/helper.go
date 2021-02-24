@@ -1247,3 +1247,21 @@ func BackupBucketIsErroneous(bb *gardencorev1beta1.BackupBucket) (bool, string) 
 	}
 	return true, lastErr.Description
 }
+
+// SeedBackupSecretRefEqual returns true when the secret reference of the backup configuration is the same.
+func SeedBackupSecretRefEqual(oldBackup, newBackup *gardencorev1beta1.SeedBackup) bool {
+	var (
+		oldSecretRef corev1.SecretReference
+		newSecretRef corev1.SecretReference
+	)
+
+	if oldBackup != nil {
+		oldSecretRef = oldBackup.SecretRef
+	}
+
+	if newBackup != nil {
+		newSecretRef = newBackup.SecretRef
+	}
+
+	return apiequality.Semantic.DeepEqual(oldSecretRef, newSecretRef)
+}

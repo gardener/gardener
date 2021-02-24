@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"sync"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+
 	"github.com/go-logr/logr"
 	gonumgraph "gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/simple"
@@ -57,7 +59,9 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 	for _, resource := range []struct {
 		obj     client.Object
 		setupFn func(informer cache.Informer)
-	}{} {
+	}{
+		{&gardencorev1beta1.Seed{}, g.setupSeedWatch},
+	} {
 		informer, err := c.GetInformer(ctx, resource.obj)
 		if err != nil {
 			return err

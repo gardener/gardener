@@ -1778,4 +1778,17 @@ var _ = Describe("helper", func() {
 			Equal("foo"),
 		),
 	)
+
+	DescribeTable("#SeedBackupSecretRefEqual",
+		func(oldBackup, newBackup *gardencorev1beta1.SeedBackup, matcher gomegatypes.GomegaMatcher) {
+			Expect(SeedBackupSecretRefEqual(oldBackup, newBackup)).To(matcher)
+		},
+
+		Entry("both nil", nil, nil, BeTrue()),
+		Entry("old nil, new empty", nil, &gardencorev1beta1.SeedBackup{}, BeTrue()),
+		Entry("old empty, new nil", &gardencorev1beta1.SeedBackup{}, nil, BeTrue()),
+		Entry("both empty", &gardencorev1beta1.SeedBackup{}, &gardencorev1beta1.SeedBackup{}, BeTrue()),
+		Entry("difference", &gardencorev1beta1.SeedBackup{SecretRef: corev1.SecretReference{Name: "foo", Namespace: "bar"}}, &gardencorev1beta1.SeedBackup{SecretRef: corev1.SecretReference{Name: "bar", Namespace: "foo"}}, BeFalse()),
+		Entry("equality", &gardencorev1beta1.SeedBackup{SecretRef: corev1.SecretReference{Name: "foo", Namespace: "bar"}}, &gardencorev1beta1.SeedBackup{SecretRef: corev1.SecretReference{Name: "foo", Namespace: "bar"}}, BeTrue()),
+	)
 })
