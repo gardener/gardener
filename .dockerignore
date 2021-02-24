@@ -11,6 +11,7 @@
 !pkg/
 !plugin/
 !test/
+!landscaper/
 !third_party/
 !vendor/
 !.golangci.yaml

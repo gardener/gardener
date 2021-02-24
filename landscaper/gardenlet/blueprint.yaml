@@ -1,0 +1,112 @@
+apiVersion: landscaper.gardener.cloud/v1alpha1
+kind: Blueprint
+jsonSchema: "https://json-schema.org/draft/2019-09/schema" # required
+imports:
+  - name: seedCluster
+    targetType: landscaper.gardener.cloud/kubernetes-cluster
+
+  - name: gardenCluster
+    targetType: landscaper.gardener.cloud/kubernetes-cluster
+
+  - name: seedBackup
+    required: false
+    schema:
+      type: object
+      properties:
+        provider:
+          type: string
+        # provider specific credentials just parsed as string and created as secret
+        credentials:
+          type: object
+
+  - name: deploymentConfiguration
+    required: false
+    schema:
+      type: object
+      properties:
+        replicaCount:
+          schema:
+            type: number
+        revisionHistoryLimit:
+          schema:
+            type: number
+        serviceAccountName:
+          schema:
+            type: string
+        resources:
+          schema:
+            type: object
+            properties:
+              requests:
+                type: object
+                properties:
+                  cpu:
+                    type: string
+                  memory:
+                    type: string
+              limits:
+                type: object
+                properties:
+                  cpu:
+                    type: string
+                  memory:
+                    type: string
+        podLabels:
+          schema:
+            type: object
+        podAnnotations:
+          schema:
+            type: object
+        additionalVolumes:
+          schema:
+            type: array
+            items:
+              type: object
+        additionalVolumeMounts:
+          schema:
+            type: array
+            items:
+              type: object
+        vpa:
+          schema:
+            type: bool
+        imageVectorOverwrite:
+          schema:
+            type: string
+        componentImageVectorOverwrites:
+          schema:
+            type: string
+
+
+  # check example/20-componentconfig-gardenlet.yaml for what can be configured here
+  - name: componentConfiguration
+    schema:
+      type: object
+
+# For what can be referenced in the the deployExecutions, please see:
+# https://github.com/gardener/landscaper/blob/master/docs/usage/Blueprints.md
+deployExecutions:
+  - name: default
+    type: GoTemplate
+    template: |
+      deployItems:
+      - name: deploy
+        type: landscaper.gardener.cloud/container
+        config:
+          # defined in https://github.com/gardener/landscaper/blob/master/apis/deployer/container/types_provider.go
+          apiVersion: container.deployer.landscaper.gardener.cloud/v1alpha1
+          kind: ProviderConfiguration
+          blueprint:
+      {{ toYaml .blueprint | indent 6 }}
+
+          componentDescriptor:
+      {{ toYaml .componentDescriptorDef | indent 6 }}
+
+          importValues:
+            # the import configuration of the Gardenlet landscaper
+            apiVersion: gardenlet.gardener.landscaper.gardener.cloud/v1alpha1
+            kind: Imports
+      {{ toYaml .imports | indent 6 }}
+
+          {{ $resource := getResource .cd "name" "gardenlet-landscaper" }}
+          image: {{ $resource.access.imageReference }}

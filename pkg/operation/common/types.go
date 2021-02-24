@@ -462,6 +462,12 @@ const (
 
 	// ShootDNSIngressName is a constant for the DNS resources used for the shoot ingress addon.
 	ShootDNSIngressName = "ingress"
+	// GardenletDefaultKubeconfigSecretName is the default name for the field in the Gardenlet component configuration
+	// .gardenClientConnection.KubeconfigSecret.Name
+	GardenletDefaultKubeconfigSecretName = "gardenlet-kubeconfig"
+	// GardenletDefaultKubeconfigBootstrapSecretName is the default name for the field in the Gardenlet component configuration
+	// .gardenClientConnection.BootstrapKubeconfig.Name
+	GardenletDefaultKubeconfigBootstrapSecretName = "gardenlet-kubeconfig-bootstrap"
 )
 
 var (

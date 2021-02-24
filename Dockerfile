@@ -73,3 +73,14 @@ COPY --from=builder /go/bin/gardener-seed-admission-controller /gardener-seed-ad
 WORKDIR /
 
 ENTRYPOINT ["/gardener-seed-admission-controller"]
+
+############# landscaper-gardenlet #############
+FROM base AS landscaper-gardenlet
+
+COPY --from=builder /go/bin/landscaper-gardenlet /landscaper-gardenlet
+COPY charts/gardener/gardenlet /charts/gardener/gardenlet
+COPY charts/utils-templates /charts/utils-templates
+
+WORKDIR /
+
+ENTRYPOINT ["/landscaper-gardenlet"]
