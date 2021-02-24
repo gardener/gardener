@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,24 +20,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
-const (
-	namespace = "gardener_admission_controller"
-
-	// ReasonSizeExceeded is the value for reason when a resource exceeded the maximum allowed size.
-	ReasonSizeExceeded = "Size Exceeded"
-
-	// ReasonRejectedKubeconfig is the value for reason when a kubeconfig was rejected.
-	ReasonRejectedKubeconfig = "Rejected Kubeconfig"
-)
+// Namespace is the metric namespace for the gardener-admission-controller.
+const Namespace = "gardener_admission_controller"
 
 var (
-	// factory is used for registering metrics in the controller-runtime metrics registry.
-	factory = promauto.With(metrics.Registry)
+	// Factory is used for registering metrics in the controller-runtime metrics registry.
+	Factory = promauto.With(metrics.Registry)
 
 	// RejectedResources defines the counter rejected_resources_total.
-	RejectedResources = factory.NewCounterVec(
+	RejectedResources = Factory.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: namespace,
+			Namespace: Namespace,
 			Name:      "rejected_resources_total",
 			Help:      "Total number of resources rejected.",
 		},
