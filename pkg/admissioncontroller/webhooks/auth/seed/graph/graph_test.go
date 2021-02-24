@@ -38,13 +38,14 @@ var _ = Describe("graph", func() {
 	var (
 		ctx = context.TODO()
 
-		fakeInformerSeed          *controllertest.FakeInformer
-		fakeInformerShoot         *controllertest.FakeInformer
-		fakeInformerProject       *controllertest.FakeInformer
-		fakeInformerBackupBucket  *controllertest.FakeInformer
-		fakeInformerBackupEntry   *controllertest.FakeInformer
-		fakeInformerSecretBinding *controllertest.FakeInformer
-		fakeInformers             *informertest.FakeInformers
+		fakeInformerSeed                   *controllertest.FakeInformer
+		fakeInformerShoot                  *controllertest.FakeInformer
+		fakeInformerProject                *controllertest.FakeInformer
+		fakeInformerBackupBucket           *controllertest.FakeInformer
+		fakeInformerBackupEntry            *controllertest.FakeInformer
+		fakeInformerSecretBinding          *controllertest.FakeInformer
+		fakeInformerControllerInstallation *controllertest.FakeInformer
+		fakeInformers                      *informertest.FakeInformers
 
 		logger logr.Logger
 		graph  *graph
@@ -69,6 +70,8 @@ var _ = Describe("graph", func() {
 
 		secretBinding1          *gardencorev1beta1.SecretBinding
 		secretBinding1SecretRef = corev1.SecretReference{Namespace: "foobar", Name: "bazfoo"}
+
+		controllerInstallation1 *gardencorev1beta1.ControllerInstallation
 	)
 
 	BeforeEach(func() {
@@ -81,16 +84,18 @@ var _ = Describe("graph", func() {
 		fakeInformerBackupBucket = &controllertest.FakeInformer{}
 		fakeInformerBackupEntry = &controllertest.FakeInformer{}
 		fakeInformerSecretBinding = &controllertest.FakeInformer{}
+		fakeInformerControllerInstallation = &controllertest.FakeInformer{}
 
 		fakeInformers = &informertest.FakeInformers{
 			Scheme: scheme,
 			InformersByGVK: map[schema.GroupVersionKind]toolscache.SharedIndexInformer{
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"):          fakeInformerSeed,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"):         fakeInformerShoot,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Project"):       fakeInformerProject,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"):  fakeInformerBackupBucket,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntry"):   fakeInformerBackupEntry,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("SecretBinding"): fakeInformerSecretBinding,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"):                   fakeInformerSeed,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"):                  fakeInformerShoot,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Project"):                fakeInformerProject,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"):           fakeInformerBackupBucket,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntry"):            fakeInformerBackupEntry,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("SecretBinding"):          fakeInformerSecretBinding,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerInstallation"): fakeInformerControllerInstallation,
 			},
 		}
 
@@ -154,6 +159,14 @@ var _ = Describe("graph", func() {
 		secretBinding1 = &gardencorev1beta1.SecretBinding{
 			ObjectMeta: metav1.ObjectMeta{Name: "secretbinding1", Namespace: "sb1namespace"},
 			SecretRef:  secretBinding1SecretRef,
+		}
+
+		controllerInstallation1 = &gardencorev1beta1.ControllerInstallation{
+			ObjectMeta: metav1.ObjectMeta{Name: "controllerinstallation1"},
+			Spec: gardencorev1beta1.ControllerInstallationSpec{
+				SeedRef:         corev1.ObjectReference{Name: seed1.Name},
+				RegistrationRef: corev1.ObjectReference{Name: "controllerregistration1"},
+			},
 		}
 	})
 
@@ -515,5 +528,50 @@ var _ = Describe("graph", func() {
 		Expect(graph.graph.Nodes().Len()).To(BeZero())
 		Expect(graph.graph.Edges().Len()).To(BeZero())
 		Expect(graph.HasPathFrom(VertexTypeSecret, secretBinding1.SecretRef.Namespace, secretBinding1.SecretRef.Name, VertexTypeSecretBinding, secretBinding1.Namespace, secretBinding1.Name)).To(BeFalse())
+	})
+
+	It("should behave as expected for gardencorev1beta1.ControllerInstallation", func() {
+		By("add")
+		fakeInformerControllerInstallation.Add(controllerInstallation1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name)).To(BeTrue())
+
+		By("update (irrelevant change)")
+		controllerInstallation1Copy := controllerInstallation1.DeepCopy()
+		controllerInstallation1.Spec.RegistrationRef.ResourceVersion = "123"
+		fakeInformerControllerInstallation.Update(controllerInstallation1Copy, controllerInstallation1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name)).To(BeTrue())
+
+		By("update (controller registration name)")
+		controllerInstallation1Copy = controllerInstallation1.DeepCopy()
+		controllerInstallation1.Spec.RegistrationRef.Name = "newreg"
+		fakeInformerControllerInstallation.Update(controllerInstallation1Copy, controllerInstallation1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeControllerRegistration, "", controllerInstallation1Copy.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name)).To(BeTrue())
+
+		By("update (seed name)")
+		controllerInstallation1Copy = controllerInstallation1.DeepCopy()
+		controllerInstallation1.Spec.SeedRef.Name = "newseed"
+		fakeInformerControllerInstallation.Update(controllerInstallation1Copy, controllerInstallation1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1Copy.Spec.SeedRef.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name)).To(BeTrue())
+
+		By("delete")
+		fakeInformerControllerInstallation.Delete(controllerInstallation1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name)).To(BeFalse())
 	})
 })

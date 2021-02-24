@@ -62,6 +62,7 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 	}{
 		{&gardencorev1beta1.BackupBucket{}, g.setupBackupBucketWatch},
 		{&gardencorev1beta1.BackupEntry{}, g.setupBackupEntryWatch},
+		{&gardencorev1beta1.ControllerInstallation{}, g.setupControllerInstallationWatch},
 		{&gardencorev1beta1.Project{}, g.setupProjectWatch},
 		{&gardencorev1beta1.SecretBinding{}, g.setupSecretBindingWatch},
 		{&gardencorev1beta1.Seed{}, g.setupSeedWatch},
