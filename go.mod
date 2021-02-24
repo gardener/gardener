@@ -18,7 +18,7 @@ require (
 	github.com/go-openapi/spec v0.19.3
 	github.com/gobuffalo/packr v1.30.1
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/mock v1.4.4-0.20200731163441-8734ec565a4d
+	github.com/golang/mock v1.5.0
 	github.com/googleapis/gnostic v0.5.1
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/golang-lru v0.5.4
