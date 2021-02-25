@@ -86,15 +86,16 @@ In [Issue #2181](https://github.com/gardener/gardener/issues/2181) it is already
 The `ManagedSeed` resource is a dedicated custom resource that represents an evolution of the "shooted seed" and properly replaces the `use-as-seed` annotation. This resource contains:
 
 * The name of the Shoot that should be registered as a Seed.
-* An optional `seed` section that contains the Seed spec and parts of the metadata, such as labels and annotations.
+* An optional `seedTemplate` section that contains the Seed spec and parts of the metadata, such as labels and annotations.
 * An optional `gardenlet` section that contains:
-    * Certain aspects of the `gardenlet` deployment configuration, such as the number of replicas, the image, which bootstrap mechanism to use (bootstrap token / service account), etc.
-    * The `GardenletConfiguration` resource that contains controllers configuration, feature gates, etc.
+    * `gardenlet` deployment parameters, such as the number of replicas, the image, etc.
+    * The `GardenletConfiguration` resource that contains controllers configuration, feature gates, and a `seedConfig` section that contains the `Seed` spec and parts of its metadata.
+    * Additional configuration parameters, such as the garden connection bootstrap mechanism (see [TLS Bootstrapping](../concepts/gardenlet.md#tls-bootstrapping)), and whether to merge the provided configuration with the configuration of the parent `gardenlet`.
     
-Either the `seed` or the `gardenlet` section must be specified, but not both: 
+Either the `seedTemplate` or the `gardenlet` section must be specified, but not both: 
 
-* If the `seed` section is specified, `gardenlet` should not be deployed in the shoot, and a new seed should be registered based on the `seed` section.
-* If the `gardenlet` section is specified, `gardenlet` should be deployed in the shoot, and it will register a new seed upon startup based on the `seedConfig` section of the `GardenletConfiguration` resource.
+* If the `seedTemplate` section is specified, `gardenlet` is not deployed to the shoot, and a new `Seed` resource is created based on the template.
+* If the `gardenlet` section is specified, `gardenlet` is deployed to the shoot, and it registers a new seed upon startup based on the `seedConfig` section of the `GardenletConfiguration` resource.
 
 A ManagedSeed allows fine-tuning the seed and the `gardenlet` configuration of shooted seeds in order to deviate from the global defaults, e.g. lower the concurrent sync for some of the seed's controllers or enable a feature gate only on certain seeds. Also, it simplifies the deletion protection of such seeds. 
 
@@ -106,7 +107,7 @@ Last but not least, ManagedSeeds could be used as the basis for creating and del
 
 Unlike the `Seed` resource, the `ManagedSeed` resource is namespaced. If created in the `garden` namespace, the resulting seed is globally available. If created in a project namespace, the resulting seed can be used as a "private seed" by shoots in the project, either by being decorated with project-specific taints and labels, or by being of the special `PrivateSeed` kind that is also namespaced. The concept of private seeds / cloudprofiles is described in [Issue #2874](https://github.com/gardener/gardener/issues/2874). Until this concept is implemented, `ManagedSeed` resources might need to be restricted to the `garden` namespace, similarly to how shoots with the `use-as-seed` annotation currently are.
 
-Example `ManagedSeed` resource with a `seed` section:
+Example `ManagedSeed` resource with a `seedTemplate` section:
 
 ```yaml
 apiVersion: seedmanagement.gardener.cloud/v1alpha1
@@ -117,7 +118,7 @@ metadata:
 spec:
   shoot:
     name: crazy-botany # Shoot that should be registered as a Seed
-  seed: # Seed template, including spec and parts of the metadata
+  seedTemplate: # Seed template, including spec and parts of the metadata
     metadata:
       labels:
         foo: bar
@@ -143,7 +144,7 @@ spec:
     name: crazy-botany # Shoot that should be registered as a Seed
   gardenlet: 
     deployment: # Gardenlet deployment configuration
-      replicas: 1
+      replicaCount: 1
       revisionHistoryLimit: 10
       serviceAccountName: gardenlet
       image:
@@ -152,32 +153,39 @@ spec:
         pullPolicy: IfNotPresent
       resources:
         ...
-      annotations: 
+      podLabels:
         ...
-      labels:
-        ...
-      env:
-        ...
-      imageVectorOverwrite: | # See docs/deployment/image_vector.md
-        ...
-      componentImageVectorOverwrites: | # See docs/deployment/image_vector.md
-        ...
-      dnsConfig:
+      podAnnotations: 
         ...
       additionalVolumes:
         ...
       additionalVolumeMounts:
         ...
+      env:
+        ...
       vpa: false
     config: # GardenletConfiguration resource
-      seedConfig: # Configuration of the Seed to be registered
-        ...
+      apiVersion: gardenlet.config.gardener.cloud/v1alpha1
+      kind: GardenletConfiguration
+      seedConfig: # Seed template, including spec and parts of the metadata
+        metadata:
+          labels:
+            foo: bar
+        spec:
+          provider:
+            type: gcp
+            region: europe-west1
+          taints:
+          - key: seed.gardener.cloud/protected
+          ...
       controllers:
         shoot:
           concurrentSyncs: 20
       featureGates:
         CachedRuntimeClients: true
       ...
+    bootstrap: BootstrapToken
+    mergeWithParent: true
 ```
 
 ### ManagedSeed Controller
@@ -186,7 +194,15 @@ ManagedSeeds are reconciled by a new *managed seed controller* in `gardenlet`. I
 
 Once this controller is considered sufficiently stable, the current `use-as-seed` annotation and the controller mentioned above should be marked as deprecated and eventually removed.
 
-A `ManagedSeed` that is in use by shoots cannot be deleted, unless the shoots are either deleted or moved to other seeds first. The managed seed controller ensures that this is the case.
+A `ManagedSeed` that is in use by shoots cannot be deleted, unless the shoots are either deleted or moved to other seeds first. The managed seed controller ensures that this is the case by only allowing a ManagedSeed to be deleted if its Seed has been already deleted.
+
+### ManagedSeed Admission Plugins
+
+In addition to the managed seed controller mentioned above, new `gardener-apiserver` admission plugins should be introduced to properly validate the creation and update of ManagedSeeds, as well as the deletion of shoots registered as seeds. These plugins should ensure that: 
+
+* A `Shoot` that is being referred to by a `ManagedSeed` cannot be deleted.   
+* Certain `Seed` spec fields, for example the provider type and region, networking CIDRs for pods, services, and nodes, etc., are the same as (or compatible with) the corresponding `Shoot` spec fields of the shoot that is being registered as seed. 
+* If such `Seed` spec fields are omitted or empty, the plugins should supply proper defaults based on the values in the `Shoot` resource.
 
 ### Provider-specific Seed Bootstrapping Actions
 
@@ -196,7 +212,7 @@ One idea that could be further explored is the use *shoot readiness gates*, simi
 
 ### Changes to Existing Controllers
 
-Since the Shoot registration as a Seed is decoupled from the Shoot reconciliation, existing `gardenlet` controllers would not have to be changed in order to properly support ManagedSeeds. The only change to `gardenlet` that would be needed is introducing the new *managed seed controller* mentioned above, and possibly retiring the old one at some point. Also, the Shoot controller might need to be adapted to ensure that Shoots registered as Seeds cannot be deleted until they ManagedSeed that caused the registration is itself deleted.
+Since the Shoot registration as a Seed is decoupled from the Shoot reconciliation, existing `gardenlet` controllers would not have to be changed in order to properly support ManagedSeeds. The main change to `gardenlet` that would be needed is introducing the new *managed seed controller* mentioned above, and possibly retiring the old one at some point. In addition, the Shoot controller would need to be adapted as it currently performs certain actions differently if the shoot has a "shooted seed".
 
 The introduction of the `ManagedSeed` resource would also require no changes to existing `gardener-controller-manager` controllers that operate on Shoots (for example, shoot hibernation and maintenance controllers).
 
@@ -224,17 +240,21 @@ metadata:
   name: crazy-botany
   namespace: garden
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       foo: bar
+  updateStrategy:
+    type: RollingUpdate # Update strategy, must be `RollingUpdate`
+    rollingUpdate:
+      partition: 2 # Only update the last replica (#2), assuming there are no gaps ("rolling out a canary")
   template: # ManagedSeed template, including spec and parts of the metadata
     metadata:
       labels:
         foo: bar
     spec: 
       # shoot.name is not specified since it's filled automatically by the controller
-      seed: # Either a seed or a gardenlet section must be specified, see above
+      seedTemplate: # Either a seed or a gardenlet section must be specified, see above
         metadata:
           labels:
             foo: bar
@@ -263,18 +283,66 @@ ManagedSeedSets are reconciled by a new *managed seed set controller* in `garden
 
 **Note:** The introduction of the `ManagedSeedSet` resource would not require any changes to `gardenlet` or to existing `gardener-controller-manager` controllers. 
 
-### ManagedSeedDeployments
+### Managing ManagedSeed Updates
 
-A ManagedSeedSet, similarly to a `ReplicaSet`, does not manage updates to its replicas in any way. In the future, we might introduce ManagedSeedDeployments, a higher-level concept that manages ManagedSeedSets and provides declarative updates to ManagedSeeds along with other useful features, similarly to a [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/), or perhaps a [StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/). An implementation that is more like a StatefulSet rather than a Deployment would be rolling seed by seed, stopping on rollout-failures (see [Issue #87](https://github.com/gardener/gardener/issues/87)), etc.
+To manage ManagedSeed updates, we considered two possible approaches:
 
-There is an important difference between seeds and pods or nodes in that seeds are more "heavyweight" and therefore updating a set of seeds by introducing new seeds and moving shoots to them tends to be much more complex, time-consuming, and prone to failures compared to updating the seeds "in place". Furthermore, updating seeds in this way depends on a mature implementation of [GEP-7: Shoot Control Plane Migration](07-shoot-control-plane-migration.md), which is not available right now. Therefore, ManagedSeedDeployments are not described in detail here, as properly dealing with the challenges mentioned requires a separate GEP.
+* A ManagedSeedSet, similarly to a ReplicaSet, does not manage updates to its replicas in any way. In the future, we might introduce ManagedSeedDeployments, a higher-level concept that manages ManagedSeedSets and provides declarative updates to ManagedSeeds along with other useful features, similarly to a [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/). Such a mechanism would involve creating new ManagedSeedSets, and therefore new seeds, behind the scenes, and moving existing shoots to them.
+* A ManagedSeedSet does manage updates to its replicas, similarly to a [StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/). Updates are performed "in-place", without creating new seeds and moving existing shoots to them. Such a mechanism could also take advantage of other StatefulSet features, such as ordered rolling updates and phased rollouts. 
+
+There is an important difference between seeds and pods or nodes in that seeds are more "heavyweight" and therefore updating a set of seeds by introducing new seeds and moving shoots to them tends to be much more complex, time-consuming, and prone to failures compared to updating the seeds "in place". Furthermore, updating seeds in this way depends on a mature implementation of [GEP-7: Shoot Control Plane Migration](07-shoot-control-plane-migration.md), which is not available right now. Due to these considerations, we favor the second approach over the first one.
+
+#### ManagedSeed Identity and Order
+
+A StatefulSet manages the deployment and scaling of a set of Pods, and provides guarantees about the ordering and uniqueness of these Pods. It maintains a *stable identity* (including network identity) for each of their Pods. These pods are created from the same spec, but are not interchangeable: each has a persistent identifier that it maintains across any rescheduling.
+
+A StatefulSet achieves the above by associating each replica with an *ordinal number*. With n replicas, these ordinal numbers range from 0 to n-1. When scaling out, newly added replicas always have ordinal numbers larger than those of previously existing replicas. When scaling in, it is the replicas with the largest orginal numbers that are removed.
+
+Besides stable identity and persistent storage, these ordinal numbers are also used to implement the following StatefulSet features: 
+
+* Ordered, graceful deployment and scaling.
+* Ordered, automated rolling updates. Such rolling updates can be *partitioned* (limited to replicas with ordinal numbers greater than or equal to the "partition") to achieve *phased rollouts*.
+
+A ManagedSeedSet, unlike a StatefulSet, does not need to maintain a stable identity for its ManagedSeeds. Furthermore, it would not be practical to always remove the replicas with the largest ordinal numbers when scaling in, since the corresponding seeds may have shoots scheduled onto them, while other seeds, with lower ordinals, may have fewer shoots (or none), and therefore be much better candidates for being removed.
+
+On the other hand, it would be beneficial if a ManagedSeedSet, like a StatefulSet, provides ordered deployment and scaling, ordered rolling updates, and phased rollouts. The main advantage of these features is that a deployment or update failure would affect fewer replicas (ideally just one), containing any potential damage and making the situation easier to handle, thus achieving some of the goals stated in [Issue #87](https://github.com/gardener/gardener/issues/87).
+
+Based on the above considerations, we propose the following mechanism for handling ManagedSeed identity and order:
+
+* A ManagedSeedSet uses *ordinal numbers generated by an increasing sequence* to identify ManagedSeeds and Shoots it creates and manages. These numbers always starts from 0 and are incremented by 1 for each newly added replica. 
+* Replicas (both ManagedSeeds and Shoots) are named after the ManagedSeedSet with the ordinal number appended. For example, for a ManagedSeedSet named `test` its replicas are named `test-0`, `test-1`, etc.
+* Gaps in the sequence created by removing replicas with ordinal numbers in the middle of the range are never filled in. A newly added replica always receives a number that is not only free, but also unique to itself. For example, if there are 2 replicas named `test-0` and `test-1` and any one of them is removed, a newly added replica will still be named `test-2`.   
+
+Although such ordinal numbers cannot provide stable identity, they can provide a predictable ordering for deployments and updates, and can also be used to partition rolling updates similarly to StatefulSet ordinal numbers.
+
+#### Update Strategies
+
+The ManagedSeedSet's `.spec.updateStrategy` field allows configuring automated rolling updates for the ManagedSeeds and Shoots in a ManagedSeedSet.
+
+**Rolling Updates**
+
+The `RollingUpdate` update strategy implements automated, rolling update for the ManagedSeeds and Shoots in a ManagedSeedSet. With this strategy, the ManagedSeedSet controller will update each ManagedSeed and Shoot in the ManagedSeedSet. It will proceed from the largest number to the smallest, updating each ManagedSeed and its corresponding Shoot one at a time. It will wait until both the Shoot and the Seed of an updated ManagedSeed are Ready prior to updating its predecessor.
+
+Note that unlike a StatefulSet, an `OnDelete` update strategy is not supported.
+
+**Partitions**
+
+The `RollingUpdate` update strategy can be partitioned, by specifying a `.spec.updateStrategy.rollingUpdate.partition`. If a partition is specified, only ManagedSeeds and Shoots with ordinals greater than or equal to the partition will be updated when any of the ManagedSeedSet's templates is updated. All remaining ManagedSeeds and Shoots will not be updated. If a ManagedSeedSet's `.spec.updateStrategy.rollingUpdate.partition` is greater than the largest ordinal number in use by a replica, updates to its templates will not be propagated to its replicas (but newly added replicas may still use the updated templates depending on the partition value).
+
+#### Keeping Track of Revision History and Performing Rollbacks
+
+Similarly to a StatefulSet, the ManagedSedSet controller uses [ControllerRevisions](https://pkg.go.dev/k8s.io/api/apps/v1#ControllerRevision) to keep track of the revision history, and `controller-revision-hash` labels to maintain an association between a ManagedSeed or a Shoot and the concrete template revisions based on which they were created or last updated. These are used for the following purposes:
+
+* During an update, determine which replicas are still not on the latest revision and therefore should be updated.
+* Display the revision history of a ManagedSedSet via `kubectl rollout history`.
+* Roll back all ManagedSedSet replicas to a specific revision via `kubectl rollout undo`
 
 ### Scaling-in ManagedSeedSets
 
 Deleting ManagedSeeds in response to decreasing the replicas of a ManagedSeedSet deserves special attention for two reasons:
 
 * A seed that is already in use by shoots cannot be deleted, unless the shoots are either deleted or moved to other seeds first.
-* When there are more empty seeds than requested for deletion, determining which seeds to delete might not be as straightforward as with pods or nodes, if the seeds are based on different versions of the template and therefore not completely identical.
+* When there are more empty seeds than requested for deletion, determining which seeds to delete might not be as straightforward as with pods or nodes.
 
 The above challenges could be addressed as follows:
 
