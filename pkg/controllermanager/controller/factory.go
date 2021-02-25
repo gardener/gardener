@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -38,12 +39,20 @@ import (
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
+	"github.com/gardener/gardener/pkg/utils"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	kubeinformers "k8s.io/client-go/informers"
+	kubecorev1informers "k8s.io/client-go/informers/core/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GardenControllerFactory contains information relevant to controllers for the Garden API group.
@@ -66,8 +75,36 @@ func NewGardenControllerFactory(clientMap clientmap.ClientMap, gardenCoreInforme
 	}
 }
 
+var (
+	noControlPlaneSecrets = utils.MustNewRequirement(
+		v1beta1constants.GardenRole,
+		selection.NotIn,
+		v1beta1constants.ControlPlaneSecretRoles...,
+	)
+
+	// uncontrolledSecretSelector is a selector for objects which are managed by operators/users and not created Gardener controllers.
+	uncontrolledSecretSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(noControlPlaneSecrets)}
+)
+
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenControllerFactory) Run(ctx context.Context) error {
+	if err := f.clientMap.Start(ctx.Done()); err != nil {
+		panic(fmt.Errorf("failed to start ClientMap: %+v", err))
+	}
+
+	k8sGardenClient, err := f.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		panic(fmt.Errorf("failed to get garden client: %+v", err))
+	}
+
+	// create separate informer for configuration secrets
+	f.k8sInformers.InformerFor(&corev1.Secret{}, func(client kubernetes.Interface, sync time.Duration) cache.SharedIndexInformer {
+		secretInformer := kubecorev1informers.NewFilteredSecretInformer(client, metav1.NamespaceAll, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, func(opts *metav1.ListOptions) {
+			opts.LabelSelector = uncontrolledSecretSelector.String()
+		})
+		return secretInformer
+	})
+
 	var (
 		// Garden core informers
 		backupBucketInformer           = f.k8sGardenCoreInformers.Core().V1beta1().BackupBuckets().Informer()
@@ -89,15 +126,6 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		roleBindingInformer = f.k8sInformers.Rbac().V1().RoleBindings().Informer()
 		leaseInformer       = f.k8sInformers.Coordination().V1().Leases().Informer()
 	)
-
-	if err := f.clientMap.Start(ctx.Done()); err != nil {
-		panic(fmt.Errorf("failed to start ClientMap: %+v", err))
-	}
-
-	k8sGardenClient, err := f.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		panic(fmt.Errorf("failed to get garden client: %+v", err))
-	}
 
 	f.k8sGardenCoreInformers.Start(ctx.Done())
 	if !cache.WaitForCacheSync(ctx.Done(), backupBucketInformer.HasSynced, backupEntryInformer.HasSynced, controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, plantInformer.HasSynced, cloudProfileInformer.HasSynced, secretBindingInformer.HasSynced, quotaInformer.HasSynced, projectInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {

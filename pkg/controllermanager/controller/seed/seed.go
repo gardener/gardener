@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
-
 	"github.com/prometheus/client_golang/prometheus"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
@@ -40,17 +39,20 @@ type Controller struct {
 	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
-	config   *config.ControllerManagerConfiguration
-	control  ControlInterface
-	recorder record.EventRecorder
+	config *config.ControllerManagerConfiguration
 
+	seedReconciler       reconcile.Reconciler
+	lifeCycleReconciler  reconcile.Reconciler
 	seedBackupReconciler reconcile.Reconciler
+
+	recorder record.EventRecorder
 
 	backupBucketLister    gardencorelisters.BackupBucketLister
 	seedBackupBucketQueue workqueue.RateLimitingInterface
 
-	seedLister gardencorelisters.SeedLister
-	seedQueue  workqueue.RateLimitingInterface
+	seedLister         gardencorelisters.SeedLister
+	seedQueue          workqueue.RateLimitingInterface
+	seedLifecycleQueue workqueue.RateLimitingInterface
 
 	shootLister gardencorelisters.ShootLister
 
@@ -61,7 +63,7 @@ type Controller struct {
 
 // NewSeedController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <gardenInformerFactory>, and a <recorder> for
-// event recording. It creates a new Gardener controller.
+// event recording. It creates a new Seed controller.
 func NewSeedController(
 	clientMap clientmap.ClientMap,
 	gardenInformerFactory gardencoreinformers.SharedInformerFactory,
@@ -83,19 +85,24 @@ func NewSeedController(
 
 		leaseInformer = kubeInformerFactory.Coordination().V1().Leases()
 		leaseLister   = leaseInformer.Lister()
+
+		secretInformer = kubeInformerFactory.Core().V1().Secrets()
+		secretLister   = kubeInformerFactory.Core().V1().Secrets().Lister()
 	)
 
 	seedController := &Controller{
 		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenInformerFactory,
 		config:                 config,
-		control:                NewDefaultControl(clientMap, leaseLister, shootLister, config),
+		seedReconciler:         NewDefaultControl(clientMap, secretLister, seedLister),
+		lifeCycleReconciler:    NewLifecycleDefaultControl(clientMap, leaseLister, seedLister, shootLister, config),
 		recorder:               recorder,
 		seedBackupReconciler:   NewDefaultBackupBucketControl(clientMap, backupBucketLister, seedLister),
 		backupBucketLister:     backupBucketLister,
 		seedBackupBucketQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Backup Bucket"),
 		seedLister:             seedLister,
 		shootLister:            shootLister,
+		seedLifecycleQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
 		seedQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed"),
 		workerCh:               make(chan int),
 	}
@@ -106,7 +113,20 @@ func NewSeedController(
 	})
 
 	seedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: seedController.seedLifecycleAdd,
+	})
+
+	seedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: seedController.seedAdd,
+	})
+
+	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: filterGardenSecret,
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc:    seedController.gardenSecretAdd,
+			UpdateFunc: seedController.gardenSecretUpdate,
+			DeleteFunc: seedController.gardenSecretDelete,
+		},
 	})
 
 	seedController.hasSyncedFuncs = []cache.InformerSynced{
@@ -114,6 +134,7 @@ func NewSeedController(
 		seedInformer.Informer().HasSynced,
 		shootInformer.Informer().HasSynced,
 		leaseInformer.Informer().HasSynced,
+		secretInformer.Informer().HasSynced,
 	}
 
 	return seedController
@@ -121,8 +142,6 @@ func NewSeedController(
 
 // Run runs the Controller until the given stop channel can be read from.
 func (c *Controller) Run(ctx context.Context, workers int) {
-	var waitGroup sync.WaitGroup
-
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
@@ -138,8 +157,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	logger.Logger.Info("Seed controller initialized.")
 
+	var waitGroup sync.WaitGroup
 	for i := 0; i < workers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.seedQueue, "Seed", c.reconcileSeedKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.seedReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedLifecycleQueue, "Seed Lifecycle", c.lifeCycleReconciler, &waitGroup, c.workerCh)
 		controllerutils.CreateWorker(ctx, c.seedBackupBucketQueue, "Seed Backup Bucket", c.seedBackupReconciler, &waitGroup, c.workerCh)
 	}
 
@@ -147,6 +168,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	<-ctx.Done()
 	c.seedQueue.ShutDown()
 	c.seedBackupBucketQueue.ShutDown()
+	c.seedLifecycleQueue.ShutDown()
 
 	for {
 		if c.seedQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
@@ -173,4 +195,12 @@ func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
 		return
 	}
 	ch <- metric
+}
+
+func reconcileAfter(d time.Duration) (reconcile.Result, error) {
+	return reconcile.Result{RequeueAfter: d}, nil
+}
+
+func reconcileResult(err error) (reconcile.Result, error) {
+	return reconcile.Result{}, err
 }

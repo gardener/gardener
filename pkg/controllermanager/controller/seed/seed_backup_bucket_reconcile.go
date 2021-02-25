@@ -87,15 +87,15 @@ func (b *backupBucketReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			logger.Logger.Debugf("[BACKUPBUCKET SEED RECONCILE] %s - skipping because Seed has been deleted", req.NamespacedName)
-			return reconcile.Result{}, nil
+			return reconcileResult(nil)
 		}
 		logger.Logger.Infof("[BACKUPBUCKET SEED RECONCILE] %s - unable to retrieve seed object from store: %v", req.NamespacedName, err)
-		return reconcile.Result{}, err
+		return reconcileResult(err)
 	}
 
 	bbs, err := b.backupBucketLister.List(labels.Everything())
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcileResult(err)
 	}
 
 	conditionBackupBucketsReady := gardencorev1beta1helper.GetOrInitCondition(seed.Status.Conditions, gardencorev1beta1.SeedBackupBucketsReady)
@@ -120,7 +120,7 @@ func (b *backupBucketReconciler) Reconcile(ctx context.Context, req reconcile.Re
 
 	gardenClient, err := b.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcileResult(err)
 	}
 
 	switch {
@@ -132,21 +132,21 @@ func (b *backupBucketReconciler) Reconcile(ctx context.Context, req reconcile.Re
 
 		if updateErr := patchSeedCondition(ctx, gardenClient.GardenCore(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
 			gardencorev1beta1.ConditionFalse, "BackupBucketsError", errorMsg)); updateErr != nil {
-			return reconcile.Result{}, updateErr
+			return reconcileResult(updateErr)
 		}
 	case bbCount > 0:
 		if updateErr := patchSeedCondition(ctx, gardenClient.GardenCore(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
 			gardencorev1beta1.ConditionTrue, "BackupBucketsAvailable", "Backup Buckets are available.")); updateErr != nil {
-			return reconcile.Result{}, updateErr
+			return reconcileResult(updateErr)
 		}
 	case bbCount == 0:
 		if updateErr := patchSeedCondition(ctx, gardenClient.GardenCore(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
 			gardencorev1beta1.ConditionUnknown, "BackupBucketsGone", "Backup Buckets are gone.")); updateErr != nil {
-			return reconcile.Result{}, updateErr
+			return reconcileResult(updateErr)
 		}
 	}
 
-	return reconcile.Result{}, nil
+	return reconcileResult(nil)
 }
 
 func patchSeedCondition(ctx context.Context, gardenClientSet gardencoreclientset.Interface, seed *gardencorev1beta1.Seed, condition gardencorev1beta1.Condition) error {

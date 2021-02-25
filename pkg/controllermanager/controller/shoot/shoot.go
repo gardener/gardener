@@ -34,7 +34,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -65,7 +64,6 @@ type Controller struct {
 	configMapQueue        workqueue.RateLimitingInterface
 
 	hasSyncedFuncs []cache.InformerSynced
-	startFuncs     []func(<-chan struct{})
 
 	shootRefReconciler reconcile.Reconciler
 
@@ -85,6 +83,9 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 
 		configMapInformer = corev1Informer.ConfigMaps()
 		configMapLister   = configMapInformer.Lister()
+
+		secretInformer = corev1Informer.Secrets()
+		secretLister   = secretInformer.Lister()
 	)
 
 	shootController := &Controller{
@@ -162,19 +163,13 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 	// If cache is not enabled, set up a dedicated informer which only considers objects which are not gardener managed.
 	// Large gardener environments hold many secrets and with a proper cache we can compensate the load the controller puts on the API server.
 	if !controllermanagerfeatures.FeatureGate.Enabled(features.CachedRuntimeClients) {
-		factory := kubeinformers.NewSharedInformerFactoryWithOptions(gardenClient.Kubernetes(), 0,
-			kubeinformers.WithTweakListOptions(func(opts *metav1.ListOptions) {
-				opts.LabelSelector = UserManagedSelector.String()
-			}))
-		secretInformer := factory.Core().V1().Secrets()
-
 		runtimeSecretLister = func(ctx context.Context, secretList *corev1.SecretList, opts ...client.ListOption) error {
 			listOpts := &client.ListOptions{}
 			for _, opt := range opts {
 				opt.ApplyToList(listOpts)
 			}
 
-			secrets, err := secretInformer.Lister().Secrets(listOpts.Namespace).List(listOpts.LabelSelector)
+			secrets, err := secretLister.Secrets(listOpts.Namespace).List(listOpts.LabelSelector)
 			if err != nil {
 				return err
 			}
@@ -184,9 +179,7 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 
 			return nil
 		}
-
 		shootController.hasSyncedFuncs = append(shootController.hasSyncedFuncs, secretInformer.Informer().HasSynced)
-		shootController.startFuncs = append(shootController.startFuncs, factory.Start)
 	}
 
 	shootController.shootRefReconciler = NewShootReferenceReconciler(logger.Logger, clientMap, runtimeSecretLister, runtimeConfigMapLister, config.Controllers.ShootReference)
@@ -196,10 +189,6 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 
 // Run runs the Controller until the given stop channel can be read from.
 func (c *Controller) Run(ctx context.Context, shootMaintenanceWorkers, shootQuotaWorkers, shootHibernationWorkers, shootReferenceWorkers int) {
-	for _, start := range c.startFuncs {
-		start(ctx.Done())
-	}
-
 	var waitGroup sync.WaitGroup
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
