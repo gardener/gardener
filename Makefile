@@ -188,13 +188,13 @@ check:
 generate:
 	@GO111MODULE=off hack/update-protobuf.sh
 	@GO111MODULE=off hack/update-codegen.sh --parallel
-	@hack/generate-parallel.sh cmd extensions pkg plugin test
+	@hack/generate-parallel.sh cmd extensions pkg plugin landscaper test
 
 .PHONY: generate-sequential
 generate-sequential:
 	@GO111MODULE=off hack/update-protobuf.sh
 	@GO111MODULE=off hack/update-codegen.sh 
-	@hack/generate.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
+	@hack/generate.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./landscaper/... ./test/...
 
 .PHONY: generate-extensions-crds
 generate-extensions-crds:

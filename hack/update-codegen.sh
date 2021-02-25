@@ -221,6 +221,7 @@ bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh 
   --extra-peer-dirs=github.com/gardener/gardener/landscaper/gardenlet/pkg/apis/imports, github.com/gardener/gardener/pkg/gardenlet/apis/config,github.com/gardener/landscaper/apis/core/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime \
   -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
 }
+export -f landscaper_groups
 
 # Componentconfig for admission plugins
 
