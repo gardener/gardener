@@ -226,6 +226,12 @@ func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp app
 	if err := t.CheckObjectsTimestamp(ctx, strings.Split(*mrExcludeList, ",")); err != nil {
 		return err
 	}
+
+	ginkgo.By("Checking for orphaned resources...")
+	if err := t.CheckForOrphanedNonNamespacedResources(ctx); err != nil {
+		return err
+	}
+
 	return nil
 }
 
