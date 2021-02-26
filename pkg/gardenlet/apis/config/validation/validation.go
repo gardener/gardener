@@ -29,6 +29,9 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 	allErrs := field.ErrorList{}
 
 	if cfg.Controllers != nil {
+		if cfg.Controllers.BackupEntry != nil {
+			allErrs = append(allErrs, ValidateBackupEntryControllerConfiguration(cfg.Controllers.BackupEntry, fldPath.Child("controllers", "backupEntry"))...)
+		}
 		if cfg.Controllers.Shoot != nil {
 			allErrs = append(allErrs, ValidateShootControllerConfiguration(cfg.Controllers.Shoot, fldPath.Child("controllers", "shoot"))...)
 		}
@@ -126,6 +129,17 @@ func ValidateManagedSeedControllerConfiguration(cfg *config.ManagedSeedControlle
 	}
 	if cfg.SyncJitterPeriod != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(cfg.SyncJitterPeriod.Duration), fldPath.Child("syncJitterPeriod"))...)
+	}
+
+	return allErrs
+}
+
+// ValidateBackupEntryControllerConfiguration validates the BackupEntry controller configuration.
+func ValidateBackupEntryControllerConfiguration(cfg *config.BackupEntryControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(cfg.DeletionGracePeriodShootPurposes) > 0 && (cfg.DeletionGracePeriodHours == nil || *cfg.DeletionGracePeriodHours <= 0) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("deletionGracePeriodShootPurposes"), "must specify grace period hours > 0 when specifying purposes"))
 	}
 
 	return allErrs

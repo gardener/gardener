@@ -23,6 +23,8 @@ package v1alpha1
 import (
 	unsafe "unsafe"
 
+	core "github.com/gardener/gardener/pkg/apis/core"
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	config "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -355,6 +357,7 @@ func Convert_config_BackupBucketControllerConfiguration_To_v1alpha1_BackupBucket
 func autoConvert_v1alpha1_BackupEntryControllerConfiguration_To_config_BackupEntryControllerConfiguration(in *BackupEntryControllerConfiguration, out *config.BackupEntryControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.DeletionGracePeriodHours = (*int)(unsafe.Pointer(in.DeletionGracePeriodHours))
+	out.DeletionGracePeriodShootPurposes = *(*[]core.ShootPurpose)(unsafe.Pointer(&in.DeletionGracePeriodShootPurposes))
 	return nil
 }
 
@@ -366,6 +369,7 @@ func Convert_v1alpha1_BackupEntryControllerConfiguration_To_config_BackupEntryCo
 func autoConvert_config_BackupEntryControllerConfiguration_To_v1alpha1_BackupEntryControllerConfiguration(in *config.BackupEntryControllerConfiguration, out *BackupEntryControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
 	out.DeletionGracePeriodHours = (*int)(unsafe.Pointer(in.DeletionGracePeriodHours))
+	out.DeletionGracePeriodShootPurposes = *(*[]v1beta1.ShootPurpose)(unsafe.Pointer(&in.DeletionGracePeriodShootPurposes))
 	return nil
 }
 

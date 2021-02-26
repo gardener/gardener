@@ -50,6 +50,8 @@ type Values struct {
 	Namespace string
 	// Name is the name of the BackupEntry resource.
 	Name string
+	// ShootPurpose is the purpose of the shoot.
+	ShootPurpose *gardencorev1beta1.ShootPurpose
 	// OwnerReference is a reference to an owner for BackupEntry resource.
 	OwnerReference *metav1.OwnerReference
 	// SeedName is the name of the seed to which the BackupEntry shall be scheduled.
@@ -116,6 +118,9 @@ func (b *backupEntry) Deploy(ctx context.Context) error {
 	_, err := controllerutil.CreateOrUpdate(ctx, b.client, backupEntry, func() error {
 		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+		if b.values.ShootPurpose != nil {
+			metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.ShootPurpose, string(*b.values.ShootPurpose))
+		}
 
 		finalizers := sets.NewString(backupEntry.GetFinalizers()...)
 		finalizers.Insert(gardencorev1beta1.GardenerName)

@@ -167,4 +167,20 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.DNSEntryTTLSeconds).To(PointTo(Equal(int64(120))))
 		})
 	})
+
+	Describe("#SetDefaults_BackupEntryControllerConfiguration", func() {
+		var obj *BackupEntryControllerConfiguration
+
+		BeforeEach(func() {
+			obj = &BackupEntryControllerConfiguration{}
+		})
+
+		It("should default the configuration", func() {
+			SetDefaults_BackupEntryControllerConfiguration(obj)
+
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(20)))
+			Expect(obj.DeletionGracePeriodHours).To(PointTo(Equal(0)))
+			Expect(obj.DeletionGracePeriodShootPurposes).To(BeEmpty())
+		})
+	})
 })

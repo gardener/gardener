@@ -167,6 +167,8 @@ const (
 	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
 	ShootUID = "shoot.gardener.cloud/uid"
+	// ShootPurpose is a constant for the shoot purpose.
+	ShootPurpose = "shoot.gardener.cloud/purpose"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.

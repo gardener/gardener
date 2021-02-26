@@ -37,6 +37,7 @@ func (b *Botanist) DefaultCoreBackupEntry(gardenClient client.Client) component.
 		&corebackupentry.Values{
 			Namespace:         b.Shoot.Info.Namespace,
 			Name:              common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID),
+			ShootPurpose:      b.Shoot.Info.Spec.Purpose,
 			OwnerReference:    ownerRef,
 			SeedName:          pointer.StringPtr(b.Seed.Info.Name),
 			OverwriteSeedName: b.isRestorePhase(),

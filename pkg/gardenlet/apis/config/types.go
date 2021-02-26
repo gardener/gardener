@@ -142,6 +142,9 @@ type BackupEntryControllerConfiguration struct {
 	// DeletionGracePeriodHours holds the period in number of hours to delete the BackupEntry after deletion timestamp is set.
 	// If value is set to 0 then the BackupEntryController will trigger deletion immediately.
 	DeletionGracePeriodHours *int
+	// DeletionGracePeriodShootPurposes is a list of shoot purposes for which the deletion grace period applies. All
+	// BackupEntries corresponding to Shoots with different purposes will be deleted immediately.
+	DeletionGracePeriodShootPurposes []gardencore.ShootPurpose
 }
 
 // ControllerInstallationControllerConfiguration defines the configuration of the
