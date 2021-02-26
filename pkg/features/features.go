@@ -47,6 +47,7 @@ const (
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/istio.md
 	// owner @mvladev
 	// alpha: v1.5.0
+	// beta: v1.18.0
 	ManagedIstio featuregate.Feature = "ManagedIstio"
 
 	// KonnectivityTunnel enables inverting the connection direction to be shoot->seed instead of seed->shoot (only for Shoots with Kubernetes version >= 1.18).
@@ -60,6 +61,7 @@ const (
 	// See https://github.com/gardener/gardener/blob/masster/docs/proposals/08-shoot-apiserver-via-sni.md
 	// owner @mvladev
 	// alpha: v1.7.0
+	// beta: v1.18.0
 	APIServerSNI featuregate.Feature = "APIServerSNI"
 
 	// CachedRuntimeClients enables a cache in the controller-runtime clients, that Gardener uses.
