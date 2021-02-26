@@ -32,12 +32,12 @@ const (
 	Logging featuregate.Feature = "Logging"
 
 	// HVPA enables simultaneous horizontal and vertical scaling in Seed Clusters.
-	// owner @ggaurav10, @amshuman-kr
+	// owner @amshuman-kr
 	// alpha: v0.31.0
 	HVPA featuregate.Feature = "HVPA"
 
 	// HVPAForShootedSeed enables simultaneous horizontal and vertical scaling in shooted seed Clusters.
-	// owner @ggaurav10, @amshuman-kr
+	// owner @amshuman-kr
 	// alpha: v0.32.0
 	HVPAForShootedSeed featuregate.Feature = "HVPAForShootedSeed"
 
@@ -50,7 +50,7 @@ const (
 	ManagedIstio featuregate.Feature = "ManagedIstio"
 
 	// KonnectivityTunnel enables inverting the connection direction to be shoot->seed instead of seed->shoot (only for Shoots with Kubernetes version >= 1.18).
-	// owner @zanetworker
+	// owner @DockToFuture @mvladev
 	// alpha: v1.6.0
 	KonnectivityTunnel featuregate.Feature = "KonnectivityTunnel"
 
@@ -69,7 +69,7 @@ const (
 	CachedRuntimeClients featuregate.Feature = "CachedRuntimeClients"
 
 	// NodeLocalDNS enables node-local-dns cache feature.
-	// owner @zanetworker
+	// owner @DockToFuture
 	// alpha: v1.7.0
 	NodeLocalDNS featuregate.Feature = "NodeLocalDNS"
 
