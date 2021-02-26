@@ -1096,7 +1096,7 @@ func validateKubeletConfigReserved(reserved *core.KubeletConfigReserved, fldPath
 		allErrs = append(allErrs, validateResourceQuantityValue("ephemeralStorage", *reserved.EphemeralStorage, fldPath.Child("ephemeralStorage"))...)
 	}
 	if reserved.PID != nil {
-		allErrs = append(allErrs, validateResourceQuantityValue("pid", *reserved.EphemeralStorage, fldPath.Child("pid"))...)
+		allErrs = append(allErrs, validateResourceQuantityValue("pid", *reserved.PID, fldPath.Child("pid"))...)
 	}
 	return allErrs
 }
