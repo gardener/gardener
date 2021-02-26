@@ -16,6 +16,8 @@ package graph
 
 import (
 	"context"
+	"fmt"
+	"sync"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -24,6 +26,8 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/matchers"
+	gomegatypes "github.com/onsi/gomega/types"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -641,4 +645,456 @@ var _ = Describe("graph", func() {
 		Expect(graph.graph.Edges().Len()).To(BeZero())
 		Expect(graph.HasPathFrom(VertexTypeShootState, shootState1.Namespace, shootState1.Name, VertexTypeShoot, shootState1.Namespace, shootState1.Name)).To(BeFalse())
 	})
+
+	It("should behave as expected with more objects modified in parallel", func() {
+		var (
+			nodes, edges int
+			paths        = make(map[VertexType][]pathExpectation)
+			wg           sync.WaitGroup
+			lock         sync.Mutex
+		)
+
+		By("creating objects")
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerSeed.Add(seed1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes+3, edges+2
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerShoot.Add(shoot1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes+8, edges+8
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecretBinding, shoot1.Namespace, shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeConfigMap, shoot1.Namespace, shoot1AuditPolicyConfigMapRef.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider1.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider2.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, shoot1Resource2.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerProject.Add(project1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes+2, edges+1
+			paths[VertexTypeProject] = append(paths[VertexTypeProject], pathExpectation{VertexTypeProject, "", project1.Name, VertexTypeNamespace, "", *project1.Spec.Namespace, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerBackupBucket.Add(backupBucket1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes+2, edges+2
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1SecretRef.Namespace, backupBucket1SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeTrue()})
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerBackupEntry.Add(backupEntry1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes+1, edges+2
+			paths[VertexTypeBackupEntry] = append(paths[VertexTypeBackupEntry], pathExpectation{VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeBackupBucket, "", backupEntry1.Spec.BucketName, BeTrue()})
+			paths[VertexTypeBackupEntry] = append(paths[VertexTypeBackupEntry], pathExpectation{VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeSeed, "", *backupEntry1.Spec.SeedName, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerSecretBinding.Add(secretBinding1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes+2, edges+1
+			paths[VertexTypeSecretBinding] = append(paths[VertexTypeSecretBinding], pathExpectation{VertexTypeSecret, secretBinding1.SecretRef.Namespace, secretBinding1.SecretRef.Name, VertexTypeSecretBinding, secretBinding1.Namespace, secretBinding1.Name, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerControllerInstallation.Add(controllerInstallation1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes+2, edges+2
+			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name, BeTrue()})
+			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerManagedSeed.Add(managedSeed1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes+2, edges+1
+			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerShootState.Add(shootState1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes+2, edges+1
+			paths[VertexTypeShootState] = append(paths[VertexTypeShootState], pathExpectation{VertexTypeShootState, shootState1.Namespace, shootState1.Name, VertexTypeShoot, shootState1.Namespace, shootState1.Name, BeTrue()})
+		}()
+		wg.Wait()
+		Expect(graph.graph.Nodes().Len()).To(Equal(nodes))
+		Expect(graph.graph.Edges().Len()).To(Equal(edges))
+		expectPaths(graph, edges, paths)
+
+		By("updating some objects (1)")
+		paths = make(map[VertexType][]pathExpectation)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			seed1Copy := seed1.DeepCopy()
+			seed1.Spec.Provider.Type = "providertype"
+			fakeInformerSeed.Update(seed1Copy, seed1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			shoot1Copy := shoot1.DeepCopy()
+			shoot1.Spec.CloudProfileName = "foo"
+			fakeInformerShoot.Update(shoot1Copy, shoot1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeCloudProfile, "", shoot1Copy.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeFalse()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecretBinding, shoot1.Namespace, shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeConfigMap, shoot1.Namespace, shoot1AuditPolicyConfigMapRef.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider1.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider2.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, shoot1Resource2.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			project1Copy := project1.DeepCopy()
+			project1.Spec.Namespace = pointer.StringPtr("newnamespace")
+			fakeInformerProject.Update(project1Copy, project1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeProject] = append(paths[VertexTypeProject], pathExpectation{VertexTypeProject, "", project1.Name, VertexTypeNamespace, "", *project1Copy.Spec.Namespace, BeFalse()})
+			paths[VertexTypeProject] = append(paths[VertexTypeProject], pathExpectation{VertexTypeProject, "", project1.Name, VertexTypeNamespace, "", *project1.Spec.Namespace, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			backupBucket1Copy := backupBucket1.DeepCopy()
+			backupBucket1.Spec.SecretRef = corev1.SecretReference{Namespace: "newsecretrefnamespace", Name: "newsecretrefname"}
+			fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1Copy.Spec.SecretRef.Namespace, backupBucket1Copy.Spec.SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeFalse()})
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1.Spec.SecretRef.Namespace, backupBucket1.Spec.SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeTrue()})
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			backupEntry1Copy := backupEntry1.DeepCopy()
+			backupEntry1.Spec.SeedName = pointer.StringPtr("newbbseed")
+			fakeInformerBackupEntry.Update(backupEntry1Copy, backupEntry1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes = nodes + 1
+			paths[VertexTypeBackupEntry] = append(paths[VertexTypeBackupEntry], pathExpectation{VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeBackupBucket, "", backupEntry1.Spec.BucketName, BeTrue()})
+			paths[VertexTypeBackupEntry] = append(paths[VertexTypeBackupEntry], pathExpectation{VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeSeed, "", *backupEntry1Copy.Spec.SeedName, BeTrue()})
+			paths[VertexTypeBackupEntry] = append(paths[VertexTypeBackupEntry], pathExpectation{VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeSeed, "", *backupEntry1.Spec.SeedName, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			secretBinding1Copy := secretBinding1.DeepCopy()
+			secretBinding1.Quotas = []corev1.ObjectReference{{}, {}, {}}
+			fakeInformerSecretBinding.Update(secretBinding1Copy, secretBinding1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeSecretBinding] = append(paths[VertexTypeSecretBinding], pathExpectation{VertexTypeSecret, secretBinding1.SecretRef.Namespace, secretBinding1.SecretRef.Name, VertexTypeSecretBinding, secretBinding1.Namespace, secretBinding1.Name, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			controllerInstallation1Copy := controllerInstallation1.DeepCopy()
+			controllerInstallation1.Spec.RegistrationRef.Name = "newreg"
+			fakeInformerControllerInstallation.Update(controllerInstallation1Copy, controllerInstallation1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerRegistration, "", controllerInstallation1Copy.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name, BeFalse()})
+			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name, BeTrue()})
+			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			managedSeed1Copy := managedSeed1.DeepCopy()
+			managedSeed1.Spec.Shoot.Name = "newshoot"
+			fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1Copy.Spec.Shoot.Name, BeFalse()})
+			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerShootState.Delete(shootState1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes-2, edges-1
+			paths[VertexTypeShootState] = append(paths[VertexTypeShootState], pathExpectation{VertexTypeShootState, shootState1.Namespace, shootState1.Name, VertexTypeShoot, shootState1.Namespace, shootState1.Name, BeFalse()})
+		}()
+		wg.Wait()
+		Expect(graph.graph.Nodes().Len()).To(Equal(nodes), "node count")
+		Expect(graph.graph.Edges().Len()).To(Equal(edges), "edge count")
+		expectPaths(graph, edges, paths)
+
+		By("updating some objects (2)")
+		paths = make(map[VertexType][]pathExpectation)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			seed1Copy := seed1.DeepCopy()
+			seed1.Spec.Backup = nil
+			fakeInformerSeed.Update(seed1Copy, seed1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes-1, edges-1
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			shoot1Copy := shoot1.DeepCopy()
+			shoot1.Spec.Kubernetes.KubeAPIServer = nil
+			fakeInformerShoot.Update(shoot1Copy, shoot1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes-1, edges-1
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecretBinding, shoot1.Namespace, shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeConfigMap, shoot1.Namespace, shoot1AuditPolicyConfigMapRef.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeFalse()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider1.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider2.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, shoot1Resource2.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeTrue()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			project1Copy := project1.DeepCopy()
+			project1.Spec.Purpose = pointer.StringPtr("purpose")
+			fakeInformerProject.Update(project1Copy, project1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeProject] = append(paths[VertexTypeProject], pathExpectation{VertexTypeProject, "", project1.Name, VertexTypeNamespace, "", *project1.Spec.Namespace, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			backupBucket1Copy := backupBucket1.DeepCopy()
+			backupBucket1.Spec.SeedName = pointer.StringPtr("newbbseed")
+			fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1.Spec.SecretRef.Namespace, backupBucket1.Spec.SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeTrue()})
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1Copy.Spec.SeedName, BeFalse()})
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			backupEntry1Copy := backupEntry1.DeepCopy()
+			backupEntry1.Spec.BucketName = "newbebucket"
+			fakeInformerBackupEntry.Update(backupEntry1Copy, backupEntry1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes = nodes + 1
+			paths[VertexTypeBackupEntry] = append(paths[VertexTypeBackupEntry], pathExpectation{VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeBackupBucket, "", backupEntry1Copy.Spec.BucketName, BeFalse()})
+			paths[VertexTypeBackupEntry] = append(paths[VertexTypeBackupEntry], pathExpectation{VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeBackupBucket, "", backupEntry1.Spec.BucketName, BeTrue()})
+			paths[VertexTypeBackupEntry] = append(paths[VertexTypeBackupEntry], pathExpectation{VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeSeed, "", *backupEntry1.Spec.SeedName, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			secretBinding1Copy := secretBinding1.DeepCopy()
+			secretBinding1.SecretRef = corev1.SecretReference{Namespace: "new-sb-secret-namespace", Name: "new-sb-secret-name"}
+			fakeInformerSecretBinding.Update(secretBinding1Copy, secretBinding1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeSecretBinding] = append(paths[VertexTypeSecretBinding], pathExpectation{VertexTypeSecret, secretBinding1Copy.SecretRef.Namespace, secretBinding1Copy.SecretRef.Name, VertexTypeSecretBinding, secretBinding1.Namespace, secretBinding1.Name, BeFalse()})
+			paths[VertexTypeSecretBinding] = append(paths[VertexTypeSecretBinding], pathExpectation{VertexTypeSecret, secretBinding1.SecretRef.Namespace, secretBinding1.SecretRef.Name, VertexTypeSecretBinding, secretBinding1.Namespace, secretBinding1.Name, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			controllerInstallation1Copy := controllerInstallation1.DeepCopy()
+			controllerInstallation1.Spec.RegistrationRef.ResourceVersion = "123"
+			fakeInformerControllerInstallation.Update(controllerInstallation1Copy, controllerInstallation1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name, BeTrue()})
+			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			managedSeed1Copy := managedSeed1.DeepCopy()
+			managedSeed1.Spec.Gardenlet = &seedmanagementv1alpha1.Gardenlet{}
+			fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerShootState.Add(shootState1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes+2, edges+1
+			paths[VertexTypeShootState] = append(paths[VertexTypeShootState], pathExpectation{VertexTypeShootState, shootState1.Namespace, shootState1.Name, VertexTypeShoot, shootState1.Namespace, shootState1.Name, BeTrue()})
+		}()
+		wg.Wait()
+		Expect(graph.graph.Nodes().Len()).To(Equal(nodes), "node count")
+		Expect(graph.graph.Edges().Len()).To(Equal(edges), "edge count")
+		expectPaths(graph, edges, paths)
+
+		By("deleting all objects")
+		paths = make(map[VertexType][]pathExpectation)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerSeed.Delete(seed1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerShoot.Delete(shoot1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeNamespace, "", shoot1.Namespace, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeFalse()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeCloudProfile, "", shoot1.Spec.CloudProfileName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeFalse()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecretBinding, shoot1.Namespace, shoot1.Spec.SecretBindingName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeFalse()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeConfigMap, shoot1.Namespace, shoot1AuditPolicyConfigMapRef.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeFalse()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider1.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeFalse()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, *shoot1DNSProvider2.SecretName, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeFalse()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeSecret, shoot1.Namespace, shoot1Resource2.Name, VertexTypeShoot, shoot1.Namespace, shoot1.Name, BeFalse()})
+			paths[VertexTypeShoot] = append(paths[VertexTypeShoot], pathExpectation{VertexTypeShoot, shoot1.Namespace, shoot1.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerProject.Delete(project1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeProject] = append(paths[VertexTypeProject], pathExpectation{VertexTypeProject, "", project1.Name, VertexTypeNamespace, "", *project1.Spec.Namespace, BeFalse()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerBackupBucket.Delete(backupBucket1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeSecret, backupBucket1SecretRef.Namespace, backupBucket1SecretRef.Name, VertexTypeBackupBucket, "", backupBucket1.Name, BeFalse()})
+			paths[VertexTypeBackupBucket] = append(paths[VertexTypeBackupBucket], pathExpectation{VertexTypeBackupBucket, "", backupBucket1.Name, VertexTypeSeed, "", *backupBucket1.Spec.SeedName, BeFalse()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerBackupEntry.Delete(backupEntry1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeBackupEntry] = append(paths[VertexTypeBackupEntry], pathExpectation{VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeBackupBucket, "", backupEntry1.Spec.BucketName, BeFalse()})
+			paths[VertexTypeBackupEntry] = append(paths[VertexTypeBackupEntry], pathExpectation{VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeSeed, "", *backupEntry1.Spec.SeedName, BeFalse()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerSecretBinding.Delete(secretBinding1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeSecretBinding] = append(paths[VertexTypeSecretBinding], pathExpectation{VertexTypeSecret, secretBinding1.SecretRef.Namespace, secretBinding1.SecretRef.Name, VertexTypeSecretBinding, secretBinding1.Namespace, secretBinding1.Name, BeFalse()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerControllerInstallation.Delete(controllerInstallation1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name, BeFalse()})
+			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name, BeFalse()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerManagedSeed.Delete(managedSeed1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name, BeFalse()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerShootState.Delete(shootState1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeShootState] = append(paths[VertexTypeShootState], pathExpectation{VertexTypeShootState, shootState1.Namespace, shootState1.Name, VertexTypeShoot, shootState1.Namespace, shootState1.Name, BeFalse()})
+		}()
+		wg.Wait()
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		expectPaths(graph, 0, paths)
+	})
 })
+
+type pathExpectation struct {
+	fromType      VertexType
+	fromNamespace string
+	fromName      string
+	toType        VertexType
+	toNamespace   string
+	toName        string
+	matcher       gomegatypes.GomegaMatcher
+}
+
+func expectPaths(graph *graph, edges int, paths map[VertexType][]pathExpectation) {
+	var pathsCount int
+
+	for vertexType, expectation := range paths {
+		By("validating path expectations for " + vertexTypes[vertexType])
+		for _, p := range expectation {
+			switch p.matcher.(type) {
+			case *matchers.BeTrueMatcher:
+				pathsCount++
+			}
+
+			Expect(graph.HasPathFrom(p.fromType, p.fromNamespace, p.fromName, p.toType, p.toNamespace, p.toName)).To(p.matcher, fmt.Sprintf("path expectation from %s:%s/%s to %s:%s/%s", vertexTypes[p.fromType], p.fromNamespace, p.fromName, vertexTypes[p.toType], p.toNamespace, p.toName))
+		}
+	}
+
+	Expect(pathsCount).To(BeNumerically(">=", edges), "paths equals edges")
+}
