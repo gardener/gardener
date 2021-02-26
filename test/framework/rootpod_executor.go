@@ -15,12 +15,12 @@
 package framework
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/mock/go/context"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"

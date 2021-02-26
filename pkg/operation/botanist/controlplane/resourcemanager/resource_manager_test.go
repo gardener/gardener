@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -276,7 +275,7 @@ var _ = Describe("ResourceManager", func() {
 		}
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      constants.DeploymentNameGardenerResourceManager,
+				Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
 				Namespace: deployNamespace,
 				Labels:    defaultLabels,
 			},

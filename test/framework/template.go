@@ -16,12 +16,12 @@ package framework
 
 import (
 	"bytes"
+	"context"
 	"html/template"
 	"os"
 	"path/filepath"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/mock/go/context"
 	"github.com/pkg/errors"
 )
 
