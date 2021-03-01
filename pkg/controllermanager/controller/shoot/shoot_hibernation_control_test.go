@@ -18,15 +18,15 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	mockgardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned/mock"
+	mockgardencorev1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1/mock"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
+	mockshoot "github.com/gardener/gardener/pkg/controllermanager/controller/shoot/mock"
 	"github.com/gardener/gardener/pkg/logger"
 	mockevent "github.com/gardener/gardener/pkg/mock/client-go/tools/record"
-	mockgardencore "github.com/gardener/gardener/pkg/mock/gardener/client/core/clientset/versioned"
-	mockgardencorev1beta1 "github.com/gardener/gardener/pkg/mock/gardener/client/core/clientset/versioned/typed/core/v1beta1"
-	mockshoot "github.com/gardener/gardener/pkg/mock/gardener/controllermanager/controller/shoot"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/utils/test"
 

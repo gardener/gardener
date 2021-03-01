@@ -21,10 +21,10 @@ import (
 
 	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mockutilclient "github.com/gardener/gardener/pkg/mock/gardener/utils/kubernetes/client"
-	mocktime "github.com/gardener/gardener/pkg/mock/gardener/utils/time"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
+	mockutilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client/mock"
+	mocktime "github.com/gardener/gardener/pkg/utils/time/mock"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"

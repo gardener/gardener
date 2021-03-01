@@ -20,9 +20,9 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockcomponent "github.com/gardener/gardener/pkg/mock/gardener/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	mockcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 
 	"github.com/golang/mock/gomock"

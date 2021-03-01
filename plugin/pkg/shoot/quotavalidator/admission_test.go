@@ -21,8 +21,8 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	"github.com/gardener/gardener/pkg/logger"
-	mocktime "github.com/gardener/gardener/pkg/mock/gardener/utils/time"
 	"github.com/gardener/gardener/pkg/operation/common"
+	mocktime "github.com/gardener/gardener/pkg/utils/time/mock"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 
 	"github.com/golang/mock/gomock"

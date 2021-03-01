@@ -19,13 +19,13 @@ import (
 	"encoding/json"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	mockgardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned/mock"
+	mockgardencorev1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1/mock"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
-	mockgardencore "github.com/gardener/gardener/pkg/mock/gardener/client/core/clientset/versioned"
-	mockgardencorev1beta1 "github.com/gardener/gardener/pkg/mock/gardener/client/core/clientset/versioned/typed/core/v1beta1"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"

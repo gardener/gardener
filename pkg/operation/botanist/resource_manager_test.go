@@ -19,13 +19,13 @@ import (
 	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mockkubernetes "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
-	mockresourcemanager "github.com/gardener/gardener/pkg/mock/gardener/operation/botanist/controlplane/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/resourcemanager"
+	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/controlplane/resourcemanager/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 
 	"github.com/golang/mock/gomock"

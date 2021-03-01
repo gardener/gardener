@@ -22,8 +22,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	mockcomponent "github.com/gardener/gardener/pkg/mock/gardener/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component"
+	mockcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/mock"
 )
 
 var _ = Describe("Helper functions", func() {

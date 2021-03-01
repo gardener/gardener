@@ -20,16 +20,16 @@ import (
 	"testing"
 	"time"
 
-	mockutilcontext "github.com/gardener/gardener/pkg/mock/gardener/utils/context"
-	mockretry "github.com/gardener/gardener/pkg/mock/gardener/utils/retry"
-	mockcontext "github.com/gardener/gardener/pkg/mock/go/context"
-	. "github.com/gardener/gardener/pkg/utils/retry"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+
+	mockcontext "github.com/gardener/gardener/pkg/mock/go/context"
+	mockutilcontext "github.com/gardener/gardener/pkg/utils/context/mock"
+	. "github.com/gardener/gardener/pkg/utils/retry"
+	mockretry "github.com/gardener/gardener/pkg/utils/retry/mock"
 )
 
 func TestRetry(t *testing.T) {

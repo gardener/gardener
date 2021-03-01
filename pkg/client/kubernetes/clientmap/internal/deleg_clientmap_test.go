@@ -21,7 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	mockclientmap "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes/clientmap"
+	mockclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/mock"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"

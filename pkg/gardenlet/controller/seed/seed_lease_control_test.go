@@ -25,10 +25,10 @@ import (
 	gardencorev1beta1lister "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	mock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	mockrest "github.com/gardener/gardener/pkg/mock/client-go/rest"
-	mock "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
 	mockio "github.com/gardener/gardener/pkg/mock/go/io"
 
 	"github.com/golang/mock/gomock"

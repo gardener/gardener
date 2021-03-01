@@ -19,11 +19,11 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	mockmanagedseed "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed/mock"
 	gardenerlogger "github.com/gardener/gardener/pkg/logger"
 	mockrecord "github.com/gardener/gardener/pkg/mock/client-go/tools/record"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mockkubernetes "github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
-	mockmanagedseed "github.com/gardener/gardener/pkg/mock/gardener/gardenlet/controller/managedseed"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
