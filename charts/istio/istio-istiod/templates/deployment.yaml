@@ -22,6 +22,7 @@ spec:
         sidecar.istio.io/inject: "false"
         checksum/istio-config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
+      replicas: 2
       serviceAccountName: istiod
       securityContext:
         fsGroup: 1337
@@ -96,7 +97,7 @@ spec:
         resources:
           requests:
             cpu: 250m
-            memory: 128Mi
+            memory: 256Mi
           limits:
             cpu: 1000m
             memory: 2048Mi
