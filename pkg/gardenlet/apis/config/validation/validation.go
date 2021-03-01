@@ -17,10 +17,12 @@ package validation
 import (
 	"fmt"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -134,12 +136,26 @@ func ValidateManagedSeedControllerConfiguration(cfg *config.ManagedSeedControlle
 	return allErrs
 }
 
+var availableShootPurposes = sets.NewString(
+	string(gardencore.ShootPurposeEvaluation),
+	string(gardencore.ShootPurposeTesting),
+	string(gardencore.ShootPurposeDevelopment),
+	string(gardencore.ShootPurposeInfrastructure),
+	string(gardencore.ShootPurposeProduction),
+)
+
 // ValidateBackupEntryControllerConfiguration validates the BackupEntry controller configuration.
 func ValidateBackupEntryControllerConfiguration(cfg *config.BackupEntryControllerConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(cfg.DeletionGracePeriodShootPurposes) > 0 && (cfg.DeletionGracePeriodHours == nil || *cfg.DeletionGracePeriodHours <= 0) {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("deletionGracePeriodShootPurposes"), "must specify grace period hours > 0 when specifying purposes"))
+	}
+
+	for i, purpose := range cfg.DeletionGracePeriodShootPurposes {
+		if !availableShootPurposes.Has(string(purpose)) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("deletionGracePeriodShootPurposes").Index(i), purpose, availableShootPurposes.List()))
+		}
 	}
 
 	return allErrs
