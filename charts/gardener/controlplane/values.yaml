@@ -372,6 +372,7 @@ global:
         shootMaintenance:
           concurrentSyncs: 5
           enableShootControlPlaneRestarter: true
+          enableShootCoreAddonRestarter: true
         shootQuota:
           concurrentSyncs: 5
           syncPeriod: 60m

@@ -268,6 +268,9 @@ const (
 	// ShootTaskRestartControlPlanePods is a name for a Shoot task which is dedicated to restart related control plane pods.
 	ShootTaskRestartControlPlanePods = "restartControlPlanePods"
 
+	// ShootTaskRestartCoreAddons is a name for a Shoot task which is dedicated to restart some core addons.
+	ShootTaskRestartCoreAddons = "restartCoreAddons"
+
 	// ShootOperationRetry is a constant for an annotation on a Shoot indicating that a failed Shoot reconciliation shall be retried.
 	ShootOperationRetry = "retry"
 

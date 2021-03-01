@@ -17,6 +17,7 @@ images:
    coredns: image-repository:image-tag
 deployment:
   spec:
+    podAnnotations: {}
     containers:
       imagePullPolicy: IfNotPresent
       resources:

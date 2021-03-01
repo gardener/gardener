@@ -12,7 +12,7 @@ spec:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       k8s-app: kube-dns
@@ -20,6 +20,9 @@ spec:
     metadata:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
+        {{- if .Values.deployment.spec.podAnnotations }}
+{{ toYaml .Values.deployment.spec.podAnnotations | indent 8 }}
+        {{- end }}
       labels:
         origin: gardener
         gardener.cloud/role: system-component
@@ -101,6 +104,7 @@ spec:
             path: /ready
             port: 8181
             scheme: HTTP
+          initialDelaySeconds: 5
       dnsPolicy: Default
       volumes:
         - name: config-volume

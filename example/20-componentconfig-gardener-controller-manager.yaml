@@ -16,6 +16,7 @@ controllers:
   shootMaintenance:
     concurrentSyncs: 5
   # enableShootControlPlaneRestarter: true
+  # enableShootCoreAddonRestarter: true
   shootHibernation:
     concurrentSyncs: 5
   shootQuota:
