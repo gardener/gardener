@@ -21,11 +21,11 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencorefake "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
 	mockdiscovery "github.com/gardener/gardener/pkg/mock/client-go/discovery"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/mock/gardener/client/kubernetes"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -54,7 +54,7 @@ var _ = Describe("Fake ClientSet", func() {
 	})
 
 	It("should correctly set applier attribute", func() {
-		applier := kubernetes.NewMockApplier(ctrl)
+		applier := mockkubernetes.NewMockApplier(ctrl)
 		cs := builder.WithApplier(applier).Build()
 
 		Expect(cs.Applier()).To(BeIdenticalTo(applier))
@@ -68,7 +68,7 @@ var _ = Describe("Fake ClientSet", func() {
 	})
 
 	It("should correctly set chartApplier attribute", func() {
-		chartApplier := kubernetes.NewMockChartApplier(ctrl)
+		chartApplier := mockkubernetes.NewMockChartApplier(ctrl)
 		cs := builder.WithChartApplier(chartApplier).Build()
 
 		Expect(cs.ChartApplier()).To(BeIdenticalTo(chartApplier))

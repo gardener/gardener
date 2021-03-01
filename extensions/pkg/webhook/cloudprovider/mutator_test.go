@@ -20,8 +20,8 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider"
+	mockcloudprovider "github.com/gardener/gardener/extensions/pkg/webhook/cloudprovider/mock"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	mockcloudprovider "github.com/gardener/gardener/pkg/mock/gardener/extensions/webhook/cloudprovider"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"

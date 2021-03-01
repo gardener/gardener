@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
-	mockcomponent "github.com/gardener/gardener/pkg/mock/gardener/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	mockcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/mock"
 	mockbackupentry "github.com/gardener/gardener/pkg/operation/botanist/extensions/backupentry/mock"
 	mockcontainerruntime "github.com/gardener/gardener/pkg/operation/botanist/extensions/containerruntime/mock"
 	mockcontrolplane "github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane/mock"

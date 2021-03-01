@@ -18,9 +18,9 @@ import (
 	"errors"
 	"fmt"
 
+	mockcmd "github.com/gardener/gardener/extensions/pkg/controller/cmd/mock"
+	mockcontroller "github.com/gardener/gardener/extensions/pkg/controller/mock"
 	"github.com/gardener/gardener/extensions/pkg/util/test"
-	mockcontroller "github.com/gardener/gardener/pkg/mock/gardener/extensions/controller"
-	mockcmd "github.com/gardener/gardener/pkg/mock/gardener/extensions/controller/cmd"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
