@@ -93,7 +93,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 func (r *reconciler) reconcileBackupBucket(ctx context.Context, gardenClient kubernetes.Interface, backupBucket *gardencorev1beta1.BackupBucket) (reconcile.Result, error) {
 	backupBucketLogger := logger.NewFieldLogger(logger.Logger, "backupbucket", backupBucket.Name)
 
-	if err := controllerutils.EnsureFinalizer(ctx, gardenClient.DirectClient(), backupBucket, gardencorev1beta1.GardenerName); err != nil {
+	if err := controllerutils.PatchFinalizers(ctx, gardenClient.Client(), backupBucket, gardencorev1beta1.GardenerName); err != nil {
 		backupBucketLogger.Errorf("Failed to ensure gardener finalizer on backupbucket: %+v", err)
 		return reconcile.Result{}, err
 	}
@@ -111,7 +111,7 @@ func (r *reconciler) reconcileBackupBucket(ctx context.Context, gardenClient kub
 		return reconcile.Result{}, err
 	}
 
-	if err := controllerutils.EnsureFinalizer(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+	if err := controllerutils.PatchFinalizers(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 		backupBucketLogger.Errorf("Failed to ensure external gardener finalizer on referred secret: %+v", err)
 		return reconcile.Result{}, err
 	}
@@ -215,12 +215,12 @@ func (r *reconciler) deleteBackupBucket(ctx context.Context, gardenClient kubern
 		return reconcile.Result{}, err
 	}
 
-	if err := controllerutils.RemoveFinalizer(ctx, gardenClient.DirectClient(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+	if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 		backupBucketLogger.Errorf("Failed to remove external gardener finalizer on referred secret: %+v", err)
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, controllerutils.RemoveGardenerFinalizer(ctx, gardenClient.DirectClient(), backupBucket)
+	return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), backupBucket, gardencorev1beta1.GardenerName)
 }
 
 func updateBackupBucketStatusProcessing(ctx context.Context, c client.Client, bb *gardencorev1beta1.BackupBucket, message string, progress int32) error {

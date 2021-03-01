@@ -36,6 +36,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 const (
@@ -54,6 +55,7 @@ type reconciler struct {
 	actuator Actuator
 
 	client   client.Client
+	reader   client.Reader
 	recorder record.EventRecorder
 }
 
@@ -117,7 +119,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 func (r *reconciler) reconcile(ctx context.Context, logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
 	logger.Info("Ensuring finalizer")
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, infrastructure, FinalizerName); err != nil {
+	if err := controllerutils.PatchFinalizers(ctx, r.client, infrastructure, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -188,7 +190,7 @@ func (r *reconciler) migrate(ctx context.Context, logger logr.Logger, infrastruc
 
 func (r *reconciler) restore(ctx context.Context, logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
 	logger.Info("Ensuring finalizer")
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, infrastructure, FinalizerName); err != nil {
+	if err := controllerutils.PatchFinalizers(ctx, r.client, infrastructure, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -240,7 +242,7 @@ func (r *reconciler) updateStatusSuccess(ctx context.Context, logger logr.Logger
 
 func (r *reconciler) removeFinalizerFromInfrastructure(ctx context.Context, logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure) error {
 	logger.Info("Removing finalizer")
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, infrastructure, FinalizerName); err != nil {
+	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, infrastructure, FinalizerName); err != nil {
 		msg := fmt.Sprintf("error removing finalizer from Infrastructure: %+v", err)
 		r.recorder.Eventf(infrastructure, corev1.EventTypeWarning, EventInfrastructureMigration, msg)
 		return fmt.Errorf(msg)

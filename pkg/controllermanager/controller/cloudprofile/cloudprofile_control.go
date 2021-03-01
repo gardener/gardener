@@ -136,7 +136,7 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardencorev1beta1.CloudProfi
 		if len(associatedShoots) == 0 {
 			cloudProfileLogger.Infof("No Shoots are referencing the CloudProfile. Deletion accepted.")
 
-			if err := controllerutils.RemoveGardenerFinalizer(ctx, gardenClient.DirectClient(), cloudProfile); client.IgnoreNotFound(err) != nil {
+			if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), cloudProfile, gardencorev1beta1.GardenerName); client.IgnoreNotFound(err) != nil {
 				logger.Logger.Errorf("could not remove finalizer from CloudProfile: %s", err.Error())
 				return err
 			}
@@ -150,7 +150,7 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardencorev1beta1.CloudProfi
 		return errors.New("CloudProfile still has references")
 	}
 
-	if err := controllerutils.EnsureFinalizer(ctx, gardenClient.Client(), cloudProfile, gardencorev1beta1.GardenerName); err != nil {
+	if err := controllerutils.PatchFinalizers(ctx, gardenClient.Client(), cloudProfile, gardencorev1beta1.GardenerName); err != nil {
 		logger.Logger.Errorf("could not add finalizer to CloudProfile: %s", err.Error())
 		return err
 	}

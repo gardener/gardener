@@ -44,14 +44,14 @@ func patchFinalizers(ctx context.Context, writer client.Writer, obj client.Objec
 
 // EnsureFinalizer ensures that a finalizer of the given name is set on the given object with exponential backoff.
 // If the finalizer is not set, it adds it to the list of finalizers and patches the remote object.
-// Use PatchFinalizers instead, if the controller is able to tolerate stale reads.
+// Use PatchFinalizers instead, if the controller is able to tolerate conflict errors caused by stale reads.
 func EnsureFinalizer(ctx context.Context, reader client.Reader, writer client.Writer, obj client.Object, finalizer string) error {
 	return tryPatchFinalizers(ctx, reader, writer, obj, controllerutil.AddFinalizer, finalizer)
 }
 
 // RemoveFinalizer ensures that the given finalizer is not present anymore in the given object with exponential backoff.
 // If it is set, it removes it and issues a patch.
-// Use PatchRemoveFinalizers instead, if the controller is able to tolerate stale reads.
+// Use PatchRemoveFinalizers instead, if the controller is able to tolerate conflict errors caused by stale reads.
 func RemoveFinalizer(ctx context.Context, reader client.Reader, writer client.Writer, obj client.Object, finalizer string) error {
 	return tryPatchFinalizers(ctx, reader, writer, obj, controllerutil.RemoveFinalizer, finalizer)
 }

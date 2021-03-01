@@ -36,6 +36,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 const (
@@ -54,6 +55,7 @@ type reconciler struct {
 	actuator Actuator
 
 	client   client.Client
+	reader   client.Reader
 	recorder record.EventRecorder
 }
 
@@ -115,7 +117,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *reconciler) reconcile(ctx context.Context, network *extensionsv1alpha1.Network, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, network, FinalizerName); err != nil {
+	if err := controllerutils.PatchFinalizers(ctx, r.client, network, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -136,7 +138,7 @@ func (r *reconciler) reconcile(ctx context.Context, network *extensionsv1alpha1.
 }
 
 func (r *reconciler) restore(ctx context.Context, network *extensionsv1alpha1.Network, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, network, FinalizerName); err != nil {
+	if err := controllerutils.PatchFinalizers(ctx, r.client, network, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -185,7 +187,7 @@ func (r *reconciler) delete(ctx context.Context, network *extensionsv1alpha1.Net
 	}
 
 	r.logger.Info("Removing finalizer.", "network", network.Name)
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, network, FinalizerName); err != nil {
+	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, network, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from the Network resource: %+v", err)
 	}
 

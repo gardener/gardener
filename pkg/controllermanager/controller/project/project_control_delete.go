@@ -64,7 +64,7 @@ func (c *defaultControl) delete(ctx context.Context, project *gardencorev1beta1.
 		}
 	}
 
-	return false, controllerutils.RemoveFinalizer(ctx, gardenClient.DirectClient(), project, gardencorev1beta1.GardenerName)
+	return false, controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), project, gardencorev1beta1.GardenerName)
 }
 
 // isNamespaceEmpty checks if there are no more Shoots left inside the given namespace.

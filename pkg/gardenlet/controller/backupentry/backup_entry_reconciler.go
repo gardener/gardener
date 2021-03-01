@@ -88,7 +88,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 func (r *reconciler) reconcileBackupEntry(ctx context.Context, gardenClient kubernetes.Interface, backupEntry *gardencorev1beta1.BackupEntry) (reconcile.Result, error) {
 	backupEntryLogger := logger.NewFieldLogger(logger.Logger, "backupentry", backupEntry.Name)
 
-	if err := controllerutils.EnsureFinalizer(ctx, gardenClient.DirectClient(), backupEntry, gardencorev1beta1.GardenerName); err != nil {
+	if err := controllerutils.PatchFinalizers(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.GardenerName); err != nil {
 		backupEntryLogger.Errorf("Failed to ensure gardener finalizer on backupentry: %+v", err)
 		return reconcile.Result{}, err
 	}
@@ -174,7 +174,7 @@ func (r *reconciler) deleteBackupEntry(ctx context.Context, gardenClient kuberne
 			return reconcile.Result{}, updateErr
 		}
 		backupEntryLogger.Infof("Successfully deleted backup entry %q", backupEntry.Name)
-		return reconcile.Result{}, controllerutils.RemoveGardenerFinalizer(ctx, gardenClient.DirectClient(), backupEntry)
+		return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.GardenerName)
 	}
 	if updateErr := updateBackupEntryStatusPending(ctx, gardenClient.DirectClient(), backupEntry, fmt.Sprintf("Deletion of backup entry is scheduled for %s", backupEntry.DeletionTimestamp.Time.Add(gracePeriod))); updateErr != nil {
 		backupEntryLogger.Errorf("Could not update the BackupEntry status after deletion successful: %+v", updateErr)

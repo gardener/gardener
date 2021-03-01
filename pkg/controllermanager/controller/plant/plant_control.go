@@ -177,7 +177,7 @@ func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1
 	}
 
 	// Add Finalizers to Plant
-	if err := controllerutils.EnsureFinalizer(ctx, gardenClient.Client(), plant, FinalizerName); err != nil {
+	if err := controllerutils.PatchFinalizers(ctx, gardenClient.Client(), plant, FinalizerName); err != nil {
 		return fmt.Errorf("failed to ensure finalizer on plant: %w", err)
 	}
 
@@ -194,7 +194,7 @@ func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1
 		return fmt.Errorf("failed to get plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
 	}
 
-	if err := controllerutils.EnsureFinalizer(ctx, gardenClient.Client(), kubeconfigSecret, FinalizerName); err != nil {
+	if err := controllerutils.PatchFinalizers(ctx, gardenClient.Client(), kubeconfigSecret, FinalizerName); err != nil {
 		return fmt.Errorf("failed to ensure finalizer on plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
 	}
 
@@ -247,14 +247,14 @@ func (c *defaultPlantControl) delete(ctx context.Context, plant *gardencorev1bet
 	secret := &corev1.Secret{}
 	err = gardenClient.Client().Get(ctx, kutil.Key(plant.Namespace, plant.Spec.SecretRef.Name), secret)
 	if err == nil {
-		if err2 := controllerutils.RemoveFinalizer(ctx, gardenClient.DirectClient(), secret, FinalizerName); err2 != nil {
+		if err2 := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), secret, FinalizerName); err2 != nil {
 			return fmt.Errorf("failed to remove finalizer from plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err2)
 		}
 	} else if !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to get plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
 	}
 
-	if err := controllerutils.RemoveFinalizer(ctx, gardenClient.DirectClient(), plant, FinalizerName); err != nil {
+	if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), plant, FinalizerName); err != nil {
 		return fmt.Errorf("failed to remove finalizer from plant: %w", err)
 	}
 

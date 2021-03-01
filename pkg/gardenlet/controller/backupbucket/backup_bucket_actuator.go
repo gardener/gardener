@@ -333,7 +333,7 @@ func (a *actuator) deleteGeneratedBackupBucketSecretInGarden(ctx context.Context
 		},
 	}
 
-	if err := controllerutils.RemoveFinalizer(ctx, a.gardenClient.DirectClient(), secret, finalizerName); err != nil {
+	if err := controllerutils.PatchRemoveFinalizers(ctx, a.gardenClient.Client(), secret, finalizerName); err != nil {
 		return err
 	}
 	return client.IgnoreNotFound(a.gardenClient.Client().Delete(ctx, secret))
