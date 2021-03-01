@@ -23,7 +23,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	resourcemanagerv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
@@ -110,14 +109,6 @@ func (a *AddToManagerBuilder) AddToManager(m manager.Manager) error {
 	}
 	return nil
 }
-
-// EnsureFinalizer ensures that a finalizer of the given name is set on the given object.
-// If the finalizer is not set, it adds it to the list of finalizers and updates the remote object.
-var EnsureFinalizer = controllerutils.EnsureFinalizer
-
-// DeleteFinalizer ensures that the given finalizer is not present anymore in the given object.
-// If it is set, it removes it and issues an update.
-var DeleteFinalizer = controllerutils.RemoveFinalizer
 
 // DeleteAllFinalizers removes all finalizers from the object and issues an  update.
 func DeleteAllFinalizers(ctx context.Context, client client.Client, obj client.Object) error {
