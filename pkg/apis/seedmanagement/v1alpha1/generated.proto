@@ -141,6 +141,119 @@ message ManagedSeedList {
   repeated ManagedSeed items = 2;
 }
 
+// ManagedSeedSet represents a set of identical ManagedSeeds.
+message ManagedSeedSet {
+  // Standard object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Spec defines the desired identities of ManagedSeeds and Shoots in this set.
+  // +optional
+  optional ManagedSeedSetSpec spec = 2;
+
+  // Status is the current status of ManagedSeeds and Shoots in this ManagedSeedSet.
+  // +optional
+  optional ManagedSeedSetStatus status = 3;
+}
+
+// ManagedSeedSetList is a list of ManagedSeed objects.
+message ManagedSeedSetList {
+  // Standard list object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  // Items is the list of ManagedSeeds.
+  repeated ManagedSeedSet items = 2;
+}
+
+// ManagedSeedSetSpec is the specification of a ManagedSeedSet.
+message ManagedSeedSetSpec {
+  // Replicas is the desired number of replicas of the given Template. Defaults to 1.
+  // +optional
+  optional int32 replicas = 1;
+
+  // Selector is a label query over ManagedSeeds and Shoots that should match the replica count.
+  // It must match the ManagedSeeds and Shoots template's labels.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector selector = 2;
+
+  // Template describes the ManagedSeed that will be created if insufficient replicas are detected.
+  // Each ManagedSeed created / updated by the ManagedSeedSet will fulfill this template.
+  optional ManagedSeedTemplate template = 3;
+
+  // ShootTemplate describes the Shoot that will be created if insufficient replicas are detected for hosting the corresponding ManagedSeed.
+  // Each Shoot created / updated by the ManagedSeedSet will fulfill this template.
+  optional github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootTemplate shootTemplate = 4;
+
+  // UpdateStrategy specifies the ManagedSeedSetUpdateStrategy that will be
+  // employed to update ManagedSeeds / Shoots in the ManagedSeedSet when a revision is made to
+  // Template / ShootTemplate.
+  // +optional
+  optional ManagedSeedSetUpdateStrategy updateStrategy = 5;
+
+  // RevisionHistoryLimit is the maximum number of revisions that will
+  // be maintained in the ManagedSeedSet's revision history. Defaults to 10.
+  // +optional
+  optional int32 revisionHistoryLimit = 6;
+}
+
+// ManagedSeedSetStatus represents the current state of a ManagedSeedSet.
+message ManagedSeedSetStatus {
+  // ObservedGeneration is the most recent generation observed for this ManagedSeedSet. It corresponds to the
+  // ManagedSeedSet's generation, which is updated on mutation by the API Server.
+  optional int64 observedGeneration = 1;
+
+  // Replicas is the number of replicas (ManagedSeeds and their corresponding Shoots) created by the ManagedSeedSet controller.
+  optional int32 replicas = 2;
+
+  // ReadyReplicas is the number of ManagedSeeds created by the ManagedSeedSet controller that have a Ready Condition.
+  optional int32 readyReplicas = 3;
+
+  // NextReplicaNumber is the ordinal number that will be assigned to the next replica of the ManagedSeedSet.
+  optional int32 nextReplicaNumber = 4;
+
+  // CurrentReplicas is the number of ManagedSeeds created by the ManagedSeedSet controller from the ManagedSeedSet version
+  // indicated by CurrentRevision.
+  optional int32 currentReplicas = 5;
+
+  // UpdatedReplicas is the number of ManagedSeeds created by the ManagedSeedSet controller from the ManagedSeedSet version
+  // indicated by UpdateRevision.
+  optional int32 updatedReplicas = 6;
+
+  // CurrentRevision, if not empty, indicates the version of the ManagedSeedSet used to generate ManagedSeeds with smaller
+  // ordinal numbers during updates.
+  optional string currentRevision = 7;
+
+  // UpdateRevision, if not empty, indicates the version of the ManagedSeedSet used to generate ManagedSeeds with larger
+  // ordinal numbers during updates
+  optional string updateRevision = 8;
+
+  // CollisionCount is the count of hash collisions for the ManagedSeedSet. The ManagedSeedSet controller
+  // uses this field as a collision avoidance mechanism when it needs to create the name for the
+  // newest ControllerRevision.
+  // +optional
+  optional int32 collisionCount = 9;
+
+  // Conditions represents the latest available observations of a ManagedSeedSet's current state.
+  // +patchMergeKey=type
+  // +patchStrategy=merge
+  // +optional
+  repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 10;
+}
+
+// ManagedSeedSetUpdateStrategy specifies the strategy that the ManagedSeedSet
+// controller will use to perform updates. It includes any additional parameters
+// necessary to perform the update for the indicated strategy.
+message ManagedSeedSetUpdateStrategy {
+  // Type indicates the type of the ManagedSeedSetUpdateStrategy. Defaults to ManagedSeedSetUpdateStrategyType.
+  // +optional
+  optional string type = 1;
+
+  // RollingUpdate is used to communicate parameters when Type is ManagedSeedSetUpdateStrategyType.
+  // +optional
+  optional RollingUpdateManagedSeedSetUpdateStrategy rollingUpdate = 2;
+}
+
 // ManagedSeedSpec is the specification of a ManagedSeed.
 message ManagedSeedSpec {
   // Shoot references a Shoot that should be registered as Seed.
@@ -169,6 +282,24 @@ message ManagedSeedStatus {
   // ObservedGeneration is the most recent generation observed for this ManagedSeed. It corresponds to the
   // ManagedSeed's generation, which is updated on mutation by the API Server.
   optional int64 observedGeneration = 2;
+}
+
+// ManagedSeedTemplate is a template for creating a ManagedSeed object.
+message ManagedSeedTemplate {
+  // Standard object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Specification of the desired behavior of the ManagedSeed.
+  // +optional
+  optional ManagedSeedSpec spec = 2;
+}
+
+// RollingUpdateManagedSeedSetStrategy is used to communicate parameter for RollingUpdateManagedSeedSetUpdateStrategyType.
+message RollingUpdateManagedSeedSetUpdateStrategy {
+  // Partition indicates the ordinal at which the ManagedSeedSet should be partitioned. Defaults to 0.
+  // +optional
+  optional int32 partition = 1;
 }
 
 // Shoot identifies the Shoot that should be registered as Seed.

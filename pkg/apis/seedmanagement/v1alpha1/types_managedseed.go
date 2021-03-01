@@ -51,6 +51,16 @@ type ManagedSeedList struct {
 	Items []ManagedSeed `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
+// ManagedSeedTemplate is a template for creating a ManagedSeed object.
+type ManagedSeedTemplate struct {
+	// Standard object metadata.
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	// Specification of the desired behavior of the ManagedSeed.
+	// +optional
+	Spec ManagedSeedSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+}
+
 // ManagedSeedSpec is the specification of a ManagedSeed.
 type ManagedSeedSpec struct {
 	// Shoot references a Shoot that should be registered as Seed.

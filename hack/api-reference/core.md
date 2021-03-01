@@ -8209,7 +8209,8 @@ string
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.Shoot">Shoot</a>)
+<a href="#core.gardener.cloud/v1beta1.Shoot">Shoot</a>, 
+<a href="#core.gardener.cloud/v1beta1.ShootTemplate">ShootTemplate</a>)
 </p>
 <p>
 <p>ShootSpec is the specification of a Shoot.</p>
@@ -8624,6 +8625,281 @@ string
 <td>
 <em>(Optional)</em>
 <p>ClusterIdentity is the identity of the Shoot cluster</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ShootTemplate">ShootTemplate
+</h3>
+<p>
+<p>ShootTemplate is a template for creating a Shoot object.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Standard object metadata.</p>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">
+ShootSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Specification of the desired behavior of the Shoot.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>addons</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Addons">
+Addons
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Addons contains information about enabled/disabled addons and their configuration.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cloudProfileName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>CloudProfileName is a name of a CloudProfile object.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>dns</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.DNS">
+DNS
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DNS contains information about the DNS settings of the Shoot.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>extensions</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Extension">
+[]Extension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Extensions contain type and provider information for Shoot extensions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>hibernation</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Hibernation">
+Hibernation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Hibernation contains information whether the Shoot is suspended or not.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubernetes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Kubernetes">
+Kubernetes
+</a>
+</em>
+</td>
+<td>
+<p>Kubernetes contains the version and configuration settings of the control plane components.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>networking</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Networking">
+Networking
+</a>
+</em>
+</td>
+<td>
+<p>Networking contains information about cluster networking such as CNI Plugin type, CIDRs, &hellip;etc.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maintenance</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Maintenance">
+Maintenance
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Maintenance contains information about the time window for maintenance operations and which
+operations should be performed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>monitoring</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Monitoring">
+Monitoring
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Monitoring contains information about custom monitoring configurations for the shoot.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>provider</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Provider">
+Provider
+</a>
+</em>
+</td>
+<td>
+<p>Provider contains all provider-specific and provider-relevant information.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>purpose</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootPurpose">
+ShootPurpose
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Purpose is the purpose class for this cluster.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>region</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Region is a name of a region.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretBindingName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
+The credentials inside the provider secret will be used to create the shoot in the respective account.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>seedName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SeedName is the name of the seed cluster that runs the control plane of the Shoot.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>seedSelector</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSelector">
+SeedSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SeedSelector is an optional selector which must match a seed&rsquo;s labels for the shoot to be scheduled on that seed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.NamedResourceReference">
+[]NamedResourceReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources holds a list of named resource references that can be referred to in extension configs by their names.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tolerations</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.Toleration">
+[]Toleration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Tolerations contains the tolerations for taints on seed clusters.</p>
+</td>
+</tr>
+</table>
 </td>
 </tr>
 </tbody>

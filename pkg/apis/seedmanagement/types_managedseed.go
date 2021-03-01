@@ -47,6 +47,14 @@ type ManagedSeedList struct {
 	Items []ManagedSeed
 }
 
+// ManagedSeedTemplate is a template for creating a ManagedSeed object.
+type ManagedSeedTemplate struct {
+	// Standard object metadata.
+	metav1.ObjectMeta
+	// Specification of the desired behavior of the ManagedSeed.
+	Spec ManagedSeedSpec
+}
+
 // ManagedSeedSpec is the specification of a ManagedSeed.
 type ManagedSeedSpec struct {
 	// Shoot references a Shoot that should be registered as Seed.

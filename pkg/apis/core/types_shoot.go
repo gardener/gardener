@@ -50,6 +50,14 @@ type ShootList struct {
 	Items []Shoot
 }
 
+// ShootTemplate is a template for creating a Shoot object.
+type ShootTemplate struct {
+	// Standard object metadata.
+	metav1.ObjectMeta
+	// Specification of the desired behavior of the Shoot.
+	Spec ShootSpec
+}
+
 // ShootSpec is the specification of a Shoot.
 type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.

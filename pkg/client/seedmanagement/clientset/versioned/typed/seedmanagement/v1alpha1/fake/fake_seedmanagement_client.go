@@ -32,6 +32,10 @@ func (c *FakeSeedmanagementV1alpha1) ManagedSeeds(namespace string) v1alpha1.Man
 	return &FakeManagedSeeds{c, namespace}
 }
 
+func (c *FakeSeedmanagementV1alpha1) ManagedSeedSets(namespace string) v1alpha1.ManagedSeedSetInterface {
+	return &FakeManagedSeedSets{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeSeedmanagementV1alpha1) RESTClient() rest.Interface {
