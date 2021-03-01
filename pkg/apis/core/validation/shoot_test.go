@@ -2914,6 +2914,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		validResourceQuantity := resource.MustParse(validResourceQuantityValueMi)
+		invalidResourceQuantity := resource.MustParse(invalidResourceQuantityValue)
+
 		DescribeTable("validate the kubelet configuration - EvictionMinimumReclaim",
 			func(memoryAvailable, imagefsAvailable, imagefsInodesFree, nodefsAvailable, nodefsInodesFree resource.Quantity, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
@@ -2932,11 +2934,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 			},
 
 			Entry("valid configuration", validResourceQuantity, validResourceQuantity, validResourceQuantity, validResourceQuantity, validResourceQuantity, HaveLen(0)),
-			Entry("only allow positive resource.Quantity for any value", resource.MustParse(invalidResourceQuantityValue), validResourceQuantity, validResourceQuantity, validResourceQuantity, validResourceQuantity, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("only allow positive resource.Quantity for any value", invalidResourceQuantity, validResourceQuantity, validResourceQuantity, validResourceQuantity, validResourceQuantity, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("evictionMinimumReclaim.memoryAvailable").String()),
 			})))),
 		)
+
 		validDuration := metav1.Duration{Duration: 2 * time.Minute}
 		invalidDuration := metav1.Duration{Duration: -2 * time.Minute}
 		DescribeTable("validate the kubelet configuration - KubeletConfigEvictionSoftGracePeriod",
@@ -2985,48 +2988,49 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 
 		Context("validate the kubelet configuration - reserved", func() {
-
 			DescribeTable("validate the kubelet configuration - KubeReserved",
-				func(cpu, memory, epehemeralStorage, pid resource.Quantity, matcher gomegatypes.GomegaMatcher) {
+				func(cpu, memory, ephemeralStorage, pid *resource.Quantity, matcher gomegatypes.GomegaMatcher) {
 					kubeletConfig := core.KubeletConfig{
 						KubeReserved: &core.KubeletConfigReserved{
-							CPU:              &cpu,
-							Memory:           &memory,
-							EphemeralStorage: &epehemeralStorage,
-							PID:              &pid,
+							CPU:              cpu,
+							Memory:           memory,
+							EphemeralStorage: ephemeralStorage,
+							PID:              pid,
 						},
 					}
-
-					errList := ValidateKubeletConfig(kubeletConfig, nil)
-
-					Expect(errList).To(matcher)
+					Expect(ValidateKubeletConfig(kubeletConfig, nil)).To(matcher)
 				},
 
-				Entry("valid configuration", validResourceQuantity, validResourceQuantity, validResourceQuantity, validResourceQuantity, HaveLen(0)),
-				Entry("only allow positive resource.Quantity for any value", resource.MustParse(invalidResourceQuantityValue), validResourceQuantity, validResourceQuantity, validResourceQuantity, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Entry("valid configuration (cpu)", &validResourceQuantity, nil, nil, nil, HaveLen(0)),
+				Entry("valid configuration (memory)", nil, &validResourceQuantity, nil, nil, HaveLen(0)),
+				Entry("valid configuration (storage)", nil, nil, &validResourceQuantity, nil, HaveLen(0)),
+				Entry("valid configuration (pid)", nil, nil, nil, &validResourceQuantity, HaveLen(0)),
+				Entry("valid configuration (all)", &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, HaveLen(0)),
+				Entry("only allow positive resource.Quantity for any value", &invalidResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(field.NewPath("kubeReserved.cpu").String()),
 				})))),
 			)
 
 			DescribeTable("validate the kubelet configuration - SystemReserved",
-				func(cpu, memory, epehemeralStorage, pid resource.Quantity, matcher gomegatypes.GomegaMatcher) {
+				func(cpu, memory, ephemeralStorage, pid *resource.Quantity, matcher gomegatypes.GomegaMatcher) {
 					kubeletConfig := core.KubeletConfig{
 						SystemReserved: &core.KubeletConfigReserved{
-							CPU:              &cpu,
-							Memory:           &memory,
-							EphemeralStorage: &epehemeralStorage,
-							PID:              &pid,
+							CPU:              cpu,
+							Memory:           memory,
+							EphemeralStorage: ephemeralStorage,
+							PID:              pid,
 						},
 					}
-
-					errList := ValidateKubeletConfig(kubeletConfig, nil)
-
-					Expect(errList).To(matcher)
+					Expect(ValidateKubeletConfig(kubeletConfig, nil)).To(matcher)
 				},
 
-				Entry("valid configuration", validResourceQuantity, validResourceQuantity, validResourceQuantity, validResourceQuantity, HaveLen(0)),
-				Entry("only allow positive resource.Quantity for any value", resource.MustParse(invalidResourceQuantityValue), validResourceQuantity, validResourceQuantity, validResourceQuantity, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				Entry("valid configuration (cpu)", &validResourceQuantity, nil, nil, nil, HaveLen(0)),
+				Entry("valid configuration (memory)", nil, &validResourceQuantity, nil, nil, HaveLen(0)),
+				Entry("valid configuration (storage)", nil, nil, &validResourceQuantity, nil, HaveLen(0)),
+				Entry("valid configuration (pid)", nil, nil, nil, &validResourceQuantity, HaveLen(0)),
+				Entry("valid configuration (all)", &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, HaveLen(0)),
+				Entry("only allow positive resource.Quantity for any value", &invalidResourceQuantity, &validResourceQuantity, &validResourceQuantity, &validResourceQuantity, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(field.NewPath("systemReserved.cpu").String()),
 				})))),
