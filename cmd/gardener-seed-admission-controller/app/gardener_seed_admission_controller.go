@@ -34,6 +34,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/seedadmission"
+	"github.com/gardener/gardener/pkg/seedadmission/webhooks/admission/extensioncrds"
 )
 
 const (
@@ -149,10 +150,7 @@ func (o *Options) Run(ctx context.Context) error {
 
 	log.Info("setting up webhook server")
 	server := mgr.GetWebhookServer()
-	server.Register(
-		seedadmission.ExtensionDeletionProtectionWebhookPath,
-		&webhook.Admission{Handler: &seedadmission.ExtensionDeletionProtection{}},
-	)
+	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(logf.Log.WithName(extensioncrds.PluginName))})
 	server.Register(
 		seedadmission.GardenerShootControlPlaneSchedulerWebhookPath,
 		&webhook.Admission{Handler: admission.HandlerFunc(seedadmission.DefaultShootControlPlanePodsSchedulerName)},

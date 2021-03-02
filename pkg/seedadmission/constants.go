@@ -23,8 +23,4 @@ const (
 	// Note: In the future we might want to have additional scheduler names
 	// so lets have the handler be of pattern "/webhooks/default-pod-scheduler-name/{scheduler-name}"
 	GardenerShootControlPlaneSchedulerWebhookPath = "/webhooks/default-pod-scheduler-name/" + GardenerShootControlPlaneSchedulerName
-	// ExtensionDeletionProtectionWebhookPath is the path of the webhook endpoint
-	// that validates DELETE requests for extension CRDs and extension
-	// resources, that are marked for deletion protection (`gardener.cloud/deletion-protected`).
-	ExtensionDeletionProtectionWebhookPath = "/webhooks/validate-extension-crd-deletion"
 )
