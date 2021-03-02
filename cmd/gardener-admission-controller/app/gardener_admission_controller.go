@@ -39,6 +39,7 @@ import (
 	configv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	configvalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks"
+	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/kubeconfigsecret"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/namespacedeletion"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/seedrestriction"
 	seedauthorizer "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed"
@@ -162,7 +163,7 @@ func (o *options) run(ctx context.Context) error {
 	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth)))
 	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedrestriction.New(logf.Log.WithName(seedrestriction.PluginName))})
 	server.Register(namespacedeletion.WebhookPath, &webhook.Admission{Handler: namespaceValidationHandler})
-	server.Register("/webhooks/validate-kubeconfig-secrets", &webhook.Admission{Handler: &webhooks.KubeconfigSecretValidator{}})
+	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(logf.Log.WithName(kubeconfigsecret.PluginName))})
 	server.Register("/webhooks/validate-resource-size", &webhook.Admission{Handler: &webhooks.ObjectSizeHandler{Config: o.config.Server.ResourceAdmissionConfiguration}})
 
 	log.Info("starting manager")
