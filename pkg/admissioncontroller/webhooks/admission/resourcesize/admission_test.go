@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package webhooks_test
+package resourcesize_test
 
 import (
+	"context"
 	"io"
 	"net/http"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -34,22 +36,23 @@ import (
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	apisconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
-	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks"
+	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/resourcesize"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
-var _ = Describe("ValidateResourceSizeHandler", func() {
+var _ = Describe("plugin", func() {
 	var (
-		request admission.Request
-		decoder *admission.Decoder
+		ctx    = context.TODO()
+		logger logr.Logger
 
-		validator *ObjectSizeHandler
+		request   admission.Request
+		decoder   *admission.Decoder
+		validator admission.Handler
 
 		logBuffer   *gbytes.Buffer
 		testEncoder runtime.Encoder
@@ -212,15 +215,14 @@ var _ = Describe("ValidateResourceSizeHandler", func() {
 	)
 
 	BeforeEach(func() {
+		logBuffer = gbytes.NewBuffer()
+		logger = logzap.New(logzap.UseDevMode(true), logzap.WriteTo(io.MultiWriter(GinkgoWriter, logBuffer)), logzap.Level(zapcore.Level(0)))
+
 		var err error
 		decoder, err = admission.NewDecoder(kubernetes.GardenScheme)
 		Expect(err).NotTo(HaveOccurred())
 
-		validator = &ObjectSizeHandler{Config: config()}
-
-		logBuffer = gbytes.NewBuffer()
-		logger := logzap.New(logzap.UseDevMode(true), logzap.WriteTo(io.MultiWriter(GinkgoWriter, logBuffer)), logzap.Level(zapcore.Level(0)))
-		Expect(inject.LoggerInto(logger, validator)).To(BeTrue())
+		validator = New(logger, config())
 		Expect(admission.InjectDecoderInto(decoder, validator)).To(BeTrue())
 
 		testEncoder = &json.Serializer{}
@@ -262,7 +264,11 @@ var _ = Describe("ValidateResourceSizeHandler", func() {
 		}
 		Expect(response.Result.Code).To(Equal(expectedStatusCode))
 		if expectedMsg != "" {
-			Expect(response.Result.Message).To(ContainSubstring(expectedMsg))
+			if expectedAllowed {
+				Expect(string(response.Result.Reason)).To(ContainSubstring(expectedMsg))
+			} else {
+				Expect(response.Result.Message).To(ContainSubstring(expectedMsg))
+			}
 		}
 	}
 
@@ -271,51 +277,68 @@ var _ = Describe("ValidateResourceSizeHandler", func() {
 			test(project, "logs", restrictedUser, true, "subresource")
 		})
 		It("empty resource", func() {
-			test(empty, noSubResource, restrictedUser, true, "no limit")
+			test(empty, "", restrictedUser, true, "no limit")
 		})
 	})
 
 	It("should pass because size is in range for v1beta1 shoot", func() {
-		test(shootv1beta1, noSubResource, restrictedUser, true, "resource size ok")
+		test(shootv1beta1, "", restrictedUser, true, "resource size ok")
 	})
+
 	It("should fail because size is not in range for v1alpha1 shoot and mode is nil", func() {
-		test(shootv1alpha1, noSubResource, restrictedUser, false, "resource size exceeded")
+		test(shootv1alpha1, "", restrictedUser, false, "resource size exceeded")
 		Eventually(logBuffer).Should(gbytes.Say("maximum resource size exceeded"))
 	})
+
 	It("should fail because size is not in range for v1alpha1 shoot and mode is block", func() {
+		cfg := config()
 		blockMode := apisconfig.ResourceAdmissionWebhookMode("block")
-		validator.Config.OperationMode = &blockMode
-		test(shootv1alpha1, noSubResource, restrictedUser, false, "resource size exceeded")
+		cfg.OperationMode = &blockMode
+		validator = New(logger, cfg)
+
+		test(shootv1alpha1, "", restrictedUser, false, "resource size exceeded")
 		Eventually(logBuffer).Should(gbytes.Say("maximum resource size exceeded"))
 	})
+
 	It("should pass but log because size is not in range for v1alpha1 shoot and mode is log", func() {
+		cfg := config()
 		logMode := apisconfig.ResourceAdmissionWebhookMode("log")
-		validator.Config.OperationMode = &logMode
-		test(shootv1alpha1, noSubResource, restrictedUser, true, "resource size ok")
+		cfg.OperationMode = &logMode
+		validator = New(logger, cfg)
+
+		test(shootv1alpha1, "", restrictedUser, true, "resource size ok")
 		Eventually(logBuffer).Should(gbytes.Say("maximum resource size exceeded"))
 	})
+
 	It("should pass because request is for status subresource of v1alpha1 shoot", func() {
 		test(shootv1alpha1, "status", restrictedUser, true, "subresource")
 	})
+
 	It("should pass because size is in range for secret", func() {
-		test(secret, noSubResource, restrictedUser, true, "resource size ok")
+		test(secret, "", restrictedUser, true, "resource size ok")
 	})
+
 	It("should pass because no limits configured for configMaps", func() {
-		test(configMap, noSubResource, restrictedUser, true, "no limit")
+		test(configMap, "", restrictedUser, true, "no limit")
 	})
+
 	It("should fail because size is not in range for project", func() {
-		test(project, noSubResource, restrictedUser, false, "resource size exceeded")
+		test(project, "", restrictedUser, false, "resource size exceeded")
 	})
+
 	It("should pass because of unrestricted user", func() {
-		test(project, noSubResource, unrestrictedUser, true, "unrestricted")
+		test(project, "", unrestrictedUser, true, "unrestricted")
 	})
+
 	It("should pass because of unrestricted group", func() {
-		test(project, noSubResource, unrestrictedGroup, true, "unrestricted")
+		test(project, "", unrestrictedGroup, true, "unrestricted")
 	})
+
 	It("should pass because of unrestricted service account", func() {
-		test(project, noSubResource, unrestrictedServiceAccount, true, "unrestricted")
+		test(project, "", unrestrictedServiceAccount, true, "unrestricted")
 	})
+
 	It("should fail because of restricted service account", func() {
-		test(project, noSubResource, restrictedServiceAccount, false, "resource size exceeded")
+		test(project, "", restrictedServiceAccount, false, "resource size exceeded")
 	})
 })
