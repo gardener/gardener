@@ -72,6 +72,11 @@ func (r *reconciler) InjectClient(client client.Client) error {
 	return nil
 }
 
+func (r *reconciler) InjectReader(reader client.Reader) error {
+	r.reader = reader
+	return nil
+}
+
 func (r *reconciler) InjectScheme(scheme *runtime.Scheme) error {
 	r.scheme = scheme
 	return nil

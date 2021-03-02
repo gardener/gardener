@@ -81,6 +81,11 @@ func (r *reconciler) InjectClient(client client.Client) error {
 	return nil
 }
 
+func (r *reconciler) InjectReader(reader client.Reader) error {
+	r.reader = reader
+	return nil
+}
+
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	network := &extensionsv1alpha1.Network{}
 	if err := r.client.Get(ctx, request.NamespacedName, network); err != nil {
