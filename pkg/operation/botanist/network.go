@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/network"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/network"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

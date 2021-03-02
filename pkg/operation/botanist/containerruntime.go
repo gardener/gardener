@@ -19,7 +19,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/containerruntime"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime"
 )
 
 // DefaultContainerRuntime creates the default deployer for the ContainerRuntime custom resource.

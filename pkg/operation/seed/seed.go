@@ -23,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -33,18 +32,18 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmission"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/etcd"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubecontrollermanager"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/resourcemanager"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
-	"github.com/gardener/gardener/pkg/operation/botanist/seedsystemcomponents/seedadmission"
-	"github.com/gardener/gardener/pkg/operation/botanist/systemcomponents/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/seed/istio"
-	"github.com/gardener/gardener/pkg/operation/seed/scheduler"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -54,6 +53,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -872,7 +872,7 @@ func DebootstrapCluster(ctx context.Context, k8sSeedClient kubernetes.Interface)
 }
 
 func destroyGardenerResourceManager(ctx context.Context, c kubernetes.Interface) error {
-	managedResources := &v1alpha1.ManagedResourceList{}
+	managedResources := &resourcesv1alpha1.ManagedResourceList{}
 	if err := c.Client().List(ctx, managedResources, client.InNamespace(v1beta1constants.GardenNamespace)); err != nil {
 		return err
 	}
@@ -959,7 +959,7 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 			return nil, err
 		}
 	}
-	sched, err := scheduler.Bootstrap(c.DirectClient(), namespace, schedulerImage, kubernetesVersion)
+	sched, err := gardenerkubescheduler.Bootstrap(c.DirectClient(), namespace, schedulerImage, kubernetesVersion)
 	if err != nil {
 		return nil, err
 	}

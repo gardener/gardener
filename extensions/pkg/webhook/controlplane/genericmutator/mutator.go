@@ -22,8 +22,8 @@ import (
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/original/components/kubelet"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/utils"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
 
 	"github.com/coreos/go-systemd/v22/unit"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"

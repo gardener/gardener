@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/botanist/projectrbac"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/projectrbac"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"

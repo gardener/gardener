@@ -24,8 +24,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/resourcemanager"
-	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/controlplane/resourcemanager/mock"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	mockresourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 
 	"github.com/golang/mock/gomock"

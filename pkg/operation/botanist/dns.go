@@ -25,7 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/dns"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"

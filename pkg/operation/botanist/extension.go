@@ -17,7 +17,7 @@ package botanist
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/extension"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

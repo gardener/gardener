@@ -16,9 +16,9 @@ package botanist
 
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	corebackupentry "github.com/gardener/gardener/pkg/operation/botanist/backupentry"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/extensions/backupentry"
+	corebackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/backupentry"
+	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry"
 	"github.com/gardener/gardener/pkg/operation/common"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
