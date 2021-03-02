@@ -197,7 +197,7 @@ func (r *reconciler) delete(ctx context.Context, logger logr.Logger, worker *ext
 
 func (r *reconciler) reconcile(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
 	logger.Info("Ensuring finalizer")
-	if err := controllerutils.PatchAddFinalizers(ctx, r.client, worker, FinalizerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, worker, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 	if err := r.updateStatusProcessing(ctx, logger, worker, operationType, "Reconciling the worker"); err != nil {

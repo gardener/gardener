@@ -97,7 +97,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) (reconcile.Result, error) {
-	if err := controllerutils.PatchAddFinalizers(ctx, r.client, bb, FinalizerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, bb, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on backup bucket: %+v", err)
 	}
 
@@ -110,7 +110,7 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
-	if err := controllerutils.PatchAddFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, secret, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on bucket secret: %+v", err)
 	}
 
