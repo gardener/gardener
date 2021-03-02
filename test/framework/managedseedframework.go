@@ -153,7 +153,7 @@ func (f *ManagedSeedFramework) CreateManagedSeed(ctx context.Context) error {
 
 	// Get shoot
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := f.GardenClient.DirectClient().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, f.Config.ShootName), shoot); err != nil {
+	if err := f.GardenClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, f.Config.ShootName), shoot); err != nil {
 		return err
 	}
 

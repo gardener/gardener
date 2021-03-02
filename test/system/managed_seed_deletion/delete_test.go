@@ -49,7 +49,7 @@ var _ = Describe("ManagedSeed deletion testing", func() {
 		validateFlags()
 
 		managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-		if err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: *managedSeedName}, managedSeed); err != nil {
+		if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: v1beta1constants.GardenNamespace, Name: *managedSeedName}, managedSeed); err != nil {
 			if apierrors.IsNotFound(err) {
 				Skip("managed seed is already deleted")
 			}

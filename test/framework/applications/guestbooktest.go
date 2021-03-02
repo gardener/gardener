@@ -231,7 +231,7 @@ func (t *GuestBookTest) Cleanup(ctx context.Context) {
 	// Clean up shoot
 	ginkgo.By("Cleaning up guestbook app resources")
 	deleteResource := func(ctx context.Context, resource client.Object) error {
-		err := t.framework.ShootClient.DirectClient().Delete(ctx, resource)
+		err := t.framework.ShootClient.Client().Delete(ctx, resource)
 		if apierrors.IsNotFound(err) {
 			return nil
 		}

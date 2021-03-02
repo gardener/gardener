@@ -124,7 +124,7 @@ var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 			f.Logger.Info("Running in test Machinery")
 			// setup the integration test environment by manipulation the Gardener Components (namespace garden) in the garden cluster
 			// scale down the gardener-scheduler to 0 replicas
-			replicas, err := framework.ScaleGardenerScheduler(setupContextTimeout, f.GardenClient.DirectClient(), pointer.Int32Ptr(0))
+			replicas, err := framework.ScaleGardenerScheduler(setupContextTimeout, f.GardenClient.Client(), pointer.Int32Ptr(0))
 			gardenerSchedulerReplicaCount = replicas
 			gomega.Expect(err).To(gomega.BeNil())
 			f.Logger.Info("Environment for test-machinery run is prepared")
@@ -174,12 +174,12 @@ var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 	framework.CAfterSuite(func(ctx context.Context) {
 		framework.CommonAfterSuite()
 		if cloudProfileCleanupNeeded {
-			err := CleanupCloudProfile(ctx, f.GardenClient.DirectClient(), testShootCloudProfile.Name, testMachineImage, []gardencorev1beta1.ExpirableVersion{testKubernetesVersionLowPatchLowMinor, testKubernetesVersionHighestPatchLowMinor, testKubernetesVersionLowPatchConsecutiveMinor, testKubernetesVersionHighestPatchConsecutiveMinor})
+			err := CleanupCloudProfile(ctx, f.GardenClient.Client(), testShootCloudProfile.Name, testMachineImage, []gardencorev1beta1.ExpirableVersion{testKubernetesVersionLowPatchLowMinor, testKubernetesVersionHighestPatchLowMinor, testKubernetesVersionLowPatchConsecutiveMinor, testKubernetesVersionHighestPatchConsecutiveMinor})
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			f.Logger.Infof("Cleaned Cloud Profile '%s'", testShootCloudProfile.Name)
 		}
 		if testMachineryRun != nil && *testMachineryRun {
-			_, err := framework.ScaleGardenerScheduler(restoreCtxTimeout, f.GardenClient.DirectClient(), gardenerSchedulerReplicaCount)
+			_, err := framework.ScaleGardenerScheduler(restoreCtxTimeout, f.GardenClient.Client(), gardenerSchedulerReplicaCount)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			f.Logger.Infof("Environment is restored")
 		}
@@ -210,53 +210,53 @@ var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 
 	ginkgo.Describe("Machine image maintenance tests", func() {
 		f.Beta().Serial().CIt("Do not update Shoot machine image in maintenance time: AutoUpdate.MachineImageVersion == false && expirationDate does not apply", func(ctx context.Context) {
-			err = StartShootMaintenance(ctx, f.GardenClient.DirectClient(), f.Shoot)
+			err = StartShootMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
 			gomega.Expect(err).To(gomega.BeNil())
-			err = WaitForExpectedMachineImageMaintenance(ctx, f.Logger, f.GardenClient.DirectClient(), f.Shoot, testMachineImage, false, time.Now().Add(time.Second*10))
+			err = WaitForExpectedMachineImageMaintenance(ctx, f.Logger, f.GardenClient.Client(), f.Shoot, testMachineImage, false, time.Now().Add(time.Second*10))
 			gomega.Expect(err).To(gomega.BeNil())
 		}, waitForCreateDeleteTimeout)
 
 		f.Beta().Serial().CIt("Shoot machine image must be updated in maintenance time: AutoUpdate.MachineImageVersion == true && expirationDate does not apply", func(ctx context.Context) {
 			// set test specific shoot settings
 			f.Shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = true
-			err = TryUpdateShootForMachineImageMaintenance(ctx, f.GardenClient.DirectClient(), f.Shoot)
+			err = TryUpdateShootForMachineImageMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
 			gomega.Expect(err).To(gomega.BeNil())
 
-			err = StartShootMaintenance(ctx, f.GardenClient.DirectClient(), f.Shoot)
+			err = StartShootMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
 			gomega.Expect(err).To(gomega.BeNil())
 
-			err = WaitForExpectedMachineImageMaintenance(ctx, f.Logger, f.GardenClient.DirectClient(), f.Shoot, highestShootMachineImage, true, time.Now().Add(time.Second*20))
+			err = WaitForExpectedMachineImageMaintenance(ctx, f.Logger, f.GardenClient.Client(), f.Shoot, highestShootMachineImage, true, time.Now().Add(time.Second*20))
 			gomega.Expect(err).To(gomega.BeNil())
 		}, waitForCreateDeleteTimeout)
 
 		f.Beta().Serial().CIt("Shoot machine image must be updated in maintenance time: AutoUpdate.MachineImageVersion == false && expirationDate applies", func(ctx context.Context) {
 			defer func() {
 				// make sure to remove expiration date from cloud profile after test
-				err = TryUpdateCloudProfileForMachineImageMaintenance(ctx, f.GardenClient.DirectClient(), f.Shoot, testMachineImage, nil, &deprecatedClassification)
+				err = TryUpdateCloudProfileForMachineImageMaintenance(ctx, f.GardenClient.Client(), f.Shoot, testMachineImage, nil, &deprecatedClassification)
 				gomega.Expect(err).To(gomega.BeNil())
 				f.Logger.Infof("Cleaned expiration date on machine image from Cloud Profile '%s'", testShootCloudProfile.Name)
 			}()
 			// expire the Shoot's machine image
-			err = TryUpdateCloudProfileForMachineImageMaintenance(ctx, f.GardenClient.DirectClient(), f.Shoot, testMachineImage, &expirationDateInThePast, &deprecatedClassification)
+			err = TryUpdateCloudProfileForMachineImageMaintenance(ctx, f.GardenClient.Client(), f.Shoot, testMachineImage, &expirationDateInThePast, &deprecatedClassification)
 			gomega.Expect(err).To(gomega.BeNil())
 
 			// give controller caches time to sync
 			time.Sleep(10 * time.Second)
 
-			err = StartShootMaintenance(ctx, f.GardenClient.DirectClient(), f.Shoot)
+			err = StartShootMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
 			gomega.Expect(err).To(gomega.BeNil())
 
-			err = WaitForExpectedMachineImageMaintenance(ctx, f.Logger, f.GardenClient.DirectClient(), f.Shoot, highestShootMachineImage, true, time.Now().Add(time.Minute*1))
+			err = WaitForExpectedMachineImageMaintenance(ctx, f.Logger, f.GardenClient.Client(), f.Shoot, highestShootMachineImage, true, time.Now().Add(time.Minute*1))
 			gomega.Expect(err).To(gomega.BeNil())
 		}, waitForCreateDeleteTimeout)
 	})
 
 	ginkgo.Describe("Kubernetes version maintenance tests", func() {
 		f.Beta().Serial().CIt("Kubernetes version should not be updated: auto update not enabled", func(ctx context.Context) {
-			err = StartShootMaintenance(ctx, f.GardenClient.DirectClient(), f.Shoot)
+			err = StartShootMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
 			gomega.Expect(err).To(gomega.BeNil())
 
-			err = WaitForExpectedKubernetesVersionMaintenance(ctx, f.Logger, f.GardenClient.DirectClient(), f.Shoot, testKubernetesVersionLowPatchLowMinor.Version, false, time.Now().Add(time.Second*10))
+			err = WaitForExpectedKubernetesVersionMaintenance(ctx, f.Logger, f.GardenClient.Client(), f.Shoot, testKubernetesVersionLowPatchLowMinor.Version, false, time.Now().Add(time.Second*10))
 			gomega.Expect(err).To(gomega.BeNil())
 
 		}, waitForCreateDeleteTimeout)
@@ -264,63 +264,63 @@ var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 		f.Beta().Serial().CIt("Kubernetes version should be updated: auto update enabled", func(ctx context.Context) {
 			// set test specific shoot settings
 			f.Shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
-			err = TryUpdateShootForKubernetesMaintenance(ctx, f.GardenClient.DirectClient(), f.Shoot)
+			err = TryUpdateShootForKubernetesMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
 			gomega.Expect(err).To(gomega.BeNil())
 
-			err = StartShootMaintenance(ctx, f.GardenClient.DirectClient(), f.Shoot)
+			err = StartShootMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
 			gomega.Expect(err).To(gomega.BeNil())
 
-			err = WaitForExpectedKubernetesVersionMaintenance(ctx, f.Logger, f.GardenClient.DirectClient(), f.Shoot, testKubernetesVersionHighestPatchLowMinor.Version, true, time.Now().Add(time.Second*20))
+			err = WaitForExpectedKubernetesVersionMaintenance(ctx, f.Logger, f.GardenClient.Client(), f.Shoot, testKubernetesVersionHighestPatchLowMinor.Version, true, time.Now().Add(time.Second*20))
 			gomega.Expect(err).To(gomega.BeNil())
 		}, waitForCreateDeleteTimeout)
 
 		f.Beta().Serial().CIt("Kubernetes version should be updated: force update patch version", func(ctx context.Context) {
 			defer func() {
 				// make sure to remove expiration date from cloud profile after test
-				err = TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.DirectClient(), f.Shoot, testKubernetesVersionLowPatchLowMinor.Version, nil, &deprecatedClassification)
+				err = TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.Client(), f.Shoot, testKubernetesVersionLowPatchLowMinor.Version, nil, &deprecatedClassification)
 				gomega.Expect(err).To(gomega.BeNil())
 				f.Logger.Infof("Cleaned expiration date on kubernetes version from Cloud Profile '%s'", testShootCloudProfile.Name)
 			}()
 
 			// expire the Shoot's Kubernetes version
-			err = TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.DirectClient(), f.Shoot, testKubernetesVersionLowPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)
+			err = TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.Client(), f.Shoot, testKubernetesVersionLowPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)
 			gomega.Expect(err).To(gomega.BeNil())
 
 			// give controller caches time to sync
 			time.Sleep(10 * time.Second)
 
-			err = StartShootMaintenance(ctx, f.GardenClient.DirectClient(), f.Shoot)
+			err = StartShootMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
 			gomega.Expect(err).To(gomega.BeNil())
 
-			err = WaitForExpectedKubernetesVersionMaintenance(ctx, f.Logger, f.GardenClient.DirectClient(), f.Shoot, testKubernetesVersionHighestPatchLowMinor.Version, true, time.Now().Add(time.Second*20))
+			err = WaitForExpectedKubernetesVersionMaintenance(ctx, f.Logger, f.GardenClient.Client(), f.Shoot, testKubernetesVersionHighestPatchLowMinor.Version, true, time.Now().Add(time.Second*20))
 			gomega.Expect(err).To(gomega.BeNil())
 		}, waitForCreateDeleteTimeout)
 
 		f.Beta().Serial().CIt("Kubernetes version should be updated: force update minor version", func(ctx context.Context) {
 			defer func() {
 				// make sure to remove expiration date from cloud profile after test
-				err = TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.DirectClient(), f.Shoot, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)
+				err = TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.Client(), f.Shoot, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)
 				gomega.Expect(err).To(gomega.BeNil())
 				f.Logger.Infof("Cleaned expiration date on kubernetes version from Cloud Profile '%s'", testShootCloudProfile.Name)
 			}()
 
 			// set the shoots Kubernetes version to be the highest patch version of the minor version
 			f.Shoot.Spec.Kubernetes.Version = testKubernetesVersionHighestPatchLowMinor.Version
-			err = TryUpdateShootForKubernetesMaintenance(ctx, f.GardenClient.DirectClient(), f.Shoot)
+			err = TryUpdateShootForKubernetesMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
 			gomega.Expect(err).To(gomega.BeNil())
 
 			// let Shoot's Kubernetes version expire
-			err = TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.DirectClient(), f.Shoot, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)
+			err = TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.Client(), f.Shoot, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)
 			gomega.Expect(err).To(gomega.BeNil())
 
 			// give controller caches time to sync
 			time.Sleep(10 * time.Second)
 
-			err = StartShootMaintenance(ctx, f.GardenClient.DirectClient(), f.Shoot)
+			err = StartShootMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
 			gomega.Expect(err).To(gomega.BeNil())
 
 			// expect shoot to have updated to latest patch version of next minor version
-			err = WaitForExpectedKubernetesVersionMaintenance(ctx, f.Logger, f.GardenClient.DirectClient(), f.Shoot, testKubernetesVersionHighestPatchConsecutiveMinor.Version, true, time.Now().Add(time.Second*20))
+			err = WaitForExpectedKubernetesVersionMaintenance(ctx, f.Logger, f.GardenClient.Client(), f.Shoot, testKubernetesVersionHighestPatchConsecutiveMinor.Version, true, time.Now().Add(time.Second*20))
 			gomega.Expect(err).To(gomega.BeNil())
 		}, waitForCreateDeleteTimeout)
 	})
@@ -348,6 +348,6 @@ func prepareCloudProfile(ctx context.Context, profile gardencorev1beta1.CloudPro
 
 	// add  test kubernetes versions (one low patch version, one high patch version)
 	profile.Spec.Kubernetes.Versions = append(profile.Spec.Kubernetes.Versions, testKubernetesVersionLowPatchLowMinor, testKubernetesVersionHighestPatchLowMinor, testKubernetesVersionLowPatchConsecutiveMinor, testKubernetesVersionHighestPatchConsecutiveMinor)
-	err = f.GardenClient.DirectClient().Update(ctx, &profile)
+	err = f.GardenClient.Client().Update(ctx, &profile)
 	gomega.Expect(err).To(gomega.BeNil())
 }

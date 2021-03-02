@@ -42,12 +42,12 @@ import (
 // If not, probably the logging feature gate is not enabled.
 func hasRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interface) (bool, error) {
 	fluentBit := &appsv1.DaemonSet{}
-	if err := k8sSeedClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: garden, Name: fluentBitName}, fluentBit); err != nil {
+	if err := k8sSeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: fluentBitName}, fluentBit); err != nil {
 		return false, err
 	}
 
 	loki := &appsv1.StatefulSet{}
-	if err := k8sSeedClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: garden, Name: lokiName}, loki); err != nil {
+	if err := k8sSeedClient.Client().Get(ctx, client.ObjectKey{Namespace: garden, Name: lokiName}, loki); err != nil {
 		return false, err
 	}
 

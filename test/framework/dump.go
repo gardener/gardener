@@ -41,7 +41,7 @@ const (
 // DumpDefaultResourcesInAllNamespaces dumps all default k8s resources of a namespace
 func (f *CommonFramework) DumpDefaultResourcesInAllNamespaces(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface) error {
 	namespaces := &corev1.NamespaceList{}
-	if err := k8sClient.DirectClient().List(ctx, namespaces); err != nil {
+	if err := k8sClient.Client().List(ctx, namespaces); err != nil {
 		return err
 	}
 
@@ -127,7 +127,7 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 
 	f.Logger.Infof("%s [EXTENSIONS] [INFRASTRUCTURE]", ctxIdentifier)
 	infrastructures := &v1alpha1.InfrastructureList{}
-	err := k8sClient.DirectClient().List(ctx, infrastructures, client.InNamespace(namespace))
+	err := k8sClient.Client().List(ctx, infrastructures, client.InNamespace(namespace))
 	result = multierror.Append(result, err)
 	if err != nil {
 		for _, infra := range infrastructures.Items {
@@ -138,7 +138,7 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 
 	f.Logger.Infof("%s [EXTENSIONS] [CONTROLPLANE]", ctxIdentifier)
 	controlplanes := &v1alpha1.ControlPlaneList{}
-	err = k8sClient.DirectClient().List(ctx, controlplanes, client.InNamespace(namespace))
+	err = k8sClient.Client().List(ctx, controlplanes, client.InNamespace(namespace))
 	if err != nil {
 		for _, cp := range controlplanes.Items {
 			f.dumpGardenerExtension(&cp)
@@ -148,7 +148,7 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 
 	f.Logger.Infof("%s [EXTENSIONS] [OS]", ctxIdentifier)
 	operatingSystems := &v1alpha1.OperatingSystemConfigList{}
-	err = k8sClient.DirectClient().List(ctx, operatingSystems, client.InNamespace(namespace))
+	err = k8sClient.Client().List(ctx, operatingSystems, client.InNamespace(namespace))
 	result = multierror.Append(result, err)
 	if err == nil {
 		for _, os := range operatingSystems.Items {
@@ -159,7 +159,7 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 
 	f.Logger.Infof("%s [EXTENSIONS] [WORKER]", ctxIdentifier)
 	workers := &v1alpha1.WorkerList{}
-	err = k8sClient.DirectClient().List(ctx, workers, client.InNamespace(namespace))
+	err = k8sClient.Client().List(ctx, workers, client.InNamespace(namespace))
 	result = multierror.Append(result, err)
 	if err == nil {
 		for _, worker := range workers.Items {
@@ -170,7 +170,7 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 
 	f.Logger.Infof("%s [EXTENSIONS] [BACKUPBUCKET]", ctxIdentifier)
 	backupBuckets := &v1alpha1.BackupBucketList{}
-	err = k8sClient.DirectClient().List(ctx, backupBuckets, client.InNamespace(namespace))
+	err = k8sClient.Client().List(ctx, backupBuckets, client.InNamespace(namespace))
 	result = multierror.Append(result, err)
 	if err == nil {
 		for _, bucket := range backupBuckets.Items {
@@ -181,7 +181,7 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 
 	f.Logger.Infof("%s [EXTENSIONS] [BACKUPENTRY]", ctxIdentifier)
 	backupEntries := &v1alpha1.BackupEntryList{}
-	err = k8sClient.DirectClient().List(ctx, backupEntries, client.InNamespace(namespace))
+	err = k8sClient.Client().List(ctx, backupEntries, client.InNamespace(namespace))
 	result = multierror.Append(result, err)
 	if err == nil {
 		for _, entry := range backupEntries.Items {
@@ -192,7 +192,7 @@ func (f *GardenerFramework) dumpGardenerExtensionsInNamespace(ctx context.Contex
 
 	f.Logger.Infof("%s [EXTENSIONS] [NETWORK]", ctxIdentifier)
 	networks := &v1alpha1.NetworkList{}
-	err = k8sClient.DirectClient().List(ctx, networks, client.InNamespace(namespace))
+	err = k8sClient.Client().List(ctx, networks, client.InNamespace(namespace))
 	result = multierror.Append(result, err)
 	if err == nil {
 		for _, network := range networks.Items {
@@ -220,7 +220,7 @@ func (f *GardenerFramework) dumpGardenerExtension(extension v1alpha1.Object) {
 func (f *CommonFramework) DumpLogsForPodsWithLabelsInNamespace(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, namespace string, opts ...client.ListOption) error {
 	pods := &corev1.PodList{}
 	opts = append(opts, client.InNamespace(namespace))
-	if err := k8sClient.DirectClient().List(ctx, pods, opts...); err != nil {
+	if err := k8sClient.Client().List(ctx, pods, opts...); err != nil {
 		return err
 	}
 
@@ -252,7 +252,7 @@ func (f *CommonFramework) DumpLogsForPodInNamespace(ctx context.Context, ctxIden
 func (f *CommonFramework) dumpDeploymentInfoForNamespace(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, namespace string) error {
 	f.Logger.Infof("%s [NAMESPACE %s] [DEPLOYMENTS]", ctxIdentifier, namespace)
 	deployments := &appsv1.DeploymentList{}
-	if err := k8sClient.DirectClient().List(ctx, deployments, client.InNamespace(namespace)); err != nil {
+	if err := k8sClient.Client().List(ctx, deployments, client.InNamespace(namespace)); err != nil {
 		return err
 	}
 	for _, deployment := range deployments.Items {
@@ -270,7 +270,7 @@ func (f *CommonFramework) dumpDeploymentInfoForNamespace(ctx context.Context, ct
 func (f *CommonFramework) dumpStatefulSetInfoForNamespace(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, namespace string) error {
 	f.Logger.Infof("%s [NAMESPACE %s] [STATEFULSETS]", ctxIdentifier, namespace)
 	statefulSets := &appsv1.StatefulSetList{}
-	if err := k8sClient.DirectClient().List(ctx, statefulSets, client.InNamespace(namespace)); err != nil {
+	if err := k8sClient.Client().List(ctx, statefulSets, client.InNamespace(namespace)); err != nil {
 		return err
 	}
 	for _, statefulSet := range statefulSets.Items {
@@ -288,7 +288,7 @@ func (f *CommonFramework) dumpStatefulSetInfoForNamespace(ctx context.Context, c
 func (f *CommonFramework) dumpDaemonSetInfoForNamespace(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, namespace string) error {
 	f.Logger.Infof("%s [NAMESPACE %s] [DAEMONSETS]", ctxIdentifier, namespace)
 	daemonSets := &appsv1.DaemonSetList{}
-	if err := k8sClient.DirectClient().List(ctx, daemonSets, client.InNamespace(namespace)); err != nil {
+	if err := k8sClient.Client().List(ctx, daemonSets, client.InNamespace(namespace)); err != nil {
 		return err
 	}
 	for _, ds := range daemonSets.Items {
@@ -306,7 +306,7 @@ func (f *CommonFramework) dumpDaemonSetInfoForNamespace(ctx context.Context, ctx
 func (f *CommonFramework) dumpNamespaceResource(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, namespace string) error {
 	f.Logger.Infof("%s [NAMESPACE RESOURCE %s]", ctxIdentifier, namespace)
 	ns := &corev1.Namespace{}
-	if err := k8sClient.DirectClient().Get(ctx, client.ObjectKey{Name: namespace}, ns); err != nil {
+	if err := k8sClient.Client().Get(ctx, client.ObjectKey{Name: namespace}, ns); err != nil {
 		return err
 	}
 	f.Logger.Printf("Namespace %s - Spec %+v - Status %+v", namespace, ns.Spec, ns.Status)
@@ -318,7 +318,7 @@ func (f *CommonFramework) dumpNamespaceResource(ctx context.Context, ctxIdentifi
 func (f *CommonFramework) dumpServiceInfoForNamespace(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, namespace string) error {
 	f.Logger.Infof("%s [NAMESPACE %s] [SERVICES]", ctxIdentifier, namespace)
 	services := &corev1.ServiceList{}
-	if err := k8sClient.DirectClient().List(ctx, services, client.InNamespace(namespace)); err != nil {
+	if err := k8sClient.Client().List(ctx, services, client.InNamespace(namespace)); err != nil {
 		return err
 	}
 	for _, service := range services.Items {
@@ -356,7 +356,7 @@ func (f *CommonFramework) dumpVolumeInfoForNamespace(ctx context.Context, ctxIde
 func (f *CommonFramework) dumpNodes(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface) error {
 	f.Logger.Infof("%s [NODES]", ctxIdentifier)
 	nodes := &corev1.NodeList{}
-	if err := k8sClient.DirectClient().List(ctx, nodes); err != nil {
+	if err := k8sClient.Client().List(ctx, nodes); err != nil {
 		return err
 	}
 	for _, node := range nodes.Items {
@@ -368,7 +368,7 @@ func (f *CommonFramework) dumpNodes(ctx context.Context, ctxIdentifier string, k
 		f.Logger.Printf("Node %s has a capacity of %s cpu, %s memory", node.Name, node.Status.Capacity.Cpu().String(), node.Status.Capacity.Memory().String())
 
 		nodeMetric := &metricsv1beta1.NodeMetrics{}
-		if err := k8sClient.DirectClient().Get(ctx, client.ObjectKey{Name: node.Name}, nodeMetric); err != nil {
+		if err := k8sClient.Client().Get(ctx, client.ObjectKey{Name: node.Name}, nodeMetric); err != nil {
 			f.Logger.Errorf("unable to receive metrics for node %s: %s", node.Name, err.Error())
 			continue
 		}
@@ -382,7 +382,7 @@ func (f *CommonFramework) dumpNodes(ctx context.Context, ctxIdentifier string, k
 func (f *CommonFramework) dumpPodInfoForNamespace(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, namespace string) error {
 	f.Logger.Infof("%s [NAMESPACE %s] [PODS]", ctxIdentifier, namespace)
 	pods := &corev1.PodList{}
-	if err := k8sClient.DirectClient().List(ctx, pods, client.InNamespace(namespace)); err != nil {
+	if err := k8sClient.Client().List(ctx, pods, client.InNamespace(namespace)); err != nil {
 		return err
 	}
 	for _, pod := range pods.Items {
@@ -396,7 +396,7 @@ func (f *CommonFramework) dumpPodInfoForNamespace(ctx context.Context, ctxIdenti
 func (f *CommonFramework) dumpEventsInNamespace(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, namespace string, filters ...EventFilterFunc) error {
 	f.Logger.Infof("%s [NAMESPACE %s] [EVENTS]", ctxIdentifier, namespace)
 	events := &corev1.EventList{}
-	if err := k8sClient.DirectClient().List(ctx, events, client.InNamespace(namespace)); err != nil {
+	if err := k8sClient.Client().List(ctx, events, client.InNamespace(namespace)); err != nil {
 		return err
 	}
 

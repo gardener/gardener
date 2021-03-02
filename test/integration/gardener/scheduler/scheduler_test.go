@@ -124,7 +124,7 @@ var _ = Describe("Scheduler testing", func() {
 		framework.ExpectNoError(err)
 
 		schedulerConfigurationConfigMap := &corev1.ConfigMap{}
-		err = hostClusterClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: schedulerconfigv1alpha1.SchedulerDefaultConfigurationConfigMapNamespace, Name: schedulerconfigv1alpha1.SchedulerDefaultConfigurationConfigMapName}, schedulerConfigurationConfigMap)
+		err = hostClusterClient.Client().Get(ctx, client.ObjectKey{Namespace: schedulerconfigv1alpha1.SchedulerDefaultConfigurationConfigMapNamespace, Name: schedulerconfigv1alpha1.SchedulerDefaultConfigurationConfigMapName}, schedulerConfigurationConfigMap)
 		framework.ExpectNoError(err)
 
 		schedulerConfiguration, err = framework.ParseSchedulerConfiguration(schedulerConfigurationConfigMap)
@@ -138,7 +138,7 @@ var _ = Describe("Scheduler testing", func() {
 
 		if testMachineryRun != nil && *testMachineryRun {
 			f.Logger.Info("Running in test Machinery")
-			replicas, err := framework.ScaleGardenerControllerManager(setupContextTimeout, f.GardenClient.DirectClient(), pointer.Int32Ptr(0))
+			replicas, err := framework.ScaleGardenerControllerManager(setupContextTimeout, f.GardenClient.Client(), pointer.Int32Ptr(0))
 			Expect(err).To(BeNil())
 			gardenerSchedulerReplicaCount = replicas
 			f.Logger.Info("Environment for test-machinery run is prepared")
@@ -154,7 +154,7 @@ var _ = Describe("Scheduler testing", func() {
 		}
 		if testMachineryRun != nil && *testMachineryRun {
 			// Scale up ControllerManager again to restore state before this test.
-			_, err := framework.ScaleGardenerControllerManager(restoreCtxTimeout, f.GardenClient.DirectClient(), gardenerSchedulerReplicaCount)
+			_, err := framework.ScaleGardenerControllerManager(restoreCtxTimeout, f.GardenClient.Client(), gardenerSchedulerReplicaCount)
 			framework.ExpectNoError(err)
 			f.Logger.Infof("Environment is restored")
 		}
@@ -219,7 +219,7 @@ var _ = Describe("Scheduler testing", func() {
 
 		// retrieve valid shoot
 		alreadyScheduledShoot := &gardencorev1beta1.Shoot{}
-		err = f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: f.Shoot.Name}, alreadyScheduledShoot)
+		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: f.Shoot.Name}, alreadyScheduledShoot)
 		framework.ExpectNoError(err)
 
 		err = f.ScheduleShoot(ctx, alreadyScheduledShoot, invalidSeed)
@@ -227,7 +227,7 @@ var _ = Describe("Scheduler testing", func() {
 
 		// double check that invalid seed is not set
 		currentShoot := &gardencorev1beta1.Shoot{}
-		err = f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: f.Shoot.Name}, currentShoot)
+		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: f.Shoot.Namespace, Name: f.Shoot.Name}, currentShoot)
 		framework.ExpectNoError(err)
 		Expect(*currentShoot.Spec.SeedName).NotTo(Equal(invalidSeed.Name))
 

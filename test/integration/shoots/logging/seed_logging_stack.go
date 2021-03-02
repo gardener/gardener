@@ -174,7 +174,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 
 			cluster := getCluster(i)
 			ginkgo.By(fmt.Sprintf("Deploy cluster %s", cluster.Name))
-			framework.ExpectNoError(create(ctx, f.ShootClient.DirectClient(), cluster))
+			framework.ExpectNoError(create(ctx, f.ShootClient.Client(), cluster))
 
 			ginkgo.By(fmt.Sprintf("Deploy the loki service in namespace %s", shootNamespace.Name))
 			lokiShootService := getLokiShootService(i)
