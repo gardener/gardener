@@ -93,6 +93,26 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	return allErrs
 }
 
+// ValidateShootTemplate validates a ShootTemplate.
+func ValidateShootTemplate(shootTemplate *core.ShootTemplate, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, metav1validation.ValidateLabels(shootTemplate.Labels, fldPath.Child("metadata", "labels"))...)
+	allErrs = append(allErrs, apivalidation.ValidateAnnotations(shootTemplate.Annotations, fldPath.Child("metadata", "annotations"))...)
+	allErrs = append(allErrs, ValidateShootSpec(shootTemplate.ObjectMeta, &shootTemplate.Spec, fldPath.Child("spec"))...)
+
+	return allErrs
+}
+
+// ValidateShootTemplateUpdate validates a ShootTemplate before an update.
+func ValidateShootTemplateUpdate(newShootTemplate, oldShootTemplate *core.ShootTemplate, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, ValidateShootSpecUpdate(&newShootTemplate.Spec, &oldShootTemplate.Spec, newShootTemplate.ObjectMeta, fldPath.Child("spec"))...)
+
+	return allErrs
+}
+
 // ValidateShootSpec validates the specification of a Shoot object.
 func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}

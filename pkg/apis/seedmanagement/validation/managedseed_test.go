@@ -86,8 +86,9 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 	BeforeEach(func() {
 		managedSeed = &seedmanagement.ManagedSeed{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
+				Name:       name,
+				Namespace:  namespace,
+				Generation: 1,
 			},
 			Spec: seedmanagement.ManagedSeedSpec{
 				Shoot: seedmanagement.Shoot{
@@ -97,6 +98,9 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					ObjectMeta: seed.ObjectMeta,
 					Spec:       seed.Spec,
 				},
+			},
+			Status: seedmanagement.ManagedSeedStatus{
+				ObservedGeneration: 1,
 			},
 		}
 	})
@@ -473,6 +477,36 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					})),
 				))
 			})
+		})
+	})
+
+	Describe("#ValidateManagedSeedStatusUpdate", func() {
+		var (
+			newManagedSeed *seedmanagement.ManagedSeed
+		)
+
+		BeforeEach(func() {
+			newManagedSeed = managedSeed.DeepCopy()
+			newManagedSeed.ResourceVersion = "1"
+		})
+
+		It("should allow valid status updates", func() {
+			errorList := ValidateManagedSeedStatusUpdate(newManagedSeed, managedSeed)
+
+			Expect(errorList).To(HaveLen(0))
+		})
+
+		It("should forbid negative observed generation", func() {
+			newManagedSeed.Status.ObservedGeneration = -1
+
+			errorList := ValidateManagedSeedStatusUpdate(newManagedSeed, managedSeed)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("status.observedGeneration"),
+				})),
+			))
 		})
 	})
 })

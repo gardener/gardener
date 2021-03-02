@@ -45,6 +45,11 @@ func ValidateManagedSeed(managedSeed *seedmanagement.ManagedSeed) field.ErrorLis
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&managedSeed.ObjectMeta, true, corevalidation.ValidateName, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateManagedSeedSpec(&managedSeed.Spec, field.NewPath("spec"))...)
 
+	// Ensure shoot name is specified
+	if managedSeed.Spec.Shoot.Name == "" {
+		allErrs = append(allErrs, field.Required(field.NewPath("spec").Child("shoot", "name"), "shoot name is required"))
+	}
+
 	return allErrs
 }
 
@@ -59,14 +64,39 @@ func ValidateManagedSeedUpdate(newManagedSeed, oldManagedSeed *seedmanagement.Ma
 	return allErrs
 }
 
+// ValidateManagedSeedStatusUpdate validates a ManagedSeed object before a status update.
+func ValidateManagedSeedStatusUpdate(newManagedSeed, oldManagedSeed *seedmanagement.ManagedSeed) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newManagedSeed.ObjectMeta, &oldManagedSeed.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateManagedSeedStatus(&newManagedSeed.Status, field.NewPath("status"))...)
+
+	return allErrs
+}
+
+// ValidateManagedSeedTemplate validates a ManagedSeedTemplate.
+func ValidateManagedSeedTemplate(managedSeedTemplate *seedmanagement.ManagedSeedTemplate, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, metav1validation.ValidateLabels(managedSeedTemplate.Labels, fldPath.Child("metadata", "labels"))...)
+	allErrs = append(allErrs, apivalidation.ValidateAnnotations(managedSeedTemplate.Annotations, fldPath.Child("metadata", "annotations"))...)
+	allErrs = append(allErrs, ValidateManagedSeedSpec(&managedSeedTemplate.Spec, fldPath.Child("spec"))...)
+
+	return allErrs
+}
+
+// ValidateManagedSeedTemplateUpdate validates a ManagedSeedTemplate before an update.
+func ValidateManagedSeedTemplateUpdate(newManagedSeedTemplate, oldManagedSeedTemplate *seedmanagement.ManagedSeedTemplate, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, ValidateManagedSeedSpecUpdate(&newManagedSeedTemplate.Spec, &oldManagedSeedTemplate.Spec, fldPath.Child("spec"))...)
+
+	return allErrs
+}
+
 // ValidateManagedSeedSpec validates the specification of a ManagedSeed object.
 func ValidateManagedSeedSpec(spec *seedmanagement.ManagedSeedSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-
-	// Ensure shoot name is specified
-	if spec.Shoot.Name == "" {
-		allErrs = append(allErrs, field.Required(fldPath.Child("shoot", "name"), "shoot name is required"))
-	}
 
 	// Ensure either seed template or gardenlet is specified
 	if (spec.SeedTemplate == nil && spec.Gardenlet == nil) || (spec.SeedTemplate != nil && spec.Gardenlet != nil) {
@@ -105,9 +135,13 @@ func ValidateManagedSeedSpecUpdate(newSpec, oldSpec *seedmanagement.ManagedSeedS
 	return allErrs
 }
 
-// ValidateManagedSeedStatusUpdate validates a ManagedSeed object before a status update.
-func ValidateManagedSeedStatusUpdate(newManagedSeed, oldManagedSeed *seedmanagement.ManagedSeed) field.ErrorList {
+// ValidateManagedSeedStatus validates the given ManagedSeedStatus.
+func ValidateManagedSeedStatus(status *seedmanagement.ManagedSeedStatus, fieldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	// Ensure integer fields are non-negative
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(status.ObservedGeneration, fieldPath.Child("observedGeneration"))...)
+
 	return allErrs
 }
 
