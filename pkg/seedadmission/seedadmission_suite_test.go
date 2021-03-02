@@ -310,7 +310,7 @@ var _ = Describe("Integration Test", func() {
 		Context("extension resources", func() {
 			BeforeEach(func() {
 				By("creating extension test objects")
-				_, err := test.EnsureTestResources(ctx, c, "testdata")
+				_, err := test.EnsureTestResources(ctx, c, filepath.Join("webhooks", "admission", "extensioncrds", "testdata"))
 				Expect(err).NotTo(HaveOccurred())
 			})
 
