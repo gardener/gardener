@@ -47,6 +47,8 @@ var _ = Describe("errors", func() {
 		Entry("resources depleted with coder", NewErrorWithCodes("not available in the current hardware cluster", gardencorev1beta1.ErrorInfraResourcesDepleted), "error occurred: not available in the current hardware cluster", NewErrorWithCodes("error occurred: not available in the current hardware cluster", gardencorev1beta1.ErrorInfraResourcesDepleted)),
 		Entry("configuration problem", errors.New("InvalidParameterValue"), "error occurred: InvalidParameterValue", NewErrorWithCodes("error occurred: InvalidParameterValue", gardencorev1beta1.ErrorConfigurationProblem)),
 		Entry("configuration problem with coder", NewErrorWithCodes("InvalidParameterValue", gardencorev1beta1.ErrorConfigurationProblem), "error occurred: InvalidParameterValue", NewErrorWithCodes("error occurred: InvalidParameterValue", gardencorev1beta1.ErrorConfigurationProblem)),
+		Entry("retryable configuration problem", errors.New("pod disruption budget default/pdb is misconfigured and requires zero voluntary evictions"), "", NewErrorWithCodes("pod disruption budget default/pdb is misconfigured and requires zero voluntary evictions", gardencorev1beta1.ErrorRetryableConfigurationProblem)),
+		Entry("retryable configuration problem with coder", NewErrorWithCodes("pod disruption budget default/pdb is misconfigured and requires zero voluntary evictions", gardencorev1beta1.ErrorRetryableConfigurationProblem), "", NewErrorWithCodes("pod disruption budget default/pdb is misconfigured and requires zero voluntary evictions", gardencorev1beta1.ErrorRetryableConfigurationProblem)),
 	)
 
 	DescribeTable("#ExtractErrorCodes",

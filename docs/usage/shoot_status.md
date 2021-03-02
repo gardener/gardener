@@ -55,14 +55,12 @@ Currently there are two constraints:
 
 This constraint indicates whether a Shoot is allowed to be hibernated.
 The rationale behind this constraint is that a Shoot can have `ValidatingWebhookConfiguration`s or `MutatingWebhookConfiguration`s acting on resources that are critical for waking up a cluster.
-For example, if a webhook has rules for `CREATE/UPDATE` Pods or Nodes and `failurePolicy=Fail`, the webhook will block joining `Nodes` and creating critical system component Pods and thus block the entire wakeup
-operation, because the server backing the webhook is not running.
+For example, if a webhook has rules for `CREATE/UPDATE` Pods or Nodes and `failurePolicy=Fail`, the webhook will block joining `Nodes` and creating critical system component Pods and thus block the entire wakeup operation, because the server backing the webhook is not running.
 
 Even if the `failurePolicy` is set to `Ignore`, high timeouts (`>15s`) can lead to blocking requests of control plane components.
 That's because most control-plane API calls are made with a client-side timeout of `30s`, so if a webhook has `timeoutSeconds=30`
 the overall request might still fail as there is overhead in communication with the API server and potential other webhooks.
-Generally, it's [best pratice](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts)
-to specify low timeouts in WebhookConfigs.
+Generally, it's [best pratice](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#timeouts) to specify low timeouts in WebhookConfigs.
 Also, it's [best practice](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#avoiding-operating-on-the-kube-system-namespace)
 to exclude the `kube-system` namespace from webhooks to avoid blocking critical operations on system components of the cluster.
 Shoot owners can do so by adding a `namespaceSelector` similar to this one to their webhook configurations:
@@ -75,19 +73,15 @@ namespaceSelector:
     - kube-system
 ```
 
-If the Shoot still has webhooks with either `failurePolicy={Fail,nil}` or `failurePolicy=Ignore && timeoutSeconds>15` that
-act on [critical resources](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/matchers/matcher.go#L60)
-in the `kube-system` namespace, Gardener will set the `HibernationPossible` to `False` indicating, that the Shoot can
-probably not be woken up again after hibernation without manual intervention of the Gardener Operator.
-`gardener-apiserver` will prevent any Shoot with the `HibernationPossible` constraint set to `False` from being hibernated,
-that is via manual hibernation as well as scheduled hibernation.
+If the Shoot still has webhooks with either `failurePolicy={Fail,nil}` or `failurePolicy=Ignore && timeoutSeconds>15` that act on [critical resources](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/matchers/matcher.go#L60) in the `kube-system` namespace, Gardener will set the `HibernationPossible` to `False` indicating, that the Shoot can probably not be woken up again after hibernation without manual intervention of the Gardener Operator.
+`gardener-apiserver` will prevent any Shoot with the `HibernationPossible` constraint set to `False` from being hibernated, that is via manual hibernation as well as scheduled hibernation.
 
 **`MaintenancePreconditionsSatisfied`**:
-  
+
 This constraint indicates whether all preconditions for a safe maintenance operation are satisfied (see also [this document](shoot_maintenance.md) for more information about what happens during a shoot maintenance).
 As of today, the same checks as in the `HibernationPossible` constraint are being performed (user-deployed webhooks that might interfere with potential rolling updates of shoot worker nodes).
 There is no further action being performed on this constraint's status (maintenance is still being performed).
-It is meant to make the user aware of potential problems that might occur due to his configurations. 
+It is meant to make the user aware of potential problems that might occur due to his configurations.
 
 ### Last Operation
 
@@ -101,10 +95,11 @@ The Shoot status also contains information about the last occurred error(s) (if 
 
 Known error codes are:
 
-- `ERR_INFRA_UNAUTHORIZED` - indicates that the last error occurred due to invalid infrastructure credentials
+- `ERR_INFRA_UNAUTHORIZED` - indicates that the last error occurred due to invalid infrastructure credentials. It is classified as a non-retryable error code.
 - `ERR_INFRA_INSUFFICIENT_PRIVILEGES` - indicates that the last error occurred due to insufficient infrastructure privileges
 - `ERR_INFRA_QUOTA_EXCEEDED` - indicates that the last error occurred due to infrastructure quota limits
 - `ERR_INFRA_DEPENDENCIES` - indicates that the last error occurred due to dependent objects on the infrastructure level
 - `ERR_INFRA_RESOURCES_DEPLETED` - indicates that the last error occurred due to depleted resource in the infrastructure
 - `ERR_CLEANUP_CLUSTER_RESOURCES` - indicates that the last error occurred due to resources in the cluster that are stuck in deletion
-- `ERR_CONFIGURATION_PROBLEM` - indicates that the last error occurred due to a configuration problem
+- `ERR_CONFIGURATION_PROBLEM` - indicates that the last error occurred due to a configuration problem. It is classified as a non-retryable error code.
+- `ERR_RETRYABLE_CONFIGURATION_PROBLEM` - indicates that the last error occurred due to a retryable configuration problem. "Retryable" means that the occurred error is likely to be resolved in a ungraceful manner after given period of time.
