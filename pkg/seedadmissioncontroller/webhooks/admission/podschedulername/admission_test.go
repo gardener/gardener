@@ -30,14 +30,14 @@ import (
 
 var _ = Describe("#DefaultShootControlPlanePodsSchedulerName", func() {
 	var (
-		ctx       context.Context
-		request   admission.Request
-		validator admission.Handler
+		ctx     context.Context
+		request admission.Request
+		handler admission.Handler
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
-		validator = admission.HandlerFunc(DefaultShootControlPlanePodsSchedulerName)
+		handler = admission.HandlerFunc(DefaultShootControlPlanePodsSchedulerName)
 
 		request = admission.Request{}
 		request.Operation = admissionv1.Create
@@ -46,25 +46,25 @@ var _ = Describe("#DefaultShootControlPlanePodsSchedulerName", func() {
 
 	It("should ignore other operations than CREATE", func() {
 		request.Operation = admissionv1.Delete
-		expectAllowed(validator.Handle(ctx, request), ContainSubstring("not CREATE"))
+		expectAllowed(handler.Handle(ctx, request), ContainSubstring("not CREATE"))
 		request.Operation = admissionv1.Update
-		expectAllowed(validator.Handle(ctx, request), ContainSubstring("not CREATE"))
+		expectAllowed(handler.Handle(ctx, request), ContainSubstring("not CREATE"))
 		request.Operation = admissionv1.Connect
-		expectAllowed(validator.Handle(ctx, request), ContainSubstring("not CREATE"))
+		expectAllowed(handler.Handle(ctx, request), ContainSubstring("not CREATE"))
 	})
 
 	It("should ignore other resources than Pods", func() {
 		request.Kind = metav1.GroupVersionKind{Group: "foo", Version: "bar", Kind: "baz"}
-		expectAllowed(validator.Handle(ctx, request), ContainSubstring("not corev1.Pod"))
+		expectAllowed(handler.Handle(ctx, request), ContainSubstring("not corev1.Pod"))
 	})
 
 	It("should ignore subresources", func() {
 		request.SubResource = "logs"
-		expectAllowed(validator.Handle(ctx, request), ContainSubstring("subresource"))
+		expectAllowed(handler.Handle(ctx, request), ContainSubstring("subresource"))
 	})
 
 	It("should default schedulerName", func() {
-		expectPatched(validator.Handle(ctx, request), ContainSubstring("shoot control plane pod"), []jsonpatch.JsonPatchOperation{
+		expectPatched(handler.Handle(ctx, request), ContainSubstring("shoot control plane pod"), []jsonpatch.JsonPatchOperation{
 			jsonpatch.NewOperation("replace", "/spec/schedulerName", "gardener-shoot-controlplane-scheduler"),
 		})
 	})

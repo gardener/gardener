@@ -28,8 +28,8 @@ const (
 	// shoot control plane pods.
 	GardenerShootControlPlaneSchedulerName = "gardener-shoot-controlplane-scheduler"
 
-	// PluginName is the name of this admission plugin.
-	PluginName = "pod_scheduler_name"
+	// HandlerName is the name of this admission webhook handler.
+	HandlerName = "pod_scheduler_name"
 	// WebhookPath is the HTTP handler path for this admission webhook handler.
 	// Note: In the future we might want to have additional scheduler names
 	// so lets have the handler be of pattern "/webhooks/default-pod-scheduler-name/{scheduler-name}"

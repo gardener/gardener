@@ -150,7 +150,7 @@ func (o *Options) Run(ctx context.Context) error {
 
 	log.Info("setting up webhook server")
 	server := mgr.GetWebhookServer()
-	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(logf.Log.WithName(extensioncrds.PluginName))})
+	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(logf.Log.WithName(extensioncrds.HandlerName))})
 	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
 
 	log.Info("starting manager")

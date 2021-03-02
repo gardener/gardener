@@ -39,37 +39,37 @@ import (
 )
 
 const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "extension_crds"
+	// HandlerName is the name of this admission webhook handler.
+	HandlerName = "extension_crds"
 	// WebhookPath is the HTTP handler path for this admission webhook handler.
 	WebhookPath = "/webhooks/validate-extension-crd-deletion"
 )
 
 // New creates a new webhook handler validating DELETE requests for extension CRDs and extension resources, that are
 // marked for deletion protection (`gardener.cloud/deletion-protected`).
-func New(logger logr.Logger) *plugin {
-	return &plugin{logger: logger}
+func New(logger logr.Logger) *handler {
+	return &handler{logger: logger}
 }
 
-type plugin struct {
+type handler struct {
 	logger  logr.Logger
 	reader  client.Reader
 	decoder *admission.Decoder
 }
 
-var _ admission.Handler = &plugin{}
+var _ admission.Handler = &handler{}
 
-func (p *plugin) InjectAPIReader(reader client.Reader) error {
-	p.reader = reader
+func (h *handler) InjectAPIReader(reader client.Reader) error {
+	h.reader = reader
 	return nil
 }
 
-func (p *plugin) InjectDecoder(d *admission.Decoder) error {
-	p.decoder = d
+func (h *handler) InjectDecoder(d *admission.Decoder) error {
+	h.decoder = d
 	return nil
 }
 
-func (p *plugin) Handle(ctx context.Context, request admission.Request) admission.Response {
+func (h *handler) Handle(ctx context.Context, request admission.Request) admission.Response {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -97,7 +97,7 @@ func (p *plugin) Handle(ctx context.Context, request admission.Request) admissio
 		return admission.Allowed("resource is not deletion-protected")
 	}
 
-	obj, err := sacadmission.ExtractRequestObject(ctx, p.reader, p.decoder, request)
+	obj, err := sacadmission.ExtractRequestObject(ctx, h.reader, h.decoder, request)
 	if apierrors.IsNotFound(err) {
 		return admission.Allowed("object was not found")
 	}
@@ -112,7 +112,7 @@ func (p *plugin) Handle(ctx context.Context, request admission.Request) admissio
 		operation = "DELETE"
 	}
 
-	log := p.logger.
+	log := h.logger.
 		WithValues("resource", request.Resource).
 		WithValues("operation", operation).
 		WithValues("namespace", request.Namespace)

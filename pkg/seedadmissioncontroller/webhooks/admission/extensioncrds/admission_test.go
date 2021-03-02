@@ -47,7 +47,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-var _ = Describe("plugin", func() {
+var _ = Describe("handler", func() {
 	Describe("#ValidateExtensionDeletion", func() {
 		var (
 			ctx    = context.TODO()
@@ -55,11 +55,10 @@ var _ = Describe("plugin", func() {
 
 			request admission.Request
 			decoder *admission.Decoder
+			handler admission.Handler
 
 			ctrl *gomock.Controller
 			c    *mockclient.MockClient
-
-			validator admission.Handler
 		)
 
 		BeforeEach(func() {
@@ -75,9 +74,9 @@ var _ = Describe("plugin", func() {
 			decoder, err = admission.NewDecoder(kubernetes.SeedScheme)
 			Expect(err).NotTo(HaveOccurred())
 
-			validator = extensioncrds.New(logger)
-			Expect(inject.APIReaderInto(c, validator)).To(BeTrue())
-			Expect(admission.InjectDecoderInto(decoder, validator)).To(BeTrue())
+			handler = extensioncrds.New(logger)
+			Expect(inject.APIReaderInto(c, handler)).To(BeTrue())
+			Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 		})
 
 		AfterEach(func() {
@@ -114,12 +113,12 @@ var _ = Describe("plugin", func() {
 
 		testDeletionUnconfirmed := func(ctx context.Context, request admission.Request, resource metav1.GroupVersionResource) {
 			request.Resource = resource
-			expectDenied(validator.Handle(ctx, request), ContainSubstring("annotation to delete"), resourceToId(resource))
+			expectDenied(handler.Handle(ctx, request), ContainSubstring("annotation to delete"), resourceToId(resource))
 		}
 
 		testDeletionConfirmed := func(ctx context.Context, request admission.Request, resource metav1.GroupVersionResource) {
 			request.Resource = resource
-			expectAllowed(validator.Handle(ctx, request), Equal(""), resourceToId(resource))
+			expectAllowed(handler.Handle(ctx, request), Equal(""), resourceToId(resource))
 		}
 
 		type unstructuredInterface interface {
@@ -163,16 +162,16 @@ var _ = Describe("plugin", func() {
 		Context("ignored requests", func() {
 			It("should ignore other operations than DELETE", func() {
 				request.Operation = admissionv1.Create
-				expectAllowed(validator.Handle(ctx, request), ContainSubstring("not DELETE"))
+				expectAllowed(handler.Handle(ctx, request), ContainSubstring("not DELETE"))
 				request.Operation = admissionv1.Update
-				expectAllowed(validator.Handle(ctx, request), ContainSubstring("not DELETE"))
+				expectAllowed(handler.Handle(ctx, request), ContainSubstring("not DELETE"))
 				request.Operation = admissionv1.Connect
-				expectAllowed(validator.Handle(ctx, request), ContainSubstring("not DELETE"))
+				expectAllowed(handler.Handle(ctx, request), ContainSubstring("not DELETE"))
 			})
 
 			It("should ignore types other than CRDs + extension resources", func() {
 				request.Resource = fooResource
-				expectAllowed(validator.Handle(ctx, request), ContainSubstring("resource is not deletion-protected"))
+				expectAllowed(handler.Handle(ctx, request), ContainSubstring("resource is not deletion-protected"))
 			})
 		})
 
@@ -187,7 +186,7 @@ var _ = Describe("plugin", func() {
 				for _, resource := range resources {
 					request.Resource = resource
 					request.OldObject = runtime.RawExtension{Raw: []byte("foo")}
-					expectErrored(validator.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), ContainSubstring("invalid character"), resourceToId(resource))
+					expectErrored(handler.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), ContainSubstring("invalid character"), resourceToId(resource))
 				}
 			})
 
@@ -260,7 +259,7 @@ var _ = Describe("plugin", func() {
 					request.Resource = resource
 					request.Object = runtime.RawExtension{Raw: []byte("foo")}
 
-					expectErrored(validator.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), ContainSubstring("invalid character"), resourceToId(resource))
+					expectErrored(handler.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), ContainSubstring("invalid character"), resourceToId(resource))
 				}
 			})
 
@@ -337,7 +336,7 @@ var _ = Describe("plugin", func() {
 
 					c.EXPECT().Get(gomock.Any(), gomock.AssignableToTypeOf(client.ObjectKey{}), gomock.AssignableToTypeOf(&unstructured.Unstructured{})).Return(fakeErr)
 
-					expectErrored(validator.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), Equal(fakeErr.Error()), resourceToId(resource))
+					expectErrored(handler.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), Equal(fakeErr.Error()), resourceToId(resource))
 				}
 			})
 
@@ -349,7 +348,7 @@ var _ = Describe("plugin", func() {
 
 					c.EXPECT().Get(gomock.Any(), gomock.AssignableToTypeOf(client.ObjectKey{}), gomock.AssignableToTypeOf(&unstructured.Unstructured{})).Return(apierrors.NewNotFound(core.Resource(resource.Resource), "name"))
 
-					expectAllowed(validator.Handle(ctx, request), ContainSubstring("object was not found"), resourceToId(resource))
+					expectAllowed(handler.Handle(ctx, request), ContainSubstring("object was not found"), resourceToId(resource))
 				}
 			})
 
@@ -463,7 +462,7 @@ var _ = Describe("plugin", func() {
 
 					c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).Return(fakeErr)
 
-					expectErrored(validator.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), Equal(fakeErr.Error()), resourceToId(resource))
+					expectErrored(handler.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), Equal(fakeErr.Error()), resourceToId(resource))
 				}
 			})
 
@@ -475,7 +474,7 @@ var _ = Describe("plugin", func() {
 
 					c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).Return(apierrors.NewNotFound(core.Resource(resource.Resource), "name"))
 
-					expectAllowed(validator.Handle(ctx, request), ContainSubstring("object was not found"), resourceToId(resource))
+					expectAllowed(handler.Handle(ctx, request), ContainSubstring("object was not found"), resourceToId(resource))
 				}
 			})
 
