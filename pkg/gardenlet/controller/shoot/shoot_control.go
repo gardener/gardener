@@ -408,7 +408,7 @@ func (c *Controller) reconcileShoot(ctx context.Context, logger *logrus.Entry, s
 	}
 
 	if !controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
-		if err := controllerutils.PatchFinalizers(ctx, gardenClient.Client(), shoot.DeepCopy(), gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), shoot.DeepCopy(), gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not add finalizer to Shoot: %s", err.Error())
 		}
 		return reconcile.Result{}, nil

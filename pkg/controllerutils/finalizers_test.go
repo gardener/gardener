@@ -63,7 +63,7 @@ var _ = Describe("Finalizers", func() {
 	})
 
 	Context("no retry on conflict", func() {
-		Describe("PatchFinalizers", func() {
+		Describe("PatchAddFinalizers", func() {
 			test := func(description string, expectedPatchFinalizers string, existingFinalizers, finalizers []string) {
 				It(description+fmt.Sprintf(" %v, %v", existingFinalizers, finalizers), func() {
 					obj.SetFinalizers(existingFinalizers)
@@ -73,7 +73,7 @@ var _ = Describe("Finalizers", func() {
 						return nil
 					})
 
-					Expect(PatchFinalizers(ctx, mockWriter, obj, finalizers...)).To(Succeed())
+					Expect(PatchAddFinalizers(ctx, mockWriter, obj, finalizers...)).To(Succeed())
 				})
 			}
 			test("should add given finalizers via patch", `["foo"]`, nil, []string{"foo"})
@@ -88,7 +88,7 @@ var _ = Describe("Finalizers", func() {
 
 			It("should fail on conflict", func() {
 				mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).Return(apierrors.NewConflict(schema.GroupResource{}, obj.GetName(), fmt.Errorf("conflict")))
-				Expect(PatchFinalizers(ctx, mockWriter, obj, "foo")).To(MatchError(ContainSubstring("conflict")))
+				Expect(PatchAddFinalizers(ctx, mockWriter, obj, "foo")).To(MatchError(ContainSubstring("conflict")))
 			})
 		})
 

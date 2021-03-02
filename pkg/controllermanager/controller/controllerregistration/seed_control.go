@@ -134,5 +134,5 @@ func (c *defaultSeedControl) Reconcile(obj *gardencorev1beta1.Seed) error {
 		return controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), seed, FinalizerName)
 	}
 
-	return controllerutils.PatchFinalizers(ctx, gardenClient.Client(), seed, FinalizerName)
+	return controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), seed, FinalizerName)
 }

@@ -149,7 +149,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		return fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	if err := controllerutils.PatchFinalizers(ctx, gardenClient.Client(), controllerInstallation, FinalizerName); err != nil {
+	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), controllerInstallation, FinalizerName); err != nil {
 		return err
 	}
 

@@ -93,7 +93,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 func (r *reconciler) reconcileBackupBucket(ctx context.Context, gardenClient kubernetes.Interface, backupBucket *gardencorev1beta1.BackupBucket) (reconcile.Result, error) {
 	backupBucketLogger := logger.NewFieldLogger(logger.Logger, "backupbucket", backupBucket.Name)
 
-	if err := controllerutils.PatchFinalizers(ctx, gardenClient.Client(), backupBucket, gardencorev1beta1.GardenerName); err != nil {
+	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), backupBucket, gardencorev1beta1.GardenerName); err != nil {
 		backupBucketLogger.Errorf("Failed to ensure gardener finalizer on backupbucket: %+v", err)
 		return reconcile.Result{}, err
 	}
@@ -111,7 +111,7 @@ func (r *reconciler) reconcileBackupBucket(ctx context.Context, gardenClient kub
 		return reconcile.Result{}, err
 	}
 
-	if err := controllerutils.PatchFinalizers(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 		backupBucketLogger.Errorf("Failed to ensure external gardener finalizer on referred secret: %+v", err)
 		return reconcile.Result{}, err
 	}

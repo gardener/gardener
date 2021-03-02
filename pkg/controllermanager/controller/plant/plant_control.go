@@ -177,7 +177,7 @@ func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1
 	}
 
 	// Add Finalizers to Plant
-	if err := controllerutils.PatchFinalizers(ctx, gardenClient.Client(), plant, FinalizerName); err != nil {
+	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), plant, FinalizerName); err != nil {
 		return fmt.Errorf("failed to ensure finalizer on plant: %w", err)
 	}
 
@@ -194,7 +194,7 @@ func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1
 		return fmt.Errorf("failed to get plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
 	}
 
-	if err := controllerutils.PatchFinalizers(ctx, gardenClient.Client(), kubeconfigSecret, FinalizerName); err != nil {
+	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), kubeconfigSecret, FinalizerName); err != nil {
 		return fmt.Errorf("failed to ensure finalizer on plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
 	}
 

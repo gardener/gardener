@@ -126,7 +126,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *reconciler) reconcile(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := controllerutils.PatchFinalizers(ctx, r.client, cr, FinalizerName); err != nil {
+	if err := controllerutils.PatchAddFinalizers(ctx, r.client, cr, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -146,7 +146,7 @@ func (r *reconciler) reconcile(ctx context.Context, cr *extensionsv1alpha1.Conta
 }
 
 func (r *reconciler) restore(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := controllerutils.PatchFinalizers(ctx, r.client, cr, FinalizerName); err != nil {
+	if err := controllerutils.PatchAddFinalizers(ctx, r.client, cr, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 

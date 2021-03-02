@@ -124,7 +124,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *reconciler) reconcile(ctx context.Context, be *extensionsv1alpha1.BackupEntry, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := controllerutils.PatchFinalizers(ctx, r.client, be, FinalizerName); err != nil {
+	if err := controllerutils.PatchAddFinalizers(ctx, r.client, be, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -136,7 +136,7 @@ func (r *reconciler) reconcile(ctx context.Context, be *extensionsv1alpha1.Backu
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 	}
-	if err := controllerutils.PatchFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
+	if err := controllerutils.PatchAddFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on backup entry secret: %+v", err)
 	}
 
@@ -159,7 +159,7 @@ func (r *reconciler) reconcile(ctx context.Context, be *extensionsv1alpha1.Backu
 }
 
 func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupEntry) (reconcile.Result, error) {
-	if err := controllerutils.PatchFinalizers(ctx, r.client, be, FinalizerName); err != nil {
+	if err := controllerutils.PatchAddFinalizers(ctx, r.client, be, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -171,7 +171,7 @@ func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupE
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 	}
-	if err := controllerutils.PatchFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
+	if err := controllerutils.PatchAddFinalizers(ctx, r.client, secret, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on backup entry secret: %+v", err)
 	}
 

@@ -130,5 +130,5 @@ func (c *defaultControllerRegistrationControl) Reconcile(obj *gardencorev1beta1.
 		return controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), controllerRegistration, FinalizerName)
 	}
 
-	return controllerutils.PatchFinalizers(ctx, gardenClient.Client(), controllerRegistration, FinalizerName)
+	return controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), controllerRegistration, FinalizerName)
 }

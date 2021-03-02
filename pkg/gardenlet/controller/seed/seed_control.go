@@ -334,7 +334,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 			seedLogger.Error(err.Error())
 			return err
 		}
-		if err := controllerutils.PatchFinalizers(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+		if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
 			seedLogger.Error(err.Error())
 			return err
 		}

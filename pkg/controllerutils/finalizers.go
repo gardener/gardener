@@ -23,8 +23,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// PatchFinalizers adds the given finalizers to the object via a patch request.
-func PatchFinalizers(ctx context.Context, writer client.Writer, obj client.Object, finalizers ...string) error {
+// PatchAddFinalizers adds the given finalizers to the object via a patch request.
+func PatchAddFinalizers(ctx context.Context, writer client.Writer, obj client.Object, finalizers ...string) error {
 	return patchFinalizers(ctx, writer, obj, controllerutil.AddFinalizer, finalizers...)
 }
 
@@ -44,7 +44,7 @@ func patchFinalizers(ctx context.Context, writer client.Writer, obj client.Objec
 
 // EnsureFinalizer ensures that a finalizer of the given name is set on the given object with exponential backoff.
 // If the finalizer is not set, it adds it to the list of finalizers and patches the remote object.
-// Use PatchFinalizers instead, if the controller is able to tolerate conflict errors caused by stale reads.
+// Use PatchAddFinalizers instead, if the controller is able to tolerate conflict errors caused by stale reads.
 func EnsureFinalizer(ctx context.Context, reader client.Reader, writer client.Writer, obj client.Object, finalizer string) error {
 	return tryPatchFinalizers(ctx, reader, writer, obj, controllerutil.AddFinalizer, finalizer)
 }
