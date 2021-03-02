@@ -21,8 +21,7 @@ import (
 	"strconv"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -41,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -140,7 +140,7 @@ func (r *reconciler) deleteBackupEntry(ctx context.Context, gardenClient kuberne
 		return reconcile.Result{}, nil
 	}
 
-	gracePeriod := computeGracePeriod(*r.config.Controllers.BackupEntry.DeletionGracePeriodHours)
+	gracePeriod := computeGracePeriod(*r.config.Controllers.BackupEntry.DeletionGracePeriodHours, r.config.Controllers.BackupEntry.DeletionGracePeriodShootPurposes, gardencore.ShootPurpose(backupEntry.Annotations[v1beta1constants.ShootPurpose]))
 	present, _ := strconv.ParseBool(backupEntry.ObjectMeta.Annotations[gardencorev1beta1.BackupEntryForceDeletion])
 	if present || time.Since(backupEntry.DeletionTimestamp.Local()) > gracePeriod {
 		if updateErr := r.updateBackupEntryStatusProcessing(ctx, gardenClient.DirectClient(), backupEntry, "Deletion of Backup Entry in progress.", 2); updateErr != nil {
@@ -243,6 +243,21 @@ func updateBackupEntryStatusPending(ctx context.Context, c client.Client, be *ga
 	})
 }
 
-func computeGracePeriod(deletionGracePeriodHours int) time.Duration {
-	return time.Hour * time.Duration(deletionGracePeriodHours)
+func computeGracePeriod(deletionGracePeriodHours int, deletionGracePeriodShootPurposes []gardencore.ShootPurpose, shootPurpose gardencore.ShootPurpose) time.Duration {
+	// If no dedicated list of purposes is provided then the grace period applies for all purposes. If the shoot purpose
+	// is empty then it was not yet updated with the purpose annotation or the corresponding `Shoot` is already deleted
+	// from the system. In this case, for backwards-compatibility, the grace period applies as well.
+	if len(deletionGracePeriodShootPurposes) == 0 || len(shootPurpose) == 0 {
+		return time.Hour * time.Duration(deletionGracePeriodHours)
+	}
+
+	// Otherwise, the grace period only applies for the purposes in the list.
+	for _, p := range deletionGracePeriodShootPurposes {
+		if p == shootPurpose {
+			return time.Hour * time.Duration(deletionGracePeriodHours)
+		}
+	}
+
+	// If the shoot purpose was not found in the list then the grace period does not apply.
+	return 0
 }

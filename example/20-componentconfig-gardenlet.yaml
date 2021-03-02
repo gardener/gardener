@@ -16,6 +16,8 @@ controllers:
   backupEntry:
     concurrentSyncs: 20
     deletionGracePeriodHours: 0
+  # deletionGracePeriodShootPurposes:
+  # - production
   controllerInstallation:
     concurrentSyncs: 20
   controllerInstallationCare:

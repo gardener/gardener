@@ -52,9 +52,10 @@ var _ = Describe("BackupEntry", func() {
 		mockNow *mocktime.MockNow
 		now     time.Time
 
-		name      = "be"
-		namespace = "namespace"
-		ownerRef  = metav1.NewControllerRef(&corev1.Namespace{}, corev1.SchemeGroupVersion.WithKind("Namespace"))
+		name         = "be"
+		namespace    = "namespace"
+		shootPurpose = gardencorev1beta1.ShootPurposeDevelopment
+		ownerRef     = metav1.NewControllerRef(&corev1.Namespace{}, corev1.SchemeGroupVersion.WithKind("Namespace"))
 
 		seedName            = "seed"
 		bucketName          = "bucket"
@@ -78,6 +79,7 @@ var _ = Describe("BackupEntry", func() {
 		values = &Values{
 			Name:           name,
 			Namespace:      namespace,
+			ShootPurpose:   &shootPurpose,
 			OwnerReference: ownerRef,
 			SeedName:       &seedName,
 			BucketName:     bucketName,
@@ -94,6 +96,7 @@ var _ = Describe("BackupEntry", func() {
 				Annotations: map[string]string{
 					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 					v1beta1constants.GardenerTimestamp: now.UTC().String(),
+					v1beta1constants.ShootPurpose:      string(shootPurpose),
 				},
 				Finalizers:      []string{"gardener"},
 				OwnerReferences: []metav1.OwnerReference{*ownerRef},

@@ -35,12 +35,17 @@ var _ = Describe("GardenletConfiguration", func() {
 	var (
 		cfg *config.GardenletConfiguration
 
-		concurrentSyncs = 20
+		deletionGracePeriodHours = 1
+		concurrentSyncs          = 20
 	)
 
 	BeforeEach(func() {
 		cfg = &config.GardenletConfiguration{
 			Controllers: &config.GardenletControllerConfiguration{
+				BackupEntry: &config.BackupEntryControllerConfiguration{
+					DeletionGracePeriodHours:         &deletionGracePeriodHours,
+					DeletionGracePeriodShootPurposes: []gardencore.ShootPurpose{gardencore.ShootPurposeDevelopment},
+				},
 				Shoot: &config.ShootControllerConfiguration{
 					ConcurrentSyncs:      &concurrentSyncs,
 					ProgressReportPeriod: &metav1.Duration{Duration: time.Hour},
@@ -165,6 +170,42 @@ var _ = Describe("GardenletConfiguration", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("controllers.managedSeed.syncJitterPeriod"),
+					})),
+				))
+			})
+		})
+
+		Context("backup entry controller", func() {
+			It("should forbid specifying purposes when not specifying hours", func() {
+				cfg.Controllers.BackupEntry.DeletionGracePeriodHours = nil
+
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("controllers.backupEntry.deletionGracePeriodShootPurposes"),
+					})),
+				))
+			})
+
+			It("should allow valid purposes", func() {
+				cfg.Controllers.BackupEntry.DeletionGracePeriodShootPurposes = []gardencore.ShootPurpose{
+					gardencore.ShootPurposeEvaluation,
+					gardencore.ShootPurposeTesting,
+					gardencore.ShootPurposeDevelopment,
+					gardencore.ShootPurposeInfrastructure,
+					gardencore.ShootPurposeProduction,
+				}
+
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
+			})
+
+			It("should forbid invalid purposes", func() {
+				cfg.Controllers.BackupEntry.DeletionGracePeriodShootPurposes = []gardencore.ShootPurpose{"does-not-exist"}
+
+				Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal("controllers.backupEntry.deletionGracePeriodShootPurposes[0]"),
 					})),
 				))
 			})

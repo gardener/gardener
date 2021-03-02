@@ -176,6 +176,10 @@ type BackupEntryControllerConfiguration struct {
 	// If value is set to 0 then the BackupEntryController will trigger deletion immediately.
 	// +optional
 	DeletionGracePeriodHours *int `json:"deletionGracePeriodHours,omitempty"`
+	// DeletionGracePeriodShootPurposes is a list of shoot purposes for which the deletion grace period applies. All
+	// BackupEntries corresponding to Shoots with different purposes will be deleted immediately.
+	// +optional
+	DeletionGracePeriodShootPurposes []gardencorev1beta1.ShootPurpose `json:"deletionGracePeriodShootPurposes,omitempty"`
 }
 
 // ControllerInstallationControllerConfiguration defines the configuration of the

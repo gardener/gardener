@@ -72,6 +72,10 @@ data:
         {{- if .Values.global.gardenlet.config.controllers.backupEntry.deletionGracePeriodHours }}
         deletionGracePeriodHours: {{ .Values.global.gardenlet.config.controllers.backupEntry.deletionGracePeriodHours }}
         {{- end }}
+        {{- if .Values.global.gardenlet.config.controllers.backupEntry.deletionGracePeriodShootPurposes }}
+        deletionGracePeriodShootPurposes:
+{{ toYaml .Values.global.gardenlet.config.controllers.backupEntry.deletionGracePeriodShootPurposes | indent 8 }}
+        {{- end }}
       {{- if .Values.global.gardenlet.config.controllers.controllerInstallation }}
       controllerInstallation:
         concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.controllerInstallation.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.controllerInstallation.concurrentSyncs }}

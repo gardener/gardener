@@ -21,6 +21,7 @@ limitations under the License.
 package config
 
 import (
+	core "github.com/gardener/gardener/pkg/apis/core"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -60,6 +61,11 @@ func (in *BackupEntryControllerConfiguration) DeepCopyInto(out *BackupEntryContr
 		in, out := &in.DeletionGracePeriodHours, &out.DeletionGracePeriodHours
 		*out = new(int)
 		**out = **in
+	}
+	if in.DeletionGracePeriodShootPurposes != nil {
+		in, out := &in.DeletionGracePeriodShootPurposes, &out.DeletionGracePeriodShootPurposes
+		*out = make([]core.ShootPurpose, len(*in))
+		copy(*out, *in)
 	}
 	return
 }
