@@ -82,6 +82,7 @@ var _ = Describe("Worker Reconcile", func() {
 		expectInject(inject.ClientInto(t.fields.client, reconciler))
 		expectInject(inject.InjectorInto(func(i interface{}) error {
 			expectInject(inject.ClientInto(t.fields.client, i))
+			expectInject(inject.APIReaderInto(t.fields.client, i))
 			return nil
 		}, reconciler))
 
@@ -336,8 +337,9 @@ func getWorker() *extensionsv1alpha1.Worker {
 			APIVersion: "extensions.gardener.cloud/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "workerTestReconcile",
-			Namespace: "test",
+			Name:            "workerTestReconcile",
+			Namespace:       "test",
+			ResourceVersion: "42",
 		},
 		Spec: extensionsv1alpha1.WorkerSpec{},
 	}
