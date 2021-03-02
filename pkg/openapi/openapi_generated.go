@@ -6778,7 +6778,7 @@ func schema_pkg_apis_core_v1alpha1_WorkerKubernetes(ref common.ReferenceCallback
 				Properties: map[string]spec.Schema{
 					"kubelet": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Kubelet contains configuration settings for all kubelets of this worker pool.",
+							Description: "Kubelet contains configuration settings for all kubelets of this worker pool. If set, all `spec.kubernetes.kubelet` settings will be overwritten for this worker pool (no merge of settings).",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfig"),
 						},
 					},
@@ -12741,7 +12741,7 @@ func schema_pkg_apis_core_v1beta1_WorkerKubernetes(ref common.ReferenceCallback)
 				Properties: map[string]spec.Schema{
 					"kubelet": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Kubelet contains configuration settings for all kubelets of this worker pool.",
+							Description: "Kubelet contains configuration settings for all kubelets of this worker pool. If set, all `spec.kubernetes.kubelet` settings will be overwritten for this worker pool (no merge of settings).",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig"),
 						},
 					},

@@ -9266,7 +9266,8 @@ KubeletConfig
 </td>
 <td>
 <em>(Optional)</em>
-<p>Kubelet contains configuration settings for all kubelets of this worker pool.</p>
+<p>Kubelet contains configuration settings for all kubelets of this worker pool.
+If set, all <code>spec.kubernetes.kubelet</code> settings will be overwritten for this worker pool (no merge of settings).</p>
 </td>
 </tr>
 </tbody>
