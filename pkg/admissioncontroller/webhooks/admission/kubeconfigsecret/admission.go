@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/metrics"
+	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -66,13 +67,13 @@ func (p *plugin) InjectDecoder(d *admission.Decoder) error {
 func (p *plugin) Handle(_ context.Context, request admission.Request) admission.Response {
 	// If the request does not indicate the correct operations (CREATE, UPDATE) we allow the review without further doing.
 	if request.Operation != admissionv1.Create && request.Operation != admissionv1.Update {
-		return admission.Allowed("operation is neither CREATE nor UPDATE")
+		return acadmission.Allowed("operation is neither CREATE nor UPDATE")
 	}
 	if request.Kind != secretGVK {
-		return admission.Allowed("resource is not corev1.Secret")
+		return acadmission.Allowed("resource is not corev1.Secret")
 	}
 	if request.SubResource != "" {
-		return admission.Allowed("subresources on secrets are not handled")
+		return acadmission.Allowed("subresources on secrets are not handled")
 	}
 
 	requestID, err := utils.GenerateRandomString(8)
@@ -108,7 +109,7 @@ func (p *plugin) Handle(_ context.Context, request admission.Request) admission.
 func admitKubeconfigSecret(secret *corev1.Secret) admission.Response {
 	kubeconfig, ok := secret.Data[kubernetes.KubeConfig]
 	if !ok {
-		return admission.Allowed("secret does not contain kubeconfig")
+		return acadmission.Allowed("secret does not contain kubeconfig")
 	}
 
 	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
@@ -127,5 +128,5 @@ func admitKubeconfigSecret(secret *corev1.Secret) admission.Response {
 		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("secret contains invalid kubeconfig: %w", err))
 	}
 
-	return admission.Allowed("kubeconfig is valid")
+	return acadmission.Allowed("kubeconfig is valid")
 }

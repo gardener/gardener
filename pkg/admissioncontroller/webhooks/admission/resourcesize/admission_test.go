@@ -264,11 +264,7 @@ var _ = Describe("plugin", func() {
 		}
 		Expect(response.Result.Code).To(Equal(expectedStatusCode))
 		if expectedMsg != "" {
-			if expectedAllowed {
-				Expect(string(response.Result.Reason)).To(ContainSubstring(expectedMsg))
-			} else {
-				Expect(response.Result.Message).To(ContainSubstring(expectedMsg))
-			}
+			Expect(response.Result.Message).To(ContainSubstring(expectedMsg))
 		}
 	}
 

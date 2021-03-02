@@ -12,35 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seedrestriction
+package admission
 
 import (
-	"context"
+	"net/http"
 
-	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
-
-	"github.com/go-logr/logr"
+	admissionv1 "k8s.io/api/admission/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "seedrestriction"
-	// WebhookPath is the HTTP handler path for this admission webhook handler.
-	WebhookPath = "/webhooks/admission/seedrestriction"
-)
-
-// New creates a new webhook handler restricting requests by gardenlets. It allows all requests.
-func New(logger logr.Logger) *plugin {
-	return &plugin{logger: logger}
-}
-
-type plugin struct {
-	logger logr.Logger
-}
-
-var _ admission.Handler = &plugin{}
-
-func (p *plugin) Handle(_ context.Context, _ admission.Request) admission.Response {
-	return acadmission.Allowed("")
+// Allowed constructs a response indicating that the given operation is allowed (without any patches). In contrast to
+// sigs.k8s.io/controller-runtime/pkg/webhook/admission.Allowed it does not set the `.status.result` but the
+// `.status.message` field.
+func Allowed(msg string) admission.Response {
+	resp := admission.Response{
+		AdmissionResponse: admissionv1.AdmissionResponse{
+			Allowed: true,
+			Result: &metav1.Status{
+				Code: int32(http.StatusOK),
+			},
+		},
+	}
+	if len(msg) > 0 {
+		resp.Result.Message = msg
+	}
+	return resp
 }

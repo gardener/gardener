@@ -31,6 +31,7 @@ import (
 	apisconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/helper"
 	"github.com/gardener/gardener/pkg/admissioncontroller/metrics"
+	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 )
@@ -90,11 +91,11 @@ func (p *plugin) Handle(_ context.Context, request admission.Request) admission.
 
 func (p *plugin) admitRequestSize(request admission.Request, requestLogger logr.Logger) admission.Response {
 	if request.SubResource != "" {
-		return admission.Allowed("subresources are not handled")
+		return acadmission.Allowed("subresources are not handled")
 	}
 
 	if isUnrestrictedUser(request.UserInfo, p.config.UnrestrictedSubjects) {
-		return admission.Allowed("user is unrestricted")
+		return acadmission.Allowed("user is unrestricted")
 	}
 
 	requestedResource := &request.Resource
@@ -105,7 +106,7 @@ func (p *plugin) admitRequestSize(request admission.Request, requestLogger logr.
 
 	limit := findLimitForGVR(p.config.Limits, requestedResource)
 	if limit == nil {
-		return admission.Allowed("no limit configured for requested resource")
+		return acadmission.Allowed("no limit configured for requested resource")
 	}
 
 	objectSize := len(request.Object.Raw)
@@ -120,7 +121,7 @@ func (p *plugin) admitRequestSize(request admission.Request, requestLogger logr.
 			"requestObjectSize", objectSize, "limit", limit)
 	}
 
-	return admission.Allowed("resource size ok")
+	return acadmission.Allowed("resource size ok")
 }
 
 func serviceAccountMatch(userInfo authenticationv1.UserInfo, subjects []rbacv1.Subject) bool {

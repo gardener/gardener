@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -79,13 +80,13 @@ func (p *plugin) Handle(ctx context.Context, request admission.Request) admissio
 
 	// If the request does not indicate the correct operation (DELETE) we allow the review without further doing.
 	if request.Operation != admissionv1.Delete {
-		return admission.Allowed("operation is not DELETE")
+		return acadmission.Allowed("operation is not DELETE")
 	}
 	if request.Kind != namespaceGVK {
-		return admission.Allowed("resource is not corev1.Namespace")
+		return acadmission.Allowed("resource is not corev1.Namespace")
 	}
 	if request.SubResource != "" {
-		return admission.Allowed("subresources on namespaces are not handled")
+		return acadmission.Allowed("subresources on namespaces are not handled")
 	}
 
 	requestID, err := utils.GenerateRandomString(8)
@@ -111,7 +112,7 @@ func (p *plugin) admitNamespace(ctx context.Context, request admission.Request) 
 	project, err := common.ProjectForNamespaceWithClient(ctx, p.cacheReader, request.Name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return admission.Allowed("namespace does not belong to a project")
+			return acadmission.Allowed("namespace does not belong to a project")
 		}
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
@@ -120,14 +121,14 @@ func (p *plugin) admitNamespace(ctx context.Context, request admission.Request) 
 	namespace := &corev1.Namespace{}
 	if err := p.apiReader.Get(ctx, client.ObjectKey{Name: request.Name}, namespace); err != nil {
 		if apierrors.IsNotFound(err) {
-			return admission.Allowed("namespace is already gone")
+			return acadmission.Allowed("namespace is already gone")
 		}
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
 	switch {
 	case namespace.DeletionTimestamp != nil:
-		return admission.Allowed("namespace is already marked for deletion")
+		return acadmission.Allowed("namespace is already marked for deletion")
 	case project.DeletionTimestamp != nil:
 		// if project is marked for deletion we need to wait until all shoots in the namespace are gone
 		namespaceEmpty, err := p.isNamespaceEmpty(ctx, namespace.Name)
@@ -136,7 +137,7 @@ func (p *plugin) admitNamespace(ctx context.Context, request admission.Request) 
 		}
 
 		if namespaceEmpty {
-			return admission.Allowed("namespace doesn't contain any shoots")
+			return acadmission.Allowed("namespace doesn't contain any shoots")
 		}
 
 		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("deletion of namespace %q is not permitted (it still contains Shoots)", namespace.Name))
