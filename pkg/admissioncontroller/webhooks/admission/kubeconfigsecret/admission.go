@@ -34,8 +34,8 @@ import (
 )
 
 const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "kubeconfig_validator"
+	// HandlerName is the name of this admission webhook handler.
+	HandlerName = "kubeconfig_validator"
 	// WebhookPath is the HTTP handler path for this admission webhook handler.
 	WebhookPath = "/webhooks/validate-kubeconfig-secrets"
 
@@ -48,23 +48,23 @@ var secretGVK = metav1.GroupVersionKind{Group: "", Kind: "Secret", Version: "v1"
 
 // New creates a new webhook handler validating CREATE and UPDATE requests on secrets. It checks, if the secrets
 // contains a kubeconfig and denies kubeconfigs with invalid fields (e.g. tokenFile or exec).
-func New(logger logr.Logger) *plugin {
-	return &plugin{logger: logger}
+func New(logger logr.Logger) *handler {
+	return &handler{logger: logger}
 }
 
-type plugin struct {
+type handler struct {
 	logger  logr.Logger
 	decoder *admission.Decoder
 }
 
-var _ admission.Handler = &plugin{}
+var _ admission.Handler = &handler{}
 
-func (p *plugin) InjectDecoder(d *admission.Decoder) error {
-	p.decoder = d
+func (h *handler) InjectDecoder(d *admission.Decoder) error {
+	h.decoder = d
 	return nil
 }
 
-func (p *plugin) Handle(_ context.Context, request admission.Request) admission.Response {
+func (h *handler) Handle(_ context.Context, request admission.Request) admission.Response {
 	// If the request does not indicate the correct operations (CREATE, UPDATE) we allow the review without further doing.
 	if request.Operation != admissionv1.Create && request.Operation != admissionv1.Update {
 		return acadmission.Allowed("operation is neither CREATE nor UPDATE")
@@ -80,10 +80,10 @@ func (p *plugin) Handle(_ context.Context, request admission.Request) admission.
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	requestLogger := p.logger.WithValues(logger.IDFieldName, requestID)
+	requestLogger := h.logger.WithValues(logger.IDFieldName, requestID)
 
 	secret := &corev1.Secret{}
-	if err := p.decoder.Decode(request, secret); err != nil {
+	if err := h.decoder.Decode(request, secret); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 

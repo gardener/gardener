@@ -33,15 +33,14 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
-var _ = Describe("plugin", func() {
+var _ = Describe("handler", func() {
 	var (
 		ctx    = context.TODO()
 		logger logr.Logger
 
 		request admission.Request
 		decoder *admission.Decoder
-
-		validator admission.Handler
+		handler admission.Handler
 
 		testEncoder runtime.Encoder
 
@@ -160,8 +159,8 @@ users:
 		decoder, err = admission.NewDecoder(kubernetes.GardenScheme)
 		Expect(err).NotTo(HaveOccurred())
 
-		validator = New(logger)
-		Expect(admission.InjectDecoderInto(decoder, validator)).To(BeTrue())
+		handler = New(logger)
+		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 
 		testEncoder = &json.Serializer{}
 		request = admission.Request{}
@@ -177,7 +176,7 @@ users:
 			request.Object.Raw = objData
 		}
 
-		response := validator.Handle(ctx, request)
+		response := handler.Handle(ctx, request)
 		Expect(response).To(Not(BeNil()))
 		Expect(response.Allowed).To(Equal(expectedAllowed))
 		Expect(response.Result.Code).To(Equal(expectedStatusCode))

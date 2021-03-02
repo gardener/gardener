@@ -24,23 +24,23 @@ import (
 )
 
 const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "seedrestriction"
+	// HandlerName is the name of this admission webhook handler.
+	HandlerName = "seedrestriction"
 	// WebhookPath is the HTTP handler path for this admission webhook handler.
 	WebhookPath = "/webhooks/admission/seedrestriction"
 )
 
 // New creates a new webhook handler restricting requests by gardenlets. It allows all requests.
-func New(logger logr.Logger) *plugin {
-	return &plugin{logger: logger}
+func New(logger logr.Logger) *handler {
+	return &handler{logger: logger}
 }
 
-type plugin struct {
+type handler struct {
 	logger logr.Logger
 }
 
-var _ admission.Handler = &plugin{}
+var _ admission.Handler = &handler{}
 
-func (p *plugin) Handle(_ context.Context, _ admission.Request) admission.Response {
+func (p *handler) Handle(_ context.Context, _ admission.Request) admission.Response {
 	return acadmission.Allowed("")
 }

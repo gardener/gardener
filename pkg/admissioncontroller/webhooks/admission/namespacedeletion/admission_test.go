@@ -39,14 +39,14 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
-var _ = Describe("plugin", func() {
+var _ = Describe("handler", func() {
 	var (
 		ctx    = context.TODO()
 		logger logr.Logger
 		err    error
 
-		request   admission.Request
-		validator admission.Handler
+		request admission.Request
+		handler admission.Handler
 
 		ctrl       *gomock.Controller
 		mockCache  *mockcache.MockCache
@@ -71,9 +71,9 @@ var _ = Describe("plugin", func() {
 		shootMetadataList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 
 		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
-		validator, err = namespacedeletion.New(ctx, logger, mockCache)
+		handler, err = namespacedeletion.New(ctx, logger, mockCache)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(inject.APIReaderInto(mockReader, validator)).To(BeTrue())
+		Expect(inject.APIReaderInto(mockReader, handler)).To(BeTrue())
 
 		request = admission.Request{}
 		request.Kind = metav1.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"}
@@ -87,7 +87,7 @@ var _ = Describe("plugin", func() {
 		request.Operation = op
 		request.Name = namespaceName
 
-		response := validator.Handle(ctx, request)
+		response := handler.Handle(ctx, request)
 		Expect(response).To(Not(BeNil()))
 		Expect(response.Allowed).To(Equal(expectedAllowed))
 		Expect(response.Result.Code).To(Equal(expectedStatusCode))

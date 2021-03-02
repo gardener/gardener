@@ -45,14 +45,14 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
-var _ = Describe("plugin", func() {
+var _ = Describe("handler", func() {
 	var (
 		ctx    = context.TODO()
 		logger logr.Logger
 
-		request   admission.Request
-		decoder   *admission.Decoder
-		validator admission.Handler
+		request admission.Request
+		decoder *admission.Decoder
+		handler admission.Handler
 
 		logBuffer   *gbytes.Buffer
 		testEncoder runtime.Encoder
@@ -222,8 +222,8 @@ var _ = Describe("plugin", func() {
 		decoder, err = admission.NewDecoder(kubernetes.GardenScheme)
 		Expect(err).NotTo(HaveOccurred())
 
-		validator = New(logger, config())
-		Expect(admission.InjectDecoderInto(decoder, validator)).To(BeTrue())
+		handler = New(logger, config())
+		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 
 		testEncoder = &json.Serializer{}
 		request = admission.Request{}
@@ -255,7 +255,7 @@ var _ = Describe("plugin", func() {
 
 		request.SubResource = subresource
 		request.UserInfo = userFn()
-		response := validator.Handle(ctx, request)
+		response := handler.Handle(ctx, request)
 		Expect(response).To(Not(BeNil()))
 		Expect(response.Allowed).To(Equal(expectedAllowed))
 		var expectedStatusCode int32 = http.StatusOK
@@ -290,7 +290,7 @@ var _ = Describe("plugin", func() {
 		cfg := config()
 		blockMode := apisconfig.ResourceAdmissionWebhookMode("block")
 		cfg.OperationMode = &blockMode
-		validator = New(logger, cfg)
+		handler = New(logger, cfg)
 
 		test(shootv1alpha1, "", restrictedUser, false, "resource size exceeded")
 		Eventually(logBuffer).Should(gbytes.Say("maximum resource size exceeded"))
@@ -300,7 +300,7 @@ var _ = Describe("plugin", func() {
 		cfg := config()
 		logMode := apisconfig.ResourceAdmissionWebhookMode("log")
 		cfg.OperationMode = &logMode
-		validator = New(logger, cfg)
+		handler = New(logger, cfg)
 
 		test(shootv1alpha1, "", restrictedUser, true, "resource size ok")
 		Eventually(logBuffer).Should(gbytes.Say("maximum resource size exceeded"))

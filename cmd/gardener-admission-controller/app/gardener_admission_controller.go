@@ -154,17 +154,17 @@ func (o *options) run(ctx context.Context) error {
 	log.Info("setting up webhook server")
 	server := mgr.GetWebhookServer()
 
-	namespaceValidationHandler, err := namespacedeletion.New(ctx, logf.Log.WithName(namespacedeletion.PluginName), mgr.GetCache())
+	namespaceValidationHandler, err := namespacedeletion.New(ctx, logf.Log.WithName(namespacedeletion.HandlerName), mgr.GetCache())
 	if err != nil {
 		return err
 	}
-	logSeedAuth := logf.Log.WithName(seedauthorizer.PluginName)
+	logSeedAuth := logf.Log.WithName(seedauthorizer.AuthorizerName)
 
 	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth)))
-	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedrestriction.New(logf.Log.WithName(seedrestriction.PluginName))})
+	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedrestriction.New(logf.Log.WithName(seedrestriction.HandlerName))})
 	server.Register(namespacedeletion.WebhookPath, &webhook.Admission{Handler: namespaceValidationHandler})
-	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(logf.Log.WithName(kubeconfigsecret.PluginName))})
-	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(logf.Log.WithName(resourcesize.PluginName), o.config.Server.ResourceAdmissionConfiguration)})
+	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(logf.Log.WithName(kubeconfigsecret.HandlerName))})
+	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(logf.Log.WithName(resourcesize.HandlerName), o.config.Server.ResourceAdmissionConfiguration)})
 
 	log.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {

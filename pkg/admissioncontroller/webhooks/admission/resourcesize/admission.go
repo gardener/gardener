@@ -37,37 +37,37 @@ import (
 )
 
 const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "resource_size_validator"
+	// HandlerName is the name of this admission webhook handler.
+	HandlerName = "resource_size_validator"
 	// WebhookPath is the HTTP handler path for this admission webhook handler.
 	WebhookPath = "/webhooks/validate-resource-size"
 )
 
 // New creates a new webhook handler validating that the resource size of a request doesn't exceed the configured
 // limits.
-func New(logger logr.Logger, config *apisconfig.ResourceAdmissionConfiguration) *plugin {
-	return &plugin{logger: logger, config: config}
+func New(logger logr.Logger, config *apisconfig.ResourceAdmissionConfiguration) *handler {
+	return &handler{logger: logger, config: config}
 }
 
-type plugin struct {
+type handler struct {
 	logger  logr.Logger
 	config  *apisconfig.ResourceAdmissionConfiguration
 	decoder *admission.Decoder
 }
 
-var _ admission.Handler = &plugin{}
+var _ admission.Handler = &handler{}
 
-func (p *plugin) InjectDecoder(d *admission.Decoder) error {
-	p.decoder = d
+func (h *handler) InjectDecoder(d *admission.Decoder) error {
+	h.decoder = d
 	return nil
 }
 
-func (p *plugin) Handle(_ context.Context, request admission.Request) admission.Response {
+func (h *handler) Handle(_ context.Context, request admission.Request) admission.Response {
 	requestID, err := utils.GenerateRandomString(8)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	requestLogger := p.logger.WithValues(
+	requestLogger := h.logger.WithValues(
 		logger.IDFieldName, requestID,
 		"user", request.UserInfo.Username,
 		"resource", request.Resource, "name", request.Name,
@@ -76,7 +76,7 @@ func (p *plugin) Handle(_ context.Context, request admission.Request) admission.
 		requestLogger = requestLogger.WithValues("namespace", request.Namespace)
 	}
 
-	response := p.admitRequestSize(request, requestLogger)
+	response := h.admitRequestSize(request, requestLogger)
 	if !response.Allowed {
 		metrics.RejectedResources.WithLabelValues(
 			fmt.Sprint(request.Operation),
@@ -89,12 +89,12 @@ func (p *plugin) Handle(_ context.Context, request admission.Request) admission.
 	return response
 }
 
-func (p *plugin) admitRequestSize(request admission.Request, requestLogger logr.Logger) admission.Response {
+func (h *handler) admitRequestSize(request admission.Request, requestLogger logr.Logger) admission.Response {
 	if request.SubResource != "" {
 		return acadmission.Allowed("subresources are not handled")
 	}
 
-	if isUnrestrictedUser(request.UserInfo, p.config.UnrestrictedSubjects) {
+	if isUnrestrictedUser(request.UserInfo, h.config.UnrestrictedSubjects) {
 		return acadmission.Allowed("user is unrestricted")
 	}
 
@@ -104,14 +104,14 @@ func (p *plugin) admitRequestSize(request admission.Request, requestLogger logr.
 		requestedResource = request.RequestResource
 	}
 
-	limit := findLimitForGVR(p.config.Limits, requestedResource)
+	limit := findLimitForGVR(h.config.Limits, requestedResource)
 	if limit == nil {
 		return acadmission.Allowed("no limit configured for requested resource")
 	}
 
 	objectSize := len(request.Object.Raw)
 	if limit.CmpInt64(int64(objectSize)) == -1 {
-		if p.config.OperationMode == nil || *p.config.OperationMode == apisconfig.AdmissionModeBlock {
+		if h.config.OperationMode == nil || *h.config.OperationMode == apisconfig.AdmissionModeBlock {
 			requestLogger.Info("maximum resource size exceeded, rejected request",
 				"requestObjectSize", objectSize, "limit", limit)
 

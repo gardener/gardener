@@ -31,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apiserver/pkg/authorization/authorizer"
+	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 )
 
 // WebhookPath is the HTTP handler path for this authorization webhook handler.
@@ -51,7 +51,7 @@ func init() {
 }
 
 // NewHandler creates a new HTTP handler for authorizing requests for resources related to a Seed.
-func NewHandler(logger logr.Logger, authorizer authorizer.Authorizer) http.HandlerFunc {
+func NewHandler(logger logr.Logger, authorizer auth.Authorizer) http.HandlerFunc {
 	h := &handler{
 		logger:     logger,
 		authorizer: authorizer,
@@ -61,7 +61,7 @@ func NewHandler(logger logr.Logger, authorizer authorizer.Authorizer) http.Handl
 
 type handler struct {
 	logger     logr.Logger
-	authorizer authorizer.Authorizer
+	authorizer auth.Authorizer
 }
 
 func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
@@ -125,11 +125,11 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	var status authorizationv1.SubjectAccessReviewStatus
 	switch decision {
-	case authorizer.DecisionAllow:
+	case auth.DecisionAllow:
 		status = Allowed()
-	case authorizer.DecisionDeny:
+	case auth.DecisionDeny:
 		status = Denied(reason)
-	case authorizer.DecisionNoOpinion:
+	case auth.DecisionNoOpinion:
 		status = NoOpinion(reason)
 	default:
 		status = Errored(http.StatusInternalServerError, fmt.Errorf("unexpected decision: %d", decision))

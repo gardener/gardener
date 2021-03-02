@@ -18,26 +18,25 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apiserver/pkg/authorization/authorizer"
+	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 )
 
-// PluginName is the name of this authorization plugin.
-const PluginName = "seedauthorizer"
+// AuthorizerName is the name of this authorizatior.
+const AuthorizerName = "seedauthorizer"
 
-// NewAuthorizer returns a new seed authorizer which never has an opinion on the request.
-func NewAuthorizer(logger logr.Logger) *plugin {
-	return &plugin{
+// NewAuthorizer returns a new authorizer for requests from gardenlets. It never has an opinion on the request.
+func NewAuthorizer(logger logr.Logger) *authorizer {
+	return &authorizer{
 		logger: logger,
 	}
 }
 
-// Authorizer authorizes requests from gardenlets. Only resources related to a Seed are allowed.
-type plugin struct {
+type authorizer struct {
 	logger logr.Logger
 }
 
-var _ = authorizer.Authorizer(&plugin{})
+var _ = auth.Authorizer(&authorizer{})
 
-func (p *plugin) Authorize(_ context.Context, _ authorizer.Attributes) (authorizer.Decision, string, error) {
-	return authorizer.DecisionNoOpinion, "", nil
+func (a *authorizer) Authorize(_ context.Context, _ auth.Attributes) (auth.Decision, string, error) {
+	return auth.DecisionNoOpinion, "", nil
 }

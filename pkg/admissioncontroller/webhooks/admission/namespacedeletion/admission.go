@@ -37,8 +37,8 @@ import (
 )
 
 const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "namespace_validator"
+	// HandlerName is the name of this admission webhook handler.
+	HandlerName = "namespace_validator"
 	// WebhookPath is the HTTP handler path for this admission webhook handler.
 	WebhookPath = "/webhooks/validate-namespace-deletion"
 )
@@ -46,35 +46,35 @@ const (
 var namespaceGVK = metav1.GroupVersionKind{Group: "", Kind: "Namespace", Version: "v1"}
 
 // New creates a new handler for validating namespace deletions.
-func New(ctx context.Context, logger logr.Logger, cache cache.Cache) (admission.Handler, error) {
+func New(ctx context.Context, logger logr.Logger, cache cache.Cache) (*handler, error) {
 	// Initialize caches here to ensure the readyz informer check will only succeed once informers required for this
 	// handler have synced so that http requests can be served quicker with pre-syncronized caches.
 	if _, err := cache.GetInformer(ctx, &gardencorev1beta1.Project{}); err != nil {
 		return nil, err
 	}
 
-	return &plugin{
+	return &handler{
 		cacheReader: cache,
 		logger:      logger,
 	}, nil
 }
 
-type plugin struct {
+type handler struct {
 	cacheReader client.Reader
 	apiReader   client.Reader
 	logger      logr.Logger
 }
 
-var _ admission.Handler = &plugin{}
+var _ admission.Handler = &handler{}
 
 // InjectAPIReader injects a reader into the handler.
-func (p *plugin) InjectAPIReader(reader client.Reader) error {
-	p.apiReader = reader
+func (h *handler) InjectAPIReader(reader client.Reader) error {
+	h.apiReader = reader
 	return nil
 }
 
 // Handle implements the webhook handler for namespace deletion validation.
-func (p *plugin) Handle(ctx context.Context, request admission.Request) admission.Response {
+func (h *handler) Handle(ctx context.Context, request admission.Request) admission.Response {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -93,10 +93,10 @@ func (p *plugin) Handle(ctx context.Context, request admission.Request) admissio
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	requestLogger := p.logger.WithValues(logger.IDFieldName, requestID)
+	requestLogger := h.logger.WithValues(logger.IDFieldName, requestID)
 
 	// Now that all checks have been passed we can actually validate the admission request.
-	reviewResponse := p.admitNamespace(ctx, request)
+	reviewResponse := h.admitNamespace(ctx, request)
 	if !reviewResponse.Allowed && reviewResponse.Result != nil {
 		requestLogger.Info("rejected namespace deletion", "user", request.UserInfo.Username, "message", reviewResponse.Result.Message)
 	}
@@ -104,12 +104,12 @@ func (p *plugin) Handle(ctx context.Context, request admission.Request) admissio
 }
 
 // admitNamespace does only allow the request if no Shoots exist in this specific namespace anymore.
-func (p *plugin) admitNamespace(ctx context.Context, request admission.Request) admission.Response {
+func (h *handler) admitNamespace(ctx context.Context, request admission.Request) admission.Response {
 	// Determine project for given namespace.
 	// TODO: we should use a direct lookup here, as we might falsely allow the request, if our cache is
 	// out of sync and doesn't know about the project. We should use a field selector for looking up the project
 	// belonging to a given namespace.
-	project, err := common.ProjectForNamespaceWithClient(ctx, p.cacheReader, request.Name)
+	project, err := common.ProjectForNamespaceWithClient(ctx, h.cacheReader, request.Name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return acadmission.Allowed("namespace does not belong to a project")
@@ -119,7 +119,7 @@ func (p *plugin) admitNamespace(ctx context.Context, request admission.Request) 
 
 	// we do not receive the namespace object in the `.object` field of the admission request, we need to get it ourselves.
 	namespace := &corev1.Namespace{}
-	if err := p.apiReader.Get(ctx, client.ObjectKey{Name: request.Name}, namespace); err != nil {
+	if err := h.apiReader.Get(ctx, client.ObjectKey{Name: request.Name}, namespace); err != nil {
 		if apierrors.IsNotFound(err) {
 			return acadmission.Allowed("namespace is already gone")
 		}
@@ -131,7 +131,7 @@ func (p *plugin) admitNamespace(ctx context.Context, request admission.Request) 
 		return acadmission.Allowed("namespace is already marked for deletion")
 	case project.DeletionTimestamp != nil:
 		// if project is marked for deletion we need to wait until all shoots in the namespace are gone
-		namespaceEmpty, err := p.isNamespaceEmpty(ctx, namespace.Name)
+		namespaceEmpty, err := h.isNamespaceEmpty(ctx, namespace.Name)
 		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
@@ -149,10 +149,10 @@ func (p *plugin) admitNamespace(ctx context.Context, request admission.Request) 
 }
 
 // isNamespaceEmpty checks if there are no more Shoots left inside the given namespace.
-func (p *plugin) isNamespaceEmpty(ctx context.Context, namespace string) (bool, error) {
+func (h *handler) isNamespaceEmpty(ctx context.Context, namespace string) (bool, error) {
 	shoots := &metav1.PartialObjectMetadataList{}
 	shoots.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
-	if err := p.apiReader.List(ctx, shoots, client.InNamespace(namespace), client.Limit(1)); err != nil {
+	if err := h.apiReader.List(ctx, shoots, client.InNamespace(namespace), client.Limit(1)); err != nil {
 		return false, err
 	}
 
