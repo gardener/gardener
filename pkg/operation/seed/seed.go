@@ -41,7 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmission"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -435,7 +435,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 
 		componentsFunctions := []component.CentralLoggingConfiguration{
 			// seed system components
-			seedadmission.CentralLoggingConfiguration,
+			seedadmissioncontroller.CentralLoggingConfiguration,
 			resourcemanager.CentralLoggingConfiguration,
 			// shoot control plane components
 			etcd.CentralLoggingConfiguration,
@@ -949,7 +949,7 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 			Tag:        &tag,
 		}
 	}
-	components = append(components, seedadmission.New(c.Client(), namespace, gsacImage.String(), kubernetesVersion))
+	components = append(components, seedadmissioncontroller.New(c.Client(), namespace, gsacImage.String(), kubernetesVersion))
 
 	// kube-scheduler for shoot control plane pods
 	var schedulerImage *imagevector.Image

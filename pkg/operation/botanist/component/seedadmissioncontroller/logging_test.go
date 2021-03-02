@@ -12,31 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seedadmission
+package seedadmissioncontroller_test
 
 import (
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-const (
-	loggingParserName = "gsacParser"
-	loggingParser     = `[PARSER]
-    Name        ` + loggingParserName + `
+var _ = Describe("Logging", func() {
+	Describe("#CentralLoggingConfiguration", func() {
+		It("should return the expected logging parser and filter", func() {
+			loggingConfig, err := CentralLoggingConfiguration()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(loggingConfig.Parsers).To(Equal(`[PARSER]
+    Name        gsacParser
     Format      regex
     Regex       ^time="(?<time>\d{4}-\d{2}-\d{2}T[^"]*)"\s+level=(?<severity>\w+)\smsg="(?<log>.*)"
     Time_Key    time
     Time_Format %Y-%m-%dT%H:%M:%S%z
-`
-	loggingFilter = `[FILTER]
-    Name                parser
-    Match               kubernetes.*` + deploymentName + `*` + containerName + `*
-    Key_Name            log
-    Parser              ` + loggingParserName + `
-    Reserve_Data        True
-`
-)
+`))
 
-// CentralLoggingConfiguration returns a fluent-bit parser and filter for the gardener-seed-admission-controller logs.
-func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
-	return component.CentralLoggingConfig{Filters: loggingFilter, Parsers: loggingParser}, nil
-}
+			Expect(loggingConfig.Filters).To(Equal(`[FILTER]
+    Name                parser
+    Match               kubernetes.*gardener-seed-admission-controller*gardener-seed-admission-controller*
+    Key_Name            log
+    Parser              gsacParser
+    Reserve_Data        True
+`))
+			Expect(loggingConfig.PodPrefix).To(BeEmpty())
+			Expect(loggingConfig.UserExposed).To(BeFalse())
+		})
+	})
+})

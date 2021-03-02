@@ -22,7 +22,7 @@ import (
 	schedulerconfigv18 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v18"
 	schedulerconfigv19 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v19"
 	schedulerconfigv20 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v20"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmission"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	schedulerconfigv18v1alpha2 "github.com/gardener/gardener/third_party/kube-scheduler/v18/v1alpha2"
@@ -131,11 +131,11 @@ func Bootstrap(
 		config,
 		&admissionregistrationv1beta1.WebhookClientConfig{
 			Service: &admissionregistrationv1beta1.ServiceReference{
-				Name:      seedadmission.Name,
+				Name:      seedadmissioncontroller.Name,
 				Namespace: seedAdmissionControllerNamespace,
 				Path:      pointer.StringPtr(podschedulername.WebhookPath),
 			},
-			CABundle: []byte(seedadmission.TLSCACert),
+			CABundle: []byte(seedadmissioncontroller.TLSCACert),
 		},
 	)
 	if err != nil {

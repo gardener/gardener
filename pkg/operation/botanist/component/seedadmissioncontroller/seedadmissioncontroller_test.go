@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seedadmission_test
+package seedadmissioncontroller_test
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	. "github.com/gardener/gardener/pkg/operation/botanist/component/seedadmission"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 

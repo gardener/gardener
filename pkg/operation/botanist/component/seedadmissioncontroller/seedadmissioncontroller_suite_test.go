@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seedadmission_test
+package seedadmissioncontroller_test
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestSeedadmission(t *testing.T) {
+func TestSeedAdmissionController(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "SeedSystemComponent SeedAdmission component Suite")
+	RunSpecs(t, "Botanist Component SeedAdmissionController Suite")
 }

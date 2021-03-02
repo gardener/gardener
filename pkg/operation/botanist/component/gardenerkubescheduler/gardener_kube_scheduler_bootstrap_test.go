@@ -20,7 +20,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmission"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -147,7 +147,7 @@ var _ = Describe("Bootstrap", func() {
 									Name:      "gardener-seed-admission-controller",
 									Path:      pointer.StringPtr("/webhooks/default-pod-scheduler-name/gardener-shoot-controlplane-scheduler"),
 								},
-								CABundle: []byte(seedadmission.TLSCACert),
+								CABundle: []byte(seedadmissioncontroller.TLSCACert),
 							},
 						}},
 					}
