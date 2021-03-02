@@ -16,11 +16,8 @@ package seedrestriction
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/go-logr/logr"
-	admissionv1 "k8s.io/api/admission/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -43,14 +40,5 @@ type plugin struct {
 var _ admission.Handler = &plugin{}
 
 func (p *plugin) Handle(_ context.Context, _ admission.Request) admission.Response {
-	// TODO: Replace this with admissionAllowed() function call after GAC was refactored,
-	// see https://github.com/gardener/gardener/issues/3109.
-	return admission.Response{
-		AdmissionResponse: admissionv1.AdmissionResponse{
-			Allowed: true,
-			Result: &metav1.Status{
-				Code: int32(http.StatusOK),
-			},
-		},
-	}
+	return admission.Allowed("")
 }
