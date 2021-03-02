@@ -65,6 +65,8 @@ The `SeedAuthorizer` registers the following metrics related to the mentioned gr
 
 When the `.server.enableDebugHandlers` field in the `gardener-admission-controller`'s component configuration is set to `true` then it serves a handler that can be used for debugging the resource dependency graph under `/debug/resource-dependency-graph`.
 
+🚨 Only use this setting for development purposes as it enables unauthenticated users to view all data if they have access to the `garedner-admission-controller` component.
+
 The handler renders an HTML page displaying the current graph with a list of vertices and its associated incoming and outgoing edges to other vertices.
 Depending on the size of the Gardener landscape (and consequently, the size of the graph), it might not be possible to render it in its entirety.
 If there are more than 2000 vertices then the default filtering will selected for `kind=Seed` to prevent overloading the output.

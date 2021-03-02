@@ -92,8 +92,8 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 			prefix   string
 			iterator gonumgraph.Nodes
 		}{
-			{"<-", h.graph.To(v.ID())},
-			{"->", h.graph.From(v.ID())},
+			{"<- (incoming)", h.graph.To(v.ID())},
+			{"-> (outgoing)", h.graph.From(v.ID())},
 		} {
 			var neighbors []*vertex
 			for n.iterator.Next() {

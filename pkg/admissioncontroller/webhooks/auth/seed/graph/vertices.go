@@ -21,31 +21,31 @@ const (
 	// VertexTypeBackupBucket is a constant for a 'BackupBucket' vertex.
 	VertexTypeBackupBucket VertexType = iota
 	// VertexTypeBackupEntry is a constant for a 'BackupEntry' vertex.
-	VertexTypeBackupEntry VertexType = iota
+	VertexTypeBackupEntry
 	// VertexTypeCloudProfile is a constant for a 'CloudProfile' vertex.
-	VertexTypeCloudProfile VertexType = iota
+	VertexTypeCloudProfile
 	// VertexTypeConfigMap is a constant for a 'ConfigMap' vertex.
-	VertexTypeConfigMap VertexType = iota
+	VertexTypeConfigMap
 	// VertexTypeControllerInstallation is a constant for a 'ControllerInstallation' vertex.
-	VertexTypeControllerInstallation VertexType = iota
+	VertexTypeControllerInstallation
 	// VertexTypeControllerRegistration is a constant for a 'ControllerRegistration' vertex.
-	VertexTypeControllerRegistration VertexType = iota
+	VertexTypeControllerRegistration
 	// VertexTypeManagedSeed is a constant for a 'ManagedSeed' vertex.
-	VertexTypeManagedSeed VertexType = iota
+	VertexTypeManagedSeed
 	// VertexTypeNamespace is a constant for a 'Namespace' vertex.
-	VertexTypeNamespace VertexType = iota
+	VertexTypeNamespace
 	// VertexTypeProject is a constant for a 'Project' vertex.
-	VertexTypeProject VertexType = iota
+	VertexTypeProject
 	// VertexTypeSecret is a constant for a 'Secret' vertex.
-	VertexTypeSecret VertexType = iota
+	VertexTypeSecret
 	// VertexTypeSecretBinding is a constant for a 'SecretBinding' vertex.
-	VertexTypeSecretBinding VertexType = iota
+	VertexTypeSecretBinding
 	// VertexTypeSeed is a constant for a 'Seed' vertex.
-	VertexTypeSeed VertexType = iota
+	VertexTypeSeed
 	// VertexTypeShoot is a constant for a 'Shoot' vertex.
-	VertexTypeShoot VertexType = iota
+	VertexTypeShoot
 	// VertexTypeShootState is a constant for a 'ShootState' vertex.
-	VertexTypeShootState VertexType = iota
+	VertexTypeShootState
 )
 
 var vertexTypes = map[VertexType]string{
