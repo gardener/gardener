@@ -24,9 +24,7 @@ import (
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	gomegatypes "github.com/onsi/gomega/types"
 	"go.uber.org/zap/zapcore"
-	"gomodules.xyz/jsonpatch/v2"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -51,8 +49,8 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/seedadmission"
 	"github.com/gardener/gardener/pkg/seedadmission/webhooks/admission/extensioncrds"
+	"github.com/gardener/gardener/pkg/seedadmission/webhooks/admission/podschedulername"
 	"github.com/gardener/gardener/pkg/utils/test"
 	"github.com/gardener/gardener/test/framework"
 )
@@ -102,7 +100,7 @@ var _ = BeforeSuite(func() {
 	By("setting up webhook server")
 	server := mgr.GetWebhookServer()
 	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(logger)})
-	server.Register(seedadmission.GardenerShootControlPlaneSchedulerWebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(seedadmission.DefaultShootControlPlanePodsSchedulerName)})
+	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
 
 	go func() {
 		Expect(server.Start(ctx)).To(Succeed())
@@ -341,6 +339,68 @@ var _ = Describe("Integration Test", func() {
 			})
 		})
 	})
+
+	Describe("Pod Scheduler Name Webhook Handler", func() {
+		var (
+			c client.Client
+
+			namespace = "shoot--foo--bar"
+			pod       *corev1.Pod
+		)
+
+		BeforeEach(func() {
+			c, err = client.New(restConfig, client.Options{})
+			Expect(err).NotTo(HaveOccurred())
+
+			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+			_, err = controllerutil.CreateOrPatch(ctx, c, ns, func() error {
+				ns.SetLabels(map[string]string{
+					"gardener.cloud/role": "shoot",
+				})
+				return nil
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			pod = &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: namespace,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{
+						Name:  "test",
+						Image: "foo:latest",
+					}},
+				},
+			}
+		})
+
+		AfterEach(func() {
+			Expect(client.IgnoreNotFound(c.Delete(ctx, pod))).To(Succeed())
+		})
+
+		Describe("ignored requests", func() {
+			BeforeEach(func() {
+				Expect(c.Create(ctx, pod)).To(Succeed())
+			})
+
+			It("Update does nothing", func() {
+				expected := &corev1.Pod{}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(pod), expected)).To(Succeed())
+				Expect(c.Update(ctx, pod)).To(Succeed())
+				Expect(pod).To(Equal(expected))
+			})
+			It("Delete does nothing", func() {
+				Expect(c.Delete(ctx, pod)).To(Succeed())
+			})
+		})
+
+		It("should set .spec.schedulerName", func() {
+			Expect(c.Create(ctx, pod)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(pod), pod)).To(Succeed())
+			Expect(pod.Spec.SchedulerName).To(Equal("gardener-shoot-controlplane-scheduler"))
+		})
+	})
 })
 
 func getMutatingWebhookConfig() *admissionregistrationv1beta1.MutatingWebhookConfiguration {
@@ -372,20 +432,10 @@ func getMutatingWebhookConfig() *admissionregistrationv1beta1.MutatingWebhookCon
 			},
 			ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
 				Service: &admissionregistrationv1beta1.ServiceReference{
-					Path: pointer.StringPtr(seedadmission.GardenerShootControlPlaneSchedulerWebhookPath),
+					Path: pointer.StringPtr(podschedulername.WebhookPath),
 				},
 			},
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version},
 		}},
 	}
-}
-
-func expectAllowed(response admission.Response, reason gomegatypes.GomegaMatcher, optionalDescription ...interface{}) {
-	Expect(response.Allowed).To(BeTrue(), optionalDescription...)
-	Expect(string(response.Result.Reason)).To(reason, optionalDescription...)
-}
-
-func expectPatched(response admission.Response, reason gomegatypes.GomegaMatcher, patches []jsonpatch.JsonPatchOperation, optionalDescription ...interface{}) {
-	expectAllowed(response, reason, optionalDescription...)
-	Expect(response.Patches).To(Equal(patches))
 }

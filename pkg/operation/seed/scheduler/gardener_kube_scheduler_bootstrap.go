@@ -23,7 +23,7 @@ import (
 	schedulerconfigv18 "github.com/gardener/gardener/pkg/operation/seed/scheduler/v18"
 	schedulerconfigv19 "github.com/gardener/gardener/pkg/operation/seed/scheduler/v19"
 	schedulerconfigv20 "github.com/gardener/gardener/pkg/operation/seed/scheduler/v20"
-	seedadmissionpkg "github.com/gardener/gardener/pkg/seedadmission"
+	"github.com/gardener/gardener/pkg/seedadmission/webhooks/admission/podschedulername"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	schedulerconfigv18v1alpha2 "github.com/gardener/gardener/third_party/kube-scheduler/v18/v1alpha2"
 	schedulerconfigv19v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v19/v1beta1"
@@ -68,7 +68,7 @@ func Bootstrap(
 	case versionConstraintEqual118.Check(seedVersion):
 		config, err = schedulerconfigv18.NewConfigurator(Name, Name, &schedulerconfigv18v1alpha2.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv18v1alpha2.KubeSchedulerProfile{{
-				SchedulerName: pointer.StringPtr(seedadmissionpkg.GardenerShootControlPlaneSchedulerName),
+				SchedulerName: pointer.StringPtr(podschedulername.GardenerShootControlPlaneSchedulerName),
 				Plugins: &schedulerconfigv18v1alpha2.Plugins{
 					Score: &schedulerconfigv18v1alpha2.PluginSet{
 						Disabled: []schedulerconfigv18v1alpha2.Plugin{
@@ -85,7 +85,7 @@ func Bootstrap(
 	case versionConstraintEqual119.Check(seedVersion):
 		config, err = schedulerconfigv19.NewConfigurator(Name, Name, &schedulerconfigv19v1beta1.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv19v1beta1.KubeSchedulerProfile{{
-				SchedulerName: pointer.StringPtr(seedadmissionpkg.GardenerShootControlPlaneSchedulerName),
+				SchedulerName: pointer.StringPtr(podschedulername.GardenerShootControlPlaneSchedulerName),
 				Plugins: &schedulerconfigv19v1beta1.Plugins{
 					Score: &schedulerconfigv19v1beta1.PluginSet{
 						Disabled: []schedulerconfigv19v1beta1.Plugin{
@@ -102,7 +102,7 @@ func Bootstrap(
 	case versionConstraintEqual120.Check(seedVersion):
 		config, err = schedulerconfigv20.NewConfigurator(Name, Name, &schedulerconfigv20v1beta1.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv20v1beta1.KubeSchedulerProfile{{
-				SchedulerName: pointer.StringPtr(seedadmissionpkg.GardenerShootControlPlaneSchedulerName),
+				SchedulerName: pointer.StringPtr(podschedulername.GardenerShootControlPlaneSchedulerName),
 				Plugins: &schedulerconfigv20v1beta1.Plugins{
 					Score: &schedulerconfigv20v1beta1.PluginSet{
 						Disabled: []schedulerconfigv20v1beta1.Plugin{
@@ -133,7 +133,7 @@ func Bootstrap(
 			Service: &admissionregistrationv1beta1.ServiceReference{
 				Name:      seedadmission.Name,
 				Namespace: seedAdmissionControllerNamespace,
-				Path:      pointer.StringPtr(seedadmissionpkg.GardenerShootControlPlaneSchedulerWebhookPath),
+				Path:      pointer.StringPtr(podschedulername.WebhookPath),
 			},
 			CABundle: []byte(seedadmission.TLSCACert),
 		},
