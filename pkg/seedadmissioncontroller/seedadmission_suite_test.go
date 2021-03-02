@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seedadmission_test
+package seedadmissioncontroller_test
 
 import (
 	"context"
@@ -49,8 +49,8 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/seedadmission/webhooks/admission/extensioncrds"
-	"github.com/gardener/gardener/pkg/seedadmission/webhooks/admission/podschedulername"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
 	"github.com/gardener/gardener/pkg/utils/test"
 	"github.com/gardener/gardener/test/framework"
 )

@@ -23,7 +23,7 @@ import (
 	schedulerconfigv18 "github.com/gardener/gardener/pkg/operation/seed/scheduler/v18"
 	schedulerconfigv19 "github.com/gardener/gardener/pkg/operation/seed/scheduler/v19"
 	schedulerconfigv20 "github.com/gardener/gardener/pkg/operation/seed/scheduler/v20"
-	"github.com/gardener/gardener/pkg/seedadmission/webhooks/admission/podschedulername"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	schedulerconfigv18v1alpha2 "github.com/gardener/gardener/third_party/kube-scheduler/v18/v1alpha2"
 	schedulerconfigv19v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v19/v1beta1"

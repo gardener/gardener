@@ -35,7 +35,7 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
-	sacadmission "github.com/gardener/gardener/pkg/seedadmission/webhooks/admission"
+	sacadmission "github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission"
 )
 
 const (

@@ -32,7 +32,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	. "github.com/gardener/gardener/pkg/seedadmission/webhooks/admission"
+	. "github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 

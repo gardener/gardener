@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	. "github.com/gardener/gardener/pkg/seedadmission/webhooks/admission/podschedulername"
+	. "github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
 )
 
 var _ = Describe("#DefaultShootControlPlanePodsSchedulerName", func() {
