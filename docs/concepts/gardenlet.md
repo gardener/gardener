@@ -147,7 +147,7 @@ More information: [Example Gardenlet Component Configuration](../../example/20-c
 ## Heartbeats
 
 Similar to how Kubernetes uses `Lease` objects for node heart beats
-(see [KEP](https://github.com/kubernetes/enhancements/blob/master/keps/sig-node/0009-node-heartbeat.md)),
+(see [KEP](https://github.com/kubernetes/enhancements/blob/master/keps/sig-node/589-efficient-node-heartbeats/README.md)),
 the gardenlet is using `Lease` objects for heart beats of the seed cluster.
 Every two seconds, the gardenlet checks that the seed cluster's `/healthz`
 endpoint returns HTTP status code 200.
