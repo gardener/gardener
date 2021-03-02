@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package webhooks_test
+package namespacedeletion_test
 
 import (
 	"context"
 	"fmt"
 	"net/http"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -28,19 +29,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks"
+	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/namespacedeletion"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
-var _ = Describe("namespaceDeletionHandler", func() {
+var _ = Describe("plugin", func() {
 	var (
-		request admission.Request
+		ctx    = context.TODO()
+		logger logr.Logger
+		err    error
 
+		request   admission.Request
 		validator admission.Handler
 
 		ctrl       *gomock.Controller
@@ -56,6 +61,8 @@ var _ = Describe("namespaceDeletionHandler", func() {
 	)
 
 	BeforeEach(func() {
+		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
+
 		ctrl = gomock.NewController(GinkgoT())
 		mockCache = mockcache.NewMockCache(ctrl)
 		mockReader = mockclient.NewMockReader(ctrl)
@@ -64,9 +71,8 @@ var _ = Describe("namespaceDeletionHandler", func() {
 		shootMetadataList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 
 		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
-		validator, err = webhooks.NewValidateNamespaceDeletionHandler(ctx, mockCache)
+		validator, err = namespacedeletion.New(ctx, logger, mockCache)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(inject.LoggerInto(logger, validator)).To(BeTrue())
 		Expect(inject.APIReaderInto(mockReader, validator)).To(BeTrue())
 
 		request = admission.Request{}
@@ -86,7 +92,11 @@ var _ = Describe("namespaceDeletionHandler", func() {
 		Expect(response.Allowed).To(Equal(expectedAllowed))
 		Expect(response.Result.Code).To(Equal(expectedStatusCode))
 		if expectedMsg != "" {
-			Expect(response.Result.Message).To(ContainSubstring(expectedMsg))
+			if expectedAllowed {
+				Expect(string(response.Result.Reason)).To(ContainSubstring(expectedMsg))
+			} else {
+				Expect(response.Result.Message).To(ContainSubstring(expectedMsg))
+			}
 		}
 	}
 
@@ -96,10 +106,12 @@ var _ = Describe("namespaceDeletionHandler", func() {
 			test(admissionv1.Update, true, statusCodeAllowed, "not DELETE")
 			test(admissionv1.Connect, true, statusCodeAllowed, "not DELETE")
 		})
+
 		It("should ignore other resources than Namespaces", func() {
 			request.Kind = metav1.GroupVersionKind{Group: "foo", Version: "bar", Kind: "baz"}
 			test(admissionv1.Delete, true, statusCodeAllowed, "not corev1.Namespace")
 		})
+
 		It("should ignore subresources", func() {
 			request.SubResource = "finalize"
 			test(admissionv1.Delete, true, statusCodeAllowed, "subresource")
@@ -112,6 +124,7 @@ var _ = Describe("namespaceDeletionHandler", func() {
 		})
 		test(admissionv1.Delete, true, statusCodeAllowed, "does not belong to a project")
 	})
+
 	It("should pass because namespace is not project related", func() {
 		mockCache.EXPECT().List(gomock.Any(), &gardencorev1beta1.ProjectList{}).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
 			list.Items = []gardencorev1beta1.Project{
@@ -122,6 +135,7 @@ var _ = Describe("namespaceDeletionHandler", func() {
 		})
 		test(admissionv1.Delete, true, statusCodeAllowed, "does not belong to a project")
 	})
+
 	It("should fail because listing projects fails", func() {
 		mockCache.EXPECT().List(gomock.Any(), &gardencorev1beta1.ProjectList{}).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
 			return fmt.Errorf("fake")
@@ -149,12 +163,14 @@ var _ = Describe("namespaceDeletionHandler", func() {
 			})
 			test(admissionv1.Delete, false, statusCodeInternalError, "fake")
 		})
+
 		It("should pass because namespace is already gone", func() {
 			mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, &corev1.Namespace{}).DoAndReturn(func(_ context.Context, key client.ObjectKey, ns *corev1.Namespace) error {
 				return apierrors.NewNotFound(schema.GroupResource{Resource: "namepsaces"}, namespaceName)
 			})
 			test(admissionv1.Delete, true, statusCodeAllowed, "already gone")
 		})
+
 		It("should pass because namespace is already marked for deletion", func() {
 			mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, &corev1.Namespace{}).DoAndReturn(func(_ context.Context, key client.ObjectKey, ns *corev1.Namespace) error {
 				ns.SetName(namespaceName)
@@ -164,6 +180,7 @@ var _ = Describe("namespaceDeletionHandler", func() {
 			})
 			test(admissionv1.Delete, true, statusCodeAllowed, "already marked for deletion")
 		})
+
 		It("should forbid namespace deletion because project is not marked for deletion", func() {
 			mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, &corev1.Namespace{}).DoAndReturn(func(_ context.Context, key client.ObjectKey, ns *corev1.Namespace) error {
 				ns.SetName(namespaceName)
@@ -189,12 +206,14 @@ var _ = Describe("namespaceDeletionHandler", func() {
 				})
 				test(admissionv1.Delete, false, statusCodeInternalError, "fake")
 			})
+
 			It("should pass because namespace is does not contain any shoots", func() {
 				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
 					return nil
 				})
 				test(admissionv1.Delete, true, statusCodeAllowed, "namespace doesn't contain any shoots")
 			})
+
 			It("should forbid namespace deletion because it still contain shoots", func() {
 				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
 					list.Items = []metav1.PartialObjectMetadata{
