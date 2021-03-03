@@ -18,7 +18,7 @@ It can be translated to Gardener and Gardenlets with their `Seed` and `Shoot` re
 The following diagram shows how the two plugins are included in the request flow of a `gardenlet`.
 When they are not enabled then the `kube-apiserver` is internally authorizing the request via RBAC before forwarding the request directly to the `gardener-apiserver`, i.e., the `gardener-admission-controller` would not be consulted (this is not entirely correct because it also serves other admission webhook handlers, but for simplicity reasons this document focuses on the API access scope only).
 
-When enabling the plugins, there is one additional step for each before the `gardener-apiserver` responds to the request. 
+When enabling the plugins, there is one additional step for each before the `gardener-apiserver` responds to the request.
 
 ![Flow Diagram](gardenlet_api_access_flow.png)
 
@@ -65,7 +65,7 @@ The `SeedAuthorizer` registers the following metrics related to the mentioned gr
 
 When the `.server.enableDebugHandlers` field in the `gardener-admission-controller`'s component configuration is set to `true` then it serves a handler that can be used for debugging the resource dependency graph under `/debug/resource-dependency-graph`.
 
-🚨 Only use this setting for development purposes as it enables unauthenticated users to view all data if they have access to the `garedner-admission-controller` component.
+🚨 Only use this setting for development purposes as it enables unauthenticated users to view all data if they have access to the `gardener-admission-controller` component.
 
 The handler renders an HTML page displaying the current graph with a list of vertices and its associated incoming and outgoing edges to other vertices.
 Depending on the size of the Gardener landscape (and consequently, the size of the graph), it might not be possible to render it in its entirety.
@@ -77,7 +77,7 @@ _Example output_:
 -------------------------------------------------------------------------------
 |
 | # Seed:my-seed
-|   -> (11)
+|   <- (11)
 |     BackupBucket:73972fe2-3d7e-4f61-a406-b8f9e670e6b7
 |     BackupEntry:garden-my-project/shoot--dev--my-shoot--4656a460-1a69-4f00-9372-7452cbd38ee3
 |     ControllerInstallation:dns-external-mxt8m
@@ -91,19 +91,19 @@ _Example output_:
 -------------------------------------------------------------------------------
 |
 | # Shoot:garden-my-project/my-shoot
-|   <- (1)
-|     Seed:my-seed
-|   -> (5)
+|   <- (5)
 |     CloudProfile:gcp
 |     Namespace:garden-my-project
 |     Secret:garden-my-project/my-dns-secret
 |     SecretBinding:garden-my-project/my-credentials
 |     ShootState:garden-my-project/my-shoot
+|   -> (1)
+|     Seed:my-seed
 |
 -------------------------------------------------------------------------------
 |
 | # ShootState:garden-my-project/my-shoot
-|   <- (1)
+|   -> (1)
 |     Shoot:garden-my-project/my-shoot
 |
 -------------------------------------------------------------------------------
@@ -118,8 +118,10 @@ There are anchor links to easily jump from one resource to another, and the page
 When there is a relevant update to an existing resource, i.e., when a reference to another resource is changed, then the corresponding vertex (along with all associated edges) is first deleted from the graph before it gets added again with the up-to-date edges.
 However, this does only work for vertices belonging to resources that are only created in exactly one "watch handler".
 For example, the vertex for a `SecretBinding` can either be created in the `SecretBinding` handler itself or in the `Shoot` handler.
-In such cases, deleting the vertex before (re-)computing the edges might lead to race conditions and potentially render the graph invalid.
+In such cases, deleting the vertex before (re-)computing the edges might lead to race conditions and potentially renders the graph invalid.
 Consequently, instead of deleting the vertex, only the edges the respective handler is responsible for are deleted.
+If the vertex ends up with no remaining edges then it also gets deleted automatically.
+Afterwards, the vertex can either be added again or the updated edges can be created.
 
 ## `SeedRestriction` Admission Webhook Enablement
 
