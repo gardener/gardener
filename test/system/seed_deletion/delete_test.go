@@ -95,7 +95,7 @@ func deleteSeed(ctx context.Context, f *framework.GardenerFramework) error {
 
 	f.Logger.Info("Deleting secret...")
 	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: seed.Spec.SecretRef.Name, Namespace: seed.Spec.SecretRef.Namespace}}
-	if err := f.GardenClient.DirectClient().Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
+	if err := f.GardenClient.Client().Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
 		err = errors.Wrapf(err, "Secret %s/%s can't be deleted", seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)
 		return err
 	}
@@ -106,14 +106,14 @@ func deleteSeed(ctx context.Context, f *framework.GardenerFramework) error {
 func deleteBackupbucket(ctx context.Context, f *framework.GardenerFramework, seedName string) error {
 	backupbuckets := &gardencorev1beta1.BackupBucketList{}
 
-	if err := f.GardenClient.DirectClient().List(ctx, backupbuckets); err != nil {
+	if err := f.GardenClient.Client().List(ctx, backupbuckets); err != nil {
 		return err
 	}
 
 	for _, backupbucket := range backupbuckets.Items {
 		if backupbucket.Spec.SeedName != nil && *backupbucket.Spec.SeedName == seedName {
 			f.Logger.Infof("Backupbucket found: %s", backupbucket.Name)
-			return f.GardenClient.DirectClient().Delete(ctx, &backupbucket)
+			return f.GardenClient.Client().Delete(ctx, &backupbucket)
 		}
 	}
 	return nil

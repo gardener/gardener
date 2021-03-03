@@ -77,15 +77,15 @@ var _ = ginkgo.Describe("RBAC testing", func() {
 			},
 		}
 
-		err := f.GardenClient.DirectClient().Create(ctx, serviceAccount)
+		err := f.GardenClient.Client().Create(ctx, serviceAccount)
 		framework.ExpectNoError(err)
 		defer func() {
-			framework.ExpectNoError(f.GardenClient.DirectClient().Delete(ctx, serviceAccount))
+			framework.ExpectNoError(f.GardenClient.Client().Delete(ctx, serviceAccount))
 		}()
 
 		err = retry.UntilTimeout(ctx, 10*time.Second, serviceAccountPermissionTimeout, func(ctx context.Context) (bool, error) {
 			newServiceAccount := &corev1.ServiceAccount{}
-			if err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: serviceAccount.Namespace, Name: serviceAccount.Name}, newServiceAccount); err != nil {
+			if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: serviceAccount.Namespace, Name: serviceAccount.Name}, newServiceAccount); err != nil {
 				return retry.MinorError(err)
 			}
 			serviceAccount = newServiceAccount
@@ -100,7 +100,7 @@ var _ = ginkgo.Describe("RBAC testing", func() {
 		framework.ExpectNoError(err)
 
 		shoots := &gardencorev1beta1.ShootList{}
-		err = saClient.DirectClient().List(ctx, shoots, client.InNamespace(v1beta1constants.GardenNamespace))
+		err = saClient.Client().List(ctx, shoots, client.InNamespace(v1beta1constants.GardenNamespace))
 		g.Expect(err).To(g.HaveOccurred())
 		g.Expect(errors.IsForbidden(err)).To(g.BeTrue())
 	}, serviceAccountPermissionTimeout)

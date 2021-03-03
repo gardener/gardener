@@ -122,13 +122,13 @@ func initShootAndClient(ctx context.Context, t *ShootMigrationTest) (err error) 
 	}
 
 	kubecfgSecret := corev1.Secret{}
-	if err := t.GardenerFramework.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: shoot.Name + ".kubeconfig", Namespace: shoot.Namespace}, &kubecfgSecret); err != nil {
+	if err := t.GardenerFramework.GardenClient.Client().Get(ctx, client.ObjectKey{Name: shoot.Name + ".kubeconfig", Namespace: shoot.Namespace}, &kubecfgSecret); err != nil {
 		t.GardenerFramework.Logger.Errorf("Unable to get kubeconfig from secret: %s", err.Error())
 		return err
 	}
 	t.GardenerFramework.Logger.Info("Shoot kubeconfig secret was fetched successfully")
 
-	t.ShootClient, err = kubernetes.NewClientFromSecret(ctx, t.GardenerFramework.GardenClient.DirectClient(), kubecfgSecret.Namespace, kubecfgSecret.Name, kubernetes.WithClientOptions(client.Options{
+	t.ShootClient, err = kubernetes.NewClientFromSecret(ctx, t.GardenerFramework.GardenClient.Client(), kubecfgSecret.Namespace, kubecfgSecret.Name, kubernetes.WithClientOptions(client.Options{
 		Scheme: kubernetes.ShootScheme,
 	}))
 	t.Shoot = *shoot
@@ -172,11 +172,11 @@ func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *a
 	}
 
 	ginkgo.By("Creating test Secret and Service Account")
-	if err := t.ShootClient.DirectClient().Create(ctx, testSecret); err != nil {
+	if err := t.ShootClient.Client().Create(ctx, testSecret); err != nil {
 		return err
 	}
 	t.GardenerFramework.Logger.Infof("Secret resource %s/%s was created!", testSecret.Namespace, testSecret.Name)
-	if err := t.ShootClient.DirectClient().Create(ctx, testServiceAccount); err != nil {
+	if err := t.ShootClient.Client().Create(ctx, testServiceAccount); err != nil {
 		return err
 	}
 	t.GardenerFramework.Logger.Infof("ServiceAccount resource %s/%s was created!", testServiceAccount.Namespace, testServiceAccount.Name)
@@ -204,11 +204,11 @@ func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp app
 	}
 
 	ginkgo.By("Checking if the test Secret and Service Account are migrated and cleaning them up...")
-	if err := t.ShootClient.DirectClient().Delete(ctx, testSecret); err != nil {
+	if err := t.ShootClient.Client().Delete(ctx, testSecret); err != nil {
 		return err
 	}
 	t.GardenerFramework.Logger.Infof("Secret resource %s/%s was deleted!", testSecret.Namespace, testSecret.Name)
-	if err := t.ShootClient.DirectClient().Delete(ctx, testServiceAccount); err != nil {
+	if err := t.ShootClient.Client().Delete(ctx, testServiceAccount); err != nil {
 		return err
 	}
 	t.GardenerFramework.Logger.Infof("ServiceAccount resource %s/%s was deleted!", testServiceAccount.Namespace, testServiceAccount.Name)

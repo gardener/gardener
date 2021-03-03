@@ -135,7 +135,7 @@ func (f *ShootFramework) DumpState(ctx context.Context) {
 		// dump seed status if seed is available
 		if f.Shoot.Spec.SeedName != nil {
 			seed := &gardencorev1beta1.Seed{}
-			if err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: *f.Shoot.Spec.SeedName}, seed); err != nil {
+			if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: *f.Shoot.Spec.SeedName}, seed); err != nil {
 				f.Logger.Errorf("unable to get seed %s: %s", *f.Shoot.Spec.SeedName, err.Error())
 				return
 			}

@@ -73,7 +73,7 @@ var _ = ginkgo.Describe("Shoot application metrics testing", func() {
 		framework.ExpectNoError(err)
 
 		pods := &corev1.PodList{}
-		err = f.ShootClient.DirectClient().List(ctx, pods, client.InNamespace(f.Namespace), client.MatchingLabels{"app": "load"})
+		err = f.ShootClient.Client().List(ctx, pods, client.InNamespace(f.Namespace), client.MatchingLabels{"app": "load"})
 		framework.ExpectNoError(err)
 
 		if len(pods.Items) == 0 {
@@ -85,7 +85,7 @@ var _ = ginkgo.Describe("Shoot application metrics testing", func() {
 		framework.ExpectNoError(
 			retry.Until(ctx, 30*time.Second, func(ctx context.Context) (bool, error) {
 				podMetrics := &metricsv1beta1.PodMetrics{}
-				if err := f.ShootClient.DirectClient().Get(ctx, kutil.Key(f.Namespace, podName), podMetrics); err != nil {
+				if err := f.ShootClient.Client().Get(ctx, kutil.Key(f.Namespace, podName), podMetrics); err != nil {
 					if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
 						f.Logger.Infof("No metrics for pod %s/%s available yet: %v", f.Namespace, podName, err)
 						return retry.MinorError(err)
@@ -110,7 +110,7 @@ var _ = ginkgo.Describe("Shoot application metrics testing", func() {
 		)
 	}, metricsTestTimeout, framework.WithCAfterTest(func(ctx context.Context) {
 		ginkgo.By("cleanup metrics test deployment")
-		err := f.ShootClient.DirectClient().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: f.Namespace}})
+		err := f.ShootClient.Client().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: f.Namespace}})
 		framework.ExpectNoError(client.IgnoreNotFound(err))
 	}, cleanupTimeout))
 

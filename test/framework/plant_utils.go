@@ -35,7 +35,7 @@ func (f *GardenerFramework) CreatePlantSecret(ctx context.Context, namespace str
 	plantSecret.Data = make(map[string][]byte)
 	plantSecret.Data["kubeconfig"] = kubeConfigContent
 
-	err := f.GardenClient.DirectClient().Create(ctx, plantSecret)
+	err := f.GardenClient.Client().Create(ctx, plantSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (f *GardenerFramework) CreatePlantSecret(ctx context.Context, namespace str
 
 // CreatePlant Creates a plant from a plant Object
 func (f *GardenerFramework) CreatePlant(ctx context.Context, plant *gardencorev1beta1.Plant) error {
-	err := f.GardenClient.DirectClient().Create(ctx, plant)
+	err := f.GardenClient.Client().Create(ctx, plant)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (f *GardenerFramework) CreatePlant(ctx context.Context, plant *gardencorev1
 
 // DeletePlant deletes the test plant
 func (f *GardenerFramework) DeletePlant(ctx context.Context, plant *gardencorev1beta1.Plant) error {
-	err := f.GardenClient.DirectClient().Delete(ctx, plant)
+	err := f.GardenClient.Client().Delete(ctx, plant)
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (f *GardenerFramework) DeletePlant(ctx context.Context, plant *gardencorev1
 func (f *GardenerFramework) WaitForPlantToBeCreated(ctx context.Context, plant *gardencorev1beta1.Plant) error {
 	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 		newPlant := &gardencorev1beta1.Plant{}
-		err = f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: plant.GetNamespace(), Name: plant.GetName()}, newPlant)
+		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: plant.GetNamespace(), Name: plant.GetName()}, newPlant)
 		if err != nil {
 			return retry.SevereError(err)
 		}
@@ -94,7 +94,7 @@ func (f *GardenerFramework) WaitForPlantToBeCreated(ctx context.Context, plant *
 func (f *GardenerFramework) WaitForPlantToBeReconciledSuccessfully(ctx context.Context, plant *gardencorev1beta1.Plant) error {
 	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 		newPlant := &gardencorev1beta1.Plant{}
-		err = f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: plant.GetNamespace(), Name: plant.GetName()}, newPlant)
+		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: plant.GetNamespace(), Name: plant.GetName()}, newPlant)
 		if err != nil {
 			return retry.SevereError(err)
 		}
@@ -113,7 +113,7 @@ func (f *GardenerFramework) WaitForPlantToBeReconciledSuccessfully(ctx context.C
 func (f *GardenerFramework) WaitForPlantToBeDeleted(ctx context.Context, plant *gardencorev1beta1.Plant) error {
 	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 		newPlant := &gardencorev1beta1.Plant{}
-		err = f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: plant.GetNamespace(), Name: plant.GetName()}, newPlant)
+		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: plant.GetNamespace(), Name: plant.GetName()}, newPlant)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return retry.Ok()
@@ -132,7 +132,7 @@ func (f *GardenerFramework) WaitForPlantToBeDeleted(ctx context.Context, plant *
 func (f *GardenerFramework) WaitForPlantToBeReconciledWithUnknownStatus(ctx context.Context, plant *gardencorev1beta1.Plant) error {
 	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 		newPlant := &gardencorev1beta1.Plant{}
-		err = f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: plant.GetNamespace(), Name: plant.GetName()}, newPlant)
+		err = f.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: plant.GetNamespace(), Name: plant.GetName()}, newPlant)
 		if err != nil {
 			return retry.SevereError(err)
 		}

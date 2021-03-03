@@ -232,7 +232,7 @@ func (f *SeedRegistrationFramework) AddSeed(ctx context.Context, seed *gardencor
 	if f.GardenClient == nil {
 		return errors.New("no gardener client is defined")
 	}
-	if err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: seed.Name}, seed); err != nil {
+	if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: seed.Name}, seed); err != nil {
 		return err
 	}
 	f.Seed = seed
@@ -247,7 +247,7 @@ func (f *SeedRegistrationFramework) RegisterSeed(ctx context.Context) (err error
 	}
 
 	refShoot := &gardencorev1beta1.Shoot{}
-	if err = f.GardenClient.DirectClient().Get(ctx, kutil.Key(f.Config.ShootedSeedNamespace, f.Config.ShootedSeedName), refShoot); err != nil {
+	if err = f.GardenClient.Client().Get(ctx, kutil.Key(f.Config.ShootedSeedNamespace, f.Config.ShootedSeedName), refShoot); err != nil {
 		return err
 	}
 
@@ -256,7 +256,7 @@ func (f *SeedRegistrationFramework) RegisterSeed(ctx context.Context) (err error
 	}
 
 	secretBinding := &gardencorev1beta1.SecretBinding{}
-	if err = f.GardenClient.DirectClient().Get(ctx, kutil.Key(f.Config.ShootedSeedNamespace, f.Config.SecretBinding), secretBinding); err != nil {
+	if err = f.GardenClient.Client().Get(ctx, kutil.Key(f.Config.ShootedSeedNamespace, f.Config.SecretBinding), secretBinding); err != nil {
 		return err
 	}
 
@@ -268,7 +268,7 @@ func (f *SeedRegistrationFramework) RegisterSeed(ctx context.Context) (err error
 	}
 	f.Logger.Infof("Creating seed secret %s in namespace %s", f.Secret.GetName(), f.Secret.GetNamespace())
 	// Apply secret to the cluster
-	if err = f.GardenClient.DirectClient().Create(ctx, f.Secret); err != nil {
+	if err = f.GardenClient.Client().Create(ctx, f.Secret); err != nil {
 		f.Logger.Errorf("Cannot create seed secret %s: %s", f.Secret.GetName(), err)
 		return err
 	}
@@ -357,13 +357,13 @@ func (f *SeedRegistrationFramework) buildSeedSecret(ctx context.Context, secretB
 	}
 
 	kubeconfigSecret := &corev1.Secret{}
-	if err := f.GardenClient.DirectClient().Get(ctx, kutil.Key(f.Config.ShootedSeedNamespace, (f.Config.ShootedSeedName+".kubeconfig")), kubeconfigSecret); err != nil {
+	if err := f.GardenClient.Client().Get(ctx, kutil.Key(f.Config.ShootedSeedNamespace, (f.Config.ShootedSeedName+".kubeconfig")), kubeconfigSecret); err != nil {
 		return err
 	}
 	kubecfgData := kubeconfigSecret.Data["kubeconfig"]
 
 	referenceSecret := &corev1.Secret{}
-	if err := f.GardenClient.DirectClient().Get(ctx, kutil.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name), referenceSecret); err != nil {
+	if err := f.GardenClient.Client().Get(ctx, kutil.Key(secretBinding.SecretRef.Namespace, secretBinding.SecretRef.Name), referenceSecret); err != nil {
 		return err
 	}
 	secret.Data = referenceSecret.Data

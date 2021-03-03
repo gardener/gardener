@@ -95,7 +95,7 @@ func (e *rootPodExecutor) Execute(ctx context.Context, command string) ([]byte, 
 
 // deploy deploys a root pod on the specified node and waits until it is running
 func (e *rootPodExecutor) deploy(ctx context.Context) error {
-	rootPod, err := DeployRootPod(ctx, e.client.DirectClient(), e.namespace, e.nodeName)
+	rootPod, err := DeployRootPod(ctx, e.client.Client(), e.namespace, e.nodeName)
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (e *rootPodExecutor) checkPodRunning(ctx context.Context) (bool, error) {
 	}
 
 	pod := e.Pod.DeepCopy()
-	if err := e.client.DirectClient().Get(ctx, client.ObjectKeyFromObject(e.Pod), pod); err != nil {
+	if err := e.client.Client().Get(ctx, client.ObjectKeyFromObject(e.Pod), pod); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}

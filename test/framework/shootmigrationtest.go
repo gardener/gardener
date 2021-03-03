@@ -199,7 +199,7 @@ func (t *ShootMigrationTest) CompareElementsAfterMigration() error {
 // The timestamp should not be after the ShootMigrationTest.MigrationTime
 func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExcludeList []string) error {
 	mrList := &resourcesv1alpha1.ManagedResourceList{}
-	if err := t.TargetSeedClient.DirectClient().List(
+	if err := t.TargetSeedClient.Client().List(
 		ctx,
 		mrList,
 		client.InNamespace(t.SeedShootNamespace),
@@ -236,7 +236,7 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 // CheckForOrphanedNonNamespacedResources checks if there are orphaned resources left on the target seed after the shoot migration.
 // The function checks for Cluster, DNSOwner, BackupEntry, ClusterRoleBinding, ClusterRole and PersistentVolume
 func (t *ShootMigrationTest) CheckForOrphanedNonNamespacedResources(ctx context.Context) error {
-	seedClientScheme := t.SourceSeedClient.DirectClient().Scheme()
+	seedClientScheme := t.SourceSeedClient.Client().Scheme()
 
 	if err := extensionsv1alpha1.AddToScheme(seedClientScheme); err != nil {
 		return err

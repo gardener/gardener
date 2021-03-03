@@ -52,7 +52,7 @@ var _ = ginkgo.Describe("Operating system testing", func() {
 		f.Default().Serial().CIt("should not segfault", func(ctx context.Context) {
 			// choose random node
 			nodes := &corev1.NodeList{}
-			err := f.ShootClient.DirectClient().List(ctx, nodes)
+			err := f.ShootClient.Client().List(ctx, nodes)
 			framework.ExpectNoError(err)
 
 			if len(nodes.Items) == 0 {
