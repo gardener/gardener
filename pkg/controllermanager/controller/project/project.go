@@ -29,7 +29,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	kubeinformers "k8s.io/client-go/informers"
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -38,24 +37,19 @@ import (
 
 // Controller controls Projects.
 type Controller struct {
-	clientMap              clientmap.ClientMap
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
+	clientMap clientmap.ClientMap
+	config    *config.ControllerManagerConfiguration
 
-	staleControl StaleControlInterface
+	projectReconciler      reconcile.Reconciler
+	projectStaleReconciler reconcile.Reconciler
 
-	projectReconciler reconcile.Reconciler
+	projectLister gardencorelisters.ProjectLister
 
-	config   *config.ControllerManagerConfiguration
-	recorder record.EventRecorder
-
-	projectLister     gardencorelisters.ProjectLister
 	projectQueue      workqueue.RateLimitingInterface
 	projectStaleQueue workqueue.RateLimitingInterface
+
 	projectSynced     cache.InformerSynced
-
-	namespaceLister kubecorev1listers.NamespaceLister
-	namespaceSynced cache.InformerSynced
-
+	namespaceSynced   cache.InformerSynced
 	roleBindingSynced cache.InformerSynced
 
 	workerCh               chan int
@@ -100,15 +94,12 @@ func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFacto
 
 	projectController := &Controller{
 		clientMap:              clientMap,
-		k8sGardenCoreInformers: gardenCoreInformerFactory,
 		projectReconciler:      NewProjectReconciler(logger.Logger, config.Controllers, clientMap, gardenCoreInformerFactory, recorder, namespaceLister),
-		staleControl:           NewDefaultStaleControl(clientMap, config, shootLister, plantLister, backupEntryLister, secretBindingLister, quotaLister, namespaceLister, secretLister),
+		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, clientMap, shootLister, plantLister, backupEntryLister, secretBindingLister, quotaLister, namespaceLister, secretLister),
 		config:                 config,
-		recorder:               recorder,
 		projectLister:          projectLister,
 		projectQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
 		projectStaleQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
-		namespaceLister:        namespaceLister,
 		workerCh:               make(chan int),
 	}
 
@@ -151,7 +142,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.projectQueue, "Project", c.projectReconciler, &waitGroup, c.workerCh)
-		controllerutils.DeprecatedCreateWorker(ctx, c.projectStaleQueue, "Project Stale", c.reconcileStaleProjectKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.projectStaleQueue, "Project Stale", c.projectStaleReconciler, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling

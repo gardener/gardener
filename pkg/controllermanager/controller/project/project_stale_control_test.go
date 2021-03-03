@@ -30,19 +30,24 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	kubecoreinformers "k8s.io/client-go/informers"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 var _ = Describe("ProjectStaleControl", func() {
-	Describe("defaultStaleControl", func() {
+	Describe("projectStaleReconciler", func() {
 		var (
+			ctx = context.TODO()
+
 			ctrl                         *gomock.Controller
 			k8sGardenRuntimeClient       *mockclient.MockClient
 			k8sGardenRuntimeStatusWriter *mockclient.MockStatusWriter
@@ -61,6 +66,7 @@ var _ = Describe("ProjectStaleControl", func() {
 			minimumLifetimeDays     = 5
 			staleGracePeriodDays    = 10
 			staleExpirationTimeDays = 15
+			staleSyncPeriod         = metav1.Duration{Duration: time.Second}
 
 			project       *gardencorev1beta1.Project
 			namespace     *corev1.Namespace
@@ -70,9 +76,10 @@ var _ = Describe("ProjectStaleControl", func() {
 			quota         *gardencorev1beta1.Quota
 			secret        *corev1.Secret
 			secretBinding *gardencorev1beta1.SecretBinding
-			cfg           *config.ControllerManagerConfiguration
+			cfg           *config.ProjectControllerConfiguration
+			request       reconcile.Request
 
-			control StaleControlInterface
+			reconciler reconcile.Reconciler
 		)
 
 		BeforeSuite(func() {
@@ -129,19 +136,18 @@ var _ = Describe("ProjectStaleControl", func() {
 				SecretRef:  corev1.SecretReference{Namespace: namespaceName, Name: secretName},
 				Quotas:     []corev1.ObjectReference{{Namespace: namespaceName, Name: quotaName}},
 			}
-			cfg = &config.ControllerManagerConfiguration{
-				Controllers: config.ControllerManagerControllerConfiguration{
-					Project: &config.ProjectControllerConfiguration{
-						MinimumLifetimeDays:     &minimumLifetimeDays,
-						StaleGracePeriodDays:    &staleGracePeriodDays,
-						StaleExpirationTimeDays: &staleExpirationTimeDays,
-					},
-				},
+			cfg = &config.ProjectControllerConfiguration{
+				MinimumLifetimeDays:     &minimumLifetimeDays,
+				StaleGracePeriodDays:    &staleGracePeriodDays,
+				StaleExpirationTimeDays: &staleExpirationTimeDays,
+				StaleSyncPeriod:         &staleSyncPeriod,
 			}
+			request = reconcile.Request{NamespacedName: types.NamespacedName{Name: project.Name}}
 
-			control = NewDefaultStaleControl(
-				clientMap,
+			reconciler = NewProjectStaleReconciler(
+				logger.NewNopLogger(),
 				cfg,
+				clientMap,
 				gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(),
 				gardenCoreInformerFactory.Core().V1beta1().Plants().Lister(),
 				gardenCoreInformerFactory.Core().V1beta1().BackupEntries().Lister(),
@@ -151,37 +157,45 @@ var _ = Describe("ProjectStaleControl", func() {
 				kubeCoreInformerFactory.Core().V1().Secrets().Lister(),
 			)
 
+			k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(project.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
 			Expect(kubeCoreInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(namespace)).To(Succeed())
 		})
 
 		Describe("#ReconcileStaleProject", func() {
 			It("should do nothing because the project has no namespace", func() {
 				project.Spec.Namespace = nil
-				Expect(control.ReconcileStaleProject(project, metav1.Now)).To(Succeed())
+
+				_, result := reconciler.Reconcile(ctx, request)
+				Expect(result).To(Succeed())
 			})
 
 			It("should mark the project as 'not stale' because the namespace has the skip-stale-check annotation", func() {
 				nowFunc := func() metav1.Time {
 					return metav1.Time{Time: time.Date(100, 1, 1, 0, 0, 0, 0, time.UTC)}
 				}
+				defer test.WithVar(&NowFunc, nowFunc)
 
 				namespace.Annotations = map[string]string{common.ProjectSkipStaleCheck: "true"}
 				Expect(kubeCoreInformerFactory.Core().V1().Namespaces().Informer().GetStore().Update(namespace)).To(Succeed())
 
 				expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
 
-				Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
+				_, result := reconciler.Reconcile(ctx, request)
+				Expect(result).To(Succeed())
 			})
 
 			It("should mark the project as 'not stale' because it is younger than the configured MinimumLifetimeDays", func() {
 				nowFunc := func() metav1.Time {
 					return metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
 				}
+				defer test.WithVar(&NowFunc, nowFunc)
+
 				project.CreationTimestamp = metav1.Time{Time: time.Date(1, 1, minimumLifetimeDays-1, 0, 0, 0, 0, time.UTC)}
 
 				expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
 
-				Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
+				_, result := reconciler.Reconcile(ctx, request)
+				Expect(result).To(Succeed())
 			})
 
 			Context("project older than the configured MinimumLifetimeDays", func() {
@@ -196,40 +210,54 @@ var _ = Describe("ProjectStaleControl", func() {
 
 				Describe("project should be marked as not stale", func() {
 					It("has shoots", func() {
+						defer test.WithVar(&NowFunc, nowFunc)
+
 						Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 
 						expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
 
-						Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
+						_, result := reconciler.Reconcile(ctx, request)
+						Expect(result).To(Succeed())
 					})
 
 					It("has plants", func() {
+						defer test.WithVar(&NowFunc, nowFunc)
+
 						Expect(gardenCoreInformerFactory.Core().V1beta1().Plants().Informer().GetStore().Add(plant)).To(Succeed())
 
 						expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
 
-						Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
+						_, result := reconciler.Reconcile(ctx, request)
+						Expect(result).To(Succeed())
 					})
 
 					It("has backupentries", func() {
+						defer test.WithVar(&NowFunc, nowFunc)
+
 						Expect(gardenCoreInformerFactory.Core().V1beta1().BackupEntries().Informer().GetStore().Add(backupEntry)).To(Succeed())
 
 						expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
 
-						Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
+						_, result := reconciler.Reconcile(ctx, request)
+						Expect(result).To(Succeed())
 					})
 
 					It("has secrets that are used by shoots in the same namespace", func() {
+						defer test.WithVar(&NowFunc, nowFunc)
+
 						Expect(kubeCoreInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
 						Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(secretBinding)).To(Succeed())
 						Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 
 						expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
 
-						Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
+						_, result := reconciler.Reconcile(ctx, request)
+						Expect(result).To(Succeed())
 					})
 
 					It("has secrets that are used by shoots in another namespace", func() {
+						defer test.WithVar(&NowFunc, nowFunc)
+
 						otherNamespace := namespaceName + "other"
 						secretBinding.Namespace = otherNamespace
 						shoot.Namespace = otherNamespace
@@ -240,20 +268,26 @@ var _ = Describe("ProjectStaleControl", func() {
 
 						expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
 
-						Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
+						_, result := reconciler.Reconcile(ctx, request)
+						Expect(result).To(Succeed())
 					})
 
 					It("has quotas that are used by shoots in the same namespace", func() {
+						defer test.WithVar(&NowFunc, nowFunc)
+
 						Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(quota)).To(Succeed())
 						Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(secretBinding)).To(Succeed())
 						Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 
 						expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
 
-						Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
+						_, result := reconciler.Reconcile(ctx, request)
+						Expect(result).To(Succeed())
 					})
 
 					It("has quotas that are used by shoots in another namespace", func() {
+						defer test.WithVar(&NowFunc, nowFunc)
+
 						otherNamespace := namespaceName + "other"
 						secretBinding.Namespace = otherNamespace
 						shoot.Namespace = otherNamespace
@@ -264,46 +298,61 @@ var _ = Describe("ProjectStaleControl", func() {
 
 						expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
 
-						Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
+						_, result := reconciler.Reconcile(ctx, request)
+						Expect(result).To(Succeed())
 					})
 
 				})
 
 				Describe("project should be marked as stale", func() {
 					It("has secrets that are unused", func() {
+						defer test.WithVar(&NowFunc, nowFunc)
+
 						Expect(kubeCoreInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
 						Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(secretBinding)).To(Succeed())
 
 						expectStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nil, nil, nowFunc)
 
-						Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
+						_, result := reconciler.Reconcile(ctx, request)
+						Expect(result).To(Succeed())
 					})
 
 					It("has quotas that are unused", func() {
+						defer test.WithVar(&NowFunc, nowFunc)
+
 						Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(quota)).To(Succeed())
 						Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(secretBinding)).To(Succeed())
 
 						expectStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nil, nil, nowFunc)
 
-						Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
+						_, result := reconciler.Reconcile(ctx, request)
+						Expect(result).To(Succeed())
 					})
 
 					It("it is not used", func() {
+						defer test.WithVar(&NowFunc, nowFunc)
+
 						expectStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nil, nil, nowFunc)
 
-						Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
+						_, result := reconciler.Reconcile(ctx, request)
+						Expect(result).To(Succeed())
 					})
 
 					It("should not set the auto delete timestamp because stale grace period is not exceeded", func() {
+						defer test.WithVar(&NowFunc, nowFunc)
+
 						staleSinceTimestamp := metav1.Time{Time: nowFunc().Add(-24*time.Hour*time.Duration(staleGracePeriodDays) + time.Hour)}
 						project.Status.StaleSinceTimestamp = &staleSinceTimestamp
 
 						expectStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, &staleSinceTimestamp, nil, nowFunc)
 
-						Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
+						_, result := reconciler.Reconcile(ctx, request)
+						Expect(result).To(Succeed())
 					})
 
 					It("should set the auto delete timestamp because stale grace period is exceeded", func() {
+						defer test.WithVar(&NowFunc, nowFunc)
+
 						var (
 							staleSinceTimestamp      = metav1.Time{Time: nowFunc().Add(-24 * time.Hour * time.Duration(staleGracePeriodDays))}
 							staleAutoDeleteTimestamp = metav1.Time{Time: staleSinceTimestamp.Add(24 * time.Hour * time.Duration(staleExpirationTimeDays))}
@@ -312,10 +361,13 @@ var _ = Describe("ProjectStaleControl", func() {
 
 						expectStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, nowFunc)
 
-						Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
+						_, result := reconciler.Reconcile(ctx, request)
+						Expect(result).To(Succeed())
 					})
 
 					It("should extend the project's stale grace period", func() {
+						defer test.WithVar(&NowFunc, nowFunc)
+
 						var (
 							staleSinceTimestamp      = metav1.Time{Time: nowFunc().Add(-24 * time.Hour * time.Duration(staleGracePeriodDays))}
 							staleAutoDeleteTimestamp = metav1.Time{Time: staleSinceTimestamp.Add(24 * time.Hour * time.Duration(staleExpirationTimeDays))}
@@ -327,10 +379,13 @@ var _ = Describe("ProjectStaleControl", func() {
 
 						expectStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, nowFunc)
 
-						Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
+						_, result := reconciler.Reconcile(ctx, request)
+						Expect(result).To(Succeed())
 					})
 
 					It("should delete the project if the auto delete timestamp is exceeded", func() {
+						defer test.WithVar(&NowFunc, nowFunc)
+
 						var (
 							staleSinceTimestamp      = metav1.Time{Time: nowFunc().Add(-24 * time.Hour * 3 * time.Duration(staleExpirationTimeDays))}
 							staleAutoDeleteTimestamp = nowFunc()
@@ -352,7 +407,8 @@ var _ = Describe("ProjectStaleControl", func() {
 						k8sGardenRuntimeClient.EXPECT().Update(context.TODO(), project)
 						k8sGardenRuntimeClient.EXPECT().Delete(context.TODO(), project)
 
-						Expect(control.ReconcileStaleProject(project, nowFunc)).To(Succeed())
+						_, result := reconciler.Reconcile(ctx, request)
+						Expect(result).To(Succeed())
 					})
 				})
 			})
