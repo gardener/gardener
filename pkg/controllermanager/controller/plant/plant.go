@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // FinalizerName is the name of the Plant finalizer.
@@ -48,9 +49,9 @@ type Controller struct {
 	secretLister kubecorev1listers.SecretLister
 	secretSynced cache.InformerSynced
 
-	plantControl ControlInterface
-	plantLister  gardencorelisters.PlantLister
-	plantSynced  cache.InformerSynced
+	reconciler  reconcile.Reconciler
+	plantLister gardencorelisters.PlantLister
+	plantSynced cache.InformerSynced
 
 	plantQueue workqueue.RateLimitingInterface
 
@@ -86,7 +87,8 @@ func NewController(clientMap clientmap.ClientMap,
 		secretLister: secretLister,
 		plantLister:  plantLister,
 		plantQueue:   plantQueue,
-		plantControl: NewDefaultPlantControl(clientMap, recorder, config, secretLister),
+
+		reconciler: NewPlantReconciler(logger.Logger, config.Controllers.Plant, clientMap, secretLister, recorder),
 
 		workerCh: make(chan int),
 	}
@@ -127,7 +129,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("Plant controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.plantQueue, "plant", func(key string) error { return c.reconcilePlantKey(ctx, key) }, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.plantQueue, "Plant", c.reconciler, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling

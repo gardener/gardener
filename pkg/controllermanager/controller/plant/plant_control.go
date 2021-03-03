@@ -21,6 +21,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -37,6 +38,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // reconcilePlantForMatchingSecret checks if there is a plant resource that references this secret and then reconciles the plant again
@@ -113,68 +115,57 @@ func (c *Controller) plantDelete(obj interface{}) {
 	c.plantQueue.Add(key)
 }
 
-func (c *Controller) reconcilePlantKey(ctx context.Context, key string) error {
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		return err
-	}
-
-	plant, err := c.plantLister.Plants(namespace).Get(name)
-	if apierrors.IsNotFound(err) {
-		logger.Logger.Debugf("[PLANT RECONCILE] %s - skipping because Plant has been deleted", key)
-		return nil
-	}
-	if err != nil {
-		logger.Logger.Errorf("[PLANT RECONCILE] %s - unable to retrieve object from store: %v", key, err)
-		return err
-
-	}
-
-	if err := c.plantControl.Reconcile(ctx, plant); err != nil {
-		return err
-	}
-
-	c.plantQueue.AddAfter(key, c.config.Controllers.Plant.SyncPeriod.Duration)
-	return nil
-}
-
-// ControlInterface implements the control logic for updating Plants. It is implemented as an interface to allow
-// for extensions that provide different semantics. Currently, there is only one implementation.
-type ControlInterface interface {
-	Reconcile(context.Context, *gardencorev1beta1.Plant) error
-}
-
-// NewDefaultPlantControl returns a new instance of the default implementation ControlInterface that
-// implements the documented semantics for Plants.
-func NewDefaultPlantControl(clientMap clientmap.ClientMap, recorder record.EventRecorder, config *config.ControllerManagerConfiguration, secretLister kubecorev1listers.SecretLister) ControlInterface {
-	return &defaultPlantControl{
-		clientMap:     clientMap,
-		secretsLister: secretLister,
-		recorder:      recorder,
+// NewPlantReconciler creates a new instance of a reconciler which reconciles Plants.
+func NewPlantReconciler(l logrus.FieldLogger, config *config.PlantControllerConfiguration, clientMap clientmap.ClientMap, secretsLister kubecorev1listers.SecretLister, recorder record.EventRecorder) reconcile.Reconciler {
+	return &plantReconciler{
+		logger:        l,
 		config:        config,
+		clientMap:     clientMap,
+		secretsLister: secretsLister,
+		recorder:      recorder,
 	}
 }
 
-func (c *defaultPlantControl) Reconcile(ctx context.Context, obj *gardencorev1beta1.Plant) error {
-	var (
-		plant  = obj.DeepCopy()
-		logger = logger.NewFieldLogger(logger.Logger, "plant", plant.Name)
-	)
+type plantReconciler struct {
+	logger        logrus.FieldLogger
+	config        *config.PlantControllerConfiguration
+	clientMap     clientmap.ClientMap
+	secretsLister kubecorev1listers.SecretLister
+	recorder      record.EventRecorder
+}
+
+func (r *plantReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
+	}
+
+	plant := &gardencorev1beta1.Plant{}
+	if err := gardenClient.Client().Get(ctx, request.NamespacedName, plant); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			return reconcile.Result{}, nil
+		}
+		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+		return reconcile.Result{}, err
+	}
 
 	if plant.DeletionTimestamp != nil {
-		return c.delete(ctx, plant)
+		if err := r.delete(ctx, plant, gardenClient); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
-	return c.reconcile(ctx, plant, logger)
+	if err := r.reconcile(ctx, plant, gardenClient); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{RequeueAfter: r.config.SyncPeriod.Duration}, nil
 }
 
-func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1beta1.Plant, logger logrus.FieldLogger) error {
+func (r *plantReconciler) reconcile(ctx context.Context, plant *gardencorev1beta1.Plant, gardenClient kubernetes.Interface) error {
+	logger := logger.NewFieldLogger(r.logger, "plant", plant.Name)
 	logger.Infof("[PLANT RECONCILE] %s", plant.Name)
-
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return fmt.Errorf("failed to get garden client: %w", err)
-	}
 
 	// Add Finalizers to Plant
 	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), plant, FinalizerName); err != nil {
@@ -186,7 +177,7 @@ func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1
 		conditionEveryNodeReady     = gardencorev1beta1helper.GetOrInitCondition(plant.Status.Conditions, gardencorev1beta1.PlantEveryNodeReady)
 	)
 
-	kubeconfigSecret, err := c.secretsLister.Secrets(plant.Namespace).Get(plant.Spec.SecretRef.Name)
+	kubeconfigSecret, err := r.secretsLister.Secrets(plant.Namespace).Get(plant.Spec.SecretRef.Name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return updateStatusToUnknown(ctx, gardenClient.DirectClient(), plant, "Referenced Plant secret could not be found.", conditionAPIServerAvailable, conditionEveryNodeReady)
@@ -198,7 +189,7 @@ func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1
 		return fmt.Errorf("failed to ensure finalizer on plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
 	}
 
-	plantClient, err := c.clientMap.GetClient(ctx, keys.ForPlant(plant))
+	plantClient, err := r.clientMap.GetClient(ctx, keys.ForPlant(plant))
 	if err != nil {
 		msg := fmt.Sprintf("failed to get plant client: %v", err)
 		logger.Error(msg)
@@ -208,7 +199,7 @@ func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1
 	healthChecker := NewHealthChecker(plantClient.Client(), plantClient.Kubernetes().Discovery())
 
 	// Trigger health check
-	conditionAPIServerAvailable, conditionEveryNodeReady = c.healthChecks(ctx, healthChecker, conditionAPIServerAvailable, conditionEveryNodeReady)
+	conditionAPIServerAvailable, conditionEveryNodeReady = healthChecks(ctx, healthChecker, conditionAPIServerAvailable, conditionEveryNodeReady)
 
 	cloudInfo, err := FetchCloudInfo(ctx, plantClient.Client(), plantClient.Kubernetes().Discovery(), logger)
 	if err != nil {
@@ -238,14 +229,9 @@ func updateStatus(ctx context.Context, c client.Client, plant *gardencorev1beta1
 	})
 }
 
-func (c *defaultPlantControl) delete(ctx context.Context, plant *gardencorev1beta1.Plant) error {
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return fmt.Errorf("failed to get garden client: %w", err)
-	}
-
+func (r *plantReconciler) delete(ctx context.Context, plant *gardencorev1beta1.Plant, gardenClient kubernetes.Interface) error {
 	secret := &corev1.Secret{}
-	err = gardenClient.Client().Get(ctx, kutil.Key(plant.Namespace, plant.Spec.SecretRef.Name), secret)
+	err := gardenClient.Client().Get(ctx, kutil.Key(plant.Namespace, plant.Spec.SecretRef.Name), secret)
 	if err == nil {
 		if err2 := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), secret, FinalizerName); err2 != nil {
 			return fmt.Errorf("failed to remove finalizer from plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err2)
@@ -258,14 +244,14 @@ func (c *defaultPlantControl) delete(ctx context.Context, plant *gardencorev1bet
 		return fmt.Errorf("failed to remove finalizer from plant: %w", err)
 	}
 
-	if err := c.clientMap.InvalidateClient(keys.ForPlant(plant)); err != nil {
+	if err := r.clientMap.InvalidateClient(keys.ForPlant(plant)); err != nil {
 		return fmt.Errorf("failed to invalidate plant client: %w", err)
 	}
 
 	return nil
 }
 
-func (c *defaultPlantControl) healthChecks(ctx context.Context, healthChecker *HealthChecker, apiserverAvailability, everyNodeReady gardencorev1beta1.Condition) (gardencorev1beta1.Condition, gardencorev1beta1.Condition) {
+func healthChecks(ctx context.Context, healthChecker *HealthChecker, apiserverAvailability, everyNodeReady gardencorev1beta1.Condition) (gardencorev1beta1.Condition, gardencorev1beta1.Condition) {
 	var wg sync.WaitGroup
 
 	wg.Add(2)
