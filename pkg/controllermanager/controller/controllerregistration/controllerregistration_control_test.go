@@ -17,6 +17,17 @@ package controllerregistration
 import (
 	"context"
 	"errors"
+	"fmt"
+
+	"github.com/golang/mock/gomock"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -27,16 +38,6 @@ import (
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
-	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/tools/cache"
 )
 
 var _ = Describe("Controller", func() {
@@ -269,6 +270,10 @@ func (c *fakeControllerRegistrationLister) Get(string) (*gardencorev1beta1.Contr
 }
 
 var _ = Describe("ControllerRegistrationControl", func() {
+	const (
+		finalizerName = "core.gardener.cloud/controllerregistration"
+	)
+
 	var (
 		ctrl                   *gomock.Controller
 		clientMap              clientmap.ClientMap
@@ -297,7 +302,8 @@ var _ = Describe("ControllerRegistrationControl", func() {
 		d = &defaultControllerRegistrationControl{clientMap, controllerInstallationLister}
 		obj = &gardencorev1beta1.ControllerRegistration{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: controllerRegistrationName,
+				Name:            controllerRegistrationName,
+				ResourceVersion: "42",
 			},
 		}
 	})
@@ -311,14 +317,21 @@ var _ = Describe("ControllerRegistrationControl", func() {
 			It("should ensure the finalizer (error)", func() {
 				err := apierrors.NewNotFound(schema.GroupResource{}, controllerRegistrationName)
 
-				k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(err)
+				k8sGardenRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).
+					DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+						Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
+						return err
+					})
 
 				Expect(d.Reconcile(obj)).To(HaveOccurred())
 			})
 
 			It("should ensure the finalizer (no error)", func() {
-				k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(nil)
-				k8sGardenRuntimeClient.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(nil)
+				k8sGardenRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).
+					DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+						Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
+						return nil
+					})
 
 				Expect(d.Reconcile(obj)).NotTo(HaveOccurred())
 			})
@@ -366,7 +379,11 @@ var _ = Describe("ControllerRegistrationControl", func() {
 				err := errors.New("some err")
 				d.controllerInstallationLister = newFakeControllerInstallationLister(d.controllerInstallationLister, nil, nil)
 
-				k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(err)
+				k8sGardenRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).
+					DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+						Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
+						return err
+					})
 
 				Expect(d.Reconcile(obj)).To(HaveOccurred())
 			})
@@ -374,9 +391,11 @@ var _ = Describe("ControllerRegistrationControl", func() {
 			It("should remove the finalizer (no error)", func() {
 				d.controllerInstallationLister = newFakeControllerInstallationLister(d.controllerInstallationLister, nil, nil)
 
-				k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(nil)
-				k8sGardenRuntimeClient.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(nil)
-				k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(nil)
+				k8sGardenRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).
+					DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+						Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
+						return nil
+					})
 
 				Expect(d.Reconcile(obj)).NotTo(HaveOccurred())
 			})

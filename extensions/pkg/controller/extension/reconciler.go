@@ -40,6 +40,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 const (
@@ -122,6 +123,7 @@ type reconciler struct {
 	finalizerName string
 
 	client client.Client
+	reader client.Reader
 
 	resync time.Duration
 }
@@ -149,6 +151,11 @@ func (r *reconciler) InjectFunc(f inject.Func) error {
 // InjectClient injects the controller runtime client into the reconciler.
 func (r *reconciler) InjectClient(client client.Client) error {
 	r.client = client
+	return nil
+}
+
+func (r *reconciler) InjectAPIReader(reader client.Reader) error {
+	r.reader = reader
 	return nil
 }
 
@@ -194,7 +201,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *reconciler) reconcile(ctx context.Context, ex *extensionsv1alpha1.Extension, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, ex, r.finalizerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, ex, r.finalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -232,14 +239,14 @@ func (r *reconciler) delete(ctx context.Context, ex *extensionsv1alpha1.Extensio
 		return reconcile.Result{}, err
 	}
 
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, ex, r.finalizerName); err != nil {
+	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, ex, r.finalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from Extension resource: %+v", err)
 	}
 	return reconcile.Result{}, nil
 }
 
 func (r *reconciler) restore(ctx context.Context, ex *extensionsv1alpha1.Extension, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, ex, r.finalizerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, ex, r.finalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 

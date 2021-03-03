@@ -16,82 +16,57 @@ package controllerutils
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// PatchFinalizers adds the given finalizers to the object via a patch request.
-func PatchFinalizers(ctx context.Context, c client.Client, obj client.Object, finalizers ...string) error {
-	beforePatch := obj.DeepCopyObject()
-
-	for _, finalizer := range finalizers {
-		controllerutil.AddFinalizer(obj, finalizer)
-	}
-
-	return c.Patch(ctx, obj, client.MergeFromWithOptions(beforePatch, client.MergeFromWithOptimisticLock{}))
+// PatchAddFinalizers adds the given finalizers to the object via a patch request.
+func PatchAddFinalizers(ctx context.Context, writer client.Writer, obj client.Object, finalizers ...string) error {
+	return patchFinalizers(ctx, writer, obj, controllerutil.AddFinalizer, finalizers...)
 }
 
 // PatchRemoveFinalizers removes the given finalizers from the object via a patch request.
-func PatchRemoveFinalizers(ctx context.Context, c client.Client, obj client.Object, finalizers ...string) error {
-	beforePatch := obj.DeepCopyObject()
+func PatchRemoveFinalizers(ctx context.Context, writer client.Writer, obj client.Object, finalizers ...string) error {
+	return patchFinalizers(ctx, writer, obj, controllerutil.RemoveFinalizer, finalizers...)
+}
 
+func patchFinalizers(ctx context.Context, writer client.Writer, obj client.Object, mutate func(client.Object, string), finalizers ...string) error {
+	beforePatch := obj.DeepCopyObject().(client.Object)
 	for _, finalizer := range finalizers {
-		controllerutil.RemoveFinalizer(obj, finalizer)
+		mutate(obj, finalizer)
 	}
 
-	return c.Patch(ctx, obj, client.MergeFromWithOptions(beforePatch, client.MergeFromWithOptimisticLock{}))
+	return writer.Patch(ctx, obj, client.MergeFromWithOptions(beforePatch, client.MergeFromWithOptimisticLock{}))
 }
 
-// EnsureFinalizer ensure the <finalizer> is present for the object.
-func EnsureFinalizer(ctx context.Context, c client.Client, obj client.Object, finalizer string) error {
-	if err := kutil.TryUpdate(ctx, retry.DefaultBackoff, c, obj, func() error {
-		controllerutil.AddFinalizer(obj, finalizer)
-		return nil
-	}); err != nil {
-		return fmt.Errorf("could not ensure %q finalizer: %+v", finalizer, err)
-	}
-	return nil
+// EnsureFinalizer ensures that a finalizer of the given name is set on the given object with exponential backoff.
+// If the finalizer is not set, it adds it to the list of finalizers and patches the remote object.
+// Use PatchAddFinalizers instead, if the controller is able to tolerate conflict errors caused by stale reads.
+func EnsureFinalizer(ctx context.Context, reader client.Reader, writer client.Writer, obj client.Object, finalizer string) error {
+	return tryPatchFinalizers(ctx, reader, writer, obj, controllerutil.AddFinalizer, finalizer)
 }
 
-// RemoveGardenerFinalizer removes the gardener finalizer from the object.
-func RemoveGardenerFinalizer(ctx context.Context, c client.Client, obj client.Object) error {
-	return RemoveFinalizer(ctx, c, obj, gardencorev1beta1.GardenerName)
+// RemoveFinalizer ensures that the given finalizer is not present anymore in the given object with exponential backoff.
+// If it is set, it removes it and issues a patch.
+// Use PatchRemoveFinalizers instead, if the controller is able to tolerate conflict errors caused by stale reads.
+func RemoveFinalizer(ctx context.Context, reader client.Reader, writer client.Writer, obj client.Object, finalizer string) error {
+	return tryPatchFinalizers(ctx, reader, writer, obj, controllerutil.RemoveFinalizer, finalizer)
 }
 
-// RemoveFinalizer removes the <finalizer> from the object.
-func RemoveFinalizer(ctx context.Context, c client.Client, obj client.Object, finalizer string) error {
-	if err := kutil.TryUpdate(ctx, retry.DefaultBackoff, c, obj, func() error {
-		controllerutil.RemoveFinalizer(obj, finalizer)
-		return nil
-	}); client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("could not remove %q finalizer: %+v", finalizer, err)
-	}
+func tryPatchFinalizers(ctx context.Context, reader client.Reader, writer client.Writer, obj client.Object, mutate func(client.Object, string), finalizer string) error {
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		// Unset finalizers array manually here, because finalizers array won't be unset in decoder, if it's empty on
+		// the API server. This can lead to an empty patch, although we want to ensure, that the finalizer is present.
+		// The patch itself will go through and it won't be noticed that the finalizer wasn't added at all
+		obj.SetFinalizers(nil)
 
-	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
-	// operations (sometimes the cache is not synced fast enough).
-	pollerCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-	return wait.PollImmediateUntil(time.Second, func() (bool, error) {
-		err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj)
-		if apierrors.IsNotFound(err) {
-			return true, nil
+		if err := reader.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
+			return err
 		}
-		if err != nil {
-			return false, err
-		}
-		if !controllerutil.ContainsFinalizer(obj, finalizer) {
-			return true, nil
-		}
-		return false, nil
-	}, pollerCtx.Done())
+
+		return patchFinalizers(ctx, writer, obj, mutate, finalizer)
+	})
 }

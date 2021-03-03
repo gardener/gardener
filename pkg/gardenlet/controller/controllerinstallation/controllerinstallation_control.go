@@ -149,7 +149,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		return fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	if err := controllerutils.EnsureFinalizer(ctx, gardenClient.Client(), controllerInstallation, FinalizerName); err != nil {
+	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), controllerInstallation, FinalizerName); err != nil {
 		return err
 	}
 
@@ -359,7 +359,7 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 	}
 	conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionSuccessful", "Deletion of old resources succeeded.")
 
-	return controllerutils.RemoveFinalizer(ctx, gardenClient.DirectClient(), controllerInstallation.DeepCopy(), FinalizerName)
+	return controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), controllerInstallation.DeepCopy(), FinalizerName)
 }
 
 func updateConditions(ctx context.Context, gardenClient kubernetes.Interface, controllerInstallation *gardencorev1beta1.ControllerInstallation, conditions ...gardencorev1beta1.Condition) (*gardencorev1beta1.ControllerInstallation, error) {

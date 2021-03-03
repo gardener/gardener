@@ -139,7 +139,7 @@ func (c *defaultControl) ReconcileQuota(obj *gardencorev1beta1.Quota) error {
 			quotaLogger.Info("No SecretBindings are referencing the Quota. Deletion accepted.")
 
 			// Remove finalizer from Quota
-			if err := controllerutils.RemoveGardenerFinalizer(ctx, gardenClient.DirectClient(), quota); err != nil {
+			if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), quota, gardencorev1beta1.GardenerName); err != nil {
 				return fmt.Errorf("failed removing finalizer from quota: %w", err)
 			}
 
@@ -153,7 +153,7 @@ func (c *defaultControl) ReconcileQuota(obj *gardencorev1beta1.Quota) error {
 		return errors.New("quota still has references")
 	}
 
-	if err := controllerutils.EnsureFinalizer(ctx, gardenClient.Client(), quota, gardencorev1beta1.GardenerName); err != nil {
+	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), quota, gardencorev1beta1.GardenerName); err != nil {
 		quotaLogger.Errorf("Could not add finalizer to Quota: %s", err.Error())
 		return err
 	}

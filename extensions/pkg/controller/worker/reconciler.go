@@ -28,12 +28,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
-	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 type reconciler struct {
@@ -41,6 +41,7 @@ type reconciler struct {
 	actuator Actuator
 
 	client client.Client
+	reader client.Reader
 }
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
@@ -61,6 +62,11 @@ func (r *reconciler) InjectFunc(f inject.Func) error {
 
 func (r *reconciler) InjectClient(client client.Client) error {
 	r.client = client
+	return nil
+}
+
+func (r *reconciler) InjectAPIReader(reader client.Reader) error {
+	r.reader = reader
 	return nil
 }
 
@@ -129,7 +135,7 @@ func (r *reconciler) updateStatusSuccess(ctx context.Context, logger logr.Logger
 
 func (r *reconciler) removeFinalizerFromWorker(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker) error {
 	logger.Info("Removing finalizer")
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, worker, FinalizerName); err != nil {
+	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, worker, FinalizerName); err != nil {
 		return fmt.Errorf("error removing finalizer from Worker: %+v", err)
 	}
 	return nil
@@ -191,7 +197,7 @@ func (r *reconciler) delete(ctx context.Context, logger logr.Logger, worker *ext
 
 func (r *reconciler) reconcile(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
 	logger.Info("Ensuring finalizer")
-	if err := controller.EnsureFinalizer(ctx, r.client, worker, FinalizerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, worker, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 	if err := r.updateStatusProcessing(ctx, logger, worker, operationType, "Reconciling the worker"); err != nil {

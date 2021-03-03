@@ -34,6 +34,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -49,6 +50,7 @@ type reconciler struct {
 	actuator Actuator
 
 	client   client.Client
+	reader   client.Reader
 	recorder record.EventRecorder
 }
 
@@ -73,6 +75,11 @@ func (r *reconciler) InjectClient(client client.Client) error {
 	return nil
 }
 
+func (r *reconciler) InjectAPIReader(reader client.Reader) error {
+	r.reader = reader
+	return nil
+}
+
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	bb := &extensionsv1alpha1.BackupBucket{}
 	if err := r.client.Get(ctx, request.NamespacedName, bb); err != nil {
@@ -90,7 +97,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, bb, FinalizerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, bb, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on backup bucket: %+v", err)
 	}
 
@@ -103,7 +110,7 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, secret, FinalizerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, secret, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on bucket secret: %+v", err)
 	}
 
@@ -156,12 +163,12 @@ func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBu
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get backup bucket secret: %+v", err)
 	}
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, secret, FinalizerName); err != nil {
+	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, secret, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to remove finalizer on bucket secret: %+v", err)
 	}
 
 	r.logger.Info("Removing finalizer.", "backupbucket", bb.Name)
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, bb, FinalizerName); err != nil {
+	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, bb, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from backupbucket: %+v", err)
 	}
 

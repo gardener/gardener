@@ -36,6 +36,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 const (
@@ -57,6 +58,7 @@ type reconciler struct {
 	actuator Actuator
 
 	client   client.Client
+	reader   client.Reader
 	recorder record.EventRecorder
 }
 
@@ -78,6 +80,11 @@ func (r *reconciler) InjectFunc(f inject.Func) error {
 
 func (r *reconciler) InjectClient(client client.Client) error {
 	r.client = client
+	return nil
+}
+
+func (r *reconciler) InjectAPIReader(reader client.Reader) error {
+	r.reader = reader
 	return nil
 }
 
@@ -117,7 +124,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *reconciler) reconcile(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, cp, FinalizerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, cp, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -148,7 +155,7 @@ func (r *reconciler) reconcile(ctx context.Context, cp *extensionsv1alpha1.Contr
 }
 
 func (r *reconciler) restore(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, cp, FinalizerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, cp, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -250,7 +257,7 @@ func (r *reconciler) delete(ctx context.Context, cp *extensionsv1alpha1.ControlP
 	}
 
 	r.logger.Info("Removing finalizer.", "controlplane", cp.Name)
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, cp, FinalizerName); err != nil {
+	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, cp, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from ControlPlane: %+v", err)
 	}
 

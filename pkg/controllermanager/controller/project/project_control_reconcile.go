@@ -52,7 +52,7 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 		return fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	if err := controllerutils.EnsureFinalizer(ctx, gardenClient.Client(), project, gardencorev1beta1.GardenerName); err != nil {
+	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), project, gardencorev1beta1.GardenerName); err != nil {
 		return fmt.Errorf("could not add finalizer to Project: %w", err)
 	}
 

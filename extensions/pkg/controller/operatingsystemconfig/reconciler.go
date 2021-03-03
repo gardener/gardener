@@ -34,6 +34,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // reconciler reconciles OperatingSystemConfig resources of Gardener's `extensions.gardener.cloud`
@@ -43,6 +44,7 @@ type reconciler struct {
 	actuator Actuator
 
 	client client.Client
+	reader client.Reader
 	scheme *runtime.Scheme
 }
 
@@ -67,6 +69,11 @@ func (r *reconciler) InjectFunc(f inject.Func) error {
 // InjectClient injects the controller runtime client into the reconciler.
 func (r *reconciler) InjectClient(client client.Client) error {
 	r.client = client
+	return nil
+}
+
+func (r *reconciler) InjectReader(reader client.Reader) error {
+	r.reader = reader
 	return nil
 }
 
@@ -113,7 +120,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *reconciler) reconcile(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, osc, FinalizerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, osc, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -143,7 +150,7 @@ func (r *reconciler) reconcile(ctx context.Context, osc *extensionsv1alpha1.Oper
 }
 
 func (r *reconciler) restore(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig) (reconcile.Result, error) {
-	if err := extensionscontroller.EnsureFinalizer(ctx, r.client, osc, FinalizerName); err != nil {
+	if err := controllerutils.EnsureFinalizer(ctx, r.reader, r.client, osc, FinalizerName); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -196,7 +203,7 @@ func (r *reconciler) delete(ctx context.Context, osc *extensionsv1alpha1.Operati
 	}
 
 	r.logger.Info("Removing finalizer.", "osc", osc.Name)
-	if err := extensionscontroller.DeleteFinalizer(ctx, r.client, osc, FinalizerName); err != nil {
+	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, osc, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from OperationSystemConfig: %+v", err)
 	}
 
