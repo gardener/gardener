@@ -32,7 +32,7 @@ var _ = Describe("SecretBindingControl", func() {
 	Describe("#mayReleaseSecret", func() {
 		var (
 			gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
-			c                         *defaultControl
+			reconciler                *secretBindingReconciler
 
 			secretBinding1Namespace = "foo"
 			secretBinding1Name      = "bar"
@@ -48,11 +48,11 @@ var _ = Describe("SecretBindingControl", func() {
 			secretBindingInformer := gardenCoreInformerFactory.Core().V1beta1().SecretBindings()
 			secretBindingLister := secretBindingInformer.Lister()
 
-			c = &defaultControl{secretBindingLister: secretBindingLister}
+			reconciler = &secretBindingReconciler{secretBindingLister: secretBindingLister}
 		})
 
 		It("should return true as no other secretbinding exists", func() {
-			allowed, err := c.mayReleaseSecret(secretBinding1Namespace, secretBinding1Name, secretNamespace, secretName)
+			allowed, err := reconciler.mayReleaseSecret(secretBinding1Namespace, secretBinding1Name, secretNamespace, secretName)
 
 			Expect(allowed).To(BeTrue())
 			Expect(err).NotTo(HaveOccurred())
@@ -72,7 +72,7 @@ var _ = Describe("SecretBindingControl", func() {
 
 			Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(secretBinding)).To(Succeed())
 
-			allowed, err := c.mayReleaseSecret(secretBinding1Namespace, secretBinding1Name, secretNamespace, secretName)
+			allowed, err := reconciler.mayReleaseSecret(secretBinding1Namespace, secretBinding1Name, secretNamespace, secretName)
 
 			Expect(allowed).To(BeTrue())
 			Expect(err).NotTo(HaveOccurred())
@@ -92,18 +92,18 @@ var _ = Describe("SecretBindingControl", func() {
 
 			Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(secretBinding)).To(Succeed())
 
-			allowed, err := c.mayReleaseSecret(secretBinding1Namespace, secretBinding1Name, secretNamespace, secretName)
+			allowed, err := reconciler.mayReleaseSecret(secretBinding1Namespace, secretBinding1Name, secretNamespace, secretName)
 
 			Expect(allowed).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should return an error as the list failed", func() {
-			c.secretBindingLister = &fakeLister{
-				SecretBindingLister: c.secretBindingLister,
+			reconciler.secretBindingLister = &fakeLister{
+				SecretBindingLister: reconciler.secretBindingLister,
 			}
 
-			allowed, err := c.mayReleaseSecret(secretBinding1Namespace, secretBinding1Name, secretNamespace, secretName)
+			allowed, err := reconciler.mayReleaseSecret(secretBinding1Namespace, secretBinding1Name, secretNamespace, secretName)
 
 			Expect(allowed).To(BeFalse())
 			Expect(err).To(HaveOccurred())

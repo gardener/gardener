@@ -31,6 +31,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Controller controls SecretBindings.
@@ -38,8 +39,8 @@ type Controller struct {
 	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
-	control  ControlInterface
-	recorder record.EventRecorder
+	reconciler reconcile.Reconciler
+	recorder   record.EventRecorder
 
 	secretBindingLister gardencorelisters.SecretBindingLister
 	secretBindingQueue  workqueue.RateLimitingInterface
@@ -68,7 +69,7 @@ func NewSecretBindingController(clientMap clientmap.ClientMap, gardenInformerFac
 	secretBindingController := &Controller{
 		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenInformerFactory,
-		control:                NewDefaultControl(clientMap, gardenInformerFactory, recorder, secretBindingLister, secretLister, shootLister),
+		reconciler:             NewSecretBindingReconciler(logger.Logger, clientMap, gardenInformerFactory, recorder, secretBindingLister, secretLister, shootLister),
 		recorder:               recorder,
 		secretBindingLister:    secretBindingLister,
 		secretBindingQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SecretBinding"),
@@ -106,7 +107,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("SecretBinding controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.secretBindingQueue, "SecretBinding", c.reconcileSecretBindingKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.secretBindingQueue, "SecretBinding", c.reconciler, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
