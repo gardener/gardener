@@ -132,10 +132,7 @@ func (r *shootReferenceReconciler) Reconcile(ctx context.Context, request reconc
 
 	r.logger.Infof("[SHOOT REFERENCE CONTROL] %s", request)
 
-	if err := r.reconcileShootReferences(ctx, gardenClient.Client(), shoot); err != nil {
-		return reconcile.Result{}, err
-	}
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, r.reconcileShootReferences(ctx, gardenClient.Client(), shoot)
 }
 
 func (r *shootReferenceReconciler) reconcileShootReferences(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot) error {
