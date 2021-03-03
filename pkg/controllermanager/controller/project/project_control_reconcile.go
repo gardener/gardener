@@ -21,7 +21,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/projectrbac"
@@ -39,21 +38,17 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1beta1.Project) error {
+func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1beta1.Project, gardenClient kubernetes.Interface) (reconcile.Result, error) {
 	var (
 		generation = project.Generation
 		err        error
 	)
 
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), project, gardencorev1beta1.GardenerName); err != nil {
-		return fmt.Errorf("could not add finalizer to Project: %w", err)
+		return reconcile.Result{}, fmt.Errorf("could not add finalizer to Project: %w", err)
 	}
 
 	// Ensure that we really get the latest version of the project to prevent working with an outdated version that has
@@ -61,15 +56,15 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 	project, err = gardenClient.GardenCore().CoreV1beta1().Projects().Get(ctx, project.Name, kubernetes.DefaultGetOptions())
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return nil
+			return reconcile.Result{}, nil
 		}
-		return err
+		return reconcile.Result{}, err
 	}
 
 	// If the project has no phase yet then we update it to be 'pending'.
 	if len(project.Status.Phase) == 0 {
 		if _, err := updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectPending)); err != nil {
-			return err
+			return reconcile.Result{}, err
 		}
 	}
 
@@ -77,13 +72,13 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 
 	// We reconcile the namespace for the project: If the .spec.namespace is set then we try to claim it, if it is not
 	// set then we create a new namespace with a random hash value.
-	namespace, err := c.reconcileNamespaceForProject(ctx, gardenClient, project, ownerReference)
+	namespace, err := r.reconcileNamespaceForProject(ctx, gardenClient, project, ownerReference)
 	if err != nil {
-		c.recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
+		r.recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
 		_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
-		return err
+		return reconcile.Result{}, err
 	}
-	c.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceReconcileSuccessful, "Successfully reconciled namespace %q for project %q", namespace.Name, project.Name)
+	r.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceReconcileSuccessful, "Successfully reconciled namespace %q for project %q", namespace.Name, project.Name)
 
 	// Update the name of the created namespace in the projects '.spec.namespace' field.
 	if ns := project.Spec.Namespace; ns == nil {
@@ -92,7 +87,7 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 			return project, nil
 		})
 		if err != nil {
-			c.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
+			r.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
 			_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
 
 			// If we failed to update the namespace in the project specification we should try to delete
@@ -107,46 +102,46 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 
 				return retryutils.MinorError(fmt.Errorf("namespace %q still exists", namespace.Name))
 			}); err != nil {
-				c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Failed to delete created namespace for project %q: %v", namespace.Name, err)
+				r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Failed to delete created namespace for project %q: %v", namespace.Name, err)
 			}
 
-			return err
+			return reconcile.Result{}, err
 		}
 	}
 
 	// Create RBAC rules to allow project members to interact with it.
 	rbac, err := projectrbac.New(gardenClient.Client(), project)
 	if err != nil {
-		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while preparing for reconciling RBAC resources for namespace %q: %+v", namespace.Name, err)
+		r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while preparing for reconciling RBAC resources for namespace %q: %+v", namespace.Name, err)
 		_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
-		return err
+		return reconcile.Result{}, err
 	}
 
 	if err := rbac.Deploy(ctx); err != nil {
-		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while reconciling RBAC resources for namespace %q: %+v", namespace.Name, err)
+		r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while reconciling RBAC resources for namespace %q: %+v", namespace.Name, err)
 		_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
-		return err
+		return reconcile.Result{}, err
 	}
 
 	if err := rbac.DeleteStaleExtensionRolesResources(ctx); err != nil {
-		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while deleting stale RBAC rules for extension roles: %+v", err)
+		r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while deleting stale RBAC rules for extension roles: %+v", err)
 		_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
-		return err
+		return reconcile.Result{}, err
 	}
 
 	// Create ResourceQuota for project if configured.
-	quotaConfig, err := quotaConfiguration(c.config.Controllers, project)
+	quotaConfig, err := quotaConfiguration(r.config, project)
 	if err != nil {
-		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while setting up ResourceQuota: %+v", err)
+		r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while setting up ResourceQuota: %+v", err)
 		_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
-		return err
+		return reconcile.Result{}, err
 	}
 
 	if quotaConfig != nil {
 		if err := createOrUpdateResourceQuota(ctx, gardenClient.Client(), namespace.Name, ownerReference, *quotaConfig); err != nil {
-			c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while setting up ResourceQuota: %+v", err)
+			r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while setting up ResourceQuota: %+v", err)
 			_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
-			return err
+			return reconcile.Result{}, err
 		}
 	}
 
@@ -156,14 +151,14 @@ func (c *defaultControl) reconcile(ctx context.Context, project *gardencorev1bet
 		project.Status.ObservedGeneration = generation
 		return project, nil
 	}); err != nil {
-		c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while trying to mark project as ready: %+v", err)
-		return err
+		r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while trying to mark project as ready: %+v", err)
+		return reconcile.Result{}, err
 	}
 
-	return nil
+	return reconcile.Result{}, nil
 }
 
-func (c *defaultControl) reconcileNamespaceForProject(ctx context.Context, gardenClient kubernetes.Interface, project *gardencorev1beta1.Project, ownerReference *metav1.OwnerReference) (*corev1.Namespace, error) {
+func (r *projectReconciler) reconcileNamespaceForProject(ctx context.Context, gardenClient kubernetes.Interface, project *gardencorev1beta1.Project, ownerReference *metav1.OwnerReference) (*corev1.Namespace, error) {
 	var (
 		namespaceName = project.Spec.Namespace
 

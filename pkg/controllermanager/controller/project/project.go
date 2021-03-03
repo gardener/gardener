@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Controller controls Projects.
@@ -40,8 +41,9 @@ type Controller struct {
 	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
-	control      ControlInterface
 	staleControl StaleControlInterface
+
+	projectReconciler reconcile.Reconciler
 
 	config   *config.ControllerManagerConfiguration
 	recorder record.EventRecorder
@@ -99,7 +101,7 @@ func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFacto
 	projectController := &Controller{
 		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenCoreInformerFactory,
-		control:                NewDefaultControl(clientMap, config, gardenCoreInformerFactory, recorder, namespaceLister),
+		projectReconciler:      NewProjectReconciler(logger.Logger, config.Controllers, clientMap, gardenCoreInformerFactory, recorder, namespaceLister),
 		staleControl:           NewDefaultStaleControl(clientMap, config, shootLister, plantLister, backupEntryLister, secretBindingLister, quotaLister, namespaceLister, secretLister),
 		config:                 config,
 		recorder:               recorder,
@@ -148,7 +150,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("Project controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.projectQueue, "Project", c.reconcileProjectKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.projectQueue, "Project", c.projectReconciler, &waitGroup, c.workerCh)
 		controllerutils.DeprecatedCreateWorker(ctx, c.projectStaleQueue, "Project Stale", c.reconcileStaleProjectKey, &waitGroup, c.workerCh)
 	}
 
