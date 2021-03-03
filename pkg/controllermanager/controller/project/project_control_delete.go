@@ -70,7 +70,7 @@ func (c *defaultControl) delete(ctx context.Context, project *gardencorev1beta1.
 // isNamespaceEmpty checks if there are no more Shoots left inside the given namespace.
 func isNamespaceEmpty(ctx context.Context, reader client.Reader, namespace string) (bool, error) {
 	shoots := &metav1.PartialObjectMetadataList{}
-	shoots.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
+	shoots.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 	if err := reader.List(ctx, shoots, client.InNamespace(namespace), client.Limit(1)); err != nil {
 		return false, err
 	}

@@ -152,7 +152,7 @@ func (h *namespaceDeletionHandler) admitNamespace(ctx context.Context, request a
 // isNamespaceEmpty checks if there are no more Shoots left inside the given namespace.
 func (h *namespaceDeletionHandler) isNamespaceEmpty(ctx context.Context, namespace string) (bool, error) {
 	shoots := &metav1.PartialObjectMetadataList{}
-	shoots.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
+	shoots.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 	if err := h.apiReader.List(ctx, shoots, client.InNamespace(namespace), client.Limit(1)); err != nil {
 		return false, err
 	}
