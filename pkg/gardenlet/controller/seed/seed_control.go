@@ -233,25 +233,21 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 			seedLogger.Error(err.Error())
 			return err
 		}
-		// As per design, backupBucket's are not tightly coupled with Seed resources. But to reconcile backup bucket on object store, seed
-		// provides the worker node for running backup extension controller. Hence, we do check if there is another Seed available for
-		// running this backup extension controller for associated backup buckets. Otherwise we block the deletion of current seed.
-		// validSeedBootstrapped, err := validSeedBootstrappedForBucketRescheduling(ctx, gardenClient.Client())
-		// if err != nil {
-		// 	seedLogger.Error(err.Error())
-		// 	return err
-		// }
-		// associatedBackupBuckets := make([]string, 0)
 
-		// if validSeedBootstrapped {
+		associatedControllerInstallations, err := controllerutils.DetermineControllerInstallationAssociations(ctx, gardenClient.Client(), seed.Name)
+		if err != nil {
+			seedLogger.Error(err.Error())
+			return err
+		}
+
 		associatedBackupBuckets, err := controllerutils.DetermineBackupBucketAssociations(ctx, gardenClient.Client(), seed.Name)
 		if err != nil {
 			seedLogger.Error(err.Error())
 			return err
 		}
-		// }
-		if len(associatedShoots) == 0 && len(associatedBackupBuckets) == 0 {
-			seedLogger.Info("No Shoots or BackupBuckets are referencing the Seed. Deletion accepted.")
+
+		if len(associatedShoots) == 0 && len(associatedControllerInstallations) == 0 && len(associatedBackupBuckets) == 0 {
+			seedLogger.Info("No Shoots, ControllerInstallations or BackupBuckets are referencing the Seed. Deletion accepted.")
 
 			// Debootstrap the Seed cluster.
 			if err := seedpkg.DebootstrapCluster(ctx, seedClient); err != nil {
@@ -292,6 +288,11 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 		parentLogMessage := "Can't delete Seed, because the following objects are still referencing it:"
 		if len(associatedShoots) != 0 {
 			message := fmt.Sprintf("%s Shoots=%v", parentLogMessage, associatedShoots)
+			seedLogger.Info(message)
+			c.recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
+		}
+		if len(associatedControllerInstallations) != 0 {
+			message := fmt.Sprintf("%s ControllerInstallations=%v", parentLogMessage, associatedControllerInstallations)
 			seedLogger.Info(message)
 			c.recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
 		}
