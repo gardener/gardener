@@ -35,7 +35,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	kubeinformers "k8s.io/client-go/informers"
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -52,8 +51,7 @@ type Controller struct {
 	recorder                    record.EventRecorder
 	hibernationScheduleRegistry HibernationScheduleRegistry
 
-	shootLister     gardencorelisters.ShootLister
-	configMapLister kubecorev1listers.ConfigMapLister
+	shootLister gardencorelisters.ShootLister
 
 	shootMaintenanceQueue workqueue.RateLimitingInterface
 	shootQuotaQueue       workqueue.RateLimitingInterface
@@ -66,6 +64,7 @@ type Controller struct {
 	shootMaintenanceReconciler reconcile.Reconciler
 	shootQuotaReconciler       reconcile.Reconciler
 	shootRefReconciler         reconcile.Reconciler
+	configMapReconciler        reconcile.Reconciler
 
 	numberOfRunningWorkers int
 	workerCh               chan int
@@ -82,7 +81,6 @@ func NewShootController(ctx context.Context, clientMap clientmap.ClientMap, k8sG
 		shootLister   = shootInformer.Lister()
 
 		configMapInformer = corev1Informer.ConfigMaps()
-		configMapLister   = configMapInformer.Lister()
 
 		secretInformer = corev1Informer.Secrets()
 		secretLister   = secretInformer.Lister()
@@ -96,11 +94,11 @@ func NewShootController(ctx context.Context, clientMap clientmap.ClientMap, k8sG
 		recorder:                    recorder,
 		hibernationScheduleRegistry: NewHibernationScheduleRegistry(),
 
-		shootLister:     shootLister,
-		configMapLister: configMapLister,
+		shootLister: shootLister,
 
 		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, config.Controllers.ShootMaintenance, clientMap, gardenCoreV1beta1Informer, recorder),
 		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, config.Controllers.ShootQuota, clientMap, gardenCoreV1beta1Informer),
+		configMapReconciler:        NewConfigMapReconciler(logger.Logger, clientMap, shootLister),
 
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
 		shootQuotaQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),
@@ -216,9 +214,8 @@ func (c *Controller) Run(ctx context.Context, shootMaintenanceWorkers, shootQuot
 		controllerutils.DeprecatedCreateWorker(ctx, c.shootHibernationQueue, "Scheduled Shoot Hibernation", c.reconcileShootHibernationKey, &waitGroup, c.workerCh)
 	}
 	for i := 0; i < shootMaintenanceWorkers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.configMapQueue, "ConfigMap", c.reconcileConfigMapKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.configMapQueue, "ConfigMap", c.configMapReconciler, &waitGroup, c.workerCh)
 	}
-
 	for i := 0; i < shootReferenceWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.shootReferenceQueue, "ShootReference", c.shootRefReconciler, &waitGroup, c.workerCh)
 	}
