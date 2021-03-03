@@ -73,7 +73,7 @@ type Controller struct {
 
 // NewShootController takes a ClientMap, a GardenerInformerFactory, a KubernetesInformerFactory, a
 // ControllerManagerConfig struct and an EventRecorder to create a new Shoot controller.
-func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) (*Controller, error) {
+func NewShootController(ctx context.Context, clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) (*Controller, error) {
 	var (
 		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
 		corev1Informer            = kubeInformerFactory.Core().V1()
@@ -132,12 +132,12 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 		UpdateFunc: shootController.configMapUpdate,
 	})
 
-	gardenClient, err := clientMap.GetClient(context.TODO(), keys.ForGarden())
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return nil, err
 	}
 
-	runtimeShootInformer, err := gardenClient.Cache().GetInformer(context.TODO(), &gardencorev1beta1.Shoot{})
+	runtimeShootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
