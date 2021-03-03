@@ -21,7 +21,7 @@ import (
 
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/scheduler"
@@ -31,17 +31,18 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // SchedulerController controls Seeds.
 type SchedulerController struct {
-	k8sGardenClient        kubernetes.Interface
+	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
 	config *config.SchedulerConfiguration
 
-	control  SchedulerInterface
-	recorder record.EventRecorder
+	reconciler reconcile.Reconciler
+	recorder   record.EventRecorder
 
 	cloudProfileLister gardencorelisters.CloudProfileLister
 	cloudProfileSynced cache.InformerSynced
@@ -59,7 +60,7 @@ type SchedulerController struct {
 
 // NewGardenerScheduler takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a <sharedInformerFactory>, a struct containing the scheduler configuration and a <recorder> for
 // event recording. It creates a new NewGardenerScheduler.
-func NewGardenerScheduler(k8sGardenClient kubernetes.Interface, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.SchedulerConfiguration, recorder record.EventRecorder) *SchedulerController {
+func NewGardenerScheduler(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.SchedulerConfiguration, recorder record.EventRecorder) *SchedulerController {
 	var (
 		coreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
 
@@ -73,9 +74,9 @@ func NewGardenerScheduler(k8sGardenClient kubernetes.Interface, gardenCoreInform
 	)
 
 	schedulerController := &SchedulerController{
-		k8sGardenClient:        k8sGardenClient,
+		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenCoreInformerFactory,
-		control:                NewDefaultControl(k8sGardenClient, gardenCoreInformerFactory, recorder, config, shootLister, seedLister, cloudProfileLister),
+		reconciler:             NewReconciler(logger.Logger, config, clientMap, gardenCoreInformerFactory, shootLister, seedLister, cloudProfileLister, recorder),
 		config:                 config,
 		recorder:               recorder,
 		cloudProfileLister:     cloudProfileLister,
@@ -100,11 +101,6 @@ func NewGardenerScheduler(k8sGardenClient kubernetes.Interface, gardenCoreInform
 func (c *SchedulerController) Run(ctx context.Context) {
 	var waitGroup sync.WaitGroup
 
-	c.k8sGardenClient.Start(ctx)
-	if !c.k8sGardenClient.WaitForCacheSync(ctx) {
-		panic("Timed out waiting for the controller-runtime cache to sync")
-	}
-
 	c.k8sGardenCoreInformers.Start(ctx.Done())
 	if !cache.WaitForCacheSync(ctx.Done(), c.cloudProfileSynced, c.seedSynced, c.shootSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
@@ -120,7 +116,7 @@ func (c *SchedulerController) Run(ctx context.Context) {
 	}()
 
 	for i := 0; i < c.config.Schedulers.Shoot.ConcurrentSyncs; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.shootQueue, "gardener-scheduler", func(key string) error { return c.reconcileShootKey(ctx, key) }, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootQueue, "Shoot", c.reconciler, &waitGroup, c.workerCh)
 	}
 
 	logger.Logger.Infof("Shoot Scheduler controller initialized with %d workers  (with Strategy: %s)", c.config.Schedulers.Shoot.ConcurrentSyncs, c.config.Schedulers.Shoot.Strategy)
