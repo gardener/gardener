@@ -28,20 +28,19 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/logger"
 
+	"github.com/sirupsen/logrus"
 	authorizationv1beta1 "k8s.io/api/authorization/v1beta1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func (c *Controller) csrAdd(obj interface{}) {
@@ -52,90 +51,68 @@ func (c *Controller) csrAdd(obj interface{}) {
 	c.csrQueue.Add(key)
 }
 
-func (c *Controller) csrUpdate(oldObj, newObj interface{}) {
+func (c *Controller) csrUpdate(_, newObj interface{}) {
 	c.csrAdd(newObj)
 }
 
-func (c *Controller) reconcileCertificateSigningRequestKey(key string) error {
-	_, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		return err
+// NewCSRReconciler creates a new instance of a reconciler which reconciles CSRs.
+func NewCSRReconciler(l logrus.FieldLogger, clientMap clientmap.ClientMap) reconcile.Reconciler {
+	return &csrReconciler{
+		logger:    l,
+		clientMap: clientMap,
 	}
-
-	csr, err := c.csrLister.Get(name)
-	if apierrors.IsNotFound(err) {
-		logger.Logger.Infof("[CSR AUTO APPROVER] Stopping operations for CSR %s since it has been deleted", key)
-		c.csrQueue.Done(key)
-		return nil
-	}
-	if err != nil {
-		logger.Logger.Infof("[CSR AUTO APPROVER] %s - unable to retrieve object from store: %v", key, err)
-		return err
-	}
-
-	if err := c.control.Reconcile(csr, key); err != nil {
-		c.csrQueue.AddAfter(key, 15*time.Second)
-	}
-	return nil
 }
 
-// ControlInterface implements the control logic for managing the lifecycle for certificate signing requests.
-// It is implemented as an interface to allow for extensions that provide different semantics. Currently, there
-// is only one implementation.
-type ControlInterface interface {
-	Reconcile(certificatesigningrequests *certificatesv1beta1.CertificateSigningRequest, key string) error
-}
-
-// NewDefaultControl returns a new instance of the default implementation ControlInterface that
-// implements the documented semantics for checking the lifecycle for certificate signing requests. You should
-// use an instance returned from NewDefaultControl() for any scenario other than testing.
-func NewDefaultControl(clientMap clientmap.ClientMap) ControlInterface {
-	return &defaultControl{clientMap}
-}
-
-type defaultControl struct {
+type csrReconciler struct {
+	logger    logrus.FieldLogger
 	clientMap clientmap.ClientMap
 }
 
-func (c *defaultControl) Reconcile(csrObj *certificatesv1beta1.CertificateSigningRequest, key string) error {
-	var (
-		ctx       = context.TODO()
-		csr       = csrObj.DeepCopy()
-		csrLogger = logger.NewFieldLogger(logger.Logger, "csr", csr.Name)
-	)
+func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
+	}
+
+	csr := &certificatesv1beta1.CertificateSigningRequest{}
+	if err := gardenClient.Client().Get(ctx, request.NamespacedName, csr); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			return reconcile.Result{}, nil
+		}
+		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+		return reconcile.Result{}, err
+	}
+
+	csrLogger := logger.NewFieldLogger(logger.Logger, "csr", csr.Name)
 
 	if len(csr.Status.Certificate) != 0 {
-		return nil
+		return reconcile.Result{}, nil
 	}
 
 	for _, c := range csr.Status.Conditions {
 		if c.Type == certificatesv1beta1.CertificateApproved {
-			return nil
+			return reconcile.Result{}, nil
 		}
 		if c.Type == certificatesv1beta1.CertificateDenied {
-			return nil
+			return reconcile.Result{}, nil
 		}
 	}
 
 	x509cr, err := parseCSR(csr)
 	if err != nil {
-		return fmt.Errorf("unable to parse csr %q: %v", csr.Name, err)
+		return reconcile.Result{}, fmt.Errorf("unable to parse csr %q: %v", csr.Name, err)
 	}
 
 	if !isSeedClientCert(csr, x509cr) {
-		return nil
+		return reconcile.Result{}, nil
 	}
 
 	csrLogger.Infof("[CSR APPROVER] %s", csr.Name)
 
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	approved, err := authorize(ctx, gardenClient.Client(), csr, authorizationv1beta1.ResourceAttributes{Group: "certificates.k8s.io", Resource: "certificatesigningrequests", Verb: "create", Subresource: "seedclient"})
 	if err != nil {
-		return err
+		return reconcile.Result{}, err
 	}
 
 	if approved {
@@ -147,12 +124,12 @@ func (c *defaultControl) Reconcile(csrObj *certificatesv1beta1.CertificateSignin
 			Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
 		})
 		_, err := gardenClient.Kubernetes().CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(ctx, csr, kubernetes.DefaultUpdateOptions())
-		return err
+		return reconcile.Result{}, err
 	}
 
 	message := fmt.Sprintf("recognized csr %q but subject access review was not approved", csr.Name)
 	csrLogger.Errorf("[CSR APPROVER] %s", message)
-	return fmt.Errorf(message)
+	return reconcile.Result{}, fmt.Errorf(message)
 }
 
 func authorize(ctx context.Context, c client.Client, csr *certificatesv1beta1.CertificateSigningRequest, resourceAttributes authorizationv1beta1.ResourceAttributes) (bool, error) {

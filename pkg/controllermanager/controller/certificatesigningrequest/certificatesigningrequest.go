@@ -30,14 +30,15 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Controller controls CertificateSigningRequests.
 type Controller struct {
 	clientMap clientmap.ClientMap
 
-	control  ControlInterface
-	recorder record.EventRecorder
+	reconciler reconcile.Reconciler
+	recorder   record.EventRecorder
 
 	csrLister certificatesv1beta1lister.CertificateSigningRequestLister
 	csrQueue  workqueue.RateLimitingInterface
@@ -58,12 +59,12 @@ func NewCSRController(clientMap clientmap.ClientMap, kubeInformerFactory kubeinf
 	)
 
 	csrController := &Controller{
-		clientMap: clientMap,
-		control:   NewDefaultControl(clientMap),
-		recorder:  recorder,
-		csrLister: csrLister,
-		csrQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CertificateSigningRequest"),
-		workerCh:  make(chan int),
+		clientMap:  clientMap,
+		reconciler: NewCSRReconciler(logger.Logger, clientMap),
+		recorder:   recorder,
+		csrLister:  csrLister,
+		csrQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CertificateSigningRequest"),
+		workerCh:   make(chan int),
 	}
 
 	csrInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -95,7 +96,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("CertificateSigningRequest controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.csrQueue, "CertificateSigningRequest", c.reconcileCertificateSigningRequestKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.csrQueue, "CertificateSigningRequest", c.reconciler, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
