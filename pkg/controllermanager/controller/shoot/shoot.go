@@ -51,7 +51,6 @@ type Controller struct {
 	config                      *config.ControllerManagerConfiguration
 	recorder                    record.EventRecorder
 	maintenanceControl          MaintenanceControlInterface
-	quotaControl                QuotaControlInterface
 	hibernationScheduleRegistry HibernationScheduleRegistry
 
 	shootLister     gardencorelisters.ShootLister
@@ -65,7 +64,8 @@ type Controller struct {
 
 	hasSyncedFuncs []cache.InformerSynced
 
-	shootRefReconciler reconcile.Reconciler
+	shootQuotaReconciler reconcile.Reconciler
+	shootRefReconciler   reconcile.Reconciler
 
 	numberOfRunningWorkers int
 	workerCh               chan int
@@ -95,11 +95,12 @@ func NewShootController(ctx context.Context, clientMap clientmap.ClientMap, k8sG
 		config:                      config,
 		recorder:                    recorder,
 		maintenanceControl:          NewDefaultMaintenanceControl(clientMap, gardenCoreV1beta1Informer, config.Controllers.ShootMaintenance, recorder),
-		quotaControl:                NewDefaultQuotaControl(clientMap, gardenCoreV1beta1Informer),
 		hibernationScheduleRegistry: NewHibernationScheduleRegistry(),
 
 		shootLister:     shootLister,
 		configMapLister: configMapLister,
+
+		shootQuotaReconciler: NewShootQuotaReconciler(logger.Logger, config.Controllers.ShootQuota, clientMap, gardenCoreV1beta1Informer),
 
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
 		shootQuotaQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),
@@ -209,7 +210,7 @@ func (c *Controller) Run(ctx context.Context, shootMaintenanceWorkers, shootQuot
 		controllerutils.DeprecatedCreateWorker(ctx, c.shootMaintenanceQueue, "Shoot Maintenance", c.reconcileShootMaintenanceKey, &waitGroup, c.workerCh)
 	}
 	for i := 0; i < shootQuotaWorkers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.shootQuotaQueue, "Shoot Quota", c.reconcileShootQuotaKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootQuotaQueue, "Shoot Quota", c.shootQuotaReconciler, &waitGroup, c.workerCh)
 	}
 	for i := 0; i < shootHibernationWorkers; i++ {
 		controllerutils.DeprecatedCreateWorker(ctx, c.shootHibernationQueue, "Scheduled Shoot Hibernation", c.reconcileShootHibernationKey, &waitGroup, c.workerCh)
