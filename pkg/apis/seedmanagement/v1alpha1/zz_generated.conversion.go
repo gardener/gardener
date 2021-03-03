@@ -178,6 +178,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*core.SeedTemplate)(nil), (*v1beta1.SeedTemplate)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedTemplate_To_v1beta1_SeedTemplate(a.(*core.SeedTemplate), b.(*v1beta1.SeedTemplate), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*core.ShootTemplate)(nil), (*v1beta1.ShootTemplate)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_ShootTemplate_To_v1beta1_ShootTemplate(a.(*core.ShootTemplate), b.(*v1beta1.ShootTemplate), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddConversionFunc((*seedmanagement.Gardenlet)(nil), (*Gardenlet)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(a.(*seedmanagement.Gardenlet), b.(*Gardenlet), scope)
 	}); err != nil {
@@ -185,6 +195,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddConversionFunc((*Gardenlet)(nil), (*seedmanagement.Gardenlet)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet(a.(*Gardenlet), b.(*seedmanagement.Gardenlet), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1beta1.SeedTemplate)(nil), (*core.SeedTemplate)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_SeedTemplate_To_core_SeedTemplate(a.(*v1beta1.SeedTemplate), b.(*core.SeedTemplate), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1beta1.ShootTemplate)(nil), (*core.ShootTemplate)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ShootTemplate_To_core_ShootTemplate(a.(*v1beta1.ShootTemplate), b.(*core.ShootTemplate), scope)
 	}); err != nil {
 		return err
 	}
@@ -429,8 +449,7 @@ func autoConvert_v1alpha1_ManagedSeedSetSpec_To_seedmanagement_ManagedSeedSetSpe
 	if err := Convert_v1alpha1_ManagedSeedTemplate_To_seedmanagement_ManagedSeedTemplate(&in.Template, &out.Template, s); err != nil {
 		return err
 	}
-	// TODO: Inefficient conversion - can we improve it?
-	if err := s.Convert(&in.ShootTemplate, &out.ShootTemplate, 0); err != nil {
+	if err := Convert_v1beta1_ShootTemplate_To_core_ShootTemplate(&in.ShootTemplate, &out.ShootTemplate, s); err != nil {
 		return err
 	}
 	out.UpdateStrategy = (*seedmanagement.UpdateStrategy)(unsafe.Pointer(in.UpdateStrategy))
@@ -449,8 +468,7 @@ func autoConvert_seedmanagement_ManagedSeedSetSpec_To_v1alpha1_ManagedSeedSetSpe
 	if err := Convert_seedmanagement_ManagedSeedTemplate_To_v1alpha1_ManagedSeedTemplate(&in.Template, &out.Template, s); err != nil {
 		return err
 	}
-	// TODO: Inefficient conversion - can we improve it?
-	if err := s.Convert(&in.ShootTemplate, &out.ShootTemplate, 0); err != nil {
+	if err := Convert_core_ShootTemplate_To_v1beta1_ShootTemplate(&in.ShootTemplate, &out.ShootTemplate, s); err != nil {
 		return err
 	}
 	out.UpdateStrategy = (*UpdateStrategy)(unsafe.Pointer(in.UpdateStrategy))
@@ -508,8 +526,7 @@ func autoConvert_v1alpha1_ManagedSeedSpec_To_seedmanagement_ManagedSeedSpec(in *
 	if in.SeedTemplate != nil {
 		in, out := &in.SeedTemplate, &out.SeedTemplate
 		*out = new(core.SeedTemplate)
-		// TODO: Inefficient conversion - can we improve it?
-		if err := s.Convert(*in, *out, 0); err != nil {
+		if err := Convert_v1beta1_SeedTemplate_To_core_SeedTemplate(*in, *out, s); err != nil {
 			return err
 		}
 	} else {
@@ -539,8 +556,7 @@ func autoConvert_seedmanagement_ManagedSeedSpec_To_v1alpha1_ManagedSeedSpec(in *
 	if in.SeedTemplate != nil {
 		in, out := &in.SeedTemplate, &out.SeedTemplate
 		*out = new(v1beta1.SeedTemplate)
-		// TODO: Inefficient conversion - can we improve it?
-		if err := s.Convert(*in, *out, 0); err != nil {
+		if err := Convert_core_SeedTemplate_To_v1beta1_SeedTemplate(*in, *out, s); err != nil {
 			return err
 		}
 	} else {
