@@ -22,7 +22,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
@@ -44,14 +43,8 @@ import (
 
 // Controller controls Shoots.
 type Controller struct {
-	clientMap              clientmap.ClientMap
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-
-	config                      *config.ControllerManagerConfiguration
-	recorder                    record.EventRecorder
-	hibernationScheduleRegistry HibernationScheduleRegistry
-
-	shootLister gardencorelisters.ShootLister
+	clientMap clientmap.ClientMap
+	config    *config.ControllerManagerConfiguration
 
 	shootMaintenanceQueue workqueue.RateLimitingInterface
 	shootQuotaQueue       workqueue.RateLimitingInterface
@@ -59,13 +52,13 @@ type Controller struct {
 	shootReferenceQueue   workqueue.RateLimitingInterface
 	configMapQueue        workqueue.RateLimitingInterface
 
-	hasSyncedFuncs []cache.InformerSynced
-
+	shootHibernationReconciler reconcile.Reconciler
 	shootMaintenanceReconciler reconcile.Reconciler
 	shootQuotaReconciler       reconcile.Reconciler
 	shootRefReconciler         reconcile.Reconciler
 	configMapReconciler        reconcile.Reconciler
 
+	hasSyncedFuncs         []cache.InformerSynced
 	numberOfRunningWorkers int
 	workerCh               chan int
 }
@@ -87,15 +80,10 @@ func NewShootController(ctx context.Context, clientMap clientmap.ClientMap, k8sG
 	)
 
 	shootController := &Controller{
-		clientMap:              clientMap,
-		k8sGardenCoreInformers: k8sGardenCoreInformers,
+		clientMap: clientMap,
+		config:    config,
 
-		config:                      config,
-		recorder:                    recorder,
-		hibernationScheduleRegistry: NewHibernationScheduleRegistry(),
-
-		shootLister: shootLister,
-
+		shootHibernationReconciler: NewShootHibernationReconciler(logger.Logger, clientMap, shootLister, NewHibernationScheduleRegistry(), recorder),
 		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, config.Controllers.ShootMaintenance, clientMap, gardenCoreV1beta1Informer, recorder),
 		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, config.Controllers.ShootQuota, clientMap, gardenCoreV1beta1Informer),
 		configMapReconciler:        NewConfigMapReconciler(logger.Logger, clientMap, shootLister),
@@ -211,7 +199,7 @@ func (c *Controller) Run(ctx context.Context, shootMaintenanceWorkers, shootQuot
 		controllerutils.CreateWorker(ctx, c.shootQuotaQueue, "Shoot Quota", c.shootQuotaReconciler, &waitGroup, c.workerCh)
 	}
 	for i := 0; i < shootHibernationWorkers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.shootHibernationQueue, "Scheduled Shoot Hibernation", c.reconcileShootHibernationKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootHibernationQueue, "Shoot Hibernation", c.shootHibernationReconciler, &waitGroup, c.workerCh)
 	}
 	for i := 0; i < shootMaintenanceWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.configMapQueue, "ConfigMap", c.configMapReconciler, &waitGroup, c.workerCh)
