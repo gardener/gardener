@@ -87,9 +87,9 @@ featureGates:
   Logging: true
   HVPA: true
   HVPAForShootedSeed: true
-  ManagedIstio: false
+  ManagedIstio: true
   KonnectivityTunnel: false
-  APIServerSNI: false
+  APIServerSNI: true
   CachedRuntimeClients: true
   NodeLocalDNS: true
   MountHostCADirectories: false
