@@ -95,10 +95,18 @@ func NewFederatedSeedController(ctx context.Context, clientMap clientmap.ClientM
 
 func (c *Controller) seedAdd(obj interface{}) {
 	seedObj := obj.(*gardencorev1beta1.Seed)
-	bootstrappedCondition := helper.GetCondition(seedObj.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-	if bootstrappedCondition == nil || bootstrappedCondition.Status != gardencorev1beta1.ConditionTrue {
-		return
+
+	// We can't skip the controller setup if the deletionTimestamp is set.
+	// see comment in reconcileSeedRequest for more details
+	isTerminating := seedObj.DeletionTimestamp != nil
+
+	if !isTerminating {
+		bootstrappedCondition := helper.GetCondition(seedObj.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
+		if bootstrappedCondition == nil || bootstrappedCondition.Status != gardencorev1beta1.ConditionTrue {
+			return
+		}
 	}
+
 	c.addSeedToQueue(obj)
 }
 
@@ -176,13 +184,15 @@ func (c *Controller) reconcileSeedRequest(ctx context.Context, req reconcile.Req
 		return reconcile.Result{}, err
 	}
 
-	if seed.DeletionTimestamp != nil {
-		logger.Logger.Infof("Skipping federated seed setup - Seed %s is being deleted", req.Name)
-		return reconcile.Result{}, nil
-	}
+	// We can't skip the controller setup if the deletionTimestamp is set.
+	// gardenlet might have been restarted, so that Seeds with a deletionTimestamp and SeedBootstrapped=false are
+	// reconciled here. These controllers are needed for properly cleaning up Seed's, that are marked for deletion
+	// (e.g. ControllerInstallations need to be marked as non-required).
+	// The controllers will be stopped/removed once the Seed is completely removed from the store.
+	isTerminating := seed.DeletionTimestamp != nil
 
 	condition := helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedBootstrapped)
-	if condition.Status != gardencorev1beta1.ConditionTrue {
+	if !isTerminating && condition.Status != gardencorev1beta1.ConditionTrue {
 		return reconcile.Result{}, nil
 	}
 
@@ -299,7 +309,7 @@ func (f *federatedSeedControllerManager) createNamespaceControllers(ctx context.
 }
 
 func (f *federatedSeedControllerManager) addExtensionController(seedName string, controller *extensions.Controller, cancelFunc context.CancelFunc) {
-	logger.Logger.Debugf("Adding extension controllers for seed %s", seedName)
+	logger.Logger.Infof("Adding extension controllers for seed %s", seedName)
 	f.extensionControllersLock.Lock()
 	defer f.extensionControllersLock.Unlock()
 	f.extensionControllers[seedName] = &extensionsController{
@@ -309,7 +319,7 @@ func (f *federatedSeedControllerManager) addExtensionController(seedName string,
 }
 
 func (f *federatedSeedControllerManager) addNamespaceController(seedName string, controller *seedapiservernetworkpolicy.Controller, cancelFunc context.CancelFunc) {
-	logger.Logger.Debugf("Adding namespace controller for seed %s", seedName)
+	logger.Logger.Infof("Adding namespace controller for seed %s", seedName)
 	f.namespaceControllersLock.Lock()
 	defer f.namespaceControllersLock.Unlock()
 	f.namespaceControllers[seedName] = &namespaceController{
@@ -320,14 +330,14 @@ func (f *federatedSeedControllerManager) addNamespaceController(seedName string,
 
 func (f *federatedSeedControllerManager) removeController(seedName string) {
 	if controller, ok := f.extensionControllers[seedName]; ok {
-		logger.Logger.Debugf("Removing extension controller for seed %s", seedName)
+		logger.Logger.Infof("Removing extension controller for seed %s", seedName)
 		controller.Stop()
 		f.extensionControllersLock.Lock()
 		defer f.extensionControllersLock.Unlock()
 		delete(f.extensionControllers, seedName)
 	}
 	if controller, ok := f.namespaceControllers[seedName]; ok {
-		logger.Logger.Debugf("Removing namespace controller for seed %s", seedName)
+		logger.Logger.Infof("Removing namespace controller for seed %s", seedName)
 		controller.Stop()
 		f.namespaceControllersLock.Lock()
 		defer f.namespaceControllersLock.Unlock()
