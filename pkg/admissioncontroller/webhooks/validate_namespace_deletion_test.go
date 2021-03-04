@@ -61,7 +61,7 @@ var _ = Describe("namespaceDeletionHandler", func() {
 		mockReader = mockclient.NewMockReader(ctrl)
 
 		shootMetadataList = &metav1.PartialObjectMetadataList{}
-		shootMetadataList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
+		shootMetadataList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 
 		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
 		validator, err = webhooks.NewValidateNamespaceDeletionHandler(ctx, mockCache)
