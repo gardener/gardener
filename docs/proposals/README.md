@@ -45,7 +45,7 @@ The main reviewers are charged with the following tasks:
  the proposal was accepted
 - reviewing PRs related to the GEP in-depth
 
-Other community members are of course also welcome the help the GEP author, review his work and raise
+Other community members are of course also welcome to help the GEP author, review his work and raise
 general concerns with the enhancement. Nevertheless, the main reviewers are supposed to focus on more
 in-depth reviews and accompaning the whole GEP process end-to-end, which helps with getting more
 high-quality reviews and faster feedback cycles instead of having more people looking at the process
