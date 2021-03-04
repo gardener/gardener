@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seedadmission
+package admission_test
 
 import (
 	"context"
@@ -32,10 +32,11 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-var _ = Describe("Utils", func() {
+var _ = Describe("admission", func() {
 	var (
 		ctx     = context.Background()
 		request admission.Request
@@ -75,8 +76,7 @@ var _ = Describe("Utils", func() {
 			It("should return an error because the old object cannot be decoded", func() {
 				request.OldObject = runtime.RawExtension{Raw: []byte("foo")}
 
-				_, err := getRequestObject(ctx, c, decoder, request)
-
+				_, err := ExtractRequestObject(ctx, c, decoder, request)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("invalid character"))
 			})
@@ -87,7 +87,7 @@ var _ = Describe("Utils", func() {
 
 				request.OldObject = runtime.RawExtension{Raw: objJSON}
 
-				result, err := getRequestObject(ctx, c, decoder, request)
+				result, err := ExtractRequestObject(ctx, c, decoder, request)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal(resource.Resource))
 			})
@@ -105,8 +105,7 @@ var _ = Describe("Utils", func() {
 			It("should return an error because the new object cannot be decoded", func() {
 				request.Object = runtime.RawExtension{Raw: []byte("foo")}
 
-				_, err := getRequestObject(ctx, c, decoder, request)
-
+				_, err := ExtractRequestObject(ctx, c, decoder, request)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("invalid character"))
 			})
@@ -117,7 +116,7 @@ var _ = Describe("Utils", func() {
 
 				request.Object = runtime.RawExtension{Raw: objJSON}
 
-				result, err := getRequestObject(ctx, c, decoder, request)
+				result, err := ExtractRequestObject(ctx, c, decoder, request)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal(resource.Resource))
 			})
@@ -142,7 +141,7 @@ var _ = Describe("Utils", func() {
 
 				c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), gomock.AssignableToTypeOf(&unstructured.Unstructured{})).Return(fakeErr)
 
-				_, err := getRequestObject(ctx, c, decoder, request)
+				_, err := ExtractRequestObject(ctx, c, decoder, request)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(err))
 			})
@@ -157,7 +156,8 @@ var _ = Describe("Utils", func() {
 					ob.SetKind(resource.Resource)
 					return nil
 				})
-				result, err := getRequestObject(ctx, c, decoder, request)
+
+				result, err := ExtractRequestObject(ctx, c, decoder, request)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal(resource.Resource))
 			})
@@ -181,12 +181,12 @@ var _ = Describe("Utils", func() {
 
 				c.EXPECT().List(ctx, obj, client.InNamespace(request.Namespace)).Return(fakeErr)
 
-				_, err := getRequestObject(ctx, c, decoder, request)
+				_, err := ExtractRequestObject(ctx, c, decoder, request)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(err))
 			})
 
-			It("Shoul return the looked up resource", func() {
+			It("should return the looked up resource", func() {
 				c.EXPECT().List(ctx, obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
 					ob, ok := list.(*unstructured.UnstructuredList)
 					if !ok {
@@ -196,7 +196,8 @@ var _ = Describe("Utils", func() {
 					ob.SetKind(request.Kind.Kind + "List")
 					return nil
 				})
-				result, err := getRequestObject(ctx, c, decoder, request)
+
+				result, err := ExtractRequestObject(ctx, c, decoder, request)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal("List"))
 			})

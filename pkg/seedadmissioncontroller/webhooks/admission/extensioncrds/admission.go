@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seedadmission
+package extensioncrds
 
 import (
 	"context"
@@ -35,38 +35,41 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
+	sacadmission "github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission"
 )
 
-var _ admission.Handler = &ExtensionDeletionProtection{}
+const (
+	// HandlerName is the name of this admission webhook handler.
+	HandlerName = "extension_crds"
+	// WebhookPath is the HTTP handler path for this admission webhook handler.
+	WebhookPath = "/webhooks/validate-extension-crd-deletion"
+)
 
-// ExtensionDeletionProtection is a webhook handler validating DELETE requests for extension CRDs and extension
-// resources, that are marked for deletion protection (`gardener.cloud/deletion-protected`).
-type ExtensionDeletionProtection struct {
+// New creates a new webhook handler validating DELETE requests for extension CRDs and extension resources, that are
+// marked for deletion protection (`gardener.cloud/deletion-protected`).
+func New(logger logr.Logger) *handler {
+	return &handler{logger: logger}
+}
+
+type handler struct {
 	logger  logr.Logger
 	reader  client.Reader
 	decoder *admission.Decoder
 }
 
-// InjectLogger inject a logger into the handler.
-func (h *ExtensionDeletionProtection) InjectLogger(l logr.Logger) error {
-	h.logger = l
-	return nil
-}
+var _ admission.Handler = &handler{}
 
-// InjectAPIReader injects a reader into the handler.
-func (h *ExtensionDeletionProtection) InjectAPIReader(reader client.Reader) error {
+func (h *handler) InjectAPIReader(reader client.Reader) error {
 	h.reader = reader
 	return nil
 }
 
-// InjectDecoder injects a decoder capable of decoding objects included in admission requests.
-func (h *ExtensionDeletionProtection) InjectDecoder(d *admission.Decoder) error {
+func (h *handler) InjectDecoder(d *admission.Decoder) error {
 	h.decoder = d
 	return nil
 }
 
-// Handle implements the webhook handler for extension deletion protection.
-func (h *ExtensionDeletionProtection) Handle(ctx context.Context, request admission.Request) admission.Response {
+func (h *handler) Handle(ctx context.Context, request admission.Request) admission.Response {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -94,7 +97,7 @@ func (h *ExtensionDeletionProtection) Handle(ctx context.Context, request admiss
 		return admission.Allowed("resource is not deletion-protected")
 	}
 
-	obj, err := getRequestObject(ctx, h.reader, h.decoder, request)
+	obj, err := sacadmission.ExtractRequestObject(ctx, h.reader, h.decoder, request)
 	if apierrors.IsNotFound(err) {
 		return admission.Allowed("object was not found")
 	}

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seedadmission
+package podschedulername
 
 import (
 	"context"
@@ -21,6 +21,19 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+)
+
+const (
+	// GardenerShootControlPlaneSchedulerName is the name of the scheduler used for
+	// shoot control plane pods.
+	GardenerShootControlPlaneSchedulerName = "gardener-shoot-controlplane-scheduler"
+
+	// HandlerName is the name of this admission webhook handler.
+	HandlerName = "pod_scheduler_name"
+	// WebhookPath is the HTTP handler path for this admission webhook handler.
+	// Note: In the future we might want to have additional scheduler names
+	// so lets have the handler be of pattern "/webhooks/default-pod-scheduler-name/{scheduler-name}"
+	WebhookPath = "/webhooks/default-pod-scheduler-name/" + GardenerShootControlPlaneSchedulerName
 )
 
 var podGVK = metav1.GroupVersionKind{Group: "", Kind: "Pod", Version: "v1"}

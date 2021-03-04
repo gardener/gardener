@@ -43,7 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/seedadmission"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -51,7 +51,8 @@ const (
 	// Name is used as metadata.name of the ServiceAccount, ManagedResource,
 	// ClusterRole, ClusterRoleBinding, Service, Deployment and ValidatingWebhookConfiguration
 	// of the seed admission controller.
-	Name                = "gardener-seed-admission-controller"
+	Name = "gardener-seed-admission-controller"
+
 	managedResourceName = Name
 	deploymentName      = Name
 	containerName       = Name
@@ -299,7 +300,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 						Service: &admissionregistrationv1beta1.ServiceReference{
 							Name:      service.Name,
 							Namespace: service.Namespace,
-							Path:      pointer.StringPtr(seedadmission.ExtensionDeletionProtectionWebhookPath),
+							Path:      pointer.StringPtr(extensioncrds.WebhookPath),
 						},
 					},
 					AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
@@ -332,7 +333,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 						Service: &admissionregistrationv1beta1.ServiceReference{
 							Name:      service.Name,
 							Namespace: service.Namespace,
-							Path:      pointer.StringPtr(seedadmission.ExtensionDeletionProtectionWebhookPath),
+							Path:      pointer.StringPtr(extensioncrds.WebhookPath),
 						},
 					},
 					AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},

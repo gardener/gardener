@@ -33,7 +33,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/seedadmission"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
 )
 
 const (
@@ -149,14 +150,8 @@ func (o *Options) Run(ctx context.Context) error {
 
 	log.Info("setting up webhook server")
 	server := mgr.GetWebhookServer()
-	server.Register(
-		seedadmission.ExtensionDeletionProtectionWebhookPath,
-		&webhook.Admission{Handler: &seedadmission.ExtensionDeletionProtection{}},
-	)
-	server.Register(
-		seedadmission.GardenerShootControlPlaneSchedulerWebhookPath,
-		&webhook.Admission{Handler: admission.HandlerFunc(seedadmission.DefaultShootControlPlanePodsSchedulerName)},
-	)
+	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(logf.Log.WithName(extensioncrds.HandlerName))})
+	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
 
 	log.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {
