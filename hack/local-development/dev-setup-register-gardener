@@ -336,6 +336,7 @@ $ADMISSION_CONTROLLER_PORT_STRING
     - UPDATE
     resources:
     - managedseeds
+    - managedseedsets
   - apiGroups:
     - settings.gardener.cloud
     apiVersions:
