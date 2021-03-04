@@ -289,7 +289,7 @@ func getManagedSeedSpec(shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev
 
 	// Return result
 	return &seedmanagementv1alpha1.ManagedSeedSpec{
-		Shoot: seedmanagementv1alpha1.Shoot{
+		Shoot: &seedmanagementv1alpha1.Shoot{
 			Name: shoot.Name,
 		},
 		SeedTemplate: seedTemplate,

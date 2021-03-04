@@ -13378,7 +13378,6 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSpec(ref common.Referenc
 						},
 					},
 				},
-				Required: []string{"shoot"},
 			},
 		},
 		Dependencies: []string{

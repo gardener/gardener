@@ -64,7 +64,7 @@ var _ = Describe("ManagedSeed", func() {
 					Namespace: namespace,
 				},
 				Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-					Shoot: seedmanagementv1alpha1.Shoot{
+					Shoot: &seedmanagementv1alpha1.Shoot{
 						Name: name,
 					},
 				},

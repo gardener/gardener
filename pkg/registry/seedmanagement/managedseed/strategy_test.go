@@ -43,7 +43,7 @@ var _ = Describe("Strategy", func() {
 		})
 
 		It("should increase the generation if the spec has changed", func() {
-			newManagedSeed.Spec.Shoot = seedmanagement.Shoot{Name: "foo"}
+			newManagedSeed.Spec.Shoot = &seedmanagement.Shoot{Name: "foo"}
 
 			strategy.PrepareForUpdate(ctx, newManagedSeed, oldManagedSeed)
 			Expect(newManagedSeed.Generation).To(Equal(oldManagedSeed.Generation + 1))
@@ -118,7 +118,7 @@ func newManagedSeed(shootName string) *seedmanagement.ManagedSeed {
 			Labels:    map[string]string{"foo": "bar"},
 		},
 		Spec: seedmanagement.ManagedSeedSpec{
-			Shoot: seedmanagement.Shoot{
+			Shoot: &seedmanagement.Shoot{
 				Name: shootName,
 			},
 		},

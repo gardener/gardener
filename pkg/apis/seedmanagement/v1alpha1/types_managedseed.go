@@ -64,7 +64,8 @@ type ManagedSeedTemplate struct {
 // ManagedSeedSpec is the specification of a ManagedSeed.
 type ManagedSeedSpec struct {
 	// Shoot references a Shoot that should be registered as Seed.
-	Shoot Shoot `json:"shoot" protobuf:"bytes,1,opt,name=shoot"`
+	// +optional
+	Shoot *Shoot `json:"shoot,omitempty" protobuf:"bytes,1,opt,name=shoot"`
 	// SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed.
 	// Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster
 	// and an existing gardenlet reconciling the new Seed is required.

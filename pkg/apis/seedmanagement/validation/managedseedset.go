@@ -154,6 +154,10 @@ func ValidateManagedSeedTemplateForManagedSeedSet(template *seedmanagement.Manag
 
 	allErrs = append(allErrs, ValidateManagedSeedTemplate(template, fldPath)...)
 
+	if template.Spec.Shoot != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("spec", "shoot"), "shoot is forbidden"))
+	}
+
 	return allErrs
 }
 

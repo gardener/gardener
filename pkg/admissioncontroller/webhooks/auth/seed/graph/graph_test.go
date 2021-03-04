@@ -187,7 +187,7 @@ var _ = Describe("graph", func() {
 		managedSeed1 = &seedmanagementv1alpha1.ManagedSeed{
 			ObjectMeta: metav1.ObjectMeta{Name: "managedseed1", Namespace: "managedseednamespace"},
 			Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-				Shoot: seedmanagementv1alpha1.Shoot{Name: shoot1.Name},
+				Shoot: &seedmanagementv1alpha1.Shoot{Name: shoot1.Name},
 			},
 		}
 

@@ -177,8 +177,12 @@ func (v *ManagedSeed) Admit(ctx context.Context, a admission.Attributes, o admis
 	var allErrs field.ErrorList
 	gk := schema.GroupKind{Group: seedmanagement.GroupName, Kind: "ManagedSeed"}
 
-	// Ensure shoot name is specified
-	shootNamePath := field.NewPath("spec", "shoot", "name")
+	// Ensure shoot and shoot name are specified
+	shootPath := field.NewPath("spec", "shoot")
+	shootNamePath := shootPath.Child("name")
+	if managedSeed.Spec.Shoot == nil {
+		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Required(shootPath, "shoot is required")))
+	}
 	if managedSeed.Spec.Shoot.Name == "" {
 		return apierrors.NewInvalid(gk, managedSeed.Name, append(allErrs, field.Required(shootNamePath, "shoot name is required")))
 	}

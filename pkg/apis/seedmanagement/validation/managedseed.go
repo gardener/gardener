@@ -93,9 +93,13 @@ func ValidateManagedSeedTemplateUpdate(newManagedSeedTemplate, oldManagedSeedTem
 func ValidateManagedSeedSpec(spec *seedmanagement.ManagedSeedSpec, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// Ensure shoot name is specified
-	if !inTemplate && spec.Shoot.Name == "" {
-		allErrs = append(allErrs, field.Required(fldPath.Child("shoot", "name"), "shoot name is required"))
+	// Ensure shoot is specified (if not in template)
+	if !inTemplate && spec.Shoot == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("shoot"), "shoot is required"))
+	}
+
+	if spec.Shoot != nil {
+		allErrs = append(allErrs, validateShoot(spec.Shoot, fldPath.Child("shoot"), inTemplate)...)
 	}
 
 	// Ensure either seed template or gardenlet is specified
@@ -117,8 +121,8 @@ func ValidateManagedSeedSpec(spec *seedmanagement.ManagedSeedSpec, fldPath *fiel
 func ValidateManagedSeedSpecUpdate(newSpec, oldSpec *seedmanagement.ManagedSeedSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// Ensure shoot name is not changed
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Shoot.Name, oldSpec.Shoot.Name, fldPath.Child("shoot", "name"))...)
+	// Ensure shoot is not changed
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Shoot, oldSpec.Shoot, fldPath.Child("shoot"))...)
 
 	// Ensure no changing from seed template to gardenlet or vice versa takes place
 	if (newSpec.SeedTemplate != nil) != (oldSpec.SeedTemplate != nil) || (newSpec.Gardenlet != nil) != (oldSpec.Gardenlet != nil) {
@@ -141,6 +145,17 @@ func ValidateManagedSeedStatus(status *seedmanagement.ManagedSeedStatus, fieldPa
 
 	// Ensure integer fields are non-negative
 	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(status.ObservedGeneration, fieldPath.Child("observedGeneration"))...)
+
+	return allErrs
+}
+
+func validateShoot(shoot *seedmanagement.Shoot, fldPath *field.Path, inTemplate bool) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// Ensure shoot name is specified (if not in template)
+	if !inTemplate && shoot.Name == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "shoot name is required"))
+	}
 
 	return allErrs
 }

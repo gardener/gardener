@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	"github.com/gardener/gardener/pkg/registry/seedmanagement/managedseed"
 )
 
 var swaggerMetadataDescriptions = metav1.ObjectMeta{}.SwaggerDoc()
@@ -83,7 +84,7 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 		} else {
 			cells = append(cells, "Registered")
 		}
-		cells = append(cells, managedSeed.Spec.Shoot.Name)
+		cells = append(cells, managedseed.GetShootName(managedSeed))
 		if managedSeed.Spec.Gardenlet != nil {
 			cells = append(cells, "True")
 		} else {
