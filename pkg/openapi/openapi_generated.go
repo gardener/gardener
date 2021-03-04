@@ -192,6 +192,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.CloudProfileSpec":                       schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterAutoscaler":                      schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ClusterInfo":                            schema_pkg_apis_core_v1beta1_ClusterInfo(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ComponentImageVector":                   schema_pkg_apis_core_v1beta1_ComponentImageVector(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition":                              schema_pkg_apis_core_v1beta1_Condition(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ContainerRuntime":                       schema_pkg_apis_core_v1beta1_ContainerRuntime(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeployment":                   schema_pkg_apis_core_v1beta1_ControllerDeployment(ref),
@@ -214,6 +215,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation":                            schema_pkg_apis_core_v1beta1_Hibernation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HibernationSchedule":                    schema_pkg_apis_core_v1beta1_HibernationSchedule(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.HorizontalPodAutoscalerConfig":          schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ImageSource":                            schema_pkg_apis_core_v1beta1_ImageSource(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Ingress":                                schema_pkg_apis_core_v1beta1_Ingress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.IngressController":                      schema_pkg_apis_core_v1beta1_IngressController(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerConfig":                    schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref),
@@ -7735,6 +7737,42 @@ func schema_pkg_apis_core_v1beta1_ClusterInfo(ref common.ReferenceCallback) comm
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ComponentImageVector(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ComponentImageVector specifies the name and the list of images for a component.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the component name, e.g. \"etcd-druid\"",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"imageVector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ImageVector is the list of images for the component.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ImageSource"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"name", "imageVector"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ImageSource"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_Condition(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -8651,6 +8689,62 @@ func schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref common.Refer
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ImageSource(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ImageSource specified the name, the repository, the tag, and version constraints of a container image.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the image name, e.g. \"gardenlet\"",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"sourceRepository": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SourceRepository is the image source repository, e.g. \"github.com/gardener/gardener\".",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"repository": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Repository is the image repository, e.g. \"eu.gcr.io/gardener-project/gardener/gardenlet\".",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"tag": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Tag is the image tag, e.g. \"v1.0\". Defaults to \"latest\".",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"runtimeVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RuntimeVersion is the Kubernetes version on which the image can be deployed. It should be specified if the image can only be deployed on specific Kubernetes version(s). For supported syntax, see https://github.com/Masterminds/semver#hyphen-range-comparisons",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"targetVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TargetVersion is the Kubernetes version that the image can target (operate on). It should be specified if the image can target only specific Kubernetes version(s). For supported syntax, see https://github.com/Masterminds/semver#hyphen-range-comparisons",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name", "repository"},
+			},
+		},
 	}
 }
 
@@ -12931,11 +13025,37 @@ func schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref common.Refe
 							Format:      "",
 						},
 					},
+					"imageVectorOverwrite": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ImageVector specifies images that should be overwritten when deploying gardenlet.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ImageSource"),
+									},
+								},
+							},
+						},
+					},
+					"componentImageVectorOverwrites": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ComponentImageVectorOverwrites specifies images that should be overwritten when deploying components deployed by gardenlet.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ComponentImageVector"),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ComponentImageVector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ImageSource", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Volume", "k8s.io/api/core/v1.VolumeMount"},
 	}
 }
 

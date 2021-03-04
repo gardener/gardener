@@ -15,6 +15,7 @@
 package imagevector_test
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -204,12 +205,12 @@ var _ = Describe("imagevector", func() {
 	]
 }`, image1Src1.Name, image1Src1.Repository, *image1Src1.Tag, *image1Src1.RuntimeVersion)
 
-			image1Src1VectorYAML = fmt.Sprintf(`
-images:
-  - name: "%s"
-    repository: "%s"
-    tag: "%s"
-    runtimeVersion: "%s"`, image1Src1.Name, image1Src1.Repository, *image1Src1.Tag, *image1Src1.RuntimeVersion)
+			image1Src1VectorYAML = fmt.Sprintf(`images:
+- name: %s
+  repository: %s
+  tag: %s
+  runtimeVersion: '%s'
+`, image1Src1.Name, image1Src1.Repository, *image1Src1.Tag, *image1Src1.RuntimeVersion)
 		}
 		resetValues()
 		BeforeEach(resetValues)
@@ -236,6 +237,15 @@ images:
 				vector, err := ReadFile(tmpFile.Name())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vector).To(Equal(image1Src1Vector))
+			})
+		})
+
+		Describe("#Write", func() {
+			It("should successfully write a YAML image vector", func() {
+				var buf bytes.Buffer
+				err := Write(&buf, image1Src1Vector)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(buf.String()).To(Equal(image1Src1VectorYAML))
 			})
 		})
 

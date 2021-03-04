@@ -128,6 +128,12 @@ type GardenletDeployment struct {
 	// VPA specifies whether to enable VPA for gardenlet. Defaults to true.
 	// +optional
 	VPA *bool `json:"vpa,omitempty" protobuf:"bytes,11,rep,name=vpa"`
+	// ImageVector specifies images that should be overwritten when deploying gardenlet.
+	// +optional
+	ImageVectorOverwrite gardencorev1beta1.ImageVector `json:"imageVectorOverwrite,omitempty" protobuf:"bytes,12,opt,name=imageVectorOverwrite"`
+	// ComponentImageVectorOverwrites specifies images that should be overwritten when deploying components deployed by gardenlet.
+	// +optional
+	ComponentImageVectorOverwrites gardencorev1beta1.ComponentImageVectors `json:"componentImageVectorOverwrites,omitempty" protobuf:"bytes,13,opt,name=componentImageVectorOverwrites"`
 }
 
 // Image specifies container image parameters.

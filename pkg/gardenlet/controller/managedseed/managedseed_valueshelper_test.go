@@ -39,6 +39,8 @@ import (
 
 var _ = Describe("ValuesHelper", func() {
 	var (
+		imageVectorOverwrite, componentImageVectorOverwrites string
+
 		imageVectorOverwritePath, componentImageVectorOverwritesPath string
 		gardenKubeconfigPath, seedKubeconfigPath                     string
 		serverCertPath, serverKeyPath                                string
@@ -63,10 +65,25 @@ var _ = Describe("ValuesHelper", func() {
 	BeforeEach(func() {
 		gardenletfeatures.RegisterFeatureGates()
 
+		imageVectorOverwrite = `images:
+- name: test-image1
+  sourceRepository: test-source-repo 
+  repository: test-repo
+  tag: test-tag
+`
+		componentImageVectorOverwrites = `components:
+- name: test-component1
+  imageVectorOverwrite: |
+    images:
+    - name: test-component-image1
+      sourceRepository: test-source-repo
+      repository: test-repo
+      tag: test-tag
+`
 		cleanupFuncs = []func(){
 			test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, true),
-			test.WithTempFile("", "image-vector-overwrite", []byte("image vector overwrite"), &imageVectorOverwritePath),
-			test.WithTempFile("", "component-image-vector-overwrites", []byte("component image vector overwrites"), &componentImageVectorOverwritesPath),
+			test.WithTempFile("", "image-vector-overwrite", []byte(imageVectorOverwrite), &imageVectorOverwritePath),
+			test.WithTempFile("", "component-image-vector-overwrites", []byte(componentImageVectorOverwrites), &componentImageVectorOverwritesPath),
 			test.WithTempFile("", "garden-kubeconfig", []byte("garden kubeconfig"), &gardenKubeconfigPath),
 			test.WithTempFile("", "seed-kubeconfig", []byte("seed kubeconfig"), &seedKubeconfigPath),
 			test.WithTempFile("", "server-cert", []byte("server cert"), &serverCertPath),
@@ -138,6 +155,25 @@ var _ = Describe("ValuesHelper", func() {
 				"foo": "bar",
 			},
 			VPA: pointer.BoolPtr(true),
+			ImageVectorOverwrite: gardencorev1beta1.ImageVector{
+				{
+					Name:       "test-image1",
+					Repository: "my-repo",
+					Tag:        pointer.StringPtr("my-tag"),
+				},
+			},
+			ComponentImageVectorOverwrites: gardencorev1beta1.ComponentImageVectors{
+				{
+					Name: "test-component1",
+					ImageVector: gardencorev1beta1.ImageVector{
+						{
+							Name:       "test-component-image1",
+							Repository: "my-repo",
+							Tag:        pointer.StringPtr("my-tag"),
+						},
+					},
+				},
+			},
 		}
 		gardenletConfig = &configv1alpha1.GardenletConfiguration{
 			TypeMeta: metav1.TypeMeta{
@@ -174,6 +210,25 @@ var _ = Describe("ValuesHelper", func() {
 				"networking.gardener.cloud/seed-sni-enabled": "true",
 			},
 			VPA: pointer.BoolPtr(true),
+			ImageVectorOverwrite: gardencorev1beta1.ImageVector{
+				{
+					Name:       "test-image1",
+					Repository: "my-repo",
+					Tag:        pointer.StringPtr("my-tag"),
+				},
+			},
+			ComponentImageVectorOverwrites: gardencorev1beta1.ComponentImageVectors{
+				{
+					Name: "test-component1",
+					ImageVector: gardencorev1beta1.ImageVector{
+						{
+							Name:       "test-component-image1",
+							Repository: "my-repo",
+							Tag:        pointer.StringPtr("my-tag"),
+						},
+					},
+				},
+			},
 		}
 		mergedGardenletConfig = func(withBootstrap bool) *configv1alpha1.GardenletConfiguration {
 			var kubeconfigPath string
@@ -254,9 +309,20 @@ var _ = Describe("ValuesHelper", func() {
 							"foo": "bar",
 							"networking.gardener.cloud/seed-sni-enabled": "true",
 						},
-						"vpa":                            true,
-						"imageVectorOverwrite":           "image vector overwrite",
-						"componentImageVectorOverwrites": "component image vector overwrites",
+						"vpa": true,
+						"imageVectorOverwrite": `images:
+- name: test-image1
+  repository: my-repo
+  tag: my-tag
+`,
+						"componentImageVectorOverwrites": `components:
+- name: test-component1
+  imageVectorOverwrite: |
+    images:
+    - name: test-component-image1
+      repository: my-repo
+      tag: my-tag
+`,
 						"config": map[string]interface{}{
 							"apiVersion": "gardenlet.config.gardener.cloud/v1alpha1",
 							"kind":       "GardenletConfiguration",

@@ -341,6 +341,15 @@ message ClusterInfo {
   optional KubernetesInfo kubernetes = 2;
 }
 
+// ComponentImageVector specifies the name and the list of images for a component.
+message ComponentImageVector {
+  // Name is the component name, e.g. "etcd-druid"
+  optional string name = 1;
+
+  // ImageVector is the list of images for the component.
+  repeated ImageSource imageVector = 2;
+}
+
 // Condition holds the information about the state of a resource.
 message Condition {
   // Type of the Shoot condition.
@@ -674,6 +683,35 @@ message HorizontalPodAutoscalerConfig {
   // The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration upscaleDelay = 7;
+}
+
+// ImageSource specified the name, the repository, the tag, and version constraints of a container image.
+message ImageSource {
+  // Name is the image name, e.g. "gardenlet"
+  optional string name = 1;
+
+  // SourceRepository is the image source repository, e.g. "github.com/gardener/gardener".
+  // +optional
+  optional string sourceRepository = 2;
+
+  // Repository is the image repository, e.g. "eu.gcr.io/gardener-project/gardener/gardenlet".
+  optional string repository = 3;
+
+  // Tag is the image tag, e.g. "v1.0". Defaults to "latest".
+  // +optional
+  optional string tag = 4;
+
+  // RuntimeVersion is the Kubernetes version on which the image can be deployed.
+  // It should be specified if the image can only be deployed on specific Kubernetes version(s).
+  // For supported syntax, see https://github.com/Masterminds/semver#hyphen-range-comparisons
+  // +optional
+  optional string runtimeVersion = 5;
+
+  // TargetVersion is the Kubernetes version that the image can target (operate on).
+  // It should be specified if the image can target only specific Kubernetes version(s).
+  // For supported syntax, see https://github.com/Masterminds/semver#hyphen-range-comparisons
+  // +optional
+  optional string targetVersion = 6;
 }
 
 // Ingress configures the Ingress specific settings of the Seed cluster

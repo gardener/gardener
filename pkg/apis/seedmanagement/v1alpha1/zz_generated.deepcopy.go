@@ -126,6 +126,20 @@ func (in *GardenletDeployment) DeepCopyInto(out *GardenletDeployment) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.ImageVectorOverwrite != nil {
+		in, out := &in.ImageVectorOverwrite, &out.ImageVectorOverwrite
+		*out = make(v1beta1.ImageVector, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.ComponentImageVectorOverwrites != nil {
+		in, out := &in.ComponentImageVectorOverwrites, &out.ComponentImageVectorOverwrites
+		*out = make(v1beta1.ComponentImageVectors, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	return
 }
 

@@ -2578,6 +2578,50 @@ KubernetesInfo
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ComponentImageVector">ComponentImageVector
+</h3>
+<p>
+<p>ComponentImageVector specifies the name and the list of images for a component.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the component name, e.g. &ldquo;etcd-druid&rdquo;</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>imageVector</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ImageVector">
+ImageVector
+</a>
+</em>
+</td>
+<td>
+<p>ImageVector is the list of images for the component.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ComponentImageVectors">ComponentImageVectors
+(<code>[]github.com/gardener/gardener/pkg/apis/core/v1beta1.ComponentImageVector</code> alias)</p></h3>
+<p>
+<p>ComponentImageVectors is a list of components and their images.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.Condition">Condition
 </h3>
 <p>
@@ -3745,6 +3789,104 @@ Kubernetes meta/v1.Duration
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ImageSource">ImageSource
+</h3>
+<p>
+<p>ImageSource specified the name, the repository, the tag, and version constraints of a container image.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the image name, e.g. &ldquo;gardenlet&rdquo;</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>sourceRepository</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SourceRepository is the image source repository, e.g. &ldquo;github.com/gardener/gardener&rdquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>repository</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Repository is the image repository, e.g. &ldquo;eu.gcr.io/gardener-project/gardener/gardenlet&rdquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>tag</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Tag is the image tag, e.g. &ldquo;v1.0&rdquo;. Defaults to &ldquo;latest&rdquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>runtimeVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RuntimeVersion is the Kubernetes version on which the image can be deployed.
+It should be specified if the image can only be deployed on specific Kubernetes version(s).
+For supported syntax, see <a href="https://github.com/Masterminds/semver#hyphen-range-comparisons">https://github.com/Masterminds/semver#hyphen-range-comparisons</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>targetVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TargetVersion is the Kubernetes version that the image can target (operate on).
+It should be specified if the image can target only specific Kubernetes version(s).
+For supported syntax, see <a href="https://github.com/Masterminds/semver#hyphen-range-comparisons">https://github.com/Masterminds/semver#hyphen-range-comparisons</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ImageVector">ImageVector
+(<code>[]github.com/gardener/gardener/pkg/apis/core/v1beta1.ImageSource</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ComponentImageVector">ComponentImageVector</a>)
+</p>
+<p>
+<p>ImageVector is a list of images.</p>
+</p>
 <h3 id="core.gardener.cloud/v1beta1.Ingress">Ingress
 </h3>
 <p>

@@ -234,6 +234,12 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					},
 					PodLabels:      map[string]string{"foo!": "bar"},
 					PodAnnotations: map[string]string{"bar@": "baz"},
+					ImageVectorOverwrite: core.ImageVector{
+						{},
+					},
+					ComponentImageVectorOverwrites: core.ComponentImageVectors{
+						{},
+					},
 				}
 				managedSeed.Spec.Gardenlet.Config = gardenletConfiguration(seedx, nil)
 				managedSeed.Spec.Gardenlet.Bootstrap = bootstrapPtr("foo")
@@ -272,6 +278,18 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("spec.gardenlet.deployment.podAnnotations"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.gardenlet.deployment.imageVectorOverwrite.images[0].name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.gardenlet.deployment.imageVectorOverwrite.images[0].repository"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.gardenlet.deployment.componentImageVectorOverwrites.components[0].name"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),

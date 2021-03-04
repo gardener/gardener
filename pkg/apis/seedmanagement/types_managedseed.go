@@ -107,6 +107,10 @@ type GardenletDeployment struct {
 	Env []corev1.EnvVar
 	// VPA specifies whether to enable VPA for gardenlet. Defaults to true.
 	VPA *bool
+	// ImageVector specifies images that should be overwritten when deploying gardenlet.
+	ImageVectorOverwrite gardencore.ImageVector
+	// ComponentImageVectorOverwrites specifies images that should be overwritten when deploying components deployed by gardenlet.
+	ComponentImageVectorOverwrites gardencore.ComponentImageVectors
 }
 
 // Image specifies container image parameters.

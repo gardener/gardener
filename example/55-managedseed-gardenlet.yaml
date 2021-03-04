@@ -34,6 +34,17 @@ spec:
 #     additionalVolumeMounts: []
 #     env: []
 #     vpa: true
+#     imageVectorOverwrite:
+#     - name: pause-container
+#       repository: my-custom-image-registry/pause-amd64
+#       tag: "3.1"
+#       targetVersion: ">= 1.12"
+#     componentImageVectorOverwrites:
+#     - name: etcd-druid
+#       imageVector:
+#       - name: etcd
+#         repository: my-custom-image-registry/etcd
+#         tag: latest
     config: # GardenletConfiguration resource
       apiVersion: gardenlet.config.gardener.cloud/v1alpha1
       kind: GardenletConfiguration

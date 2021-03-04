@@ -15,11 +15,13 @@
 package managedseed
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -178,14 +180,20 @@ func (vp *valuesHelper) getGardenletDeploymentValues(deployment *seedmanagementv
 		return nil, err
 	}
 
-	// Set imageVectorOverwrite and componentImageVectorOverwrites from parent
-	deploymentValues["imageVectorOverwrite"], err = getParentImageVectorOverwrite()
-	if err != nil {
-		return nil, err
+	// If image vector overwrites are specified, convert them to strings and set them in values
+	if deployment.ImageVectorOverwrite != nil {
+		var buf bytes.Buffer
+		if err := gardencorev1beta1helper.WriteImageVector(&buf, deployment.ImageVectorOverwrite); err != nil {
+			return nil, err
+		}
+		deploymentValues["imageVectorOverwrite"] = buf.String()
 	}
-	deploymentValues["componentImageVectorOverwrites"], err = getParentComponentImageVectorOverwrites()
-	if err != nil {
-		return nil, err
+	if deployment.ComponentImageVectorOverwrites != nil {
+		var buf bytes.Buffer
+		if err := gardencorev1beta1helper.WriteComponentImageVectors(&buf, deployment.ComponentImageVectorOverwrites); err != nil {
+			return nil, err
+		}
+		deploymentValues["componentImageVectorOverwrites"] = buf.String()
 	}
 
 	return deploymentValues, nil
@@ -299,38 +307,48 @@ func getParentGardenletDeployment(imageVector imagevector.ImageVector, shoot *ga
 		imageTag = version.Get().GitVersion
 	}
 
+	// Get image vector overwrites
+	imageVectorOverwrite, err := getParentImageVectorOverwrite()
+	if err != nil {
+		return nil, err
+	}
+	componentImageVectorOverwrites, err := getParentComponentImageVectorOverwrites()
+	if err != nil {
+		return nil, err
+	}
+
 	// Create and return result
 	return &seedmanagementv1alpha1.GardenletDeployment{
 		Image: &seedmanagementv1alpha1.Image{
 			Repository: &imageRepository,
 			Tag:        &imageTag,
 		},
-		PodAnnotations: getParentPodAnnotations(shoot),
+		PodAnnotations:                 getParentPodAnnotations(shoot),
+		ImageVectorOverwrite:           imageVectorOverwrite,
+		ComponentImageVectorOverwrites: componentImageVectorOverwrites,
 	}, nil
 }
 
-func getParentImageVectorOverwrite() (string, error) {
-	var imageVectorOverwrite string
+func getParentImageVectorOverwrite() (gardencorev1beta1.ImageVector, error) {
 	if overWritePath := os.Getenv(imagevector.OverrideEnv); len(overWritePath) > 0 {
 		data, err := ioutil.ReadFile(overWritePath)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		imageVectorOverwrite = string(data)
+		return gardencorev1beta1helper.ReadImageVector(strings.NewReader(string(data)))
 	}
-	return imageVectorOverwrite, nil
+	return nil, nil
 }
 
-func getParentComponentImageVectorOverwrites() (string, error) {
-	var componentImageVectorOverwrites string
+func getParentComponentImageVectorOverwrites() (gardencorev1beta1.ComponentImageVectors, error) {
 	if overWritePath := os.Getenv(imagevector.ComponentOverrideEnv); len(overWritePath) > 0 {
 		data, err := ioutil.ReadFile(overWritePath)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		componentImageVectorOverwrites = string(data)
+		return gardencorev1beta1helper.ReadComponentImageVectors(strings.NewReader(string(data)))
 	}
-	return componentImageVectorOverwrites, nil
+	return nil, nil
 }
 
 var minimumAPIServerSNISidecarConstraint *semver.Constraints

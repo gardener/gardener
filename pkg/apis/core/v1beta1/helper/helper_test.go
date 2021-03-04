@@ -15,6 +15,9 @@
 package helper_test
 
 import (
+	"bytes"
+	"fmt"
+	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -1778,4 +1781,81 @@ var _ = Describe("helper", func() {
 			Equal("foo"),
 		),
 	)
+
+	Context("Image Vectors", func() {
+		var (
+			imageVector               gardencorev1beta1.ImageVector
+			imageVectorYAML           string
+			componentImageVectors     gardencorev1beta1.ComponentImageVectors
+			componentImageVectorsYAML string
+		)
+
+		BeforeEach(func() {
+			imageSource := gardencorev1beta1.ImageSource{
+				Name:             "image1",
+				SourceRepository: pointer.StringPtr("sourcerepo1"),
+				Repository:       "repo1",
+				Tag:              pointer.StringPtr("tag1"),
+				TargetVersion:    pointer.StringPtr(">= 1.6, < 1.8"),
+			}
+			imageVector = []gardencorev1beta1.ImageSource{imageSource}
+			imageVectorYAML = fmt.Sprintf(`images:
+- name: %s
+  sourceRepository: %s
+  repository: %s
+  tag: %s
+  targetVersion: '%s'
+`, imageSource.Name, *imageSource.SourceRepository, imageSource.Repository, *imageSource.Tag, *imageSource.TargetVersion)
+
+			componentImageVector := gardencorev1beta1.ComponentImageVector{
+				Name:        "component1",
+				ImageVector: imageVector,
+			}
+			componentImageVectors = []gardencorev1beta1.ComponentImageVector{componentImageVector}
+			componentImageVectorsYAML = fmt.Sprintf(`components:
+- name: %s
+  imageVectorOverwrite: |
+    images:
+    - name: %s
+      sourceRepository: %s
+      repository: %s
+      tag: %s
+      targetVersion: '%s'
+`, componentImageVector.Name, imageSource.Name, *imageSource.SourceRepository, imageSource.Repository, *imageSource.Tag, *imageSource.TargetVersion)
+		})
+
+		Describe("#ReadImageVector", func() {
+			It("should read the image vector correctly", func() {
+				iv, err := ReadImageVector(strings.NewReader(imageVectorYAML))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(iv).To(Equal(imageVector))
+			})
+		})
+
+		Describe("#WriteImageVector", func() {
+			It("should write the image vector correctly", func() {
+				var buf bytes.Buffer
+				err := WriteImageVector(&buf, imageVector)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(buf.String()).To(Equal(imageVectorYAML))
+			})
+		})
+
+		Describe("#ReadComponentImageVectors", func() {
+			It("should read the component image vectors correctly", func() {
+				civs, err := ReadComponentImageVectors(strings.NewReader(componentImageVectorsYAML))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(civs).To(Equal(componentImageVectors))
+			})
+		})
+
+		Describe("#WriteComponentImageVectors", func() {
+			It("should write the component image vectors correctly", func() {
+				var buf bytes.Buffer
+				err := WriteComponentImageVectors(&buf, componentImageVectors)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(buf.String()).To(Equal(componentImageVectorsYAML))
+			})
+		})
+	})
 })

@@ -378,6 +378,30 @@ bool
 <p>VPA specifies whether to enable VPA for gardenlet. Defaults to true.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>imageVectorOverwrite</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.ImageVector
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ImageVector specifies images that should be overwritten when deploying gardenlet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>componentImageVectorOverwrites</code></br>
+<em>
+github.com/gardener/gardener/pkg/apis/core/v1beta1.ComponentImageVectors
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ComponentImageVectorOverwrites specifies images that should be overwritten when deploying components deployed by gardenlet.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="seedmanagement.gardener.cloud/v1alpha1.Image">Image

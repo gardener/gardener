@@ -15,6 +15,7 @@
 package imagevector_test
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -52,8 +53,7 @@ var _ = Describe("imagevector", func() {
 	]
 }`, component1, componentData1, component2, componentData2)
 
-			componentImagesYAML = fmt.Sprintf(`
-components:
+			componentImagesYAML = fmt.Sprintf(`components:
 - name: %s
   imageVectorOverwrite: %s
 - name: %s
@@ -83,6 +83,15 @@ components:
 				vector, err := ReadComponentOverwriteFile(tmpFile.Name())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(vector).To(Equal(componentImageVectors))
+			})
+		})
+
+		Describe("#Write", func() {
+			It("should successfully write a YAML image vector", func() {
+				var buf bytes.Buffer
+				err := WriteComponentOverwrite(&buf, componentImageVectors)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(buf.String()).To(Equal(componentImagesYAML))
 			})
 		})
 	})

@@ -218,6 +218,13 @@ func validateGardenletDeployment(deployment *seedmanagement.GardenletDeployment,
 	allErrs = append(allErrs, metav1validation.ValidateLabels(deployment.PodLabels, fldPath.Child("podLabels"))...)
 	allErrs = append(allErrs, apivalidation.ValidateAnnotations(deployment.PodAnnotations, fldPath.Child("podAnnotations"))...)
 
+	if deployment.ImageVectorOverwrite != nil {
+		allErrs = append(allErrs, corevalidation.ValidateImageVector(deployment.ImageVectorOverwrite, fldPath.Child("imageVectorOverwrite"))...)
+	}
+	if deployment.ComponentImageVectorOverwrites != nil {
+		allErrs = append(allErrs, corevalidation.ValidateComponentImageVectors(deployment.ComponentImageVectorOverwrites, fldPath.Child("componentImageVectorOverwrites"))...)
+	}
+
 	return allErrs
 }
 

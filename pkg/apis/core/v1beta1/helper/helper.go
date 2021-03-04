@@ -15,13 +15,16 @@
 package helper
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
@@ -1246,4 +1249,56 @@ func BackupBucketIsErroneous(bb *gardencorev1beta1.BackupBucket) (bool, string) 
 		return false, ""
 	}
 	return true, lastErr.Description
+}
+
+func ReadImageVector(r io.Reader) (gardencorev1beta1.ImageVector, error) {
+	iv, err := imagevector.Read(r)
+	if err != nil {
+		return nil, err
+	}
+	var images []gardencorev1beta1.ImageSource
+	for _, is := range iv {
+		images = append(images, gardencorev1beta1.ImageSource(*is))
+	}
+	return images, nil
+}
+
+func WriteImageVector(w io.Writer, imageVector gardencorev1beta1.ImageVector) error {
+	var iv imagevector.ImageVector
+	for _, imageSource := range imageVector {
+		is := imagevector.ImageSource(imageSource)
+		iv = append(iv, &is)
+	}
+	return imagevector.Write(w, iv)
+}
+
+func ReadComponentImageVectors(r io.Reader) (gardencorev1beta1.ComponentImageVectors, error) {
+	civs, err := imagevector.ReadComponentOverwrite(r)
+	if err != nil {
+		return nil, err
+	}
+	var components []gardencorev1beta1.ComponentImageVector
+	for name, civ := range civs {
+		imageVector, err := ReadImageVector(strings.NewReader(civ))
+		if err != nil {
+			return nil, err
+		}
+		components = append(components, gardencorev1beta1.ComponentImageVector{
+			Name:        name,
+			ImageVector: imageVector,
+		})
+	}
+	return components, nil
+}
+
+func WriteComponentImageVectors(w io.Writer, componentImageVectors gardencorev1beta1.ComponentImageVectors) error {
+	civs := make(imagevector.ComponentImageVectors, len(componentImageVectors))
+	for _, componentImageVector := range componentImageVectors {
+		var buf bytes.Buffer
+		if err := WriteImageVector(&buf, componentImageVector.ImageVector); err != nil {
+			return err
+		}
+		civs[componentImageVector.Name] = buf.String()
+	}
+	return imagevector.WriteComponentOverwrite(w, civs)
 }

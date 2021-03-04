@@ -66,6 +66,20 @@ func ReadGlobalImageVectorWithEnvOverride(filePath string) (ImageVector, error) 
 	return WithEnvOverride(imageVector)
 }
 
+// Write writes an ImageVector to the given io.Writer.
+func Write(w io.Writer, iv ImageVector) error {
+	vector := struct {
+		Images ImageVector `json:"images" yaml:"images"`
+	}{
+		Images: iv,
+	}
+
+	if err := yaml.NewEncoder(w).Encode(&vector); err != nil {
+		return err
+	}
+	return nil
+}
+
 // mergeImageSources merges the two given ImageSources.
 //
 // If the tag of the override is non-empty, it immediately returns the override.

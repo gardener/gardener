@@ -98,6 +98,14 @@ message GardenletDeployment {
   // VPA specifies whether to enable VPA for gardenlet. Defaults to true.
   // +optional
   optional bool vpa = 11;
+
+  // ImageVector specifies images that should be overwritten when deploying gardenlet.
+  // +optional
+  repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.ImageSource imageVectorOverwrite = 12;
+
+  // ComponentImageVectorOverwrites specifies images that should be overwritten when deploying components deployed by gardenlet.
+  // +optional
+  repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.ComponentImageVector componentImageVectorOverwrites = 13;
 }
 
 // Image specifies container image parameters.

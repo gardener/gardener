@@ -55,3 +55,24 @@ func ReadComponentOverwriteFile(name string) (ComponentImageVectors, error) {
 
 	return ReadComponentOverwrite(file)
 }
+
+// WriteComponentOverwrite writes a ComponentImageVector to the given io.Writer.
+func WriteComponentOverwrite(w io.Writer, civs ComponentImageVectors) error {
+	var components []ComponentImageVector
+	for name, imageVectorOverwrite := range civs {
+		components = append(components, ComponentImageVector{
+			Name:                 name,
+			ImageVectorOverwrite: imageVectorOverwrite,
+		})
+	}
+	data := struct {
+		Components []ComponentImageVector `json:"components" yaml:"components"`
+	}{
+		Components: components,
+	}
+
+	if err := yaml.NewEncoder(w).Encode(&data); err != nil {
+		return err
+	}
+	return nil
+}

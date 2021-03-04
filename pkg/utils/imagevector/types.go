@@ -22,12 +22,12 @@ package imagevector
 // in the seed cluster and act on the shoot cluster. Different versions might be used depending on the
 // seed and the shoot version.
 type ImageSource struct {
-	Name           string  `json:"name" yaml:"name"`
-	RuntimeVersion *string `json:"runtimeVersion,omitempty" yaml:"runtimeVersion,omitempty"`
-	TargetVersion  *string `json:"targetVersion,omitempty" yaml:"targetVersion,omitempty"`
-
-	Repository string  `json:"repository" yaml:"repository"`
-	Tag        *string `json:"tag,omitempty" yaml:"tag,omitempty"`
+	Name             string  `json:"name" yaml:"name"`
+	SourceRepository *string `json:"sourceRepository,omitempty" yaml:"sourceRepository,omitempty"`
+	Repository       string  `json:"repository" yaml:"repository"`
+	Tag              *string `json:"tag,omitempty" yaml:"tag,omitempty"`
+	RuntimeVersion   *string `json:"runtimeVersion,omitempty" yaml:"runtimeVersion,omitempty"`
+	TargetVersion    *string `json:"targetVersion,omitempty" yaml:"targetVersion,omitempty"`
 }
 
 // Image is a concrete, pullable image with a nonempty tag.
