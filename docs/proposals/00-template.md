@@ -1,14 +1,26 @@
-# Headline of GEP
+---
+title: GEP Title
+gep-number: NNNN
+creation-date: 20XX-XX-XX
+status: implementable|implemented
+authors:
+- "@you"
+- "@maybe-another-author"
+reviewers:
+- "@main-reviewer-1"
+- "@main-reviewer-2"
+---
+
+# GEP-NNNN: Your short, descriptive title
 
 ## Table of Contents
 
-- [Headline of GEP](#headline-of-gep)
-  - [Table of Contents](#table-of-contents)
-  - [Summary](#summary)
-  - [Motivation](#motivation)
+- [Summary](#summary)
+- [Motivation](#motivation)
     - [Goals](#goals)
     - [Non-Goals](#non-goals)
-  - [Proposal](#proposal)
+- [Proposal](#proposal)
+- [Alternatives](#alternatives)
 
 ## Summary
 
@@ -18,3 +30,5 @@
 ### Non-Goals
 
 ## Proposal
+
+## Alternatives

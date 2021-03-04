@@ -21,4 +21,4 @@ Garden-controller-manager, being cloud agnostic, deploys the etcd resource. This
 * Garden-controller-manager creates etcd resource with secretRefs and etcd information populated appropriately.
 * etcd-druid acts on the etcd resource; druid creates the statefulset, the service and the configmap.
 
-![etcd-druid](./druid_integration.png)
+![etcd-druid](assets/druid_integration.png)
