@@ -23,8 +23,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | Logging | `false` | `Alpha` | `0.13` | |
 | HVPA | `false` | `Alpha` | `0.31` | |
 | HVPAForShootedSeed | `false` | `Alpha` | `0.32` | |
-| ManagedIstio | `true` | `Beta` | `1.18` | |
-| APIServerSNI | `true` | `Beta` | `1.18` | |
+| ManagedIstio | `true` | `Beta` | `1.19` | |
+| APIServerSNI | `true` | `Beta` | `1.19` | |
 | MountHostCADirectories | `false` | `Alpha` | `1.11.0` | |
 | SeedChange | `false` | `Alpha` | `1.12.0` | |
 | SeedKubeScheduler | `false` | `Alpha` | `1.15.0` | |
