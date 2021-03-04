@@ -38,7 +38,9 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	configvalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks"
+	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/kubeconfigsecret"
+	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/namespacedeletion"
+	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/resourcesize"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/seedrestriction"
 	seedauthorizer "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -152,17 +154,17 @@ func (o *options) run(ctx context.Context) error {
 	log.Info("setting up webhook server")
 	server := mgr.GetWebhookServer()
 
-	namespaceValidationHandler, err := webhooks.NewValidateNamespaceDeletionHandler(ctx, mgr.GetCache())
+	namespaceValidationHandler, err := namespacedeletion.New(ctx, logf.Log.WithName(namespacedeletion.HandlerName), mgr.GetCache())
 	if err != nil {
 		return err
 	}
-	logSeedAuth := logf.Log.WithName(seedauthorizer.PluginName)
+	logSeedAuth := logf.Log.WithName(seedauthorizer.AuthorizerName)
 
 	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth)))
-	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedrestriction.New(logf.Log.WithName(seedrestriction.PluginName))})
-	server.Register("/webhooks/validate-namespace-deletion", &webhook.Admission{Handler: namespaceValidationHandler})
-	server.Register("/webhooks/validate-kubeconfig-secrets", &webhook.Admission{Handler: &webhooks.KubeconfigSecretValidator{}})
-	server.Register("/webhooks/validate-resource-size", &webhook.Admission{Handler: &webhooks.ObjectSizeHandler{Config: o.config.Server.ResourceAdmissionConfiguration}})
+	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedrestriction.New(logf.Log.WithName(seedrestriction.HandlerName))})
+	server.Register(namespacedeletion.WebhookPath, &webhook.Admission{Handler: namespaceValidationHandler})
+	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(logf.Log.WithName(kubeconfigsecret.HandlerName))})
+	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(logf.Log.WithName(resourcesize.HandlerName), o.config.Server.ResourceAdmissionConfiguration)})
 
 	log.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {

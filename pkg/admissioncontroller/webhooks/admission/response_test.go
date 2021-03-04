@@ -12,45 +12,42 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seedrestriction_test
+package admission_test
 
 import (
-	"context"
 	"net/http"
 
-	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/seedrestriction"
-
-	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 )
 
-var _ = Describe("handler", func() {
-	var (
-		ctx = context.TODO()
-
-		logger  logr.Logger
-		handler admission.Handler
-	)
-
-	BeforeEach(func() {
-		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
-		handler = New(logger)
-	})
-
-	Describe("#Handle", func() {
-		It("should always allow the request", func() {
-			request := admission.Request{}
-
-			Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+var _ = Describe("Response", func() {
+	Describe("#Allowed", func() {
+		It("should return the expected response (w/o msg)", func() {
+			Expect(Allowed("")).To(Equal(admission.Response{
 				AdmissionResponse: admissionv1.AdmissionResponse{
 					Allowed: true,
 					Result: &metav1.Status{
 						Code: int32(http.StatusOK),
+					},
+				},
+			}))
+		})
+
+		It("should return the expected response (w/ msg)", func() {
+			msg := "foo"
+
+			Expect(Allowed(msg)).To(Equal(admission.Response{
+				AdmissionResponse: admissionv1.AdmissionResponse{
+					Allowed: true,
+					Result: &metav1.Status{
+						Code:    int32(http.StatusOK),
+						Message: msg,
 					},
 				},
 			}))

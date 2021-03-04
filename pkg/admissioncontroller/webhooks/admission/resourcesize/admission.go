@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package webhooks
+package resourcesize
 
 import (
 	"context"
@@ -31,44 +31,47 @@ import (
 	apisconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/helper"
 	"github.com/gardener/gardener/pkg/admissioncontroller/metrics"
+	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-const resourceSizeValidatorName = "resource_size_validator"
+const (
+	// HandlerName is the name of this admission webhook handler.
+	HandlerName = "resource_size_validator"
+	// WebhookPath is the HTTP handler path for this admission webhook handler.
+	WebhookPath = "/webhooks/validate-resource-size"
+)
 
-var _ admission.Handler = &ObjectSizeHandler{}
+// New creates a new webhook handler validating that the resource size of a request doesn't exceed the configured
+// limits.
+func New(logger logr.Logger, config *apisconfig.ResourceAdmissionConfiguration) *handler {
+	return &handler{logger: logger, config: config}
+}
 
-// ObjectSizeHandler is a webhook handler for validating that the resource size of a request doesn't exceed the
-// configured limits.
-type ObjectSizeHandler struct {
-	// Config is the configuration for this webhook handler.
-	Config *apisconfig.ResourceAdmissionConfiguration
-
+type handler struct {
 	logger  logr.Logger
+	config  *apisconfig.ResourceAdmissionConfiguration
 	decoder *admission.Decoder
 }
 
-// InjectLogger injects a logger into the handler.
-func (h *ObjectSizeHandler) InjectLogger(l logr.Logger) error {
-	h.logger = l.WithName(resourceSizeValidatorName)
-	return nil
-}
+var _ admission.Handler = &handler{}
 
-// InjectDecoder injects a decoder capable of decoding objects included in admission requests.
-func (h *ObjectSizeHandler) InjectDecoder(d *admission.Decoder) error {
+func (h *handler) InjectDecoder(d *admission.Decoder) error {
 	h.decoder = d
 	return nil
 }
 
-// Handle implements the webhook handler for resource size validation.
-func (h *ObjectSizeHandler) Handle(_ context.Context, request admission.Request) admission.Response {
+func (h *handler) Handle(_ context.Context, request admission.Request) admission.Response {
 	requestID, err := utils.GenerateRandomString(8)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	requestLogger := h.logger.WithValues(logger.IDFieldName, requestID, "user", request.UserInfo.Username,
-		"resource", request.Resource, "name", request.Name)
+	requestLogger := h.logger.WithValues(
+		logger.IDFieldName, requestID,
+		"user", request.UserInfo.Username,
+		"resource", request.Resource, "name", request.Name,
+	)
 	if request.Namespace != "" {
 		requestLogger = requestLogger.WithValues("namespace", request.Namespace)
 	}
@@ -82,17 +85,17 @@ func (h *ObjectSizeHandler) Handle(_ context.Context, request admission.Request)
 			metrics.ReasonSizeExceeded,
 		).Inc()
 	}
+
 	return response
 }
 
-// admitRequestSize only allows the request if the object in the request does not exceed a configured limit.
-func (h *ObjectSizeHandler) admitRequestSize(request admission.Request, requestLogger logr.Logger) admission.Response {
+func (h *handler) admitRequestSize(request admission.Request, requestLogger logr.Logger) admission.Response {
 	if request.SubResource != "" {
-		return admissionAllowed("subresources are not handled")
+		return acadmission.Allowed("subresources are not handled")
 	}
 
-	if isUnrestrictedUser(request.UserInfo, h.Config.UnrestrictedSubjects) {
-		return admissionAllowed("user is unrestricted")
+	if isUnrestrictedUser(request.UserInfo, h.config.UnrestrictedSubjects) {
+		return acadmission.Allowed("user is unrestricted")
 	}
 
 	requestedResource := &request.Resource
@@ -101,14 +104,14 @@ func (h *ObjectSizeHandler) admitRequestSize(request admission.Request, requestL
 		requestedResource = request.RequestResource
 	}
 
-	limit := findLimitForGVR(h.Config.Limits, requestedResource)
+	limit := findLimitForGVR(h.config.Limits, requestedResource)
 	if limit == nil {
-		return admissionAllowed("no limit configured for requested resource")
+		return acadmission.Allowed("no limit configured for requested resource")
 	}
 
 	objectSize := len(request.Object.Raw)
 	if limit.CmpInt64(int64(objectSize)) == -1 {
-		if h.Config.OperationMode == nil || *h.Config.OperationMode == apisconfig.AdmissionModeBlock {
+		if h.config.OperationMode == nil || *h.config.OperationMode == apisconfig.AdmissionModeBlock {
 			requestLogger.Info("maximum resource size exceeded, rejected request",
 				"requestObjectSize", objectSize, "limit", limit)
 
@@ -118,7 +121,7 @@ func (h *ObjectSizeHandler) admitRequestSize(request admission.Request, requestL
 			"requestObjectSize", objectSize, "limit", limit)
 	}
 
-	return admissionAllowed("resource size ok")
+	return acadmission.Allowed("resource size ok")
 }
 
 func serviceAccountMatch(userInfo authenticationv1.UserInfo, subjects []rbacv1.Subject) bool {

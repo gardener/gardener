@@ -24,13 +24,13 @@ package seed
 import (
 	authorizationv1 "k8s.io/api/authorization/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/apiserver/pkg/authorization/authorizer"
+	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 )
 
 // ResourceAttributesFrom combines the API object information and the user.Info from the context to build a full
-// authorizer.AttributesRecord for resource access.
-func ResourceAttributesFrom(user user.Info, in authorizationv1.ResourceAttributes) authorizer.AttributesRecord {
-	return authorizer.AttributesRecord{
+// auth.AttributesRecord for resource access.
+func ResourceAttributesFrom(user user.Info, in authorizationv1.ResourceAttributes) auth.AttributesRecord {
+	return auth.AttributesRecord{
 		User:            user,
 		Verb:            in.Verb,
 		Namespace:       in.Namespace,
@@ -44,9 +44,9 @@ func ResourceAttributesFrom(user user.Info, in authorizationv1.ResourceAttribute
 }
 
 // NonResourceAttributesFrom combines the API object information and the user.Info from the context to build a full
-// authorizer.AttributesRecord for non resource access.
-func NonResourceAttributesFrom(user user.Info, in authorizationv1.NonResourceAttributes) authorizer.AttributesRecord {
-	return authorizer.AttributesRecord{
+// auth.AttributesRecord for non resource access.
+func NonResourceAttributesFrom(user user.Info, in authorizationv1.NonResourceAttributes) auth.AttributesRecord {
+	return auth.AttributesRecord{
 		User:            user,
 		ResourceRequest: false,
 		Path:            in.Path,
@@ -55,7 +55,7 @@ func NonResourceAttributesFrom(user user.Info, in authorizationv1.NonResourceAtt
 }
 
 // AuthorizationAttributesFrom takes a spec and returns the proper authz attributes to check it.
-func AuthorizationAttributesFrom(spec authorizationv1.SubjectAccessReviewSpec) authorizer.AttributesRecord {
+func AuthorizationAttributesFrom(spec authorizationv1.SubjectAccessReviewSpec) auth.AttributesRecord {
 	userToCheck := &user.DefaultInfo{
 		Name:   spec.User,
 		Groups: spec.Groups,
@@ -63,7 +63,7 @@ func AuthorizationAttributesFrom(spec authorizationv1.SubjectAccessReviewSpec) a
 		Extra:  convertToUserInfoExtra(spec.Extra),
 	}
 
-	var authorizationAttributes authorizer.AttributesRecord
+	var authorizationAttributes auth.AttributesRecord
 	if spec.ResourceAttributes != nil {
 		authorizationAttributes = ResourceAttributesFrom(userToCheck, *spec.ResourceAttributes)
 	} else if spec.NonResourceAttributes != nil {

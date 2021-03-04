@@ -12,31 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seed
+package kubeconfigsecret_test
 
 import (
-	"context"
+	"testing"
 
-	"github.com/go-logr/logr"
-	auth "k8s.io/apiserver/pkg/authorization/authorizer"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-// AuthorizerName is the name of this authorizatior.
-const AuthorizerName = "seedauthorizer"
-
-// NewAuthorizer returns a new authorizer for requests from gardenlets. It never has an opinion on the request.
-func NewAuthorizer(logger logr.Logger) *authorizer {
-	return &authorizer{
-		logger: logger,
-	}
-}
-
-type authorizer struct {
-	logger logr.Logger
-}
-
-var _ = auth.Authorizer(&authorizer{})
-
-func (a *authorizer) Authorize(_ context.Context, _ auth.Attributes) (auth.Decision, string, error) {
-	return auth.DecisionNoOpinion, "", nil
+func TestKubeconfigSecret(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "AdmissionController Admission KubeconfigSecret Suite")
 }

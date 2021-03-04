@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package webhooks
+package admission
 
 import (
 	"net/http"
@@ -22,7 +22,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-func admissionAllowed(msg string) admission.Response {
+// Allowed constructs a response indicating that the given operation is allowed (without any patches). In contrast to
+// sigs.k8s.io/controller-runtime/pkg/webhook/admission.Allowed it does not set the `.status.result` but the
+// `.status.message` field.
+func Allowed(msg string) admission.Response {
 	resp := admission.Response{
 		AdmissionResponse: admissionv1.AdmissionResponse{
 			Allowed: true,

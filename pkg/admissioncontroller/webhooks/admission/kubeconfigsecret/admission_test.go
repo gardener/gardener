@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package webhooks_test
+package kubeconfigsecret_test
 
 import (
+	"context"
 	"net/http"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -24,19 +26,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks"
+	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/kubeconfigsecret"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
-var _ = Describe("ValidateKubeconfigSecret", func() {
+var _ = Describe("handler", func() {
 	var (
+		ctx    = context.TODO()
+		logger logr.Logger
+
 		request admission.Request
 		decoder *admission.Decoder
-
-		validator admission.Handler
+		handler admission.Handler
 
 		testEncoder runtime.Encoder
 
@@ -149,13 +153,14 @@ users:
 	)
 
 	BeforeEach(func() {
+		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
+
 		var err error
 		decoder, err = admission.NewDecoder(kubernetes.GardenScheme)
 		Expect(err).NotTo(HaveOccurred())
 
-		validator = &KubeconfigSecretValidator{}
-		Expect(inject.LoggerInto(logger, validator)).To(BeTrue())
-		Expect(admission.InjectDecoderInto(decoder, validator)).To(BeTrue())
+		handler = New(logger)
+		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 
 		testEncoder = &json.Serializer{}
 		request = admission.Request{}
@@ -171,7 +176,7 @@ users:
 			request.Object.Raw = objData
 		}
 
-		response := validator.Handle(ctx, request)
+		response := handler.Handle(ctx, request)
 		Expect(response).To(Not(BeNil()))
 		Expect(response.Allowed).To(Equal(expectedAllowed))
 		Expect(response.Result.Code).To(Equal(expectedStatusCode))
@@ -185,10 +190,12 @@ users:
 			test(validKubeconfigSecret, admissionv1.Delete, true, statusCodeAllowed, "neither CREATE nor UPDATE")
 			test(validKubeconfigSecret, admissionv1.Connect, true, statusCodeAllowed, "neither CREATE nor UPDATE")
 		})
+
 		It("should ignore other resources than Pods", func() {
 			request.Kind = metav1.GroupVersionKind{Group: "foo", Version: "bar", Kind: "baz"}
 			test(validKubeconfigSecret, admissionv1.Create, true, statusCodeAllowed, "not corev1.Secret")
 		})
+
 		It("should ignore subresources", func() {
 			request.SubResource = "logs"
 			test(validKubeconfigSecret, admissionv1.Create, true, statusCodeAllowed, "subresource")
@@ -196,42 +203,54 @@ users:
 	})
 
 	It("should pass because no Kubeconfig is found (create)", func() {
-		test(noKubeconfigSecret, admissionv1.Create, true, statusCodeAllowed, emptyMessage)
+		test(noKubeconfigSecret, admissionv1.Create, true, statusCodeAllowed, "")
 	})
+
 	It("should pass because Kubeconfig is valid (create)", func() {
-		test(validKubeconfigSecret, admissionv1.Create, true, statusCodeAllowed, emptyMessage)
+		test(validKubeconfigSecret, admissionv1.Create, true, statusCodeAllowed, "")
 	})
+
 	It("should fail because secret cannot be decoded (create)", func() {
 		test(configMap, admissionv1.Create, false, statusCodeInternalError, "unable to decode")
 	})
+
 	It("should fail because Kubeconfig is malformed (create)", func() {
 		test(malformedKubeconfigSecret, admissionv1.Create, false, statusCodeInvalid, "json parse error")
 	})
+
 	It("should fail because Kubeconfig is invalid (create)", func() {
 		test(invalidKubeconfigSecret, admissionv1.Create, false, statusCodeInvalid, "exec configurations are not supported")
 	})
+
 	It("should fail because Kubeconfig has invalid content (create)", func() {
 		test(invalidKubeconfigYamlSecret, admissionv1.Create, false, statusCodeInvalid, "cannot unmarshal string into Go value of type struct")
 	})
+
 	It("should pass because no Kubeconfig is found (update)", func() {
-		test(noKubeconfigSecret, admissionv1.Update, true, statusCodeAllowed, emptyMessage)
+		test(noKubeconfigSecret, admissionv1.Update, true, statusCodeAllowed, "")
 	})
+
 	It("should pass because Kubeconfig is valid (update)", func() {
-		test(validKubeconfigSecret, admissionv1.Update, true, statusCodeAllowed, emptyMessage)
+		test(validKubeconfigSecret, admissionv1.Update, true, statusCodeAllowed, "")
 	})
+
 	It("should fail because secret cannot be decoded (update)", func() {
 		test(configMap, admissionv1.Update, false, statusCodeInternalError, "unable to decode")
 	})
+
 	It("should fail because Kubeconfig is malformed (update)", func() {
 		test(malformedKubeconfigSecret, admissionv1.Update, false, statusCodeInvalid, "json parse error")
 	})
+
 	It("should fail because Kubeconfig is invalid (update)", func() {
 		test(invalidKubeconfigSecret, admissionv1.Update, false, statusCodeInvalid, "exec configurations are not supported")
 	})
+
 	It("should fail because Kubeconfig has invalid content (update)", func() {
 		test(invalidKubeconfigYamlSecret, admissionv1.Update, false, statusCodeInvalid, "cannot unmarshal string into Go value of type struct")
 	})
+
 	It("should pass because operation is delete", func() {
-		test(invalidKubeconfigSecret, admissionv1.Delete, true, statusCodeAllowed, emptyMessage)
+		test(invalidKubeconfigSecret, admissionv1.Delete, true, statusCodeAllowed, "")
 	})
 })

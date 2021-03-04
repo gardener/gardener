@@ -16,41 +16,31 @@ package seedrestriction
 
 import (
 	"context"
-	"net/http"
+
+	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 
 	"github.com/go-logr/logr"
-	admissionv1 "k8s.io/api/admission/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 const (
-	// PluginName is the name of this admission plugin.
-	PluginName = "seedrestriction"
+	// HandlerName is the name of this admission webhook handler.
+	HandlerName = "seedrestriction"
 	// WebhookPath is the HTTP handler path for this admission webhook handler.
 	WebhookPath = "/webhooks/admission/seedrestriction"
 )
 
 // New creates a new webhook handler restricting requests by gardenlets. It allows all requests.
-func New(logger logr.Logger) *plugin {
-	return &plugin{logger: logger}
+func New(logger logr.Logger) *handler {
+	return &handler{logger: logger}
 }
 
-type plugin struct {
+type handler struct {
 	logger logr.Logger
 }
 
-var _ admission.Handler = &plugin{}
+var _ admission.Handler = &handler{}
 
-func (p *plugin) Handle(_ context.Context, _ admission.Request) admission.Response {
-	// TODO: Replace this with admissionAllowed() function call after GAC was refactored,
-	// see https://github.com/gardener/gardener/issues/3109.
-	return admission.Response{
-		AdmissionResponse: admissionv1.AdmissionResponse{
-			Allowed: true,
-			Result: &metav1.Status{
-				Code: int32(http.StatusOK),
-			},
-		},
-	}
+func (p *handler) Handle(_ context.Context, _ admission.Request) admission.Response {
+	return acadmission.Allowed("")
 }
