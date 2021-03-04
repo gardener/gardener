@@ -27,7 +27,7 @@ import (
 )
 
 // ValidateGardenletConfiguration validates a GardenletConfiguration object.
-func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath *field.Path) field.ErrorList {
+func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if cfg.Controllers != nil {
@@ -42,7 +42,7 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 		}
 	}
 
-	if (cfg.SeedConfig == nil && cfg.SeedSelector == nil) || (cfg.SeedConfig != nil && cfg.SeedSelector != nil) {
+	if !inTemplate && (cfg.SeedConfig == nil && cfg.SeedSelector == nil) || (cfg.SeedConfig != nil && cfg.SeedSelector != nil) {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedConfig"), cfg, "either seed config or seed selector is required"))
 	}
 

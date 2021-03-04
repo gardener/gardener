@@ -94,7 +94,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 	Describe("#ValidateGardenletConfiguration", func() {
 		It("should allow valid configurations", func() {
-			errorList := ValidateGardenletConfiguration(cfg, nil)
+			errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
 			Expect(errorList).To(BeEmpty())
 		})
@@ -108,7 +108,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				cfg.Controllers.Shoot.SyncPeriod = &metav1.Duration{Duration: -1}
 				cfg.Controllers.Shoot.RetryDuration = &metav1.Duration{Duration: -1}
 
-				errorList := ValidateGardenletConfiguration(cfg, nil)
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -133,7 +133,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should forbid too low values for the DNS TTL", func() {
 				cfg.Controllers.Shoot.DNSEntryTTLSeconds = pointer.Int64Ptr(-1)
 
-				errorList := ValidateGardenletConfiguration(cfg, nil)
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -144,7 +144,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should forbid too high values for the DNS TTL", func() {
 				cfg.Controllers.Shoot.DNSEntryTTLSeconds = pointer.Int64Ptr(601)
 
-				errorList := ValidateGardenletConfiguration(cfg, nil)
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -160,7 +160,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				cfg.Controllers.ManagedSeed.ConcurrentSyncs = &invalidConcurrentSyncs
 				cfg.Controllers.ManagedSeed.SyncJitterPeriod = &metav1.Duration{Duration: -1}
 
-				errorList := ValidateGardenletConfiguration(cfg, nil)
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -179,7 +179,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should forbid specifying purposes when not specifying hours", func() {
 				cfg.Controllers.BackupEntry.DeletionGracePeriodHours = nil
 
-				Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
+				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("controllers.backupEntry.deletionGracePeriodShootPurposes"),
@@ -196,13 +196,13 @@ var _ = Describe("GardenletConfiguration", func() {
 					gardencore.ShootPurposeProduction,
 				}
 
-				Expect(ValidateGardenletConfiguration(cfg, nil)).To(BeEmpty())
+				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(BeEmpty())
 			})
 
 			It("should forbid invalid purposes", func() {
 				cfg.Controllers.BackupEntry.DeletionGracePeriodShootPurposes = []gardencore.ShootPurpose{"does-not-exist"}
 
-				Expect(ValidateGardenletConfiguration(cfg, nil)).To(ConsistOf(
+				Expect(ValidateGardenletConfiguration(cfg, nil, false)).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeNotSupported),
 						"Field": Equal("controllers.backupEntry.deletionGracePeriodShootPurposes[0]"),
@@ -216,7 +216,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				cfg.SeedSelector = nil
 				cfg.SeedConfig = nil
 
-				errorList := ValidateGardenletConfiguration(cfg, nil)
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -227,7 +227,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should forbid specifying both a seed selector and a seed config", func() {
 				cfg.SeedSelector = &metav1.LabelSelector{}
 
-				errorList := ValidateGardenletConfiguration(cfg, nil)
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -238,14 +238,14 @@ var _ = Describe("GardenletConfiguration", func() {
 
 		Context("seed template", func() {
 			It("should forbid invalid fields in seed template", func() {
-				cfg.SeedConfig.Spec.Provider.Type = ""
+				cfg.SeedConfig.Spec.Networks.Nodes = pointer.StringPtr("")
 
-				errorList := ValidateGardenletConfiguration(cfg, nil)
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("seedConfig.spec.provider.type"),
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("seedConfig.spec.networks.nodes"),
 					})),
 				))
 			})
@@ -255,7 +255,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			It("should forbid invalid server configuration", func() {
 				cfg.Server = &config.ServerConfiguration{}
 
-				errorList := ValidateGardenletConfiguration(cfg, nil)
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -281,7 +281,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					},
 				}
 
-				errorList := ValidateGardenletConfiguration(cfg, nil)
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -296,7 +296,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					},
 				}
 
-				errorList := ValidateGardenletConfiguration(cfg, nil)
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),

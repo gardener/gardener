@@ -837,23 +837,14 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path) fie
 	allErrs := field.ErrorList{}
 
 	if maintenance == nil {
-		allErrs = append(allErrs, field.Required(fldPath, "maintenance information is required"))
 		return allErrs
 	}
 
-	if maintenance.AutoUpdate == nil {
-		allErrs = append(allErrs, field.Required(fldPath.Child("autoUpdate"), "auto update information is required"))
-	}
-
-	if maintenance.TimeWindow == nil {
-		allErrs = append(allErrs, field.Required(fldPath.Child("timeWindow"), "time window information is required"))
-	} else {
+	if maintenance.TimeWindow != nil {
 		maintenanceTimeWindow, err := utils.ParseMaintenanceTimeWindow(maintenance.TimeWindow.Begin, maintenance.TimeWindow.End)
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("timeWindow", "begin/end"), maintenance.TimeWindow, err.Error()))
-		}
-
-		if err == nil {
+		} else {
 			duration := maintenanceTimeWindow.Duration()
 			if duration > core.MaintenanceTimeWindowDurationMaximum {
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("timeWindow"), fmt.Sprintf("time window must not be greater than %s", core.MaintenanceTimeWindowDurationMaximum)))
@@ -921,9 +912,7 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 	if len(worker.Machine.Type) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("machine", "type"), "must specify a machine type"))
 	}
-	if worker.Machine.Image == nil {
-		allErrs = append(allErrs, field.Required(fldPath.Child("machine", "image"), "must specify a machine image"))
-	} else {
+	if worker.Machine.Image != nil {
 		if len(worker.Machine.Image.Name) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("machine", "image", "name"), "must specify a machine image name"))
 		}
@@ -945,7 +934,7 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 	allErrs = append(allErrs, ValidatePositiveIntOrPercent(worker.MaxUnavailable, fldPath.Child("maxUnavailable"))...)
 	allErrs = append(allErrs, IsNotMoreThan100Percent(worker.MaxUnavailable, fldPath.Child("maxUnavailable"))...)
 
-	if (worker.MaxUnavailable == nil && worker.MaxSurge == nil) || (getIntOrPercentValue(*worker.MaxUnavailable) == 0 && getIntOrPercentValue(*worker.MaxSurge) == 0) {
+	if (worker.MaxUnavailable == nil || getIntOrPercentValue(*worker.MaxUnavailable) == 0) && (worker.MaxSurge != nil && getIntOrPercentValue(*worker.MaxSurge) == 0) {
 		// Both MaxSurge and MaxUnavailable cannot be zero.
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxUnavailable"), worker.MaxUnavailable, "may not be 0 when `maxSurge` is 0"))
 	}

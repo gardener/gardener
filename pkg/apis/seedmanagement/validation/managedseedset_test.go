@@ -20,7 +20,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 
@@ -31,24 +30,14 @@ import (
 
 var _ = Describe("ManagedSeedSet Validation Tests", func() {
 	var (
-		seed = &core.Seed{
+		managedSeed = &seedmanagement.ManagedSeed{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
 					"foo": "bar",
 				},
 			},
-			Spec: core.SeedSpec{
-				DNS: core.SeedDNS{
-					IngressDomain: pointer.StringPtr("ingress.test.example.com"),
-				},
-				Networks: core.SeedNetworks{
-					Pods:     "100.96.0.0/11",
-					Services: "100.64.0.0/13",
-				},
-				Provider: core.SeedProvider{
-					Type:   "foo",
-					Region: "some-region",
-				},
+			Spec: seedmanagement.ManagedSeedSpec{
+				SeedTemplate: &core.SeedTemplate{},
 			},
 		}
 		shoot = &core.Shoot{
@@ -59,27 +48,11 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 			},
 			Spec: core.ShootSpec{
 				CloudProfileName: "foo",
-				DNS: &core.DNS{
-					Domain: pointer.StringPtr("test.example.com"),
-				},
 				Kubernetes: core.Kubernetes{
 					Version: "1.18.14",
 				},
 				Networking: core.Networking{
-					Type:     "foo",
-					Nodes:    pointer.StringPtr("10.250.0.0/16"),
-					Pods:     pointer.StringPtr("100.96.0.0/11"),
-					Services: pointer.StringPtr("100.64.0.0/13"),
-				},
-				Maintenance: &core.Maintenance{
-					AutoUpdate: &core.MaintenanceAutoUpdate{
-						KubernetesVersion:   true,
-						MachineImageVersion: true,
-					},
-					TimeWindow: &core.MaintenanceTimeWindow{
-						Begin: "200000+0000",
-						End:   "210000+0000",
-					},
+					Type: "foo",
 				},
 				Provider: core.Provider{
 					Type: "foo",
@@ -88,18 +61,9 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 							Name: "some-worker",
 							Machine: core.Machine{
 								Type: "some-machine-type",
-								Image: &core.ShootMachineImage{
-									Name:    "some-machine-image",
-									Version: "1.0",
-								},
 							},
-							Maximum:        2,
-							Minimum:        1,
-							MaxSurge:       intstrPtr(intstr.FromInt(1)),
-							MaxUnavailable: intstrPtr(intstr.FromInt(0)),
-							SystemComponents: &core.WorkerSystemComponents{
-								Allow: true,
-							},
+							Maximum: 2,
+							Minimum: 1,
 						},
 					},
 				},
@@ -124,17 +88,8 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 					"foo": "bar",
 				}),
 				Template: seedmanagement.ManagedSeedTemplate{
-					ObjectMeta: metav1.ObjectMeta{
-						Labels: map[string]string{
-							"foo": "bar",
-						},
-					},
-					Spec: seedmanagement.ManagedSeedSpec{
-						SeedTemplate: &core.SeedTemplate{
-							ObjectMeta: seed.ObjectMeta,
-							Spec:       seed.Spec,
-						},
-					},
+					ObjectMeta: managedSeed.ObjectMeta,
+					Spec:       managedSeed.Spec,
 				},
 				ShootTemplate: core.ShootTemplate{
 					ObjectMeta: shoot.ObjectMeta,
@@ -283,10 +238,10 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 		})
 
 		It("should forbid empty or invalid fields in template", func() {
-			managedSeedSet.Spec.Template.Spec.SeedTemplate.Name = "foo"
-			seedCopy := seed.DeepCopy()
-			seedCopy.Spec.Provider.Type = ""
-			managedSeedSet.Spec.Template.Spec.SeedTemplate.Spec = seedCopy.Spec
+			managedSeedCopy := managedSeed.DeepCopy()
+			managedSeedCopy.Spec.SeedTemplate.Name = "foo"
+			managedSeedCopy.Spec.SeedTemplate.Spec.Networks.Nodes = pointer.StringPtr("")
+			managedSeedSet.Spec.Template.Spec = managedSeedCopy.Spec
 
 			errorList := ValidateManagedSeedSet(managedSeedSet)
 
@@ -296,15 +251,15 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 					"Field": Equal("spec.template.spec.seedTemplate.metadata.name"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.template.spec.seedTemplate.spec.provider.type"),
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.template.spec.seedTemplate.spec.networks.nodes"),
 				})),
 			))
 		})
 
 		It("should forbid empty or invalid fields in shootTemplate", func() {
 			shootCopy := shoot.DeepCopy()
-			shootCopy.Spec.Maintenance = nil
+			shootCopy.Spec.Provider.Type = ""
 			managedSeedSet.Spec.ShootTemplate.Spec = shootCopy.Spec
 
 			errorList := ValidateManagedSeedSet(managedSeedSet)
@@ -312,7 +267,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.shootTemplate.spec.maintenance"),
+					"Field": Equal("spec.shootTemplate.spec.provider.type"),
 				})),
 			))
 		})
@@ -516,9 +471,5 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 })
 
 func updateStrategyTypePtr(v seedmanagement.UpdateStrategyType) *seedmanagement.UpdateStrategyType {
-	return &v
-}
-
-func intstrPtr(v intstr.IntOrString) *intstr.IntOrString {
 	return &v
 }

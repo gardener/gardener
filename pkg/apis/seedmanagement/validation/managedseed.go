@@ -43,12 +43,7 @@ func ValidateManagedSeed(managedSeed *seedmanagement.ManagedSeed) field.ErrorLis
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&managedSeed.ObjectMeta, true, corevalidation.ValidateName, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateManagedSeedSpec(&managedSeed.Spec, field.NewPath("spec"))...)
-
-	// Ensure shoot name is specified
-	if managedSeed.Spec.Shoot.Name == "" {
-		allErrs = append(allErrs, field.Required(field.NewPath("spec").Child("shoot", "name"), "shoot name is required"))
-	}
+	allErrs = append(allErrs, ValidateManagedSeedSpec(&managedSeed.Spec, field.NewPath("spec"), false)...)
 
 	return allErrs
 }
@@ -80,7 +75,7 @@ func ValidateManagedSeedTemplate(managedSeedTemplate *seedmanagement.ManagedSeed
 
 	allErrs = append(allErrs, metav1validation.ValidateLabels(managedSeedTemplate.Labels, fldPath.Child("metadata", "labels"))...)
 	allErrs = append(allErrs, apivalidation.ValidateAnnotations(managedSeedTemplate.Annotations, fldPath.Child("metadata", "annotations"))...)
-	allErrs = append(allErrs, ValidateManagedSeedSpec(&managedSeedTemplate.Spec, fldPath.Child("spec"))...)
+	allErrs = append(allErrs, ValidateManagedSeedSpec(&managedSeedTemplate.Spec, fldPath.Child("spec"), true)...)
 
 	return allErrs
 }
@@ -95,8 +90,13 @@ func ValidateManagedSeedTemplateUpdate(newManagedSeedTemplate, oldManagedSeedTem
 }
 
 // ValidateManagedSeedSpec validates the specification of a ManagedSeed object.
-func ValidateManagedSeedSpec(spec *seedmanagement.ManagedSeedSpec, fldPath *field.Path) field.ErrorList {
+func ValidateManagedSeedSpec(spec *seedmanagement.ManagedSeedSpec, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	// Ensure shoot name is specified
+	if !inTemplate && spec.Shoot.Name == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("shoot", "name"), "shoot name is required"))
+	}
 
 	// Ensure either seed template or gardenlet is specified
 	if (spec.SeedTemplate == nil && spec.Gardenlet == nil) || (spec.SeedTemplate != nil && spec.Gardenlet != nil) {
@@ -107,7 +107,7 @@ func ValidateManagedSeedSpec(spec *seedmanagement.ManagedSeedSpec, fldPath *fiel
 	case spec.SeedTemplate != nil:
 		allErrs = append(allErrs, validateSeedTemplate(spec.SeedTemplate, fldPath.Child("seedTemplate"))...)
 	case spec.Gardenlet != nil:
-		allErrs = append(allErrs, validateGardenlet(spec.Gardenlet, fldPath.Child("gardenlet"))...)
+		allErrs = append(allErrs, validateGardenlet(spec.Gardenlet, fldPath.Child("gardenlet"), inTemplate)...)
 	}
 
 	return allErrs
@@ -166,7 +166,7 @@ func validateSeedTemplateUpdate(newSeedTemplate, oldSeedTemplate *gardencore.See
 	return allErrs
 }
 
-func validateGardenlet(gardenlet *seedmanagement.Gardenlet, fldPath *field.Path) field.ErrorList {
+func validateGardenlet(gardenlet *seedmanagement.Gardenlet, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if gardenlet.Deployment != nil {
@@ -184,7 +184,7 @@ func validateGardenlet(gardenlet *seedmanagement.Gardenlet, fldPath *field.Path)
 		}
 
 		// Validate gardenlet config
-		allErrs = append(allErrs, validateGardenletConfiguration(gardenletConfig, helper.GetBootstrap(gardenlet.Bootstrap), utils.IsTrue(gardenlet.MergeWithParent), configPath)...)
+		allErrs = append(allErrs, validateGardenletConfiguration(gardenletConfig, helper.GetBootstrap(gardenlet.Bootstrap), utils.IsTrue(gardenlet.MergeWithParent), configPath, inTemplate)...)
 	}
 
 	if gardenlet.Bootstrap != nil {
@@ -274,7 +274,7 @@ func validateImage(image *seedmanagement.Image, fldPath *field.Path) field.Error
 	return allErrs
 }
 
-func validateGardenletConfiguration(gardenletConfig *config.GardenletConfiguration, bootstrap seedmanagement.Bootstrap, mergeWithParent bool, fldPath *field.Path) field.ErrorList {
+func validateGardenletConfiguration(gardenletConfig *config.GardenletConfiguration, bootstrap seedmanagement.Bootstrap, mergeWithParent bool, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// Ensure seed selector is not specified
@@ -288,7 +288,7 @@ func validateGardenletConfiguration(gardenletConfig *config.GardenletConfigurati
 	}
 
 	// Validate gardenlet config
-	allErrs = append(allErrs, configvalidation.ValidateGardenletConfiguration(gardenletConfig, fldPath)...)
+	allErrs = append(allErrs, configvalidation.ValidateGardenletConfiguration(gardenletConfig, fldPath, inTemplate)...)
 
 	if gardenletConfig.GardenClientConnection != nil {
 		allErrs = append(allErrs, validateGardenClientConnection(gardenletConfig.GardenClientConnection, bootstrap, mergeWithParent, fldPath.Child("gardenClientConnection"))...)
