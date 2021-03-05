@@ -24,6 +24,7 @@ import (
 
 	certificatesv1 "k8s.io/api/certificates/v1"
 
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -155,15 +156,12 @@ func BuildBootstrapperName(name string) string {
 	return fmt.Sprintf("%s:%s", GardenerSeedBootstrapper, name)
 }
 
-// DefaultSeedName is the default seed name in case the gardenlet config.SeedConfig is not set
-const DefaultSeedName = "<ambiguous>"
-
 // GetSeedName returns the seed name from the SeedConfig or the default Seed name
 func GetSeedName(seedConfig *config.SeedConfig) string {
 	if seedConfig != nil {
 		return seedConfig.Name
 	}
-	return DefaultSeedName
+	return constants.SeedUserNameSuffixAmbiguous
 }
 
 const (

@@ -34,6 +34,7 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
@@ -44,8 +45,8 @@ import (
 // returns the kubeconfig []byte representation, the CSR name, the seed name or an error
 func RequestBootstrapKubeconfig(ctx context.Context, logger logrus.FieldLogger, seedClient client.Client, clientSet kubernetesclientset.Interface, bootstrapConfig *rest.Config, gardenClientConnection *config.GardenClientConnection, seedName, bootstrapTargetCluster string) ([]byte, string, string, error) {
 	certificateSubject := &pkix.Name{
-		Organization: []string{"gardener.cloud:system:seeds"},
-		CommonName:   "gardener.cloud:system:seed:" + seedName,
+		Organization: []string{v1beta1constants.SeedsGroup},
+		CommonName:   v1beta1constants.SeedUserNamePrefix + seedName,
 	}
 
 	certData, privateKeyData, csrName, err := certificate.RequestCertificate(ctx, logger, clientSet, certificateSubject, []string{}, []net.IP{})
