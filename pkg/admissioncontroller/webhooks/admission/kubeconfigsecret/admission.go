@@ -39,9 +39,11 @@ const (
 	// WebhookPath is the HTTP handler path for this admission webhook handler.
 	WebhookPath = "/webhooks/validate-kubeconfig-secrets"
 
-	// reasonInvalidKubeconfig is a StatusReason that will be sent as part of the webhook's response if the secret
-	// contains an invalid kubeconfig
-	reasonInvalidKubeconfig = metav1.StatusReason("InvalidKubeconfig")
+	// statusReasonInvalidKubeconfig is a StatusReason that will be sent as part of the webhook's response if the secret
+	// contains an invalid kubeconfig.
+	statusReasonInvalidKubeconfig = metav1.StatusReason("InvalidKubeconfig")
+	// metricReasonRejectedKubeconfig is a metric reason value for a reason when a kubeconfig was rejected.
+	metricReasonRejectedKubeconfig = "Rejected Kubeconfig"
 )
 
 var secretGVK = metav1.GroupVersionKind{Group: "", Kind: "Secret", Version: "v1"}
@@ -89,7 +91,7 @@ func (h *handler) Handle(_ context.Context, request admission.Request) admission
 
 	response := admitKubeconfigSecret(secret)
 	if !response.Allowed && response.Result != nil {
-		response.Result.Reason = reasonInvalidKubeconfig
+		response.Result.Reason = statusReasonInvalidKubeconfig
 
 		requestLogger.Info("rejected secret", "reason", response.Result.Reason,
 			"message", response.Result.Message, "operation", request.Operation,
@@ -99,7 +101,7 @@ func (h *handler) Handle(_ context.Context, request admission.Request) admission
 			string(request.Operation),
 			request.Kind.Kind,
 			request.Namespace,
-			metrics.ReasonRejectedKubeconfig,
+			metricReasonRejectedKubeconfig,
 		).Inc()
 	}
 

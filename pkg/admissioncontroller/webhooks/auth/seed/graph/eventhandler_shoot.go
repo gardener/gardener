@@ -1,0 +1,145 @@
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package graph
+
+import (
+	"time"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	toolscache "k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+)
+
+func (g *graph) setupShootWatch(informer cache.Informer) {
+	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			shoot, ok := obj.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return
+			}
+			g.handleShootCreateOrUpdate(shoot)
+		},
+
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			oldShoot, ok := oldObj.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return
+			}
+
+			newShoot, ok := newObj.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return
+			}
+
+			if !apiequality.Semantic.DeepEqual(oldShoot.Spec.SeedName, newShoot.Spec.SeedName) ||
+				!apiequality.Semantic.DeepEqual(oldShoot.Status.SeedName, newShoot.Status.SeedName) ||
+				!apiequality.Semantic.DeepEqual(oldShoot.Spec.SecretBindingName, newShoot.Spec.SecretBindingName) ||
+				!apiequality.Semantic.DeepEqual(oldShoot.Spec.CloudProfileName, newShoot.Spec.CloudProfileName) ||
+				!gardencorev1beta1helper.ShootAuditPolicyConfigMapRefEqual(oldShoot.Spec.Kubernetes.KubeAPIServer, newShoot.Spec.Kubernetes.KubeAPIServer) ||
+				!gardencorev1beta1helper.ShootDNSProviderSecretNamesEqual(oldShoot.Spec.DNS, newShoot.Spec.DNS) ||
+				!gardencorev1beta1helper.ShootSecretResourceReferencesEqual(oldShoot.Spec.Resources, newShoot.Spec.Resources) {
+				g.handleShootCreateOrUpdate(newShoot)
+			}
+		},
+
+		DeleteFunc: func(obj interface{}) {
+			if tombstone, ok := obj.(toolscache.DeletedFinalStateUnknown); ok {
+				obj = tombstone.Obj
+			}
+			shoot, ok := obj.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return
+			}
+			g.handleShootDelete(shoot)
+		},
+	})
+}
+
+func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {
+	start := time.Now()
+	defer func() {
+		metricUpdateDuration.WithLabelValues("Shoot", "CreateOrUpdate").Observe(time.Since(start).Seconds())
+	}()
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	g.deleteAllIncomingEdges(VertexTypeCloudProfile, VertexTypeShoot, shoot.Namespace, shoot.Name)
+	g.deleteAllIncomingEdges(VertexTypeConfigMap, VertexTypeShoot, shoot.Namespace, shoot.Name)
+	g.deleteAllIncomingEdges(VertexTypeNamespace, VertexTypeShoot, shoot.Namespace, shoot.Name)
+	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeShoot, shoot.Namespace, shoot.Name)
+	g.deleteAllIncomingEdges(VertexTypeSecretBinding, VertexTypeShoot, shoot.Namespace, shoot.Name)
+	g.deleteAllOutgoingEdges(VertexTypeShoot, shoot.Namespace, shoot.Name, VertexTypeSeed)
+
+	var (
+		shootVertex         = g.getOrCreateVertex(VertexTypeShoot, shoot.Namespace, shoot.Name)
+		namespaceVertex     = g.getOrCreateVertex(VertexTypeNamespace, "", shoot.Namespace)
+		secretBindingVertex = g.getOrCreateVertex(VertexTypeSecretBinding, shoot.Namespace, shoot.Spec.SecretBindingName)
+		cloudProfileVertex  = g.getOrCreateVertex(VertexTypeCloudProfile, "", shoot.Spec.CloudProfileName)
+	)
+
+	g.addEdge(namespaceVertex, shootVertex)
+	g.addEdge(secretBindingVertex, shootVertex)
+	g.addEdge(cloudProfileVertex, shootVertex)
+
+	if shoot.Spec.SeedName != nil {
+		seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", *shoot.Spec.SeedName)
+		g.addEdge(shootVertex, seedVertex)
+	}
+
+	if shoot.Status.SeedName != nil {
+		seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", *shoot.Status.SeedName)
+		g.addEdge(shootVertex, seedVertex)
+	}
+
+	if shoot.Spec.Kubernetes.KubeAPIServer != nil &&
+		shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig != nil &&
+		shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy != nil &&
+		shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef != nil {
+
+		configMapVertex := g.getOrCreateVertex(VertexTypeConfigMap, shoot.Namespace, shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name)
+		g.addEdge(configMapVertex, shootVertex)
+	}
+
+	if shoot.Spec.DNS != nil {
+		for _, provider := range shoot.Spec.DNS.Providers {
+			if provider.SecretName != nil {
+				secretVertex := g.getOrCreateVertex(VertexTypeSecret, shoot.Namespace, *provider.SecretName)
+				g.addEdge(secretVertex, shootVertex)
+			}
+		}
+	}
+
+	for _, resource := range shoot.Spec.Resources {
+		// only secrets are supported here
+		if resource.ResourceRef.APIVersion == "v1" && resource.ResourceRef.Kind == "Secret" {
+			secretVertex := g.getOrCreateVertex(VertexTypeSecret, shoot.Namespace, resource.ResourceRef.Name)
+			g.addEdge(secretVertex, shootVertex)
+		}
+	}
+}
+
+func (g *graph) handleShootDelete(shoot *gardencorev1beta1.Shoot) {
+	start := time.Now()
+	defer func() {
+		metricUpdateDuration.WithLabelValues("Shoot", "Delete").Observe(time.Since(start).Seconds())
+	}()
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	g.deleteVertex(VertexTypeShoot, shoot.Namespace, shoot.Name)
+}

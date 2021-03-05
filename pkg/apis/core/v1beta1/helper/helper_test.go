@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
 	gomegatypes "github.com/onsi/gomega/types"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1770,6 +1771,7 @@ var _ = Describe("helper", func() {
 			Expect(erroneous).To(matcher1)
 			Expect(msg).To(matcher2)
 		},
+
 		Entry("W/o BackupBucket", nil, BeFalse(), BeEmpty()),
 		Entry("W/o last error", &gardencorev1beta1.BackupBucket{}, BeFalse(), BeEmpty()),
 		Entry("W/ last error",
@@ -1777,5 +1779,62 @@ var _ = Describe("helper", func() {
 			BeTrue(),
 			Equal("foo"),
 		),
+	)
+
+	DescribeTable("#SeedBackupSecretRefEqual",
+		func(oldBackup, newBackup *gardencorev1beta1.SeedBackup, matcher gomegatypes.GomegaMatcher) {
+			Expect(SeedBackupSecretRefEqual(oldBackup, newBackup)).To(matcher)
+		},
+
+		Entry("both nil", nil, nil, BeTrue()),
+		Entry("old nil, new empty", nil, &gardencorev1beta1.SeedBackup{}, BeTrue()),
+		Entry("old empty, new nil", &gardencorev1beta1.SeedBackup{}, nil, BeTrue()),
+		Entry("both empty", &gardencorev1beta1.SeedBackup{}, &gardencorev1beta1.SeedBackup{}, BeTrue()),
+		Entry("difference", &gardencorev1beta1.SeedBackup{SecretRef: corev1.SecretReference{Name: "foo", Namespace: "bar"}}, &gardencorev1beta1.SeedBackup{SecretRef: corev1.SecretReference{Name: "bar", Namespace: "foo"}}, BeFalse()),
+		Entry("equality", &gardencorev1beta1.SeedBackup{SecretRef: corev1.SecretReference{Name: "foo", Namespace: "bar"}}, &gardencorev1beta1.SeedBackup{SecretRef: corev1.SecretReference{Name: "foo", Namespace: "bar"}}, BeTrue()),
+	)
+
+	DescribeTable("#ShootAuditPolicyConfigMapRefEqual",
+		func(oldAPIServerConfig, newAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, matcher gomegatypes.GomegaMatcher) {
+			Expect(ShootAuditPolicyConfigMapRefEqual(oldAPIServerConfig, newAPIServerConfig)).To(matcher)
+		},
+
+		Entry("both nil", nil, nil, BeTrue()),
+		Entry("old auditconfig nil", &gardencorev1beta1.KubeAPIServerConfig{}, &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "foo"}}}}, BeFalse()),
+		Entry("old auditpolicy nil", &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{}}, &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "foo"}}}}, BeFalse()),
+		Entry("old configmapref nil", &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{}}}, &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "foo"}}}}, BeFalse()),
+		Entry("new auditconfig nil", &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "foo"}}}}, &gardencorev1beta1.KubeAPIServerConfig{}, BeFalse()),
+		Entry("new auditpolicy nil", &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "foo"}}}}, &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{}}, BeFalse()),
+		Entry("new configmapref nil", &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "foo"}}}}, &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{}}}, BeFalse()),
+		Entry("difference", &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "bar"}}}}, &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "foo"}}}}, BeFalse()),
+		Entry("equality", &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "bar"}}}}, &gardencorev1beta1.KubeAPIServerConfig{AuditConfig: &gardencorev1beta1.AuditConfig{AuditPolicy: &gardencorev1beta1.AuditPolicy{ConfigMapRef: &corev1.ObjectReference{Name: "bar"}}}}, BeTrue()),
+	)
+
+	DescribeTable("#ShootDNSProviderSecretNamesEqual",
+		func(oldDNS, newDNS *gardencorev1beta1.DNS, matcher gomegatypes.GomegaMatcher) {
+			Expect(ShootDNSProviderSecretNamesEqual(oldDNS, newDNS)).To(matcher)
+		},
+
+		Entry("both nil", nil, nil, BeTrue()),
+		Entry("old nil, new w/o secret names", nil, &gardencorev1beta1.DNS{}, BeTrue()),
+		Entry("old w/o secret names, new nil", &gardencorev1beta1.DNS{}, nil, BeTrue()),
+		Entry("difference due to old", &gardencorev1beta1.DNS{}, &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: pointer.StringPtr("foo")}}}, BeFalse()),
+		Entry("difference due to new", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: pointer.StringPtr("foo")}}}, &gardencorev1beta1.DNS{}, BeFalse()),
+		Entry("equality", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: pointer.StringPtr("foo")}}}, &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{SecretName: pointer.StringPtr("foo")}}}, BeTrue()),
+	)
+
+	DescribeTable("#ShootSecretResourceReferencesEqual",
+		func(oldResources, newResources []gardencorev1beta1.NamedResourceReference, matcher gomegatypes.GomegaMatcher) {
+			Expect(ShootSecretResourceReferencesEqual(oldResources, newResources)).To(matcher)
+		},
+
+		Entry("both nil", nil, nil, BeTrue()),
+		Entry("old empty, new w/o secrets", []gardencorev1beta1.NamedResourceReference{}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{Name: "foo"}}}, BeTrue()),
+		Entry("old empty, new w/ secrets", []gardencorev1beta1.NamedResourceReference{}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, BeFalse()),
+		Entry("old w/o secrets, new empty", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{}, BeTrue()),
+		Entry("old w/ secrets, new empty", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{}, BeFalse()),
+		Entry("difference", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "bar"}}}, BeFalse()),
+		Entry("difference because no secret", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "foo"}}}, BeFalse()),
+		Entry("equality", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, BeTrue()),
 	)
 })

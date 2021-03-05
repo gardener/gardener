@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 )
@@ -1246,4 +1247,97 @@ func BackupBucketIsErroneous(bb *gardencorev1beta1.BackupBucket) (bool, string) 
 		return false, ""
 	}
 	return true, lastErr.Description
+}
+
+// SeedBackupSecretRefEqual returns true when the secret reference of the backup configuration is the same.
+func SeedBackupSecretRefEqual(oldBackup, newBackup *gardencorev1beta1.SeedBackup) bool {
+	var (
+		oldSecretRef corev1.SecretReference
+		newSecretRef corev1.SecretReference
+	)
+
+	if oldBackup != nil {
+		oldSecretRef = oldBackup.SecretRef
+	}
+
+	if newBackup != nil {
+		newSecretRef = newBackup.SecretRef
+	}
+
+	return apiequality.Semantic.DeepEqual(oldSecretRef, newSecretRef)
+}
+
+// ShootAuditPolicyConfigMapRefEqual returns true if the name of the ConfigMap reference for the audit policy
+// configuration is the same.
+func ShootAuditPolicyConfigMapRefEqual(oldAPIServerConfig, newAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig) bool {
+	var (
+		oldConfigMapRefName string
+		newConfigMapRefName string
+	)
+
+	if oldAPIServerConfig != nil &&
+		oldAPIServerConfig.AuditConfig != nil &&
+		oldAPIServerConfig.AuditConfig.AuditPolicy != nil &&
+		oldAPIServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil {
+		oldConfigMapRefName = oldAPIServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name
+	}
+
+	if newAPIServerConfig != nil &&
+		newAPIServerConfig.AuditConfig != nil &&
+		newAPIServerConfig.AuditConfig.AuditPolicy != nil &&
+		newAPIServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil {
+		newConfigMapRefName = newAPIServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name
+	}
+
+	return oldConfigMapRefName == newConfigMapRefName
+}
+
+// ShootDNSProviderSecretNamesEqual returns true when all the secretNames in the `.spec.dns.providers[]` list are the
+// same.
+func ShootDNSProviderSecretNamesEqual(oldDNS, newDNS *gardencorev1beta1.DNS) bool {
+	var (
+		oldNames = sets.NewString()
+		newNames = sets.NewString()
+	)
+
+	if oldDNS != nil {
+		for _, provider := range oldDNS.Providers {
+			if provider.SecretName != nil {
+				oldNames.Insert(*provider.SecretName)
+			}
+		}
+	}
+
+	if newDNS != nil {
+		for _, provider := range newDNS.Providers {
+			if provider.SecretName != nil {
+				newNames.Insert(*provider.SecretName)
+			}
+		}
+	}
+
+	return oldNames.Equal(newNames)
+}
+
+// ShootSecretResourceReferencesEqual returns true when at least one of the Secret resource references inside a Shoot
+// has been changed.
+func ShootSecretResourceReferencesEqual(oldResources, newResources []gardencorev1beta1.NamedResourceReference) bool {
+	var (
+		oldNames = sets.NewString()
+		newNames = sets.NewString()
+	)
+
+	for _, resource := range oldResources {
+		if resource.ResourceRef.APIVersion == "v1" && resource.ResourceRef.Kind == "Secret" {
+			oldNames.Insert(resource.ResourceRef.Name)
+		}
+	}
+
+	for _, resource := range newResources {
+		if resource.ResourceRef.APIVersion == "v1" && resource.ResourceRef.Kind == "Secret" {
+			newNames.Insert(resource.ResourceRef.Name)
+		}
+	}
+
+	return oldNames.Equal(newNames)
 }

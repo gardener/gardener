@@ -45,6 +45,8 @@ type ServerConfiguration struct {
 	Metrics *Server
 	// ResourceAdmissionConfiguration is the configuration for the resource admission.
 	ResourceAdmissionConfiguration *ResourceAdmissionConfiguration
+	// EnableDebugHandlers determines whether the /debug/ handlers are enabled.
+	EnableDebugHandlers *bool
 }
 
 // ResourceAdmissionConfiguration contains settings about arbitrary kinds and the size each resource should have at most.

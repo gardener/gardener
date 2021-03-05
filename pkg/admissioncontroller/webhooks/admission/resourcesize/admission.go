@@ -41,6 +41,9 @@ const (
 	HandlerName = "resource_size_validator"
 	// WebhookPath is the HTTP handler path for this admission webhook handler.
 	WebhookPath = "/webhooks/validate-resource-size"
+
+	// metricReasonSizeExceeded is a metric reason value for a reason when an object size was exceeded.
+	metricReasonSizeExceeded = "Size Exceeded"
 )
 
 // New creates a new webhook handler validating that the resource size of a request doesn't exceed the configured
@@ -82,7 +85,7 @@ func (h *handler) Handle(_ context.Context, request admission.Request) admission
 			fmt.Sprint(request.Operation),
 			request.Kind.Kind,
 			request.Namespace,
-			metrics.ReasonSizeExceeded,
+			metricReasonSizeExceeded,
 		).Inc()
 	}
 

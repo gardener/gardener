@@ -251,6 +251,7 @@ func autoConvert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration(in *
 	out.HealthProbes = (*config.Server)(unsafe.Pointer(in.HealthProbes))
 	out.Metrics = (*config.Server)(unsafe.Pointer(in.Metrics))
 	out.ResourceAdmissionConfiguration = (*config.ResourceAdmissionConfiguration)(unsafe.Pointer(in.ResourceAdmissionConfiguration))
+	out.EnableDebugHandlers = (*bool)(unsafe.Pointer(in.EnableDebugHandlers))
 	return nil
 }
 
@@ -266,6 +267,7 @@ func autoConvert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *
 	out.HealthProbes = (*Server)(unsafe.Pointer(in.HealthProbes))
 	out.Metrics = (*Server)(unsafe.Pointer(in.Metrics))
 	out.ResourceAdmissionConfiguration = (*ResourceAdmissionConfiguration)(unsafe.Pointer(in.ResourceAdmissionConfiguration))
+	out.EnableDebugHandlers = (*bool)(unsafe.Pointer(in.EnableDebugHandlers))
 	return nil
 }
 

@@ -50,4 +50,5 @@ data:
 {{ toYaml .Values.global.admission.config.server.resourceAdmissionConfiguration.unrestrictedSubjects | indent 8 }}
         operationMode: {{ required ".Values.global.admission.config.server.resourceAdmissionConfiguration.operationMode is required" .Values.global.admission.config.server.resourceAdmissionConfiguration.operationMode }}
       {{- end }}
+      enableDebugHandlers: {{ .Values.global.admission.config.server.enableDebugHandlers }}
 {{- end }}
