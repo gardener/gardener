@@ -27,7 +27,10 @@ Hotfixes are usually only maintained for the latest minor release as well as the
 
 The validation process for new releases usually takes a couple of days and includes the following steps:
 
-1. `master` (or latest `release-*` branch) is deployed to a development landscape that already hosts some existing seed and shoot clusters.
+1. If a new
+   1. minor release `vX.Y.0` shall be cut then a new branch `release-vX.Y` is created based on `master`. [*]
+   1. patch release `vX.Y.Z` with `Z>0` shall be cut then the existing `release-vX.Y` branch is used.
+1. The images built from the respective branch are deployed to a development landscape that already hosts some existing seed and shoot clusters.
 1. An extended test suite is triggered by the "release responsible" which
    1. executes the Gardener integration tests for different Kubernetes versions, infrastructures, and `Shoot` settings.
    1. executes the Kubernetes conformance tests.
@@ -36,3 +39,5 @@ The validation process for new releases usually takes a couple of days and inclu
 1. The "release responsible" is verifying new features or other notable changes (derived of the draft release notes) in this development system.
 
 If all tests are green, all checks were successful, and the release responsible has performed all of the planned verifications then the release is triggered.
+
+> [*] This can be seen as "code freeze" period for the `vX.Y.0` release. The development and pull request merges to `master` can continue. Please note that you would have to pro-actively creates pull requests to the respective `release-vX.Y` branch in case you want to have your change that was already merged to `master` included in the `vX.Y.0` release.
