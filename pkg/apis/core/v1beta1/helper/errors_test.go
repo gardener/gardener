@@ -80,8 +80,8 @@ var _ = Describe("errors", func() {
 		},
 
 		Entry("no error given", nil, BeFalse()),
-		Entry("only errors with non-retryable error codes", []gardencorev1beta1.LastError{unauthorizedError, infraInsufficientPrivilegesError, infraDependenciesError, configurationProblemError}, BeTrue()),
-		Entry("only errors with retryable error codes", []gardencorev1beta1.LastError{infraQuotaExceededError, infraResourcesDepletedError, cleanupClusterResourcesError}, BeFalse()),
+		Entry("only errors with non-retryable error codes", []gardencorev1beta1.LastError{unauthorizedError, infraInsufficientPrivilegesError, infraQuotaExceededError, infraDependenciesError, configurationProblemError}, BeTrue()),
+		Entry("only errors with retryable error codes", []gardencorev1beta1.LastError{infraResourcesDepletedError, cleanupClusterResourcesError}, BeFalse()),
 		Entry("errors with both retryable and not retryable error codes", []gardencorev1beta1.LastError{unauthorizedError, configurationProblemError, infraInsufficientPrivilegesError, infraQuotaExceededError, infraDependenciesError, infraResourcesDepletedError, cleanupClusterResourcesError}, BeTrue()),
 		Entry("errors without error codes", []gardencorev1beta1.LastError{errorWithoutCodes}, BeFalse()),
 	)

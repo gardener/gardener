@@ -27,6 +27,7 @@ const (
 	// It is classified as a non-retryable error code.
 	ErrorInfraInsufficientPrivileges ErrorCode = "ERR_INFRA_INSUFFICIENT_PRIVILEGES"
 	// ErrorInfraQuotaExceeded indicates that the last error occurred due to infrastructure quota limits.
+	// It is classified as a non-retryable error code.
 	ErrorInfraQuotaExceeded ErrorCode = "ERR_INFRA_QUOTA_EXCEEDED"
 	// ErrorInfraDependencies indicates that the last error occurred due to dependent objects on the infrastructure level.
 	// It is classified as a non-retryable error code.

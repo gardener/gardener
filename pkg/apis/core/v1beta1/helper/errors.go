@@ -203,8 +203,9 @@ func HasNonRetryableErrorCode(lastErrors ...gardencorev1beta1.LastError) bool {
 		for _, code := range lastError.Codes {
 			if code == gardencorev1beta1.ErrorInfraUnauthorized ||
 				code == gardencorev1beta1.ErrorInfraInsufficientPrivileges ||
-				code == gardencorev1beta1.ErrorConfigurationProblem ||
-				code == gardencorev1beta1.ErrorInfraDependencies {
+				code == gardencorev1beta1.ErrorInfraDependencies ||
+				code == gardencorev1beta1.ErrorInfraQuotaExceeded ||
+				code == gardencorev1beta1.ErrorConfigurationProblem {
 				return true
 			}
 		}
