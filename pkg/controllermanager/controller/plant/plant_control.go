@@ -254,7 +254,7 @@ func (c *defaultPlantControl) delete(ctx context.Context, plant *gardencorev1bet
 		return fmt.Errorf("failed to get plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
 	}
 
-	if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), plant, FinalizerName); err != nil {
+	if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), plant, FinalizerName); client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("failed to remove finalizer from plant: %w", err)
 	}
 
