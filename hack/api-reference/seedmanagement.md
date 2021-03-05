@@ -219,7 +219,6 @@ Kubernetes meta/v1.LabelSelector
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Selector is a label query over ManagedSeeds and Shoots that should match the replica count.
 It must match the ManagedSeeds and Shoots template&rsquo;s labels.</p>
 </td>
@@ -254,14 +253,14 @@ Each Shoot created / updated by the ManagedSeedSet will fulfill this template.</
 <td>
 <code>updateStrategy</code></br>
 <em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSetUpdateStrategy">
-ManagedSeedSetUpdateStrategy
+<a href="#seedmanagement.gardener.cloud/v1alpha1.UpdateStrategy">
+UpdateStrategy
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>UpdateStrategy specifies the ManagedSeedSetUpdateStrategy that will be
+<p>UpdateStrategy specifies the UpdateStrategy that will be
 employed to update ManagedSeeds / Shoots in the ManagedSeedSet when a revision is made to
 Template / ShootTemplate.</p>
 </td>
@@ -641,7 +640,6 @@ Kubernetes meta/v1.LabelSelector
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Selector is a label query over ManagedSeeds and Shoots that should match the replica count.
 It must match the ManagedSeeds and Shoots template&rsquo;s labels.</p>
 </td>
@@ -676,14 +674,14 @@ Each Shoot created / updated by the ManagedSeedSet will fulfill this template.</
 <td>
 <code>updateStrategy</code></br>
 <em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSetUpdateStrategy">
-ManagedSeedSetUpdateStrategy
+<a href="#seedmanagement.gardener.cloud/v1alpha1.UpdateStrategy">
+UpdateStrategy
 </a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>UpdateStrategy specifies the ManagedSeedSetUpdateStrategy that will be
+<p>UpdateStrategy specifies the UpdateStrategy that will be
 employed to update ManagedSeeds / Shoots in the ManagedSeedSet when a revision is made to
 Template / ShootTemplate.</p>
 </td>
@@ -841,65 +839,6 @@ newest ControllerRevision.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSetUpdateStrategy">ManagedSeedSetUpdateStrategy
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSetSpec">ManagedSeedSetSpec</a>)
-</p>
-<p>
-<p>ManagedSeedSetUpdateStrategy specifies the strategy that the ManagedSeedSet
-controller will use to perform updates. It includes any additional parameters
-necessary to perform the update for the indicated strategy.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>type</code></br>
-<em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSetUpdateStrategyType">
-ManagedSeedSetUpdateStrategyType
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Type indicates the type of the ManagedSeedSetUpdateStrategy. Defaults to ManagedSeedSetUpdateStrategyType.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>rollingUpdate</code></br>
-<em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.RollingUpdateManagedSeedSetUpdateStrategy">
-RollingUpdateManagedSeedSetUpdateStrategy
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>RollingUpdate is used to communicate parameters when Type is ManagedSeedSetUpdateStrategyType.</p>
-</td>
-</tr>
-</tbody>
-</table>
-<h3 id="seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSetUpdateStrategyType">ManagedSeedSetUpdateStrategyType
-(<code>string</code> alias)</p></h3>
-<p>
-(<em>Appears on:</em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSetUpdateStrategy">ManagedSeedSetUpdateStrategy</a>)
-</p>
-<p>
-<p>ManagedSeedSetUpdateStrategyType is a string enumeration type that enumerates
-all possible update strategies for the ManagedSeedSet controller.</p>
-</p>
 <h3 id="seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSpec">ManagedSeedSpec
 </h3>
 <p>
@@ -1100,14 +1039,14 @@ with the given deployment parameters and GardenletConfiguration.</p>
 </tr>
 </tbody>
 </table>
-<h3 id="seedmanagement.gardener.cloud/v1alpha1.RollingUpdateManagedSeedSetUpdateStrategy">RollingUpdateManagedSeedSetUpdateStrategy
+<h3 id="seedmanagement.gardener.cloud/v1alpha1.RollingUpdateStrategy">RollingUpdateStrategy
 </h3>
 <p>
 (<em>Appears on:</em>
-<a href="#seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSetUpdateStrategy">ManagedSeedSetUpdateStrategy</a>)
+<a href="#seedmanagement.gardener.cloud/v1alpha1.UpdateStrategy">UpdateStrategy</a>)
 </p>
 <p>
-<p>RollingUpdateManagedSeedSetStrategy is used to communicate parameter for RollingUpdateManagedSeedSetUpdateStrategyType.</p>
+<p>RollingUpdateStrategy is used to communicate parameters for RollingUpdateStrategyType.</p>
 </p>
 <table>
 <thead>
@@ -1161,6 +1100,65 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="seedmanagement.gardener.cloud/v1alpha1.UpdateStrategy">UpdateStrategy
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSetSpec">ManagedSeedSetSpec</a>)
+</p>
+<p>
+<p>UpdateStrategy specifies the strategy that the ManagedSeedSet
+controller will use to perform updates. It includes any additional parameters
+necessary to perform the update for the indicated strategy.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.UpdateStrategyType">
+UpdateStrategyType
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Type indicates the type of the UpdateStrategy. Defaults to RollingUpdate.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>rollingUpdate</code></br>
+<em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.RollingUpdateStrategy">
+RollingUpdateStrategy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RollingUpdate is used to communicate parameters when Type is RollingUpdateStrategyType.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="seedmanagement.gardener.cloud/v1alpha1.UpdateStrategyType">UpdateStrategyType
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.UpdateStrategy">UpdateStrategy</a>)
+</p>
+<p>
+<p>UpdateStrategyType is a string enumeration type that enumerates
+all possible update strategies for the ManagedSeedSet controller.</p>
+</p>
 <hr/>
 <p><em>
 Generated with <a href="https://github.com/ahmetb/gen-crd-api-reference-docs">gen-crd-api-reference-docs</a>

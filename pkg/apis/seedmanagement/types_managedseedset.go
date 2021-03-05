@@ -41,7 +41,7 @@ type ManagedSeedSetList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
 	metav1.ListMeta
-	// Items is the list of ManagedSeeds.
+	// Items is the list of ManagedSeedSets.
 	Items []ManagedSeedSet
 }
 
@@ -51,45 +51,45 @@ type ManagedSeedSetSpec struct {
 	Replicas *int32
 	// Selector is a label query over ManagedSeeds and Shoots that should match the replica count.
 	// It must match the ManagedSeeds and Shoots template's labels.
-	Selector *metav1.LabelSelector
+	Selector metav1.LabelSelector
 	// Template describes the ManagedSeed that will be created if insufficient replicas are detected.
 	// Each ManagedSeed created / updated by the ManagedSeedSet will fulfill this template.
 	Template ManagedSeedTemplate
 	// ShootTemplate describes the Shoot that will be created if insufficient replicas are detected for hosting the corresponding ManagedSeed.
 	// Each Shoot created / updated by the ManagedSeedSet will fulfill this template.
 	ShootTemplate gardencore.ShootTemplate
-	// UpdateStrategy specifies the ManagedSeedSetUpdateStrategy that will be
+	// UpdateStrategy specifies the UpdateStrategy that will be
 	// employed to update ManagedSeeds / Shoots in the ManagedSeedSet when a revision is made to
 	// Template / ShootTemplate.
-	UpdateStrategy *ManagedSeedSetUpdateStrategy
+	UpdateStrategy *UpdateStrategy
 	// RevisionHistoryLimit is the maximum number of revisions that will
 	// be maintained in the ManagedSeedSet's revision history. Defaults to 10.
 	RevisionHistoryLimit *int32
 }
 
-// ManagedSeedSetUpdateStrategy specifies the strategy that the ManagedSeedSet
+// UpdateStrategy specifies the strategy that the ManagedSeedSet
 // controller will use to perform updates. It includes any additional parameters
 // necessary to perform the update for the indicated strategy.
-type ManagedSeedSetUpdateStrategy struct {
-	// Type indicates the type of the ManagedSeedSetUpdateStrategy. Defaults to ManagedSeedSetUpdateStrategyType.
-	Type *ManagedSeedSetUpdateStrategyType
-	// RollingUpdate is used to communicate parameters when Type is ManagedSeedSetUpdateStrategyType.
-	RollingUpdate *RollingUpdateManagedSeedSetUpdateStrategy
+type UpdateStrategy struct {
+	// Type indicates the type of the UpdateStrategy. Defaults to RollingUpdate.
+	Type *UpdateStrategyType
+	// RollingUpdate is used to communicate parameters when Type is RollingUpdateStrategyType.
+	RollingUpdate *RollingUpdateStrategy
 }
 
-// ManagedSeedSetUpdateStrategyType is a string enumeration type that enumerates
+// UpdateStrategyType is a string enumeration type that enumerates
 // all possible update strategies for the ManagedSeedSet controller.
-type ManagedSeedSetUpdateStrategyType string
+type UpdateStrategyType string
 
 const (
-	// RollingUpdateManagedSeedSetUpdateStrategyType indicates that update will be
+	// RollingUpdateStrategyType indicates that update will be
 	// applied to all ManagedSeeds / Shoots in the ManagedSeedSet with respect to the ManagedSeedSet
 	// ordering constraints.
-	RollingUpdateManagedSeedSetUpdateStrategyType ManagedSeedSetUpdateStrategyType = "RollingUpdate"
+	RollingUpdateStrategyType UpdateStrategyType = "RollingUpdate"
 )
 
-// RollingUpdateManagedSeedSetStrategy is used to communicate parameter for RollingUpdateManagedSeedSetUpdateStrategyType.
-type RollingUpdateManagedSeedSetUpdateStrategy struct {
+// RollingUpdateStrategy is used to communicate parameter for RollingUpdateStrategyType.
+type RollingUpdateStrategy struct {
 	// Partition indicates the ordinal at which the ManagedSeedSet should be partitioned. Defaults to 0.
 	Partition *int32
 }

@@ -162,7 +162,7 @@ message ManagedSeedSetList {
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
-  // Items is the list of ManagedSeeds.
+  // Items is the list of ManagedSeedSets.
   repeated ManagedSeedSet items = 2;
 }
 
@@ -174,7 +174,6 @@ message ManagedSeedSetSpec {
 
   // Selector is a label query over ManagedSeeds and Shoots that should match the replica count.
   // It must match the ManagedSeeds and Shoots template's labels.
-  // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector selector = 2;
 
   // Template describes the ManagedSeed that will be created if insufficient replicas are detected.
@@ -185,11 +184,11 @@ message ManagedSeedSetSpec {
   // Each Shoot created / updated by the ManagedSeedSet will fulfill this template.
   optional github.com.gardener.gardener.pkg.apis.core.v1beta1.ShootTemplate shootTemplate = 4;
 
-  // UpdateStrategy specifies the ManagedSeedSetUpdateStrategy that will be
+  // UpdateStrategy specifies the UpdateStrategy that will be
   // employed to update ManagedSeeds / Shoots in the ManagedSeedSet when a revision is made to
   // Template / ShootTemplate.
   // +optional
-  optional ManagedSeedSetUpdateStrategy updateStrategy = 5;
+  optional UpdateStrategy updateStrategy = 5;
 
   // RevisionHistoryLimit is the maximum number of revisions that will
   // be maintained in the ManagedSeedSet's revision history. Defaults to 10.
@@ -241,19 +240,6 @@ message ManagedSeedSetStatus {
   repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 10;
 }
 
-// ManagedSeedSetUpdateStrategy specifies the strategy that the ManagedSeedSet
-// controller will use to perform updates. It includes any additional parameters
-// necessary to perform the update for the indicated strategy.
-message ManagedSeedSetUpdateStrategy {
-  // Type indicates the type of the ManagedSeedSetUpdateStrategy. Defaults to ManagedSeedSetUpdateStrategyType.
-  // +optional
-  optional string type = 1;
-
-  // RollingUpdate is used to communicate parameters when Type is ManagedSeedSetUpdateStrategyType.
-  // +optional
-  optional RollingUpdateManagedSeedSetUpdateStrategy rollingUpdate = 2;
-}
-
 // ManagedSeedSpec is the specification of a ManagedSeed.
 message ManagedSeedSpec {
   // Shoot references a Shoot that should be registered as Seed.
@@ -295,8 +281,8 @@ message ManagedSeedTemplate {
   optional ManagedSeedSpec spec = 2;
 }
 
-// RollingUpdateManagedSeedSetStrategy is used to communicate parameter for RollingUpdateManagedSeedSetUpdateStrategyType.
-message RollingUpdateManagedSeedSetUpdateStrategy {
+// RollingUpdateStrategy is used to communicate parameters for RollingUpdateStrategyType.
+message RollingUpdateStrategy {
   // Partition indicates the ordinal at which the ManagedSeedSet should be partitioned. Defaults to 0.
   // +optional
   optional int32 partition = 1;
@@ -306,5 +292,18 @@ message RollingUpdateManagedSeedSetUpdateStrategy {
 message Shoot {
   // Name is the name of the Shoot that will be registered as Seed.
   optional string name = 1;
+}
+
+// UpdateStrategy specifies the strategy that the ManagedSeedSet
+// controller will use to perform updates. It includes any additional parameters
+// necessary to perform the update for the indicated strategy.
+message UpdateStrategy {
+  // Type indicates the type of the UpdateStrategy. Defaults to RollingUpdate.
+  // +optional
+  optional string type = 1;
+
+  // RollingUpdate is used to communicate parameters when Type is RollingUpdateStrategyType.
+  // +optional
+  optional RollingUpdateStrategy rollingUpdate = 2;
 }
 

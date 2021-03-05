@@ -65,9 +65,9 @@ func SetObjectDefaults_ManagedSeedSet(in *ManagedSeedSet) {
 		}
 	}
 	if in.Spec.UpdateStrategy != nil {
-		SetDefaults_ManagedSeedSetUpdateStrategy(in.Spec.UpdateStrategy)
+		SetDefaults_UpdateStrategy(in.Spec.UpdateStrategy)
 		if in.Spec.UpdateStrategy.RollingUpdate != nil {
-			SetDefaults_RollingUpdateManagedSeedSetUpdateStrategy(in.Spec.UpdateStrategy.RollingUpdate)
+			SetDefaults_RollingUpdateStrategy(in.Spec.UpdateStrategy.RollingUpdate)
 		}
 	}
 }

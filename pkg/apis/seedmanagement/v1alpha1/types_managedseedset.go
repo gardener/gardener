@@ -45,7 +45,7 @@ type ManagedSeedSetList struct {
 	// Standard list object metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	// Items is the list of ManagedSeeds.
+	// Items is the list of ManagedSeedSets.
 	Items []ManagedSeedSet `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
@@ -56,50 +56,49 @@ type ManagedSeedSetSpec struct {
 	Replicas *int32 `json:"replicas,omitempty" protobuf:"varint,1,opt,name=replicas"`
 	// Selector is a label query over ManagedSeeds and Shoots that should match the replica count.
 	// It must match the ManagedSeeds and Shoots template's labels.
-	// +optional
-	Selector *metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
+	Selector metav1.LabelSelector `json:"selector" protobuf:"bytes,2,opt,name=selector"`
 	// Template describes the ManagedSeed that will be created if insufficient replicas are detected.
 	// Each ManagedSeed created / updated by the ManagedSeedSet will fulfill this template.
 	Template ManagedSeedTemplate `json:"template" protobuf:"bytes,3,opt,name=template"`
 	// ShootTemplate describes the Shoot that will be created if insufficient replicas are detected for hosting the corresponding ManagedSeed.
 	// Each Shoot created / updated by the ManagedSeedSet will fulfill this template.
-	ShootTemplate gardencorev1beta1.ShootTemplate `json:"shootTemplate,omitempty" protobuf:"bytes,4,rep,name=shootTemplate"`
-	// UpdateStrategy specifies the ManagedSeedSetUpdateStrategy that will be
+	ShootTemplate gardencorev1beta1.ShootTemplate `json:"shootTemplate" protobuf:"bytes,4,rep,name=shootTemplate"`
+	// UpdateStrategy specifies the UpdateStrategy that will be
 	// employed to update ManagedSeeds / Shoots in the ManagedSeedSet when a revision is made to
 	// Template / ShootTemplate.
 	// +optional
-	UpdateStrategy *ManagedSeedSetUpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,5,opt,name=updateStrategy"`
+	UpdateStrategy *UpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,5,opt,name=updateStrategy"`
 	// RevisionHistoryLimit is the maximum number of revisions that will
 	// be maintained in the ManagedSeedSet's revision history. Defaults to 10.
 	// +optional
 	RevisionHistoryLimit *int32 `json:"revisionHistoryLimit,omitempty" protobuf:"varint,6,opt,name=revisionHistoryLimit"`
 }
 
-// ManagedSeedSetUpdateStrategy specifies the strategy that the ManagedSeedSet
+// UpdateStrategy specifies the strategy that the ManagedSeedSet
 // controller will use to perform updates. It includes any additional parameters
 // necessary to perform the update for the indicated strategy.
-type ManagedSeedSetUpdateStrategy struct {
-	// Type indicates the type of the ManagedSeedSetUpdateStrategy. Defaults to ManagedSeedSetUpdateStrategyType.
+type UpdateStrategy struct {
+	// Type indicates the type of the UpdateStrategy. Defaults to RollingUpdate.
 	// +optional
-	Type *ManagedSeedSetUpdateStrategyType `json:"type,omitempty" protobuf:"bytes,1,opt,name=type,casttype=ManagedSeedSetUpdateStrategyType"`
-	// RollingUpdate is used to communicate parameters when Type is ManagedSeedSetUpdateStrategyType.
+	Type *UpdateStrategyType `json:"type,omitempty" protobuf:"bytes,1,opt,name=type,casttype=UpdateStrategyType"`
+	// RollingUpdate is used to communicate parameters when Type is RollingUpdateStrategyType.
 	// +optional
-	RollingUpdate *RollingUpdateManagedSeedSetUpdateStrategy `json:"rollingUpdate,omitempty" protobuf:"bytes,2,opt,name=rollingUpdate"`
+	RollingUpdate *RollingUpdateStrategy `json:"rollingUpdate,omitempty" protobuf:"bytes,2,opt,name=rollingUpdate"`
 }
 
-// ManagedSeedSetUpdateStrategyType is a string enumeration type that enumerates
+// UpdateStrategyType is a string enumeration type that enumerates
 // all possible update strategies for the ManagedSeedSet controller.
-type ManagedSeedSetUpdateStrategyType string
+type UpdateStrategyType string
 
 const (
-	// RollingUpdateManagedSeedSetUpdateStrategyType indicates that update will be
+	// RollingUpdateStrategyType indicates that update will be
 	// applied to all ManagedSeeds / Shoots in the ManagedSeedSet with respect to the ManagedSeedSet
 	// ordering constraints.
-	RollingUpdateManagedSeedSetUpdateStrategyType ManagedSeedSetUpdateStrategyType = "RollingUpdate"
+	RollingUpdateStrategyType UpdateStrategyType = "RollingUpdate"
 )
 
-// RollingUpdateManagedSeedSetStrategy is used to communicate parameter for RollingUpdateManagedSeedSetUpdateStrategyType.
-type RollingUpdateManagedSeedSetUpdateStrategy struct {
+// RollingUpdateStrategy is used to communicate parameters for RollingUpdateStrategyType.
+type RollingUpdateStrategy struct {
 	// Partition indicates the ordinal at which the ManagedSeedSet should be partitioned. Defaults to 0.
 	// +optional
 	Partition *int32 `json:"partition,omitempty" protobuf:"varint,1,opt,name=partition"`

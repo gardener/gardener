@@ -27,7 +27,7 @@ func SetDefaults_ManagedSeedSet(obj *ManagedSeedSet) {
 
 	// Set update strategy defaults
 	if obj.Spec.UpdateStrategy == nil {
-		obj.Spec.UpdateStrategy = &ManagedSeedSetUpdateStrategy{}
+		obj.Spec.UpdateStrategy = &UpdateStrategy{}
 	}
 
 	// Set default revision history limit
@@ -36,24 +36,17 @@ func SetDefaults_ManagedSeedSet(obj *ManagedSeedSet) {
 	}
 }
 
-// SetDefaults_ManagedSeedSetUpdateStrategy sets default values for ManagedSeedSetUpdateStrategy objects.
-func SetDefaults_ManagedSeedSetUpdateStrategy(obj *ManagedSeedSetUpdateStrategy) {
+// SetDefaults_UpdateStrategy sets default values for UpdateStrategy objects.
+func SetDefaults_UpdateStrategy(obj *UpdateStrategy) {
 	// Set default type
 	if obj.Type == nil {
-		t := RollingUpdateManagedSeedSetUpdateStrategyType
+		t := RollingUpdateStrategyType
 		obj.Type = &t
-	}
-
-	if *obj.Type == RollingUpdateManagedSeedSetUpdateStrategyType {
-		// Set rolling update defaults
-		if obj.RollingUpdate == nil {
-			obj.RollingUpdate = &RollingUpdateManagedSeedSetUpdateStrategy{}
-		}
 	}
 }
 
-// SetDefaults_RollingUpdateManagedSeedSetUpdateStrategye sets default values for RollingUpdateManagedSeedSetUpdateStrategy objects.
-func SetDefaults_RollingUpdateManagedSeedSetUpdateStrategy(obj *RollingUpdateManagedSeedSetUpdateStrategy) {
+// SetDefaults_RollingUpdateStrategy sets default values for RollingUpdateStrategy objects.
+func SetDefaults_RollingUpdateStrategy(obj *RollingUpdateStrategy) {
 	// Set default partition
 	if obj.Partition == nil {
 		obj.Partition = pointer.Int32Ptr(0)
