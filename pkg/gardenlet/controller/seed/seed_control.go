@@ -266,14 +266,18 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 						Namespace: seed.Spec.SecretRef.Namespace,
 					},
 				}
-				if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
-					seedLogger.Error(err.Error())
-					return err
+				err = gardenClient.Client().Get(ctx, client.ObjectKeyFromObject(secret), secret)
+				if err == nil {
+					if err2 := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err2 != nil {
+						return fmt.Errorf("failed to remove finalizer from Seed secret '%s/%s': %w", secret.Namespace, secret.Name, err2)
+					}
+				} else if !apierrors.IsNotFound(err) {
+					return fmt.Errorf("failed to get Seed secret '%s/%s': %w", secret.Namespace, secret.Name, err)
 				}
 			}
 
 			// Remove finalizer from Seed
-			if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), seed); err != nil {
+			if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), seed, gardencorev1beta1.GardenerName); err != nil {
 				seedLogger.Error(err.Error())
 				return err
 			}
