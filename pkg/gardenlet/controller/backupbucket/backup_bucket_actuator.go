@@ -31,6 +31,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kretry "k8s.io/client-go/util/retry"
@@ -333,9 +334,15 @@ func (a *actuator) deleteGeneratedBackupBucketSecretInGarden(ctx context.Context
 		},
 	}
 
-	if err := controllerutils.PatchRemoveFinalizers(ctx, a.gardenClient.Client(), secret, finalizerName); err != nil {
-		return err
+	err := a.gardenClient.Client().Get(ctx, client.ObjectKeyFromObject(secret), secret)
+	if err == nil {
+		if err2 := controllerutils.PatchRemoveFinalizers(ctx, a.gardenClient.Client(), secret, finalizerName); err2 != nil {
+			return fmt.Errorf("failed to remove finalizer from BackupBucket generated secret '%s/%s': %w", secret.Namespace, secret.Name, err2)
+		}
+	} else if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to get BackupBucket generated secret '%s/%s': %w", secret.Namespace, secret.Name, err)
 	}
+
 	return client.IgnoreNotFound(a.gardenClient.Client().Delete(ctx, secret))
 }
 
