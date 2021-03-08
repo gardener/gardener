@@ -1,0 +1,6 @@
+global:
+  gardenlet:
+    config:
+      sni:
+        ingress:
+          namespace: istio-ingress

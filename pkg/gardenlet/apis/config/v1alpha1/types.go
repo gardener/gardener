@@ -62,7 +62,7 @@ type GardenletConfiguration struct {
 	Server *ServerConfiguration `json:"server,omitempty"`
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
 	// features. This field modifies piecemeal the built-in default values from
-	// "github.com/gardener/gardener/pkg/gardenlet/features/features.go".
+	// "github.com/gardener/gardener/tree/master/pkg/features/features.go".
 	// Default: nil
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
