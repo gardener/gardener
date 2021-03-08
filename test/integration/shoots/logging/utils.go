@@ -63,9 +63,9 @@ func checkRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interf
 }
 
 // WaitUntilLokiReceivesLogs waits until the loki instance in <lokiNamespace> receives <expected> logs for <key>=<value>
-func WaitUntilLokiReceivesLogs(ctx context.Context, interval time.Duration, f *framework.ShootFramework, tenant, lokiNamespace, key, value string, expected, delta int, client kubernetes.Interface) error {
-	return retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
-		search, err := f.GetLokiLogs(ctx, tenant, lokiNamespace, key, value, client)
+func WaitUntilLokiReceivesLogs(ctx context.Context, interval time.Duration, f *framework.ShootFramework, tenant, lokiNamespace, key, value string, expected, delta int, c kubernetes.Interface) error {
+	err := retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
+		search, err := f.GetLokiLogs(ctx, tenant, lokiNamespace, key, value, c)
 		if err != nil {
 			return retry.SevereError(err)
 		}
@@ -92,6 +92,21 @@ func WaitUntilLokiReceivesLogs(ctx context.Context, interval time.Duration, f *f
 		f.Logger.Infof("Received %d logs. Expected %d logs with delta %d. Expected logs received.", actual, expected, delta)
 		return retry.Ok()
 	})
+
+	if err != nil {
+		f.Logger.Info("Dump Loki logs")
+		if dumpError := f.DumpLogsForPodInNamespace(ctx, "", c, lokiNamespace, "loki-0"); dumpError != nil {
+			f.Logger.Error(dumpError.Error())
+		}
+
+		f.Logger.Info("Dump Fluent-bit logs")
+		labels := client.MatchingLabels{"app": "fluent-bit"}
+		if dumpError := f.DumpLogsForPodsWithLabelsInNamespace(ctx, "", c, "garden", labels); dumpError != nil {
+			f.Logger.Error(dumpError.Error())
+		}
+	}
+
+	return err
 }
 
 func encode(obj runtime.Object) []byte {
