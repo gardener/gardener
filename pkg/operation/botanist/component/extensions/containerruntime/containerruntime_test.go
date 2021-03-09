@@ -282,7 +282,7 @@ var _ = Describe("#ContainerRuntimee", func() {
 					extensions = append(extensions, gardencorev1alpha1.ExtensionResourceState{
 						Name:  &extensionName,
 						Kind:  extensionsv1alpha1.ContainerRuntimeResource,
-						State: &runtime.RawExtension{Raw: []byte("dummy state")},
+						State: &runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)},
 					})
 				}
 			}
@@ -317,7 +317,7 @@ var _ = Describe("#ContainerRuntimee", func() {
 			expected[0].Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationWaitForState
 			expectedWithState := expected[0].DeepCopy()
 			expectedWithState.Status = extensionsv1alpha1.ContainerRuntimeStatus{
-				DefaultStatus: extensionsv1alpha1.DefaultStatus{State: &runtime.RawExtension{Raw: []byte("dummy state")}},
+				DefaultStatus: extensionsv1alpha1.DefaultStatus{State: &runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)}},
 			}
 			expectedWithRestore := expectedWithState.DeepCopy()
 			expectedWithRestore.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationRestore
@@ -331,7 +331,7 @@ var _ = Describe("#ContainerRuntimee", func() {
 				return mc
 			})
 			mc.EXPECT().Update(ctx, expectedWithState).Return(nil)
-			mc.EXPECT().Patch(ctx, expectedWithRestore, client.MergeFrom(expectedWithState))
+			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState)
 
 			defaultDepWaiter = containerruntime.New(
 				log,

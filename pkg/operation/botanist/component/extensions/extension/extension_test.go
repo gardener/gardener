@@ -231,7 +231,7 @@ var _ = Describe("Extension", func() {
 
 	Describe("#Restore", func() {
 		var (
-			state      = []byte("dummy state")
+			state      = []byte(`{"dummy":"state"}`)
 			shootState *gardencorev1alpha1.ShootState
 		)
 
@@ -275,7 +275,7 @@ var _ = Describe("Extension", func() {
 				return mc
 			})
 			mc.EXPECT().Update(ctx, expectedWithState).Return(nil)
-			mc.EXPECT().Patch(ctx, expectedWithRestore, client.MergeFrom(expectedWithState))
+			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState)
 
 			defaultDepWaiter = extension.New(
 				log,

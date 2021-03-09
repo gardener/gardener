@@ -298,7 +298,7 @@ var _ = Describe("ControlPlane", func() {
 
 	Describe("#Restore", func() {
 		var (
-			state      = &runtime.RawExtension{Raw: []byte("dummy state")}
+			state      = &runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)}
 			shootState *gardencorev1alpha1.ShootState
 		)
 
@@ -338,7 +338,7 @@ var _ = Describe("ControlPlane", func() {
 			mc.EXPECT().Create(ctx, obj)
 			mc.EXPECT().Status().Return(mc)
 			mc.EXPECT().Update(ctx, expectedWithState)
-			mc.EXPECT().Patch(ctx, expectedWithRestore, client.MergeFrom(expectedWithState))
+			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState)
 
 			Expect(controlplane.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
 		})
@@ -369,7 +369,7 @@ var _ = Describe("ControlPlane", func() {
 			mc.EXPECT().Create(ctx, obj)
 			mc.EXPECT().Status().Return(mc)
 			mc.EXPECT().Update(ctx, expectedWithState)
-			mc.EXPECT().Patch(ctx, expectedWithRestore, client.MergeFrom(expectedWithState))
+			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState)
 
 			defaultDepWaiter = controlplane.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			Expect(defaultDepWaiter.Restore(ctx, shootState)).To(Succeed())
