@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -84,7 +85,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("seed-%s", seedObj.Name),
+			Name: seed.ComputeGardenNamespace(seedObj.Name),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(seedObj, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed")),
 			},

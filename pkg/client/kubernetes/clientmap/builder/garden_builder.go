@@ -17,6 +17,8 @@ package builder
 import (
 	"fmt"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 
@@ -29,8 +31,10 @@ import (
 // to retrieve a client to the garden cluster via the same mechanisms as the other types of ClientSets (e.g. through
 // a DelegatingClientMap).
 type GardenClientMapBuilder struct {
-	restConfig *rest.Config
-	logger     logrus.FieldLogger
+	restConfig   *rest.Config
+	logger       logrus.FieldLogger
+	seedName     string
+	seedSelector *metav1.LabelSelector
 }
 
 // NewGardenClientMapBuilder creates a new GardenClientMapBuilder.
@@ -51,6 +55,18 @@ func (b *GardenClientMapBuilder) WithRESTConfig(cfg *rest.Config) *GardenClientM
 	return b
 }
 
+// ForSeed sets the seed that will be used to construct a new client to the garden cluster.
+func (b *GardenClientMapBuilder) ForSeed(name string) *GardenClientMapBuilder {
+	b.seedName = name
+	return b
+}
+
+// ForSeed sets the seeds that will be used to construct a new client to the garden cluster.
+func (b *GardenClientMapBuilder) ForSeeds(selector *metav1.LabelSelector) *GardenClientMapBuilder {
+	b.seedSelector = selector
+	return b
+}
+
 // Build builds the GardenClientMap using the provided attributes.
 func (b *GardenClientMapBuilder) Build() (clientmap.ClientMap, error) {
 	if b.logger == nil {
@@ -62,5 +78,9 @@ func (b *GardenClientMapBuilder) Build() (clientmap.ClientMap, error) {
 
 	return internal.NewGardenClientMap(&internal.GardenClientSetFactory{
 		RESTConfig: b.restConfig,
+		SeedSelector: internal.SeedSelector{
+			SeedName: b.seedName,
+			Selector: b.seedSelector,
+		},
 	}, b.logger), nil
 }
