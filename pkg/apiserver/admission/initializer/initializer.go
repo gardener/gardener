@@ -21,10 +21,10 @@ import (
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	seedmanagementinformers "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
-	"github.com/gardener/gardener/third_party/forked/kubernetes/pkg/quota/v1"
 
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+	quotav1 "k8s.io/apiserver/pkg/quota/v1"
 	"k8s.io/client-go/dynamic"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -42,7 +42,7 @@ func New(
 	kubeClient kubernetes.Interface,
 	dynamicClient dynamic.Interface,
 	authz authorizer.Authorizer,
-	quotaConfiguration quota.Configuration,
+	quotaConfiguration quotav1.Configuration,
 ) admission.PluginInitializer {
 	return pluginInitializer{
 		coreInformers: coreInformers,

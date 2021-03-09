@@ -21,7 +21,6 @@ require (
 	github.com/golang/mock v1.5.0
 	github.com/googleapis/gnostic v0.5.1
 	github.com/hashicorp/go-multierror v1.0.0
-	github.com/hashicorp/golang-lru v0.5.4
 	github.com/huandu/xstrings v1.3.1
 	github.com/json-iterator/go v1.1.10
 	github.com/mholt/archiver v3.1.1+incompatible
