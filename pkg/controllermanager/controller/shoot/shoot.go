@@ -51,7 +51,6 @@ type Controller struct {
 	config                      *config.ControllerManagerConfiguration
 	recorder                    record.EventRecorder
 	maintenanceControl          MaintenanceControlInterface
-	quotaControl                QuotaControlInterface
 	hibernationScheduleRegistry HibernationScheduleRegistry
 
 	shootLister     gardencorelisters.ShootLister
@@ -65,7 +64,8 @@ type Controller struct {
 
 	hasSyncedFuncs []cache.InformerSynced
 
-	shootRefReconciler reconcile.Reconciler
+	shootQuotaReconciler reconcile.Reconciler
+	shootRefReconciler   reconcile.Reconciler
 
 	numberOfRunningWorkers int
 	workerCh               chan int
@@ -73,7 +73,7 @@ type Controller struct {
 
 // NewShootController takes a ClientMap, a GardenerInformerFactory, a KubernetesInformerFactory, a
 // ControllerManagerConfig struct and an EventRecorder to create a new Shoot controller.
-func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) (*Controller, error) {
+func NewShootController(ctx context.Context, clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) (*Controller, error) {
 	var (
 		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
 		corev1Informer            = kubeInformerFactory.Core().V1()
@@ -95,11 +95,12 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 		config:                      config,
 		recorder:                    recorder,
 		maintenanceControl:          NewDefaultMaintenanceControl(clientMap, gardenCoreV1beta1Informer, config.Controllers.ShootMaintenance, recorder),
-		quotaControl:                NewDefaultQuotaControl(clientMap, gardenCoreV1beta1Informer),
 		hibernationScheduleRegistry: NewHibernationScheduleRegistry(),
 
 		shootLister:     shootLister,
 		configMapLister: configMapLister,
+
+		shootQuotaReconciler: NewShootQuotaReconciler(logger.Logger, config.Controllers.ShootQuota, clientMap, gardenCoreV1beta1Informer),
 
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
 		shootQuotaQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),
@@ -132,12 +133,12 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 		UpdateFunc: shootController.configMapUpdate,
 	})
 
-	gardenClient, err := clientMap.GetClient(context.TODO(), keys.ForGarden())
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return nil, err
 	}
 
-	runtimeShootInformer, err := gardenClient.Cache().GetInformer(context.TODO(), &gardencorev1beta1.Shoot{})
+	runtimeShootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
@@ -209,7 +210,7 @@ func (c *Controller) Run(ctx context.Context, shootMaintenanceWorkers, shootQuot
 		controllerutils.DeprecatedCreateWorker(ctx, c.shootMaintenanceQueue, "Shoot Maintenance", c.reconcileShootMaintenanceKey, &waitGroup, c.workerCh)
 	}
 	for i := 0; i < shootQuotaWorkers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.shootQuotaQueue, "Shoot Quota", c.reconcileShootQuotaKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootQuotaQueue, "Shoot Quota", c.shootQuotaReconciler, &waitGroup, c.workerCh)
 	}
 	for i := 0; i < shootHibernationWorkers; i++ {
 		controllerutils.DeprecatedCreateWorker(ctx, c.shootHibernationQueue, "Scheduled Shoot Hibernation", c.reconcileShootHibernationKey, &waitGroup, c.workerCh)

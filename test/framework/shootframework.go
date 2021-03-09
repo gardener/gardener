@@ -92,7 +92,7 @@ func NewShootFramework(cfg *ShootConfig) *ShootFramework {
 
 // NewShootFrameworkFromConfig creates a new Shoot framework from a shoot configuration without registering ginkgo
 // specific functions
-func NewShootFrameworkFromConfig(cfg *ShootConfig) (*ShootFramework, error) {
+func NewShootFrameworkFromConfig(ctx context.Context, cfg *ShootConfig) (*ShootFramework, error) {
 	var gardenerConfig *GardenerConfig
 	if cfg != nil {
 		gardenerConfig = cfg.GardenerConfig
@@ -103,7 +103,7 @@ func NewShootFrameworkFromConfig(cfg *ShootConfig) (*ShootFramework, error) {
 		Config:            cfg,
 	}
 	if cfg != nil && gardenerConfig != nil {
-		if err := f.AddShoot(context.TODO(), cfg.ShootName, cfg.GardenerConfig.ProjectNamespace); err != nil {
+		if err := f.AddShoot(ctx, cfg.ShootName, cfg.GardenerConfig.ProjectNamespace); err != nil {
 			return nil, err
 		}
 	}

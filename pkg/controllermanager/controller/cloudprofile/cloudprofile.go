@@ -30,6 +30,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Controller controls CloudProfiles.
@@ -37,7 +38,7 @@ type Controller struct {
 	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
-	control ControlInterface
+	reconciler reconcile.Reconciler
 
 	cloudProfileLister gardencorelisters.CloudProfileLister
 	cloudProfileQueue  workqueue.RateLimitingInterface
@@ -64,7 +65,7 @@ func NewCloudProfileController(clientMap clientmap.ClientMap, k8sGardenCoreInfor
 		cloudProfileLister:     cloudProfileInformer.Lister(),
 		cloudProfileQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "cloudprofile"),
 		shootLister:            shootLister,
-		control:                NewDefaultControl(clientMap, shootLister, recorder),
+		reconciler:             NewCloudProfileReconciler(logger.Logger, clientMap, shootLister, recorder),
 		workerCh:               make(chan int),
 	}
 
@@ -99,7 +100,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	// Start the workers
 	for i := 0; i < workers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.cloudProfileQueue, "cloudprofile", c.reconcileCloudProfileKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.cloudProfileQueue, "CloudProfile", c.reconciler, &waitGroup, c.workerCh)
 	}
 
 	<-ctx.Done()

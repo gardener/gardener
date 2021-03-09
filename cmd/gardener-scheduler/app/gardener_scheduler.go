@@ -24,6 +24,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/healthz"
@@ -44,7 +47,6 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version/verflag"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Options has all the context and parameters needed to run a GardenerScheduler.
@@ -86,7 +88,7 @@ func (o *Options) run(ctx context.Context) error {
 	}
 	kubernetes.UseCachedRuntimeClients = schedulerfeatures.FeatureGate.Enabled(features.CachedRuntimeClients)
 
-	gardener, err := NewGardenerScheduler(o.config)
+	gardener, err := NewGardenerScheduler(ctx, o.config)
 	if err != nil {
 		return err
 	}
@@ -126,7 +128,7 @@ type GardenerScheduler struct {
 	Config                 *config.SchedulerConfiguration
 	Identity               *gardencorev1beta1.Gardener
 	GardenerNamespace      string
-	K8sGardenClient        kubernetes.Interface
+	ClientMap              clientmap.ClientMap
 	K8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	Logger                 *logrus.Logger
 	Recorder               record.EventRecorder
@@ -134,7 +136,7 @@ type GardenerScheduler struct {
 }
 
 // NewGardenerScheduler is the main entry point of instantiating a new Gardener Scheduler.
-func NewGardenerScheduler(cfg *config.SchedulerConfiguration) (*GardenerScheduler, error) {
+func NewGardenerScheduler(ctx context.Context, cfg *config.SchedulerConfiguration) (*GardenerScheduler, error) {
 	// validate the configuration
 	if err := validation.ValidateConfiguration(cfg); err != nil {
 		return nil, err
@@ -156,15 +158,18 @@ func NewGardenerScheduler(cfg *config.SchedulerConfiguration) (*GardenerSchedule
 		return nil, err
 	}
 
-	k8sGardenClient, err := kubernetes.NewWithConfig(
-		kubernetes.WithRESTConfig(restCfg),
-		kubernetes.WithClientOptions(
-			client.Options{
-				Scheme: kubernetes.GardenScheme,
-			}),
-	)
+	clientMap, err := clientmapbuilder.
+		NewDelegatingClientMapBuilder().
+		WithGardenClientMapBuilder(clientmapbuilder.NewGardenClientMapBuilder().WithRESTConfig(restCfg)).
+		WithLogger(logger).
+		Build()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to build ClientMap: %w", err)
+	}
+
+	k8sGardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
 	// Set up leader election if enabled and prepare event recorder.
@@ -193,9 +198,9 @@ func NewGardenerScheduler(cfg *config.SchedulerConfiguration) (*GardenerSchedule
 
 	return &GardenerScheduler{
 		Config:                 cfg,
+		ClientMap:              clientMap,
 		Logger:                 logger,
 		Recorder:               recorder,
-		K8sGardenClient:        k8sGardenClient,
 		K8sGardenCoreInformers: gardencoreinformers.NewSharedInformerFactory(k8sGardenClient.GardenCore(), 0),
 		LeaderElection:         leaderElectionConfig,
 	}, nil
@@ -257,7 +262,11 @@ func (g *GardenerScheduler) Run(ctx context.Context) error {
 }
 
 func (g *GardenerScheduler) startScheduler(ctx context.Context) {
-	shootScheduler := shootcontroller.NewGardenerScheduler(g.K8sGardenClient, g.K8sGardenCoreInformers, g.Config, g.Recorder)
+	if err := g.ClientMap.Start(ctx.Done()); err != nil {
+		panic(fmt.Errorf("failed to start ClientMap: %+v", err))
+	}
+
+	shootScheduler := shootcontroller.NewGardenerScheduler(g.ClientMap, g.K8sGardenCoreInformers, g.Config, g.Recorder)
 	//backupBucketScheduler := backupbucketcontroller.NewGardenerScheduler(ctx, g.K8sGardenClient, g.K8sGardenCoreInformers, g.Config, g.Recorder)
 
 	// Initialize the Controller metrics collection.
