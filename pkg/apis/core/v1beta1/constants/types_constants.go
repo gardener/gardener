@@ -333,6 +333,13 @@ const (
 	IngressKindNginx = "nginx"
 	// ShootNginxIngressClass defines the ingress class for the seed nginx ingress controller
 	ShootNginxIngressClass = "nginx"
+
+	// SeedsGroup is the identity group for gardenlets when authenticating to the API server.
+	SeedsGroup = "gardener.cloud:system:seeds"
+	// SeedUserNamePrefix is the identity user name prefix for gardenlets when authenticating to the API server.
+	SeedUserNamePrefix = "gardener.cloud:system:seed:"
+	// SeedUserNameSuffixAmbiguous is the default seed name in case the gardenlet config.SeedConfig is not set
+	SeedUserNameSuffixAmbiguous = "<ambiguous>"
 )
 
 // ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.

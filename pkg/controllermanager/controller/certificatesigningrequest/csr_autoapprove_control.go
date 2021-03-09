@@ -29,6 +29,7 @@ import (
 	"reflect"
 	"strings"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -163,7 +164,7 @@ func parseCSR(csr *certificatesv1beta1.CertificateSigningRequest) (*x509.Certifi
 }
 
 func isSeedClientCert(csr *certificatesv1beta1.CertificateSigningRequest, x509cr *x509.CertificateRequest) bool {
-	if !reflect.DeepEqual([]string{"gardener.cloud:system:seeds"}, x509cr.Subject.Organization) {
+	if !reflect.DeepEqual([]string{v1beta1constants.SeedsGroup}, x509cr.Subject.Organization) {
 		return false
 	}
 	if (len(x509cr.DNSNames) > 0) || (len(x509cr.EmailAddresses) > 0) || (len(x509cr.IPAddresses) > 0) {
@@ -176,10 +177,7 @@ func isSeedClientCert(csr *certificatesv1beta1.CertificateSigningRequest, x509cr
 	}) {
 		return false
 	}
-	if !strings.HasPrefix(x509cr.Subject.CommonName, "gardener.cloud:system:seed:") {
-		return false
-	}
-	return true
+	return strings.HasPrefix(x509cr.Subject.CommonName, v1beta1constants.SeedUserNamePrefix)
 }
 
 func hasExactUsages(csr *certificatesv1beta1.CertificateSigningRequest, usages []certificatesv1beta1.KeyUsage) bool {

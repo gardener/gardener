@@ -271,7 +271,7 @@ var _ = Describe("Util", func() {
 
 		It("should return the default name", func() {
 			result := bootstraputil.GetSeedName(nil)
-			Expect(result).To(Equal(bootstraputil.DefaultSeedName))
+			Expect(result).To(Equal("<ambiguous>"))
 		})
 	})
 
