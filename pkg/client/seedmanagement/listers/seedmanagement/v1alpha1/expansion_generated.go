@@ -25,3 +25,11 @@ type ManagedSeedListerExpansion interface{}
 // ManagedSeedNamespaceListerExpansion allows custom methods to be added to
 // ManagedSeedNamespaceLister.
 type ManagedSeedNamespaceListerExpansion interface{}
+
+// ManagedSeedSetListerExpansion allows custom methods to be added to
+// ManagedSeedSetLister.
+type ManagedSeedSetListerExpansion interface{}
+
+// ManagedSeedSetNamespaceListerExpansion allows custom methods to be added to
+// ManagedSeedSetNamespaceLister.
+type ManagedSeedSetNamespaceListerExpansion interface{}

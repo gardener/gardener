@@ -78,6 +78,46 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*ManagedSeedSet)(nil), (*seedmanagement.ManagedSeedSet)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ManagedSeedSet_To_seedmanagement_ManagedSeedSet(a.(*ManagedSeedSet), b.(*seedmanagement.ManagedSeedSet), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*seedmanagement.ManagedSeedSet)(nil), (*ManagedSeedSet)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_seedmanagement_ManagedSeedSet_To_v1alpha1_ManagedSeedSet(a.(*seedmanagement.ManagedSeedSet), b.(*ManagedSeedSet), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ManagedSeedSetList)(nil), (*seedmanagement.ManagedSeedSetList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ManagedSeedSetList_To_seedmanagement_ManagedSeedSetList(a.(*ManagedSeedSetList), b.(*seedmanagement.ManagedSeedSetList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*seedmanagement.ManagedSeedSetList)(nil), (*ManagedSeedSetList)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_seedmanagement_ManagedSeedSetList_To_v1alpha1_ManagedSeedSetList(a.(*seedmanagement.ManagedSeedSetList), b.(*ManagedSeedSetList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ManagedSeedSetSpec)(nil), (*seedmanagement.ManagedSeedSetSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ManagedSeedSetSpec_To_seedmanagement_ManagedSeedSetSpec(a.(*ManagedSeedSetSpec), b.(*seedmanagement.ManagedSeedSetSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*seedmanagement.ManagedSeedSetSpec)(nil), (*ManagedSeedSetSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_seedmanagement_ManagedSeedSetSpec_To_v1alpha1_ManagedSeedSetSpec(a.(*seedmanagement.ManagedSeedSetSpec), b.(*ManagedSeedSetSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ManagedSeedSetStatus)(nil), (*seedmanagement.ManagedSeedSetStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ManagedSeedSetStatus_To_seedmanagement_ManagedSeedSetStatus(a.(*ManagedSeedSetStatus), b.(*seedmanagement.ManagedSeedSetStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*seedmanagement.ManagedSeedSetStatus)(nil), (*ManagedSeedSetStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_seedmanagement_ManagedSeedSetStatus_To_v1alpha1_ManagedSeedSetStatus(a.(*seedmanagement.ManagedSeedSetStatus), b.(*ManagedSeedSetStatus), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*ManagedSeedSpec)(nil), (*seedmanagement.ManagedSeedSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_ManagedSeedSpec_To_seedmanagement_ManagedSeedSpec(a.(*ManagedSeedSpec), b.(*seedmanagement.ManagedSeedSpec), scope)
 	}); err != nil {
@@ -98,6 +138,26 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*ManagedSeedTemplate)(nil), (*seedmanagement.ManagedSeedTemplate)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ManagedSeedTemplate_To_seedmanagement_ManagedSeedTemplate(a.(*ManagedSeedTemplate), b.(*seedmanagement.ManagedSeedTemplate), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*seedmanagement.ManagedSeedTemplate)(nil), (*ManagedSeedTemplate)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_seedmanagement_ManagedSeedTemplate_To_v1alpha1_ManagedSeedTemplate(a.(*seedmanagement.ManagedSeedTemplate), b.(*ManagedSeedTemplate), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*RollingUpdateStrategy)(nil), (*seedmanagement.RollingUpdateStrategy)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_RollingUpdateStrategy_To_seedmanagement_RollingUpdateStrategy(a.(*RollingUpdateStrategy), b.(*seedmanagement.RollingUpdateStrategy), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*seedmanagement.RollingUpdateStrategy)(nil), (*RollingUpdateStrategy)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_seedmanagement_RollingUpdateStrategy_To_v1alpha1_RollingUpdateStrategy(a.(*seedmanagement.RollingUpdateStrategy), b.(*RollingUpdateStrategy), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*Shoot)(nil), (*seedmanagement.Shoot)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_Shoot_To_seedmanagement_Shoot(a.(*Shoot), b.(*seedmanagement.Shoot), scope)
 	}); err != nil {
@@ -105,6 +165,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*seedmanagement.Shoot)(nil), (*Shoot)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_seedmanagement_Shoot_To_v1alpha1_Shoot(a.(*seedmanagement.Shoot), b.(*Shoot), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*UpdateStrategy)(nil), (*seedmanagement.UpdateStrategy)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_UpdateStrategy_To_seedmanagement_UpdateStrategy(a.(*UpdateStrategy), b.(*seedmanagement.UpdateStrategy), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*seedmanagement.UpdateStrategy)(nil), (*UpdateStrategy)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_seedmanagement_UpdateStrategy_To_v1alpha1_UpdateStrategy(a.(*seedmanagement.UpdateStrategy), b.(*UpdateStrategy), scope)
 	}); err != nil {
 		return err
 	}
@@ -279,6 +349,158 @@ func Convert_seedmanagement_ManagedSeedList_To_v1alpha1_ManagedSeedList(in *seed
 	return autoConvert_seedmanagement_ManagedSeedList_To_v1alpha1_ManagedSeedList(in, out, s)
 }
 
+func autoConvert_v1alpha1_ManagedSeedSet_To_seedmanagement_ManagedSeedSet(in *ManagedSeedSet, out *seedmanagement.ManagedSeedSet, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_v1alpha1_ManagedSeedSetSpec_To_seedmanagement_ManagedSeedSetSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_v1alpha1_ManagedSeedSetStatus_To_seedmanagement_ManagedSeedSetStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha1_ManagedSeedSet_To_seedmanagement_ManagedSeedSet is an autogenerated conversion function.
+func Convert_v1alpha1_ManagedSeedSet_To_seedmanagement_ManagedSeedSet(in *ManagedSeedSet, out *seedmanagement.ManagedSeedSet, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ManagedSeedSet_To_seedmanagement_ManagedSeedSet(in, out, s)
+}
+
+func autoConvert_seedmanagement_ManagedSeedSet_To_v1alpha1_ManagedSeedSet(in *seedmanagement.ManagedSeedSet, out *ManagedSeedSet, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_seedmanagement_ManagedSeedSetSpec_To_v1alpha1_ManagedSeedSetSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	if err := Convert_seedmanagement_ManagedSeedSetStatus_To_v1alpha1_ManagedSeedSetStatus(&in.Status, &out.Status, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_seedmanagement_ManagedSeedSet_To_v1alpha1_ManagedSeedSet is an autogenerated conversion function.
+func Convert_seedmanagement_ManagedSeedSet_To_v1alpha1_ManagedSeedSet(in *seedmanagement.ManagedSeedSet, out *ManagedSeedSet, s conversion.Scope) error {
+	return autoConvert_seedmanagement_ManagedSeedSet_To_v1alpha1_ManagedSeedSet(in, out, s)
+}
+
+func autoConvert_v1alpha1_ManagedSeedSetList_To_seedmanagement_ManagedSeedSetList(in *ManagedSeedSetList, out *seedmanagement.ManagedSeedSetList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]seedmanagement.ManagedSeedSet, len(*in))
+		for i := range *in {
+			if err := Convert_v1alpha1_ManagedSeedSet_To_seedmanagement_ManagedSeedSet(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
+	return nil
+}
+
+// Convert_v1alpha1_ManagedSeedSetList_To_seedmanagement_ManagedSeedSetList is an autogenerated conversion function.
+func Convert_v1alpha1_ManagedSeedSetList_To_seedmanagement_ManagedSeedSetList(in *ManagedSeedSetList, out *seedmanagement.ManagedSeedSetList, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ManagedSeedSetList_To_seedmanagement_ManagedSeedSetList(in, out, s)
+}
+
+func autoConvert_seedmanagement_ManagedSeedSetList_To_v1alpha1_ManagedSeedSetList(in *seedmanagement.ManagedSeedSetList, out *ManagedSeedSetList, s conversion.Scope) error {
+	out.ListMeta = in.ListMeta
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]ManagedSeedSet, len(*in))
+		for i := range *in {
+			if err := Convert_seedmanagement_ManagedSeedSet_To_v1alpha1_ManagedSeedSet(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
+	return nil
+}
+
+// Convert_seedmanagement_ManagedSeedSetList_To_v1alpha1_ManagedSeedSetList is an autogenerated conversion function.
+func Convert_seedmanagement_ManagedSeedSetList_To_v1alpha1_ManagedSeedSetList(in *seedmanagement.ManagedSeedSetList, out *ManagedSeedSetList, s conversion.Scope) error {
+	return autoConvert_seedmanagement_ManagedSeedSetList_To_v1alpha1_ManagedSeedSetList(in, out, s)
+}
+
+func autoConvert_v1alpha1_ManagedSeedSetSpec_To_seedmanagement_ManagedSeedSetSpec(in *ManagedSeedSetSpec, out *seedmanagement.ManagedSeedSetSpec, s conversion.Scope) error {
+	out.Replicas = (*int32)(unsafe.Pointer(in.Replicas))
+	out.Selector = in.Selector
+	if err := Convert_v1alpha1_ManagedSeedTemplate_To_seedmanagement_ManagedSeedTemplate(&in.Template, &out.Template, s); err != nil {
+		return err
+	}
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.ShootTemplate, &out.ShootTemplate, 0); err != nil {
+		return err
+	}
+	out.UpdateStrategy = (*seedmanagement.UpdateStrategy)(unsafe.Pointer(in.UpdateStrategy))
+	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
+	return nil
+}
+
+// Convert_v1alpha1_ManagedSeedSetSpec_To_seedmanagement_ManagedSeedSetSpec is an autogenerated conversion function.
+func Convert_v1alpha1_ManagedSeedSetSpec_To_seedmanagement_ManagedSeedSetSpec(in *ManagedSeedSetSpec, out *seedmanagement.ManagedSeedSetSpec, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ManagedSeedSetSpec_To_seedmanagement_ManagedSeedSetSpec(in, out, s)
+}
+
+func autoConvert_seedmanagement_ManagedSeedSetSpec_To_v1alpha1_ManagedSeedSetSpec(in *seedmanagement.ManagedSeedSetSpec, out *ManagedSeedSetSpec, s conversion.Scope) error {
+	out.Replicas = (*int32)(unsafe.Pointer(in.Replicas))
+	out.Selector = in.Selector
+	if err := Convert_seedmanagement_ManagedSeedTemplate_To_v1alpha1_ManagedSeedTemplate(&in.Template, &out.Template, s); err != nil {
+		return err
+	}
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.ShootTemplate, &out.ShootTemplate, 0); err != nil {
+		return err
+	}
+	out.UpdateStrategy = (*UpdateStrategy)(unsafe.Pointer(in.UpdateStrategy))
+	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
+	return nil
+}
+
+// Convert_seedmanagement_ManagedSeedSetSpec_To_v1alpha1_ManagedSeedSetSpec is an autogenerated conversion function.
+func Convert_seedmanagement_ManagedSeedSetSpec_To_v1alpha1_ManagedSeedSetSpec(in *seedmanagement.ManagedSeedSetSpec, out *ManagedSeedSetSpec, s conversion.Scope) error {
+	return autoConvert_seedmanagement_ManagedSeedSetSpec_To_v1alpha1_ManagedSeedSetSpec(in, out, s)
+}
+
+func autoConvert_v1alpha1_ManagedSeedSetStatus_To_seedmanagement_ManagedSeedSetStatus(in *ManagedSeedSetStatus, out *seedmanagement.ManagedSeedSetStatus, s conversion.Scope) error {
+	out.ObservedGeneration = in.ObservedGeneration
+	out.Replicas = in.Replicas
+	out.ReadyReplicas = in.ReadyReplicas
+	out.NextReplicaNumber = in.NextReplicaNumber
+	out.CurrentReplicas = in.CurrentReplicas
+	out.UpdatedReplicas = in.UpdatedReplicas
+	out.CurrentRevision = in.CurrentRevision
+	out.UpdateRevision = in.UpdateRevision
+	out.CollisionCount = (*int32)(unsafe.Pointer(in.CollisionCount))
+	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_v1alpha1_ManagedSeedSetStatus_To_seedmanagement_ManagedSeedSetStatus is an autogenerated conversion function.
+func Convert_v1alpha1_ManagedSeedSetStatus_To_seedmanagement_ManagedSeedSetStatus(in *ManagedSeedSetStatus, out *seedmanagement.ManagedSeedSetStatus, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ManagedSeedSetStatus_To_seedmanagement_ManagedSeedSetStatus(in, out, s)
+}
+
+func autoConvert_seedmanagement_ManagedSeedSetStatus_To_v1alpha1_ManagedSeedSetStatus(in *seedmanagement.ManagedSeedSetStatus, out *ManagedSeedSetStatus, s conversion.Scope) error {
+	out.ObservedGeneration = in.ObservedGeneration
+	out.Replicas = in.Replicas
+	out.ReadyReplicas = in.ReadyReplicas
+	out.NextReplicaNumber = in.NextReplicaNumber
+	out.CurrentReplicas = in.CurrentReplicas
+	out.UpdatedReplicas = in.UpdatedReplicas
+	out.CurrentRevision = in.CurrentRevision
+	out.UpdateRevision = in.UpdateRevision
+	out.CollisionCount = (*int32)(unsafe.Pointer(in.CollisionCount))
+	out.Conditions = *(*[]v1beta1.Condition)(unsafe.Pointer(&in.Conditions))
+	return nil
+}
+
+// Convert_seedmanagement_ManagedSeedSetStatus_To_v1alpha1_ManagedSeedSetStatus is an autogenerated conversion function.
+func Convert_seedmanagement_ManagedSeedSetStatus_To_v1alpha1_ManagedSeedSetStatus(in *seedmanagement.ManagedSeedSetStatus, out *ManagedSeedSetStatus, s conversion.Scope) error {
+	return autoConvert_seedmanagement_ManagedSeedSetStatus_To_v1alpha1_ManagedSeedSetStatus(in, out, s)
+}
+
 func autoConvert_v1alpha1_ManagedSeedSpec_To_seedmanagement_ManagedSeedSpec(in *ManagedSeedSpec, out *seedmanagement.ManagedSeedSpec, s conversion.Scope) error {
 	if err := Convert_v1alpha1_Shoot_To_seedmanagement_Shoot(&in.Shoot, &out.Shoot, s); err != nil {
 		return err
@@ -363,6 +585,52 @@ func Convert_seedmanagement_ManagedSeedStatus_To_v1alpha1_ManagedSeedStatus(in *
 	return autoConvert_seedmanagement_ManagedSeedStatus_To_v1alpha1_ManagedSeedStatus(in, out, s)
 }
 
+func autoConvert_v1alpha1_ManagedSeedTemplate_To_seedmanagement_ManagedSeedTemplate(in *ManagedSeedTemplate, out *seedmanagement.ManagedSeedTemplate, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_v1alpha1_ManagedSeedSpec_To_seedmanagement_ManagedSeedSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1alpha1_ManagedSeedTemplate_To_seedmanagement_ManagedSeedTemplate is an autogenerated conversion function.
+func Convert_v1alpha1_ManagedSeedTemplate_To_seedmanagement_ManagedSeedTemplate(in *ManagedSeedTemplate, out *seedmanagement.ManagedSeedTemplate, s conversion.Scope) error {
+	return autoConvert_v1alpha1_ManagedSeedTemplate_To_seedmanagement_ManagedSeedTemplate(in, out, s)
+}
+
+func autoConvert_seedmanagement_ManagedSeedTemplate_To_v1alpha1_ManagedSeedTemplate(in *seedmanagement.ManagedSeedTemplate, out *ManagedSeedTemplate, s conversion.Scope) error {
+	out.ObjectMeta = in.ObjectMeta
+	if err := Convert_seedmanagement_ManagedSeedSpec_To_v1alpha1_ManagedSeedSpec(&in.Spec, &out.Spec, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_seedmanagement_ManagedSeedTemplate_To_v1alpha1_ManagedSeedTemplate is an autogenerated conversion function.
+func Convert_seedmanagement_ManagedSeedTemplate_To_v1alpha1_ManagedSeedTemplate(in *seedmanagement.ManagedSeedTemplate, out *ManagedSeedTemplate, s conversion.Scope) error {
+	return autoConvert_seedmanagement_ManagedSeedTemplate_To_v1alpha1_ManagedSeedTemplate(in, out, s)
+}
+
+func autoConvert_v1alpha1_RollingUpdateStrategy_To_seedmanagement_RollingUpdateStrategy(in *RollingUpdateStrategy, out *seedmanagement.RollingUpdateStrategy, s conversion.Scope) error {
+	out.Partition = (*int32)(unsafe.Pointer(in.Partition))
+	return nil
+}
+
+// Convert_v1alpha1_RollingUpdateStrategy_To_seedmanagement_RollingUpdateStrategy is an autogenerated conversion function.
+func Convert_v1alpha1_RollingUpdateStrategy_To_seedmanagement_RollingUpdateStrategy(in *RollingUpdateStrategy, out *seedmanagement.RollingUpdateStrategy, s conversion.Scope) error {
+	return autoConvert_v1alpha1_RollingUpdateStrategy_To_seedmanagement_RollingUpdateStrategy(in, out, s)
+}
+
+func autoConvert_seedmanagement_RollingUpdateStrategy_To_v1alpha1_RollingUpdateStrategy(in *seedmanagement.RollingUpdateStrategy, out *RollingUpdateStrategy, s conversion.Scope) error {
+	out.Partition = (*int32)(unsafe.Pointer(in.Partition))
+	return nil
+}
+
+// Convert_seedmanagement_RollingUpdateStrategy_To_v1alpha1_RollingUpdateStrategy is an autogenerated conversion function.
+func Convert_seedmanagement_RollingUpdateStrategy_To_v1alpha1_RollingUpdateStrategy(in *seedmanagement.RollingUpdateStrategy, out *RollingUpdateStrategy, s conversion.Scope) error {
+	return autoConvert_seedmanagement_RollingUpdateStrategy_To_v1alpha1_RollingUpdateStrategy(in, out, s)
+}
+
 func autoConvert_v1alpha1_Shoot_To_seedmanagement_Shoot(in *Shoot, out *seedmanagement.Shoot, s conversion.Scope) error {
 	out.Name = in.Name
 	return nil
@@ -381,4 +649,26 @@ func autoConvert_seedmanagement_Shoot_To_v1alpha1_Shoot(in *seedmanagement.Shoot
 // Convert_seedmanagement_Shoot_To_v1alpha1_Shoot is an autogenerated conversion function.
 func Convert_seedmanagement_Shoot_To_v1alpha1_Shoot(in *seedmanagement.Shoot, out *Shoot, s conversion.Scope) error {
 	return autoConvert_seedmanagement_Shoot_To_v1alpha1_Shoot(in, out, s)
+}
+
+func autoConvert_v1alpha1_UpdateStrategy_To_seedmanagement_UpdateStrategy(in *UpdateStrategy, out *seedmanagement.UpdateStrategy, s conversion.Scope) error {
+	out.Type = (*seedmanagement.UpdateStrategyType)(unsafe.Pointer(in.Type))
+	out.RollingUpdate = (*seedmanagement.RollingUpdateStrategy)(unsafe.Pointer(in.RollingUpdate))
+	return nil
+}
+
+// Convert_v1alpha1_UpdateStrategy_To_seedmanagement_UpdateStrategy is an autogenerated conversion function.
+func Convert_v1alpha1_UpdateStrategy_To_seedmanagement_UpdateStrategy(in *UpdateStrategy, out *seedmanagement.UpdateStrategy, s conversion.Scope) error {
+	return autoConvert_v1alpha1_UpdateStrategy_To_seedmanagement_UpdateStrategy(in, out, s)
+}
+
+func autoConvert_seedmanagement_UpdateStrategy_To_v1alpha1_UpdateStrategy(in *seedmanagement.UpdateStrategy, out *UpdateStrategy, s conversion.Scope) error {
+	out.Type = (*UpdateStrategyType)(unsafe.Pointer(in.Type))
+	out.RollingUpdate = (*RollingUpdateStrategy)(unsafe.Pointer(in.RollingUpdate))
+	return nil
+}
+
+// Convert_seedmanagement_UpdateStrategy_To_v1alpha1_UpdateStrategy is an autogenerated conversion function.
+func Convert_seedmanagement_UpdateStrategy_To_v1alpha1_UpdateStrategy(in *seedmanagement.UpdateStrategy, out *UpdateStrategy, s conversion.Scope) error {
+	return autoConvert_seedmanagement_UpdateStrategy_To_v1alpha1_UpdateStrategy(in, out, s)
 }

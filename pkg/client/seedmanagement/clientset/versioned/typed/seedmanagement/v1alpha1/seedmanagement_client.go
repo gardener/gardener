@@ -27,6 +27,7 @@ import (
 type SeedmanagementV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	ManagedSeedsGetter
+	ManagedSeedSetsGetter
 }
 
 // SeedmanagementV1alpha1Client is used to interact with features provided by the seedmanagement.gardener.cloud group.
@@ -36,6 +37,10 @@ type SeedmanagementV1alpha1Client struct {
 
 func (c *SeedmanagementV1alpha1Client) ManagedSeeds(namespace string) ManagedSeedInterface {
 	return newManagedSeeds(c, namespace)
+}
+
+func (c *SeedmanagementV1alpha1Client) ManagedSeedSets(namespace string) ManagedSeedSetInterface {
+	return newManagedSeedSets(c, namespace)
 }
 
 // NewForConfig creates a new SeedmanagementV1alpha1Client for the given config.

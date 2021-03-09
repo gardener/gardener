@@ -54,6 +54,16 @@ type ShootList struct {
 	Items []Shoot `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
+// ShootTemplate is a template for creating a Shoot object.
+type ShootTemplate struct {
+	// Standard object metadata.
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	// Specification of the desired behavior of the Shoot.
+	// +optional
+	Spec ShootSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+}
+
 // ShootSpec is the specification of a Shoot.
 type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.

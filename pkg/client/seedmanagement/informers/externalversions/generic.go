@@ -55,6 +55,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=seedmanagement.gardener.cloud, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("managedseeds"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Seedmanagement().V1alpha1().ManagedSeeds().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("managedseedsets"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Seedmanagement().V1alpha1().ManagedSeedSets().Informer()}, nil
 
 	}
 

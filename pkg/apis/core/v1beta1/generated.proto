@@ -2093,6 +2093,17 @@ message ShootStatus {
   optional string clusterIdentity = 12;
 }
 
+// ShootTemplate is a template for creating a Shoot object.
+message ShootTemplate {
+  // Standard object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Specification of the desired behavior of the Shoot.
+  // +optional
+  optional ShootSpec spec = 2;
+}
+
 // Toleration is a toleration for a seed taint.
 message Toleration {
   // Key is the toleration key to be applied to a project or shoot.

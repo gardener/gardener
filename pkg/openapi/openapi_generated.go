@@ -293,6 +293,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootNetworks":                          schema_pkg_apis_core_v1beta1_ShootNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec":                              schema_pkg_apis_core_v1beta1_ShootSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStatus":                            schema_pkg_apis_core_v1beta1_ShootStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootTemplate":                          schema_pkg_apis_core_v1beta1_ShootTemplate(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration":                             schema_pkg_apis_core_v1beta1_Toleration(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler":                  schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume":                                 schema_pkg_apis_core_v1beta1_Volume(ref),
@@ -306,9 +307,16 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image":                       schema_pkg_apis_seedmanagement_v1alpha1_Image(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeed":                 schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeed(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedList":             schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedList(ref),
+		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSet":              schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSet(ref),
+		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSetList":          schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetList(ref),
+		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSetSpec":          schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetSpec(ref),
+		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSetStatus":        schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSpec":             schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedStatus":           schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedStatus(ref),
+		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedTemplate":         schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedTemplate(ref),
+		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.RollingUpdateStrategy":       schema_pkg_apis_seedmanagement_v1alpha1_RollingUpdateStrategy(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Shoot":                       schema_pkg_apis_seedmanagement_v1alpha1_Shoot(ref),
+		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.UpdateStrategy":              schema_pkg_apis_seedmanagement_v1alpha1_UpdateStrategy(ref),
 		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPreset":        schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPreset(ref),
 		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPresetList":    schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetList(ref),
 		"github.com/gardener/gardener/pkg/apis/settings/v1alpha1.ClusterOpenIDConnectPresetSpec":    schema_pkg_apis_settings_v1alpha1_ClusterOpenIDConnectPresetSpec(ref),
@@ -12348,6 +12356,33 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ShootTemplate(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootTemplate is a template for creating a Shoot object.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specification of the desired behavior of the Shoot.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_Toleration(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -13069,6 +13104,254 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedList(ref common.Referenc
 	}
 }
 
+func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSet(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ManagedSeedSet represents a set of identical ManagedSeeds.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Spec defines the desired identities of ManagedSeeds and Shoots in this set.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSetSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status is the current status of ManagedSeeds and Shoots in this ManagedSeedSet.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSetStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSetSpec", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSetStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ManagedSeedSetList is a list of ManagedSeed objects.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard list object metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Items is the list of ManagedSeedSets.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSet"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSet", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ManagedSeedSetSpec is the specification of a ManagedSeedSet.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"replicas": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Replicas is the desired number of replicas of the given Template. Defaults to 1.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"selector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Selector is a label query over ManagedSeeds and Shoots that should match the replica count. It must match the ManagedSeeds and Shoots template's labels.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+						},
+					},
+					"template": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Template describes the ManagedSeed that will be created if insufficient replicas are detected. Each ManagedSeed created / updated by the ManagedSeedSet will fulfill this template.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedTemplate"),
+						},
+					},
+					"shootTemplate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootTemplate describes the Shoot that will be created if insufficient replicas are detected for hosting the corresponding ManagedSeed. Each Shoot created / updated by the ManagedSeedSet will fulfill this template.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootTemplate"),
+						},
+					},
+					"updateStrategy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UpdateStrategy specifies the UpdateStrategy that will be employed to update ManagedSeeds / Shoots in the ManagedSeedSet when a revision is made to Template / ShootTemplate.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.UpdateStrategy"),
+						},
+					},
+					"revisionHistoryLimit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RevisionHistoryLimit is the maximum number of revisions that will be maintained in the ManagedSeedSet's revision history. Defaults to 10.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+				Required: []string{"selector", "template", "shootTemplate"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootTemplate", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedTemplate", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.UpdateStrategy", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+	}
+}
+
+func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ManagedSeedSetStatus represents the current state of a ManagedSeedSet.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"observedGeneration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ObservedGeneration is the most recent generation observed for this ManagedSeedSet. It corresponds to the ManagedSeedSet's generation, which is updated on mutation by the API Server.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"replicas": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Replicas is the number of replicas (ManagedSeeds and their corresponding Shoots) created by the ManagedSeedSet controller.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"readyReplicas": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ReadyReplicas is the number of ManagedSeeds created by the ManagedSeedSet controller that have a Ready Condition.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"nextReplicaNumber": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NextReplicaNumber is the ordinal number that will be assigned to the next replica of the ManagedSeedSet.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"currentReplicas": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CurrentReplicas is the number of ManagedSeeds created by the ManagedSeedSet controller from the ManagedSeedSet version indicated by CurrentRevision.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"updatedReplicas": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UpdatedReplicas is the number of ManagedSeeds created by the ManagedSeedSet controller from the ManagedSeedSet version indicated by UpdateRevision.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"currentRevision": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CurrentRevision, if not empty, indicates the version of the ManagedSeedSet used to generate ManagedSeeds with smaller ordinal numbers during updates.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"updateRevision": {
+						SchemaProps: spec.SchemaProps{
+							Description: "UpdateRevision, if not empty, indicates the version of the ManagedSeedSet used to generate ManagedSeeds with larger ordinal numbers during updates",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"collisionCount": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CollisionCount is the count of hash collisions for the ManagedSeedSet. The ManagedSeedSet controller uses this field as a collision avoidance mechanism when it needs to create the name for the newest ControllerRevision.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"conditions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "type",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Conditions represents the latest available observations of a ManagedSeedSet's current state.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"replicas"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition"},
+	}
+}
+
 func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -13144,6 +13427,53 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedStatus(ref common.Refere
 	}
 }
 
+func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedTemplate(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ManagedSeedTemplate is a template for creating a ManagedSeed object.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specification of the desired behavior of the ManagedSeed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSpec"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_seedmanagement_v1alpha1_RollingUpdateStrategy(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "RollingUpdateStrategy is used to communicate parameters for RollingUpdateStrategyType.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"partition": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Partition indicates the ordinal at which the ManagedSeedSet should be partitioned. Defaults to 0.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_seedmanagement_v1alpha1_Shoot(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -13162,6 +13492,34 @@ func schema_pkg_apis_seedmanagement_v1alpha1_Shoot(ref common.ReferenceCallback)
 				Required: []string{"name"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_seedmanagement_v1alpha1_UpdateStrategy(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "UpdateStrategy specifies the strategy that the ManagedSeedSet controller will use to perform updates. It includes any additional parameters necessary to perform the update for the indicated strategy.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type indicates the type of the UpdateStrategy. Defaults to RollingUpdate.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"rollingUpdate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RollingUpdate is used to communicate parameters when Type is RollingUpdateStrategyType.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.RollingUpdateStrategy"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.RollingUpdateStrategy"},
 	}
 }
 

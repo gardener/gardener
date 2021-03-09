@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// ManagedSeeds returns a ManagedSeedInformer.
 	ManagedSeeds() ManagedSeedInformer
+	// ManagedSeedSets returns a ManagedSeedSetInformer.
+	ManagedSeedSets() ManagedSeedSetInformer
 }
 
 type version struct {
@@ -42,4 +44,9 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // ManagedSeeds returns a ManagedSeedInformer.
 func (v *version) ManagedSeeds() ManagedSeedInformer {
 	return &managedSeedInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ManagedSeedSets returns a ManagedSeedSetInformer.
+func (v *version) ManagedSeedSets() ManagedSeedSetInformer {
+	return &managedSeedSetInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
