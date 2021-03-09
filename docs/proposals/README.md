@@ -18,6 +18,9 @@ We encourage you to take a look at already merged [GEPs]( https://github.com/gar
 
 ## Before creating a GEP
 
+Before starting your work and creating a GEP, please take some time to familiarize yourself with our
+general [Gardener Contribution Guidelines](https://gardener.cloud/documentation/contribute/).
+
 It is recommended to discuss and outline the motivation of your prospective GEP as a draft with the community before you take the investment of creating the actual GEP. This early briefing supports the understanding for the broad community and leads to a fast feedback for your proposal from the respective experts in the community.
 An appropriate format for this may be the regular [Gardener community meeting](https://github.com/gardener/documentation/blob/master/CONTRIBUTING.md#weekly-meeting).
 
@@ -27,12 +30,38 @@ GEPs should be created as Markdown `.md` files and are submitted through a GitHu
 
 If not already done, please present your GEP in the [regular community meeting](https://github.com/gardener/documentation/blob/master/CONTRIBUTING.md#weekly-meeting) to brief the community about your proposal (we strive for personal communication :) ). Also consider that this may be an important step to raise awareness and understanding for everyone involved.
 
+The GEP template contains a small set of metadata, which is helpful for keeping track of the enhancement
+in general and especially of who is responsible for implementing and reviewing PRs that are part of
+the enhancement.
+
+### Main Reviewers
+
+Apart from general metadata, the GEP should name at least one "main reviewer".
+You can find a main reviewer for your GEP either when discussing the proposal in the community meeting, by asking in our
+[Slack Channel](https://gardener.cloud/documentation/contribute/#slack-channel) or at latest during the GEP PR review.
+New GEPs should only be accepted once at least one main reviewer is nominated/assigned. 
+
+The main reviewers are charged with the following tasks:
+
+- familiarizing themselves with the details of the proposal
+- reviewing the GEP PR itself and any further updates to the document
+- discussing design details and clarifying implementation questions with the author before and after
+ the proposal was accepted
+- reviewing PRs related to the GEP in-depth
+
+Other community members are of course also welcome to help the GEP author, review his work and raise
+general concerns with the enhancement. Nevertheless, the main reviewers are supposed to focus on more
+in-depth reviews and accompaning the whole GEP process end-to-end, which helps with getting more
+high-quality reviews and faster feedback cycles instead of having more people looking at the process
+with lower priority and less focus.
+
 ## GEP Process
 
 1. Pre-discussions about GEP (if necessary)
-2. GEP is filed through GitHub PR
-3. Presentation in Gardener community meeting (if possible)
-4. Review of GEP from maintainers/community
-5. GEP is merged if accepted
-6. Implementation of GEP
-7. Consider keeping GEP up-to-date in case implementation differs essentially
+1. Find a main reviewer for your enhancement
+1. GEP is filed through GitHub PR
+1. Presentation in Gardener community meeting (if possible)
+1. Review of GEP from maintainers/community
+1. GEP is merged if accepted
+1. Implementation of GEP
+1. Consider keeping GEP up-to-date in case implementation differs essentially
