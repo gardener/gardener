@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	configvalidation "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/validation"
+	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/auditpolicy"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/kubeconfigsecret"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/namespacedeletion"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/resourcesize"
@@ -173,6 +174,7 @@ func (o *options) run(ctx context.Context) error {
 	server.Register(namespacedeletion.WebhookPath, &webhook.Admission{Handler: namespaceValidationHandler})
 	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(logf.Log.WithName(kubeconfigsecret.HandlerName))})
 	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(logf.Log.WithName(resourcesize.HandlerName), o.config.Server.ResourceAdmissionConfiguration)})
+	server.Register(auditpolicy.WebhookPath, &webhook.Admission{Handler: auditpolicy.New(logf.Log.WithName(auditpolicy.HandlerName))})
 
 	if utils.IsTrue(o.config.Server.EnableDebugHandlers) {
 		log.Info("registering debug handlers")
