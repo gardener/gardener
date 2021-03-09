@@ -269,7 +269,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 			}
 
 			if generatedSecretRef != nil || backupBucket.Status.ProviderStatus != nil {
-				return kutil.TryUpdateStatus(ctx, kretry.DefaultBackoff, a.gardenClient.Client(), a.backupBucket, func() error {
+				return kutil.TryUpdateStatus(ctx, kretry.DefaultBackoff, a.gardenClient.DirectClient(), a.backupBucket, func() error {
 					a.backupBucket.Status.GeneratedSecretRef = generatedSecretRef
 					a.backupBucket.Status.ProviderStatus = backupBucket.Status.ProviderStatus
 					return nil
