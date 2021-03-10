@@ -30,7 +30,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -57,7 +56,7 @@ func (b *Botanist) DefaultWorker(seedClient client.Client) worker.Interface {
 // the Shoot is in the restore phase of the control plane migration
 func (b *Botanist) DeployWorker(ctx context.Context) error {
 	b.Shoot.Components.Extensions.Worker.SetSSHPublicKey(b.Secrets[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys])
-	b.Shoot.Components.Extensions.Worker.SetInfrastructureProviderStatus(&runtime.RawExtension{Raw: b.Shoot.InfrastructureStatus})
+	b.Shoot.Components.Extensions.Worker.SetInfrastructureProviderStatus(b.Shoot.Components.Extensions.Infrastructure.ProviderStatus())
 	b.Shoot.Components.Extensions.Worker.SetWorkerNameToOperatingSystemConfigsMap(b.Shoot.Components.Extensions.OperatingSystemConfig.WorkerNameToOperatingSystemConfigsMap())
 
 	if b.isRestorePhase() {

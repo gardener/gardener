@@ -78,10 +78,7 @@ type Shoot struct {
 	NodeLocalDNSEnabled        bool
 	Networks                   *Networks
 
-	Components *Components
-
-	InfrastructureStatus []byte
-
+	Components     *Components
 	ETCDEncryption *etcdencryption.EncryptionConfig
 }
 

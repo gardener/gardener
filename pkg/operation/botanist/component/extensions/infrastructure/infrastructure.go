@@ -19,9 +19,8 @@ import (
 	"fmt"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,6 +31,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -50,8 +50,13 @@ var TimeNow = time.Now
 // Interface is an interface for managing Infrastructures.
 type Interface interface {
 	component.DeployMigrateWaiter
+	// Get retrieves and returns the Infrastructure resources based on the configured values.
+	Get(context.Context) (*extensionsv1alpha1.Infrastructure, error)
+	// SetSSHPublicKey sets the SSH public key in the values.
 	SetSSHPublicKey([]byte)
+	// ProviderStatus returns the generated status of the provider.
 	ProviderStatus() *runtime.RawExtension
+	// NodesCIDR returns the generated nodes CIDR of the provider.
 	NodesCIDR() *string
 }
 
@@ -207,8 +212,7 @@ func (i *infrastructure) Wait(ctx context.Context) error {
 				return fmt.Errorf("expected extensionsv1alpha1.Infrastructure but got %T", infrastructure)
 			}
 
-			i.providerStatus = infrastructure.Status.ProviderStatus
-			i.nodesCIDR = infrastructure.Status.NodesCIDR
+			i.extractStatus(infrastructure.Status)
 			return nil
 		},
 	)
@@ -242,6 +246,17 @@ func (i *infrastructure) WaitCleanup(ctx context.Context) error {
 	)
 }
 
+// Get retrieves and returns the Infrastructure resources based on the configured values.
+func (i *infrastructure) Get(ctx context.Context) (*extensionsv1alpha1.Infrastructure, error) {
+	obj := &extensionsv1alpha1.Infrastructure{}
+	if err := i.client.Get(ctx, kutil.Key(i.values.Namespace, i.values.Name), obj); err != nil {
+		return nil, err
+	}
+
+	i.extractStatus(obj.Status)
+	return obj, nil
+}
+
 // SetSSHPublicKey sets the SSH public key in the values.
 func (i *infrastructure) SetSSHPublicKey(key []byte) {
 	i.values.SSHPublicKey = key
@@ -255,4 +270,9 @@ func (i *infrastructure) ProviderStatus() *runtime.RawExtension {
 // NodesCIDR returns the generated nodes CIDR of the provider.
 func (i *infrastructure) NodesCIDR() *string {
 	return i.nodesCIDR
+}
+
+func (i *infrastructure) extractStatus(status extensionsv1alpha1.InfrastructureStatus) {
+	i.providerStatus = status.ProviderStatus
+	i.nodesCIDR = status.NodesCIDR
 }

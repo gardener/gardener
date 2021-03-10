@@ -37,7 +37,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -56,8 +55,9 @@ var _ = Describe("#Interface", func() {
 	)
 
 	var (
-		ctx context.Context
-		log logrus.FieldLogger
+		ctx     context.Context
+		log     logrus.FieldLogger
+		fakeErr = errors.New("fake")
 
 		ctrl    *gomock.Controller
 		c       *mockclient.MockClient
@@ -67,6 +67,8 @@ var _ = Describe("#Interface", func() {
 		region         string
 		sshPublicKey   []byte
 		providerConfig *runtime.RawExtension
+		providerStatus *runtime.RawExtension
+		nodesCIDR      *string
 
 		infra        *extensionsv1alpha1.Infrastructure
 		infraSpec    extensionsv1alpha1.InfrastructureSpec
@@ -87,9 +89,9 @@ var _ = Describe("#Interface", func() {
 
 		region = "europe"
 		sshPublicKey = []byte("secure")
-		providerConfig = &runtime.RawExtension{
-			Raw: []byte(`{"very":"provider-specific"}`),
-		}
+		providerConfig = &runtime.RawExtension{Raw: []byte(`{"very":"provider-specific"}`)}
+		providerStatus = &runtime.RawExtension{Raw: []byte(`{"very":"provider-specific-status"}`)}
+		nodesCIDR = pointer.StringPtr("1.2.3.4/5")
 
 		values = &infrastructure.Values{
 			Namespace:      namespace,
@@ -180,8 +182,6 @@ var _ = Describe("#Interface", func() {
 		})
 
 		It("should return unexpected errors", func() {
-			fakeErr := errors.New("fake")
-
 			c.
 				EXPECT().
 				Get(gomock.Any(), kutil.Key(namespace, name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
@@ -191,27 +191,21 @@ var _ = Describe("#Interface", func() {
 		})
 
 		It("should return error when it's not ready", func() {
-			description := "some error"
-
 			c.
 				EXPECT().
 				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
 					obj.Status.LastError = &gardencorev1beta1.LastError{
-						Description: description,
+						Description: fakeErr.Error(),
 					}
 					return nil
 				}).
 				AnyTimes()
 
-			Expect(deployWaiter.Wait(ctx)).To(MatchError(ContainSubstring(description)))
+			Expect(deployWaiter.Wait(ctx)).To(MatchError(ContainSubstring(fakeErr.Error())))
 		})
 
 		It("should return no error when is ready", func() {
-			nodesCIDR := "1.2.3.4/5"
-			providerStatus := &runtime.RawExtension{
-				Raw: []byte("foo"),
-			}
 
 			c.
 				EXPECT().
@@ -222,33 +216,25 @@ var _ = Describe("#Interface", func() {
 					obj.Status.LastOperation = &gardencorev1beta1.LastOperation{
 						State: gardencorev1beta1.LastOperationStateSucceeded,
 					}
-					obj.Status.NodesCIDR = &nodesCIDR
+					obj.Status.NodesCIDR = nodesCIDR
 					obj.Status.ProviderStatus = providerStatus
 					return nil
 				})
 
 			Expect(deployWaiter.Wait(ctx)).To(Succeed())
 			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
-			Expect(deployWaiter.NodesCIDR()).To(PointTo(Equal(nodesCIDR)))
+			Expect(deployWaiter.NodesCIDR()).To(Equal(nodesCIDR))
 		})
 
 		It("should poll until it's ready", func() {
 			waiter.MaxAttempts = 2
 
-			var (
-				description    = "some error"
-				nodesCIDR      = "1.2.3.4/5"
-				providerStatus = &runtime.RawExtension{
-					Raw: []byte("foo"),
-				}
-			)
-
 			c.
 				EXPECT().
 				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
 					obj.Status.LastError = &gardencorev1beta1.LastError{
-						Description: description,
+						Description: fakeErr.Error(),
 					}
 					return nil
 				})
@@ -262,33 +248,31 @@ var _ = Describe("#Interface", func() {
 					obj.Status.LastOperation = &gardencorev1beta1.LastOperation{
 						State: gardencorev1beta1.LastOperationStateSucceeded,
 					}
-					obj.Status.NodesCIDR = &nodesCIDR
+					obj.Status.NodesCIDR = nodesCIDR
 					obj.Status.ProviderStatus = providerStatus
 					return nil
 				})
 
 			Expect(deployWaiter.Wait(ctx)).To(Succeed())
 			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
-			Expect(deployWaiter.NodesCIDR()).To(PointTo(Equal(nodesCIDR)))
+			Expect(deployWaiter.NodesCIDR()).To(Equal(nodesCIDR))
 		})
 
 		It("should poll until it times out", func() {
 			waiter.MaxAttempts = 3
-
-			description := "some error"
 
 			c.
 				EXPECT().
 				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
 					obj.Status.LastError = &gardencorev1beta1.LastError{
-						Description: description,
+						Description: fakeErr.Error(),
 					}
 					return nil
 				}).
 				AnyTimes()
 
-			Expect(deployWaiter.Wait(ctx)).To(MatchError(ContainSubstring(description)))
+			Expect(deployWaiter.Wait(ctx)).To(MatchError(ContainSubstring(fakeErr.Error())))
 		})
 	})
 
@@ -342,7 +326,6 @@ var _ = Describe("#Interface", func() {
 				common.ConfirmationDeletion:        "true",
 				v1beta1constants.GardenerTimestamp: now.UTC().String(),
 			}
-			fakeErr := errors.New("some random error")
 
 			c.
 				EXPECT().
@@ -426,8 +409,6 @@ var _ = Describe("#Interface", func() {
 
 		It("should return unexpected errors", func() {
 			waiter.MaxAttempts = 2
-
-			fakeErr := errors.New("fake")
 
 			c.
 				EXPECT().
@@ -570,6 +551,48 @@ var _ = Describe("#Interface", func() {
 				})
 
 			Expect(deployWaiter.WaitMigrate(ctx)).To(Succeed(), "infrastructure is ready, should not return an error")
+		})
+	})
+
+	Describe("#Get", func() {
+		It("should return an error when the retrieval fails", func() {
+			c.
+				EXPECT().
+				Get(ctx, kutil.Key(infra.Namespace, infra.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
+				Return(fakeErr)
+
+			res, err := deployWaiter.Get(ctx)
+			Expect(res).To(BeNil())
+			Expect(err).To(MatchError(fakeErr))
+		})
+
+		It("should retrieve the object and extract the status", func() {
+			Expect(deployWaiter.ProviderStatus()).To(BeNil())
+			Expect(deployWaiter.NodesCIDR()).To(BeNil())
+
+			var (
+				providerStatus = &runtime.RawExtension{Raw: []byte(`{"some":"status"}`)}
+				nodesCIDR      = pointer.StringPtr("1.2.3.4")
+			)
+
+			obj := infra.DeepCopy()
+			obj.Status.ProviderStatus = providerStatus
+			obj.Status.NodesCIDR = nodesCIDR
+
+			c.
+				EXPECT().
+				Get(ctx, kutil.Key(obj.Namespace, obj.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
+				DoAndReturn(func(_ context.Context, _ client.ObjectKey, o *extensionsv1alpha1.Infrastructure) error {
+					obj.DeepCopyInto(o)
+					return nil
+				})
+
+			res, err := deployWaiter.Get(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).To(Equal(obj))
+
+			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
+			Expect(deployWaiter.NodesCIDR()).To(Equal(nodesCIDR))
 		})
 	})
 })

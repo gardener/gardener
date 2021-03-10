@@ -367,9 +367,7 @@ func (b *Botanist) DefaultControlPlane(seedClient client.Client, purpose extensi
 
 // DeployControlPlane deploys or restores the ControlPlane custom resource (purpose normal).
 func (b *Botanist) DeployControlPlane(ctx context.Context) error {
-	b.Shoot.Components.Extensions.ControlPlane.SetInfrastructureProviderStatus(&runtime.RawExtension{
-		Raw: b.Shoot.InfrastructureStatus,
-	})
+	b.Shoot.Components.Extensions.ControlPlane.SetInfrastructureProviderStatus(b.Shoot.Components.Extensions.Infrastructure.ProviderStatus())
 	return b.deployOrRestoreControlPlane(ctx, b.Shoot.Components.Extensions.ControlPlane)
 }
 
