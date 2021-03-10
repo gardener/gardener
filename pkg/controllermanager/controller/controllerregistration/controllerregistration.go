@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
-	corev1 "k8s.io/api/core/v1"
+	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 )
@@ -66,10 +66,11 @@ type Controller struct {
 func NewController(
 	clientMap clientmap.ClientMap,
 	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
-	secrets map[string]*corev1.Secret,
+	kubeInformerFactory kubeinformers.SharedInformerFactory,
 ) *Controller {
 	var (
 		gardenCoreInformer = gardenCoreInformerFactory.Core().V1beta1()
+		k8sCoreInformer    = kubeInformerFactory.Core().V1()
 
 		backupBucketInformer = gardenCoreInformer.BackupBuckets()
 		backupBucketLister   = backupBucketInformer.Lister()
@@ -87,6 +88,9 @@ func NewController(
 
 		shootInformer = gardenCoreInformer.Shoots()
 
+		secretInformer = k8sCoreInformer.Secrets()
+		secretLister   = secretInformer.Lister()
+
 		controllerRegistrationQueue     = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration")
 		controllerRegistrationSeedQueue = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration-seed")
 		seedQueue                       = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed")
@@ -96,7 +100,7 @@ func NewController(
 		clientMap: clientMap,
 
 		controllerRegistrationControl:     NewDefaultControllerRegistrationControl(clientMap, controllerInstallationLister),
-		controllerRegistrationSeedControl: NewDefaultControllerRegistrationSeedControl(clientMap, secrets, backupBucketLister, controllerInstallationLister, controllerRegistrationLister, seedLister),
+		controllerRegistrationSeedControl: NewDefaultControllerRegistrationSeedControl(clientMap, secretLister, backupBucketLister, controllerInstallationLister, controllerRegistrationLister, seedLister),
 		seedControl:                       NewDefaultSeedControl(clientMap, controllerInstallationLister),
 
 		backupBucketLister:           backupBucketLister,

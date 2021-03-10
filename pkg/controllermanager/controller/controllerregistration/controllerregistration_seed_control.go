@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -43,6 +44,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -78,18 +80,18 @@ type RegistrationSeedControlInterface interface {
 // for any scenario other than testing.
 func NewDefaultControllerRegistrationSeedControl(
 	clientMap clientmap.ClientMap,
-	secrets map[string]*corev1.Secret,
+	secretLister corev1listers.SecretLister,
 	backupBucketLister gardencorelisters.BackupBucketLister,
 	controllerInstallationLister gardencorelisters.ControllerInstallationLister,
 	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister,
 	seedLister gardencorelisters.SeedLister,
 ) RegistrationSeedControlInterface {
-	return &defaultControllerRegistrationSeedControl{clientMap, secrets, backupBucketLister, controllerInstallationLister, controllerRegistrationLister, seedLister}
+	return &defaultControllerRegistrationSeedControl{clientMap, secretLister, backupBucketLister, controllerInstallationLister, controllerRegistrationLister, seedLister}
 }
 
 type defaultControllerRegistrationSeedControl struct {
 	clientMap                    clientmap.ClientMap
-	secrets                      map[string]*corev1.Secret
+	secretLister                 corev1listers.SecretLister
 	backupBucketLister           gardencorelisters.BackupBucketLister
 	controllerInstallationLister gardencorelisters.ControllerInstallationLister
 	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
@@ -138,11 +140,20 @@ func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1be
 		return err
 	}
 
-	internalDomain, err := gardenpkg.GetInternalDomain(c.secrets)
+	secrets, err := gardenpkg.ReadGardenSecretsFromLister(ctx, c.secretLister, c.seedLister, seedpkg.ComputeGardenNamespace(seed.Name))
 	if err != nil {
 		return err
 	}
-	defaultDomains, err := gardenpkg.GetDefaultDomains(c.secrets)
+
+	if len(secrets) < 1 {
+		return fmt.Errorf("garden secrets for seed %q have not been synchronized yet", seed.Name)
+	}
+
+	internalDomain, err := gardenpkg.GetInternalDomain(secrets)
+	if err != nil {
+		return err
+	}
+	defaultDomains, err := gardenpkg.GetDefaultDomains(secrets)
 	if err != nil {
 		return err
 	}
