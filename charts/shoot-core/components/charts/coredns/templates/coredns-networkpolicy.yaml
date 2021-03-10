@@ -36,6 +36,8 @@ spec:
       podSelector: {}
     - ipBlock:
         cidr: {{ .Values.global.podNetwork }}
+    - ipBlock:
+        cidr: {{ .Values.nodeNetwork }}
   policyTypes:
   - Egress
   - Ingress

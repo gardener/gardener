@@ -3,6 +3,7 @@
 
 global:
   podNetwork: 1.2.3.4/24
+nodeNetwork: 2.3.4.5/24
 service:
   type: "ClusterIP"
   clusterDNS: 100.64.0.10
