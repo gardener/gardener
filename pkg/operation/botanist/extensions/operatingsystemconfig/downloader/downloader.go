@@ -262,6 +262,22 @@ func GenerateRBACResourcesData(secretNames []string) (map[string][]byte, error) 
 				Name:     bootstraptokenapi.BootstrapDefaultGroup,
 			}},
 		}
+
+		clusterRoleBindingSelfNodeClient = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "system:certificates.k8s.io:certificatesigningrequests:selfnodeclient",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.SchemeGroupVersion.Group,
+				Kind:     "ClusterRole",
+				Name:     "system:certificates.k8s.io:certificatesigningrequests:selfnodeclient",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.SchemeGroupVersion.Group,
+				Kind:     rbacv1.GroupKind,
+				Name:     bootstraptokenapi.BootstrapDefaultGroup,
+			}},
+		}
 	)
 
 	return managedresources.
@@ -271,5 +287,6 @@ func GenerateRBACResourcesData(secretNames []string) (map[string][]byte, error) 
 			roleBinding,
 			clusterRoleBindingNodeBootstrapper,
 			clusterRoleBindingNodeClient,
+			clusterRoleBindingSelfNodeClient,
 		)
 }
