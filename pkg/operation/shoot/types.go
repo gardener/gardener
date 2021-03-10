@@ -80,7 +80,6 @@ type Shoot struct {
 
 	Components *Components
 
-	Extensions           map[string]extension.Extension
 	InfrastructureStatus []byte
 
 	ETCDEncryption *etcdencryption.EncryptionConfig
