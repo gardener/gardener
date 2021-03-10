@@ -39,8 +39,6 @@ import (
 const (
 	// DefaultInterval is the default interval for retry operations.
 	DefaultInterval = 5 * time.Second
-	// DefaultSevereThreshold  is the default threshold until an error reported by another component is treated as 'severe'.
-	DefaultSevereThreshold = 30 * time.Second
 )
 
 // New takes an operation object <o> and creates a new Botanist object. It checks whether the given Shoot DNS
