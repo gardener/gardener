@@ -30,6 +30,7 @@ import (
 	"github.com/Masterminds/sprig"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/authentication/user"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"k8s.io/utils/pointer"
 )
@@ -262,6 +263,22 @@ func GenerateRBACResourcesData(secretNames []string) (map[string][]byte, error) 
 				Name:     bootstraptokenapi.BootstrapDefaultGroup,
 			}},
 		}
+
+		clusterRoleBindingSelfNodeClient = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "system:certificates.k8s.io:certificatesigningrequests:selfnodeclient",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.SchemeGroupVersion.Group,
+				Kind:     "ClusterRole",
+				Name:     "system:certificates.k8s.io:certificatesigningrequests:selfnodeclient",
+			},
+			Subjects: []rbacv1.Subject{{
+				APIGroup: rbacv1.SchemeGroupVersion.Group,
+				Kind:     rbacv1.GroupKind,
+				Name:     user.NodesGroup,
+			}},
+		}
 	)
 
 	return managedresources.
@@ -271,5 +288,6 @@ func GenerateRBACResourcesData(secretNames []string) (map[string][]byte, error) 
 			roleBinding,
 			clusterRoleBindingNodeBootstrapper,
 			clusterRoleBindingNodeClient,
+			clusterRoleBindingSelfNodeClient,
 		)
 }

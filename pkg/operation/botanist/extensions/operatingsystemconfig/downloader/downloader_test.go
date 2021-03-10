@@ -158,16 +158,31 @@ subjects:
   kind: Group
   name: system:bootstrappers
 `
+			clusterRoleBindingSelfNodeClientYAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: system:certificates.k8s.io:certificatesigningrequests:selfnodeclient
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:certificates.k8s.io:certificatesigningrequests:selfnodeclient
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:nodes
+`
 		)
 
 		It("should generate the expected RBAC resources", func() {
 			data, err := GenerateRBACResourcesData([]string{secretName1, secretName2})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(data).To(HaveLen(4))
+			Expect(data).To(HaveLen(5))
 			Expect(string(data["role__kube-system__cloud-config-downloader.yaml"])).To(Equal(roleYAML))
 			Expect(string(data["rolebinding__kube-system__cloud-config-downloader.yaml"])).To(Equal(roleBindingYAML))
 			Expect(string(data["clusterrolebinding____system_node-bootstrapper.yaml"])).To(Equal(clusterRoleBindingNodeBootstrapperYAML))
 			Expect(string(data["clusterrolebinding____system_certificates.k8s.io_certificatesigningrequests_nodeclient.yaml"])).To(Equal(clusterRoleBindingNodeClientYAML))
+			Expect(string(data["clusterrolebinding____system_certificates.k8s.io_certificatesigningrequests_selfnodeclient.yaml"])).To(Equal(clusterRoleBindingSelfNodeClientYAML))
 		})
 	})
 })
