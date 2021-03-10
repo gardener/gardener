@@ -239,7 +239,6 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	}
 	shoot.Networks = networks
 
-	shoot.ResourceRefs = getResourceRefs(shootObject)
 	shoot.NodeLocalDNSEnabled = gardenletfeatures.FeatureGate.Enabled(features.NodeLocalDNS)
 	shoot.Purpose = gardencorev1beta1helper.GetPurpose(shootObject)
 
@@ -619,13 +618,4 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 	}
 
 	return requiredExtensions
-}
-
-// getResourceRefs returns resource references from the Shoot spec as map[string]autoscalingv1.CrossVersionObjectReference.
-func getResourceRefs(shoot *gardencorev1beta1.Shoot) map[string]autoscalingv1.CrossVersionObjectReference {
-	resourceRefs := make(map[string]autoscalingv1.CrossVersionObjectReference)
-	for _, r := range shoot.Spec.Resources {
-		resourceRefs[r.Name] = r.ResourceRef
-	}
-	return resourceRefs
 }
