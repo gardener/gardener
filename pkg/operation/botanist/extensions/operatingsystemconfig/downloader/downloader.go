@@ -30,6 +30,7 @@ import (
 	"github.com/Masterminds/sprig"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/authentication/user"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"k8s.io/utils/pointer"
 )
@@ -275,7 +276,7 @@ func GenerateRBACResourcesData(secretNames []string) (map[string][]byte, error) 
 			Subjects: []rbacv1.Subject{{
 				APIGroup: rbacv1.SchemeGroupVersion.Group,
 				Kind:     rbacv1.GroupKind,
-				Name:     bootstraptokenapi.BootstrapDefaultGroup,
+				Name:     user.NodesGroup,
 			}},
 		}
 	)

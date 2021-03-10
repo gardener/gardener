@@ -170,7 +170,7 @@ roleRef:
 subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: Group
-  name: system:bootstrappers
+  name: system:nodes
 `
 		)
 
