@@ -56,7 +56,7 @@ var _ = Describe("Aggregator", func() {
 			corev1.SchemeGroupVersion.WithKind("Secret"): secretCache,
 		}
 		scheme = runtime.NewScheme()
-		corev1.AddToScheme(scheme)
+		Expect(corev1.AddToScheme(scheme)).To(Succeed())
 
 		aggregator = NewAggregator(fallback, gvkToCache, scheme)
 	})

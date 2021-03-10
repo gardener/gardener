@@ -46,6 +46,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/component-base/version"
@@ -247,11 +248,36 @@ func shouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
 const taskID = "initializeOperation"
 
 func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Entry, gardenClient client.Client, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (*operation.Operation, error) {
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get garden client: %w", err)
+	}
+
+	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient.Cache(), c.seedLister, seedpkg.ComputeGardenNamespace(seed.Name))
+	if err != nil {
+		return nil, err
+	}
+
+	shootList, err := c.k8sGardenCoreInformers.Core().V1beta1().Shoots().Lister().List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	shootCount := len(shootList)
+	if len(shoot.Status.UID) == 0 {
+		// Do not consider shoot that is just being created.
+		shootCount -= 1
+	}
+
+	if err := garden.VerifyInternalDomainSecret(ctx, gardenClient, shootCount, gardenSecrets[common.GardenRoleInternalDomain]); err != nil {
+		return nil, err
+	}
+
 	gardenObj, err := garden.
 		NewBuilder().
 		WithProject(project).
-		WithInternalDomainFromSecrets(c.secrets).
-		WithDefaultDomainsFromSecrets(c.secrets).
+		WithInternalDomainFromSecrets(gardenSecrets).
+		WithDefaultDomainsFromSecrets(gardenSecrets).
 		Build()
 	if err != nil {
 		return nil, err
@@ -285,7 +311,7 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 		WithConfig(c.config).
 		WithGardenerInfo(c.identity).
 		WithGardenClusterIdentity(c.gardenClusterIdentity).
-		WithSecrets(c.secrets).
+		WithSecrets(gardenSecrets).
 		WithImageVector(c.imageVector).
 		WithGarden(gardenObj).
 		WithSeed(seedObj).

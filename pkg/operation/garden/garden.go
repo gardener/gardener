@@ -21,11 +21,11 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -34,7 +34,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/apimachinery/pkg/selection"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -171,7 +173,47 @@ const (
 
 // ReadGardenSecrets reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
 // The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
-func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory) (map[string]*corev1.Secret, error) {
+func ReadGardenSecrets(ctx context.Context, rd client.Reader, seedLister gardencorelisters.SeedLister, namespace string) (map[string]*corev1.Secret, error) {
+	return readGardenSecretsFromCache(
+		ctx,
+		func(ctx context.Context, namespace string, selector labels.Selector) ([]corev1.Secret, error) {
+			secrets := &corev1.SecretList{}
+			if err := rd.List(ctx, secrets, &client.MatchingLabelsSelector{Selector: selector}, client.InNamespace(namespace)); err != nil {
+				return nil, err
+			}
+			return secrets.Items, nil
+		},
+		seedLister,
+		namespace,
+	)
+}
+
+// ReadGardenSecretsFromLister reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
+// The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
+func ReadGardenSecretsFromLister(ctx context.Context, secretLister kubecorev1listers.SecretLister, seedLister gardencorelisters.SeedLister, namespace string) (map[string]*corev1.Secret, error) {
+	return readGardenSecretsFromCache(
+		ctx,
+		func(ctx context.Context, namespace string, selector labels.Selector) ([]corev1.Secret, error) {
+			secrets, err := secretLister.Secrets(namespace).List(selector)
+			if err != nil {
+				return nil, err
+			}
+			secretsCopy := make([]corev1.Secret, 0, len(secrets))
+			for _, secret := range secrets {
+				secretsCopy = append(secretsCopy, *secret.DeepCopy())
+			}
+			return secretsCopy, nil
+		},
+		seedLister,
+		namespace,
+	)
+}
+
+type secretLister func(ctx context.Context, namespace string, selector labels.Selector) ([]corev1.Secret, error)
+
+var gardenRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
+
+func readGardenSecretsFromCache(ctx context.Context, secretLister secretLister, seedLister gardencorelisters.SeedLister, namespace string) (map[string]*corev1.Secret, error) {
 	var (
 		secretsMap                          = make(map[string]*corev1.Secret)
 		numberOfInternalDomainSecrets       = 0
@@ -179,19 +221,12 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 		numberOfAlertingSecrets             = 0
 	)
 
-	selectorGardenRole, err := labels.Parse(v1beta1constants.GardenRole)
+	secretsGardenRole, err := secretLister(ctx, namespace, labels.NewSelector().Add(gardenRoleReq))
 	if err != nil {
 		return nil, err
 	}
 
-	secretsGardenRole, err := k8sInformers.Core().V1().Secrets().Lister().Secrets(v1beta1constants.GardenNamespace).List(selectorGardenRole)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, obj := range secretsGardenRole {
-		secret := obj.DeepCopy()
-
+	for _, secret := range secretsGardenRole {
 		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role default-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == common.GardenRoleDefaultDomain {
@@ -201,7 +236,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 				continue
 			}
 			defaultDomainSecret := secret
-			secretsMap[fmt.Sprintf("%s-%s", common.GardenRoleDefaultDomain, domain)] = defaultDomainSecret
+			secretsMap[fmt.Sprintf("%s-%s", common.GardenRoleDefaultDomain, domain)] = &defaultDomainSecret
 			logger.Logger.Infof("Found default domain secret %s for domain %s.", secret.Name, domain)
 		}
 
@@ -214,7 +249,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 				continue
 			}
 			internalDomainSecret := secret
-			secretsMap[common.GardenRoleInternalDomain] = internalDomainSecret
+			secretsMap[common.GardenRoleInternalDomain] = &internalDomainSecret
 			logger.Logger.Infof("Found internal domain secret %s for domain %s.", secret.Name, domain)
 			numberOfInternalDomainSecrets++
 		}
@@ -227,7 +262,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 			if _, ok := secret.Data[key]; !ok {
 				return nil, fmt.Errorf("cannot use OpenVPN Diffie Hellman secret '%s' as it does not contain key '%s' (whose value should be the actual Diffie Hellman key)", secret.Name, key)
 			}
-			secretsMap[common.GardenRoleOpenVPNDiffieHellman] = openvpnDiffieHellman
+			secretsMap[common.GardenRoleOpenVPNDiffieHellman] = &openvpnDiffieHellman
 			logger.Logger.Infof("Found OpenVPN Diffie Hellman secret %s.", secret.Name)
 			numberOfOpenVPNDiffieHellmanSecrets++
 		}
@@ -240,7 +275,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 				return nil, fmt.Errorf("invalid or missing field 'auth_type' in secret %s", secret.Name)
 			}
 			alertingSecret := secret
-			secretsMap[common.GardenRoleAlerting] = alertingSecret
+			secretsMap[common.GardenRoleAlerting] = &alertingSecret
 			logger.Logger.Infof("Found alerting secret %s.", secret.Name)
 			numberOfAlertingSecrets++
 		}
@@ -249,13 +284,14 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGard
 		// indicating the Garden role global-monitoring.
 		if secret.Labels[v1beta1constants.GardenRole] == common.GardenRoleGlobalMonitoring {
 			monitoringSecret := secret
-			secretsMap[common.GardenRoleGlobalMonitoring] = monitoringSecret
+			secretsMap[common.GardenRoleGlobalMonitoring] = &monitoringSecret
 			logger.Logger.Infof("Found monitoring basic auth secret %s.", secret.Name)
 		}
 	}
 
 	// Check if an internal domain secret is required
-	seeds, err := k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().List(labels.Everything())
+	// TODO: Only seeds reconciled by Gardenlet
+	seeds, err := seedLister.List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
@@ -333,8 +369,10 @@ func VerifyInternalDomainSecret(ctx context.Context, k8sGardenClient kubernetes.
 	return nil
 }
 
+var monitoringRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.In, common.GardenRoleGlobalMonitoring)
+
 // BootstrapCluster bootstraps the Garden cluster and deploys various required manifests.
-func BootstrapCluster(ctx context.Context, k8sGardenClient kubernetes.Interface, gardenNamespace string, secrets map[string]*corev1.Secret) error {
+func BootstrapCluster(ctx context.Context, k8sGardenClient kubernetes.Interface, gardenNamespace string, secretLister kubecorev1listers.SecretLister) error {
 	// Check whether the Kubernetes version of the Garden cluster is at least 1.16 (least supported K8s version of Gardener).
 	minGardenVersion := "1.16"
 	gardenVersionOK, err := version.CompareVersions(k8sGardenClient.Version(), ">=", minGardenVersion)
@@ -344,12 +382,16 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient kubernetes.Interface,
 	if !gardenVersionOK {
 		return fmt.Errorf("the Kubernetes version of the Garden cluster must be at least %s", minGardenVersion)
 	}
-	if secrets[common.GardenRoleGlobalMonitoring] == nil {
-		var secret *corev1.Secret
-		if secret, err = generateMonitoringSecret(ctx, k8sGardenClient, gardenNamespace); err != nil {
+
+	secrets, err := secretLister.Secrets(v1beta1constants.GardenNamespace).List(labels.NewSelector().Add(monitoringRoleReq))
+	if err != nil {
+		return err
+	}
+
+	if len(secrets) < 1 {
+		if _, err = generateMonitoringSecret(ctx, k8sGardenClient, gardenNamespace); err != nil {
 			return err
 		}
-		secrets[common.GardenRoleGlobalMonitoring] = secret
 	}
 
 	return nil

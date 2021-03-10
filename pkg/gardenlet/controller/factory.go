@@ -21,6 +21,8 @@ import (
 	"path/filepath"
 
 	"github.com/gardener/gardener/charts"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
+	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -44,7 +46,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
@@ -127,16 +128,21 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("timed out waiting for Kube caches to sync")
 	}
 
-	secrets, err := garden.ReadGardenSecrets(f.k8sInformers, f.k8sGardenCoreInformers)
-	runtime.Must(err)
-
-	if secret, ok := secrets[common.GardenRoleInternalDomain]; ok {
-		shootList, err := f.k8sGardenCoreInformers.Core().V1beta1().Shoots().Lister().List(labels.Everything())
-		runtime.Must(err)
-		runtime.Must(garden.VerifyInternalDomainSecret(ctx, k8sGardenClient, len(shootList), secret))
+	seedNames := confighelper.SeedNames(f.cfg.SeedConfig, f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister(), f.cfg.SeedSelector)
+	if len(seedNames) < 1 {
+		return fmt.Errorf("no seed selected by Gardenlet")
 	}
 
-	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, DefaultImageVector))
+	// Read Garden secrets from any seed namespace as we assume they are synced accordingly by the Gardener Controller Manager
+	secrets, err := garden.ReadGardenSecrets(
+		ctx,
+		k8sGardenClient.Cache(),
+		f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister(),
+		seedpkg.ComputeGardenNamespace(seedNames[0]),
+	)
+	runtime.Must(err)
+
+	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.ChartPath, DefaultImageVector))
 	runtime.Must(err)
 
 	var componentImageVectors imagevector.ComponentImageVectors
@@ -155,7 +161,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	var (
 		controllerInstallationController = controllerinstallationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace, f.gardenClusterIdentity)
 		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.healthManager, secrets, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
-		shootController                  = shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.identity, f.gardenClusterIdentity, secrets, imageVector, f.recorder)
+		shootController                  = shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.identity, f.gardenClusterIdentity, imageVector, f.recorder)
 	)
 
 	backupBucketController, err := backupbucketcontroller.NewBackupBucketController(ctx, f.clientMap, f.cfg, f.recorder)

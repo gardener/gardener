@@ -20,8 +20,10 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -31,11 +33,13 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/logger"
+	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/care"
 	"github.com/gardener/gardener/pkg/operation/common"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -48,13 +52,14 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Shoot Care Control", func() {
 	var (
 		careControl   CareControlInterface
-		coreInformers v1beta1.Interface
 		gardenletConf *config.GardenletConfiguration
 	)
 
@@ -68,12 +73,46 @@ var _ = Describe("Shoot Care Control", func() {
 
 	Describe("#Care", func() {
 		var (
+			ctrl                      *gomock.Controller
+			gardenCoreCache           *mockcache.MockCache
+			gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
+
+			gardenSecrets                            []corev1.Secret
+			seed                                     *gardencorev1beta1.Seed
 			seedName, shootName, shootNamespace, key string
 			shoot                                    *gardencorev1beta1.Shoot
+
+			gardenRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
 		)
 
 		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+			gardenCoreCache = mockcache.NewMockCache(ctrl)
+
+			gardenSecrets = []corev1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        "internal-domain-secret",
+						Annotations: map[string]string{common.DNSProvider: "fooDNS", common.DNSDomain: "foo.bar"},
+						Labels:      map[string]string{v1beta1constants.GardenRole: common.GardenRoleInternalDomain},
+					},
+				},
+			}
+
 			seedName = "seed"
+			seed = &gardencorev1beta1.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: seedName,
+				},
+				Spec: gardencorev1beta1.SeedSpec{
+					Settings: &gardencorev1beta1.SeedSettings{
+						ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
+							Enabled: true,
+						},
+					},
+				},
+			}
+
 			shootName = "shoot"
 			shootNamespace = "project"
 			key = kutil.Key(shootNamespace, shootName).String()
@@ -95,6 +134,27 @@ var _ = Describe("Shoot Care Control", func() {
 					},
 				},
 			}
+
+			gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+			Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		JustBeforeEach(func() {
+			gardenCoreCache.EXPECT().List(
+				gomock.Any(),
+				gomock.AssignableToTypeOf(&corev1.SecretList{}),
+				&client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(gardenRoleReq)},
+			).DoAndReturn(
+				func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+					secrets, ok := list.(*corev1.SecretList)
+					Expect(ok).To(BeTrue())
+					secrets.Items = gardenSecrets
+					return nil
+				}).MaxTimes(1)
 		})
 
 		Context("when health check setup is broken", func() {
@@ -107,6 +167,7 @@ var _ = Describe("Shoot Care Control", func() {
 				gardenCoreClient = fake.NewSimpleClientset(shoot)
 				gardenClientSet := fakeclientset.NewClientSetBuilder().
 					WithGardenCore(gardenCoreClient).
+					WithCache(gardenCoreCache).
 					Build()
 				clientMapBuilder.WithClientSetForKey(keys.ForGarden(), gardenClientSet)
 			})
@@ -122,13 +183,27 @@ var _ = Describe("Shoot Care Control", func() {
 				It("should report a setup failure", func() {
 					operationFunc := opFunc(nil, errors.New("foo"))
 					defer test.WithVars(&NewOperation, operationFunc)()
-					careControl = NewDefaultCareControl(clientMapBuilder.Build(), coreInformers, nil, nil, nil, "", gardenletConf)
+					careControl = NewDefaultCareControl(clientMapBuilder.Build(), gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
 
 					Expect(careControl.Care(shoot, key)).To(Succeed())
 					updatedShoot, err := gardenCoreClient.CoreV1beta1().Shoots(shootNamespace).Get(context.Background(), shootName, metav1.GetOptions{})
 					Expect(err).To(Not(HaveOccurred()))
 					Expect(updatedShoot.Status.Conditions).To(consistOfConditionsInUnknownStatus("Precondition failed: operation could not be initialized"))
 					Expect(updatedShoot.Status.Constraints).To(consistOfConstraintsInUnknownStatus("Precondition failed: operation could not be initialized"))
+				})
+			})
+
+			Context("when Garden secrets are incomplete", func() {
+				BeforeEach(func() {
+					gardenSecrets = nil
+					clientMapBuilder.WithClientSetForKey(keys.ForSeedWithName(seedName), fakeclientset.NewClientSet())
+				})
+				It("should report a setup failure", func() {
+					operationFunc := opFunc(nil, errors.New("foo"))
+					defer test.WithVars(&NewOperation, operationFunc)()
+					careControl = NewDefaultCareControl(clientMapBuilder.Build(), gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
+
+					Expect(careControl.Care(shoot, key)).To(MatchError("error reading Garden secrets: require exactly ONE internal domain secret, but found 0"))
 				})
 			})
 
@@ -146,7 +221,7 @@ var _ = Describe("Shoot Care Control", func() {
 				})
 
 				It("should report a setup failure", func() {
-					careControl = NewDefaultCareControl(clientMapBuilder.Build(), coreInformers, nil, nil, nil, "", gardenletConf)
+					careControl = NewDefaultCareControl(clientMapBuilder.Build(), gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
 					Expect(careControl.Care(shoot, key)).To(Succeed())
 					updatedShoot, err := gardenCoreClient.CoreV1beta1().Shoots(shootNamespace).Get(context.Background(), shootName, metav1.GetOptions{})
 					Expect(err).To(Not(HaveOccurred()))
@@ -158,7 +233,6 @@ var _ = Describe("Shoot Care Control", func() {
 
 		Context("when health check setup is successful", func() {
 			var (
-				ctrl                     *gomock.Controller
 				seedClient, gardenClient *mockclient.MockClient
 				clientMap                clientmap.ClientMap
 				gardenCoreClient         *fake.Clientset
@@ -175,6 +249,7 @@ var _ = Describe("Shoot Care Control", func() {
 				gardenClientSet := fakeclientset.NewClientSetBuilder().
 					WithGardenCore(gardenCoreClient).
 					WithClient(gardenClient).
+					WithCache(gardenCoreCache).
 					Build()
 				seedClientSet := fakeclientset.NewClientSetBuilder().
 					WithClient(seedClient).
@@ -198,18 +273,15 @@ var _ = Describe("Shoot Care Control", func() {
 					test.WithVar(&NewOperation, operationFunc),
 					test.WithVar(&NewGarbageCollector, nopGarbageCollectorFunc()),
 				)
-				careControl = NewDefaultCareControl(clientMap, coreInformers, nil, nil, nil, "", gardenletConf)
+				careControl = NewDefaultCareControl(clientMap, gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
 			})
 
 			BeforeEach(func() {
-				ctrl = gomock.NewController(GinkgoT())
-
 				seedClient = mockclient.NewMockClient(ctrl)
 				gardenClient = mockclient.NewMockClient(ctrl)
 			})
 
 			AfterEach(func() {
-				ctrl.Finish()
 				shoot = nil
 
 				for _, fn := range revertFns {
