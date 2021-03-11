@@ -24,9 +24,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler"
-	mockclusterautoscaler "github.com/gardener/gardener/pkg/operation/botanist/controlplane/clusterautoscaler/mock"
-	mockworker "github.com/gardener/gardener/pkg/operation/botanist/extensions/worker/mock"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
+	mockclusterautoscaler "github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler/mock"
+	mockworker "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 

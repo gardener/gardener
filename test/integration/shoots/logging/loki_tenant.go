@@ -19,7 +19,7 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/seedsystemcomponents/seedadmission"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
@@ -89,7 +89,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		validatingWebhookParams := map[string]interface{}{
 			"NamespaceLabelKey":   shootNamespaceLabelKey,
 			"NamespaceLabelValue": shootNamespaceLabelValue,
-			"CABundle":            utils.EncodeBase64([]byte(seedadmission.TLSCACert)),
+			"CABundle":            utils.EncodeBase64([]byte(seedadmissioncontroller.TLSCACert)),
 		}
 		err = f.RenderAndDeployTemplate(ctx, f.SeedClient, templates.BlockLokiValidatingWebhookConfiguration, validatingWebhookParams)
 		framework.ExpectNoError(err)

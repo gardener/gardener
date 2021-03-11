@@ -25,9 +25,9 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig"
-	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/operation/botanist/extensions/operatingsystemconfig/mock"
-	mockworker "github.com/gardener/gardener/pkg/operation/botanist/extensions/worker/mock"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
+	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/mock"
+	mockworker "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"

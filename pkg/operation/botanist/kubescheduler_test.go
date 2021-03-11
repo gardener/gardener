@@ -23,8 +23,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler"
-	mockkubescheduler "github.com/gardener/gardener/pkg/operation/botanist/controlplane/kubescheduler/mock"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
+	mockkubescheduler "github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 

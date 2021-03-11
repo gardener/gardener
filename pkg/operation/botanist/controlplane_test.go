@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	mockcontrolplane "github.com/gardener/gardener/pkg/operation/botanist/extensions/controlplane/mock"
+	mockcontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane/mock"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
