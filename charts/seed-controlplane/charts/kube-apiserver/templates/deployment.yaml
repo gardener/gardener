@@ -322,6 +322,8 @@ spec:
         - --cert-name=kube-apiserver.crt
         - --key-name=kube-apiserver.key
         - --port=9443
+        resources:
+{{ toYaml .Values.podMutatorResources | indent 10 }}
         volumeMounts:
         - name: kube-apiserver
           mountPath: /srv/kubernetes/apiserver
