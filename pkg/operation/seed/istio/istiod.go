@@ -21,7 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
-	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -38,6 +37,7 @@ type istiod struct {
 	client    crclient.Client
 }
 
+// IstiodValues holds values for the istio-istiod chart.
 type IstiodValues struct {
 	TrustDomain string `json:"trustDomain,omitempty"`
 	Image       string `json:"image,omitempty"`
@@ -88,7 +88,6 @@ func (i *istiod) Deploy(ctx context.Context) error {
 	}
 
 	applierOptions := kubernetes.CopyApplierOptions(kubernetes.DefaultMergeFuncs)
-	applierOptions[appsv1.SchemeGroupVersion.WithKind("Deployment").GroupKind()] = kubernetes.DeploymentKeepReplicasMergeFunc
 
 	return i.Apply(ctx, i.chartPath, i.namespace, istioReleaseName, kubernetes.Values(i.values), applierOptions)
 }
