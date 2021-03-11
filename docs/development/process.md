@@ -79,9 +79,9 @@ Before you initiate a cherry pick, make sure that the following prerequisites ar
   - You will need to run the cherry pick script separately for each patch
     release you want to cherry pick to. Cherry picks should be applied to all
     active release branches where the fix is applicable.
-  
-  - When asked for your github password, provide the created github token 
-    rather than your actual github password. 
+
+  - When asked for your github password, provide the created github token
+    rather than your actual github password.
     Refer [https://github.com/github/hub/issues/2655#issuecomment-735836048](https://github.com/github/hub/issues/2655#issuecomment-735836048)
 
 [cherry-pick-script]: https://github.com/gardener/gardener/blob/master/hack/cherry-pick-pull.sh

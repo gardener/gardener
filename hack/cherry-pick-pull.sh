@@ -42,6 +42,9 @@ UPSTREAM_REMOTE=${UPSTREAM_REMOTE:-upstream}
 FORK_REMOTE=${FORK_REMOTE:-origin}
 MAIN_REPO_ORG=${MAIN_REPO_ORG:-$(git remote get-url "$UPSTREAM_REMOTE" | awk '{gsub(/http[s]:\/\/|git@/,"")}1' | awk -F'[@:./]' 'NR==1{print $3}')}
 MAIN_REPO_NAME=${MAIN_REPO_NAME:-$(git remote get-url "$UPSTREAM_REMOTE" | awk '{gsub(/http[s]:\/\/|git@/,"")}1' | awk -F'[@:./]' 'NR==1{print $4}')}
+DEPRECATED_RELEASE_NOTE_CATEGORY="|noteworthy|improvement|action"
+RELEASE_NOTE_CATEGORY="(breaking|feature|bugfix|doc|other${DEPRECATED_RELEASE_NOTE_CATEGORY})"
+RELEASE_NOTE_TARGET_GROUP="(user|operator|developer|dependency)"
 
 if [[ -z ${GITHUB_USER:-} ]]; then
   echo "Please export GITHUB_USER=<your-user> (or GH organization, if that's where your fork lives)"
@@ -133,6 +136,7 @@ function return_to_kansas {
 trap return_to_kansas EXIT
 
 SUBJECTS=()
+RELEASE_NOTES=()
 function make-a-pr() {
   local rel
   rel="$(basename "${BRANCH}")"
@@ -146,12 +150,16 @@ function make-a-pr() {
   prtext="$(mktemp -t prtext.XXXX)" # cleaned in return_to_kansas
   local numandtitle
   numandtitle=$(printf '%s\n' "${SUBJECTS[@]}")
+  relnotes=$(printf "${RELEASE_NOTES[@]}")
   cat >"${prtext}" <<EOF
 Automated cherry pick of ${numandtitle}
 
 Cherry pick of ${PULLSUBJ} on ${rel}.
 
 ${numandtitle}
+
+**Release Notes:**
+${relnotes}
 EOF
 
   hub pull-request -F "${prtext}" -h "${GITHUB_USER}:${NEWBRANCH}" -b "${MAIN_REPO_ORG}:${rel}"
@@ -200,6 +208,10 @@ for pull in "${PULLS[@]}"; do
 
   # remove the patch file from /tmp
   rm -f "/tmp/${pull}.patch"
+
+  # get the release notes
+  notes=$(curl "https://api.github.com/repos/${MAIN_REPO_ORG}/${MAIN_REPO_NAME}/pulls/${pull}" -sS | jq '.body' | grep -Po "\`\`\` *${RELEASE_NOTE_CATEGORY} ${RELEASE_NOTE_TARGET_GROUP}.*?\`\`\`")
+  RELEASE_NOTES+=("${notes}")
 done
 gitamcleanup=false
 
