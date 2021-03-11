@@ -6,6 +6,7 @@ metadata:
   labels:
 {{ .Values.labels | toYaml | indent 4 }}
 spec:
+  replicas: 2
   revisionHistoryLimit: 1
   strategy:
     rollingUpdate:
@@ -22,7 +23,6 @@ spec:
         sidecar.istio.io/inject: "false"
         checksum/istio-config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
-      replicas: 2
       serviceAccountName: istiod
       securityContext:
         fsGroup: 1337
