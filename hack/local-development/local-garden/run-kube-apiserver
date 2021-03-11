@@ -31,7 +31,7 @@ clusters:
 - name: gardener-admission-controller
   cluster:
     insecure-skip-tls-verify: true
-    server: https://$ADMISSION_CONTROLLER_EXTERNAL_NAME:2721/webhooks/seedauthorizer
+    server: https://$ADMISSION_CONTROLLER_EXTERNAL_NAME:2721/webhooks/auth/seed
 users:
 - name: kube-apiserver
   user: {}

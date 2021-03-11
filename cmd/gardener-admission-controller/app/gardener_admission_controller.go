@@ -168,7 +168,7 @@ func (o *options) run(ctx context.Context) error {
 	}
 	logSeedAuth := logf.Log.WithName(seedauthorizer.AuthorizerName)
 
-	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth)))
+	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth, graph)))
 	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedrestriction.New(logf.Log.WithName(seedrestriction.HandlerName))})
 	server.Register(namespacedeletion.WebhookPath, &webhook.Admission{Handler: namespaceValidationHandler})
 	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(logf.Log.WithName(kubeconfigsecret.HandlerName))})
