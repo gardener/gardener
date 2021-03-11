@@ -92,6 +92,14 @@ konnectivityTunnelResources:
       cpu: 200m
       memory: 500M
 
+podMutatorResources:
+  requests:
+    cpu: 50m
+    memory: 128M
+  limits:
+    cpu: 200m
+    memory: 500M
+
 maxReplicas: 1
 minReplicas: 1
 
