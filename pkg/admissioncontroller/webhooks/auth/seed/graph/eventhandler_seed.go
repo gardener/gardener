@@ -74,12 +74,11 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 	defer g.lock.Unlock()
 
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeSeed, "", seed.Name)
-
-	if seed.Spec.SecretRef == nil && seed.Spec.Backup == nil {
-		return
-	}
+	g.deleteAllIncomingEdges(VertexTypeNamespace, VertexTypeSeed, "", seed.Name)
 
 	seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", seed.Name)
+	namespaceVertex := g.getOrCreateVertex(VertexTypeNamespace, "", "seed-"+seed.Name)
+	g.addEdge(namespaceVertex, seedVertex)
 
 	if seed.Spec.SecretRef != nil {
 		secretVertex := g.getOrCreateVertex(VertexTypeSecret, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)
