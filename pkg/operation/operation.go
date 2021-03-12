@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -81,7 +82,7 @@ func NewBuilder() *Builder {
 			return nil, fmt.Errorf("shoot object is required but not set")
 		},
 		chartsRootPathFunc: func() string {
-			return common.ChartPath
+			return charts.Path
 		},
 	}
 }

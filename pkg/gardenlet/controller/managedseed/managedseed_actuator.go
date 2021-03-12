@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -280,7 +281,7 @@ func (a *actuator) deployGardenlet(ctx context.Context, shootClient kubernetes.I
 	}
 
 	// Apply gardenlet chart
-	return shootClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(values))
+	return shootClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(values))
 }
 
 func (a *actuator) deleteGardenlet(ctx context.Context, shootClient kubernetes.Interface, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
@@ -303,7 +304,7 @@ func (a *actuator) deleteGardenlet(ctx context.Context, shootClient kubernetes.I
 	}
 
 	// Delete gardenlet chart
-	return shootClient.ChartApplier().Delete(ctx, filepath.Join(common.ChartPath, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(values))
+	return shootClient.ChartApplier().Delete(ctx, filepath.Join(charts.Path, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(values))
 }
 
 func (a *actuator) checkSeedSpec(ctx context.Context, spec *gardencorev1beta1.SeedSpec, shoot *gardencorev1beta1.Shoot) error {

@@ -17,15 +17,15 @@ package botanist
 import (
 	"context"
 
+	"github.com/gardener/gardener/charts"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // DefaultClusterAutoscaler returns a deployer for the cluster-autoscaler.
 func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.ClusterAutoscaler, error) {
-	image, err := b.ImageVector.FindImage(common.ClusterAutoscalerImageName, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := b.ImageVector.FindImage(charts.ImageNameClusterAutoscaler, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

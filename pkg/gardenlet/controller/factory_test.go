@@ -18,7 +18,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/charts"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
 
@@ -37,7 +37,7 @@ var _ = Describe("Controller Manager", func() {
 			defer test.WithEnvVar(imagevector.OverrideEnv, "")()
 			defer test.WithWd("../../..")()
 
-			_, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(common.ChartPath, DefaultImageVector))
+			_, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, DefaultImageVector))
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

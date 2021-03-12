@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
@@ -83,9 +84,9 @@ func (b *Botanist) wantedCertificateAuthorities() map[string]*secrets.Certificat
 }
 
 var vpaSecrets = map[string]string{
-	common.VpaAdmissionControllerImageName: common.VpaAdmissionControllerName,
-	common.VpaRecommenderImageName:         common.VpaRecommenderName,
-	common.VpaUpdaterImageName:             common.VpaUpdaterName,
+	charts.ImageNameVpaAdmissionController: common.VpaAdmissionControllerName,
+	charts.ImageNameVpaRecommender:         common.VpaRecommenderName,
+	charts.ImageNameVpaUpdater:             common.VpaUpdaterName,
 }
 
 func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig {

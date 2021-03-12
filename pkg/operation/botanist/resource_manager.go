@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/gardener/gardener/charts"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
@@ -33,7 +34,7 @@ import (
 
 // DefaultResourceManager returns an instance of Gardener Resource Manager with defaults configured for being deployed in a Shoot namespace
 func (b *Botanist) DefaultResourceManager() (resourcemanager.ResourceManager, error) {
-	image, err := b.ImageVector.FindImage(common.GardenerResourceManagerImageName, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := b.ImageVector.FindImage(charts.ImageNameGardenerResourceManager, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

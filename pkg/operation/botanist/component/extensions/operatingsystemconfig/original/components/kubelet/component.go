@@ -25,6 +25,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
@@ -32,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet/templates"
 	oscutils "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
@@ -99,7 +99,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		return nil, nil, err
 	}
 
-	cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.CRIName, ctx.Images[common.PauseContainerImageName], ctx.KubeletCLIFlags)
+	cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.CRIName, ctx.Images[charts.ImageNamePauseContainer], ctx.KubeletCLIFlags)
 
 	return []extensionsv1alpha1.Unit{
 			{
@@ -117,7 +117,7 @@ Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=-/var/lib/kubelet/extra_args
-ExecStartPre=` + execStartPreCopyBinaryFromContainer("kubelet", ctx.Images[common.HyperkubeImageName], ctx.KubernetesVersion) + `
+ExecStartPre=` + execStartPreCopyBinaryFromContainer("kubelet", ctx.Images[charts.ImageNameHyperkube], ctx.KubernetesVersion) + `
 ExecStart=` + PathKubernetesBinaries + `/kubelet \
     ` + utils.Indent(strings.Join(cliFlags, " \\\n"), 4) + ` $KUBELET_EXTRA_ARGS`),
 			},
@@ -133,7 +133,7 @@ WantedBy=multi-user.target
 [Service]
 Restart=always
 EnvironmentFile=/etc/environment
-ExecStartPre=` + execStartPreCopyBinaryFromContainer("kubectl", ctx.Images[common.HyperkubeImageName], ctx.KubernetesVersion) + `
+ExecStartPre=` + execStartPreCopyBinaryFromContainer("kubectl", ctx.Images[charts.ImageNameHyperkube], ctx.KubernetesVersion) + `
 ExecStart=` + pathHealthMonitor),
 			},
 		},

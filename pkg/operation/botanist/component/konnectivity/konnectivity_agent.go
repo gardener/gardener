@@ -17,6 +17,4 @@ package konnectivity
 const (
 	// AgentName is the name of kubernetes resources associated with konnectivity-agent.
 	AgentName = "konnectivity-agent"
-	// AgentImageName is the name of the konnectivity agent image.
-	AgentImageName = AgentName
 )

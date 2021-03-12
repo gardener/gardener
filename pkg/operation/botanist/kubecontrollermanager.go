@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -29,7 +30,7 @@ import (
 
 // DefaultKubeControllerManager returns a deployer for the kube-controller-manager.
 func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.KubeControllerManager, error) {
-	image, err := b.ImageVector.FindImage(common.KubeControllerManagerImageName, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	image, err := b.ImageVector.FindImage(charts.ImageNameKubeControllerManager, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
 	}

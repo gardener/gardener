@@ -25,9 +25,6 @@ const (
 	// BasicAuthSecretName is the name of the secret containing basic authentication credentials for the kube-apiserver.
 	BasicAuthSecretName = "kube-apiserver-basic-auth"
 
-	// ChartPath is the path to the Helm charts.
-	ChartPath = "charts"
-
 	// ConfirmationDeletion is an annotation on a Shoot and Project resources whose value must be set to "true" in order to
 	// allow deleting the resource (if the annotation is not set any DELETE request will be denied).
 	ConfirmationDeletion = "confirmation.gardener.cloud/deletion"
@@ -249,125 +246,12 @@ const (
 	// ManagedResourceAddonsName is the name of the addons managed resource.
 	ManagedResourceAddonsName = "addons"
 
-	// GardenerResourceManagerImageName is the name of the GardenerResourceManager image.
-	GardenerResourceManagerImageName = "gardener-resource-manager"
-
-	// GardenerSeedAdmissionControllerImageName is the name of the GardenerSeedAdmissionController image.
-	GardenerSeedAdmissionControllerImageName = "gardener-seed-admission-controller"
-
-	// CoreDNSImageName is the name of the CoreDNS image.
-	CoreDNSImageName = "coredns"
-
-	// NodeLocalDNSImageName is the name of the node-local-dns image.
-	NodeLocalDNSImageName = "node-local-dns"
-
-	// NodeProblemDetectorImageName is the name of the node-problem-detector image.
-	NodeProblemDetectorImageName = "node-problem-detector"
-
-	// KubeAPIServerImageName is the name of the kube-apiserver image.
-	KubeAPIServerImageName = "kube-apiserver"
-
-	// KubeControllerManagerImageName is the name of the kube-controller-manager image.
-	KubeControllerManagerImageName = "kube-controller-manager"
-
-	// KubeSchedulerImageName is the name of the kube-scheduler image.
-	KubeSchedulerImageName = "kube-scheduler"
-
-	// KubeProxyImageName is the name of the kube-proxy image.
-	KubeProxyImageName = "kube-proxy"
-
-	// HyperkubeImageName is the name of the hyperkube image (used for kubectl + kubelet on the worker nodes).
-	HyperkubeImageName = "hyperkube"
-
-	// MetricsServerImageName is the name of the MetricsServer image.
-	MetricsServerImageName = "metrics-server"
-
-	// VPNShootImageName is the name of the VPNShoot image.
-	VPNShootImageName = "vpn-shoot"
-
-	// VPNSeedImageName is the name of the VPNSeed image.
-	VPNSeedImageName = "vpn-seed"
-
-	// NodeExporterImageName is the name of the NodeExporter image.
-	NodeExporterImageName = "node-exporter"
-
-	// KubernetesDashboardImageName is the name of the kubernetes-dashboard image.
-	KubernetesDashboardImageName = "kubernetes-dashboard"
-
-	// KubernetesDashboardMetricsScraperImageName is the name of the kubernetes-dashboard-metrics-scraper image.
-	KubernetesDashboardMetricsScraperImageName = "kubernetes-dashboard-metrics-scraper"
-
-	// BusyboxImageName is the name of the Busybox image.
-	BusyboxImageName = "busybox"
-
-	// NginxIngressControllerImageName is the name of the NginxIngressController image.
-	NginxIngressControllerImageName = "nginx-ingress-controller"
-
-	// NginxIngressControllerSeedImageName is the name of the NginxIngressController image.
-	NginxIngressControllerSeedImageName = "nginx-ingress-controller-seed"
-
-	// IngressDefaultBackendImageName is the name of the IngressDefaultBackend image.
-	IngressDefaultBackendImageName = "ingress-default-backend"
-
-	// ClusterAutoscalerImageName is the name of the ClusterAutoscaler image.
-	ClusterAutoscalerImageName = "cluster-autoscaler"
-
-	// AlertManagerImageName is the name of the AlertManager image.
-	AlertManagerImageName = "alertmanager"
-
-	// ConfigMapReloaderImageName is the name of the ConfigMapReloader image.
-	ConfigMapReloaderImageName = "configmap-reloader"
-
-	// GrafanaImageName is the name of the Grafana image.
-	GrafanaImageName = "grafana"
-
-	// PrometheusImageName is the name of the Prometheus image.
-	PrometheusImageName = "prometheus"
-
-	// BlackboxExporterImageName is the name of the BlackboxExporter image.
-	BlackboxExporterImageName = "blackbox-exporter"
-
-	// KubeStateMetricsImageName is the name of the KubeStateMetrics image.
-	KubeStateMetricsImageName = "kube-state-metrics"
-
-	// EtcdDruidImageName is the name of Etcd Druid image
-	EtcdDruidImageName = "etcd-druid"
-
-	// PauseContainerImageName is the name of the PauseContainer image.
-	PauseContainerImageName = "pause-container"
-
-	// LokiImageName is the name of the Loki image used for logging
-	LokiImageName = "loki"
-
-	// CuratorImageName is the image of the curator responsible for Loki Disk
-	CuratorImageName = "loki-curator"
-
-	// FluentBitImageName is the image of Fluent-bit image
-	FluentBitImageName = "fluent-bit"
-
-	// FluentBitPluginInstaller is the image of Fluent-bit plugin installer image
-	FluentBitPluginInstaller = "fluent-bit-plugin-installer"
-
-	// AlpineImageName is the name of alpine image
-	AlpineImageName = "alpine"
-
-	// AlpineIptablesImageName is the name of the alpine image with pre-installed iptable rules
-	AlpineIptablesImageName = "alpine-iptables"
-
 	// SeedSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	SeedSpecHash = "seed-spec-hash"
 
 	// RegistrationSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	RegistrationSpecHash = "registration-spec-hash"
 
-	// VpaAdmissionControllerImageName is the name of the vpa-admission-controller image
-	VpaAdmissionControllerImageName = "vpa-admission-controller"
-	// VpaRecommenderImageName is the name of the vpa-recommender image
-	VpaRecommenderImageName = "vpa-recommender"
-	// VpaUpdaterImageName is the name of the vpa-updater image
-	VpaUpdaterImageName = "vpa-updater"
-	// VpaExporterImageName is the name of the vpa-exporter image
-	VpaExporterImageName = "vpa-exporter"
 	// VpaAdmissionControllerName is the name of the vpa-admission-controller name.
 	VpaAdmissionControllerName = "gardener.cloud:vpa:admission-controller"
 	// VpaRecommenderName is the name of the vpa-recommender name.
@@ -377,29 +261,8 @@ const (
 	// VpaExporterName is the name of the vpa-exporter name.
 	VpaExporterName = "gardener.cloud:vpa:exporter"
 
-	// HvpaControllerImageName is the name of the hvpa-controller image
-	HvpaControllerImageName = "hvpa-controller"
-
-	// DependencyWatchdogImageName is the name of the dependency-watchdog image
-	DependencyWatchdogImageName = "dependency-watchdog"
-
-	// IstioProxyImageName is the image of Istio proxy image
-	IstioProxyImageName = "istio-proxy"
-
-	// IstioIstiodImageName is the image of Istio istiod image
-	IstioIstiodImageName = "istio-istiod"
-
 	// IstioNamespace is the istio-system namespace
 	IstioNamespace = "istio-system"
-
-	// APIServerProxyImageName is the image of apiserver-proxy
-	APIServerProxyImageName = "apiserver-proxy"
-
-	// APIServerProxySidecarImageName is the image of apiserver-proxy sidecar.
-	APIServerProxySidecarImageName = "apiserver-proxy-sidecar"
-
-	// APIServerProxyPodMutatorWebhookImageName is the image of apiserver-proxy pod mutator webhook.
-	APIServerProxyPodMutatorWebhookImageName = "apiserver-proxy-pod-webhook"
 
 	// ServiceAccountSigningKeySecretDataKey is the data key of a signing key Kubernetes secret.
 	ServiceAccountSigningKeySecretDataKey = "signing-key"
