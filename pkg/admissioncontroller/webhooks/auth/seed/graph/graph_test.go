@@ -199,47 +199,52 @@ var _ = Describe("graph", func() {
 	It("should behave as expected for gardencorev1beta1.Seed", func() {
 		By("add")
 		fakeInformerSeed.Add(seed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(3))
-		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.graph.Nodes().Len()).To(Equal(4))
+		Expect(graph.graph.Edges().Len()).To(Equal(3))
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", "seed-"+seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("update (irrelevant change)")
 		seed1Copy := seed1.DeepCopy()
 		seed1.Spec.Provider.Type = "providertype"
 		fakeInformerSeed.Update(seed1Copy, seed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(3))
-		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.graph.Nodes().Len()).To(Equal(4))
+		Expect(graph.graph.Edges().Len()).To(Equal(3))
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", "seed-"+seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("update (remove secret ref)")
 		seed1Copy = seed1.DeepCopy()
 		seed1.Spec.SecretRef = nil
 		fakeInformerSeed.Update(seed1Copy, seed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(2))
-		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", "seed-"+seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("update (remove backup secret ref)")
 		seed1Copy = seed1.DeepCopy()
 		seed1.Spec.Backup = nil
 		fakeInformerSeed.Update(seed1Copy, seed1)
-		Expect(graph.graph.Nodes().Len()).To(BeZero())
-		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", "seed-"+seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("update (both secret refs)")
 		seed1Copy = seed1.DeepCopy()
 		seed1.Spec.Backup = &gardencorev1beta1.SeedBackup{SecretRef: seed1BackupSecretRef}
 		seed1.Spec.SecretRef = &seed1SecretRef
 		fakeInformerSeed.Update(seed1Copy, seed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(3))
-		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.graph.Nodes().Len()).To(Equal(4))
+		Expect(graph.graph.Edges().Len()).To(Equal(3))
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", "seed-"+seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("delete")
 		fakeInformerSeed.Delete(seed1)
@@ -247,6 +252,7 @@ var _ = Describe("graph", func() {
 		Expect(graph.graph.Edges().Len()).To(BeZero())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", "seed-"+seed1.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 	})
 
 	It("should behave as expected for gardencorev1beta1.Shoot", func() {
@@ -661,9 +667,10 @@ var _ = Describe("graph", func() {
 			fakeInformerSeed.Add(seed1)
 			lock.Lock()
 			defer lock.Unlock()
-			nodes, edges = nodes+3, edges+2
+			nodes, edges = nodes+4, edges+3
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", "seed-" + seed1.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 		}()
 		wg.Add(1)
 		go func() {
@@ -879,6 +886,7 @@ var _ = Describe("graph", func() {
 			nodes, edges = nodes-1, edges-1
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", "seed-" + seed1.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 		}()
 		wg.Add(1)
 		go func() {
