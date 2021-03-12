@@ -86,8 +86,9 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 	BeforeEach(func() {
 		managedSeed = &seedmanagement.ManagedSeed{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
+				Name:       name,
+				Namespace:  namespace,
+				Generation: 1,
 			},
 			Spec: seedmanagement.ManagedSeedSpec{
 				Shoot: seedmanagement.Shoot{
@@ -97,6 +98,9 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					ObjectMeta: seed.ObjectMeta,
 					Spec:       seed.Spec,
 				},
+			},
+			Status: seedmanagement.ManagedSeedStatus{
+				ObservedGeneration: 1,
 			},
 		}
 	})
@@ -172,7 +176,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			It("should forbid empty or invalid fields in seed template", func() {
 				managedSeed.Spec.SeedTemplate.Name = "foo"
 				seedCopy := seed.DeepCopy()
-				seedCopy.Spec.Provider.Type = ""
+				seedCopy.Spec.Networks.Nodes = pointer.StringPtr("")
 				managedSeed.Spec.SeedTemplate.Spec = seedCopy.Spec
 
 				errorList := ValidateManagedSeed(managedSeed)
@@ -183,8 +187,8 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 						"Field": Equal("spec.seedTemplate.metadata.name"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.seedTemplate.spec.provider.type"),
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.seedTemplate.spec.networks.nodes"),
 					})),
 				))
 			})
@@ -221,7 +225,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 
 			It("should forbid empty or invalid fields in gardenlet", func() {
 				seedx.Name = "foo"
-				seedx.Spec.Provider.Type = ""
+				seedx.Spec.Networks.Nodes = pointer.StringPtr("")
 
 				managedSeed.Spec.Gardenlet.Deployment = &seedmanagement.GardenletDeployment{
 					ReplicaCount:         pointer.Int32Ptr(-1),
@@ -278,8 +282,8 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 						"Field": Equal("spec.gardenlet.config.seedConfig.metadata.name"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.gardenlet.config.seedConfig.spec.provider.type"),
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.gardenlet.config.seedConfig.spec.networks.nodes"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeNotSupported),
@@ -473,6 +477,36 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					})),
 				))
 			})
+		})
+	})
+
+	Describe("#ValidateManagedSeedStatusUpdate", func() {
+		var (
+			newManagedSeed *seedmanagement.ManagedSeed
+		)
+
+		BeforeEach(func() {
+			newManagedSeed = managedSeed.DeepCopy()
+			newManagedSeed.ResourceVersion = "1"
+		})
+
+		It("should allow valid status updates", func() {
+			errorList := ValidateManagedSeedStatusUpdate(newManagedSeed, managedSeed)
+
+			Expect(errorList).To(HaveLen(0))
+		})
+
+		It("should forbid negative observed generation", func() {
+			newManagedSeed.Status.ObservedGeneration = -1
+
+			errorList := ValidateManagedSeedStatusUpdate(newManagedSeed, managedSeed)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("status.observedGeneration"),
+				})),
+			))
 		})
 	})
 })

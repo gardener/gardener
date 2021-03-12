@@ -298,10 +298,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.maintenance"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("spec.provider.type"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -787,10 +783,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal("spec.provider.workers[0].machine.type"),
-					})),
-					PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal("spec.provider.workers[0].machine.image"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
@@ -1991,42 +1983,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("maintenance section", func() {
-			It("should forbid not specifying the maintenance section", func() {
-				shoot.Spec.Maintenance = nil
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(HaveLen(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.maintenance"),
-				}))
-			})
-
-			It("should forbid not specifying the auto update section", func() {
-				shoot.Spec.Maintenance.AutoUpdate = nil
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(HaveLen(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.maintenance.autoUpdate"),
-				}))
-			})
-
-			It("should forbid not specifying the time window section", func() {
-				shoot.Spec.Maintenance.TimeWindow = nil
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(HaveLen(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.maintenance.timeWindow"),
-				}))
-			})
-
 			It("should forbid invalid formats for the time window begin and end values", func() {
 				shoot.Spec.Maintenance.TimeWindow.Begin = "invalidformat"
 				shoot.Spec.Maintenance.TimeWindow.End = "invalidformat"
@@ -2217,15 +2173,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("machine.type"),
-				}))),
-			),
-			Entry("missing machine image",
-				core.Machine{
-					Type: "large",
-				},
-				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("machine.image"),
 				}))),
 			),
 			Entry("empty machine image name",

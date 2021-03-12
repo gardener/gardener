@@ -43,7 +43,7 @@ func ValidateManagedSeed(managedSeed *seedmanagement.ManagedSeed) field.ErrorLis
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&managedSeed.ObjectMeta, true, corevalidation.ValidateName, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateManagedSeedSpec(&managedSeed.Spec, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateManagedSeedSpec(&managedSeed.Spec, field.NewPath("spec"), false)...)
 
 	return allErrs
 }
@@ -59,12 +59,42 @@ func ValidateManagedSeedUpdate(newManagedSeed, oldManagedSeed *seedmanagement.Ma
 	return allErrs
 }
 
+// ValidateManagedSeedStatusUpdate validates a ManagedSeed object before a status update.
+func ValidateManagedSeedStatusUpdate(newManagedSeed, oldManagedSeed *seedmanagement.ManagedSeed) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newManagedSeed.ObjectMeta, &oldManagedSeed.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateManagedSeedStatus(&newManagedSeed.Status, field.NewPath("status"))...)
+
+	return allErrs
+}
+
+// ValidateManagedSeedTemplate validates a ManagedSeedTemplate.
+func ValidateManagedSeedTemplate(managedSeedTemplate *seedmanagement.ManagedSeedTemplate, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, metav1validation.ValidateLabels(managedSeedTemplate.Labels, fldPath.Child("metadata", "labels"))...)
+	allErrs = append(allErrs, apivalidation.ValidateAnnotations(managedSeedTemplate.Annotations, fldPath.Child("metadata", "annotations"))...)
+	allErrs = append(allErrs, ValidateManagedSeedSpec(&managedSeedTemplate.Spec, fldPath.Child("spec"), true)...)
+
+	return allErrs
+}
+
+// ValidateManagedSeedTemplateUpdate validates a ManagedSeedTemplate before an update.
+func ValidateManagedSeedTemplateUpdate(newManagedSeedTemplate, oldManagedSeedTemplate *seedmanagement.ManagedSeedTemplate, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, ValidateManagedSeedSpecUpdate(&newManagedSeedTemplate.Spec, &oldManagedSeedTemplate.Spec, fldPath.Child("spec"))...)
+
+	return allErrs
+}
+
 // ValidateManagedSeedSpec validates the specification of a ManagedSeed object.
-func ValidateManagedSeedSpec(spec *seedmanagement.ManagedSeedSpec, fldPath *field.Path) field.ErrorList {
+func ValidateManagedSeedSpec(spec *seedmanagement.ManagedSeedSpec, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// Ensure shoot name is specified
-	if spec.Shoot.Name == "" {
+	if !inTemplate && spec.Shoot.Name == "" {
 		allErrs = append(allErrs, field.Required(fldPath.Child("shoot", "name"), "shoot name is required"))
 	}
 
@@ -77,7 +107,7 @@ func ValidateManagedSeedSpec(spec *seedmanagement.ManagedSeedSpec, fldPath *fiel
 	case spec.SeedTemplate != nil:
 		allErrs = append(allErrs, validateSeedTemplate(spec.SeedTemplate, fldPath.Child("seedTemplate"))...)
 	case spec.Gardenlet != nil:
-		allErrs = append(allErrs, validateGardenlet(spec.Gardenlet, fldPath.Child("gardenlet"))...)
+		allErrs = append(allErrs, validateGardenlet(spec.Gardenlet, fldPath.Child("gardenlet"), inTemplate)...)
 	}
 
 	return allErrs
@@ -105,9 +135,13 @@ func ValidateManagedSeedSpecUpdate(newSpec, oldSpec *seedmanagement.ManagedSeedS
 	return allErrs
 }
 
-// ValidateManagedSeedStatusUpdate validates a ManagedSeed object before a status update.
-func ValidateManagedSeedStatusUpdate(newManagedSeed, oldManagedSeed *seedmanagement.ManagedSeed) field.ErrorList {
+// ValidateManagedSeedStatus validates the given ManagedSeedStatus.
+func ValidateManagedSeedStatus(status *seedmanagement.ManagedSeedStatus, fieldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	// Ensure integer fields are non-negative
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(status.ObservedGeneration, fieldPath.Child("observedGeneration"))...)
+
 	return allErrs
 }
 
@@ -132,7 +166,7 @@ func validateSeedTemplateUpdate(newSeedTemplate, oldSeedTemplate *gardencore.See
 	return allErrs
 }
 
-func validateGardenlet(gardenlet *seedmanagement.Gardenlet, fldPath *field.Path) field.ErrorList {
+func validateGardenlet(gardenlet *seedmanagement.Gardenlet, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if gardenlet.Deployment != nil {
@@ -150,7 +184,7 @@ func validateGardenlet(gardenlet *seedmanagement.Gardenlet, fldPath *field.Path)
 		}
 
 		// Validate gardenlet config
-		allErrs = append(allErrs, validateGardenletConfiguration(gardenletConfig, helper.GetBootstrap(gardenlet.Bootstrap), utils.IsTrue(gardenlet.MergeWithParent), configPath)...)
+		allErrs = append(allErrs, validateGardenletConfiguration(gardenletConfig, helper.GetBootstrap(gardenlet.Bootstrap), utils.IsTrue(gardenlet.MergeWithParent), configPath, inTemplate)...)
 	}
 
 	if gardenlet.Bootstrap != nil {
@@ -240,7 +274,7 @@ func validateImage(image *seedmanagement.Image, fldPath *field.Path) field.Error
 	return allErrs
 }
 
-func validateGardenletConfiguration(gardenletConfig *config.GardenletConfiguration, bootstrap seedmanagement.Bootstrap, mergeWithParent bool, fldPath *field.Path) field.ErrorList {
+func validateGardenletConfiguration(gardenletConfig *config.GardenletConfiguration, bootstrap seedmanagement.Bootstrap, mergeWithParent bool, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// Ensure seed selector is not specified
@@ -254,7 +288,7 @@ func validateGardenletConfiguration(gardenletConfig *config.GardenletConfigurati
 	}
 
 	// Validate gardenlet config
-	allErrs = append(allErrs, configvalidation.ValidateGardenletConfiguration(gardenletConfig, fldPath)...)
+	allErrs = append(allErrs, configvalidation.ValidateGardenletConfiguration(gardenletConfig, fldPath, inTemplate)...)
 
 	if gardenletConfig.GardenClientConnection != nil {
 		allErrs = append(allErrs, validateGardenClientConnection(gardenletConfig.GardenClientConnection, bootstrap, mergeWithParent, fldPath.Child("gardenClientConnection"))...)

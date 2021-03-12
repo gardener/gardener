@@ -674,7 +674,7 @@ var _ = Describe("Seed Validation Tests", func() {
 		It("should forbid invalid metadata or spec fields", func() {
 			seedTemplate.Labels = map[string]string{"foo!": "bar"}
 			seedTemplate.Annotations = map[string]string{"foo!": "bar"}
-			seedTemplate.Spec.Provider.Type = ""
+			seedTemplate.Spec.Networks.Nodes = pointer.StringPtr("")
 
 			errorList := ValidateSeedTemplate(seedTemplate, nil)
 
@@ -688,8 +688,8 @@ var _ = Describe("Seed Validation Tests", func() {
 					"Field": Equal("metadata.annotations"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.provider.type"),
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.networks.nodes"),
 				})),
 			))
 		})

@@ -150,7 +150,7 @@ func run(ctx context.Context, o *Options) error {
 			return fmt.Errorf("unable to read the configuration file: %v", err)
 		}
 
-		if errs := configvalidation.ValidateGardenletConfiguration(c, nil); len(errs) > 0 {
+		if errs := configvalidation.ValidateGardenletConfiguration(c, nil, false); len(errs) > 0 {
 			return fmt.Errorf("errors validating the configuration: %+v", errs)
 		}
 
