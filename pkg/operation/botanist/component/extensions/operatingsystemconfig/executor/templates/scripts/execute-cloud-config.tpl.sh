@@ -123,7 +123,7 @@ if [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
 
   # Update checksum/cloud-config-data annotation on Node object if possible
   if [[ ! -z "$NODENAME" ]] && [[ -f "$PATH_CHECKSUM" ]]; then
-    /opt/bin/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
+    /opt/bin/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "{{ .annotationKeyChecksum }}=$(cat "$PATH_CHECKSUM")" --overwrite
   fi
 
   # Restart systemd services if requested

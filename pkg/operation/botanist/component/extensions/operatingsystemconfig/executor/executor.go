@@ -51,6 +51,10 @@ func init() {
 	}
 }
 
+// AnnotationKeyChecksum is the key of an annotation on a shoot Node object whose value is the checksum
+// of the last applied cloud config user data.
+const AnnotationKeyChecksum = "checksum/cloud-config-data"
+
 // Script returns the executor script that applies the downloaded cloud-config user-data.
 func Script(
 	bootstrapToken string,
@@ -64,6 +68,7 @@ func Script(
 	error,
 ) {
 	values := map[string]interface{}{
+		"annotationKeyChecksum":          AnnotationKeyChecksum,
 		"pathKubeletDirectory":           kubelet.PathKubeletDirectory,
 		"pathDownloadsDirectory":         downloader.PathDownloadsDirectory,
 		"pathCCDScript":                  downloader.PathCCDScript,

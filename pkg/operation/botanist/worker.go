@@ -21,8 +21,9 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -98,7 +99,7 @@ func WorkerPoolToCloudConfigSecretChecksumMap(ctx context.Context, shootClient c
 	for _, secret := range secretList.Items {
 		var (
 			poolName, ok1 = secret.Labels[v1beta1constants.LabelWorkerPool]
-			checksum, ok2 = secret.Annotations[common.CloudConfigChecksumSecretAnnotation]
+			checksum, ok2 = secret.Annotations[downloader.AnnotationKeyChecksum]
 		)
 
 		if ok1 && ok2 {
@@ -123,7 +124,7 @@ func CloudConfigUpdatedForAllWorkerPools(workers []gardencorev1beta1.Worker, wor
 		}
 
 		for _, node := range workerPoolToNodes[worker.Name] {
-			if nodeChecksum, ok := node.Annotations[common.CloudConfigChecksumNodeAnnotation]; ok && nodeChecksum != secretChecksum {
+			if nodeChecksum, ok := node.Annotations[executor.AnnotationKeyChecksum]; ok && nodeChecksum != secretChecksum {
 				result = multierror.Append(result, fmt.Errorf("the last successfully applied cloud config on node %q is outdated (current: %s, desired: %s)", node.Name, nodeChecksum, secretChecksum))
 			}
 		}
