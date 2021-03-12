@@ -21,16 +21,16 @@ import (
 	"path/filepath"
 
 	"github.com/gardener/gardener/charts"
-	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
-	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	controllerinstallationcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
@@ -40,12 +40,14 @@ import (
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
@@ -128,21 +130,22 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("timed out waiting for Kube caches to sync")
 	}
 
-	seedNames := confighelper.SeedNames(f.cfg.SeedConfig, f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister(), f.cfg.SeedSelector)
-	if len(seedNames) < 1 {
+	seeds := seedNames(f.cfg.SeedConfig, f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister(), f.cfg.SeedSelector)
+	if len(seeds) < 1 {
 		return fmt.Errorf("no seed selected by Gardenlet")
 	}
 
-	// Read Garden secrets from any seed namespace as we assume they are synced accordingly by the Gardener Controller Manager
+	// Read Garden secrets from any seed namespace as we assume they are synced accordingly by the Gardener Controller Manager.
+	// This requires adaption if we'll decide not to sync all Secrets for all Seeds in the future.
 	secrets, err := garden.ReadGardenSecrets(
 		ctx,
 		k8sGardenClient.Cache(),
 		f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister(),
-		seedpkg.ComputeGardenNamespace(seedNames[0]),
+		seedpkg.ComputeGardenNamespace(seeds[0]),
 	)
 	runtime.Must(err)
 
-	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.ChartPath, DefaultImageVector))
+	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, DefaultImageVector))
 	runtime.Must(err)
 
 	var componentImageVectors imagevector.ComponentImageVectors
@@ -213,4 +216,28 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	logger.Logger.Infof("Bye Bye!")
 
 	return nil
+}
+
+// seedNames returns all seed names matching the given config or LabelSelector if no config is given.
+func seedNames(seedConfig *config.SeedConfig, seedLister gardencorelisters.SeedLister, labelSelector *metav1.LabelSelector) []string {
+	if name := confighelper.SeedNameFromSeedConfig(seedConfig); name != "" {
+		return []string{name}
+	}
+
+	var names []string
+	selector, err := metav1.LabelSelectorAsSelector(labelSelector)
+	if err != nil || selector == labels.Nothing() {
+		return names
+	}
+
+	seeds, err := seedLister.List(selector)
+	if err != nil {
+		return names
+	}
+
+	for _, seed := range seeds {
+		names = append(names, seed.Name)
+	}
+
+	return names
 }

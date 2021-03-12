@@ -114,7 +114,7 @@ func BeInvalidError() types.GomegaMatcher {
 	}
 }
 
-// BeCacheError checks if error is an CacheError.
+// BeCacheError checks if error is a CacheError.
 func BeCacheError() types.GomegaMatcher {
 	return &kubernetesErrors{
 		checkFunc: func(err error) bool {

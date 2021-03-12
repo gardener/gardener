@@ -209,11 +209,11 @@ func ReadGardenSecretsFromLister(ctx context.Context, secretLister kubecorev1lis
 	)
 }
 
-type secretLister func(ctx context.Context, namespace string, selector labels.Selector) ([]corev1.Secret, error)
+type listSecretsFunc func(ctx context.Context, namespace string, selector labels.Selector) ([]corev1.Secret, error)
 
 var gardenRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
 
-func readGardenSecretsFromCache(ctx context.Context, secretLister secretLister, seedLister gardencorelisters.SeedLister, namespace string) (map[string]*corev1.Secret, error) {
+func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFunc, seedLister gardencorelisters.SeedLister, namespace string) (map[string]*corev1.Secret, error) {
 	var (
 		secretsMap                          = make(map[string]*corev1.Secret)
 		numberOfInternalDomainSecrets       = 0
@@ -290,7 +290,6 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister secretLister, 
 	}
 
 	// Check if an internal domain secret is required
-	// TODO: Only seeds reconciled by Gardenlet
 	seeds, err := seedLister.List(labels.Everything())
 	if err != nil {
 		return nil, err
@@ -333,14 +332,14 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister secretLister, 
 
 // VerifyInternalDomainSecret verifies that the internal domain secret matches to the internal domain secret used for
 // existing Shoot clusters. It is not allowed to change the internal domain secret if there are existing Shoot clusters.
-func VerifyInternalDomainSecret(ctx context.Context, k8sGardenClient kubernetes.Interface, numberOfShoots int, internalDomainSecret *corev1.Secret) error {
+func VerifyInternalDomainSecret(ctx context.Context, gardenClient client.Client, numberOfShoots int, internalDomainSecret *corev1.Secret) error {
 	_, currentDomain, _, _, err := common.GetDomainInfoFromAnnotations(internalDomainSecret.Annotations)
 	if err != nil {
 		return fmt.Errorf("error getting information out of current internal domain secret: %+v", err)
 	}
 
 	internalConfigMap := &corev1.ConfigMap{}
-	err = k8sGardenClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, ControllerManagerInternalConfigMapName), internalConfigMap)
+	err = gardenClient.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, ControllerManagerInternalConfigMapName), internalConfigMap)
 	if apierrors.IsNotFound(err) || numberOfShoots == 0 {
 		configMap := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
@@ -349,7 +348,7 @@ func VerifyInternalDomainSecret(ctx context.Context, k8sGardenClient kubernetes.
 			},
 		}
 
-		_, err := controllerutil.CreateOrUpdate(ctx, k8sGardenClient.Client(), configMap, func() error {
+		_, err := controllerutil.CreateOrUpdate(ctx, gardenClient, configMap, func() error {
 			configMap.Data = map[string]string{
 				common.GardenRoleInternalDomain: currentDomain,
 			}

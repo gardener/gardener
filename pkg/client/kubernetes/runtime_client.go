@@ -108,7 +108,7 @@ func AggregatorCacheFunc(newCache cache.NewCacheFunc, typeToNewCache map[client.
 			return nil, err
 		}
 
-		fallback, err := newCache(config, options)
+		fallbackCache, err := newCache(config, options)
 		if err != nil {
 			return nil, err
 		}
@@ -128,7 +128,7 @@ func AggregatorCacheFunc(newCache cache.NewCacheFunc, typeToNewCache map[client.
 			gvkToCache[gvks[0]] = cache
 		}
 
-		return kcache.NewAggregator(fallback, gvkToCache, scheme), nil
+		return kcache.NewAggregator(fallbackCache, gvkToCache, scheme), nil
 	}
 }
 

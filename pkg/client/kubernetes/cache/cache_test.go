@@ -44,7 +44,7 @@ var _ = Describe("Aggregator", func() {
 		gvkToCache  map[schema.GroupVersionKind]cache.Cache
 		scheme      *runtime.Scheme
 
-		aggregator *Aggregator
+		aggregator cache.Cache
 	)
 
 	BeforeEach(func() {
@@ -169,26 +169,25 @@ var _ = Describe("Aggregator", func() {
 
 	Describe("#Start", func() {
 		It("should start all informers", func() {
-			informerCtx, cancel := context.WithCancel(ctx)
 			testChan := make(chan struct{})
 
-			fallback.EXPECT().Start(informerCtx).DoAndReturn(func(ctx context.Context) error {
+			fallback.EXPECT().Start(ctx).DoAndReturn(func(ctx context.Context) error {
 				testChan <- struct{}{}
 				return nil
 			})
-			secretCache.EXPECT().Start(informerCtx).DoAndReturn(func(ctx context.Context) error {
+			secretCache.EXPECT().Start(ctx).DoAndReturn(func(ctx context.Context) error {
 				testChan <- struct{}{}
 				return nil
 			})
 
 			go func() {
-				for count := 0; count < 2; count++ {
-					<-testChan
-				}
-				cancel()
+				defer GinkgoRecover()
+				Expect(aggregator.Start(ctx)).To(Succeed())
 			}()
 
-			Expect(aggregator.Start(informerCtx)).To(Succeed())
+			Eventually(testChan).Should(Receive())
+			Eventually(testChan).Should(Receive())
+			close(testChan)
 		})
 	})
 

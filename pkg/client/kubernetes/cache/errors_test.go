@@ -28,8 +28,8 @@ import (
 )
 
 var _ = Describe("Errors", func() {
-	DescribeTable("#APIError", func(err error, matcher gomegatypes.GomegaMatcher) {
-		Expect(APIError(err)).To(matcher)
+	DescribeTable("#IsAPIError", func(err error, matcher gomegatypes.GomegaMatcher) {
+		Expect(IsAPIError(err)).To(matcher)
 	},
 		Entry("API status Error", apierrors.NewBadRequest("foo"), BeTrue()),
 		Entry("No match error for kind", &meta.NoKindMatchError{}, BeTrue()),

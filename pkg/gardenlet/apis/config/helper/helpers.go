@@ -19,12 +19,10 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
@@ -36,30 +34,6 @@ func SeedNameFromSeedConfig(seedConfig *config.SeedConfig) string {
 		return ""
 	}
 	return seedConfig.SeedTemplate.Name
-}
-
-// SeedNames returns all seed names matching the given config or LabelSelector if no config is given.
-func SeedNames(seedConfig *config.SeedConfig, seedLister gardencorelisters.SeedLister, labelSelector *metav1.LabelSelector) []string {
-	if name := SeedNameFromSeedConfig(seedConfig); name != "" {
-		return []string{name}
-	}
-
-	var names []string
-	selector, err := metav1.LabelSelectorAsSelector(labelSelector)
-	if err != nil || selector == labels.Nothing() {
-		return names
-	}
-
-	seeds, err := seedLister.List(selector)
-	if err != nil {
-		return names
-	}
-
-	for _, seed := range seeds {
-		names = append(names, seed.Name)
-	}
-
-	return names
 }
 
 // StaleExtensionHealthChecksThreshold returns nil if the given config is nil or the check

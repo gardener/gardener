@@ -23,5 +23,5 @@ import (
 
 func TestCache(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Cache Suite")
+	RunSpecs(t, "Client Kubernetes Cache Suite")
 }

@@ -21,8 +21,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 )
 
-// APIError checks if the given error is API related.
-func APIError(err error) bool {
+// IsAPIError checks if the given error is API related.
+func IsAPIError(err error) bool {
 	if _, ok := err.(apierrors.APIStatus); ok {
 		return true
 	}

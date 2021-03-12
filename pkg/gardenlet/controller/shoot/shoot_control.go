@@ -247,12 +247,7 @@ func shouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
 
 const taskID = "initializeOperation"
 
-func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Entry, gardenClient client.Client, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (*operation.Operation, error) {
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
+func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Entry, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (*operation.Operation, error) {
 	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient.Cache(), c.seedLister, seedpkg.ComputeGardenNamespace(seed.Name))
 	if err != nil {
 		return nil, err
@@ -269,7 +264,8 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 		shootCount -= 1
 	}
 
-	if err := garden.VerifyInternalDomainSecret(ctx, gardenClient, shootCount, gardenSecrets[common.GardenRoleInternalDomain]); err != nil {
+	// TODO: Move this validation to the Gardener Admission Controller.
+	if err := garden.VerifyInternalDomainSecret(ctx, gardenClient.Client(), shootCount, gardenSecrets[common.GardenRoleInternalDomain]); err != nil {
 		return nil, err
 	}
 
@@ -300,7 +296,7 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 		WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
 		WithInternalDomain(gardenObj.InternalDomain).
 		WithDefaultDomains(gardenObj.DefaultDomains).
-		Build(ctx, gardenClient)
+		Build(ctx, gardenClient.Client())
 	if err != nil {
 		return nil, err
 	}
@@ -369,7 +365,7 @@ func (c *Controller) deleteShoot(ctx context.Context, logger *logrus.Entry, gard
 		return reconcile.Result{}, err
 	}
 
-	o, operationErr := c.initializeOperation(ctx, logger, gardenClient.Client(), shoot, project, cloudProfile, seed)
+	o, operationErr := c.initializeOperation(ctx, logger, gardenClient, shoot, project, cloudProfile, seed)
 	if operationErr != nil {
 		_, updateErr := c.updateShootStatusOperationError(ctx, gardenClient, shoot, fmt.Sprintf("Could not initialize a new operation for Shoot deletion: %s", operationErr.Error()), operationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
@@ -477,7 +473,7 @@ func (c *Controller) reconcileShoot(ctx context.Context, logger *logrus.Entry, g
 		return reconcile.Result{}, err
 	}
 
-	o, operationErr := c.initializeOperation(ctx, logger, gardenClient.Client(), shoot, project, cloudProfile, seed)
+	o, operationErr := c.initializeOperation(ctx, logger, gardenClient, shoot, project, cloudProfile, seed)
 	if operationErr != nil {
 		_, updateErr := c.updateShootStatusOperationError(ctx, gardenClient, shoot, fmt.Sprintf("Could not initialize a new operation for Shoot reconciliation: %s", operationErr.Error()), operationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)

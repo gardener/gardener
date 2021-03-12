@@ -18,8 +18,6 @@ import (
 	"time"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	corev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -46,48 +44,6 @@ var _ = Describe("helper", func() {
 				},
 			}
 			Expect(SeedNameFromSeedConfig(config)).To(Equal(seedName))
-		})
-	})
-
-	Describe("#SeedNames", func() {
-		It("should return no name because of missing config and selector", func() {
-			Expect(SeedNames(nil, nil, nil)).To(BeEmpty())
-		})
-		It("should return name of seed config", func() {
-			config := &config.SeedConfig{
-				SeedTemplate: gardencore.SeedTemplate{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "foo",
-					},
-				},
-			}
-
-			Expect(SeedNames(config, nil, nil)).To(ContainElements(config.SeedTemplate.Name))
-		})
-		It("should return names matching the seed selector", func() {
-			seed1 := &corev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "foo",
-					Labels: map[string]string{
-						"role": "seed",
-					},
-				},
-			}
-			seed2 := &corev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "bar",
-				},
-			}
-
-			gardenCoreInformerFactory := gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			seedInformer := gardenCoreInformerFactory.Core().V1beta1().Seeds()
-			Expect(seedInformer.Informer().GetStore().Add(seed1)).To(Succeed())
-			Expect(seedInformer.Informer().GetStore().Add(seed2)).To(Succeed())
-
-			labelSelector, err := metav1.ParseToLabelSelector("role = seed")
-			Expect(err).To(Not(HaveOccurred()))
-
-			Expect(SeedNames(nil, seedInformer.Lister(), labelSelector)).To(ContainElements(seed1.Name))
 		})
 	})
 

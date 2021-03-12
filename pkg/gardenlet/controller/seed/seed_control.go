@@ -96,11 +96,6 @@ func (c *Controller) reconcileSeedKey(key string) error {
 			return fmt.Errorf("failed to invalidate seed client: %w", err)
 		}
 
-		// Invalidate Garden client as it holds watches to seed specific namespaces in the Garden cluster
-		// which will be gone when the seed is deleted.
-		if err := c.clientMap.InvalidateClient(keys.ForGarden()); err != nil {
-			return fmt.Errorf("failed to invalidate garden client: %w", err)
-		}
 		return nil
 	}
 	if err != nil {
@@ -191,14 +186,6 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	// Check if seed namespace is already available.
 	if err := gardenClient.APIReader().Get(ctx, client.ObjectKeyFromObject(seedNamespace), seedNamespace); err != nil {
 		return fmt.Errorf("failed to get seed namespace in garden cluster: %w", err)
-	}
-
-	// Invalidate Garden client as it holds watches to seed specific namespaces in the Garden cluster.
-	// These watches must be reset when an additional namespace watch for the new seed is required.
-	if seed.Status.ObservedGeneration == 0 {
-		if err := c.clientMap.InvalidateClient(keys.ForGarden()); err != nil {
-			return fmt.Errorf("failed to invalidate garden client: %w", err)
-		}
 	}
 
 	// Initialize capacity and allocatable
@@ -309,12 +296,6 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 
 			if err := c.clientMap.InvalidateClient(keys.ForSeed(seed)); err != nil {
 				return fmt.Errorf("failed to invalidate seed client: %w", err)
-			}
-
-			// Invalidate Garden client as it holds watches to seed specific namespaces in the Garden cluster
-			// which will be gone when the seed is deleted.
-			if err := c.clientMap.InvalidateClient(keys.ForGarden()); err != nil {
-				return fmt.Errorf("failed to invalidate garden client: %w", err)
 			}
 
 			return nil
