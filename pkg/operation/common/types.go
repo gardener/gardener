@@ -429,33 +429,3 @@ const (
 	// ShootDNSIngressName is a constant for the DNS resources used for the shoot ingress addon.
 	ShootDNSIngressName = "ingress"
 )
-
-var (
-	// RequiredControlPlaneDeployments is a set of the required shoot control plane deployments
-	// running in the seed.
-	RequiredControlPlaneDeployments = sets.NewString(
-		v1beta1constants.DeploymentNameGardenerResourceManager,
-		v1beta1constants.DeploymentNameKubeAPIServer,
-		v1beta1constants.DeploymentNameKubeControllerManager,
-		v1beta1constants.DeploymentNameKubeScheduler,
-	)
-
-	// RequiredControlPlaneEtcds is a set of the required shoot control plane etcds
-	// running in the seed.
-	RequiredControlPlaneEtcds = sets.NewString(
-		v1beta1constants.ETCDMain,
-		v1beta1constants.ETCDEvents,
-	)
-
-	// RequiredMonitoringSeedDeployments is a set of the required seed monitoring deployments.
-	RequiredMonitoringSeedDeployments = sets.NewString(
-		v1beta1constants.DeploymentNameGrafanaOperators,
-		v1beta1constants.DeploymentNameGrafanaUsers,
-		v1beta1constants.DeploymentNameKubeStateMetricsShoot,
-	)
-
-	// RequiredLoggingStatefulSets is a set of the required logging stateful sets.
-	RequiredLoggingStatefulSets = sets.NewString(
-		v1beta1constants.StatefulSetNameLoki,
-	)
-)
