@@ -16,10 +16,6 @@ package common
 
 import (
 	"time"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-
-	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 const (
@@ -77,11 +73,6 @@ const (
 	// which is made available as volume mount to the shoot's apiserver.
 	// Should match charts/seed-controlplane/charts/kube-apiserver/templates/deployment.yaml
 	EtcdEncryptionSecretFileName = "encryption-configuration.yaml"
-
-	// EtcdEncryptionChecksumAnnotationName is the name of the annotation with which to annotate
-	// the EncryptionConfiguration secret to denote the checksum of the EncryptionConfiguration
-	// that was used when last rewriting secrets.
-	EtcdEncryptionChecksumAnnotationName = "shoot.gardener.cloud/etcd-encryption-configuration-checksum"
 
 	// EtcdEncryptionChecksumLabelName is the name of the label which is added to the shoot
 	// secrets after rewriting them to ensure that successfully rewritten secrets are not
@@ -164,26 +155,8 @@ const (
 	// appended.
 	InternalDomainKey = "internal"
 
-	// KubeControllerManagerServerName is the name of the kube-controller-manager server.
-	KubeControllerManagerServerName = "kube-controller-manager-server"
-
 	// CoreDNSDeploymentName is the name of the coredns deployment.
 	CoreDNSDeploymentName = "coredns"
-
-	// VPNShootDeploymentName is the name of the vpn-shoot deployment.
-	VPNShootDeploymentName = "vpn-shoot"
-
-	// KubeProxyDaemonSetName is the name of the kube-proxy daemon set.
-	KubeProxyDaemonSetName = "kube-proxy"
-
-	// NodeProblemDetectorDaemonSetName is the name of the node-problem-detector daemon set.
-	NodeProblemDetectorDaemonSetName = "node-problem-detector"
-
-	// BlackboxExporterDeploymentName is the name of the blackbox-exporter deployment.
-	BlackboxExporterDeploymentName = "blackbox-exporter"
-
-	// NodeExporterDaemonSetName is the name of the node-exporter daemon set.
-	NodeExporterDaemonSetName = "node-exporter"
 
 	// KubecfgUsername is the username for the token used for the kubeconfig the shoot.
 	KubecfgUsername = "system:cluster-admin"

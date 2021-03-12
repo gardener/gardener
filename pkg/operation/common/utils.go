@@ -176,28 +176,6 @@ func projectForNamespace(projects []gardencorev1beta1.Project, namespaceName str
 	return nil, apierrors.NewNotFound(gardencorev1beta1.Resource("Project"), fmt.Sprintf("for namespace %s", namespaceName))
 }
 
-// ProjectNameForNamespace determines the project name for a given <namespace>. It tries to identify it first per the namespace's ownerReferences.
-// If it doesn't help then it will check whether the project name is a label on the namespace object. If it doesn't help then the name can be inferred
-// from the namespace name in case it is prefixed with the project prefix. If none of those approaches the namespace name itself is returned as project
-// name.
-func ProjectNameForNamespace(namespace *corev1.Namespace) string {
-	for _, ownerReference := range namespace.OwnerReferences {
-		if ownerReference.Kind == "Project" {
-			return ownerReference.Name
-		}
-	}
-
-	if name, ok := namespace.Labels[ProjectName]; ok {
-		return name
-	}
-
-	if nameSplit := strings.Split(namespace.Name, ProjectPrefix); len(nameSplit) > 1 {
-		return nameSplit[1]
-	}
-
-	return namespace.Name
-}
-
 // GardenerDeletionGracePeriod is the default grace period for Gardener's force deletion methods.
 var GardenerDeletionGracePeriod = 5 * time.Minute
 
