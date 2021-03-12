@@ -41,6 +41,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// NamespacePrefix is the prefix of namespaces representing projects.
+const NamespacePrefix = "garden-"
+
 func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1beta1.Project, gardenClient kubernetes.Interface) (reconcile.Result, error) {
 	var (
 		generation = project.Generation
@@ -169,7 +172,7 @@ func (r *projectReconciler) reconcileNamespaceForProject(ctx context.Context, ga
 	if namespaceName == nil {
 		obj := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName:    fmt.Sprintf("%s%s-", common.ProjectPrefix, project.Name),
+				GenerateName:    fmt.Sprintf("%s%s-", NamespacePrefix, project.Name),
 				OwnerReferences: []metav1.OwnerReference{*ownerReference},
 				Labels:          projectLabels,
 				Annotations:     projectAnnotations,

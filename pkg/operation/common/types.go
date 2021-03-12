@@ -179,9 +179,6 @@ const (
 	// VPASecretName is the name of the secret used by VPA
 	VPASecretName = "vpa-tls-certs"
 
-	// ProjectPrefix is the prefix of namespaces representing projects.
-	ProjectPrefix = "garden-"
-
 	// ProjectName is the key of a label on namespaces whose value holds the project name.
 	ProjectName = "project.gardener.cloud/name"
 
