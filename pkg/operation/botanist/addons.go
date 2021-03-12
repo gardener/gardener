@@ -226,6 +226,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"vpaEnabled":        b.Shoot.WantsVerticalPodAutoscaler,
 		}
 		coreDNSConfig = map[string]interface{}{
+			"nodeNetwork": b.Shoot.GetNodeNetwork(),
 			"service": map[string]interface{}{
 				"clusterDNS": b.Shoot.Networks.CoreDNS.String(),
 				// TODO: resolve conformance test issue before changing:
