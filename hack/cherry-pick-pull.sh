@@ -152,7 +152,7 @@ function make-a-pr() {
   numandtitle=$(printf '%s\n' "${SUBJECTS[@]}")
   relnotes=$(printf "${RELEASE_NOTES[@]}")
   cat >"${prtext}" <<EOF
-Automated cherry pick of ${numandtitle}
+[${rel}] Automated cherry pick of ${numandtitle}
 
 Cherry pick of ${PULLSUBJ} on ${rel}.
 
