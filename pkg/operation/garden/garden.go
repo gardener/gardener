@@ -163,6 +163,12 @@ func DomainIsDefaultDomain(domain string, defaultDomains []*Domain) *Domain {
 	return nil
 }
 
+const (
+	// ControllerManagerInternalConfigMapName is the name of the internal config map in which the Gardener controller
+	// manager stores its configuration.
+	ControllerManagerInternalConfigMapName = "gardener-controller-manager-internal-config"
+)
+
 // ReadGardenSecrets reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
 // The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
 func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory) (map[string]*corev1.Secret, error) {
@@ -298,11 +304,11 @@ func VerifyInternalDomainSecret(ctx context.Context, k8sGardenClient kubernetes.
 	}
 
 	internalConfigMap := &corev1.ConfigMap{}
-	err = k8sGardenClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, common.ControllerManagerInternalConfigMapName), internalConfigMap)
+	err = k8sGardenClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, ControllerManagerInternalConfigMapName), internalConfigMap)
 	if apierrors.IsNotFound(err) || numberOfShoots == 0 {
 		configMap := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      common.ControllerManagerInternalConfigMapName,
+				Name:      ControllerManagerInternalConfigMapName,
 				Namespace: v1beta1constants.GardenNamespace,
 			},
 		}

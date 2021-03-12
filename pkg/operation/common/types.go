@@ -40,10 +40,6 @@ const (
 	// allow deleting the resource (if the annotation is not set any DELETE request will be denied).
 	ConfirmationDeletion = "confirmation.gardener.cloud/deletion"
 
-	// ControllerManagerInternalConfigMapName is the name of the internal config map in which the Gardener controller
-	// manager stores its configuration.
-	ControllerManagerInternalConfigMapName = "gardener-controller-manager-internal-config"
-
 	// DNSProvider is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
 	// DNS provider.
 	DNSProvider = "dns.gardener.cloud/provider"
