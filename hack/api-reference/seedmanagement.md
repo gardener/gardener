@@ -85,6 +85,7 @@ Shoot
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Shoot references a Shoot that should be registered as Seed.</p>
 </td>
 </tr>
@@ -867,6 +868,7 @@ Shoot
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Shoot references a Shoot that should be registered as Seed.</p>
 </td>
 </tr>
@@ -1002,6 +1004,7 @@ Shoot
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>Shoot references a Shoot that should be registered as Seed.</p>
 </td>
 </tr>

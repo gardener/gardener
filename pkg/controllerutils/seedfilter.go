@@ -162,6 +162,9 @@ func ManagedSeedFilterFunc(ctx context.Context, c client.Client, seedName string
 		if !ok {
 			return false
 		}
+		if managedSeed.Spec.Shoot == nil || managedSeed.Spec.Shoot.Name == "" {
+			return false
+		}
 		shoot := &gardencorev1beta1.Shoot{}
 		if err := c.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
 			return false

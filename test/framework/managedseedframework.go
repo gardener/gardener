@@ -238,7 +238,7 @@ func (f *ManagedSeedFramework) buildManagedSeed() (*seedmanagementv1alpha1.Manag
 			Namespace: v1beta1constants.GardenNamespace,
 		},
 		Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-			Shoot: seedmanagementv1alpha1.Shoot{
+			Shoot: &seedmanagementv1alpha1.Shoot{
 				Name: f.Config.ShootName,
 			},
 			SeedTemplate: seedTemplate,

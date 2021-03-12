@@ -502,9 +502,7 @@ func Convert_seedmanagement_ManagedSeedSetStatus_To_v1alpha1_ManagedSeedSetStatu
 }
 
 func autoConvert_v1alpha1_ManagedSeedSpec_To_seedmanagement_ManagedSeedSpec(in *ManagedSeedSpec, out *seedmanagement.ManagedSeedSpec, s conversion.Scope) error {
-	if err := Convert_v1alpha1_Shoot_To_seedmanagement_Shoot(&in.Shoot, &out.Shoot, s); err != nil {
-		return err
-	}
+	out.Shoot = (*seedmanagement.Shoot)(unsafe.Pointer(in.Shoot))
 	if in.SeedTemplate != nil {
 		in, out := &in.SeedTemplate, &out.SeedTemplate
 		*out = new(core.SeedTemplate)
@@ -533,9 +531,7 @@ func Convert_v1alpha1_ManagedSeedSpec_To_seedmanagement_ManagedSeedSpec(in *Mana
 }
 
 func autoConvert_seedmanagement_ManagedSeedSpec_To_v1alpha1_ManagedSeedSpec(in *seedmanagement.ManagedSeedSpec, out *ManagedSeedSpec, s conversion.Scope) error {
-	if err := Convert_seedmanagement_Shoot_To_v1alpha1_Shoot(&in.Shoot, &out.Shoot, s); err != nil {
-		return err
-	}
+	out.Shoot = (*Shoot)(unsafe.Pointer(in.Shoot))
 	if in.SeedTemplate != nil {
 		in, out := &in.SeedTemplate, &out.SeedTemplate
 		*out = new(v1beta1.SeedTemplate)

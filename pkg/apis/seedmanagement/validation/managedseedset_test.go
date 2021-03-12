@@ -239,6 +239,7 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 
 		It("should forbid empty or invalid fields in template", func() {
 			managedSeedCopy := managedSeed.DeepCopy()
+			managedSeedCopy.Spec.Shoot = &seedmanagement.Shoot{}
 			managedSeedCopy.Spec.SeedTemplate.Name = "foo"
 			managedSeedCopy.Spec.SeedTemplate.Spec.Networks.Nodes = pointer.StringPtr("")
 			managedSeedSet.Spec.Template.Spec = managedSeedCopy.Spec
@@ -246,6 +247,10 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 			errorList := ValidateManagedSeedSet(managedSeedSet)
 
 			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.template.spec.shoot"),
+				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.template.spec.seedTemplate.metadata.name"),

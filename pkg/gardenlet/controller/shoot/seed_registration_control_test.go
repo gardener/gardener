@@ -130,7 +130,7 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 									},
 								},
 								Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-									Shoot: seedmanagementv1alpha1.Shoot{
+									Shoot: &seedmanagementv1alpha1.Shoot{
 										Name: name,
 									},
 									SeedTemplate: &gardencorev1beta1.SeedTemplate{
@@ -188,7 +188,7 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 									},
 								},
 								Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-									Shoot: seedmanagementv1alpha1.Shoot{
+									Shoot: &seedmanagementv1alpha1.Shoot{
 										Name: name,
 									},
 									SeedTemplate: &gardencorev1beta1.SeedTemplate{
@@ -274,7 +274,7 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 									},
 								},
 								Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-									Shoot: seedmanagementv1alpha1.Shoot{
+									Shoot: &seedmanagementv1alpha1.Shoot{
 										Name: name,
 									},
 									Gardenlet: &seedmanagementv1alpha1.Gardenlet{
@@ -345,7 +345,7 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 									},
 								},
 								Spec: seedmanagementv1alpha1.ManagedSeedSpec{
-									Shoot: seedmanagementv1alpha1.Shoot{
+									Shoot: &seedmanagementv1alpha1.Shoot{
 										Name: name,
 									},
 									Gardenlet: &seedmanagementv1alpha1.Gardenlet{

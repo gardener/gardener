@@ -91,7 +91,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				Generation: 1,
 			},
 			Spec: seedmanagement.ManagedSeedSpec{
-				Shoot: seedmanagement.Shoot{
+				Shoot: &seedmanagement.Shoot{
 					Name: name,
 				},
 				SeedTemplate: &core.SeedTemplate{
@@ -136,6 +136,19 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("metadata.namespace"),
+				})),
+			))
+		})
+
+		It("should forbid nil shoot", func() {
+			managedSeed.Spec.Shoot = nil
+
+			errorList := ValidateManagedSeed(managedSeed)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.shoot"),
 				})),
 			))
 		})
@@ -377,7 +390,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.shoot.name"),
+					"Field":  Equal("spec.shoot"),
 					"Detail": Equal("field is immutable"),
 				})),
 			))

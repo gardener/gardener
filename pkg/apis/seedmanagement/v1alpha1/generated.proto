@@ -243,6 +243,7 @@ message ManagedSeedSetStatus {
 // ManagedSeedSpec is the specification of a ManagedSeed.
 message ManagedSeedSpec {
   // Shoot references a Shoot that should be registered as Seed.
+  // +optional
   optional Shoot shoot = 1;
 
   // SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed.
