@@ -108,6 +108,12 @@ metadata:
   name: metrics-server
   namespace: kube-system
 spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      minAllowed:
+        cpu: 50m
+        memory: 150Mi
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -260,8 +266,8 @@ spec:
             cpu: 100m
             memory: 1Gi
           requests:
-            cpu: 20m
-            memory: 100Mi
+            cpu: 50m
+            memory: 150Mi
         volumeMounts:
         - mountPath: /srv/metrics-server/tls
           name: metrics-server
@@ -353,8 +359,8 @@ spec:
             cpu: 80m
             memory: 400Mi
           requests:
-            cpu: 20m
-            memory: 100Mi
+            cpu: 50m
+            memory: 150Mi
         volumeMounts:
         - mountPath: /srv/metrics-server/tls
           name: metrics-server
