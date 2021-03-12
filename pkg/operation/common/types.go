@@ -22,9 +22,6 @@ const (
 	// VPNTunnel dictates that VPN is used as a tunnel between seed and shoot networks.
 	VPNTunnel string = "vpn-shoot"
 
-	// KonnectivityTunnel dictates that a konnectivity proxy is used as a tunnel between seed and shoot networks.
-	KonnectivityTunnel string = "konnectivity-agent"
-
 	// BasicAuthSecretName is the name of the secret containing basic authentication credentials for the kube-apiserver.
 	BasicAuthSecretName = "kube-apiserver-basic-auth"
 

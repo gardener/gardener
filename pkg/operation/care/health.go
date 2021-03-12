@@ -28,6 +28,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
@@ -296,8 +297,8 @@ func (h *Health) checkSystemComponents(
 	}
 
 	tunnelName := common.VPNTunnel
-	if podsList.Items[0].Labels["app"] == common.KonnectivityTunnel {
-		tunnelName = common.KonnectivityTunnel
+	if podsList.Items[0].Labels["app"] == konnectivity.AgentName {
+		tunnelName = konnectivity.AgentName
 	}
 
 	if established, err := kuberneteshealth.CheckTunnelConnection(ctx, h.shootClient, logrus.NewEntry(logger.NewNopLogger()), tunnelName); err != nil || !established {
