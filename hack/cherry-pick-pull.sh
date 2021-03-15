@@ -19,7 +19,7 @@
 #
 # Modifications Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved.
 
-# Usage Instructions: https://github.com/gardener/gardener/blob/master/docs/development/cherry-picks.md
+# Usage Instructions: https://github.com/gardener/gardener/blob/master/docs/development/process.md#cherry-picks
 
 # Checkout a PR from GitHub. (Yes, this is sitting in a Git tree. How
 # meta.) Assumes you care about pulls from remote "upstream" and
