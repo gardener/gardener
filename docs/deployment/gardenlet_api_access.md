@@ -7,7 +7,7 @@ As RBAC is not powerful enough for fine-grained checks and for the sake of secur
 Similar to the [`Node` authorization mode in Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/node/), Gardener features a `SeedAuthorizer` plugin.
 It is a special-purpose authorization plugin that specifically authorizes API requests made by the `gardenlet`s.
 
-Likewise, similar to the [`NodeRestriction` admission plugin in Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#noderestriction), Gardener features a `NodeRestriction` plugin.
+Likewise, similar to the [`NodeRestriction` admission plugin in Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#noderestriction), Gardener features a `SeedRestriction` plugin.
 It is a special-purpose admission plugin that specifically limits the Kubernetes objects `gardenlet`s can modify.
 
 📚 You might be interested to look into the [design proposal for scoped Kubelet API access](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/node/kubelet-authorizer.md) from the Kubernetes community.
@@ -31,6 +31,30 @@ In this case, the consultation of the `SeedRestriction` admission plugin is perf
 The `SeedAuthorizer` is implemented as [Kubernetes authorization webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) and part of the [`gardener-admission-controller`](../concepts/admission-controller.md) component running in the garden cluster.
 
 ⚠️ This authorization plugin is still in development and should not be used yet.
+
+### Authorizer Decisions
+
+As mentioned earlier, it's the authorizer's job to evaluate API requests and return one of the following decisions:
+- `DecisionAllow`: The request is allowed, further configured authorizers won't be consulted.
+- `DecisionDeny`: The request is denied, further configured authorizers won't be consulted.
+- `DecisionNoOpinion`: A decision cannot be made, further configured authorizers will be consulted.
+
+For backwards compatibility, no requests are denied at the moment, so that an ambiguous request is still deferred to a subsequent authorizer like RBAC.
+
+First, the `SeedAuthorizer` extracts the `Seed` name from the API request. This requires a proper TLS certificate the `gardenlet` uses to contact the API server and is automatically given if [TLS bootstrapping](../concepts/gardenlet.md#TLS-Bootstrapping) is used.
+Concretely, the authorizer checks the certificate for name `gardener.cloud:system:seed:<seed-name>` and group `gardener.cloud:system:seeds`.
+In cases this information is missing e.g., when a custom Kubeconfig is used, the authorizer cannot make any decision.
+Likewise, if `gardenlet` is responsible for more than one `Seed`, the name in the mentioned TLS certificate is `gardener.cloud:system:seed:<ambiguous>` and a definite decision cannot be made as well.
+The authorizer immediately returns with `DecisionNoOpinion` for all ambiguous cases which means that the request is neither allowed nor denied and further configured authorizers (e.g. RBAC) will be contacted.
+Thus, RBAC is still a considerable option to restrict the `gardenlet`'s access permission if the above explained preconditions are not given.
+   
+With the `Seed` name at hand, the authorizer checks for an **existing path** from the resource that a request is being made for to the `Seed` belonging to the `gardenlet`. See [Implementation-Details](#implementation-details) for more information.
+
+Today, the following rules are implemented:
+
+| Resource        | Verb        | Path                                   | Description            |
+| ----------------|-------------|----------------------------------------|------------------------|
+| `CloudProfile`  | Get         | `CloudProfile` -> `Shoot` -> `Seed`    | Allow `get` requests for CloudProfiles, referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `CloudProfile`s. |
 
 ### Implementation Details
 

@@ -190,10 +190,17 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	cloudProfile, err := c.k8sGardenCoreInformers.Core().V1beta1().CloudProfiles().Lister().Get(shoot.Spec.CloudProfileName)
+
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
+	}
+
+	cloudProfile := &gardencorev1beta1.CloudProfile{}
+	if err := gardenClient.APIReader().Get(ctx, kutil.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
 		return reconcile.Result{}, err
 	}
+
 	seed, err := c.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().Get(*shoot.Spec.SeedName)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -203,7 +210,7 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 	if shoot.DeletionTimestamp != nil {
 		log = log.WithField("operation", "delete")
 		c.shootReconciliationDueTracker.off(key)
-		return c.deleteShoot(ctx, log, shoot, project, cloudProfile, seed)
+		return c.deleteShoot(ctx, log, gardenClient, shoot, project, cloudProfile, seed)
 	}
 
 	if shouldPrepareShootForMigration(shoot) {
@@ -219,7 +226,7 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 			return reconcile.Result{}, err
 		}
 
-		return c.prepareShootForMigration(ctx, log, shoot, project, cloudProfile, sourceSeed)
+		return c.prepareShootForMigration(ctx, log, gardenClient, shoot, project, cloudProfile, sourceSeed)
 	}
 
 	// if shoot is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue
@@ -229,7 +236,7 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 	}
 
 	log = log.WithField("operation", "reconcile")
-	return c.reconcileShoot(ctx, log, shoot, project, cloudProfile, seed)
+	return c.reconcileShoot(ctx, log, gardenClient, shoot, project, cloudProfile, seed)
 }
 
 func shouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
@@ -238,12 +245,7 @@ func shouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
 
 const taskID = "initializeOperation"
 
-func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (*operation.Operation, error) {
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
+func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Entry, gardenClient client.Client, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (*operation.Operation, error) {
 	gardenObj, err := garden.
 		NewBuilder().
 		WithProject(project).
@@ -271,7 +273,7 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 		WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
 		WithInternalDomain(gardenObj.InternalDomain).
 		WithDefaultDomains(gardenObj.DefaultDomains).
-		Build(ctx, gardenClient.Client())
+		Build(ctx, gardenClient)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +292,7 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 		Build(ctx, c.clientMap)
 }
 
-func (c *Controller) deleteShoot(ctx context.Context, logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
+func (c *Controller) deleteShoot(ctx context.Context, logger *logrus.Entry, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
 	var (
 		err error
 
@@ -303,11 +305,6 @@ func (c *Controller) deleteShoot(ctx context.Context, logger *logrus.Entry, shoo
 
 	if !controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
 		return reconcile.Result{}, nil
-	}
-
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
 	// If the .status.uid field is empty, then we assume that there has never been any operation running for this Shoot
@@ -345,7 +342,7 @@ func (c *Controller) deleteShoot(ctx context.Context, logger *logrus.Entry, shoo
 		return reconcile.Result{}, err
 	}
 
-	o, operationErr := c.initializeOperation(ctx, logger, shoot, project, cloudProfile, seed)
+	o, operationErr := c.initializeOperation(ctx, logger, gardenClient.Client(), shoot, project, cloudProfile, seed)
 	if operationErr != nil {
 		_, updateErr := c.updateShootStatusOperationError(ctx, gardenClient, shoot, fmt.Sprintf("Could not initialize a new operation for Shoot deletion: %s", operationErr.Error()), operationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
@@ -386,7 +383,7 @@ func (c *Controller) isSeedReadyForMigration(seed *gardencorev1beta1.Seed) error
 	return health.CheckSeedForMigration(seed, c.identity)
 }
 
-func (c *Controller) reconcileShoot(ctx context.Context, logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
+func (c *Controller) reconcileShoot(ctx context.Context, logger *logrus.Entry, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
 	var (
 		key                                        = shootKey(shoot)
 		operationType                              = gardencorev1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
@@ -401,11 +398,6 @@ func (c *Controller) reconcileShoot(ctx context.Context, logger *logrus.Entry, s
 		regularReconciliationIsDue                 = isUpToDate && isNowInEffectiveShootMaintenanceTimeWindow && !alreadyReconciledDuringThisTimeWindow
 		reconcileAllowed                           = !failedOrIgnored && ((!reconcileInMaintenanceOnly && !confineSpecUpdateRollout(shoot.Spec.Maintenance)) || !isUpToDate || (isNowInEffectiveShootMaintenanceTimeWindow && !alreadyReconciledDuringThisTimeWindow))
 	)
-
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
 
 	if !controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
 		if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), shoot.DeepCopy(), gardencorev1beta1.GardenerName); err != nil {
@@ -453,12 +445,12 @@ func (c *Controller) reconcileShoot(ctx context.Context, logger *logrus.Entry, s
 
 	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling Shoot cluster state")
 	shootNamespace := shootpkg.ComputeTechnicalID(project.Name, shoot)
-	shoot, err = c.updateShootStatusOperationStart(ctx, gardenClient.GardenCore(), shoot, shootNamespace, operationType)
+	shoot, err := c.updateShootStatusOperationStart(ctx, gardenClient.GardenCore(), shoot, shootNamespace, operationType)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	o, operationErr := c.initializeOperation(ctx, logger, shoot, project, cloudProfile, seed)
+	o, operationErr := c.initializeOperation(ctx, logger, gardenClient.Client(), shoot, project, cloudProfile, seed)
 	if operationErr != nil {
 		_, updateErr := c.updateShootStatusOperationError(ctx, gardenClient, shoot, fmt.Sprintf("Could not initialize a new operation for Shoot reconciliation: %s", operationErr.Error()), operationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
