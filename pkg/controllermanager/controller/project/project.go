@@ -94,7 +94,7 @@ func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFacto
 
 	projectController := &Controller{
 		clientMap:              clientMap,
-		projectReconciler:      NewProjectReconciler(logger.Logger, config.Controllers, clientMap, gardenCoreInformerFactory, recorder, namespaceLister),
+		projectReconciler:      NewProjectReconciler(logger.Logger, config.Controllers.Project, clientMap, recorder, namespaceLister),
 		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, clientMap, shootLister, plantLister, backupEntryLister, secretBindingLister, quotaLister, namespaceLister, secretLister),
 		config:                 config,
 		projectLister:          projectLister,

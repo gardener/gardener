@@ -21,7 +21,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -65,31 +64,28 @@ func (c *Controller) secretBindingDelete(obj interface{}) {
 func NewSecretBindingReconciler(
 	l logrus.FieldLogger,
 	clientMap clientmap.ClientMap,
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory,
 	recorder record.EventRecorder,
 	secretBindingLister gardencorelisters.SecretBindingLister,
 	secretLister kubecorev1listers.SecretLister,
 	shootLister gardencorelisters.ShootLister,
 ) reconcile.Reconciler {
 	return &secretBindingReconciler{
-		logger:                 l,
-		clientMap:              clientMap,
-		k8sGardenCoreInformers: k8sGardenCoreInformers,
-		recorder:               recorder,
-		secretBindingLister:    secretBindingLister,
-		secretLister:           secretLister,
-		shootLister:            shootLister,
+		logger:              l,
+		clientMap:           clientMap,
+		recorder:            recorder,
+		secretBindingLister: secretBindingLister,
+		secretLister:        secretLister,
+		shootLister:         shootLister,
 	}
 }
 
 type secretBindingReconciler struct {
-	logger                 logrus.FieldLogger
-	clientMap              clientmap.ClientMap
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	recorder               record.EventRecorder
-	secretBindingLister    gardencorelisters.SecretBindingLister
-	secretLister           kubecorev1listers.SecretLister
-	shootLister            gardencorelisters.ShootLister
+	logger              logrus.FieldLogger
+	clientMap           clientmap.ClientMap
+	recorder            record.EventRecorder
+	secretBindingLister gardencorelisters.SecretBindingLister
+	secretLister        kubecorev1listers.SecretLister
+	shootLister         gardencorelisters.ShootLister
 }
 
 func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {

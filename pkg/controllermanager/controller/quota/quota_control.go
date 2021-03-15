@@ -21,7 +21,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -60,22 +59,20 @@ func (c *Controller) quotaDelete(obj interface{}) {
 }
 
 // NewQuotaReconciler creates a new instance of a reconciler which reconciles Quotas.
-func NewQuotaReconciler(l logrus.FieldLogger, clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, secretBindingLister gardencorelisters.SecretBindingLister) reconcile.Reconciler {
+func NewQuotaReconciler(l logrus.FieldLogger, clientMap clientmap.ClientMap, recorder record.EventRecorder, secretBindingLister gardencorelisters.SecretBindingLister) reconcile.Reconciler {
 	return &quotaReconciler{
-		logger:                 l,
-		clientMap:              clientMap,
-		k8sGardenCoreInformers: k8sGardenCoreInformers,
-		recorder:               recorder,
-		secretBindingLister:    secretBindingLister,
+		logger:              l,
+		clientMap:           clientMap,
+		recorder:            recorder,
+		secretBindingLister: secretBindingLister,
 	}
 }
 
 type quotaReconciler struct {
-	logger                 logrus.FieldLogger
-	clientMap              clientmap.ClientMap
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	recorder               record.EventRecorder
-	secretBindingLister    gardencorelisters.SecretBindingLister
+	logger              logrus.FieldLogger
+	clientMap           clientmap.ClientMap
+	recorder            record.EventRecorder
+	secretBindingLister gardencorelisters.SecretBindingLister
 }
 
 func (r *quotaReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {

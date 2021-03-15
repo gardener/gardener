@@ -20,7 +20,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -71,24 +70,22 @@ func (c *Controller) projectDelete(obj interface{}) {
 }
 
 // NewProjectReconciler creates a new instance of a reconciler which reconciles Projects.
-func NewProjectReconciler(l logrus.FieldLogger, config config.ControllerManagerControllerConfiguration, clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, namespaceLister kubecorev1listers.NamespaceLister) reconcile.Reconciler {
+func NewProjectReconciler(l logrus.FieldLogger, config *config.ProjectControllerConfiguration, clientMap clientmap.ClientMap, recorder record.EventRecorder, namespaceLister kubecorev1listers.NamespaceLister) reconcile.Reconciler {
 	return &projectReconciler{
-		logger:                 l,
-		config:                 config,
-		clientMap:              clientMap,
-		k8sGardenCoreInformers: k8sGardenCoreInformers,
-		recorder:               recorder,
-		namespaceLister:        namespaceLister,
+		logger:          l,
+		config:          config,
+		clientMap:       clientMap,
+		recorder:        recorder,
+		namespaceLister: namespaceLister,
 	}
 }
 
 type projectReconciler struct {
-	logger                 logrus.FieldLogger
-	config                 config.ControllerManagerControllerConfiguration
-	clientMap              clientmap.ClientMap
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	recorder               record.EventRecorder
-	namespaceLister        kubecorev1listers.NamespaceLister
+	logger          logrus.FieldLogger
+	config          *config.ProjectControllerConfiguration
+	clientMap       clientmap.ClientMap
+	recorder        record.EventRecorder
+	namespaceLister kubecorev1listers.NamespaceLister
 }
 
 func (r *projectReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {

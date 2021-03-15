@@ -221,12 +221,12 @@ func (r *projectReconciler) reconcileNamespaceForProject(ctx context.Context, ga
 }
 
 // quotaConfiguration returns the first matching quota configuration if one is configured for the given project.
-func quotaConfiguration(config config.ControllerManagerControllerConfiguration, project *gardencorev1beta1.Project) (*config.QuotaConfiguration, error) {
-	if config.Project == nil {
+func quotaConfiguration(config *config.ProjectControllerConfiguration, project *gardencorev1beta1.Project) (*config.QuotaConfiguration, error) {
+	if config == nil {
 		return nil, nil
 	}
 
-	for _, c := range config.Project.Quotas {
+	for _, c := range config.Quotas {
 		quotaConfig := c
 		selector, err := metav1.LabelSelectorAsSelector(quotaConfig.ProjectSelector)
 		if err != nil {

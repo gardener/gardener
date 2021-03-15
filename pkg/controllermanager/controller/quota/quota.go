@@ -66,7 +66,7 @@ func NewQuotaController(clientMap clientmap.ClientMap, gardenCoreInformerFactory
 	quotaController := &Controller{
 		clientMap:           clientMap,
 		k8sGardenInformers:  gardenCoreInformerFactory,
-		reconciler:          NewQuotaReconciler(logger.Logger, clientMap, gardenCoreInformerFactory, recorder, secretBindingLister),
+		reconciler:          NewQuotaReconciler(logger.Logger, clientMap, recorder, secretBindingLister),
 		recorder:            recorder,
 		quotaLister:         quotaLister,
 		quotaQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Quota"),

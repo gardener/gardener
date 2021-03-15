@@ -69,7 +69,7 @@ func NewSecretBindingController(clientMap clientmap.ClientMap, gardenInformerFac
 	secretBindingController := &Controller{
 		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenInformerFactory,
-		reconciler:             NewSecretBindingReconciler(logger.Logger, clientMap, gardenInformerFactory, recorder, secretBindingLister, secretLister, shootLister),
+		reconciler:             NewSecretBindingReconciler(logger.Logger, clientMap, recorder, secretBindingLister, secretLister, shootLister),
 		recorder:               recorder,
 		secretBindingLister:    secretBindingLister,
 		secretBindingQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SecretBinding"),
