@@ -51,9 +51,21 @@ func init() {
 	}
 }
 
-// AnnotationKeyChecksum is the key of an annotation on a shoot Node object whose value is the checksum
-// of the last applied cloud config user data.
-const AnnotationKeyChecksum = "checksum/cloud-config-data"
+const (
+	// AnnotationKeyChecksum is the key of an annotation on a shoot Node object whose value is the checksum
+	// of the last applied cloud config user data.
+	AnnotationKeyChecksum = "checksum/cloud-config-data"
+	// ExecutionMaxDelaySeconds is a constant for the maximum delay in seconds for the execution of a downloaded
+	// cloud-config user data. Each worker node will randomly select a value in [1,ExecutionMaxDelaySeconds) and always
+	// delays the execution by this number.
+	ExecutionMaxDelaySeconds = 300
+	// PathExecutionDelaySeconds is the path on the shoot worker nodes at which the randomly computed delay for the
+	// execution will be persisted.
+	PathExecutionDelaySeconds = downloader.PathCCDDirectory + "/execution_delay_seconds"
+	// PathExecutionLastDate is the path on the shoot worker nodes at which the date of the last execution will be
+	// persisted.
+	PathExecutionLastDate = downloader.PathCCDDirectory + "/execution_last_date"
+)
 
 // Script returns the executor script that applies the downloaded cloud-config user-data.
 func Script(
@@ -77,11 +89,15 @@ func Script(
 		"pathCredentialsCACert":          downloader.PathCredentialsCACert,
 		"pathDownloadedCloudConfig":      downloader.PathDownloadedCloudConfig,
 		"pathDownloadedChecksum":         downloader.PathDownloadedCloudConfigChecksum,
+		"pathExecutionDelaySeconds":      PathExecutionDelaySeconds,
+		"pathExecutionLastDate":          PathExecutionLastDate,
 		"pathKubeletKubeconfigBootstrap": kubelet.PathKubeconfigBootstrap,
 		"pathKubeletKubeconfigReal":      kubelet.PathKubeconfigReal,
 		"bootstrapToken":                 bootstrapToken,
 		"cloudConfigUserData":            utils.EncodeBase64(cloudConfigUserData),
 		"cloudConfigDownloaderName":      downloader.Name,
+		"executionMinDelaySeconds":       downloader.UnitRestartSeconds,
+		"executionMaxDelaySeconds":       ExecutionMaxDelaySeconds,
 		"images":                         images,
 		"reloadConfigCommand":            reloadConfigCommand,
 		"units":                          units,

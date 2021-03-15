@@ -8,6 +8,8 @@ PATH_CHECKSUM="{{ .pathDownloadedChecksum }}"
 PATH_CCD_SCRIPT="{{ .pathCCDScript }}"
 PATH_CCD_SCRIPT_CHECKSUM="{{ .pathCCDScriptChecksum }}"
 PATH_CCD_SCRIPT_CHECKSUM_OLD="${PATH_CCD_SCRIPT_CHECKSUM}.old"
+PATH_EXECUTION_DELAY_SECONDS="{{ .pathExecutionDelaySeconds }}"
+PATH_EXECUTION_LAST_DATE="{{ .pathExecutionLastDate }}"
 
 mkdir -p "{{ .pathDownloadsDirectory }}" "{{ .pathKubeletDirectory }}"
 
@@ -120,6 +122,24 @@ if [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
     echo "Restarting systemd service {{ .unitNameCloudConfigDownloader }} due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
     systemctl restart "{{ .unitNameCloudConfigDownloader }}" || true
   fi
+
+  # If the time difference from the last execution till now is smaller than the node-specific delay then we exit early
+  # and don't apply the (potentially updated) cloud-config user data. This is to spread the restarts of the systemd
+  # units and to prevent too many restarts happening on the nodes at roughly the same time.
+  if [[ ! -f "$PATH_EXECUTION_DELAY_SECONDS" ]]; then
+    echo $(({{ .executionMinDelaySeconds }} + $RANDOM % {{ .executionMaxDelaySeconds }})) > "$PATH_EXECUTION_DELAY_SECONDS"
+  fi
+  execution_delay_seconds=$(cat "$PATH_EXECUTION_DELAY_SECONDS")
+
+  if [[ -f "$PATH_EXECUTION_LAST_DATE" ]]; then
+    execution_last_date=$(cat "$PATH_EXECUTION_LAST_DATE")
+    now_date=$(date +%s)
+
+    if [[ $((now_date - execution_last_date)) -lt $execution_delay_seconds ]]; then
+      echo "$(date) Execution delay for this node is $execution_delay_seconds seconds, and the last execution was at $(date -d @$execution_last_date). Exiting now."
+      exit 0
+    fi
+  fi
 fi
 
 # Apply most recent cloud-config user-data, reload the systemd daemon and restart the units to make the changes
@@ -142,8 +162,9 @@ fi
 
 rm "$PATH_CLOUDCONFIG" "$PATH_CCD_SCRIPT_CHECKSUM"
 
-# Now that the most recent cloud-config user data was applied, let's update checksum/cloud-config-data annotation on
-# the Node object if possible.
+# Now that the most recent cloud-config user data was applied, let's update the checksum/cloud-config-data annotation on
+# the Node object if possible and store the current date.
 if [[ ! -z "$NODENAME" ]] && [[ -f "$PATH_CHECKSUM" ]]; then
   /opt/bin/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
 fi
+date +%s > "$PATH_EXECUTION_LAST_DATE"
