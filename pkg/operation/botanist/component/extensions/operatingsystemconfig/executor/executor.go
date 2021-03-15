@@ -81,6 +81,7 @@ func Script(
 		"pathKubeletKubeconfigReal":      kubelet.PathKubeconfigReal,
 		"bootstrapToken":                 bootstrapToken,
 		"cloudConfigUserData":            utils.EncodeBase64(cloudConfigUserData),
+		"cloudConfigDownloaderName":      downloader.Name,
 		"images":                         images,
 		"reloadConfigCommand":            reloadConfigCommand,
 		"units":                          units,
