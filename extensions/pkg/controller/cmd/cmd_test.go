@@ -17,8 +17,8 @@ package cmd
 import (
 	"errors"
 
-	"github.com/gardener/gardener/extensions/pkg/util/test"
 	mocklogr "github.com/gardener/gardener/pkg/mock/go-logr/logr"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
