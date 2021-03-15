@@ -21,14 +21,29 @@ images:
   sourceRepository: github.com/gardener/etcd-druid
   repository: eu.gcr.io/gardener-project/gardener/etcd-druid
   tag: "v0.4.1"
+  labels:
+    # get the version from the gardener/etcd-druid component
+  - name: imagevector.gardener.cloud/component-reference
+    value:
+      componentName: github.com/gardener/etcd-druid
 - name: gardener-resource-manager
   sourceRepository: github.com/gardener/gardener-resource-manager
   repository: eu.gcr.io/gardener-project/gardener/gardener-resource-manager
   tag: "v0.22.0"
+  labels:
+    # get the version from the gardener/gardener-resource-manager component
+  - name: imagevector.gardener.cloud/component-reference
+    value:
+      componentName: github.com/gardener/gardener-resource-manager
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
   tag: "v0.6.1"
+  labels:
+    # get the version from the gardener/dependency-watchdog component
+  - name: imagevector.gardener.cloud/component-reference
+    value:
+      componentName: github.com/gardener/dependency-watchdog
 
 # Seed controlplane
 #   hyperkube is used for kubectl + kubelet binaries on the worker nodes
@@ -36,60 +51,99 @@ images:
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/hyperkube
   targetVersion: "< 1.19"
+  labels:
+  - name: imagevector.gardener.cloud/generic
 - name: hyperkube
   sourceRepository: github.com/gardener/hyperkube
   repository: eu.gcr.io/gardener-project/hyperkube
   targetVersion: ">= 1.19"
+  labels:
+  - name: imagevector.gardener.cloud/generic
 - name: kube-apiserver
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/hyperkube
   targetVersion: "< 1.17"
+  labels:
+  - name: imagevector.gardener.cloud/generic
 - name: kube-apiserver
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/kube-apiserver
   targetVersion: ">= 1.17"
+  labels:
+  - name: imagevector.gardener.cloud/generic
 - name: kube-controller-manager
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/hyperkube
   targetVersion: "< 1.17"
+  labels:
+  - name: imagevector.gardener.cloud/generic
 - name: kube-controller-manager
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/kube-controller-manager
   targetVersion: ">= 1.17"
+  labels:
+  - name: imagevector.gardener.cloud/generic
 - name: kube-scheduler
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/hyperkube
   targetVersion: "< 1.17"
+  labels:
+  - name: imagevector.gardener.cloud/generic
 - name: kube-scheduler
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/kube-scheduler
   targetVersion: ">= 1.17"
+  labels:
+  - name: imagevector.gardener.cloud/generic
 - name: kube-proxy
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/hyperkube
   targetVersion: "< 1.17"
+  labels:
+  - name: imagevector.gardener.cloud/generic
 - name: kube-proxy
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/kube-proxy
   targetVersion: ">= 1.17"
+  labels:
+  - name: imagevector.gardener.cloud/generic
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
   tag: "v0.14.0"
   targetVersion: ">= 1.16"
+  labels:
+    # get the version from the gardener/autoscaler component
+  - name: imagevector.gardener.cloud/component-reference
+    value:
+      componentName: github.com/gardener/autoscaler
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
   targetVersion: "< 1.16"
   tag: "v0.10.1"
+  labels:
+    # get the version from the gardener/autoscaler component
+  - name: imagevector.gardener.cloud/component-reference
+    value:
+      componentName: github.com/gardener/autoscaler
 - name: vpn-seed
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
   tag: "0.19.0"
+  labels:
+    # get the version from the gardener/vpn component
+  - name: imagevector.gardener.cloud/component-reference
+    value:
+      componentName: github.com/gardener/vpn
 - name: konnectivity-server
   sourceRepository: github.com/gardener/replica-reloader
   repository: eu.gcr.io/gardener-project/gardener/replica-reloader
   tag: "v0.2.0-konnectivity-server-v0.0.15"
+  labels:
+    # does not add the image as component reference
+  - name: imagevector.gardener.cloud/ignore-flags
+    value: ~
 
 # Monitoring
 - name: alertmanager
@@ -136,6 +190,11 @@ images:
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
   tag: "0.19.0"
+  labels:
+    # get the version from the gardener/vpn component
+  - name: imagevector.gardener.cloud/component-reference
+    value:
+      componentName: github.com/gardener/vpn
 - name: konnectivity-agent
   sourceRepository: github.com/kubernetes-sigs/apiserver-network-proxy
   repository: k8s.gcr.io/kas-network-proxy/proxy-agent
@@ -192,6 +251,11 @@ images:
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
   tag: "0.9.0"
+  labels:
+    # get version from the gardener/ingress-default-backend component
+  - name: imagevector.gardener.cloud/component-reference
+    value:
+      componentName: github.com/gardener/ingress-default-backend
 
 # Miscellaenous
 - name: busybox
@@ -215,6 +279,11 @@ images:
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluent-bit-to-loki
   tag: "v0.34.0"
+  labels:
+    # get the autoscaler version from the gardener/logging component
+  - name: imagevector.gardener.cloud/component-reference
+    value:
+      componentName: github.com/gardener/logging
 - name: loki
   sourceRepository: github.com/grafana/loki
   repository: grafana/loki
@@ -223,6 +292,11 @@ images:
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/loki-curator
   tag: "v0.34.0"
+  labels:
+    # get the version from the gardener/logging component
+  - name: imagevector.gardener.cloud/component-reference
+    value:
+      componentName: github.com/gardener/logging
 
 # VPA
 - name: vpa-admission-controller
@@ -241,12 +315,22 @@ images:
   sourceRepository: github.com/gardener/vpa-exporter
   repository: eu.gcr.io/gardener-project/gardener/vpa-exporter
   tag: "0.1.5"
+  labels:
+    # get the version from the gardener/vpa-exporter component
+  - name: imagevector.gardener.cloud/component-reference
+    value:
+      componentName: github.com/gardener/vpa-exporter
 
 # HVPA
 - name: hvpa-controller
   sourceRepository: github.com/gardener/hvpa-controller
   repository: eu.gcr.io/gardener-project/gardener/hvpa-controller
   tag: "v0.3.1"
+  labels:
+    # get the version from the gardener/hvpa-controller component
+  - name: imagevector.gardener.cloud/component-reference
+    value:
+      componentName: github.com/gardener/hvpa-controller
 
 # Istio
 - name: istio-proxy
@@ -267,7 +351,17 @@ images:
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy
   tag: "v0.1.0"
+  labels:
+    # get the version from the gardener/apiserver-proxy component
+  - name: imagevector.gardener.cloud/component-reference
+    value:
+      componentName: github.com/gardener/apiserver-proxy
 - name: apiserver-proxy-pod-webhook
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy-pod-webhook
   tag: "v0.2.0"
+  labels:
+    # get the version from the gardener/apiserver-proxy component
+  - name: imagevector.gardener.cloud/component-reference
+    value:
+      componentName: github.com/gardener/apiserver-proxy
