@@ -88,7 +88,7 @@ var _ = Describe("#Interface", func() {
 		region = "europe"
 		sshPublicKey = []byte("secure")
 		providerConfig = &runtime.RawExtension{
-			Raw: []byte("very-provider-specific"),
+			Raw: []byte(`{"very":"provider-specific"}`),
 		}
 
 		values = &infrastructure.Values{
@@ -440,7 +440,7 @@ var _ = Describe("#Interface", func() {
 
 	Describe("#Restore", func() {
 		var (
-			state      = &runtime.RawExtension{Raw: []byte("dummy state")}
+			state      = &runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)}
 			shootState = &gardencorev1alpha1.ShootState{
 				Spec: gardencorev1alpha1.ShootStateSpec{
 					Extensions: []gardencorev1alpha1.ExtensionResourceState{
@@ -478,7 +478,7 @@ var _ = Describe("#Interface", func() {
 			mc.EXPECT().Create(ctx, obj)
 			mc.EXPECT().Status().Return(mc)
 			mc.EXPECT().Update(ctx, expectedWithState)
-			mc.EXPECT().Patch(ctx, expectedWithRestore, client.MergeFrom(expectedWithState))
+			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState)
 
 			Expect(infrastructure.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
 		})
@@ -505,9 +505,8 @@ var _ = Describe("#Interface", func() {
 						infra.DeepCopyInto(o)
 						return nil
 					}),
-				c.
-					EXPECT().
-					Patch(ctx, obj, client.MergeFrom(infra)),
+				test.
+					EXPECTPatch(ctx, c, obj, infra),
 			)
 
 			Expect(deployWaiter.Migrate(ctx)).To(Succeed())

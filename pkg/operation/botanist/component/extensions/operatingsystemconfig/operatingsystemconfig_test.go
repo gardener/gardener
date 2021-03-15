@@ -298,8 +298,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 		Describe("#Restore", func() {
 			var (
-				stateDownloader = []byte("dummy state downloader")
-				stateOriginal   = []byte("dummy state original")
+				stateDownloader = []byte(`{"dummy":"state downloader"}`)
+				stateOriginal   = []byte(`{"dummy":"state original"}`)
 				shootState      *gardencorev1alpha1.ShootState
 			)
 
@@ -359,7 +359,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					mc.EXPECT().Create(ctx, expected[i])
 					mc.EXPECT().Status().Return(mc)
 					mc.EXPECT().Update(ctx, expectedWithState)
-					mc.EXPECT().Patch(ctx, expectedWithRestore, client.MergeFrom(expectedWithState))
+					test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState)
 				}
 
 				defaultDepWaiter = New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)

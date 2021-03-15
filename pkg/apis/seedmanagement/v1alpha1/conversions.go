@@ -17,6 +17,8 @@ package v1alpha1
 import (
 	"fmt"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -70,4 +72,20 @@ func Convert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(in *seedmanagement.G
 		out.Config.Raw = raw
 	}
 	return nil
+}
+
+func Convert_v1beta1_SeedTemplate_To_core_SeedTemplate(in *gardencorev1beta1.SeedTemplate, out *gardencore.SeedTemplate, s conversion.Scope) error {
+	return gardencorev1beta1.Convert_v1beta1_SeedTemplate_To_core_SeedTemplate(in, out, s)
+}
+
+func Convert_core_SeedTemplate_To_v1beta1_SeedTemplate(in *gardencore.SeedTemplate, out *gardencorev1beta1.SeedTemplate, s conversion.Scope) error {
+	return gardencorev1beta1.Convert_core_SeedTemplate_To_v1beta1_SeedTemplate(in, out, s)
+}
+
+func Convert_v1beta1_ShootTemplate_To_core_ShootTemplate(in *gardencorev1beta1.ShootTemplate, out *gardencore.ShootTemplate, s conversion.Scope) error {
+	return gardencorev1beta1.Convert_v1beta1_ShootTemplate_To_core_ShootTemplate(in, out, s)
+}
+
+func Convert_core_ShootTemplate_To_v1beta1_ShootTemplate(in *gardencore.ShootTemplate, out *gardencorev1beta1.ShootTemplate, s conversion.Scope) error {
+	return gardencorev1beta1.Convert_core_ShootTemplate_To_v1beta1_ShootTemplate(in, out, s)
 }

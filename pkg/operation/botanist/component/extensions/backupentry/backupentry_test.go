@@ -242,7 +242,7 @@ var _ = Describe("#BackupEntry", func() {
 
 			mc := mockclient.NewMockClient(ctrl)
 			mc.EXPECT().Get(ctx, kutil.Key(name), gomock.AssignableToTypeOf(&extensionsv1alpha1.BackupEntry{})).SetArg(2, *expected)
-			mc.EXPECT().Patch(ctx, expectedCopy, gomock.AssignableToTypeOf(client.MergeFrom(expected)))
+			test.EXPECTPatch(ctx, mc, expectedCopy, expected)
 
 			defaultDepWaiter = backupentry.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())

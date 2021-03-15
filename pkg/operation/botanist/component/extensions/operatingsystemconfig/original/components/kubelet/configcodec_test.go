@@ -192,6 +192,8 @@ resolvConf: /etc/resolv.conf
 rotateCertificates: true
 runtimeRequestTimeout: 2m0s
 serializeImagePulls: true
+shutdownGracePeriod: 0s
+shutdownGracePeriodCriticalPods: 0s
 streamingConnectionIdleTimeout: 0s
 syncFrequency: 1m0s
 volumeStatsAggPeriod: 1m0s

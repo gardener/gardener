@@ -427,7 +427,7 @@ var _ = Describe("Worker", func() {
 
 	Describe("#Restore", func() {
 		var (
-			state      = &runtime.RawExtension{Raw: []byte("dummy state")}
+			state      = &runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)}
 			shootState = &gardencorev1alpha1.ShootState{
 				Spec: gardencorev1alpha1.ShootStateSpec{
 					Extensions: []gardencorev1alpha1.ExtensionResourceState{
@@ -462,7 +462,7 @@ var _ = Describe("Worker", func() {
 			mc.EXPECT().Create(ctx, obj)
 			mc.EXPECT().Status().Return(mc)
 			mc.EXPECT().Update(ctx, expectedWithState)
-			mc.EXPECT().Patch(ctx, expectedWithRestore, client.MergeFrom(expectedWithState))
+			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState)
 
 			Expect(worker.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
 		})

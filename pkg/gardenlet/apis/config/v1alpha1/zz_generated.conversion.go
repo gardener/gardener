@@ -331,6 +331,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*core.SeedTemplate)(nil), (*v1beta1.SeedTemplate)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_SeedTemplate_To_v1beta1_SeedTemplate(a.(*core.SeedTemplate), b.(*v1beta1.SeedTemplate), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1beta1.SeedTemplate)(nil), (*core.SeedTemplate)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_SeedTemplate_To_core_SeedTemplate(a.(*v1beta1.SeedTemplate), b.(*core.SeedTemplate), scope)
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -891,8 +901,7 @@ func Convert_config_SeedClientConnection_To_v1alpha1_SeedClientConnection(in *co
 }
 
 func autoConvert_v1alpha1_SeedConfig_To_config_SeedConfig(in *SeedConfig, out *config.SeedConfig, s conversion.Scope) error {
-	// TODO: Inefficient conversion - can we improve it?
-	if err := s.Convert(&in.SeedTemplate, &out.SeedTemplate, 0); err != nil {
+	if err := Convert_v1beta1_SeedTemplate_To_core_SeedTemplate(&in.SeedTemplate, &out.SeedTemplate, s); err != nil {
 		return err
 	}
 	return nil
@@ -904,8 +913,7 @@ func Convert_v1alpha1_SeedConfig_To_config_SeedConfig(in *SeedConfig, out *confi
 }
 
 func autoConvert_config_SeedConfig_To_v1alpha1_SeedConfig(in *config.SeedConfig, out *SeedConfig, s conversion.Scope) error {
-	// TODO: Inefficient conversion - can we improve it?
-	if err := s.Convert(&in.SeedTemplate, &out.SeedTemplate, 0); err != nil {
+	if err := Convert_core_SeedTemplate_To_v1beta1_SeedTemplate(&in.SeedTemplate, &out.SeedTemplate, s); err != nil {
 		return err
 	}
 	return nil

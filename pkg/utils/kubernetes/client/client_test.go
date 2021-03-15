@@ -24,6 +24,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	mockutilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client/mock"
+	"github.com/gardener/gardener/pkg/utils/test"
 	mocktime "github.com/gardener/gardener/pkg/utils/time/mock"
 
 	"github.com/golang/mock/gomock"
@@ -132,7 +133,7 @@ var _ = Describe("Cleaner", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, cm2Key, &cm2).SetArg(2, cm2WithFinalizer),
 					timeOps.EXPECT().Now().Return(now),
-					c.EXPECT().Patch(ctx, &cm2, client.MergeFrom(&cm2WithFinalizer)),
+					test.EXPECTPatch(ctx, c, &cm2, &cm2WithFinalizer),
 				)
 
 				Expect(cleaner.Clean(ctx, c, &cm2, FinalizeGracePeriodSeconds(20))).To(Succeed())
@@ -213,7 +214,7 @@ var _ = Describe("Cleaner", func() {
 				gomock.InOrder(
 					c.EXPECT().List(ctx, list).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2WithFinalizer}}),
 					timeOps.EXPECT().Now().Return(now),
-					c.EXPECT().Patch(ctx, &cm2, client.MergeFrom(&cm2WithFinalizer)),
+					test.EXPECTPatch(ctx, c, &cm2, &cm2WithFinalizer),
 				)
 
 				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(20))).To(Succeed())

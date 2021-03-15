@@ -15,13 +15,20 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
 
+	"github.com/golang/mock/gomock"
 	"github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/component-base/featuregate"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
 // WithVar sets the given var to the src value and returns a function to revert to the original state.
@@ -172,4 +179,19 @@ func WithTempFile(dir, pattern string, content []byte, fileName *string) func() 
 			ginkgo.Fail(fmt.Sprintf("could not delete temp file %s: %v", file.Name(), err))
 		}
 	}
+}
+
+// EXPECTPatch is a helper function for a GoMock call expecting a patch with the mock client.
+func EXPECTPatch(ctx context.Context, c *mockclient.MockClient, obj, mergeFrom runtime.Object) *gomock.Call {
+	expectedPatch := client.MergeFrom(mergeFrom)
+	expectedData, expectedErr := expectedPatch.Data(obj)
+	Expect(expectedErr).To(BeNil())
+
+	return c.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.Object, patch client.Patch, _ ...client.PatchOption) error {
+		data, err := patch.Data(obj)
+		Expect(err).To(BeNil())
+		Expect(patch.Type()).To(Equal(expectedPatch.Type()))
+		Expect(data).To(Equal(expectedData))
+		return nil
+	})
 }

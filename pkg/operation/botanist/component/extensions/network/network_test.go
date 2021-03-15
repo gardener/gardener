@@ -122,7 +122,7 @@ var _ = Describe("#Network", func() {
 			},
 		}
 
-		defaultDepWaiter = network.New(log, c, values, time.Second, 2*time.Second, 3*time.Second)
+		defaultDepWaiter = network.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 	})
 
 	AfterEach(func() {
@@ -217,7 +217,7 @@ var _ = Describe("#Network", func() {
 			defaultDepWaiter = network.New(log, mc, &network.Values{
 				Namespace: networkNs,
 				Name:      networkName,
-			}, time.Second, 2*time.Second, 3*time.Second)
+			}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 
 			err := defaultDepWaiter.Destroy(ctx)
 			Expect(err).To(HaveOccurred())
@@ -242,7 +242,7 @@ var _ = Describe("#Network", func() {
 						{
 							Name:  &expected.Name,
 							Kind:  extensionsv1alpha1.NetworkResource,
-							State: &runtime.RawExtension{Raw: []byte("dummy state")},
+							State: &runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)},
 						},
 					},
 				},
@@ -261,7 +261,7 @@ var _ = Describe("#Network", func() {
 
 			expectedWithState := expected.DeepCopy()
 			expectedWithState.Status = extensionsv1alpha1.NetworkStatus{
-				DefaultStatus: extensionsv1alpha1.DefaultStatus{State: &runtime.RawExtension{Raw: []byte("dummy state")}},
+				DefaultStatus: extensionsv1alpha1.DefaultStatus{State: &runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)}},
 			}
 
 			expectedWithRestore := expectedWithState.DeepCopy()
@@ -278,10 +278,10 @@ var _ = Describe("#Network", func() {
 					return mc
 				}),
 				mc.EXPECT().Update(ctx, expectedWithState).Return(nil),
-				mc.EXPECT().Patch(ctx, expectedWithRestore, client.MergeFrom(expectedWithState)),
+				test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState),
 			)
 
-			defaultDepWaiter = network.New(log, mc, values, time.Second, 2*time.Second, 3*time.Second)
+			defaultDepWaiter = network.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 
 			Expect(defaultDepWaiter.Restore(ctx, shootState)).To(Succeed())
 		})
@@ -302,9 +302,9 @@ var _ = Describe("#Network", func() {
 			mc := mockclient.NewMockClient(ctrl)
 
 			mc.EXPECT().Get(ctx, kutil.Key(networkNs, networkName), gomock.AssignableToTypeOf(&extensionsv1alpha1.Network{})).SetArg(2, *expected)
-			mc.EXPECT().Patch(ctx, expectedCopy, gomock.AssignableToTypeOf(client.MergeFrom(expected)))
+			test.EXPECTPatch(ctx, mc, expectedCopy, expected)
 
-			defaultDepWaiter = network.New(log, mc, values, time.Second, 2*time.Second, 3*time.Second)
+			defaultDepWaiter = network.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())
 		})
 
@@ -314,7 +314,7 @@ var _ = Describe("#Network", func() {
 				apierrors.NewNotFound(extensionsv1alpha1.Resource("Network"), expected.Name),
 			)
 
-			defaultDepWaiter = network.New(log, mc, values, time.Second, 2*time.Second, 3*time.Second)
+			defaultDepWaiter = network.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())
 		})
 	})

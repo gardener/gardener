@@ -92,7 +92,7 @@ func FromContext(ctx context.Context, keysAndValues ...interface{}) logr.Logger 
 	return log.WithValues(keysAndValues...)
 }
 
-// IntoContext takes a context and sets the logger as one of its keys.
+// IntoContext takes a context and sets the logger as one of its values.
 // Use FromContext function to retrieve the logger.
 func IntoContext(ctx context.Context, log logr.Logger) context.Context {
 	return logr.NewContext(ctx, log)

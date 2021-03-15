@@ -21,16 +21,15 @@ import (
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	mock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/operation"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/golang/mock/gomock"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	operationseed "github.com/gardener/gardener/pkg/operation/seed"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/test"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -38,6 +37,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("operation", func() {
@@ -169,13 +169,13 @@ var _ = Describe("operation", func() {
 				{
 					Name: "test",
 					Type: "test",
-					Data: runtime.RawExtension{Raw: []byte{}},
+					Data: runtime.RawExtension{Raw: []byte(`{}`)},
 				},
 			}
 
 			shootState := o.ShootState.DeepCopy()
 			shootState.Spec.Gardener = gardenerResourceList
-			k8sGardenRuntimeClient.EXPECT().Patch(context.TODO(), shootState, client.MergeFrom(o.ShootState))
+			test.EXPECTPatch(context.TODO(), k8sGardenRuntimeClient, shootState, o.ShootState)
 
 			Expect(o.SaveGardenerResourcesInShootState(context.TODO(), gardenerResourceList)).To(Succeed())
 			Expect(o.ShootState.Spec.Gardener).To(BeEquivalentTo(gardenerResourceList))
