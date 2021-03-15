@@ -18,22 +18,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func (c *Controller) quotaAdd(obj interface{}) {
@@ -58,81 +58,53 @@ func (c *Controller) quotaDelete(obj interface{}) {
 	c.quotaQueue.Add(key)
 }
 
-func (c *Controller) reconcileQuotaKey(key string) error {
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		return err
+// NewQuotaReconciler creates a new instance of a reconciler which reconciles Quotas.
+func NewQuotaReconciler(l logrus.FieldLogger, clientMap clientmap.ClientMap, recorder record.EventRecorder, secretBindingLister gardencorelisters.SecretBindingLister) reconcile.Reconciler {
+	return &quotaReconciler{
+		logger:              l,
+		clientMap:           clientMap,
+		recorder:            recorder,
+		secretBindingLister: secretBindingLister,
 	}
-
-	quota, err := c.quotaLister.Quotas(namespace).Get(name)
-	if apierrors.IsNotFound(err) {
-		logger.Logger.Debugf("[QUOTA RECONCILE] %s - skipping because Quota has been deleted", key)
-		return nil
-	}
-	if err != nil {
-		logger.Logger.Infof("[QUOTA RECONCILE] %s - unable to retrieve object from store: %v", key, err)
-		return err
-	}
-
-	if err := c.control.ReconcileQuota(quota); err != nil {
-		c.quotaQueue.AddAfter(key, time.Minute)
-	}
-	return nil
 }
 
-// ControlInterface implements the control logic for updating Quotas. It is implemented as an interface to allow
-// for extensions that provide different semantics. Currently, there is only one implementation.
-type ControlInterface interface {
-	// ReconcileQuota implements the control logic for Quota creation, update, and deletion.
-	// If an implementation returns a non-nil error, the invocation will be retried using a rate-limited strategy.
-	// Implementors should sink any errors that they do not wish to trigger a retry, and they may feel free to
-	// exit exceptionally at any point provided they wish the update to be re-run at a later point in time.
-	ReconcileQuota(quota *gardencorev1beta1.Quota) error
+type quotaReconciler struct {
+	logger              logrus.FieldLogger
+	clientMap           clientmap.ClientMap
+	recorder            record.EventRecorder
+	secretBindingLister gardencorelisters.SecretBindingLister
 }
 
-// NewDefaultControl returns a new instance of the default implementation ControlInterface that
-// implements the documented semantics for Quotas. You should use an instance returned from NewDefaultControl()
-// for any scenario other than testing.
-func NewDefaultControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, secretBindingLister gardencorelisters.SecretBindingLister) ControlInterface {
-	return &defaultControl{clientMap, k8sGardenCoreInformers, recorder, secretBindingLister}
-}
-
-type defaultControl struct {
-	clientMap              clientmap.ClientMap
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	recorder               record.EventRecorder
-	secretBindingLister    gardencorelisters.SecretBindingLister
-}
-
-func (c *defaultControl) ReconcileQuota(obj *gardencorev1beta1.Quota) error {
-	_, err := cache.MetaNamespaceKeyFunc(obj)
+func (r *quotaReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
-		return err
+		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	var (
-		ctx         = context.TODO()
-		quota       = obj.DeepCopy()
-		quotaLogger = logger.NewFieldLogger(logger.Logger, "quota", fmt.Sprintf("%s/%s", quota.Namespace, quota.Name))
-	)
-
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return fmt.Errorf("failed to get garden client: %w", err)
+	quota := &gardencorev1beta1.Quota{}
+	if err := gardenClient.Client().Get(ctx, request.NamespacedName, quota); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			return reconcile.Result{}, nil
+		}
+		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+		return reconcile.Result{}, err
 	}
+
+	quotaLogger := logger.NewFieldLogger(r.logger, "quota", fmt.Sprintf("%s/%s", quota.Namespace, quota.Name))
 
 	// The deletionTimestamp labels a Quota as intended to get deleted. Before deletion,
 	// it has to be ensured that no SecretBindings are depending on the Quota anymore.
 	// When this happens the controller will remove the finalizers from the Quota so that it can be garbage collected.
 	if quota.DeletionTimestamp != nil {
 		if !sets.NewString(quota.Finalizers...).Has(gardencorev1beta1.GardenerName) {
-			return nil
+			return reconcile.Result{}, nil
 		}
 
-		associatedSecretBindings, err := controllerutils.DetermineSecretBindingAssociations(quota, c.secretBindingLister)
+		associatedSecretBindings, err := controllerutils.DetermineSecretBindingAssociations(quota, r.secretBindingLister)
 		if err != nil {
 			quotaLogger.Error(err.Error())
-			return err
+			return reconcile.Result{}, err
 		}
 
 		if len(associatedSecretBindings) == 0 {
@@ -140,23 +112,23 @@ func (c *defaultControl) ReconcileQuota(obj *gardencorev1beta1.Quota) error {
 
 			// Remove finalizer from Quota
 			if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), quota, gardencorev1beta1.GardenerName); err != nil {
-				return fmt.Errorf("failed removing finalizer from quota: %w", err)
+				return reconcile.Result{}, fmt.Errorf("failed removing finalizer from quota: %w", err)
 			}
 
-			return nil
+			return reconcile.Result{}, nil
 		}
 
 		message := fmt.Sprintf("Can't delete Quota, because the following SecretBindings are still referencing it: %v", associatedSecretBindings)
 		quotaLogger.Info(message)
-		c.recorder.Event(quota, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
+		r.recorder.Event(quota, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
 
-		return errors.New("quota still has references")
+		return reconcile.Result{}, errors.New("quota still has references")
 	}
 
 	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), quota, gardencorev1beta1.GardenerName); err != nil {
 		quotaLogger.Errorf("Could not add finalizer to Quota: %s", err.Error())
-		return err
+		return reconcile.Result{}, err
 	}
 
-	return nil
+	return reconcile.Result{}, nil
 }

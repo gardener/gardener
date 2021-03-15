@@ -30,6 +30,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Controller controls Quotas.
@@ -37,8 +38,8 @@ type Controller struct {
 	clientMap          clientmap.ClientMap
 	k8sGardenInformers gardencoreinformers.SharedInformerFactory
 
-	control  ControlInterface
-	recorder record.EventRecorder
+	reconciler reconcile.Reconciler
+	recorder   record.EventRecorder
 
 	quotaLister gardencorelisters.QuotaLister
 	quotaQueue  workqueue.RateLimitingInterface
@@ -65,7 +66,7 @@ func NewQuotaController(clientMap clientmap.ClientMap, gardenCoreInformerFactory
 	quotaController := &Controller{
 		clientMap:           clientMap,
 		k8sGardenInformers:  gardenCoreInformerFactory,
-		control:             NewDefaultControl(clientMap, gardenCoreInformerFactory, recorder, secretBindingLister),
+		reconciler:          NewQuotaReconciler(logger.Logger, clientMap, recorder, secretBindingLister),
 		recorder:            recorder,
 		quotaLister:         quotaLister,
 		quotaQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Quota"),
@@ -103,7 +104,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("Quota controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.quotaQueue, "Quota", c.reconcileQuotaKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.quotaQueue, "Quota", c.reconciler, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling

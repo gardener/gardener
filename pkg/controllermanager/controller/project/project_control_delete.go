@@ -18,53 +18,49 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
-func (c *defaultControl) delete(ctx context.Context, project *gardencorev1beta1.Project) (bool, error) {
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return false, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
+func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1beta1.Project, gardenClient kubernetes.Interface) (reconcile.Result, error) {
 	if namespace := project.Spec.Namespace; namespace != nil {
 		isEmpty, err := isNamespaceEmpty(ctx, gardenClient.DirectClient(), *namespace)
 		if err != nil {
-			return false, fmt.Errorf("failed to check if namespace is empty: %w", err)
+			return reconcile.Result{}, fmt.Errorf("failed to check if namespace is empty: %w", err)
 		}
 
 		if !isEmpty {
-			c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceNotEmpty, "Cannot release namespace %q because it still contains Shoots.", *namespace)
+			r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceNotEmpty, "Cannot release namespace %q because it still contains Shoots.", *namespace)
 			_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectTerminating))
-			return true, nil
+			return reconcile.Result{RequeueAfter: time.Minute}, nil
 		}
 
-		released, err := c.releaseNamespace(ctx, gardenClient, project, *namespace)
+		released, err := r.releaseNamespace(ctx, gardenClient, project, *namespace)
 		if err != nil {
-			c.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceDeletionFailed, err.Error())
+			r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceDeletionFailed, err.Error())
 			_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectFailed))
-			return false, err
+			return reconcile.Result{}, err
 		}
 
 		if !released {
-			c.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceMarkedForDeletion, "Successfully marked namespace %q for deletion.", *namespace)
+			r.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceMarkedForDeletion, "Successfully marked namespace %q for deletion.", *namespace)
 			_, _ = updateProjectStatus(ctx, gardenClient.GardenCore(), project.ObjectMeta, setProjectPhase(gardencorev1beta1.ProjectTerminating))
-			return true, nil
+			return reconcile.Result{RequeueAfter: time.Minute}, nil
 		}
 	}
 
-	return false, controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), project, gardencorev1beta1.GardenerName)
+	return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), project, gardencorev1beta1.GardenerName)
 }
 
 // isNamespaceEmpty checks if there are no more Shoots left inside the given namespace.
@@ -78,8 +74,8 @@ func isNamespaceEmpty(ctx context.Context, reader client.Reader, namespace strin
 	return len(shoots.Items) == 0, nil
 }
 
-func (c *defaultControl) releaseNamespace(ctx context.Context, gardenClient kubernetes.Interface, project *gardencorev1beta1.Project, namespaceName string) (bool, error) {
-	namespace, err := c.namespaceLister.Get(namespaceName)
+func (r *projectReconciler) releaseNamespace(ctx context.Context, gardenClient kubernetes.Interface, project *gardencorev1beta1.Project, namespaceName string) (bool, error) {
+	namespace, err := r.namespaceLister.Get(namespaceName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return true, nil

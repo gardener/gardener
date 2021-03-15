@@ -16,12 +16,12 @@ package project
 
 import (
 	"context"
-	"time"
+	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -34,6 +34,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func (c *Controller) projectAdd(obj interface{}) {
@@ -68,57 +69,49 @@ func (c *Controller) projectDelete(obj interface{}) {
 	c.projectQueue.Add(key)
 }
 
-func (c *Controller) reconcileProjectKey(key string) error {
-	_, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		return err
+// NewProjectReconciler creates a new instance of a reconciler which reconciles Projects.
+func NewProjectReconciler(l logrus.FieldLogger, config *config.ProjectControllerConfiguration, clientMap clientmap.ClientMap, recorder record.EventRecorder, namespaceLister kubecorev1listers.NamespaceLister) reconcile.Reconciler {
+	return &projectReconciler{
+		logger:          l,
+		config:          config,
+		clientMap:       clientMap,
+		recorder:        recorder,
+		namespaceLister: namespaceLister,
 	}
-
-	project, err := c.projectLister.Get(name)
-	if apierrors.IsNotFound(err) {
-		logger.Logger.Debugf("[PROJECT RECONCILE] %s - skipping because Project has been deleted", key)
-		return nil
-	}
-	if err != nil {
-		logger.Logger.Infof("[PROJECT RECONCILE] %s - unable to retrieve object from store: %v", key, err)
-		return err
-	}
-
-	needsRequeue, err := c.control.ReconcileProject(project)
-	if err != nil {
-		return err
-	}
-	if needsRequeue {
-		c.projectQueue.AddAfter(key, time.Minute)
-	}
-
-	return nil
 }
 
-// ControlInterface implements the control logic for updating Projects. It is implemented as an interface to allow
-// for extensions that provide different semantics. Currently, there is only one implementation.
-type ControlInterface interface {
-	// ReconcileProject implements the control logic for Project creation, update, and deletion.
-	// If an implementation returns a non-nil error, the invocation will be retried using a rate-limited strategy.
-	// Implementors should sink any errors that they do not wish to trigger a retry, and they may feel free to
-	// exit exceptionally at any point provided they wish the update to be re-run at a later point in time.
-	ReconcileProject(project *gardencorev1beta1.Project) (bool, error)
+type projectReconciler struct {
+	logger          logrus.FieldLogger
+	config          *config.ProjectControllerConfiguration
+	clientMap       clientmap.ClientMap
+	recorder        record.EventRecorder
+	namespaceLister kubecorev1listers.NamespaceLister
 }
 
-// NewDefaultControl returns a new instance of the default implementation ControlInterface that
-// implements the documented semantics for Projects. updater is the UpdaterInterface used
-// to update the status of Projects. You should use an instance returned from NewDefaultControl() for any
-// scenario other than testing.
-func NewDefaultControl(clientMap clientmap.ClientMap, config *config.ControllerManagerConfiguration, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, namespaceLister kubecorev1listers.NamespaceLister) ControlInterface {
-	return &defaultControl{clientMap, config, k8sGardenCoreInformers, recorder, namespaceLister}
-}
+func (r *projectReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
+	}
 
-type defaultControl struct {
-	clientMap              clientmap.ClientMap
-	config                 *config.ControllerManagerConfiguration
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	recorder               record.EventRecorder
-	namespaceLister        kubecorev1listers.NamespaceLister
+	project := &gardencorev1beta1.Project{}
+	if err := gardenClient.Client().Get(ctx, request.NamespacedName, project); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			return reconcile.Result{}, nil
+		}
+		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+		return reconcile.Result{}, err
+	}
+
+	projectLogger := newProjectLogger(project)
+	projectLogger.Infof("[PROJECT RECONCILE] %s", project.Name)
+
+	if project.DeletionTimestamp != nil {
+		return r.delete(ctx, project, gardenClient)
+	}
+
+	return r.reconcile(ctx, project, gardenClient)
 }
 
 func newProjectLogger(project *gardencorev1beta1.Project) logrus.FieldLogger {
@@ -126,22 +119,6 @@ func newProjectLogger(project *gardencorev1beta1.Project) logrus.FieldLogger {
 		return logger.Logger
 	}
 	return logger.NewFieldLogger(logger.Logger, "project", project.Name)
-}
-
-func (c *defaultControl) ReconcileProject(obj *gardencorev1beta1.Project) (bool, error) {
-	var (
-		ctx           = context.TODO()
-		project       = obj.DeepCopy()
-		projectLogger = newProjectLogger(project)
-	)
-
-	projectLogger.Infof("[PROJECT RECONCILE]")
-
-	if project.DeletionTimestamp != nil {
-		return c.delete(ctx, project)
-	}
-
-	return false, c.reconcile(ctx, project)
 }
 
 func updateProjectStatus(ctx context.Context, g gardencore.Interface, objectMeta metav1.ObjectMeta, transform func(project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error)) (*gardencorev1beta1.Project, error) {
@@ -152,7 +129,7 @@ func updateProjectStatus(ctx context.Context, g gardencore.Interface, objectMeta
 	return project, err
 }
 
-func (c *defaultControl) reportEvent(project *gardencorev1beta1.Project, isError bool, eventReason, messageFmt string, args ...interface{}) {
+func (r *projectReconciler) reportEvent(project *gardencorev1beta1.Project, isError bool, eventReason, messageFmt string, args ...interface{}) {
 	var (
 		eventType     string
 		projectLogger = newProjectLogger(project)
@@ -166,5 +143,5 @@ func (c *defaultControl) reportEvent(project *gardencorev1beta1.Project, isError
 		projectLogger.Errorf(messageFmt, args...)
 	}
 
-	c.recorder.Eventf(project, eventType, eventReason, messageFmt, args...)
+	r.recorder.Eventf(project, eventType, eventReason, messageFmt, args...)
 }

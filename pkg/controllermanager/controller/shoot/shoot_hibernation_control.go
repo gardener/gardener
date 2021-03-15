@@ -15,11 +15,15 @@
 package shoot
 
 import (
+	"context"
+	"fmt"
 	"reflect"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	gardenlogger "github.com/gardener/gardener/pkg/logger"
 
 	"github.com/robfig/cron"
@@ -27,11 +31,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-func hibernationLogger(key string) logrus.FieldLogger {
-	return gardenlogger.NewFieldLogger(gardenlogger.Logger, "shoot-hibernation", key)
-}
 
 func getShootHibernationSchedules(shoot *gardencorev1beta1.Shoot) []gardencorev1beta1.HibernationSchedule {
 	hibernation := shoot.Spec.Hibernation
@@ -179,56 +180,84 @@ func (c *Controller) shootHibernationDelete(obj interface{}) {
 	}
 }
 
-func (c *Controller) deleteShootCron(logger logrus.FieldLogger, key string) {
-	if sched, ok := c.hibernationScheduleRegistry.Load(key); ok {
-		sched.Stop()
-		logger.Debugf("Stopped cron")
+// NewShootHibernationReconciler creates a new instance of a reconciler which hibernates shoots or wakes them up.
+func NewShootHibernationReconciler(
+	l logrus.FieldLogger,
+	clientMap clientmap.ClientMap,
+	shootLister gardencorelisters.ShootLister,
+	hibernationScheduleRegistry HibernationScheduleRegistry,
+	recorder record.EventRecorder,
+) reconcile.Reconciler {
+	return &shootHibernationReconciler{
+		logger:                      l,
+		clientMap:                   clientMap,
+		shootLister:                 shootLister,
+		hibernationScheduleRegistry: hibernationScheduleRegistry,
+		recorder:                    recorder,
 	}
-	c.hibernationScheduleRegistry.Delete(key)
-	logger.Debugf("Deleted cron")
 }
 
-func (c *Controller) reconcileShootHibernationKey(key string) error {
-	logger := hibernationLogger(key)
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+type shootHibernationReconciler struct {
+	logger                      logrus.FieldLogger
+	clientMap                   clientmap.ClientMap
+	shootLister                 gardencorelisters.ShootLister
+	hibernationScheduleRegistry HibernationScheduleRegistry
+	recorder                    record.EventRecorder
+}
+
+func (r *shootHibernationReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
-		return err
+		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	shoot, err := c.shootLister.Shoots(namespace).Get(name)
-	if apierrors.IsNotFound(err) {
-		c.deleteShootCron(logger, key)
-		logger.Debugf("Skipping because Shoot has been deleted", key)
-		return nil
-	}
-	if err != nil {
-		logger.Debugf("Unable to retrieve object %q from store: %v", key, err)
-		return err
+	key := fmt.Sprintf("%s/%s", request.Namespace, request.Name)
+
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := gardenClient.Client().Get(ctx, request.NamespacedName, shoot); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.deleteShootCron(r.logger, key)
+			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			return reconcile.Result{}, nil
+		}
+		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+		return reconcile.Result{}, err
 	}
 
+	logger := r.logger.WithField("shoot-hibernation", key)
 	logger.Info("[SHOOT HIBERNATION]")
 
 	if shoot.DeletionTimestamp != nil {
-		c.deleteShootCron(logger, key)
-		return nil
+		r.deleteShootCron(logger, key)
+		return reconcile.Result{}, nil
 	}
-	return c.reconcileShootHibernation(logger, key, shoot.DeepCopy())
+
+	return reconcile.Result{}, r.createOrUpdateShootCron(logger, key, shoot)
 }
 
-func (c *Controller) reconcileShootHibernation(logger logrus.FieldLogger, key string, shoot *gardencorev1beta1.Shoot) error {
-	c.deleteShootCron(logger, key)
+func (r *shootHibernationReconciler) deleteShootCron(logger logrus.FieldLogger, key string) {
+	if sched, ok := r.hibernationScheduleRegistry.Load(key); ok {
+		sched.Stop()
+		logger.Debugf("Stopped cron")
+	}
+
+	r.hibernationScheduleRegistry.Delete(key)
+	logger.Debugf("Deleted cron")
+}
+
+func (r *shootHibernationReconciler) createOrUpdateShootCron(logger logrus.FieldLogger, key string, shoot *gardencorev1beta1.Shoot) error {
+	r.deleteShootCron(logger, key)
 	if !shootHasHibernationSchedules(shoot) {
 		return nil
 	}
 
-	schedule, err := ComputeHibernationSchedule(c.clientMap, logger, c.recorder, shoot)
+	schedule, err := ComputeHibernationSchedule(r.clientMap, logger, r.recorder, shoot)
 	if err != nil {
 		return err
 	}
 
 	schedule.Start()
-
-	c.hibernationScheduleRegistry.Store(key, schedule)
+	r.hibernationScheduleRegistry.Store(key, schedule)
 	logger.Debugf("Successfully started hibernation schedule")
 
 	return nil

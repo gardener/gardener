@@ -24,6 +24,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -42,6 +43,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func (c *Controller) shootMaintenanceAdd(obj interface{}) {
@@ -76,39 +78,57 @@ func (c *Controller) shootMaintenanceDelete(obj interface{}) {
 	c.shootMaintenanceQueue.Done(key)
 }
 
-func (c *Controller) reconcileShootMaintenanceKey(key string) error {
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		return err
+// NewShootMaintenanceReconciler creates a new instance of a reconciler which maintains Shoots.
+func NewShootMaintenanceReconciler(l logrus.FieldLogger, config config.ShootMaintenanceControllerConfiguration, clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.Interface, recorder record.EventRecorder) reconcile.Reconciler {
+	return &shootMaintenanceReconciler{
+		logger:                 l,
+		config:                 config,
+		clientMap:              clientMap,
+		k8sGardenCoreInformers: k8sGardenCoreInformers,
+		recorder:               recorder,
 	}
-	log := logger.NewShootLogger(logger.Logger, name, namespace)
-
-	shoot, err := c.shootLister.Shoots(namespace).Get(name)
-	if apierrors.IsNotFound(err) {
-		log.Debugf("[SHOOT MAINTENANCE] - skipping because Shoot has been deleted")
-		return nil
-	}
-	if err != nil {
-		log.WithError(err).Error("[SHOOT MAINTENANCE] - unable to retrieve object from store")
-		return err
-	}
-	if shoot.DeletionTimestamp != nil {
-		log.Debug("[SHOOT MAINTENANCE] - skipping because Shoot is marked as to be deleted")
-		return nil
-	}
-
-	defer c.shootMaintenanceRequeue(key, shoot)
-
-	if !mustMaintainNow(shoot) {
-		logger.Logger.Infof("[SHOOT MAINTENANCE] %s - skipping because Shoot must not be maintained now.", key)
-		return nil
-	}
-
-	return c.maintenanceControl.Maintain(shoot, key)
 }
 
-// newRandomTimeWindow computes a new random time window either for today or the next day (depending on <today>).
-func (c *Controller) shootMaintenanceRequeue(key string, shoot *gardencorev1beta1.Shoot) {
+type shootMaintenanceReconciler struct {
+	logger                 logrus.FieldLogger
+	config                 config.ShootMaintenanceControllerConfiguration
+	clientMap              clientmap.ClientMap
+	k8sGardenCoreInformers gardencoreinformers.Interface
+	recorder               record.EventRecorder
+}
+
+func (r *shootMaintenanceReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
+	}
+
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := gardenClient.Client().Get(ctx, request.NamespacedName, shoot); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			return reconcile.Result{}, nil
+		}
+		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+		return reconcile.Result{}, err
+	}
+
+	if shoot.DeletionTimestamp != nil {
+		r.logger.Debug("[SHOOT MAINTENANCE] - skipping because Shoot is marked as to be deleted")
+		return reconcile.Result{}, nil
+	}
+
+	requeueAfter := requeueAfterDuration(shoot)
+
+	if !mustMaintainNow(shoot) {
+		logger.Logger.Infof("[SHOOT MAINTENANCE] %s/%s - skipping because Shoot must not be maintained now.", shoot.Namespace, shoot.Name)
+		return reconcile.Result{RequeueAfter: requeueAfter}, nil
+	}
+
+	return reconcile.Result{RequeueAfter: requeueAfter}, r.reconcile(ctx, shoot, gardenClient)
+}
+
+func requeueAfterDuration(shoot *gardencorev1beta1.Shoot) time.Duration {
 	var (
 		now             = time.Now()
 		window          = common.EffectiveShootMaintenanceTimeWindow(shoot)
@@ -116,67 +136,36 @@ func (c *Controller) shootMaintenanceRequeue(key string, shoot *gardencorev1beta
 		nextMaintenance = time.Now().UTC().Add(duration)
 	)
 
-	logger.Logger.Infof("[SHOOT MAINTENANCE] %s - Scheduled maintenance in %s at %s", key, duration.Round(time.Minute), nextMaintenance.UTC().Round(time.Minute))
-	c.shootMaintenanceQueue.AddAfter(key, duration)
+	logger.Logger.Infof("[SHOOT MAINTENANCE] %s/%s - Scheduled maintenance in %s at %s", shoot.Namespace, shoot.Name, duration.Round(time.Minute), nextMaintenance.UTC().Round(time.Minute))
+	return duration
 }
 
-// MaintenanceControlInterface implements the control logic for maintaining Shoots. It is implemented as an interface to allow
-// for extensions that provide different semantics. Currently, there is only one implementation.
-type MaintenanceControlInterface interface {
-	Maintain(shoot *gardencorev1beta1.Shoot, key string) error
-}
+func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *gardencorev1beta1.Shoot, gardenClient kubernetes.Interface) error {
+	key := fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name)
 
-// NewDefaultMaintenanceControl returns a new instance of the default implementation MaintenanceControlInterface that
-// implements the documented semantics for maintaining Shoots. You should use an instance returned from
-// NewDefaultMaintenanceControl() for any scenario other than testing.
-func NewDefaultMaintenanceControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.Interface, config config.ShootMaintenanceControllerConfiguration, recorder record.EventRecorder) MaintenanceControlInterface {
-	return &defaultMaintenanceControl{clientMap, k8sGardenCoreInformers, config, recorder}
-}
-
-type defaultMaintenanceControl struct {
-	clientMap              clientmap.ClientMap
-	k8sGardenCoreInformers gardencoreinformers.Interface
-	config                 config.ShootMaintenanceControllerConfiguration
-	recorder               record.EventRecorder
-}
-
-func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, key string) error {
-	var (
-		ctx         = context.TODO()
-		shoot       = shootObj.DeepCopy()
-		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace)
-		handleError = func(msg string) {
-			shootLogger.Error(msg)
-		}
-	)
-
+	shootLogger := r.logger.WithField("shoot", key)
 	shootLogger.Infof("[SHOOT MAINTENANCE] %s", key)
 
-	cloudProfile, err := c.k8sGardenCoreInformers.CloudProfiles().Lister().Get(shoot.Spec.CloudProfileName)
+	cloudProfile, err := r.k8sGardenCoreInformers.CloudProfiles().Lister().Get(shoot.Spec.CloudProfileName)
 	if err != nil {
 		return err
 	}
 
-	updatedMachineImages, reasonForImageUpdatePerPool, err := MaintainMachineImages(shootLogger, shootObj, cloudProfile)
+	updatedMachineImages, reasonForImageUpdatePerPool, err := MaintainMachineImages(shootLogger, shoot, cloudProfile)
 	if err != nil {
 		// continue execution to allow the kubernetes version update
-		handleError(fmt.Sprintf("Could not maintain machine image version: %s", err.Error()))
+		shootLogger.Error(fmt.Sprintf("Could not maintain machine image version: %s", err.Error()))
 	}
 
-	updatedKubernetesVersion, reasonForKubernetesUpdate, err := MaintainKubernetesVersion(shootObj, cloudProfile, shootLogger)
+	updatedKubernetesVersion, reasonForKubernetesUpdate, err := MaintainKubernetesVersion(shoot, cloudProfile, shootLogger)
 	if err != nil {
 		// continue execution to allow the machine image version update
-		handleError(fmt.Sprintf("Could not maintain kubernetes version: %s", err.Error()))
-	}
-
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return fmt.Errorf("failed to get garden client: %w", err)
+		shootLogger.Error(fmt.Sprintf("Could not maintain kubernetes version: %s", err.Error()))
 	}
 
 	// Update the Shoot resource object.
 	_, err = kutil.TryUpdateShoot(ctx, gardenClient.GardenCore(), retry.DefaultBackoff, shoot.ObjectMeta, func(s *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-		if !apiequality.Semantic.DeepEqual(shootObj.Spec.Maintenance.AutoUpdate, s.Spec.Maintenance.AutoUpdate) {
+		if !apiequality.Semantic.DeepEqual(shoot.Spec.Maintenance.AutoUpdate, s.Spec.Maintenance.AutoUpdate) {
 			return nil, fmt.Errorf("auto update section of Shoot %s/%s changed mid-air", s.Namespace, s.Name)
 		}
 
@@ -196,11 +185,11 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 		}
 
 		controllerutils.AddTasks(s.Annotations, common.ShootTaskDeployInfrastructure)
-		if utils.IsTrue(c.config.EnableShootControlPlaneRestarter) {
+		if utils.IsTrue(r.config.EnableShootControlPlaneRestarter) {
 			controllerutils.AddTasks(s.Annotations, common.ShootTaskRestartControlPlanePods)
 		}
 
-		if utils.IsTrue(c.config.EnableShootCoreAddonRestarter) {
+		if utils.IsTrue(r.config.EnableShootCoreAddonRestarter) {
 			controllerutils.AddTasks(s.Annotations, common.ShootTaskRestartCoreAddons)
 		}
 
@@ -218,18 +207,18 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardencorev1beta1.Shoot, 
 		return s, nil
 	})
 	if err != nil {
-		handleError(fmt.Sprintf("Could not update the Shoot specification: %s", err.Error()))
+		shootLogger.Error(fmt.Sprintf("Could not update the Shoot specification: %s", err.Error()))
 		return err
 	}
 
 	if updatedKubernetesVersion != nil {
-		c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s",
+		r.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s",
 			fmt.Sprintf("Updated %s.", *reasonForKubernetesUpdate))
 	}
 
 	if updatedMachineImages != nil {
 		for _, reason := range reasonForImageUpdatePerPool {
-			c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventImageVersionMaintenance, "%s",
+			r.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventImageVersionMaintenance, "%s",
 				fmt.Sprintf("Updated %s.", reason))
 		}
 	}
