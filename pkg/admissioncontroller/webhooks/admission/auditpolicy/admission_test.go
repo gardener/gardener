@@ -161,6 +161,79 @@ rules:
 		ctrl.Finish()
 	})
 
+	Describe("#ValidateAuditPolicyApiGroupVersionKind", func() {
+		var kind = "Policy"
+
+		It("should return false without error because of version incompatibility", func() {
+			incompatibilityMatrix := map[string][]schema.GroupVersionKind{
+				"1.10.0": {
+					auditv1.SchemeGroupVersion.WithKind(kind),
+				},
+				"1.11.0": {
+					auditv1.SchemeGroupVersion.WithKind(kind),
+				},
+			}
+
+			for shootVersion, gvks := range incompatibilityMatrix {
+				for _, gvk := range gvks {
+					ok, err := auditpolicy.IsValidAuditPolicyVersion(shootVersion, &gvk)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(ok).To(BeFalse())
+				}
+			}
+		})
+
+		It("should return true without error because of version compatibility", func() {
+			compatibilityMatrix := map[string][]schema.GroupVersionKind{
+				"1.10.0": {
+					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
+					auditv1beta1.SchemeGroupVersion.WithKind(kind),
+				},
+				"1.11.0": {
+					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
+					auditv1beta1.SchemeGroupVersion.WithKind(kind),
+				},
+				"1.12.0": {
+					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
+					auditv1beta1.SchemeGroupVersion.WithKind(kind),
+					auditv1.SchemeGroupVersion.WithKind(kind),
+				},
+				"1.13.0": {
+					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
+					auditv1beta1.SchemeGroupVersion.WithKind(kind),
+					auditv1.SchemeGroupVersion.WithKind(kind),
+				},
+				"1.14.0": {
+					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
+					auditv1beta1.SchemeGroupVersion.WithKind(kind),
+					auditv1.SchemeGroupVersion.WithKind(kind),
+				},
+				"1.15.0": {
+					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
+					auditv1beta1.SchemeGroupVersion.WithKind(kind),
+					auditv1.SchemeGroupVersion.WithKind(kind),
+				},
+			}
+
+			for shootVersion, gvks := range compatibilityMatrix {
+				for _, gvk := range gvks {
+					ok, err := auditpolicy.IsValidAuditPolicyVersion(shootVersion, &gvk)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(ok).To(BeTrue())
+				}
+			}
+		})
+
+		It("should return false with error because of not valid semver version", func() {
+			shootVersion := "1.ab.0"
+			gvk := auditv1.SchemeGroupVersion.WithKind(kind)
+
+			ok, err := auditpolicy.IsValidAuditPolicyVersion(shootVersion, &gvk)
+			Expect(err).To(HaveOccurred())
+			Expect(ok).To(BeFalse())
+		})
+	})
+
 	test := func(op admissionv1.Operation, oldObj runtime.Object, obj runtime.Object, expectedAllowed bool, expectedStatusCode int32, expectedMsg string) {
 		request.Operation = op
 

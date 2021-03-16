@@ -24,8 +24,8 @@ import (
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-	"github.com/gardener/gardener/pkg/operation/botanist"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -161,7 +161,7 @@ func (h *handler) admitShoot(ctx context.Context, request admission.Request) adm
 	}
 
 	// Validate audit policy schema version against k8s version of shoot
-	if isValidVersion, err := botanist.IsValidAuditPolicyVersion(shoot.Spec.Kubernetes.Version, schemaVersion); err != nil {
+	if isValidVersion, err := IsValidAuditPolicyVersion(shoot.Spec.Kubernetes.Version, schemaVersion); err != nil {
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	} else if !isValidVersion {
 		err := fmt.Errorf("your shoot cluster version %q is not compatible with audit policy version %q", shoot.Spec.Kubernetes.Version, schemaVersion.GroupVersion().String())
@@ -233,6 +233,16 @@ func (h *handler) admitConfigMap(ctx context.Context, request admission.Request)
 		return acadmission.Allowed("configmap change is valid")
 	}
 	return acadmission.Allowed("operation is not update or delete")
+}
+
+// IsValidAuditPolicyVersion checks whether the api server support the provided audit policy apiVersion
+func IsValidAuditPolicyVersion(shootVersion string, schemaVersion *schema.GroupVersionKind) (bool, error) {
+	auditGroupVersion := schemaVersion.GroupVersion().String()
+
+	if auditGroupVersion == "audit.k8s.io/v1" {
+		return version.CheckVersionMeetsConstraint(shootVersion, ">= v1.12")
+	}
+	return true, nil
 }
 
 func (h *handler) getOldObject(request admission.Request, oldObj runtime.Object) error {

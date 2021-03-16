@@ -46,9 +46,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/version"
-	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
-	auditv1alpha1 "k8s.io/apiserver/pkg/apis/audit/v1alpha1"
-	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -129,79 +126,6 @@ var _ = Describe("controlplane", func() {
 
 	AfterEach(func() {
 		ctrl.Finish()
-	})
-
-	Describe("#ValidateAuditPolicyApiGroupVersionKind", func() {
-		var kind = "Policy"
-
-		It("should return false without error because of version incompatibility", func() {
-			incompatibilityMatrix := map[string][]schema.GroupVersionKind{
-				"1.10.0": {
-					auditv1.SchemeGroupVersion.WithKind(kind),
-				},
-				"1.11.0": {
-					auditv1.SchemeGroupVersion.WithKind(kind),
-				},
-			}
-
-			for shootVersion, gvks := range incompatibilityMatrix {
-				for _, gvk := range gvks {
-					ok, err := IsValidAuditPolicyVersion(shootVersion, &gvk)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(ok).To(BeFalse())
-				}
-			}
-		})
-
-		It("should return true without error because of version compatibility", func() {
-			compatibilityMatrix := map[string][]schema.GroupVersionKind{
-				"1.10.0": {
-					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
-					auditv1beta1.SchemeGroupVersion.WithKind(kind),
-				},
-				"1.11.0": {
-					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
-					auditv1beta1.SchemeGroupVersion.WithKind(kind),
-				},
-				"1.12.0": {
-					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
-					auditv1beta1.SchemeGroupVersion.WithKind(kind),
-					auditv1.SchemeGroupVersion.WithKind(kind),
-				},
-				"1.13.0": {
-					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
-					auditv1beta1.SchemeGroupVersion.WithKind(kind),
-					auditv1.SchemeGroupVersion.WithKind(kind),
-				},
-				"1.14.0": {
-					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
-					auditv1beta1.SchemeGroupVersion.WithKind(kind),
-					auditv1.SchemeGroupVersion.WithKind(kind),
-				},
-				"1.15.0": {
-					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
-					auditv1beta1.SchemeGroupVersion.WithKind(kind),
-					auditv1.SchemeGroupVersion.WithKind(kind),
-				},
-			}
-
-			for shootVersion, gvks := range compatibilityMatrix {
-				for _, gvk := range gvks {
-					ok, err := IsValidAuditPolicyVersion(shootVersion, &gvk)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(ok).To(BeTrue())
-				}
-			}
-		})
-
-		It("should return false with error because of not valid semver version", func() {
-			shootVersion := "1.ab.0"
-			gvk := auditv1.SchemeGroupVersion.WithKind(kind)
-
-			ok, err := IsValidAuditPolicyVersion(shootVersion, &gvk)
-			Expect(err).To(HaveOccurred())
-			Expect(ok).To(BeFalse())
-		})
 	})
 
 	DescribeTable("#getResourcesForAPIServer",
