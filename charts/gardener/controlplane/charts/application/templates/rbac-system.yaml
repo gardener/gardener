@@ -102,20 +102,34 @@ metadata:
     heritage: "{{ .Release.Service }}"
 rules:
 - apiGroups:
-    - core.gardener.cloud
+  - core.gardener.cloud
   resources:
-    - shoots
-    - projects
+  - backupbuckets
+  - backupentries
+  - controllerinstallations
+  - secretbindings
+  - seed
+  - shoots
+  - shootstates
+  - projects
   verbs:
-    - get
-    - list
-    - watch
+  - get
+  - list
+  - watch
 - apiGroups:
-    - ""
+  - seedmanagement.gardener.cloud
   resources:
-    - namespaces
+  - managedseeds
   verbs:
-    - get
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
