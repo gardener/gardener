@@ -45,6 +45,7 @@ import (
 
 	apiserverapp "github.com/gardener/gardener/cmd/gardener-apiserver/app"
 	"github.com/gardener/gardener/pkg/apiserver"
+	"github.com/gardener/gardener/pkg/apiserver/features"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -103,6 +104,8 @@ type GardenerAPIServer struct {
 
 // Start brings up the GardenerAPIServer, waits for it to be healthy and registers Gardener's APIs.
 func (g *GardenerAPIServer) Start() error {
+	features.RegisterFeatureGates()
+
 	if err := g.defaultSettings(); err != nil {
 		return err
 	}

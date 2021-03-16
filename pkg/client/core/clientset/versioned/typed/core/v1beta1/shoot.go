@@ -22,6 +22,7 @@ import (
 	"context"
 	"time"
 
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	scheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,6 +48,8 @@ type ShootInterface interface {
 	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.ShootList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
 	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.Shoot, err error)
+	CreateAdminKubeconfigRequest(ctx context.Context, shootName string, adminKubeconfigRequest *v1alpha1.AdminKubeconfigRequest, opts v1.CreateOptions) (*v1alpha1.AdminKubeconfigRequest, error)
+
 	ShootExpansion
 }
 
@@ -189,6 +192,21 @@ func (c *shoots) Patch(ctx context.Context, name string, pt types.PatchType, dat
 		SubResource(subresources...).
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
+		Do(ctx).
+		Into(result)
+	return
+}
+
+// CreateAdminKubeconfigRequest takes the representation of a adminKubeconfigRequest and creates it.  Returns the server's representation of the adminKubeconfigRequest, and an error, if there is any.
+func (c *shoots) CreateAdminKubeconfigRequest(ctx context.Context, shootName string, adminKubeconfigRequest *v1alpha1.AdminKubeconfigRequest, opts v1.CreateOptions) (result *v1alpha1.AdminKubeconfigRequest, err error) {
+	result = &v1alpha1.AdminKubeconfigRequest{}
+	err = c.client.Post().
+		Namespace(c.ns).
+		Resource("shoots").
+		Name(shootName).
+		SubResource("adminkubeconfig").
+		VersionedParams(&opts, scheme.ParameterCodec).
+		Body(adminKubeconfigRequest).
 		Do(ctx).
 		Into(result)
 	return

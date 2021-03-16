@@ -82,6 +82,10 @@ type CertificateSecretConfig struct {
 	PKCS      int
 
 	Validity *time.Duration
+
+	// Now should only be set in tests.
+	// Defaults to time.Now
+	Now func() time.Time
 }
 
 // Certificate contains the private key, and the certificate. It does also contain the CA certificate
@@ -285,7 +289,13 @@ func LoadCAFromSecret(ctx context.Context, k8sClient client.Client, namespace, n
 // or both, depending on the <certType> value. If <isCACert> is true, then a CA certificate is being created.
 // The certificates a valid for 10 years.
 func (s *CertificateSecretConfig) generateCertificateTemplate() *x509.Certificate {
-	now := time.Now()
+	nowFunc := time.Now
+
+	if s.Now != nil {
+		nowFunc = s.Now
+	}
+
+	now := nowFunc()
 	expiration := now.AddDate(10, 0, 0) // + 10 years
 	if s.Validity != nil {
 		expiration = now.Add(*s.Validity)

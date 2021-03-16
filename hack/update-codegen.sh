@@ -128,6 +128,28 @@ operations_groups() {
 }
 export -f operations_groups
 
+# authentication.gardener.cloud APIs
+
+authentication_groups() {
+  echo "Generating API groups for pkg/apis/authentication"
+
+  bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-groups.sh \
+    deepcopy,defaulter \
+    github.com/gardener/gardener/pkg/client/authentication \
+    github.com/gardener/gardener/pkg/apis \
+    "authentication:v1alpha1" \
+    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+
+  bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+    deepcopy,defaulter,conversion \
+    github.com/gardener/gardener/pkg/client/authentication \
+    github.com/gardener/gardener/pkg/apis \
+    github.com/gardener/gardener/pkg/apis \
+    "authentication:v1alpha1" \
+    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+}
+export -f authentication_groups
+
 # Componentconfig for controller-manager
 
 controllermanager_groups() {
@@ -281,6 +303,7 @@ openapi_definitions() {
   ${GOPATH}/bin/openapi-gen "$@" \
     --v 1 \
     --logtostderr \
+    --input-dirs=github.com/gardener/gardener/pkg/apis/authentication/v1alpha1 \
     --input-dirs=github.com/gardener/gardener/pkg/apis/core/v1alpha1 \
     --input-dirs=github.com/gardener/gardener/pkg/apis/core/v1beta1 \
     --input-dirs=github.com/gardener/gardener/pkg/apis/settings/v1alpha1 \
@@ -305,6 +328,7 @@ export -f openapi_definitions
 if [[ $# -gt 0 && "$1" == "--parallel" ]]; then
   shift 1
   parallel --will-cite ::: \
+    authentication_groups \
     core_groups \
     extensions_groups \
     seedmanagement_groups \
@@ -317,6 +341,7 @@ if [[ $# -gt 0 && "$1" == "--parallel" ]]; then
     shoottolerationrestriction_groups \
     landscapergardenlet_groups
 else
+  authentication_groups
   core_groups
   extensions_groups
   seedmanagement_groups

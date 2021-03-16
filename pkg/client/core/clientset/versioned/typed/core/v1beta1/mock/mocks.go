@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta10 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	gomock "github.com/golang/mock/gomock"
@@ -258,6 +259,21 @@ func (m *MockShootInterface) Create(arg0 context.Context, arg1 *v1beta1.Shoot, a
 func (mr *MockShootInterfaceMockRecorder) Create(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockShootInterface)(nil).Create), arg0, arg1, arg2)
+}
+
+// CreateAdminKubeconfigRequest mocks base method.
+func (m *MockShootInterface) CreateAdminKubeconfigRequest(arg0 context.Context, arg1 string, arg2 *v1alpha1.AdminKubeconfigRequest, arg3 v1.CreateOptions) (*v1alpha1.AdminKubeconfigRequest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAdminKubeconfigRequest", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(*v1alpha1.AdminKubeconfigRequest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateAdminKubeconfigRequest indicates an expected call of CreateAdminKubeconfigRequest.
+func (mr *MockShootInterfaceMockRecorder) CreateAdminKubeconfigRequest(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAdminKubeconfigRequest", reflect.TypeOf((*MockShootInterface)(nil).CreateAdminKubeconfigRequest), arg0, arg1, arg2, arg3)
 }
 
 // Delete mocks base method.

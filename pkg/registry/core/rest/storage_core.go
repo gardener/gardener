@@ -102,12 +102,16 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	storage["seeds"] = seedStorage.Seed
 	storage["seeds/status"] = seedStorage.Status
 
-	shootStorage := shootstore.NewStorage(restOptionsGetter)
+	shootStateStorage := shootstatestore.NewStorage(restOptionsGetter)
+	storage["shootstates"] = shootStateStorage.ShootState
+
+	shootStorage := shootstore.NewStorage(restOptionsGetter, shootStateStorage.ShootState.Store)
 	storage["shoots"] = shootStorage.Shoot
 	storage["shoots/status"] = shootStorage.Status
 
-	shootStateStorage := shootstatestore.NewStorage(restOptionsGetter)
-	storage["shootstates"] = shootStateStorage.ShootState
+	if shootStorage.AdminKubeconfig != nil {
+		storage["shoots/adminkubeconfig"] = shootStorage.AdminKubeconfig
+	}
 
 	shootExtensionStatusStorage := shootextensionstatusstore.NewStorage(restOptionsGetter)
 	storage["shootextensionstatuses"] = shootExtensionStatusStorage.ShootExtensionStatus
@@ -157,9 +161,13 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 	storage["seeds"] = seedStorage.Seed
 	storage["seeds/status"] = seedStorage.Status
 
-	shootStorage := shootstore.NewStorage(restOptionsGetter)
+	shootStorage := shootstore.NewStorage(restOptionsGetter, shootstatestore.NewStorage(restOptionsGetter).ShootState.Store)
 	storage["shoots"] = shootStorage.Shoot
 	storage["shoots/status"] = shootStorage.Status
+
+	if shootStorage.AdminKubeconfig != nil {
+		storage["shoots/adminkubeconfig"] = shootStorage.AdminKubeconfig
+	}
 
 	return storage
 }

@@ -21,6 +21,7 @@ package fake
 import (
 	"context"
 
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
 	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -139,4 +140,15 @@ func (c *FakeShoots) Patch(ctx context.Context, name string, pt types.PatchType,
 		return nil, err
 	}
 	return obj.(*v1beta1.Shoot), err
+}
+
+// CreateAdminKubeconfigRequest takes the representation of a adminKubeconfigRequest and creates it.  Returns the server's representation of the adminKubeconfigRequest, and an error, if there is any.
+func (c *FakeShoots) CreateAdminKubeconfigRequest(ctx context.Context, shootName string, adminKubeconfigRequest *v1alpha1.AdminKubeconfigRequest, opts v1.CreateOptions) (result *v1alpha1.AdminKubeconfigRequest, err error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewCreateSubresourceAction(shootsResource, shootName, "adminkubeconfig", c.ns, adminKubeconfigRequest), &v1alpha1.AdminKubeconfigRequest{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.AdminKubeconfigRequest), err
 }

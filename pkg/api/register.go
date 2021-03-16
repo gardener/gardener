@@ -15,6 +15,7 @@
 package api
 
 import (
+	authenticationinstall "github.com/gardener/gardener/pkg/apis/authentication/install"
 	coreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	operationsinstall "github.com/gardener/gardener/pkg/apis/operations/install"
 	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
@@ -36,6 +37,7 @@ var (
 )
 
 func init() {
+	authenticationinstall.Install(Scheme)
 	coreinstall.Install(Scheme)
 	seedmanagementinstall.Install(Scheme)
 	settingsinstall.Install(Scheme)

@@ -24,7 +24,7 @@ reviewers:
 
 ## Summary
 
-This `GEP` introduces new  `Shoot` subresource called `AdminKubeConfigRequest` allowing for users to dynamically generate a short-lived `kubeconfig` that can be used to access the `Shoot` cluster as `cluster-admin`.
+This `GEP` introduces new  `Shoot` subresource called `AdminKubeconfigRequest` allowing for users to dynamically generate a short-lived `kubeconfig` that can be used to access the `Shoot` cluster as `cluster-admin`.
 
 ## Motivation
 
@@ -39,7 +39,7 @@ There are several problems with this approach:
 
 - Add a `Shoot` subresource called `adminkubeconfig` that would produce a `kubeconfig` used to access that `Shoot` cluster.
 - The `kubeconfig` is not stored in the API Server, but generated for each request.
-- In the `AdminKubeConfigRequest` send to that subresource, end-users can specify the expiration time of the credential.
+- In the `AdminKubeconfigRequest` send to that subresource, end-users can specify the expiration time of the credential.
 - The identity (user) in the Gardener cluster would be part of the identity (x509 client certificate). E.g if `Joe` authenticates against the Gardener API server, the generated certificate for `Shoot` authentication would have the following subject:
 
   - Common Name: `Joe`
@@ -54,22 +54,22 @@ There are several problems with this approach:
 
 ## Proposal
 
-The `gardener-apiserver` would serve a new `shoots/adminkubeconfig` resource. It can only accept `CREATE` calls and accept `AdminKubeConfigRequest`. A `AdminKubeConfigRequest` would have the following structure:
+The `gardener-apiserver` would serve a new `shoots/adminkubeconfig` resource. It can only accept `CREATE` calls and accept `AdminKubeconfigRequest`. A `AdminKubeconfigRequest` would have the following structure:
 
 ```yaml
 apiVersion: authentication.gardener.cloud/v1alpha1
-kind: AdminKubeConfigRequest
+kind: AdminKubeconfigRequest
 spec:
   expirationSeconds: 3600
 ```
 
-Where `expirationSeconds` is the validity of the certificate in seconds. It this case it would be `1 hour`. The maximum validity of a `AdminKubeConfigRequest` is configured by `--shoot-admin-kubeconfig-max-expiration` flag in the `gardener-apiserver`.
+Where `expirationSeconds` is the validity of the certificate in seconds. In this case it would be `1 hour`. The maximum validity of a `AdminKubeconfigRequest` is configured by `--shoot-admin-kubeconfig-max-expiration` flag in the `gardener-apiserver`.
 
 When such request is received, the API server would find the `ShootState` associated with that cluster and generate a `kubeconfig`. The x509 client certificate would be signed by the `Shoot` cluster's CA and the user used in the subject's common name would be from the `User.Info` used to make the request.
 
 ```yaml
 apiVersion: authentication.gardener.cloud/v1alpha1
-kind: AdminKubeConfigRequest
+kind: AdminKubeconfigRequest
 spec:
   expirationSeconds: 3600
 status:
@@ -96,7 +96,7 @@ status:
         client-key-data: LS0tLS1CRUd...
 ```
 
-New feature gate called `AdminKubeConfigRequest` would enable this API in the `gardener-apiserver`. The old `{shoot-name}.kubeconfig` would be kept, but deprecated and removed in the future.
+New feature gate called `AdminKubeconfigRequest` would enable this API in the `gardener-apiserver`. The old `{shoot-name}.kubeconfig` would be kept, but deprecated and removed in the future.
 
 In order to get the server's address used in the `kubeconfig`, the Shoot's `status` should be updated with new entries:
 
