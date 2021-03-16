@@ -175,12 +175,12 @@ func (b *Builder) WithChartsRootPath(chartsRootPath string) *Builder {
 }
 
 // WithShootFrom sets the shootFunc attribute at the Builder which will build a new Shoot object.
-func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Interface, s *gardencorev1beta1.Shoot) *Builder {
+func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Interface, gardenClient kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
 	b.shootFunc = func(ctx context.Context, c client.Client, gardenObj *garden.Garden, seedObj *seed.Seed) (*shoot.Shoot, error) {
 		return shoot.
 			NewBuilder().
 			WithShootObject(s).
-			WithCloudProfileObjectFromLister(k8sGardenCoreInformers.CloudProfiles().Lister()).
+			WithCloudProfileObjectFromReader(gardenClient.APIReader()).
 			WithShootSecretFromSecretBindingLister(k8sGardenCoreInformers.SecretBindings().Lister()).
 			WithProjectName(gardenObj.Project.Name).
 			WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
@@ -195,10 +195,12 @@ func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Inter
 // The shoot status is still taken from the passed `shoot`, though.
 func (b *Builder) WithShootFromCluster(k8sGardenCoreInformers gardencoreinformers.Interface, seedClient kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
 	b.shootFunc = func(ctx context.Context, c client.Client, gardenObj *garden.Garden, seedObj *seed.Seed) (*shoot.Shoot, error) {
+		shootNamespace := shoot.ComputeTechnicalID(gardenObj.Project.Name, s)
+
 		shoot, err := shoot.
 			NewBuilder().
-			WithShootObjectFromCluster(seedClient, shoot.ComputeTechnicalID(gardenObj.Project.Name, s)).
-			WithCloudProfileObjectFromLister(k8sGardenCoreInformers.CloudProfiles().Lister()).
+			WithShootObjectFromCluster(seedClient, shootNamespace).
+			WithCloudProfileObjectFromCluster(seedClient, shootNamespace).
 			WithShootSecretFromSecretBindingLister(k8sGardenCoreInformers.SecretBindings().Lister()).
 			WithProjectName(gardenObj.Project.Name).
 			WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
