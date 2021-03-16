@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package konnectivity
+//go:generate ../hack/generate-imagename-constants.sh
+package charts
 
 const (
-	// AgentName is the name of kubernetes resources associated with konnectivity-agent.
-	AgentName = "konnectivity-agent"
+	// Path is the path to the charts directory.
+	Path = "charts"
 )

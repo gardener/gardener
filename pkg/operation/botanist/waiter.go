@@ -23,6 +23,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -135,7 +136,7 @@ func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 900*time.Second, func(ctx context.Context) (done bool, err error) {
 		tunnelName := common.VPNTunnel
 		if b.Shoot.KonnectivityTunnelEnabled {
-			tunnelName = common.KonnectivityTunnel
+			tunnelName = konnectivity.AgentName
 		}
 
 		return b.CheckTunnelConnection(ctx, b.Logger, tunnelName)

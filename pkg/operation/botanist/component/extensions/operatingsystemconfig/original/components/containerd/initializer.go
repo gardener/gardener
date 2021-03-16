@@ -19,10 +19,10 @@ import (
 	"path/filepath"
 	"text/template"
 
+	"github.com/gardener/gardener/charts"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd/templates"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/Masterminds/sprig"
@@ -65,7 +65,7 @@ func (initializer) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []
 	var script bytes.Buffer
 	if err := tplInitializer.Execute(&script, map[string]interface{}{
 		"binaryPath":          extensionsv1alpha1.ContainerDRuntimeContainersBinFolder,
-		"pauseContainerImage": ctx.Images[common.PauseContainerImageName],
+		"pauseContainerImage": ctx.Images[charts.ImageNamePauseContainer],
 	}); err != nil {
 		return nil, nil, err
 	}

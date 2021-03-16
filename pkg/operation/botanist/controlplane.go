@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -63,7 +64,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
+var chartPathControlPlane = filepath.Join(charts.Path, "seed-controlplane", "charts")
 
 // EnsureClusterIdentity ensures that Shoot cluster-identity ConfigMap exists and stores its data
 // in the operation. Updates shoot.status.clusterIdentity if it doesn't exist already.
@@ -196,13 +197,13 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 		}
 	}
 
-	values, err := b.InjectSeedShootImages(defaultValues, common.VpaAdmissionControllerImageName, common.VpaExporterImageName, common.VpaRecommenderImageName, common.VpaUpdaterImageName)
+	values, err := b.InjectSeedShootImages(defaultValues, charts.ImageNameVpaAdmissionController, charts.ImageNameVpaExporter, charts.ImageNameVpaRecommender, charts.ImageNameVpaUpdater)
 	if err != nil {
 		return err
 	}
 	values["global"] = map[string]interface{}{"images": values["images"]}
 
-	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(common.ChartPath, "seed-bootstrap", "charts", "vpa", "charts", "runtime"), b.Shoot.SeedNamespace, "vpa", kubernetes.Values(values))
+	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-bootstrap", "charts", "vpa", "charts", "runtime"), b.Shoot.SeedNamespace, "vpa", kubernetes.Values(values))
 }
 
 // WakeUpKubeAPIServer creates a service and ensures API Server is scaled up
@@ -786,16 +787,16 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		"enabled": mountHostCADirectories,
 	}
 
-	tunnelComponentImageName := common.VPNSeedImageName
+	tunnelComponentImageName := charts.ImageNameVpnSeed
 	if b.Shoot.KonnectivityTunnelEnabled {
-		tunnelComponentImageName = konnectivity.ServerImageName
+		tunnelComponentImageName = charts.ImageNameKonnectivityServer
 	}
 
 	values, err := b.InjectSeedShootImages(defaultValues,
 		tunnelComponentImageName,
-		common.KubeAPIServerImageName,
-		common.AlpineIptablesImageName,
-		common.APIServerProxyPodMutatorWebhookImageName,
+		charts.ImageNameKubeApiserver,
+		charts.ImageNameAlpineIptables,
+		charts.ImageNameApiserverProxyPodWebhook,
 	)
 	if err != nil {
 		return err

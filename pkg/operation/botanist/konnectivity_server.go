@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 
+	"github.com/gardener/gardener/charts"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -36,7 +37,7 @@ func (b *Botanist) DefaultKonnectivityServer() (konnectivity.KonnectivityServer,
 		return konnectivity.OpDestroy(ks), nil
 	}
 
-	image, err := b.ImageVector.FindImage(konnectivity.ServerImageName)
+	image, err := b.ImageVector.FindImage(charts.ImageNameKonnectivityServer)
 	if err != nil {
 		return nil, err
 	}

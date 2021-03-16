@@ -54,8 +54,6 @@ const (
 	SecretNameServerCA = ServerName + "-ca"
 	// ServerCASecretName is the name of the konnectivity-server server certificate authority secret.
 	SecretNameServerTLSClient = ServerName + "-client-tls"
-	// ServerImageName is the name of the konnectivity-server image.
-	ServerImageName = ServerName
 	// ServerAudience is the audience of the konnectivity-server used for the token
 	ServerAudience = "system:konnectivity-server"
 	// ServerHTTPSPort is the port on which konnectivity-server receives traffic from the kube-apiserver.

@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -136,7 +137,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		runtime.Must(garden.VerifyInternalDomainSecret(ctx, k8sGardenClient, len(shootList), secret))
 	}
 
-	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(common.ChartPath, DefaultImageVector))
+	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, DefaultImageVector))
 	runtime.Must(err)
 
 	var componentImageVectors imagevector.ComponentImageVectors

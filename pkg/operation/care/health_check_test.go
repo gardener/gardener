@@ -23,14 +23,15 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor"
 	"github.com/gardener/gardener/pkg/operation/care"
-	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -546,7 +547,7 @@ var _ = Describe("health check", func() {
 						list.Items = append(list.Items, corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
 								Labels:      map[string]string{v1beta1constants.LabelWorkerPool: pool},
-								Annotations: map[string]string{common.CloudConfigChecksumSecretAnnotation: checksum},
+								Annotations: map[string]string{downloader.AnnotationKeyChecksum: checksum},
 							},
 						})
 					}
@@ -719,7 +720,7 @@ var _ = Describe("health check", func() {
 				BeNil()),
 			Entry("outdated cloud-config secret checksum for a worker pool",
 				[]corev1.Node{
-					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, map[string]string{common.CloudConfigChecksumNodeAnnotation: "outdated"}, "v1.18.2"),
+					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, map[string]string{executor.AnnotationKeyChecksum: "outdated"}, "v1.18.2"),
 				},
 				[]gardencorev1beta1.Worker{
 					{

@@ -44,6 +44,30 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+var (
+	requiredControlPlaneDeployments = sets.NewString(
+		v1beta1constants.DeploymentNameGardenerResourceManager,
+		v1beta1constants.DeploymentNameKubeAPIServer,
+		v1beta1constants.DeploymentNameKubeControllerManager,
+		v1beta1constants.DeploymentNameKubeScheduler,
+	)
+
+	requiredControlPlaneEtcds = sets.NewString(
+		v1beta1constants.ETCDMain,
+		v1beta1constants.ETCDEvents,
+	)
+
+	requiredMonitoringSeedDeployments = sets.NewString(
+		v1beta1constants.DeploymentNameGrafanaOperators,
+		v1beta1constants.DeploymentNameGrafanaUsers,
+		v1beta1constants.DeploymentNameKubeStateMetricsShoot,
+	)
+
+	requiredLoggingStatefulSets = sets.NewString(
+		v1beta1constants.StatefulSetNameLoki,
+	)
+)
+
 func mustGardenRoleLabelSelector(gardenRoles ...string) labels.Selector {
 	if len(gardenRoles) == 1 {
 		return labels.SelectorFromSet(map[string]string{v1beta1constants.GardenRole: gardenRoles[0]})
@@ -265,7 +289,7 @@ func computeRequiredControlPlaneDeployments(
 		return nil, err
 	}
 
-	requiredControlPlaneDeployments := sets.NewString(common.RequiredControlPlaneDeployments.UnsortedList()...)
+	requiredControlPlaneDeployments := sets.NewString(requiredControlPlaneDeployments.UnsortedList()...)
 	if shootWantsClusterAutoscaler {
 		workers, err := workerLister.List(labels.Everything())
 		if err != nil {
@@ -338,7 +362,7 @@ func (b *HealthChecker) CheckControlPlane(
 	if err != nil {
 		return nil, err
 	}
-	if exitCondition := b.checkRequiredEtcds(condition, common.RequiredControlPlaneEtcds, etcds); exitCondition != nil {
+	if exitCondition := b.checkRequiredEtcds(condition, requiredControlPlaneEtcds, etcds); exitCondition != nil {
 		return exitCondition, nil
 	}
 	if exitCondition := b.checkEtcds(condition, etcds); exitCondition != nil {
@@ -441,7 +465,7 @@ func (b *HealthChecker) CheckMonitoringControlPlane(
 	if err != nil {
 		return nil, err
 	}
-	if exitCondition := b.checkRequiredDeployments(condition, common.RequiredMonitoringSeedDeployments, deploymentList); exitCondition != nil {
+	if exitCondition := b.checkRequiredDeployments(condition, requiredMonitoringSeedDeployments, deploymentList); exitCondition != nil {
 		return exitCondition, nil
 	}
 	if exitCondition := b.checkDeployments(condition, deploymentList); exitCondition != nil {
@@ -477,7 +501,7 @@ func (b *HealthChecker) CheckLoggingControlPlane(
 	if err != nil {
 		return nil, err
 	}
-	if exitCondition := b.checkRequiredStatefulSets(condition, common.RequiredLoggingStatefulSets, statefulSetList); exitCondition != nil {
+	if exitCondition := b.checkRequiredStatefulSets(condition, requiredLoggingStatefulSets, statefulSetList); exitCondition != nil {
 		return exitCondition, nil
 	}
 	if exitCondition := b.checkStatefulSets(condition, statefulSetList); exitCondition != nil {

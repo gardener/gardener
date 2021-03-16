@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -303,26 +304,26 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 
 	images, err := imagevector.FindImages(imageVector,
 		[]string{
-			common.AlertManagerImageName,
-			common.AlpineImageName,
-			common.ConfigMapReloaderImageName,
-			common.LokiImageName,
-			common.CuratorImageName,
-			common.FluentBitImageName,
-			common.FluentBitPluginInstaller,
-			common.GardenerResourceManagerImageName,
-			common.GrafanaImageName,
-			common.PauseContainerImageName,
-			common.PrometheusImageName,
-			common.VpaAdmissionControllerImageName,
-			common.VpaExporterImageName,
-			common.VpaRecommenderImageName,
-			common.VpaUpdaterImageName,
-			common.HvpaControllerImageName,
-			common.DependencyWatchdogImageName,
-			common.KubeStateMetricsImageName,
-			common.NginxIngressControllerSeedImageName,
-			common.IngressDefaultBackendImageName,
+			charts.ImageNameAlertmanager,
+			charts.ImageNameAlpine,
+			charts.ImageNameConfigmapReloader,
+			charts.ImageNameLoki,
+			charts.ImageNameLokiCurator,
+			charts.ImageNameFluentBit,
+			charts.ImageNameFluentBitPluginInstaller,
+			charts.ImageNameGardenerResourceManager,
+			charts.ImageNameGrafana,
+			charts.ImageNamePauseContainer,
+			charts.ImageNamePrometheus,
+			charts.ImageNameVpaAdmissionController,
+			charts.ImageNameVpaExporter,
+			charts.ImageNameVpaRecommender,
+			charts.ImageNameVpaUpdater,
+			charts.ImageNameHvpaController,
+			charts.ImageNameDependencyWatchdog,
+			charts.ImageNameKubeStateMetrics,
+			charts.ImageNameNginxIngressControllerSeed,
+			charts.ImageNameIngressDefaultBackend,
 		},
 		imagevector.RuntimeVersion(k8sSeedClient.Version()),
 		imagevector.TargetVersion(k8sSeedClient.Version()),
@@ -629,18 +630,18 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 	}
 
 	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
-		istiodImage, err := imageVector.FindImage(common.IstioIstiodImageName)
+		istiodImage, err := imageVector.FindImage(charts.ImageNameIstioIstiod)
 		if err != nil {
 			return err
 		}
 
-		igwImage, err := imageVector.FindImage(common.IstioProxyImageName)
+		igwImage, err := imageVector.FindImage(charts.ImageNameIstioProxy)
 		if err != nil {
 			return err
 		}
 
 		chartApplier := k8sSeedClient.ChartApplier()
-		istioCRDs := istio.NewIstioCRD(chartApplier, common.ChartPath, k8sSeedClient.Client())
+		istioCRDs := istio.NewIstioCRD(chartApplier, charts.Path, k8sSeedClient.Client())
 		istiod := istio.NewIstiod(
 			&istio.IstiodValues{
 				TrustDomain: "cluster.local",
@@ -648,7 +649,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			},
 			common.IstioNamespace,
 			chartApplier,
-			common.ChartPath,
+			charts.Path,
 			k8sSeedClient.Client(),
 		)
 
@@ -678,7 +679,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 			igwConfig,
 			*conf.SNI.Ingress.Namespace,
 			chartApplier,
-			common.ChartPath,
+			charts.Path,
 			k8sSeedClient.Client(),
 		)
 
@@ -687,7 +688,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		}
 	}
 
-	proxy := istio.NewProxyProtocolGateway(*conf.SNI.Ingress.Namespace, chartApplier, common.ChartPath)
+	proxy := istio.NewProxyProtocolGateway(*conf.SNI.Ingress.Namespace, chartApplier, charts.Path)
 
 	if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
 		if err := proxy.Deploy(ctx); err != nil {
@@ -801,7 +802,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		"cluster-identity": map[string]interface{}{"clusterIdentity": &seed.Info.Status.ClusterIdentity},
 	})
 
-	if err := chartApplier.Apply(ctx, filepath.Join(common.ChartPath, chartName), v1beta1constants.GardenNamespace, chartName, values, applierOptions); err != nil {
+	if err := chartApplier.Apply(ctx, filepath.Join(charts.Path, chartName), v1beta1constants.GardenNamespace, chartName, values, applierOptions); err != nil {
 		return err
 	}
 
@@ -884,7 +885,7 @@ func destroyGardenerResourceManager(ctx context.Context, c kubernetes.Interface)
 }
 
 func deployGardenerResourceManager(ctx context.Context, c kubernetes.Interface, namespace string, imageVector imagevector.ImageVector) error {
-	image, err := imageVector.FindImage(common.GardenerResourceManagerImageName, imagevector.RuntimeVersion(c.Version()), imagevector.TargetVersion(c.Version()))
+	image, err := imageVector.FindImage(charts.ImageNameGardenerResourceManager, imagevector.RuntimeVersion(c.Version()), imagevector.TargetVersion(c.Version()))
 	if err != nil {
 		return err
 	}
@@ -916,7 +917,7 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 		etcdImageVectorOverwrite *string
 	)
 	if imageVector != nil {
-		image, err := imageVector.FindImage(common.EtcdDruidImageName, imagevector.RuntimeVersion(c.Version()), imagevector.TargetVersion(c.Version()))
+		image, err := imageVector.FindImage(charts.ImageNameEtcdDruid, imagevector.RuntimeVersion(c.Version()), imagevector.TargetVersion(c.Version()))
 		if err != nil {
 			return nil, err
 		}
@@ -932,7 +933,7 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 	// gardener-seed-admission-controller
 	var gsacImage imagevector.Image
 	if imageVector != nil {
-		gardenerSeedAdmissionControllerImage, err := imageVector.FindImage(common.GardenerSeedAdmissionControllerImageName)
+		gardenerSeedAdmissionControllerImage, err := imageVector.FindImage(charts.ImageNameGardenerSeedAdmissionController)
 		if err != nil {
 			return nil, err
 		}
@@ -954,7 +955,7 @@ func bootstrapComponents(c kubernetes.Interface, namespace string, imageVector i
 	// kube-scheduler for shoot control plane pods
 	var schedulerImage *imagevector.Image
 	if imageVector != nil {
-		schedulerImage, err = imageVector.FindImage(common.KubeSchedulerImageName, imagevector.TargetVersion(kubernetesVersion.String()))
+		schedulerImage, err = imageVector.FindImage(charts.ImageNameKubeScheduler, imagevector.TargetVersion(kubernetesVersion.String()))
 		if err != nil {
 			return nil, err
 		}
@@ -1186,7 +1187,7 @@ func handleIngressDNSEntry(ctx context.Context, c kubernetes.Interface, chartApp
 		values,
 		v1beta1constants.GardenNamespace,
 		chartApplier,
-		common.ChartPath,
+		charts.Path,
 		seedLogger,
 		c.Client(),
 		nil,
