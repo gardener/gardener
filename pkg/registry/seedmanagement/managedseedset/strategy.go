@@ -152,6 +152,6 @@ func ToSelectableFields(managedSeedSet *seedmanagement.ManagedSeedSet) fields.Se
 	// amount of allocations needed to create the fields.Set. If you add any
 	// field here or the number of object-meta related fields changes, this should
 	// be adjusted.
-	shootSpecificFieldsSet := make(fields.Set, 3)
-	return generic.AddObjectMetaFieldsSet(shootSpecificFieldsSet, &managedSeedSet.ObjectMeta, true)
+	fieldsSet := make(fields.Set, 2)
+	return generic.AddObjectMetaFieldsSet(fieldsSet, &managedSeedSet.ObjectMeta, true)
 }
