@@ -19,6 +19,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	managedseedstore "github.com/gardener/gardener/pkg/registry/seedmanagement/managedseed/storage"
+	managedseedsetstore "github.com/gardener/gardener/pkg/registry/seedmanagement/managedseedset/storage"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/registry/generic"
@@ -45,9 +46,12 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	storage := map[string]rest.Storage{}
 
 	managedSeedStorage := managedseedstore.NewStorage(restOptionsGetter)
+	managedSeedSetStorage := managedseedsetstore.NewStorage(restOptionsGetter)
 
 	storage["managedseeds"] = managedSeedStorage.ManagedSeed
 	storage["managedseeds/status"] = managedSeedStorage.Status
+	storage["managedseedsets"] = managedSeedSetStorage.ManagedSeedSet
+	storage["managedseedsets/status"] = managedSeedSetStorage.Status
 
 	return storage
 }

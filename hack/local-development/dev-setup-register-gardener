@@ -328,15 +328,6 @@ $ADMISSION_CONTROLLER_PORT_STRING
     - quotas
     - plants
   - apiGroups:
-    - seedmanagement.gardener.cloud
-    apiVersions:
-    - "*"
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - managedseeds
-  - apiGroups:
     - settings.gardener.cloud
     apiVersions:
     - "*"

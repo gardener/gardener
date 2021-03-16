@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package managedseed
+package managedseedset
 
 import (
 	"context"
@@ -32,13 +32,13 @@ import (
 	"k8s.io/apiserver/pkg/storage/names"
 )
 
-// Strategy defines the strategy for storing managedseeds.
+// Strategy defines the strategy for storing managedseedsets.
 type Strategy struct {
 	runtime.ObjectTyper
 	names.NameGenerator
 }
 
-// NewStrategy defines the storage strategy for ManagedSeeds.
+// NewStrategy defines the storage strategy for ManagedSeedSets.
 func NewStrategy() Strategy {
 	return Strategy{api.Scheme, names.SimpleNameGenerator}
 }
@@ -50,10 +50,10 @@ func (Strategy) NamespaceScoped() bool {
 
 // PrepareForCreate mutates some fields in the object before it's created.
 func (s Strategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
-	managedSeed := obj.(*seedmanagement.ManagedSeed)
+	managedSeedSet := obj.(*seedmanagement.ManagedSeedSet)
 
-	managedSeed.Generation = 1
-	managedSeed.Status = seedmanagement.ManagedSeedStatus{}
+	managedSeedSet.Generation = 1
+	managedSeedSet.Status = seedmanagement.ManagedSeedSetStatus{}
 }
 
 // PrepareForUpdate is invoked on update before validation to normalize
@@ -61,20 +61,20 @@ func (s Strategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 // sort order-insensitive list fields, etc.  This should not remove fields
 // whose presence would be considered a validation error.
 func (s Strategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
-	newManagedSeed := obj.(*seedmanagement.ManagedSeed)
-	oldManagedSeed := old.(*seedmanagement.ManagedSeed)
-	newManagedSeed.Status = oldManagedSeed.Status
+	newManagedSeedSet := obj.(*seedmanagement.ManagedSeedSet)
+	oldManagedSeedSet := old.(*seedmanagement.ManagedSeedSet)
+	newManagedSeedSet.Status = oldManagedSeedSet.Status
 
-	if !apiequality.Semantic.DeepEqual(oldManagedSeed.Spec, newManagedSeed.Spec) ||
-		oldManagedSeed.DeletionTimestamp == nil && newManagedSeed.DeletionTimestamp != nil {
-		newManagedSeed.Generation = oldManagedSeed.Generation + 1
+	if !apiequality.Semantic.DeepEqual(oldManagedSeedSet.Spec, newManagedSeedSet.Spec) ||
+		oldManagedSeedSet.DeletionTimestamp == nil && newManagedSeedSet.DeletionTimestamp != nil {
+		newManagedSeedSet.Generation = oldManagedSeedSet.Generation + 1
 	}
 }
 
 // Validate validates the given object.
 func (Strategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
-	managedSeed := obj.(*seedmanagement.ManagedSeed)
-	return validation.ValidateManagedSeed(managedSeed)
+	managedSeedSet := obj.(*seedmanagement.ManagedSeedSet)
+	return validation.ValidateManagedSeedSet(managedSeedSet)
 }
 
 // Canonicalize allows an object to be mutated into a canonical form. This
@@ -99,8 +99,8 @@ func (Strategy) AllowUnconditionalUpdate() bool {
 
 // ValidateUpdate validates the update on the given old and new object.
 func (Strategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
-	oldManagedSeed, newManagedSeed := oldObj.(*seedmanagement.ManagedSeed), newObj.(*seedmanagement.ManagedSeed)
-	return validation.ValidateManagedSeedUpdate(newManagedSeed, oldManagedSeed)
+	oldManagedSeedSet, newManagedSeedSet := oldObj.(*seedmanagement.ManagedSeedSet), newObj.(*seedmanagement.ManagedSeedSet)
+	return validation.ValidateManagedSeedSetUpdate(newManagedSeedSet, oldManagedSeedSet)
 }
 
 // StatusStrategy defines the strategy for storing seeds statuses.
@@ -108,7 +108,7 @@ type StatusStrategy struct {
 	Strategy
 }
 
-// NewStatusStrategy defines the storage strategy for the status subresource of ManagedSeeds.
+// NewStatusStrategy defines the storage strategy for the status subresource of ManagedSeedSets.
 func NewStatusStrategy() StatusStrategy {
 	return StatusStrategy{NewStrategy()}
 }
@@ -118,60 +118,40 @@ func NewStatusStrategy() StatusStrategy {
 // sort order-insensitive list fields, etc.  This should not remove fields
 // whose presence would be considered a validation error.
 func (s StatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
-	newManagedSeed := obj.(*seedmanagement.ManagedSeed)
-	oldManagedSeed := old.(*seedmanagement.ManagedSeed)
-	newManagedSeed.Spec = oldManagedSeed.Spec
+	newManagedSeedSet := obj.(*seedmanagement.ManagedSeedSet)
+	oldManagedSeedSet := old.(*seedmanagement.ManagedSeedSet)
+	newManagedSeedSet.Spec = oldManagedSeedSet.Spec
 }
 
 // ValidateUpdate validates the update on the given old and new object.
 func (StatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
-	return validation.ValidateManagedSeedStatusUpdate(obj.(*seedmanagement.ManagedSeed), old.(*seedmanagement.ManagedSeed))
+	return validation.ValidateManagedSeedSetStatusUpdate(obj.(*seedmanagement.ManagedSeedSet), old.(*seedmanagement.ManagedSeedSet))
 }
 
-// MatchManagedSeed returns a generic matcher for a given label and field selector.
-func MatchManagedSeed(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
+// MatchManagedSeedSet returns a generic matcher for a given label and field selector.
+func MatchManagedSeedSet(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
 	return storage.SelectionPredicate{
-		Label:       label,
-		Field:       field,
-		GetAttrs:    GetAttrs,
-		IndexFields: []string{seedmanagement.ManagedSeedShootName},
+		Label:    label,
+		Field:    field,
+		GetAttrs: GetAttrs,
 	}
 }
 
 // GetAttrs returns labels and fields of a given object for filtering purposes.
 func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
-	managedSeed, ok := obj.(*seedmanagement.ManagedSeed)
+	managedSeedSet, ok := obj.(*seedmanagement.ManagedSeedSet)
 	if !ok {
-		return nil, nil, fmt.Errorf("not a ManagedSeed")
+		return nil, nil, fmt.Errorf("not a ManagedSeedSet")
 	}
-	return labels.Set(managedSeed.ObjectMeta.Labels), ToSelectableFields(managedSeed), nil
+	return labels.Set(managedSeedSet.ObjectMeta.Labels), ToSelectableFields(managedSeedSet), nil
 }
 
 // ToSelectableFields returns a field set that represents the object.
-func ToSelectableFields(managedSeed *seedmanagement.ManagedSeed) fields.Set {
+func ToSelectableFields(managedSeedSet *seedmanagement.ManagedSeedSet) fields.Set {
 	// The purpose of allocation with a given number of elements is to reduce
 	// amount of allocations needed to create the fields.Set. If you add any
 	// field here or the number of object-meta related fields changes, this should
 	// be adjusted.
-	fieldsSet := make(fields.Set, 3)
-	fieldsSet[seedmanagement.ManagedSeedShootName] = GetShootName(managedSeed)
-	return generic.AddObjectMetaFieldsSet(fieldsSet, &managedSeed.ObjectMeta, true)
-}
-
-// ShootNameTriggerFunc returns spec.shoot.name of the given ManagedSeed.
-func ShootNameTriggerFunc(obj runtime.Object) string {
-	managedSeed, ok := obj.(*seedmanagement.ManagedSeed)
-	if !ok {
-		return ""
-	}
-
-	return GetShootName(managedSeed)
-}
-
-// GetShootName returns spec.shoot.name of the given ManagedSeed if it's specified, or an empty string if it's not.
-func GetShootName(managedSeed *seedmanagement.ManagedSeed) string {
-	if managedSeed.Spec.Shoot == nil {
-		return ""
-	}
-	return managedSeed.Spec.Shoot.Name
+	fieldsSet := make(fields.Set, 2)
+	return generic.AddObjectMetaFieldsSet(fieldsSet, &managedSeedSet.ObjectMeta, true)
 }

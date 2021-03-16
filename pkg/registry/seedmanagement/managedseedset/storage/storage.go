@@ -18,47 +18,45 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	"github.com/gardener/gardener/pkg/registry/seedmanagement/managedseed"
+	"github.com/gardener/gardener/pkg/registry/seedmanagement/managedseedset"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
-	"k8s.io/apiserver/pkg/storage"
 )
 
-// REST implements a RESTStorage for ManagedSeed.
+// REST implements a RESTStorage for ManagedSeedSet.
 type REST struct {
 	*genericregistry.Store
 }
 
-// ManagedSeedStorage implements the storage for ManagedSeeds and their status subresource.
-type ManagedSeedStorage struct {
-	ManagedSeed *REST
-	Status      *StatusREST
+// ManagedSeedSetStorage implements the storage for ManagedSeedSets and their status subresource.
+type ManagedSeedSetStorage struct {
+	ManagedSeedSet *REST
+	Status         *StatusREST
 }
 
-// NewStorage creates a new ManagedSeedStorage object.
-func NewStorage(optsGetter generic.RESTOptionsGetter) ManagedSeedStorage {
-	managedSeedRest, managedSeedStatusRest := NewREST(optsGetter)
+// NewStorage creates a new ManagedSeedSetStorage object.
+func NewStorage(optsGetter generic.RESTOptionsGetter) ManagedSeedSetStorage {
+	managedSeedSetRest, managedSeedSetStatusRest := NewREST(optsGetter)
 
-	return ManagedSeedStorage{
-		ManagedSeed: managedSeedRest,
-		Status:      managedSeedStatusRest,
+	return ManagedSeedSetStorage{
+		ManagedSeedSet: managedSeedSetRest,
+		Status:         managedSeedSetStatusRest,
 	}
 }
 
-// NewREST returns a RESTStorage object that will work with ManagedSeed objects.
+// NewREST returns a RESTStorage object that will work with ManagedSeedSet objects.
 func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
-	strategy := managedseed.NewStrategy()
-	statusStrategy := managedseed.NewStatusStrategy()
+	strategy := managedseedset.NewStrategy()
+	statusStrategy := managedseedset.NewStatusStrategy()
 
 	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &seedmanagement.ManagedSeed{} },
-		NewListFunc:              func() runtime.Object { return &seedmanagement.ManagedSeedList{} },
-		PredicateFunc:            managedseed.MatchManagedSeed,
-		DefaultQualifiedResource: seedmanagement.Resource("managedseeds"),
+		NewFunc:                  func() runtime.Object { return &seedmanagement.ManagedSeedSet{} },
+		NewListFunc:              func() runtime.Object { return &seedmanagement.ManagedSeedSetList{} },
+		DefaultQualifiedResource: seedmanagement.Resource("managedseedsets"),
 		EnableGarbageCollection:  true,
 
 		CreateStrategy: strategy,
@@ -69,8 +67,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	}
 	options := &generic.StoreOptions{
 		RESTOptions: optsGetter,
-		AttrFunc:    managedseed.GetAttrs,
-		TriggerFunc: map[string]storage.IndexerFunc{seedmanagement.ManagedSeedShootName: managedseed.ShootNameTriggerFunc},
+		AttrFunc:    managedseedset.GetAttrs,
 	}
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err)
@@ -82,7 +79,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	return &REST{store}, &StatusREST{store: &statusStore}
 }
 
-// StatusREST implements the REST endpoint for changing the status of a ManagedSeed.
+// StatusREST implements the REST endpoint for changing the status of a ManagedSeedSet.
 type StatusREST struct {
 	store *genericregistry.Store
 }
@@ -93,9 +90,9 @@ var (
 	_ rest.Updater = &StatusREST{}
 )
 
-// New creates a new (empty) internal ManagedSeed object.
+// New creates a new (empty) internal ManagedSeedSet object.
 func (r *StatusREST) New() runtime.Object {
-	return &seedmanagement.ManagedSeed{}
+	return &seedmanagement.ManagedSeedSet{}
 }
 
 // Get retrieves the object from the storage. It is required to support Patch.
@@ -113,5 +110,5 @@ var _ rest.ShortNamesProvider = &REST{}
 
 // ShortNames implements the ShortNamesProvider interface. Returns a list of short names for a resource.
 func (r *REST) ShortNames() []string {
-	return []string{"ms"}
+	return []string{"mss"}
 }
