@@ -236,9 +236,7 @@ func (enc *jsonEncoder) AppendComplex128(val complex128) {
 
 func (enc *jsonEncoder) AppendDuration(val time.Duration) {
 	cur := enc.buf.Len()
-	if e := enc.EncodeDuration; e != nil {
-		e(val, enc)
-	}
+	enc.EncodeDuration(val, enc)
 	if cur == enc.buf.Len() {
 		// User-supplied EncodeDuration is a no-op. Fall back to nanoseconds to keep
 		// JSON valid.
@@ -277,9 +275,7 @@ func (enc *jsonEncoder) AppendTimeLayout(time time.Time, layout string) {
 
 func (enc *jsonEncoder) AppendTime(val time.Time) {
 	cur := enc.buf.Len()
-	if e := enc.EncodeTime; e != nil {
-		e(val, enc)
-	}
+	enc.EncodeTime(val, enc)
 	if cur == enc.buf.Len() {
 		// User-supplied EncodeTime is a no-op. Fall back to nanos since epoch to keep
 		// output JSON valid.
@@ -366,20 +362,14 @@ func (enc *jsonEncoder) EncodeEntry(ent Entry, fields []Field) (*buffer.Buffer, 
 			final.AppendString(ent.LoggerName)
 		}
 	}
-	if ent.Caller.Defined {
-		if final.CallerKey != "" {
-			final.addKey(final.CallerKey)
-			cur := final.buf.Len()
-			final.EncodeCaller(ent.Caller, final)
-			if cur == final.buf.Len() {
-				// User-supplied EncodeCaller was a no-op. Fall back to strings to
-				// keep output JSON valid.
-				final.AppendString(ent.Caller.String())
-			}
-		}
-		if final.FunctionKey != "" {
-			final.addKey(final.FunctionKey)
-			final.AppendString(ent.Caller.Function)
+	if ent.Caller.Defined && final.CallerKey != "" {
+		final.addKey(final.CallerKey)
+		cur := final.buf.Len()
+		final.EncodeCaller(ent.Caller, final)
+		if cur == final.buf.Len() {
+			// User-supplied EncodeCaller was a no-op. Fall back to strings to
+			// keep output JSON valid.
+			final.AppendString(ent.Caller.String())
 		}
 	}
 	if final.MessageKey != "" {

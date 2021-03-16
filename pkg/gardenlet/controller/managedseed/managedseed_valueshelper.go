@@ -19,6 +19,8 @@ import (
 	"os"
 	"strings"
 
+	"k8s.io/utils/pointer"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -48,8 +50,8 @@ type valuesHelper struct {
 	imageVector imagevector.ImageVector
 }
 
-// newValuesHelper creates a new ValuesHelper with the given parent GardenletConfiguration and image vector.
-func newValuesHelper(config *config.GardenletConfiguration, imageVector imagevector.ImageVector) ValuesHelper {
+// NewValuesHelper creates a new ValuesHelper with the given parent GardenletConfiguration and image vector.
+func NewValuesHelper(config *config.GardenletConfiguration, imageVector imagevector.ImageVector) ValuesHelper {
 	return &valuesHelper{
 		config:      config,
 		imageVector: imageVector,
@@ -174,14 +176,26 @@ func (vp *valuesHelper) getGardenletDeploymentValues(deployment *seedmanagementv
 		return nil, err
 	}
 
+	// make sure map is initialized
+	deploymentValues = utils.InitValuesMap(deploymentValues)
+
 	// Set imageVectorOverwrite and componentImageVectorOverwrites from parent
-	deploymentValues["imageVectorOverwrite"], err = getParentImageVectorOverwrite()
+	parentImageVectorOverwrite, err := getParentImageVectorOverwrite()
 	if err != nil {
 		return nil, err
 	}
-	deploymentValues["componentImageVectorOverwrites"], err = getParentComponentImageVectorOverwrites()
+
+	if parentImageVectorOverwrite != nil {
+		deploymentValues["imageVectorOverwrite"] = *parentImageVectorOverwrite
+	}
+
+	parentComponentImageVectorOverwrites, err := getParentComponentImageVectorOverwrites()
 	if err != nil {
 		return nil, err
+	}
+
+	if parentComponentImageVectorOverwrites != nil {
+		deploymentValues["componentImageVectorOverwrites"] = *parentComponentImageVectorOverwrites
 	}
 
 	return deploymentValues, nil
@@ -304,26 +318,26 @@ func getParentGardenletDeployment(imageVector imagevector.ImageVector, shoot *ga
 	}, nil
 }
 
-func getParentImageVectorOverwrite() (string, error) {
-	var imageVectorOverwrite string
+func getParentImageVectorOverwrite() (*string, error) {
+	var imageVectorOverwrite *string
 	if overWritePath := os.Getenv(imagevector.OverrideEnv); len(overWritePath) > 0 {
 		data, err := ioutil.ReadFile(overWritePath)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		imageVectorOverwrite = string(data)
+		imageVectorOverwrite = pointer.StringPtr(string(data))
 	}
 	return imageVectorOverwrite, nil
 }
 
-func getParentComponentImageVectorOverwrites() (string, error) {
-	var componentImageVectorOverwrites string
+func getParentComponentImageVectorOverwrites() (*string, error) {
+	var componentImageVectorOverwrites *string
 	if overWritePath := os.Getenv(imagevector.ComponentOverrideEnv); len(overWritePath) > 0 {
 		data, err := ioutil.ReadFile(overWritePath)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		componentImageVectorOverwrites = string(data)
+		componentImageVectorOverwrites = pointer.StringPtr(string(data))
 	}
 	return componentImageVectorOverwrites, nil
 }

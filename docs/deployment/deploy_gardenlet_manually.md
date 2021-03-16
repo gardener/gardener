@@ -200,7 +200,6 @@ subjects:
   - kind: Group
     name: gardener.cloud:system:seeds
     apiGroup: rbac.authorization.k8s.io
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole

@@ -582,7 +582,7 @@ func (a *actuator) prepareGardenClientConnectionWithBootstrap(ctx context.Contex
 	// Ensure kubeconfig secret is set
 	if gcc.KubeconfigSecret == nil {
 		gcc.KubeconfigSecret = &corev1.SecretReference{
-			Name:      common.GardenletDefaultKubeconfigSecretName,
+			Name:      GardenletDefaultKubeconfigSecretName,
 			Namespace: v1beta1constants.GardenNamespace,
 		}
 	}
@@ -602,7 +602,7 @@ func (a *actuator) prepareGardenClientConnectionWithBootstrap(ctx context.Contex
 	// Ensure bootstrap kubeconfig secret is set
 	if gcc.BootstrapKubeconfig == nil {
 		gcc.BootstrapKubeconfig = &corev1.SecretReference{
-			Name:      common.GardenletDefaultKubeconfigBootstrapSecretName,
+			Name:      GardenletDefaultKubeconfigBootstrapSecretName,
 			Namespace: v1beta1constants.GardenNamespace,
 		}
 	}

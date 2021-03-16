@@ -28,7 +28,8 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -45,8 +46,6 @@ import (
 const (
 	// GardenerSeedBootstrapper is a constant for the gardener seed bootstrapper name.
 	GardenerSeedBootstrapper = "gardener.cloud:system:seed-bootstrapper"
-	// DefaultSeedName is the default seed name in case the gardenlet config.SeedConfig is not set
-	DefaultSeedName = "<ambiguous>"
 	// DedicatedSeedKubeconfig is a constant for the target cluster name when the gardenlet is using a dedicated seed kubeconfig
 	DedicatedSeedKubeconfig = "configured in .SeedClientConnection.Kubeconfig"
 	// InCluster is a constant for the target cluster name  when the gardenlet is running in a Kubernetes cluster
@@ -65,7 +64,7 @@ func GetSeedName(seedConfig *config.SeedConfig) string {
 	if seedConfig != nil {
 		return seedConfig.Name
 	}
-	return constants.SeedUserNameSuffixAmbiguous
+	return gardencorev1beta1constants.SeedUserNameSuffixAmbiguous
 }
 
 // GetTargetClusterName returns the target cluster of the gardenlet based on the SeedClientConnection.
@@ -224,7 +223,7 @@ func ComputeGardenletKubeconfigWithBootstrapToken(ctx context.Context, gardenCli
 	return CreateGardenletKubeconfigWithToken(gardenClientRestConfig, kutil.BootstrapTokenFrom(bootstrapTokenSecret.Data))
 }
 
-// ComputeGardenletKubeconfigWithBootstrapToken creates a kubeconfig containing the token of a service account
+// ComputeGardenletKubeconfigWithServiceAccountToken creates a kubeconfig containing the token of a service account
 // Creates the required service account in the Garden cluster and puts the associated token into a Kubeconfig
 // tailored to the Gardenlet
 func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gardenClient client.Client, gardenClientRestConfig *rest.Config, serviceAccountName string) ([]byte, error) {
@@ -232,7 +231,7 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceAccountName,
-			Namespace: v1beta1constants.GardenNamespace,
+			Namespace: gardencorev1beta1constants.GardenNamespace,
 		},
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient, sa, func() error { return nil }); err != nil {
@@ -244,7 +243,7 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 		return nil, fmt.Errorf("service account token controller has not yet created a secret for the service account")
 	}
 	saSecret := &corev1.Secret{}
-	if err := gardenClient.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, sa.Secrets[0].Name), saSecret); err != nil {
+	if err := gardenClient.Get(ctx, kutil.Key(gardencorev1beta1constants.GardenNamespace, sa.Secrets[0].Name), saSecret); err != nil {
 		return nil, err
 	}
 
@@ -256,15 +255,15 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient, clusterRoleBinding, func() error {
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
+			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
 			Name:     GardenerSeedBootstrapper,
 		}
 		clusterRoleBinding.Subjects = []rbacv1.Subject{
 			{
-				Kind:      "ServiceAccount",
+				Kind:      rbacv1.ServiceAccountKind,
 				Name:      serviceAccountName,
-				Namespace: v1beta1constants.GardenNamespace,
+				Namespace: gardencorev1beta1constants.GardenNamespace,
 			},
 		}
 		return nil

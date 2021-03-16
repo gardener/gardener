@@ -181,7 +181,7 @@ export -f scheduler_groups
 
 gardenlet_groups() {
   echo "Generating API groups for pkg/gardenlet/apis/config"
-  
+
   bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
     deepcopy,defaulter \
     github.com/gardener/gardener/pkg/client/componentconfig \
@@ -203,25 +203,27 @@ export -f gardenlet_groups
 
 # Componentconfig for landscaper-gardenlet
 
-landscaper_groups() {
-bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
-  deepcopy,defaulter \
-  github.com/gardener/gardener/pkg/client/componentconfig \
-  github.com/gardener/gardener/landscaper/gardenlet/pkg/apis \
-  github.com/gardener/gardener/landscaper/gardenlet/pkg/apis \
-  "imports:v1alpha1" \
-  -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+landscapergardenlet_groups() {
+  echo "Generating API groups for landscaper/gardenlet/pkg/apis/imports"
 
-bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
-  conversion \
-  github.com/gardener/gardener/pkg/client/componentconfig \
-  github.com/gardener/gardener/landscaper/gardenlet/pkg/apis \
-  github.com/gardener/gardener/landscaper/gardenlet/pkg/apis \
-  "imports:v1alpha1" \
-  --extra-peer-dirs=github.com/gardener/gardener/landscaper/gardenlet/pkg/apis/imports, github.com/gardener/gardener/pkg/gardenlet/apis/config,github.com/gardener/landscaper/apis/core/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime \
-  -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+  bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+    deepcopy,defaulter \
+    github.com/gardener/gardener/pkg/client/componentconfig \
+    github.com/gardener/gardener/landscaper/pkg/gardenlet/apis \
+    github.com/gardener/gardener/landscaper/pkg/gardenlet/apis \
+    "imports:v1alpha1" \
+    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+
+  bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+    conversion \
+    github.com/gardener/gardener/pkg/client/componentconfig \
+    github.com/gardener/gardener/landscaper/pkg/gardenlet/apis \
+    github.com/gardener/gardener/landscaper/pkg/gardenlet/apis \
+    "imports:v1alpha1" \
+    --extra-peer-dirs=github.com/gardener/gardener/pkg/gardenlet/apis/config,github.com/gardener/landscaper/apis/core/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime \
+    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
 }
-export -f landscaper_groups
+export -f landscapergardenlet_groups
 
 # Componentconfig for admission plugins
 
@@ -287,7 +289,7 @@ if [[ $# -gt 0 && "$1" == "--parallel" ]]; then
     scheduler_groups \
     gardenlet_groups \
     shoottolerationrestriction_groups \
-    landscaper_groups
+    landscapergardenlet_groups
 else
   core_groups
   extensions_groups
@@ -298,7 +300,7 @@ else
   scheduler_groups
   gardenlet_groups
   shoottolerationrestriction_groups
-  landscaper_groups
+  landscapergardenlet_groups
 fi
 
 openapi_definitions "$@"

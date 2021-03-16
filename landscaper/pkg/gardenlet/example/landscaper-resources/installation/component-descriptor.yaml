@@ -1,0 +1,39 @@
+meta:
+  schemaVersion: 'v2'
+component:
+  name: 'github.com/gardener/gardener'
+  version: 'latest'
+
+  repositoryContexts:
+  - type: 'ociRegistry'
+    baseUrl: 'eu.gcr.io/gardener-project/landscaper/dev/components'
+
+  provider: 'internal'
+
+  resources:
+  - type: blueprint
+    name: gardenlet-blueprint
+    version: 'latest'
+    relation: 'local'
+    access:
+      type: ociRegistry
+      # blueprint must exist in registry
+      imageReference: eu.gcr.io/gardener-project/landscaper/blueprints/dev/gardenlet:latest
+
+#  image referenced in in blueprint in deployExecutions when rendering the deploy item
+  - type: ociImage
+    name: gardenlet-landscaper
+    version: 'latest'
+    relation: 'local'
+    access:
+      type: ociRegistry
+      imageReference: eu.gcr.io/gardener-project/gardener/landscaper-gardenlet:latest
+
+#  image read by the Gardenlet landscaper
+  - type: ociImage
+    name: gardenlet
+    version: 'latest'
+    relation: 'local'
+    access:
+      type: ociRegistry
+      imageReference: eu.gcr.io/gardener-project/gardener/gardenlet:latest

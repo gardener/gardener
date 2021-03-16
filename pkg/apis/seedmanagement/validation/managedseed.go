@@ -185,7 +185,7 @@ func validateGardenlet(gardenlet *seedmanagement.Gardenlet, fldPath *field.Path,
 	allErrs := field.ErrorList{}
 
 	if gardenlet.Deployment != nil {
-		allErrs = append(allErrs, validateGardenletDeployment(gardenlet.Deployment, fldPath.Child("deployment"))...)
+		allErrs = append(allErrs, ValidateGardenletDeployment(gardenlet.Deployment, fldPath.Child("deployment"))...)
 	}
 
 	if gardenlet.Config != nil {
@@ -245,7 +245,8 @@ func validateGardenletUpdate(newGardenlet, oldGardenlet *seedmanagement.Gardenle
 	return allErrs
 }
 
-func validateGardenletDeployment(deployment *seedmanagement.GardenletDeployment, fldPath *field.Path) field.ErrorList {
+// ValidateGardenletDeployment validates the configuration for the gardenlet deployment
+func ValidateGardenletDeployment(deployment *seedmanagement.GardenletDeployment, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if deployment.ReplicaCount != nil {

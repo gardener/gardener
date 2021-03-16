@@ -14,8 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo "Using import values from 'dev/landscaper/gardenlet-landscaper-imports.yaml'.
-Please properly configure for your setup."
+if [ "$1" != "RECONCILE" ] && [ "$1" != "DELETE" ]; then
+  echo "Please set the argument \"OPERATION\" to either \"RECONCILE\" or \"DELETE\" (\"make start-landscaper-gardenlet OPERATION=RECONCILE\")"
+  exit 1
+fi
+
+printf "Using import values from 'dev/landscaper/gardenlet-landscaper-imports.yaml'. \n \n"
 
 GO111MODULE=on \
 OPERATION="$1" \
@@ -24,4 +28,4 @@ COMPONENT_DESCRIPTOR_PATH=dev/landscaper/gardenlet-landscaper-component-descript
     go run \
       -mod=vendor \
       -ldflags "$(./hack/get-build-ld-flags.sh)" \
-      "$(dirname $0)"/../../landscaper/gardenlet/landscaper-gardenlet/main.go
+      "$(dirname $0)"/../../landscaper/cmd/landscaper-gardenlet/main.go

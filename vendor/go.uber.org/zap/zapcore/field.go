@@ -205,23 +205,13 @@ func addFields(enc ObjectEncoder, fields []Field) {
 	}
 }
 
-func encodeStringer(key string, stringer interface{}, enc ObjectEncoder) (retErr error) {
-	// Try to capture panics (from nil references or otherwise) when calling
-	// the String() method, similar to https://golang.org/src/fmt/print.go#L540
+func encodeStringer(key string, stringer interface{}, enc ObjectEncoder) (err error) {
 	defer func() {
-		if err := recover(); err != nil {
-			// If it's a nil pointer, just say "<nil>". The likeliest causes are a
-			// Stringer that fails to guard against nil or a nil pointer for a
-			// value receiver, and in either case, "<nil>" is a nice result.
-			if v := reflect.ValueOf(stringer); v.Kind() == reflect.Ptr && v.IsNil() {
-				enc.AddString(key, "<nil>")
-				return
-			}
-
-			retErr = fmt.Errorf("PANIC=%v", err)
+		if v := recover(); v != nil {
+			err = fmt.Errorf("PANIC=%v", v)
 		}
 	}()
 
 	enc.AddString(key, stringer.(fmt.Stringer).String())
-	return nil
+	return
 }

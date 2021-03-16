@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gardenlet-landscaper-config
+  namespace: default
+data:
+  config: |
+    # import configuration file.
+    # Please see landscaper/gardenlet/example/gardenlet-landscaper-imports.yaml to see what can be configured here.
+

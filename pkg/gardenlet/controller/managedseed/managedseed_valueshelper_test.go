@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -126,7 +125,7 @@ var _ = Describe("ValuesHelper", func() {
 			},
 		}
 
-		vh = newValuesHelper(parentConfig, imageVector)
+		vh = NewValuesHelper(parentConfig, imageVector)
 
 		deployment = &seedmanagementv1alpha1.GardenletDeployment{
 			ReplicaCount:         pointer.Int32Ptr(1),
@@ -179,11 +178,11 @@ var _ = Describe("ValuesHelper", func() {
 			var bootstrapKubeconfig, kubeconfigSecret *corev1.SecretReference
 			if withBootstrap {
 				bootstrapKubeconfig = &corev1.SecretReference{
-					Name:      common.GardenletDefaultKubeconfigBootstrapSecretName,
+					Name:      "gardenlet-kubeconfig-bootstrap",
 					Namespace: v1beta1constants.GardenNamespace,
 				}
 				kubeconfigSecret = &corev1.SecretReference{
-					Name:      common.GardenletDefaultKubeconfigSecretName,
+					Name:      "gardenlet-kubeconfig",
 					Namespace: v1beta1constants.GardenNamespace,
 				}
 			} else {
@@ -294,12 +293,12 @@ var _ = Describe("ValuesHelper", func() {
 
 			if withBootstrap {
 				bootstrapKubeconfig := map[string]interface{}{
-					"name":       common.GardenletDefaultKubeconfigBootstrapSecretName,
+					"name":       "gardenlet-kubeconfig-bootstrap",
 					"namespace":  v1beta1constants.GardenNamespace,
 					"kubeconfig": bk,
 				}
 				kubeconfigSecret := map[string]interface{}{
-					"name":      common.GardenletDefaultKubeconfigSecretName,
+					"name":      "gardenlet-kubeconfig",
 					"namespace": v1beta1constants.GardenNamespace,
 				}
 

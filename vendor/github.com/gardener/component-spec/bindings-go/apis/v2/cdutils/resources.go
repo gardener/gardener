@@ -44,19 +44,30 @@ func GetImageReferenceByName(cd *cdv2.ComponentDescriptor, name string) (string,
 	return ociImageAccess.ImageReference, nil
 }
 
-// GetRepositoryAndTagFromReference takes an image reference
+// ParseImageReference takes an image reference
 // e.g eu.gcr.io/gardener-project/gardener/gardenlet:v1.11.3
-// and returns the image repository as a first, and the tag as a second argument
-func GetRepositoryAndTagFromReference(imageReference string) (string, string, error) {
+// returns
+// first argument: the image repository
+// second argument: the tag or the SHA256
+// third argument: the separator (either ":" when it is a tag or "@" if it is a SHA256)
+func ParseImageReference(imageReference string) (string, string, string, error) {
+	if strings.Contains(imageReference, "@") {
+		split := strings.Split(imageReference, "@")
+		if len(split) != 2 {
+			return "", "", "", fmt.Errorf("failed to parse image respository and tag from image reference %q", imageReference)
+		}
+		return split[0], split[1], "@", nil
+	}
+
 	split := strings.Split(imageReference, ":")
 	if len(split) == 2 {
-		return split[0], split[1], nil
+		return split[0], split[1], ":", nil
 	}
 
 	// split version from reference if image reference contains a port
-	// e.g eu.gcr.io/gardener-project:5000/gardener/gardenlet
+	// e.g eu.gcr.io:5000/gardener-project/gardener/gardenlet
 	if len(split) == 3 {
-		return fmt.Sprintf("%s:%s", split[0], split[1]), split[2], nil
+		return fmt.Sprintf("%s:%s", split[0], split[1]), split[2], ":", nil
 	}
-	return "", "", fmt.Errorf("failed to extract image respository and tag from image reference %q", imageReference)
+	return "", "", "", fmt.Errorf("failed to parse image respository and tag from image reference %q", imageReference)
 }
