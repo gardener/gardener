@@ -374,11 +374,26 @@ type FluentBit struct {
 	OutputSection *string `json:"output,omitempty" yaml:"output,omitempty"`
 }
 
+// Loki contains configuration for the Loki.
+type Loki struct {
+	// Garden contains configuration for the Loki in garden namespace.
+	Garden *GardenLoki `json:"garden,omitempty" yaml:"garden,omitempty"`
+}
+
+// GardenLoki contains configuration for the Loki in garden namespace.
+type GardenLoki struct {
+	// Priority is the priority value for the Loki
+	Priority *int `json:"priority,omitempty" yaml:"priority,omitempty"`
+}
+
 // Logging contains configuration for the logging stack.
 type Logging struct {
 	// FluentBit contains configurations for the fluent-bit
 	// +optional
 	FluentBit *FluentBit `json:"fluentBit,omitempty" yaml:"fluentBit,omitempty"`
+	// Loki contains configuration for the Loki
+	// +optional
+	Loki *Loki `json:"loki,omitempty" yaml:"loki,omitempty"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.
