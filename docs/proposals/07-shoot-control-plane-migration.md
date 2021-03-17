@@ -202,43 +202,99 @@ The ShootState synchronization controller will become part of the gardenlet. It 
 1. The Shoot's namespace in __Source Seed__ is deleted.
 
 
-### Leader Election and Control Plane Termination
+### Migrating Backups
 
-During migration "split brain" scenario must be avoided. This means that a Shoot's control plane in the __Source Seed__ must be scaled down before it is scaled up in the __Destination Seed__.
+For security reasons a `Seed` should only have access to its own backup bucket, meaning that the `etcd-backup-restore` sidecar responsible for saving and restoring the ETCD data should only be able to access the backup bucket of the `Seed` it currently operates in. Therefore, during Control Plane Migration a mechanism is needed to copy the ETCD backup from the __Source Seed__'s backup bucket to that of the __Destination Seed__. To that end `etcd-backup-restore` is extended with a new subcommand - `migrate` which runs in the Seed and does the following:
+
+1. Creates a backup directory for the `Shoot` cluster in the __Destination Seed__'s backup bucket if it does not already exist.
+1. Waits for some time (until a preconfigured timeout) for the `etcd-backup-restore` sidecar in the __Source Seed__ to finish saving a final snapshot.
+1. Writes into a "header" file inside the `Shoot`'s backup directory in the __Source Seed__'s backup bucket that copying of data __from__ this directory is in process, the timestamp when the copy operation began, a timestamp indicating when migration was actually triggered and the name of the __Destination Seed__
+1. Writes into a "header" file inside the `Shoot`'s backup directory in the __Destination Seed__'s backup bucket that copying of data __to__ this directory is in process, the timestamp of when the copy operation began and a timestamp indicating when migration was actually triggered.
+1. When the `etcd-backup-restore` sidecar in the __Destination Seed__ tries to restore the data it checks the "header":
+  - If data is still being copied, it does nothing and dies.
+  - If the data has finished copying, it restores the ETCD from it.
+1. When the copy operation has finished successfully, the "header" files in both the source and destination backup directories are updated accordingly.
+1. Subsequent executions of the command (in case the operation is repeated as part of the Control Plane Migration flow) check that the data has already been copied and do nothing
+
+*Note:* the migration timestamp might be redundant as it will closely correspond to the timestamp indicating the start of the copy operation.
+*Note:* Any additional checks and steps that have to be taken by the `etcd-backup-restore` sidecar in the __Source Seed__ in case there are problems with the Seed are described in more detail in the __Leader Election__ section below.
+
+The `migrate` subcommand requires secrets for both the backup buckets of the __Source__ and __Destination__ Seeds. The latter is already taken care of by the Backup Entry controller. For the former - a temporary secret needs to be created and provided to the Seed cluster. The exact mechanism of how this will be done is to be discussed in more details in [Dedicated secrets per seed backup bucket](https://github.com/gardener-security/security-backlog/issues/17) and [Eliminate all trust credentials between hyperscalers and Gardener](https://github.com/gardener-security/security-backlog/issues/25)
+
+The ETCD Druid is extended so that it starts `etcd-backup-restore migrate` as a job when it is notified that Control Plane Migration has been triggered. This notification happens via a `gardener.cloud/operation=restore` annotation in the `etcd` resource and (if necessary) a few additional fields indicating the cluster owner and when migration was triggered:
+```
+spec:
+  ownerToken: <seed_name>
+  ownerTimestamp: "2018-11-18T15:14:57Z"
+```
+The ETCD Druid will automatically reconcile the `etcd` resource as normal after it has finished with the `etcd-backup-restore migrate` operation.
+### Leader Election
 
 **Note**: This section is still under discussion. The plan is to first implement the `ShootState` and modify the reconciliation flow and extensions accordingly. Additionally multiple scenarios need to be considered depending on the reachability to the Garden cluster from the __Source Seed__ components, the __Source Seed's__ API server from the Garden cluster and the __Source Seed's__ API server from the controllers running on the seed. **The initial implementation will only cover the case where everything is running**.
 
-Extension controllers do not need leader election functionality because they only reconcile the extension resources if the reconcile operation annotation is specified in the resource. Since this is set only during a reconciliation triggered by the Garden Controller Manager it cannot happen during migration.
+During migration "split brain" scenario must be avoided. This means that a Shoot's control plane in the __Source Seed__ must be scaled down before it is scaled up in the __Destination Seed__.
 
-For other controllers in the controlplane (e.g MCM, etcd backup restore, kube apiserver) leader election has to be implemented. We plan to introduce gardenlet soon therefore the garden cluster is expected to be reachable from all seeds.
+### Garden cluster and __Source Seed__ are healthy and there are no network problems
 
-Another flag might be needed to tell the gardenlet in the __Destination Seed__ that the control plane in the __Source Seed__ has been scaled down and the Shoot reconciliation can begin.
+If both the Garden cluster and __Source Seed__ cluster are healthy, the `gardenlet` after checking the `spec.seedName`, can directly scale down the Shoot's control plane as part of the migration flow.
 
-Horizontal Pod Autoscalers also need to be considered and removed.
+### If components in the __Source Seed__ cannot reliably read who the leader is from the Garden cluster
+We consider the following cases in which the `gardenlet` and the extension controllers in the __Source Seed__ cannot fetch information about who the leader is:
 
-#### Garden cluster and __Source Seed__ are healthy and there are no network problems
+To avoid possible reconciliations by Control Plane Components and Extension Controllers in both the __Destination Seed__ and __Source Seed__ we use the following leader election procedure (split into two parts - one for components in the `Shoot`'s control plane which depend on its APIServer and one for extension controllers which do not depend on it):
 
-If both the Garden cluster and __Source Seed__ cluster are healthy, the Garden Controller Manager (or gardenlet after checking the `spec.seedName`) can directly scale down the Shoot's control plane as part of the migration flow.
+#### ETCD Backup Based Leader Election
 
-#### If components in the __Source Seed__ cannot reliably read who the leader is from the Garden cluster
+When migration is triggered:
+1. The ETCD Druid in the __Destination Seed__ is informed about the ownership of the ETCD cluster and that Control Plane Migration has been triggered
+2. It triggeres `etcd-backup-restore migrate` which first checks to see whether a finished snapshot has been made by the `etcd-backup-restore` sidecar in the __Source Seed__ and then begins the copy operation. If no snapshot is created within a timeout it will copy the latest snapshot.
+4. The `etcd-backup-restore` sidecar initially (during startup) and continuously (when uploading backups) checks to see if a copy operation to a new bucket has started or not.
+    1. If it finds that a copy operation __from__ its bucket is in process or has been finished, it determines that it is in the __Source Seed__ and that control plane migration has been triggered.
+    2. If it finds that a copy operation __to__ its bucket is in process, it determines that it is in the __Destination Seed__ and that control plane migration has been triggered. Once it finds that the copy operation has completed successfully it restores the ETCD data.
+    3. If the ownership information matches and thare is no indication that a copy operation is in process, `etcd-backup-restore` continues to work exactly the way it does today.
+5. When the `etcd-backup-restore` sidecar in the `Shoot's` ETCD pod determines that migration is on and that it is on the __Source Seed__, it stops taking snapshots (full and delta snapshots) and terminates with an error
+    1. This should also cut-off the client requests because the `readinessProbe` of the main ETCD container probes the `etcd-backup-restore` sidecar.
+    1. Just to be sure, the health check in the backup-restore sidecar (used by the main ETCD container's `readinessProbe`) is enhanced to also compare the ownership information passed by `etcd-druid` with what is in the backup. This should ensure that if the main etcd container `readinessProbe` will continue to fail if the `etcd-backup-restore` sidecar comes back up.
+    1. Please note that the etcd container itself might not die here. But the client requests to the container will be cut off.
+5. When the `etcd-backup-restore` sidecar in the `Shoot's` ETCD pod determines that migration is on and that it is on the __Destination Seed__, it first waits for the migration process to finish
+    1. It then checks the available backups and restores the ETCD data from the snapshot with the latest timestamp (older than the migration timestamp).
+7. Once the ETCD container stops accepting the client requests in the __Source Seed__, all components which depend on it (e.g. the Kube APIServer, Machine Controller Manager and so on) will also stop working.
 
-Currently we have come up with two ideas to handle this case:
 
-**DNS leader election:** A DNS TXT entry with TTL=60s and value seed='__Source Seed__' is used. The record is created and maintained by the Gardener Controller Manager (by using the DNS Controller Manager and its DNSEntry resource). When a control plane migration is detected, the Gardener Controller Manager changes the value of the DNS Entry to seed='__Destination Seed__' and waits for 2*TTL + 1 = 121 seconds to ensure that the change is propagated to all controllers in the old seed. We rely on the fact that DNS is highly available (100% for AWS Route53) and that control plane components in the __Source Seed__ can see the changes.
+#### Stopping extension controllers
+An additional step needs to be taken to prevent the extension controllers from reconciling their resources if they were stuck in a crashloop backoff triggered by a previous reconciliation, which can happen in the following casess:
+
+1. `Gardenlet` cannot connect to the Garden APIServer
+
+    In this case the  `gardenlet` cannot fetch information about `Shoots` and therefore does not know if control plane migration has been triggered. The `gardenlet` will not trigger new reconciliations, however extension controllers can still be reconciling their resources if they are stuck in an error backoff from a previous reconciliation.
+
+2. `Gardenlet` cannot connect to the `Seed`'s APIServer.
+
+    In this case the `gardenlet` knows if migration has been triggered but it will not start shoot migration/reconciliation as it will first check the `Seed` conditions and try to update the `Cluster` resource both of will fail. Extension controllers can still have a connection to the `Seed`'s APIServer (if they are not running where the `gardenlet` is running - different node or cluster) which means that due to previously triggered reconciliations (and/or crashloop backoff) they could reconcile their resources.
+
+
+3. The `Seed` components (etcd-druid, extension controllers, etc) cannot connect to the `Seed`'s APIServer.
+
+    In this case the extension controllers will not be able to reconcile their resources as they cannot fetch them from the `Seed`'s APIServer. When the connection to the APIServer comes back, the controllers might be stuck in a backoff from a previous reconciliation or the resources could still be annotated with `gardener.cloud/operation=reconcile`. This could lead to a race condition depending on who has a chance to `update` or `get` the resources first - `gardenlet` or the `Seed`'s APIServer. If `gardenlet` manages to update the resource before they are read by the extension controllers, they will be properly updated with `gardener.cloud/operation=migrate`. Otherwise, they would be reconciled as normal.
+
+4. All of the above.
+
+A new `ClusterOwner` resource is introduced in the `Seed` cluster (this does not have to be a new resource - it could just be a `ConfigMap`). It is managed by the `gardenlet` and contains the following:
+```
+spec:
+  owner: <seed-name>
+  renewTimestamp: "2020-10-29T15:14:57Z"
+  leaseDurationSeconds: 120
+```
+Every `X` seconds `gardenlet` checks to see if it can connect to the Garden APIServer and if successfull updates the `ClusterOwner` resource and renews the timestamp. The extension controllers fetch this resource before each reconciliation and check if the lease has expired. If it hasn't, then migration has not been triggered and `gardenlet` can reliably tell who the leader is, therefore controllers reconcile as normal. If the lease has expired, then either control plane migration has been triggered or `gardenlet` cannot tell who the leader is.
+*Note:* this resource could aslo be managed by the ETCD Druid and updated depending on the health of the `etcd-backup-restore` sidecar as a more reliable source of when the migration was actually triggered as it fetches this information from a "header" file in the `Shoot`'s backup directory. This would require the `etcd` resource to be deployed as soon as possible in the __Destination Seed__ (before other extension resources) so that the `etcd-backup-restore migrate` operation can be triggered to update the "header" in the `Shoot`'s source backup directory which will cause the `etcd-backup-restore` sidecar in the __Source Seed__ to stop and the `ClusterOwner` resource to be updated before extension controllers in the __Destination Seed__ can start reconciling their resources.
+
+**Alternative: DNS leader election:**
+
+A DNS TXT entry with TTL=60s and value seed='__Source Seed__' is used. The record is created and maintained by the Gardener Controller Manager (by using the DNS Controller Manager and its DNSEntry resource). When a control plane migration is detected, the Gardener Controller Manager changes the value of the DNS Entry to seed='__Destination Seed__' and waits for 2*TTL + 1 = 121 seconds to ensure that the change is propagated to all controllers in the old seed. We rely on the fact that DNS is highly available (100% for AWS Route53) and that control plane components in the __Source Seed__ can see the changes.
 
 Control plane components have to be shut down even when there is no access to the __Source Seed's__ API server. To be able to do that a daemonset is deployed in each Seed cluster. When the daemonset in the __Source Seed__ sees that it is nolonger the leader (by checking the DNS record) and there is no connection to the __Source Seed's__ API server, the daemonset will kill the Shoot's control plane pods by directly talking to the Kubelet's API server. If the __Source Seed's__ API Server comes back up, then gardenlet should take care of scaling down the deployments and statefulsets in the Shoot's control plane. This could be problematic if the gardenlet is in a crashloop backoff or takes too much time to do the scaling.
 
 As an alternative to the daemonset, a sidecar container can be added to each control plane component. The sidecar checks the DNS Entry to see if it is still the leader. If it is not, it shuts down the entire pod. This way we do not run the risk of deploymnets and statefulsets recreating the control plane pods after the seed's apiserver comes back up.
 
 The problems with using DNS as leader election is caching. Additionally, not all DNS servers respect TTL settings.
-
-**Using timestamps in the ETCD backup entries:** Once a Shoot is successfully created on the __Source Seed__ a timestamp is saved in the Cluster Resource and/or saved in the ETCD backup restore sidecar (either as an environment variable or additional configuration). The timestamps must not be modified afterwards and is used when the backup restore container writes data to the backup entry of the Shoot in the following way:
-- If there is no timestamp in the backup entry, the current timestamp is uploaded.
-- If there is a timestamp in the backup entry it is compared to the backup restore container's timestamp:
-    1. If it is the same, nothing is done
-    2. If it is older, it is replaced with the timestamp of the current backuprestore container
-    3. If it is newer - the current backuprestore container does not have ownership of the backup entry
-
-When case 3 happens it means that the shoot has been migrated and the backuprestore container in the  __Destination Seed__ has started using the Shoot's backup entry. The backuprestore on the __Source Seed__ should be configured to shut itself and the etcd container down once it sees the newer timestamp. Shutting down the etcd will cause the kubernetes control plane components to go into crashloop backoff and the MCM will not be able to do anything as it will not be able to list nodes (this has to be verified with MCM).
-
-For this approach to work backups must be enabled for the Shoot which is migrated. Additionally, synchronization based on the timestamps in the backup entry depend on the frequency of backups made by the backuprestore container.
