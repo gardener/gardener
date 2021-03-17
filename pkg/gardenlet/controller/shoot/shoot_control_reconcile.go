@@ -441,15 +441,25 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.HibernateControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute).DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Destroying external domain DNS record if hibernated", // delete DNS entries during hibernation.
+		destroyExternalDNSRecord = g.Add(flow.Task{
+			Name:         "Destroying external domain DNS record if hibernated",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.DNS.ExternalEntry.Destroy).DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Destroying internal domain DNS record if hibernated", // delete DNS entries during hibernation.
+			Name:         "Waiting until the external domain DNS record was destroyed if hibernated",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.DNS.ExternalEntry.WaitCleanup).DoIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(destroyExternalDNSRecord),
+		})
+		destroyInternalDNSRecord = g.Add(flow.Task{
+			Name:         "Destroying internal domain DNS record if hibernated",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.DNS.InternalEntry.Destroy).DoIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(hibernateControlPlane),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until the internal domain DNS record was destroyed if hibernated",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.DNS.InternalEntry.WaitCleanup).DoIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(destroyInternalDNSRecord),
 		})
 		deployExtensionResources = g.Add(flow.Task{
 			Name:         "Deploying extension resources",
