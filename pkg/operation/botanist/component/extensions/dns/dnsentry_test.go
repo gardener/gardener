@@ -25,17 +25,12 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	cr "github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -46,12 +41,11 @@ import (
 var _ = Describe("#DNSEntry", func() {
 	const (
 		deployNS     = "test-chart-namespace"
-		secretName   = "extensions-dns-test-deploy"
 		dnsEntryName = "test-deploy"
 	)
+
 	var (
 		ctrl             *gomock.Controller
-		ca               kubernetes.ChartApplier
 		ctx              context.Context
 		c                client.Client
 		expected         *dnsv1alpha1.DNSEntry
@@ -69,7 +63,7 @@ var _ = Describe("#DNSEntry", func() {
 		s := runtime.NewScheme()
 		Expect(dnsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
 
-		c = fake.NewFakeClientWithScheme(s)
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		vals = &EntryValues{
 			Name:    "test-deploy",
@@ -90,10 +84,7 @@ var _ = Describe("#DNSEntry", func() {
 			},
 		}
 
-		ca = kubernetes.NewChartApplier(cr.NewWithServerVersion(&version.Info{}), kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
-		Expect(ca).NotTo(BeNil(), "should return chart applier")
-
-		defaultDepWaiter = NewDNSEntry(vals, deployNS, ca, chartsRootPath, log, c, &fakeOps{})
+		defaultDepWaiter = NewEntry(log, c, deployNS, vals, &fakeOps{})
 	})
 
 	AfterEach(func() {
@@ -101,17 +92,19 @@ var _ = Describe("#DNSEntry", func() {
 	})
 
 	Describe("#Deploy", func() {
-		DescribeTable("correct DNSProvider is created", func(mutator func()) {
-			mutator()
+		DescribeTable("correct DNSProvider is created",
+			func(mutator func()) {
+				mutator()
 
-			Expect(defaultDepWaiter.Deploy(ctx)).ToNot(HaveOccurred())
+				Expect(defaultDepWaiter.Deploy(ctx)).ToNot(HaveOccurred())
 
-			actual := &dnsv1alpha1.DNSEntry{}
-			err := c.Get(ctx, client.ObjectKey{Name: dnsEntryName, Namespace: deployNS}, actual)
+				actual := &dnsv1alpha1.DNSEntry{}
+				err := c.Get(ctx, client.ObjectKey{Name: dnsEntryName, Namespace: deployNS}, actual)
 
-			Expect(err).NotTo(HaveOccurred())
-			Expect(actual).To(DeepDerivativeEqual(expected))
-		},
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actual).To(DeepDerivativeEqual(expected))
+			},
+
 			Entry("with no modification", func() {}),
 			Entry("with ownerID", func() {
 				vals.OwnerID = "dummy-emptyOwner"
@@ -121,7 +114,6 @@ var _ = Describe("#DNSEntry", func() {
 	})
 
 	Describe("#Wait", func() {
-
 		It("should return error when it's not found", func() {
 			Expect(defaultDepWaiter.Wait(ctx)).To(HaveOccurred())
 		})
@@ -130,23 +122,22 @@ var _ = Describe("#DNSEntry", func() {
 			expected.Status.State = "dummy-not-ready"
 			expected.Status.Message = pointer.StringPtr("some-error-message")
 
-			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing entry succeeds")
+			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing emptyEntry succeeds")
 
 			Expect(defaultDepWaiter.Wait(ctx)).To(HaveOccurred())
 		})
 
 		It("should return no error when is ready", func() {
 			expected.Status.State = "Ready"
-			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing entry succeeds")
+			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing emptyEntry succeeds")
 
 			Expect(defaultDepWaiter.Wait(ctx)).ToNot(HaveOccurred())
 		})
 
 		It("should set a default waiter", func() {
-			wrt := NewDNSEntry(vals, deployNS, ca, chartsRootPath, log, c, nil)
+			wrt := NewEntry(log, c, deployNS, vals, nil)
 			Expect(reflect.ValueOf(wrt).Elem().FieldByName("waiter").IsNil()).ToNot(BeTrue())
 		})
-
 	})
 
 	Describe("#Destroy", func() {
@@ -155,7 +146,7 @@ var _ = Describe("#DNSEntry", func() {
 		})
 
 		It("should not return error when it's deleted successfully", func() {
-			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing entry succeeds")
+			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing emptyEntry succeeds")
 
 			Expect(defaultDepWaiter.Destroy(ctx)).ToNot(HaveOccurred())
 		})
@@ -168,7 +159,7 @@ var _ = Describe("#DNSEntry", func() {
 					Namespace: deployNS,
 				}}).Times(1).Return(fmt.Errorf("some random error"))
 
-			defaultDepWaiter = NewDNSEntry(vals, deployNS, ca, chartsRootPath, log, mc, &fakeOps{})
+			defaultDepWaiter = NewEntry(log, mc, deployNS, vals, &fakeOps{})
 
 			Expect(defaultDepWaiter.Destroy(ctx)).To(HaveOccurred())
 		})
@@ -179,5 +170,4 @@ var _ = Describe("#DNSEntry", func() {
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).ToNot(HaveOccurred())
 		})
 	})
-
 })

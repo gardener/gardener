@@ -1183,13 +1183,11 @@ func handleIngressDNSEntry(ctx context.Context, c kubernetes.Interface, chartApp
 		values.Targets = []string{loadBalancerAddress}
 	}
 
-	dnsEntry := dns.NewDNSEntry(
-		values,
-		v1beta1constants.GardenNamespace,
-		chartApplier,
-		charts.Path,
+	dnsEntry := dns.NewEntry(
 		seedLogger,
 		c.Client(),
+		v1beta1constants.GardenNamespace,
+		values,
 		nil,
 	)
 

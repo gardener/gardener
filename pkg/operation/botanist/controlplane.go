@@ -1012,7 +1012,10 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 				OwnerID: ownerID,
 			},
 		)
-		b.Shoot.Components.Extensions.DNS.InternalEntry = dns.NewDNSEntry(
+		b.Shoot.Components.Extensions.DNS.InternalEntry = dns.NewEntry(
+			b.Logger,
+			seedClient,
+			b.Shoot.SeedNamespace,
 			&dns.EntryValues{
 				Name:    DNSInternalName,
 				DNSName: common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
@@ -1020,11 +1023,6 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 				OwnerID: ownerID,
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 			},
-			b.Shoot.SeedNamespace,
-			b.K8sSeedClient.ChartApplier(),
-			b.ChartsRootPath,
-			b.Logger,
-			seedClient,
 			nil,
 		)
 	}
@@ -1040,7 +1038,10 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 				OwnerID: ownerID,
 			},
 		)
-		b.Shoot.Components.Extensions.DNS.ExternalEntry = dns.NewDNSEntry(
+		b.Shoot.Components.Extensions.DNS.ExternalEntry = dns.NewEntry(
+			b.Logger,
+			seedClient,
+			b.Shoot.SeedNamespace,
 			&dns.EntryValues{
 				Name:    DNSExternalName,
 				DNSName: common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
@@ -1048,11 +1049,6 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 				OwnerID: ownerID,
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 			},
-			b.Shoot.SeedNamespace,
-			b.K8sSeedClient.ChartApplier(),
-			b.ChartsRootPath,
-			b.Logger,
-			seedClient,
 			nil,
 		)
 	}
