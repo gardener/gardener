@@ -265,13 +265,14 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		"",
 		cfg.SeedClientConnection.ClientConnectionConfiguration.Kubeconfig,
 		kubernetes.WithClientConnectionOptions(cfg.SeedClientConnection.ClientConnectionConfiguration),
+		kubernetes.WithDisabledCachedClient(),
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	if cfg.GardenClientConnection.KubeconfigSecret != nil {
-		kubeconfigFromBootstrap, csrName, seedName, err = bootstrapKubeconfig(ctx, logger, seedClient.DirectClient(), cfg)
+		kubeconfigFromBootstrap, csrName, seedName, err = bootstrapKubeconfig(ctx, logger, seedClient.Client(), cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -318,7 +319,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	// Delete bootstrap auth data if certificate was newly acquired
 	if len(csrName) > 0 && len(seedName) > 0 {
 		logger.Infof("Deleting bootstrap authentication data used to request a certificate")
-		if err := bootstrap.DeleteBootstrapAuth(ctx, k8sGardenClient.DirectClient(), csrName, seedName); err != nil {
+		if err := bootstrap.DeleteBootstrapAuth(ctx, k8sGardenClient.APIReader(), k8sGardenClient.Client(), csrName, seedName); err != nil {
 			return nil, err
 		}
 	}
@@ -357,7 +358,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	}
 
 	gardenClusterIdentity := &corev1.ConfigMap{}
-	if err := k8sGardenClient.DirectClient().Get(ctx, kutil.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), gardenClusterIdentity); err != nil {
+	if err := k8sGardenClient.APIReader().Get(ctx, kutil.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), gardenClusterIdentity); err != nil {
 		return nil, fmt.Errorf("unable to get Gardener`s cluster-identity ConfigMap: %v", err)
 	}
 
@@ -369,7 +370,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	// create the certificate manager to schedule certificate rotations
 	var certificateManager *certificate.Manager
 	if cfg.GardenClientConnection.KubeconfigSecret != nil {
-		certificateManager = certificate.NewCertificateManager(clientMap, seedClient.DirectClient(), cfg)
+		certificateManager = certificate.NewCertificateManager(clientMap, seedClient.Client(), cfg)
 	}
 
 	return &Gardenlet{

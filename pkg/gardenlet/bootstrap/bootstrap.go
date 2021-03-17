@@ -29,12 +29,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
-	kubernetesclientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
@@ -43,20 +42,20 @@ import (
 
 // RequestBootstrapKubeconfig creates a kubeconfig with a signed certificate using the given bootstrap client
 // returns the kubeconfig []byte representation, the CSR name, the seed name or an error
-func RequestBootstrapKubeconfig(ctx context.Context, logger logrus.FieldLogger, seedClient client.Client, clientSet kubernetesclientset.Interface, bootstrapConfig *rest.Config, gardenClientConnection *config.GardenClientConnection, seedName, bootstrapTargetCluster string) ([]byte, string, string, error) {
+func RequestBootstrapKubeconfig(ctx context.Context, logger logrus.FieldLogger, seedClient client.Client, boostrapClientSet kubernetes.Interface, gardenClientConnection *config.GardenClientConnection, seedName, bootstrapTargetCluster string) ([]byte, string, string, error) {
 	certificateSubject := &pkix.Name{
 		Organization: []string{v1beta1constants.SeedsGroup},
 		CommonName:   v1beta1constants.SeedUserNamePrefix + seedName,
 	}
 
-	certData, privateKeyData, csrName, err := certificate.RequestCertificate(ctx, logger, clientSet, certificateSubject, []string{}, []net.IP{})
+	certData, privateKeyData, csrName, err := certificate.RequestCertificate(ctx, logger, boostrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{})
 	if err != nil {
 		return nil, "", "", fmt.Errorf("unable to bootstrap the kubeconfig for the Garden cluster: %v", err)
 	}
 
 	logger.Infof("Storing kubeconfig with bootstrapped certificate into secret (%s/%s) on target cluster '%s'", gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name, bootstrapTargetCluster)
 
-	kubeconfig, err := bootstraputil.UpdateGardenKubeconfigSecret(ctx, bootstrapConfig, certData, privateKeyData, seedClient, gardenClientConnection)
+	kubeconfig, err := bootstraputil.UpdateGardenKubeconfigSecret(ctx, boostrapClientSet.RESTConfig(), certData, privateKeyData, seedClient, gardenClientConnection)
 	if err != nil {
 		return nil, "", "", fmt.Errorf("unable to update secret (%s/%s) with bootstrapped kubeconfig: %v", gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name, err)
 	}
@@ -79,12 +78,12 @@ func RequestBootstrapKubeconfig(ctx context.Context, logger logrus.FieldLogger, 
 // DeleteBootstrapAuth checks which authentication mechanism was used to request a certificate
 // (either a bootstrap token or a service account token was used). If the latter is true then it
 // also deletes the corresponding ClusterRoleBinding.
-func DeleteBootstrapAuth(ctx context.Context, c client.Client, csrName, seedName string) error {
+func DeleteBootstrapAuth(ctx context.Context, reader client.Reader, writer client.Writer, csrName, seedName string) error {
 	var username string
 
 	// try certificates v1 API first
 	csr := &certificatesv1.CertificateSigningRequest{}
-	if err := c.Get(ctx, kutil.Key(csrName), csr); err == nil {
+	if err := reader.Get(ctx, kutil.Key(csrName), csr); err == nil {
 		username = csr.Spec.Username
 	} else {
 		if !meta.IsNoMatchError(err) {
@@ -93,7 +92,7 @@ func DeleteBootstrapAuth(ctx context.Context, c client.Client, csrName, seedName
 
 		// certificates v1 API not found, fall back to v1beta1
 		csrv1beta1 := &certificatesv1beta1.CertificateSigningRequest{}
-		if err := c.Get(ctx, kutil.Key(csrName), csrv1beta1); err != nil {
+		if err := reader.Get(ctx, kutil.Key(csrName), csrv1beta1); err != nil {
 			return err
 		}
 		username = csrv1beta1.Spec.Username
@@ -133,5 +132,5 @@ func DeleteBootstrapAuth(ctx context.Context, c client.Client, csrName, seedName
 		)
 	}
 
-	return kutil.DeleteObjects(ctx, c, resourcesToDelete...)
+	return kutil.DeleteObjects(ctx, writer, resourcesToDelete...)
 }

@@ -66,7 +66,7 @@ func bootstrapKubeconfig(
 		return nil, "", "", nil
 	}
 
-	clientSet, err := kubernetes.NewClientFromBytes(bootstrapKubeconfig)
+	bootstrapClientSet, err := kubernetes.NewClientFromBytes(bootstrapKubeconfig)
 	if err != nil {
 		return nil, "", "", fmt.Errorf("unable to bootstrap client from bootstrap kubeconfig: %w", err)
 	}
@@ -76,5 +76,5 @@ func bootstrapKubeconfig(
 
 	logger.Info("Using provided bootstrap kubeconfig to request signed certificate.")
 
-	return bootstrap.RequestBootstrapKubeconfig(ctx, logger, seedClient, clientSet.Kubernetes(), clientSet.RESTConfig(), config.GardenClientConnection, seedName, bootstrapTargetCluster)
+	return bootstrap.RequestBootstrapKubeconfig(ctx, logger, seedClient, bootstrapClientSet, config.GardenClientConnection, seedName, bootstrapTargetCluster)
 }
