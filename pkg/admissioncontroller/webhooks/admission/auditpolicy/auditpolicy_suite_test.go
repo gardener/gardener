@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestNamespaceDeletion(t *testing.T) {
+func TestAuditPolicy(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "AdmissionController Admission Auditpolicy Suite")
+	RunSpecs(t, "AdmissionController Admission AuditPolicy Suite")
 }

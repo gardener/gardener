@@ -362,7 +362,6 @@ $ADMISSION_CONTROLLER_PORT_STRING
     - v1
     operations:
     - UPDATE
-    - DELETE
     resources:
     - configmaps
   failurePolicy: Fail

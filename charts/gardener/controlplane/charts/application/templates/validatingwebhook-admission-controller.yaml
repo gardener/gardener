@@ -127,7 +127,6 @@ webhooks:
         - v1
       operations:
         - UPDATE
-        - DELETE
       resources:
         - configmaps
   failurePolicy: Fail

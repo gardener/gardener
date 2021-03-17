@@ -109,7 +109,7 @@ rules:
     - group: "
       resources: ["pods"]
 `
-		inValidAuditPolicy = `
+		invalidAuditPolicy = `
 ---
 apiVersion: audit.k8s.io/v1beta1
 kind: Policy
@@ -221,6 +221,21 @@ rules:
 					Expect(err).ToNot(HaveOccurred())
 					Expect(ok).To(BeTrue())
 				}
+			}
+		})
+
+		It("should return true without error because of a valid semver version with dev tag", func() {
+			shootVersion := "1.12.3-dev"
+			gvks := []schema.GroupVersionKind{
+				auditv1alpha1.SchemeGroupVersion.WithKind(kind),
+				auditv1beta1.SchemeGroupVersion.WithKind(kind),
+				auditv1.SchemeGroupVersion.WithKind(kind),
+			}
+
+			for _, gvk := range gvks {
+				ok, err := auditpolicy.IsValidAuditPolicyVersion(shootVersion, &gvk)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(ok).To(BeTrue())
 			}
 		})
 
@@ -362,7 +377,7 @@ rules:
 				returnedCm := v1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{},
-					Data:       map[string]string{"policy": inValidAuditPolicy},
+					Data:       map[string]string{"policy": invalidAuditPolicy},
 				}
 				mockReader.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&v1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *v1.ConfigMap) error {
 					*cm = returnedCm
@@ -410,27 +425,16 @@ rules:
 
 		Context("ignored requests", func() {
 
-			It("should ignore other operations than UPDATE or DELETE", func() {
-				test(admissionv1.Create, cm, cm, true, statusCodeAllowed, "operation is not update or delete")
-				test(admissionv1.Connect, cm, cm, true, statusCodeAllowed, "operation is not update or delete")
+			It("should ignore other operations than UPDATE", func() {
+				test(admissionv1.Create, cm, cm, true, statusCodeAllowed, "operation is not update")
+				test(admissionv1.Connect, cm, cm, true, statusCodeAllowed, "operation is not update")
+				test(admissionv1.Delete, cm, cm, true, statusCodeAllowed, "operation is not update")
 			})
 
 			It("should ignore other resources than Configmaps", func() {
 				request.Kind = metav1.GroupVersionKind{Group: "foo", Version: "bar", Kind: "baz"}
 
-				test(admissionv1.Delete, cm, nil, true, statusCodeAllowed, "resource is not core.gardener.cloud.v1beta1.shoot or corev1.configmap")
-				test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "resource is not core.gardener.cloud.v1beta1.shoot or corev1.configmap")
-			})
-		})
-
-		Context("Delete", func() {
-
-			It("should allow if configmap does not have a finalizer from a Shoot", func() {
-				cm.ObjectMeta.Finalizers = nil
-				test(admissionv1.Delete, cm, nil, true, statusCodeAllowed, "deletion of audit-policy accepted")
-			})
-			It("should deny if configmap does have a finalizer from a Shoot", func() {
-				test(admissionv1.Delete, cm, nil, false, statusCodeInvalid, "deletion of audit-policy is forbidden as it is still referenced by a shoot")
+				test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "resource is not core.gardener.cloud/v1beta1.shoot or v1.configmap")
 			})
 		})
 
@@ -457,7 +461,7 @@ rules:
 					test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "configmap is not referenced by a Shoot")
 				})
 				It("did not change policy field", func() {
-					test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "audit policy did not change")
+					test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "audit policy not changed")
 				})
 
 				It("should allow if the auditPolicy is changed to something valid", func() {
@@ -517,7 +521,7 @@ rules:
 				It("holds audit policy which breaks validation rules", func() {
 					cm.DeepCopy()
 					newCm := cm.DeepCopy()
-					newCm.Data["policy"] = inValidAuditPolicy
+					newCm.Data["policy"] = invalidAuditPolicy
 
 					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "Unsupported value: \"FakeLevel\"")
 				})
