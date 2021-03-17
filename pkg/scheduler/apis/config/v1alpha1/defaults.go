@@ -81,10 +81,7 @@ func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.
 // SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the Gardener controller manager.
 func SetDefaults_LeaderElectionConfiguration(obj *LeaderElectionConfiguration) {
 	if obj.ResourceLock == "" {
-		// TODO: change default to leases after a few releases
-		// make sure, we had configmapsleases as default for a few releases before migrating to leases to ensure,
-		// all users had at least one version running with the hybrid lock to avoid split-brain scenarios when migrating.
-		obj.ResourceLock = resourcelock.ConfigMapsLeasesResourceLock
+		obj.ResourceLock = resourcelock.LeasesResourceLock
 	}
 
 	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(&obj.LeaderElectionConfiguration)

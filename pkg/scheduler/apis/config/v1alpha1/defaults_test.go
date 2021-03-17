@@ -88,7 +88,7 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.LeaderElection.LeaseDuration).To(Equal(metav1.Duration{Duration: 15 * time.Second}))
 				Expect(obj.LeaderElection.RenewDeadline).To(Equal(metav1.Duration{Duration: 10 * time.Second}))
 				Expect(obj.LeaderElection.RetryPeriod).To(Equal(metav1.Duration{Duration: 2 * time.Second}))
-				Expect(obj.LeaderElection.ResourceLock).To(Equal("configmapsleases"))
+				Expect(obj.LeaderElection.ResourceLock).To(Equal("leases"))
 				Expect(obj.LeaderElection.LockObjectNamespace).To(Equal("garden"))
 				Expect(obj.LeaderElection.LockObjectName).To(Equal("gardener-scheduler-leader-election"))
 			})
