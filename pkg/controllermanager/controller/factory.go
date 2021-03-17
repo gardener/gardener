@@ -30,6 +30,7 @@ import (
 	cloudprofilecontroller "github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
 	controllerregistrationcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
 	eventcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/event"
+	managedseedsetcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	plantcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/plant"
 	projectcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/project"
 	quotacontroller "github.com/gardener/gardener/pkg/controllermanager/controller/quota"
@@ -185,6 +186,11 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
 	}
 
+	managedSeedSetController, err := managedseedsetcontroller.NewManagedSeedSetController(ctx, f.clientMap, f.cfg, f.recorder, logger.Logger)
+	if err != nil {
+		return fmt.Errorf("failed initializing ManagedSeedSet controller: %w", err)
+	}
+
 	// Initialize the Controller metrics collection.
 	gardenmetrics.RegisterControllerMetrics(
 		controllermanager.ControllerWorkerSum,
@@ -199,6 +205,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		seedController,
 		shootController,
 		eventController,
+		managedSeedSetController,
 	)
 
 	go cloudProfileController.Run(ctx, f.cfg.Controllers.CloudProfile.ConcurrentSyncs)
@@ -211,6 +218,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	go seedController.Run(ctx, f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(ctx, f.cfg.Controllers.ShootMaintenance.ConcurrentSyncs, f.cfg.Controllers.ShootQuota.ConcurrentSyncs, f.cfg.Controllers.ShootHibernation.ConcurrentSyncs, f.cfg.Controllers.ShootReference.ConcurrentSyncs)
 	go eventController.Run(ctx)
+	go managedSeedSetController.Run(ctx, f.cfg.Controllers.ManagedSeedSet.ConcurrentSyncs)
 
 	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Get().GitVersion)
 

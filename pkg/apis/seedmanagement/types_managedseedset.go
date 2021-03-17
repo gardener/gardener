@@ -123,6 +123,41 @@ type ManagedSeedSetStatus struct {
 	CollisionCount *int32
 	// Conditions represents the latest available observations of a ManagedSeedSet's current state.
 	Conditions []gardencore.Condition
+	// PendingReplica, if not empty, indicates the replica that is currently pending creation, update, or deletion.
+	// This replica is in a state that requires the controller to wait for it to change before advancing to the next replica.
+	PendingReplica *PendingReplica
+}
+
+// PendingReplicaReason is a string enumeration type that enumerates all possible reasons for a replica to be pending.
+type PendingReplicaReason string
+
+const (
+	// ShootReconcilingReason indicates that the replica's shoot is reconciling.
+	ShootReconcilingReason PendingReplicaReason = "ShootReconciling"
+	// ShootDeletingReason indicates that the replica's shoot is deleting.
+	ShootDeletingReason PendingReplicaReason = "ShootDeleting"
+	// ShootReconcileFailedReason indicates that the reconciliation of this replica's shoot has failed.
+	ShootReconcileFailedReason PendingReplicaReason = "ShootReconcileFailed"
+	// ShootDeleteFailedReason indicates that the deletion of tis replica's shoot has failed.
+	ShootDeleteFailedReason PendingReplicaReason = "ShootDeleteFailed"
+	// ManagedSeedPreparingReason indicates that the replica's managed seed is preparing.
+	ManagedSeedPreparingReason PendingReplicaReason = "ManagedSeedPreparing"
+	// ManagedSeedDeletingReason indicates that the replica's managed seed is deleting.
+	ManagedSeedDeletingReason PendingReplicaReason = "ManagedSeedDeleting"
+	// SeedNotReadyReason indicates that the replica's seed is not ready.
+	SeedNotReadyReason PendingReplicaReason = "SeedNotReady"
+	// ShootNotHealthyReason indicates that the replica's shoot is not healthy.
+	ShootNotHealthyReason PendingReplicaReason = "ShootNotHealthy"
+)
+
+// PendingReplica contains information about a replica that is currently pending creation, update, or deletion.
+type PendingReplica struct {
+	// Name is the replica name.
+	Name string
+	// Reason is the reason for the replica to be pending.
+	Reason PendingReplicaReason
+	// Since is the moment in time since the replica is pending with the specified reason.
+	Since metav1.Time
 }
 
 // TODO Condition constants

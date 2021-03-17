@@ -383,6 +383,9 @@ global:
         shootReference:
           concurrentSyncs: 5
           protectAuditPolicyConfigMaps: false
+        managedSeedSet:
+          concurrentSyncs: 5
+          syncPeriod: 30m
       leaderElection:
         leaderElect: true
         leaseDuration: 15s

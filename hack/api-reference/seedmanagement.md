@@ -838,6 +838,21 @@ newest ControllerRevision.</p>
 <p>Conditions represents the latest available observations of a ManagedSeedSet&rsquo;s current state.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>pendingReplica</code></br>
+<em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.PendingReplica">
+PendingReplica
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>PendingReplica, if not empty, indicates the replica that is currently pending creation, update, or deletion.
+This replica is in a state that requires the controller to wait for it to change before advancing to the next replica.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSpec">ManagedSeedSpec
@@ -1042,6 +1057,71 @@ with the given deployment parameters and GardenletConfiguration.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="seedmanagement.gardener.cloud/v1alpha1.PendingReplica">PendingReplica
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.ManagedSeedSetStatus">ManagedSeedSetStatus</a>)
+</p>
+<p>
+<p>PendingReplica contains information about a replica that is currently pending creation, update, or deletion.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the replica name.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>reason</code></br>
+<em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.PendingReplicaReason">
+PendingReplicaReason
+</a>
+</em>
+</td>
+<td>
+<p>Reason is the reason for the replica to be pending.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>since</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<p>Since is the moment in time since the replica is pending with the specified reason.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="seedmanagement.gardener.cloud/v1alpha1.PendingReplicaReason">PendingReplicaReason
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#seedmanagement.gardener.cloud/v1alpha1.PendingReplica">PendingReplica</a>)
+</p>
+<p>
+<p>PendingReplicaReason is a string enumeration type that enumerates all possible reasons for a replica to be pending.</p>
+</p>
 <h3 id="seedmanagement.gardener.cloud/v1alpha1.RollingUpdateStrategy">RollingUpdateStrategy
 </h3>
 <p>

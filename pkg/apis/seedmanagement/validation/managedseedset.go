@@ -203,7 +203,7 @@ func ValidateManagedSeedSetStatus(status *seedmanagement.ManagedSeedSetStatus, f
 
 	// Ensure the next replica number is greater than or equal to the number of replicas
 	if status.NextReplicaNumber < status.Replicas {
-		allErrs = append(allErrs, field.Invalid(fieldPath.Child("nextReplicaNumber"), status.ReadyReplicas, "cannot be less than status.replicas"))
+		allErrs = append(allErrs, field.Invalid(fieldPath.Child("nextReplicaNumber"), status.NextReplicaNumber, "cannot be less than status.replicas"))
 	}
 
 	return allErrs
