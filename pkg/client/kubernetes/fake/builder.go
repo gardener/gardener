@@ -83,6 +83,7 @@ func (b *ClientSetBuilder) WithClient(client client.Client) *ClientSetBuilder {
 }
 
 // WithDirectClient sets the directClient attribute of the builder.
+// Deprecated: kubernetes.Interface.DirectClient is also deprecated.
 func (b *ClientSetBuilder) WithDirectClient(directClient client.Client) *ClientSetBuilder {
 	b.directClient = directClient
 	return b

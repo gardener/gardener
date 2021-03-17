@@ -291,7 +291,7 @@ var _ = Describe("ControllerRegistrationControl", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
-		k8sGardenClient := fakeclientset.NewClientSetBuilder().WithClient(k8sGardenRuntimeClient).WithDirectClient(k8sGardenRuntimeClient).Build()
+		k8sGardenClient := fakeclientset.NewClientSetBuilder().WithClient(k8sGardenRuntimeClient).Build()
 
 		clientMap = fake.NewClientMap().AddClient(keys.ForGarden(), k8sGardenClient)
 
