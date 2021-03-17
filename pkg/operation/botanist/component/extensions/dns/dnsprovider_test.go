@@ -26,17 +26,12 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	cr "github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -53,7 +48,6 @@ var _ = Describe("#DNSProvider", func() {
 
 	var (
 		ctrl             *gomock.Controller
-		ca               kubernetes.ChartApplier
 		ctx              context.Context
 		c                client.Client
 		expectedSecret   *corev1.Secret
@@ -73,7 +67,7 @@ var _ = Describe("#DNSProvider", func() {
 		Expect(corev1.AddToScheme(s)).NotTo(HaveOccurred())
 		Expect(dnsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
 
-		c = fake.NewFakeClientWithScheme(s)
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		expectedSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -89,7 +83,7 @@ var _ = Describe("#DNSProvider", func() {
 		vals = &ProviderValues{
 			Name:     "test-deploy",
 			Purpose:  "test",
-			Provider: "some-provider",
+			Provider: "some-emptyProvider",
 			SecretData: map[string][]byte{
 				"some-data": []byte("foo"),
 			},
@@ -107,12 +101,9 @@ var _ = Describe("#DNSProvider", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      dnsProviderName,
 				Namespace: deployNS,
-				Annotations: map[string]string{
-					"dns.gardener.cloud/realms": "test-chart-namespace,",
-				},
 			},
 			Spec: dnsv1alpha1.DNSProviderSpec{
-				Type: "some-provider",
+				Type: "some-emptyProvider",
 				SecretRef: &corev1.SecretReference{
 					Name: secretName,
 				},
@@ -127,10 +118,7 @@ var _ = Describe("#DNSProvider", func() {
 			},
 		}
 
-		ca = kubernetes.NewChartApplier(cr.NewWithServerVersion(&version.Info{}), kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
-		Expect(ca).NotTo(BeNil(), "should return chart applier")
-
-		defaultDepWaiter = NewDNSProvider(vals, deployNS, ca, chartsRootPath, log, c, &fakeOps{})
+		defaultDepWaiter = NewProvider(log, c, deployNS, vals, &fakeOps{})
 	})
 
 	AfterEach(func() {
@@ -138,17 +126,19 @@ var _ = Describe("#DNSProvider", func() {
 	})
 
 	Describe("#Deploy", func() {
-		DescribeTable("correct DNSProvider is created", func(mutator func()) {
-			mutator()
+		DescribeTable("correct DNSProvider is created",
+			func(mutator func()) {
+				mutator()
 
-			Expect(defaultDepWaiter.Deploy(ctx)).ToNot(HaveOccurred())
+				Expect(defaultDepWaiter.Deploy(ctx)).ToNot(HaveOccurred())
 
-			actualProvider := &dnsv1alpha1.DNSProvider{}
-			err := c.Get(ctx, client.ObjectKey{Name: dnsProviderName, Namespace: deployNS}, actualProvider)
+				actualProvider := &dnsv1alpha1.DNSProvider{}
+				err := c.Get(ctx, client.ObjectKey{Name: dnsProviderName, Namespace: deployNS}, actualProvider)
 
-			Expect(err).NotTo(HaveOccurred())
-			Expect(actualProvider).To(DeepDerivativeEqual(expectedDNS))
-		},
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actualProvider).To(DeepDerivativeEqual(expectedDNS))
+			},
+
 			Entry("with no modification", func() {}),
 			Entry("with no domains", func() {
 				vals.Domains = nil
@@ -194,13 +184,14 @@ var _ = Describe("#DNSProvider", func() {
 			}),
 		)
 	})
+
 	Describe("#Destroy", func() {
 		It("should not return error when it's not found", func() {
 			Expect(defaultDepWaiter.Destroy(ctx)).ToNot(HaveOccurred())
 		})
 
 		It("should not return error when it's deleted successfully", func() {
-			Expect(c.Create(ctx, expectedDNS)).ToNot(HaveOccurred(), "adding pre-existing entry succeeds")
+			Expect(c.Create(ctx, expectedDNS)).ToNot(HaveOccurred(), "adding pre-existing emptyEntry succeeds")
 
 			Expect(defaultDepWaiter.Destroy(ctx)).ToNot(HaveOccurred())
 		})
@@ -213,7 +204,7 @@ var _ = Describe("#DNSProvider", func() {
 					Namespace: deployNS,
 				}}).Times(1).Return(fmt.Errorf("some random error"))
 
-			Expect(NewDNSProvider(vals, deployNS, ca, chartsRootPath, log, mc, &fakeOps{}).Destroy(ctx)).To(HaveOccurred())
+			Expect(NewProvider(log, mc, deployNS, vals, &fakeOps{}).Destroy(ctx)).To(HaveOccurred())
 		})
 	})
 
@@ -226,7 +217,7 @@ var _ = Describe("#DNSProvider", func() {
 			expectedDNS.Status.State = "dummy-not-ready"
 			expectedDNS.Status.Message = pointer.StringPtr("some-error-message")
 
-			Expect(c.Create(ctx, expectedDNS)).ToNot(HaveOccurred(), "adding pre-existing provider succeeds")
+			Expect(c.Create(ctx, expectedDNS)).ToNot(HaveOccurred(), "adding pre-existing emptyProvider succeeds")
 
 			Expect(defaultDepWaiter.Wait(ctx)).To(HaveOccurred())
 		})
@@ -234,13 +225,13 @@ var _ = Describe("#DNSProvider", func() {
 		It("should return no error when is ready", func() {
 			expectedDNS.Status.State = "Ready"
 
-			Expect(c.Create(ctx, expectedDNS)).ToNot(HaveOccurred(), "adding pre-existing provider succeeds")
+			Expect(c.Create(ctx, expectedDNS)).ToNot(HaveOccurred(), "adding pre-existing emptyProvider succeeds")
 
 			Expect(defaultDepWaiter.Wait(ctx)).ToNot(HaveOccurred())
 		})
 
 		It("should set a default waiter", func() {
-			wrt := NewDNSProvider(vals, deployNS, ca, chartsRootPath, log, c, nil)
+			wrt := NewProvider(log, c, deployNS, vals, nil)
 			Expect(reflect.ValueOf(wrt).Elem().FieldByName("waiter").IsNil()).ToNot(BeTrue())
 		})
 	})
@@ -250,5 +241,4 @@ var _ = Describe("#DNSProvider", func() {
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).ToNot(HaveOccurred())
 		})
 	})
-
 })

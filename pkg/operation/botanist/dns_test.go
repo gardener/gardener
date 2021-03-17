@@ -120,12 +120,8 @@ var _ = Describe("dns", func() {
 			expected := &dnsv1alpha1.DNSProvider{
 				TypeMeta: metav1.TypeMeta{Kind: "DNSProvider", APIVersion: "dns.gardener.cloud/v1alpha1"},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "external",
-					Namespace: seedNS,
-					Annotations: map[string]string{
-						// Should there be a comma after the last realm?
-						"dns.gardener.cloud/realms": "test-ns,",
-					},
+					Name:            "external",
+					Namespace:       seedNS,
 					ResourceVersion: "1",
 				},
 				Spec: dnsv1alpha1.DNSProviderSpec{
