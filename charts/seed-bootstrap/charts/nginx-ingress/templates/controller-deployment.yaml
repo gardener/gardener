@@ -81,7 +81,7 @@ spec:
               path: /healthz
               port: 10254
               scheme: HTTP
-            initialDelaySeconds: 10
+            initialDelaySeconds: 40
             periodSeconds: 10
             successThreshold: 1
             timeoutSeconds: 1
@@ -94,6 +94,7 @@ spec:
               protocol: TCP
           readinessProbe:
             failureThreshold: 3
+            initialDelaySeconds: 40
             httpGet:
               path: /healthz
               port: 10254
@@ -104,10 +105,10 @@ spec:
           resources:
             limits:
               cpu: 400m
-              memory: 2048Mi
+              memory: 1500Mi
             requests:
               cpu: 100m
-              memory: 512Mi
+              memory: 375Mi
       hostNetwork: false
       serviceAccountName: nginx-ingress
       terminationGracePeriodSeconds: 60
