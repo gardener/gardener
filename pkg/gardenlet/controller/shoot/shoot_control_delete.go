@@ -132,8 +132,8 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			return nil
 		}),
 		errors.ToExecute("Retrieve the infrastructure resource", func() error {
-			obj := &extensionsv1alpha1.Infrastructure{}
-			if err := botanist.K8sSeedClient.DirectClient().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, o.Shoot.Info.Name), obj); err != nil {
+			obj, err := botanist.Shoot.Components.Extensions.Infrastructure.Get(ctx)
+			if err != nil {
 				if apierrors.IsNotFound(err) {
 					return nil
 				}
@@ -622,12 +622,6 @@ func needsControlPlaneDeployment(ctx context.Context, o *operation.Operation, ku
 	// The infrastructure resource has not been found, no need to redeploy the control plane
 	if infrastructure == nil {
 		return false, nil
-	}
-
-	if providerStatus := infrastructure.Status.ProviderStatus; providerStatus != nil {
-		// The infrastructure resource has been found with a non-nil provider status, so redeploy the control plane
-		o.Shoot.InfrastructureStatus = providerStatus.Raw
-		return true, nil
 	}
 
 	// The infrastructure resource has been found, but its provider status is nil

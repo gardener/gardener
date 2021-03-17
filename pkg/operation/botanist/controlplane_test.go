@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	mockcontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane/mock"
+	mockinfrastructure "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure/mock"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -65,6 +66,7 @@ var _ = Describe("controlplane", func() {
 		scheme *runtime.Scheme
 		client client.Client
 
+		infrastructure       *mockinfrastructure.MockInterface
 		controlPlane         *mockcontrolplane.MockInterface
 		controlPlaneExposure *mockcontrolplane.MockInterface
 		botanist             *Botanist
@@ -82,6 +84,7 @@ var _ = Describe("controlplane", func() {
 		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		client = fake.NewFakeClientWithScheme(scheme)
 
+		infrastructure = mockinfrastructure.NewMockInterface(ctrl)
 		controlPlane = mockcontrolplane.NewMockInterface(ctrl)
 		controlPlaneExposure = mockcontrolplane.NewMockInterface(ctrl)
 
@@ -104,6 +107,7 @@ var _ = Describe("controlplane", func() {
 							DNS:                  &shoot.DNS{},
 							ControlPlane:         controlPlane,
 							ControlPlaneExposure: controlPlaneExposure,
+							Infrastructure:       infrastructure,
 						},
 					},
 				},
@@ -446,13 +450,11 @@ var _ = Describe("controlplane", func() {
 	})
 
 	Describe("#DeployControlPlane", func() {
-		var infrastructureStatus = []byte("infra-status")
+		var infrastructureStatus = &runtime.RawExtension{Raw: []byte("infra-status")}
 
 		BeforeEach(func() {
-			botanist.Shoot.InfrastructureStatus = infrastructureStatus
-			controlPlane.EXPECT().SetInfrastructureProviderStatus(&runtime.RawExtension{
-				Raw: infrastructureStatus,
-			})
+			infrastructure.EXPECT().ProviderStatus().Return(infrastructureStatus)
+			controlPlane.EXPECT().SetInfrastructureProviderStatus(infrastructureStatus)
 		})
 
 		Context("deploy", func() {

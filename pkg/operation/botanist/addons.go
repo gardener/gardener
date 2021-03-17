@@ -314,7 +314,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		shootInfo["domain"] = *domain
 	}
 	var extensions []string
-	for extensionType := range b.Shoot.Extensions {
+	for extensionType := range b.Shoot.Components.Extensions.Extension.Extensions() {
 		extensions = append(extensions, extensionType)
 	}
 	shootInfo["extensions"] = strings.Join(extensions, ",")

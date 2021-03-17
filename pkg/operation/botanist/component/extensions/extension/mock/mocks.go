@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	extension "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -75,6 +76,20 @@ func (m *MockInterface) Destroy(arg0 context.Context) error {
 func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
+}
+
+// Extensions mocks base method.
+func (m *MockInterface) Extensions() map[string]extension.Extension {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Extensions")
+	ret0, _ := ret[0].(map[string]extension.Extension)
+	return ret0
+}
+
+// Extensions indicates an expected call of Extensions.
+func (mr *MockInterfaceMockRecorder) Extensions() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Extensions", reflect.TypeOf((*MockInterface)(nil).Extensions))
 }
 
 // Migrate mocks base method.

@@ -64,10 +64,6 @@ func (b *Botanist) WaitForInfrastructure(ctx context.Context) error {
 		return err
 	}
 
-	if providerStatus := b.Shoot.Components.Extensions.Infrastructure.ProviderStatus(); providerStatus != nil {
-		b.Shoot.InfrastructureStatus = providerStatus.Raw
-	}
-
 	if nodesCIDR := b.Shoot.Components.Extensions.Infrastructure.NodesCIDR(); nodesCIDR != nil {
 		shootCopy := b.Shoot.Info.DeepCopy()
 		return b.UpdateShootAndCluster(ctx, shootCopy, func() error {

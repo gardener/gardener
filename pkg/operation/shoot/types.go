@@ -38,7 +38,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 
 	"github.com/Masterminds/semver"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -79,14 +78,8 @@ type Shoot struct {
 	NodeLocalDNSEnabled        bool
 	Networks                   *Networks
 
-	Components *Components
-
-	Extensions           map[string]extension.Extension
-	InfrastructureStatus []byte
-
+	Components     *Components
 	ETCDEncryption *etcdencryption.EncryptionConfig
-
-	ResourceRefs map[string]autoscalingv1.CrossVersionObjectReference
 }
 
 // Components contains different components deployed in the Shoot cluster.

@@ -48,18 +48,24 @@ var TimeNow = time.Now
 // Interface contains references to an Extension deployer.
 type Interface interface {
 	component.DeployMigrateWaiter
-	DeleteStaleResources(ctx context.Context) error
+	// DeleteStaleResources deletes unused Extension resources from the shoot namespace in the seed.
+	DeleteStaleResources(context.Context) error
+	// Extensions returns the map of extensions where the key is the type and the value is an Extension structure.
+	Extensions() map[string]Extension
 }
 
 // Extension contains information about the desired Extension resources as well as configuration information.
 type Extension struct {
 	extensionsv1alpha1.Extension
+	// Timeout is the maximum waiting time for the Extension status to report readiness.
 	Timeout time.Duration
 }
 
 // Values contains the values used to create an Extension resources.
 type Values struct {
-	Namespace  string
+	// Namespace is the namespace into which the Extension resources should be deployed.
+	Namespace string
+	// Extensions is the map of extensions where the key is the type and the value is an Extension structure.
 	Extensions map[string]Extension
 }
 
@@ -224,26 +230,31 @@ func (e *extension) forEach(fn func(context.Context, extensionsv1alpha1.Extensio
 	return fns
 }
 
+// Extensions returns the map of extensions where the key is the type and the value is an Extension structure.
+func (e *extension) Extensions() map[string]Extension {
+	return e.values.Extensions
+}
+
 type deployer struct {
 	client client.Client
 	obj    extensionsv1alpha1.Extension
 }
 
 func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
-	extension := &extensionsv1alpha1.Extension{
+	obj := &extensionsv1alpha1.Extension{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      d.obj.Name,
 			Namespace: d.obj.Namespace,
 		},
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, d.client, extension, func() error {
-		metav1.SetMetaDataAnnotation(&extension.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&extension.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
-		extension.Spec.Type = d.obj.Spec.Type
-		extension.Spec.ProviderConfig = d.obj.Spec.ProviderConfig
+	_, err := controllerutil.CreateOrUpdate(ctx, d.client, obj, func() error {
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+		obj.Spec.Type = d.obj.Spec.Type
+		obj.Spec.ProviderConfig = d.obj.Spec.ProviderConfig
 		return nil
 	})
 
-	return extension, err
+	return obj, err
 }

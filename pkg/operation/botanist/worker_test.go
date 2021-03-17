@@ -25,6 +25,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	mockinfrastructure "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure/mock"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
 	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/mock"
 	mockworker "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker/mock"
@@ -48,13 +49,14 @@ var _ = Describe("Worker", func() {
 		c                     *mockclient.MockClient
 		worker                *mockworker.MockInterface
 		operatingSystemConfig *mockoperatingsystemconfig.MockInterface
+		infrastructure        *mockinfrastructure.MockInterface
 		botanist              *Botanist
 
 		ctx                                   = context.TODO()
 		fakeErr                               = fmt.Errorf("fake")
 		shootState                            = &gardencorev1alpha1.ShootState{}
 		sshPublicKey                          = []byte("key")
-		infrastructureProviderStatus          = []byte("infrastatus")
+		infrastructureProviderStatus          = &runtime.RawExtension{Raw: []byte("infrastatus")}
 		workerNameToOperatingSystemConfigMaps = map[string]*operatingsystemconfig.OperatingSystemConfigs{"foo": {}}
 		labelSelectorCloudConfigRole          = client.MatchingLabels{"gardener.cloud/role": "cloud-config"}
 	)
@@ -64,6 +66,7 @@ var _ = Describe("Worker", func() {
 		c = mockclient.NewMockClient(ctrl)
 		worker = mockworker.NewMockInterface(ctrl)
 		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
+		infrastructure = mockinfrastructure.NewMockInterface(ctrl)
 		botanist = &Botanist{Operation: &operation.Operation{
 			Secrets: map[string]*corev1.Secret{
 				"ssh-keypair": {Data: map[string][]byte{"id_rsa.pub": sshPublicKey}},
@@ -71,11 +74,11 @@ var _ = Describe("Worker", func() {
 			Shoot: &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					Extensions: &shootpkg.Extensions{
+						Infrastructure:        infrastructure,
 						OperatingSystemConfig: operatingSystemConfig,
 						Worker:                worker,
 					},
 				},
-				InfrastructureStatus: infrastructureProviderStatus,
 			},
 			ShootState: shootState,
 		}}
@@ -87,9 +90,11 @@ var _ = Describe("Worker", func() {
 
 	Describe("#DeployWorker", func() {
 		BeforeEach(func() {
+			infrastructure.EXPECT().ProviderStatus().Return(infrastructureProviderStatus)
 			operatingSystemConfig.EXPECT().WorkerNameToOperatingSystemConfigsMap().Return(workerNameToOperatingSystemConfigMaps)
+
 			worker.EXPECT().SetSSHPublicKey(sshPublicKey)
-			worker.EXPECT().SetInfrastructureProviderStatus(&runtime.RawExtension{Raw: infrastructureProviderStatus})
+			worker.EXPECT().SetInfrastructureProviderStatus(infrastructureProviderStatus)
 			worker.EXPECT().SetWorkerNameToOperatingSystemConfigsMap(workerNameToOperatingSystemConfigMaps)
 		})
 

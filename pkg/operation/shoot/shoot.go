@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils"
@@ -40,9 +39,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -211,12 +208,6 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 		SystemComponents: &SystemComponents{},
 	}
 
-	extensions, err := calculateExtensions(ctx, c, shootObject, shoot.SeedNamespace)
-	if err != nil {
-		return nil, fmt.Errorf("cannot calculate required extensions for shoot %s: %v", shootObject.Name, err)
-	}
-	shoot.Extensions = extensions
-
 	// Determine information about external domain for shoot cluster.
 	externalDomain, err := ConstructExternalDomain(ctx, c, shootObject, secret, b.defaultDomains)
 	if err != nil {
@@ -255,19 +246,10 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	}
 	shoot.Networks = networks
 
-	shoot.ResourceRefs = getResourceRefs(shootObject)
 	shoot.NodeLocalDNSEnabled = gardenletfeatures.FeatureGate.Enabled(features.NodeLocalDNS)
 	shoot.Purpose = gardencorev1beta1helper.GetPurpose(shootObject)
 
 	return shoot, nil
-}
-
-func calculateExtensions(ctx context.Context, gardenClient client.Client, shoot *gardencorev1beta1.Shoot, seedNamespace string) (map[string]extension.Extension, error) {
-	controllerRegistrations := &gardencorev1beta1.ControllerRegistrationList{}
-	if err := gardenClient.List(ctx, controllerRegistrations); err != nil {
-		return nil, err
-	}
-	return MergeExtensions(controllerRegistrations.Items, shoot.Spec.Extensions, seedNamespace)
 }
 
 // GetExtensionComponents returns a list of component.DeployMigrateWaiters of all extension components.
@@ -468,65 +450,6 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 	return externalDomain, nil
 }
 
-// MergeExtensions merges the given controller registrations with the given extensions, expecting that each type in
-// extensions is also represented in the registration. It ignores all extensions that were explicitly disabled in the
-// shoot spec.
-func MergeExtensions(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, namespace string) (map[string]extension.Extension, error) {
-	var (
-		typeToExtension    = make(map[string]extension.Extension)
-		requiredExtensions = make(map[string]extension.Extension)
-	)
-
-	// Extensions enabled by default for all Shoot clusters.
-	for _, reg := range registrations {
-		for _, res := range reg.Spec.Resources {
-			if res.Kind != extensionsv1alpha1.ExtensionResource {
-				continue
-			}
-
-			timeout := extension.DefaultTimeout
-			if res.ReconcileTimeout != nil {
-				timeout = res.ReconcileTimeout.Duration
-			}
-
-			typeToExtension[res.Type] = extension.Extension{
-				Extension: extensionsv1alpha1.Extension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      res.Type,
-						Namespace: namespace,
-					},
-					Spec: extensionsv1alpha1.ExtensionSpec{
-						DefaultSpec: extensionsv1alpha1.DefaultSpec{
-							Type: res.Type,
-						},
-					},
-				},
-				Timeout: timeout,
-			}
-
-			if res.GloballyEnabled != nil && *res.GloballyEnabled {
-				requiredExtensions[res.Type] = typeToExtension[res.Type]
-			}
-		}
-	}
-
-	// Extensions defined in Shoot resource.
-	for _, extension := range extensions {
-		if obj, ok := typeToExtension[extension.Type]; ok {
-			if utils.IsTrue(extension.Disabled) {
-				delete(requiredExtensions, extension.Type)
-				continue
-			}
-
-			obj.Spec.ProviderConfig = extension.ProviderConfig
-			requiredExtensions[extension.Type] = obj
-			continue
-		}
-	}
-
-	return requiredExtensions, nil
-}
-
 // ToNetworks return a network with computed cidrs and ClusterIPs
 // for a Shoot
 func ToNetworks(s *gardencorev1beta1.Shoot) (*Networks, error) {
@@ -635,13 +558,4 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 	}
 
 	return requiredExtensions
-}
-
-// getResourceRefs returns resource references from the Shoot spec as map[string]autoscalingv1.CrossVersionObjectReference.
-func getResourceRefs(shoot *gardencorev1beta1.Shoot) map[string]autoscalingv1.CrossVersionObjectReference {
-	resourceRefs := make(map[string]autoscalingv1.CrossVersionObjectReference)
-	for _, r := range shoot.Spec.Resources {
-		resourceRefs[r.Name] = r.ResourceRef
-	}
-	return resourceRefs
 }

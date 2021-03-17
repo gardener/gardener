@@ -39,8 +39,6 @@ import (
 const (
 	// DefaultInterval is the default interval for retry operations.
 	DefaultInterval = 5 * time.Second
-	// DefaultSevereThreshold  is the default threshold until an error reported by another component is treated as 'severe'.
-	DefaultSevereThreshold = 30 * time.Second
 )
 
 // New takes an operation object <o> and creates a new Botanist object. It checks whether the given Shoot DNS
@@ -89,7 +87,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.Extensions.Extension = b.DefaultExtension(b.K8sSeedClient.DirectClient())
+	o.Shoot.Components.Extensions.Extension, err = b.DefaultExtension(ctx, b.K8sSeedClient.DirectClient())
+	if err != nil {
+		return nil, err
+	}
 	o.Shoot.Components.Extensions.Infrastructure = b.DefaultInfrastructure(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.Network = b.DefaultNetwork(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.OperatingSystemConfig, err = b.DefaultOperatingSystemConfig(b.K8sSeedClient.DirectClient())
