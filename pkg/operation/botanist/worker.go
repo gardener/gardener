@@ -138,10 +138,10 @@ var (
 	// IntervalWaitCloudConfigUpdated is the interval when waiting until the cloud config was updated for all worker pools.
 	IntervalWaitCloudConfigUpdated = 5 * time.Second
 	// TimeoutWaitCloudConfigUpdated is the timeout when waiting until the cloud config was updated for all worker pools.
-	TimeoutWaitCloudConfigUpdated = 2 * time.Minute
+	TimeoutWaitCloudConfigUpdated = downloader.UnitRestartSeconds*time.Second*2 + executor.ExecutionMaxDelaySeconds*time.Second
 )
 
-// WaitUntilCloudConfigUpdatedForAllWorkerPools waits for a maximum 2 minutes until all the nodes for all the worker
+// WaitUntilCloudConfigUpdatedForAllWorkerPools waits for a maximum of 6 minutes until all the nodes for all the worker
 // pools in the Shoot have successfully applied the desired version of their cloud-config user data.
 func (b *Botanist) WaitUntilCloudConfigUpdatedForAllWorkerPools(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitCloudConfigUpdated)

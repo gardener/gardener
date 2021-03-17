@@ -17,6 +17,7 @@ package downloader
 import (
 	"bytes"
 	"path/filepath"
+	"strconv"
 	"text/template"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -58,6 +59,8 @@ const (
 	UnitName = Name + ".service"
 	// SecretName is a constant for the secret name for the cloud-config-downloader's kubeconfig secret.
 	SecretName = Name
+	// UnitRestartSeconds is the number of seconds after which the cloud-config-downloader unit will be restarted.
+	UnitRestartSeconds = 30
 
 	// DataKeyScript is the key whose value is the to-be-executed cloud-config user-data script inside a data map of a
 	// Kubernetes secret object.
@@ -131,7 +134,7 @@ After=` + docker.UnitName + ` docker.socket
 Wants=docker.socket
 [Service]
 Restart=always
-RestartSec=30
+RestartSec=` + strconv.Itoa(UnitRestartSeconds) + `
 RuntimeMaxSec=1200
 EnvironmentFile=/etc/environment
 ExecStart=` + PathCCDScript + `

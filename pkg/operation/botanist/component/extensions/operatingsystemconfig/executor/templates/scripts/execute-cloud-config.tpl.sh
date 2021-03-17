@@ -8,6 +8,9 @@ PATH_CHECKSUM="{{ .pathDownloadedChecksum }}"
 PATH_CCD_SCRIPT="{{ .pathCCDScript }}"
 PATH_CCD_SCRIPT_CHECKSUM="{{ .pathCCDScriptChecksum }}"
 PATH_CCD_SCRIPT_CHECKSUM_OLD="${PATH_CCD_SCRIPT_CHECKSUM}.old"
+PATH_EXECUTION_DELAY_SECONDS="{{ .pathExecutionDelaySeconds }}"
+PATH_EXECUTION_LAST_DATE="{{ .pathExecutionLastDate }}"
+
 mkdir -p "{{ .pathDownloadsDirectory }}" "{{ .pathKubeletDirectory }}"
 
 function docker-preload() {
@@ -63,6 +66,8 @@ if [ ! -f "$PATH_CCD_SCRIPT_CHECKSUM_OLD" ]; then
   touch "$PATH_CCD_SCRIPT_CHECKSUM_OLD"
 fi
 
+md5sum ${PATH_CCD_SCRIPT} > ${PATH_CCD_SCRIPT_CHECKSUM}
+
 if [[ ! -f "{{ .pathKubeletKubeconfigReal }}" ]] || [[ ! -f "{{ .pathKubeletDirectory }}/pki/kubelet-client-current.pem" ]]; then
   cat <<EOF > "{{ .pathKubeletKubeconfigBootstrap }}"
 ---
@@ -90,10 +95,57 @@ else
   rm -f "{{ .pathKubeletKubeconfigBootstrap }}"
 fi
 
-md5sum ${PATH_CCD_SCRIPT} > ${PATH_CCD_SCRIPT_CHECKSUM}
+NODENAME=
+ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-services"
 
+# Try to find Node object for this machine if already registered to the cluster.
+if [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
+  {{`NODE="$(/opt/bin/kubectl --kubeconfig="`}}{{ .pathKubeletKubeconfigReal }}{{`" get node -l "kubernetes.io/hostname=$(hostname)" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ if (index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\") }} {{ index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}{{ end }}")"`}}
+
+  if [[ ! -z "$NODE" ]]; then
+    NODENAME="$(echo "$NODE" | awk '{print $1}')"
+    SYSTEMD_SERVICES_TO_RESTART="$(echo "$NODE" | awk '{print $2}')"
+  fi
+
+  # Restart systemd services if requested
+  restart_ccd=n
+  for service in $(echo "$SYSTEMD_SERVICES_TO_RESTART" | sed "s/,/ /g"); do
+    if [[ ${service} == {{ .cloudConfigDownloaderName }}* ]]; then
+      restart_ccd=y
+      continue
+    fi
+    echo "Restarting systemd service $service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
+    systemctl restart "$service" || true
+  done
+  /opt/bin/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
+  if [[ ${restart_ccd} == "y" ]]; then
+    echo "Restarting systemd service {{ .unitNameCloudConfigDownloader }} due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
+    systemctl restart "{{ .unitNameCloudConfigDownloader }}" || true
+  fi
+
+  # If the time difference from the last execution till now is smaller than the node-specific delay then we exit early
+  # and don't apply the (potentially updated) cloud-config user data. This is to spread the restarts of the systemd
+  # units and to prevent too many restarts happening on the nodes at roughly the same time.
+  if [[ ! -f "$PATH_EXECUTION_DELAY_SECONDS" ]]; then
+    echo $(({{ .executionMinDelaySeconds }} + $RANDOM % {{ .executionMaxDelaySeconds }})) > "$PATH_EXECUTION_DELAY_SECONDS"
+  fi
+  execution_delay_seconds=$(cat "$PATH_EXECUTION_DELAY_SECONDS")
+
+  if [[ -f "$PATH_EXECUTION_LAST_DATE" ]]; then
+    execution_last_date=$(cat "$PATH_EXECUTION_LAST_DATE")
+    now_date=$(date +%s)
+
+    if [[ $((now_date - execution_last_date)) -lt $execution_delay_seconds ]]; then
+      echo "$(date) Execution delay for this node is $execution_delay_seconds seconds, and the last execution was at $(date -d @$execution_last_date). Exiting now."
+      exit 0
+    fi
+  fi
+fi
+
+# Apply most recent cloud-config user-data, reload the systemd daemon and restart the units to make the changes
+# effective.
 if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || ! diff "$PATH_CCD_SCRIPT_CHECKSUM" "$PATH_CCD_SCRIPT_CHECKSUM_OLD" >/dev/null; then
-  echo "Seen newer cloud config or cloud config downloder version"
+  echo "Seen newer cloud config or cloud config downloader version"
   if {{ .reloadConfigCommand }}; then
     echo "Successfully applied new cloud config version"
     systemctl daemon-reload
@@ -110,35 +162,9 @@ fi
 
 rm "$PATH_CLOUDCONFIG" "$PATH_CCD_SCRIPT_CHECKSUM"
 
-ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-services"
-
-# Try to find Node object for this machine
-if [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
-  {{`NODE="$(/opt/bin/kubectl --kubeconfig="`}}{{ .pathKubeletKubeconfigReal }}{{`" get node -l "kubernetes.io/hostname=$(hostname)" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ if (index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\") }} {{ index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}{{ end }}")"`}}
-
-  if [[ ! -z "$NODE" ]]; then
-    NODENAME="$(echo "$NODE" | awk '{print $1}')"
-    SYSTEMD_SERVICES_TO_RESTART="$(echo "$NODE" | awk '{print $2}')"
-  fi
-
-  # Update checksum/cloud-config-data annotation on Node object if possible
-  if [[ ! -z "$NODENAME" ]] && [[ -f "$PATH_CHECKSUM" ]]; then
-    /opt/bin/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "{{ .annotationKeyChecksum }}=$(cat "$PATH_CHECKSUM")" --overwrite
-  fi
-
-  # Restart systemd services if requested
-  restart_ccd=n
-  for service in $(echo "$SYSTEMD_SERVICES_TO_RESTART" | sed "s/,/ /g"); do
-    if [[ ${service} == cloud-config-downloader* ]]; then
-      restart_ccd=y
-      continue
-    fi
-    echo "Restarting systemd service $service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
-    systemctl restart "$service" || true
-  done
-  /opt/bin/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
-  if [[ ${restart_ccd} == "y" ]]; then
-    echo "Restarting systemd service cloud-config-downloader due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
-    systemctl restart "cloud-config-downloader" || true
-  fi
+# Now that the most recent cloud-config user data was applied, let's update the checksum/cloud-config-data annotation on
+# the Node object if possible and store the current date.
+if [[ ! -z "$NODENAME" ]] && [[ -f "$PATH_CHECKSUM" ]]; then
+  /opt/bin/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
 fi
+date +%s > "$PATH_EXECUTION_LAST_DATE"
