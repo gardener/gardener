@@ -1003,16 +1003,14 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 
 	if b.NeedsInternalDNS() {
 		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSInternalName
-		b.Shoot.Components.Extensions.DNS.InternalOwner = dns.NewDNSOwner(
+		b.Shoot.Components.Extensions.DNS.InternalOwner = dns.NewOwner(
+			seedClient,
+			b.Shoot.SeedNamespace,
 			&dns.OwnerValues{
 				Name:    DNSInternalName,
 				Active:  true,
 				OwnerID: ownerID,
 			},
-			b.Shoot.SeedNamespace,
-			b.K8sSeedClient.ChartApplier(),
-			b.ChartsRootPath,
-			seedClient,
 		)
 		b.Shoot.Components.Extensions.DNS.InternalEntry = dns.NewDNSEntry(
 			&dns.EntryValues{
@@ -1033,16 +1031,14 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 
 	if b.NeedsExternalDNS() {
 		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSExternalName
-		b.Shoot.Components.Extensions.DNS.ExternalOwner = dns.NewDNSOwner(
+		b.Shoot.Components.Extensions.DNS.ExternalOwner = dns.NewOwner(
+			seedClient,
+			b.Shoot.SeedNamespace,
 			&dns.OwnerValues{
 				Name:    DNSExternalName,
 				Active:  true,
 				OwnerID: ownerID,
 			},
-			b.Shoot.SeedNamespace,
-			b.K8sSeedClient.ChartApplier(),
-			b.ChartsRootPath,
-			seedClient,
 		)
 		b.Shoot.Components.Extensions.DNS.ExternalEntry = dns.NewDNSEntry(
 			&dns.EntryValues{

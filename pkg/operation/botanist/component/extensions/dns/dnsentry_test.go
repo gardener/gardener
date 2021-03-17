@@ -114,8 +114,8 @@ var _ = Describe("#DNSEntry", func() {
 		},
 			Entry("with no modification", func() {}),
 			Entry("with ownerID", func() {
-				vals.OwnerID = "dummy-owner"
-				expected.Spec.OwnerId = pointer.StringPtr("dummy-owner")
+				vals.OwnerID = "dummy-emptyOwner"
+				expected.Spec.OwnerId = pointer.StringPtr("dummy-emptyOwner")
 			}),
 		)
 	})

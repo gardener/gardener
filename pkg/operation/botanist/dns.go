@@ -167,14 +167,12 @@ func (b *Botanist) DefaultExternalDNSEntry(seedClient client.Client) component.D
 
 // DefaultExternalDNSOwner returns DeployWaiter which removes the external DNSOwner.
 func (b *Botanist) DefaultExternalDNSOwner(seedClient client.Client) component.DeployWaiter {
-	return component.OpDestroy(dns.NewDNSOwner(
+	return component.OpDestroy(dns.NewOwner(
+		seedClient,
+		b.Shoot.SeedNamespace,
 		&dns.OwnerValues{
 			Name: DNSExternalName,
 		},
-		b.Shoot.SeedNamespace,
-		b.K8sSeedClient.ChartApplier(),
-		b.ChartsRootPath,
-		seedClient,
 	))
 }
 
@@ -237,14 +235,12 @@ func (b *Botanist) DefaultInternalDNSEntry(seedClient client.Client) component.D
 
 // DefaultInternalDNSOwner returns a DeployWaiter which removes the internal DNSOwner.
 func (b *Botanist) DefaultInternalDNSOwner(seedClient client.Client) component.DeployWaiter {
-	return component.OpDestroy(dns.NewDNSOwner(
+	return component.OpDestroy(dns.NewOwner(
+		seedClient,
+		b.Shoot.SeedNamespace,
 		&dns.OwnerValues{
 			Name: DNSInternalName,
 		},
-		b.Shoot.SeedNamespace,
-		b.K8sSeedClient.ChartApplier(),
-		b.ChartsRootPath,
-		seedClient,
 	))
 }
 
