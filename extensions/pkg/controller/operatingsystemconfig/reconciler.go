@@ -72,7 +72,7 @@ func (r *reconciler) InjectClient(client client.Client) error {
 	return nil
 }
 
-func (r *reconciler) InjectReader(reader client.Reader) error {
+func (r *reconciler) InjectAPIReader(reader client.Reader) error {
 	r.reader = reader
 	return nil
 }
