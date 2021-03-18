@@ -128,17 +128,24 @@ func New(
 	}
 }
 
+const (
+	// CommandApply is a constant for the "apply" command.
+	CommandApply = "apply"
+	// CommandDestroy is a constant for the "destroy" command.
+	CommandDestroy = "destroy"
+)
+
 // Apply executes a Terraform Pod by running the 'terraform apply' command.
 func (t *terraformer) Apply(ctx context.Context) error {
 	if !t.configurationDefined {
 		return errors.New("terraformer configuration has not been defined, cannot execute Terraformer")
 	}
-	return t.execute(ctx, "apply")
+	return t.execute(ctx, CommandApply)
 }
 
 // Destroy executes a Terraform Pod by running the 'terraform destroy' command.
 func (t *terraformer) Destroy(ctx context.Context) error {
-	if err := t.execute(ctx, "destroy"); err != nil {
+	if err := t.execute(ctx, CommandDestroy); err != nil {
 		return err
 	}
 	return t.CleanupConfiguration(ctx)
@@ -214,7 +221,7 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 	// something at all. If it does not contain anything, then the 'apply' could never be executed, probably
 	// because of syntax errors. In this case, we want to skip the Terraform destroy pod (as it wouldn't do anything
 	// anyway) and just delete the related ConfigMaps/Secrets.
-	if command == "destroy" {
+	if command == CommandDestroy {
 		deployNewPod = !t.IsStateEmpty(ctx)
 	}
 
