@@ -137,7 +137,7 @@ const (
 
 // Apply executes a Terraform Pod by running the 'terraform apply' command.
 func (t *terraformer) Apply(ctx context.Context) error {
-	if !t.configurationDefined {
+	if !t.configurationInitialized {
 		return errors.New("terraformer configuration has not been defined, cannot execute Terraformer")
 	}
 	return t.execute(ctx, CommandApply)
