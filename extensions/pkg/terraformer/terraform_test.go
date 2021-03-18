@@ -607,11 +607,11 @@ var _ = Describe("terraformer", func() {
 
 			gomock.InOrder(
 				c.EXPECT().
+					Delete(gomock.Any(), state.DeepCopy()),
+				c.EXPECT().
 					Delete(gomock.Any(), secret.DeepCopy()),
 				c.EXPECT().
 					Delete(gomock.Any(), config.DeepCopy()),
-				c.EXPECT().
-					Delete(gomock.Any(), state.DeepCopy()),
 			)
 
 			Expect(t.CleanupConfiguration(ctx)).NotTo(HaveOccurred())
