@@ -78,7 +78,7 @@ spec:
             memory: 128Mi
           limits:
             cpu: 2000m
-            memory: 1024Mi
+            memory: 2048Mi
         env:
         - name: NODE_NAME
           valueFrom:
