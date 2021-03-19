@@ -35,7 +35,7 @@ import (
 
 func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1beta1.Project, gardenClient kubernetes.Interface) (reconcile.Result, error) {
 	if namespace := project.Spec.Namespace; namespace != nil {
-		isEmpty, err := isNamespaceEmpty(ctx, gardenClient.DirectClient(), *namespace)
+		isEmpty, err := isNamespaceEmpty(ctx, gardenClient.APIReader(), *namespace)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to check if namespace is empty: %w", err)
 		}

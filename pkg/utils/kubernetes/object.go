@@ -30,7 +30,7 @@ func ObjectName(obj client.Object) string {
 }
 
 // DeleteObjects deletes a list of Kubernetes objects.
-func DeleteObjects(ctx context.Context, c client.Client, objects ...client.Object) error {
+func DeleteObjects(ctx context.Context, c client.Writer, objects ...client.Object) error {
 	for _, obj := range objects {
 		if err := DeleteObject(ctx, c, obj); err != nil {
 			return err
@@ -40,7 +40,7 @@ func DeleteObjects(ctx context.Context, c client.Client, objects ...client.Objec
 }
 
 // DeleteObject deletes a Kubernetes object. It ignores 'not found' and 'no match' errors.
-func DeleteObject(ctx context.Context, c client.Client, object client.Object) error {
+func DeleteObject(ctx context.Context, c client.Writer, object client.Object) error {
 	if err := c.Delete(ctx, object); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
 		return err
 	}
