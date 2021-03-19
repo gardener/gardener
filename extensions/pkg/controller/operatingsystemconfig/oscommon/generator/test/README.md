@@ -10,24 +10,27 @@ in a test file.
 Each Generator implementation can use this function as shown bellow:
 
 ```go
+package my_generator_test
+
 import (
-	"github.com/gobuffalo/packr"
+	"embed"
+
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator/test"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ Describe("My Generator Test", func(){
-      var box packr.Box
+//go:embed /path/to/testfiles
+var files embed.FS
 
-      BeforeSuite(func() {
-            box = packr.NewBox("/path/to/testfiles")
-      })
+var _ = Describe("My Generator Test", func(){
+    Describe("Conformance Tests", 
+        test.DescribeTest(NewGenerator(), files),
+    )
 
-      Describe("Conformance Tests", test.DescribeTest(NewGenerator(),box))
-
-      Describe("My other Tests", func(){
-           ...
-      })
+    Describe("My other Tests", func(){
+        // ...
+    })
 })
 ```

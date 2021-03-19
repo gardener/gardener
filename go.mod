@@ -16,7 +16,6 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.3.0
 	github.com/go-openapi/spec v0.19.3
-	github.com/gobuffalo/packr v1.30.1
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.5.0
 	github.com/googleapis/gnostic v0.5.1
