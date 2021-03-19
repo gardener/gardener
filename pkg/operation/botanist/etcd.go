@@ -139,7 +139,7 @@ func (b *Botanist) ScaleETCDToOne(ctx context.Context) error {
 
 func (b *Botanist) scaleETCD(ctx context.Context, replicas int) error {
 	for _, etcd := range []string{v1beta1constants.ETCDEvents, v1beta1constants.ETCDMain} {
-		if err := kubernetes.ScaleEtcd(ctx, b.K8sSeedClient.DirectClient(), kutil.Key(b.Shoot.SeedNamespace, etcd), replicas); client.IgnoreNotFound(err) != nil {
+		if err := kubernetes.ScaleEtcd(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, etcd), replicas); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
