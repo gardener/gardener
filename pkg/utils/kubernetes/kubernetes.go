@@ -430,7 +430,7 @@ func OwnedBy(obj client.Object, apiVersion, kind, name string, uid types.UID) bo
 // is provided then it will be applied for each object right after listing all objects. If no object remains then nil
 // is returned. The Items field in the list object will be populated with the result returned from the server after
 // applying the filter function (if provided).
-func NewestObject(ctx context.Context, c client.Client, listObj client.ObjectList, filterFn func(client.Object) bool, listOpts ...client.ListOption) (client.Object, error) {
+func NewestObject(ctx context.Context, c client.Reader, listObj client.ObjectList, filterFn func(client.Object) bool, listOpts ...client.ListOption) (client.Object, error) {
 	if err := c.List(ctx, listObj, listOpts...); err != nil {
 		return nil, err
 	}
@@ -478,7 +478,7 @@ func NewestObject(ctx context.Context, c client.Client, listObj client.ObjectLis
 }
 
 // NewestPodForDeployment returns the most recently created Pod object for the given deployment.
-func NewestPodForDeployment(ctx context.Context, c client.Client, deployment *appsv1.Deployment) (*corev1.Pod, error) {
+func NewestPodForDeployment(ctx context.Context, c client.Reader, deployment *appsv1.Deployment) (*corev1.Pod, error) {
 	listOpts := []client.ListOption{client.InNamespace(deployment.Namespace)}
 	if deployment.Spec.Selector != nil {
 		listOpts = append(listOpts, client.MatchingLabels(deployment.Spec.Selector.MatchLabels))

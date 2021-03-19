@@ -74,7 +74,7 @@ func (b *Botanist) EnsureClusterIdentity(ctx context.Context) error {
 	}
 
 	latestShoot := &gardencorev1beta1.Shoot{}
-	if err := b.K8sGardenClient.DirectClient().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, b.Shoot.Info.Name), latestShoot); err != nil {
+	if err := b.K8sGardenClient.APIReader().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, b.Shoot.Info.Name), latestShoot); err != nil {
 		return err
 	}
 
@@ -923,7 +923,7 @@ func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
 		sniEnabled = b.APIServerSNIEnabled()
 	)
 
-	if err := b.K8sSeedClient.DirectClient().Get(
+	if err := b.K8sSeedClient.APIReader().Get(
 		ctx,
 		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
 		svc,

@@ -79,7 +79,7 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 	deployment := &appsv1.Deployment{}
 
 	if err := retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
-		if err := b.K8sSeedClient.DirectClient().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
+		if err := b.K8sSeedClient.APIReader().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
 			return retry.SevereError(err)
 		}
 		if deployment.Generation != deployment.Status.ObservedGeneration {
@@ -110,7 +110,7 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 			return err
 		}
 
-		newestPod, err2 := kutil.NewestPodForDeployment(ctx, b.K8sSeedClient.DirectClient(), deployment)
+		newestPod, err2 := kutil.NewestPodForDeployment(ctx, b.K8sSeedClient.APIReader(), deployment)
 		if err2 != nil {
 			return errorspkg.Wrapf(err, "failure to find the newest pod for deployment to read the logs: %s", err2.Error())
 		}

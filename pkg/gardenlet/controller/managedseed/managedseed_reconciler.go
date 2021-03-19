@@ -170,7 +170,7 @@ func (r *reconciler) delete(ctx context.Context, managedSeed *seedmanagementv1al
 
 func (r *reconciler) ensureShootExists(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed, condition *gardencorev1beta1.Condition, logger *logrus.Entry) (*gardencorev1beta1.Shoot, error) {
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.gardenClient.DirectClient().Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+	if err := r.gardenClient.APIReader().Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
 		if apierrors.IsNotFound(err) {
 			message := fmt.Sprintf("Shoot %s/%s not found", managedSeed.Namespace, managedSeed.Spec.Shoot.Name)
 			updateCondition(condition, gardencorev1beta1.ConditionFalse, "ShootNotFound", message)

@@ -125,7 +125,7 @@ var _ = Describe("controlplane", func() {
 
 		fakeClientSet := fakeclientset.NewClientSetBuilder().
 			WithChartApplier(chartApplier).
-			WithDirectClient(client).
+			WithAPIReader(client).
 			Build()
 
 		botanist.K8sSeedClient = fakeClientSet
