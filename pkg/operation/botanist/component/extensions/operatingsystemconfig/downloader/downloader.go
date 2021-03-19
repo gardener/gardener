@@ -16,13 +16,12 @@ package downloader
 
 import (
 	"bytes"
-	"path/filepath"
+	_ "embed"
 	"strconv"
 	"text/template"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader/templates"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -37,8 +36,10 @@ import (
 )
 
 var (
-	tplName = "download-cloud-config.tpl.sh"
-	tpl     *template.Template
+	tplName = "download-cloud-config"
+	//go:embed templates/scripts/download-cloud-config.tpl.sh
+	tplContent string
+	tpl        *template.Template
 )
 
 func init() {
@@ -46,7 +47,7 @@ func init() {
 	tpl, err = template.
 		New(tplName).
 		Funcs(sprig.TxtFuncMap()).
-		Parse(string(templates.MustAsset(filepath.Join("scripts", tplName))))
+		Parse(tplContent)
 	if err != nil {
 		panic(err)
 	}

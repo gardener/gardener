@@ -147,7 +147,6 @@ install-requirements:
 	@go install -mod=vendor github.com/ahmetb/gen-crd-api-reference-docs
 	@go install -mod=vendor github.com/golang/mock/mockgen
 	@go install -mod=vendor sigs.k8s.io/controller-tools/cmd/controller-gen
-	@GO111MODULE=off go get github.com/go-bindata/go-bindata/...
 	@./hack/install-promtool.sh
 	@./hack/install-requirements.sh
 

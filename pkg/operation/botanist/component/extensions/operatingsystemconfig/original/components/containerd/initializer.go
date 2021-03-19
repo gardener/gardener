@@ -16,13 +16,12 @@ package containerd
 
 import (
 	"bytes"
-	"path/filepath"
+	_ "embed"
 	"text/template"
 
 	"github.com/gardener/gardener/charts"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd/templates"
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/Masterminds/sprig"
@@ -30,8 +29,10 @@ import (
 )
 
 var (
-	tplNameInitializer = "init.tpl.sh"
-	tplInitializer     *template.Template
+	tplNameInitializer = "init"
+	//go:embed templates/scripts/init.tpl.sh
+	tplContentInitializer string
+	tplInitializer        *template.Template
 )
 
 func init() {
@@ -39,7 +40,7 @@ func init() {
 	tplInitializer, err = template.
 		New(tplNameInitializer).
 		Funcs(sprig.TxtFuncMap()).
-		Parse(string(templates.MustAsset(filepath.Join("scripts", tplNameInitializer))))
+		Parse(tplContentInitializer)
 	if err != nil {
 		panic(err)
 	}
