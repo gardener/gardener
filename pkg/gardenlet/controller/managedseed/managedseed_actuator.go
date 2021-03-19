@@ -273,8 +273,16 @@ func (a *actuator) deployGardenlet(ctx context.Context, shootClient kubernetes.I
 	}
 
 	// Prepare gardenlet chart values
-	values, err := a.prepareGardenletChartValues(ctx, shootClient, managedSeed.Spec.Gardenlet.Deployment, gardenletConfig, managedSeed.Name,
-		v1alpha1helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap), utils.IsTrue(managedSeed.Spec.Gardenlet.MergeWithParent), shoot)
+	values, err := a.prepareGardenletChartValues(
+		ctx,
+		shootClient,
+		managedSeed.Spec.Gardenlet.Deployment,
+		gardenletConfig,
+		managedSeed.Name,
+		v1alpha1helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
+		utils.IsTrue(managedSeed.Spec.Gardenlet.MergeWithParent),
+		shoot,
+	)
 	if err != nil {
 		return err
 	}
@@ -296,8 +304,15 @@ func (a *actuator) deleteGardenlet(ctx context.Context, shootClient kubernetes.I
 	}
 
 	// Prepare gardenlet chart values
-	values, err := a.prepareGardenletChartValues(ctx, shootClient, managedSeed.Spec.Gardenlet.Deployment, gardenletConfig, managedSeed.Name,
-		v1alpha1helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap), utils.IsTrue(managedSeed.Spec.Gardenlet.MergeWithParent), shoot)
+	values, err := a.prepareGardenletChartValues(
+		ctx,
+		shootClient,
+		managedSeed.Spec.Gardenlet.Deployment,
+		gardenletConfig,
+		managedSeed.Name,
+		v1alpha1helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
+		utils.IsTrue(managedSeed.Spec.Gardenlet.MergeWithParent), shoot,
+	)
 	if err != nil {
 		return err
 	}
@@ -524,7 +539,45 @@ func (a *actuator) prepareGardenletChartValues(
 	gardenletConfig.SeedSelector = nil
 
 	// Get gardenlet chart values
-	return a.vp.GetGardenletChartValues(deployment, gardenletConfig, bootstrapKubeconfig)
+	return a.vp.GetGardenletChartValues(
+		ensureGardenletEnvironment(deployment, shoot.Spec.DNS),
+		gardenletConfig,
+		bootstrapKubeconfig,
+	)
+}
+
+// ensureGardenletEnvironment sets the KUBERNETES_SERVICE_HOST to the API of the ManagedSeed cluster.
+// This is needed so that the deployed gardenlet can properly set the network policies allowing
+// access of control plane components of the hosted shoots to the API server of the (managed) seed.
+func ensureGardenletEnvironment(deployment *seedmanagementv1alpha1.GardenletDeployment, dns *gardencorev1beta1.DNS) *seedmanagementv1alpha1.GardenletDeployment {
+	const kubernetesServiceHost = "KUBERNETES_SERVICE_HOST"
+	var shootDomain = ""
+
+	if deployment.Env == nil {
+		deployment.Env = []corev1.EnvVar{}
+	}
+
+	for _, env := range deployment.Env {
+		if env.Name == kubernetesServiceHost {
+			return deployment
+		}
+	}
+
+	if dns != nil && dns.Domain != nil && len(*dns.Domain) != 0 {
+		shootDomain = common.GetAPIServerDomain(*dns.Domain)
+	}
+
+	if len(shootDomain) != 0 {
+		deployment.Env = append(
+			deployment.Env,
+			corev1.EnvVar{
+				Name:  kubernetesServiceHost,
+				Value: shootDomain,
+			},
+		)
+	}
+
+	return deployment
 }
 
 const (
