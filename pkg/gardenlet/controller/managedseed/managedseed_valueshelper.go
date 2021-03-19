@@ -21,17 +21,13 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
-	"github.com/Masterminds/semver"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/component-base/version"
 )
 
@@ -305,7 +301,6 @@ func getParentGardenletDeployment(imageVector imagevector.ImageVector, shoot *ga
 			Repository: &imageRepository,
 			Tag:        &imageTag,
 		},
-		PodAnnotations: getParentPodAnnotations(shoot),
 	}, nil
 }
 
@@ -331,33 +326,4 @@ func getParentComponentImageVectorOverwrites() (string, error) {
 		componentImageVectorOverwrites = string(data)
 	}
 	return componentImageVectorOverwrites, nil
-}
-
-var minimumAPIServerSNISidecarConstraint *semver.Constraints
-
-func init() {
-	var err error
-	// 1.13.0-0 must be used or no 1.13.0-dev version can be matched
-	minimumAPIServerSNISidecarConstraint, err = semver.NewConstraint(">= 1.13.0-0")
-	utilruntime.Must(err)
-}
-
-func getParentPodAnnotations(shoot *gardencorev1beta1.Shoot) map[string]string {
-	// If APIServerSNI is enabled for the seed cluster then the gardenlet must be restarted, so the Pod injector would
-	// add `KUBERNETES_SERVICE_HOST` environment variable.
-	if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
-		vers, err := semver.NewVersion(shoot.Status.Gardener.Version)
-		if err != nil {
-			// We can't really do anything in case of error, since it's not a transient error.
-			// Returning an error would force another reconciliation that would fail again here.
-			// Reconciling from this point makes no sense, unless the shoot is updated.
-			return nil
-		}
-		if vers != nil && minimumAPIServerSNISidecarConstraint.Check(vers) {
-			return map[string]string{
-				"networking.gardener.cloud/seed-sni-enabled": "true",
-			}
-		}
-	}
-	return nil
 }
