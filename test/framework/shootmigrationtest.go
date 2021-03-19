@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -38,6 +37,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -99,13 +99,14 @@ func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 	t.MigrationTime = metav1.Now()
 	return t.GardenerFramework.MigrateShoot(ctx, &t.Shoot, t.TargetSeed, func(shoot *gardencorev1beta1.Shoot) error {
 		t := gardencorev1beta1.Toleration{}
-		t.Key = core.SeedTaintProtected
+		t.Key = SeedTaintTestRun
+		t.Value = pointer.StringPtr(GetTestRunID())
 
 		if shoot.Spec.Tolerations == nil {
 			shoot.Spec.Tolerations = make([]gardencorev1beta1.Toleration, 0)
 		} else {
 			for _, t := range shoot.Spec.Tolerations {
-				if t.Key == core.SeedTaintProtected {
+				if t.Key == SeedTaintTestRun {
 					return nil
 				}
 			}
