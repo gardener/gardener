@@ -51,7 +51,7 @@ func Register(plugins *admission.Plugins) {
 }
 
 // NewFactory creates a new PluginFactory.
-func NewFactory(config io.Reader) (admission.Interface, error) {
+func NewFactory(_ io.Reader) (admission.Interface, error) {
 	return New()
 }
 
@@ -95,7 +95,7 @@ func (c *CustomVerbAuthorizer) Validate(ctx context.Context, a admission.Attribu
 func (c *CustomVerbAuthorizer) admitProjects(ctx context.Context, a admission.Attributes) error {
 	var (
 		oldObj = &core.Project{}
-		obj    = &core.Project{}
+		obj    *core.Project
 		ok     bool
 	)
 

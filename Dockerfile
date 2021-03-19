@@ -1,6 +1,6 @@
 #############      builder       #############
 ARG GCR_PULL_URL=eu.gcr.io/gardener-project/3rd/
-FROM ${GCR_PULL_URL}golang:1.15.9 AS builder
+FROM ${GCR_PULL_URL}golang:1.16.2 AS builder
 
 WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
