@@ -185,7 +185,8 @@ func WaitUntilLoadBalancerIsReady(ctx context.Context, kubeClient kubernetes.Int
 	}); err != nil {
 		const eventsLimit = 2
 
-		eventsErrorMessage, err2 := FetchEventMessages(ctx, kubeClient.DirectClient(), service, corev1.EventTypeWarning, eventsLimit)
+		// use API reader here, we don't want to cache all events
+		eventsErrorMessage, err2 := FetchEventMessages(ctx, kubeClient.Client().Scheme(), kubeClient.APIReader(), service, corev1.EventTypeWarning, eventsLimit)
 		if err2 != nil {
 			logger.Errorf("error %q occured while fetching events for error %q", err2, err)
 			return "", fmt.Errorf("'%w' occurred but could not fetch events for more information", err)
@@ -301,11 +302,8 @@ func ReconcileServicePorts(existingPorts []corev1.ServicePort, desiredPorts []co
 
 // FetchEventMessages gets events for the given object of the given `eventType` and returns them as a formatted output.
 // The function expects that the given `obj` is specified with a proper `metav1.TypeMeta`.
-func FetchEventMessages(ctx context.Context, c client.Client, obj client.Object, eventType string, eventsLimit int) (string, error) {
-	if c.Scheme() == nil {
-		return "", errors.New("scheme is not provided")
-	}
-	gvk, err := apiutil.GVKForObject(obj, c.Scheme())
+func FetchEventMessages(ctx context.Context, scheme *runtime.Scheme, reader client.Reader, obj client.Object, eventType string, eventsLimit int) (string, error) {
+	gvk, err := apiutil.GVKForObject(obj, scheme)
 	if err != nil {
 		return "", fmt.Errorf("failed identify GVK for object: %w", err)
 	}
@@ -325,7 +323,7 @@ func FetchEventMessages(ctx context.Context, c client.Client, obj client.Object,
 		"type":                      eventType,
 	}
 	eventList := &corev1.EventList{}
-	if err := c.List(ctx, eventList, fieldSelector); err != nil {
+	if err := reader.List(ctx, eventList, fieldSelector); err != nil {
 		return "", fmt.Errorf("error '%v' occurred while fetching more details", err)
 	}
 
