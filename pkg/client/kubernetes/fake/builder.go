@@ -18,9 +18,9 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 
 	apiextensionclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	"k8s.io/apimachinery/pkg/api/meta"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
@@ -35,11 +35,12 @@ type ClientSetBuilder struct {
 	chartApplier          kubernetes.ChartApplier
 	restConfig            *rest.Config
 	client                client.Client
+	apiReader             client.Reader
 	directClient          client.Client
 	cache                 cache.Cache
-	restMapper            meta.RESTMapper
 	kubernetes            kubernetesclientset.Interface
 	gardenCore            gardencoreclientset.Interface
+	gardenSeedManagement  gardenseedmanagementclientset.Interface
 	apiextension          apiextensionclientset.Interface
 	apiregistration       apiregistrationclientset.Interface
 	restClient            rest.Interface
@@ -82,6 +83,12 @@ func (b *ClientSetBuilder) WithClient(client client.Client) *ClientSetBuilder {
 	return b
 }
 
+// WithAPIReader sets the apiReader attribute of the builder.
+func (b *ClientSetBuilder) WithAPIReader(apiReader client.Reader) *ClientSetBuilder {
+	b.apiReader = apiReader
+	return b
+}
+
 // WithDirectClient sets the directClient attribute of the builder.
 // Deprecated: kubernetes.Interface.DirectClient is also deprecated.
 func (b *ClientSetBuilder) WithDirectClient(directClient client.Client) *ClientSetBuilder {
@@ -95,12 +102,6 @@ func (b *ClientSetBuilder) WithCache(cache cache.Cache) *ClientSetBuilder {
 	return b
 }
 
-// WithRESTMapper sets the restMapper attribute of the builder.
-func (b *ClientSetBuilder) WithRESTMapper(restMapper meta.RESTMapper) *ClientSetBuilder {
-	b.restMapper = restMapper
-	return b
-}
-
 // WithKubernetes sets the kubernetes attribute of the builder.
 func (b *ClientSetBuilder) WithKubernetes(kubernetes kubernetesclientset.Interface) *ClientSetBuilder {
 	b.kubernetes = kubernetes
@@ -110,6 +111,12 @@ func (b *ClientSetBuilder) WithKubernetes(kubernetes kubernetesclientset.Interfa
 // WithGardenCore sets the gardenCore attribute of the builder.
 func (b *ClientSetBuilder) WithGardenCore(gardenCore gardencoreclientset.Interface) *ClientSetBuilder {
 	b.gardenCore = gardenCore
+	return b
+}
+
+// WithGardenSeedManagement sets the gardenSeedManagement attribute of the builder.
+func (b *ClientSetBuilder) WithGardenSeedManagement(gardenSeedManagement gardenseedmanagementclientset.Interface) *ClientSetBuilder {
+	b.gardenSeedManagement = gardenSeedManagement
 	return b
 }
 
@@ -158,10 +165,12 @@ func (b *ClientSetBuilder) Build() *ClientSet {
 		CheckForwardPodPortFn: b.checkForwardPodPortFn,
 		restConfig:            b.restConfig,
 		client:                b.client,
+		apiReader:             b.apiReader,
 		directClient:          b.directClient,
 		cache:                 b.cache,
 		kubernetes:            b.kubernetes,
 		gardenCore:            b.gardenCore,
+		gardenSeedManagement:  b.gardenSeedManagement,
 		apiextension:          b.apiextension,
 		apiregistration:       b.apiregistration,
 		restClient:            b.restClient,

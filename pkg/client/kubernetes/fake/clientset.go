@@ -42,6 +42,7 @@ type ClientSet struct {
 	chartApplier         kubernetes.ChartApplier
 	restConfig           *rest.Config
 	client               client.Client
+	apiReader            client.Reader
 	directClient         client.Client
 	cache                cache.Cache
 	kubernetes           kubernetesclientset.Interface
@@ -85,7 +86,7 @@ func (c *ClientSet) Client() client.Client {
 
 // APIReader returns a client.Reader that directly reads from the API server.
 func (c *ClientSet) APIReader() client.Reader {
-	return c.directClient
+	return c.apiReader
 }
 
 // DirectClient returns a controller-runtime client, which can be used to talk to the API server directly
