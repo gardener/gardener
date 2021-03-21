@@ -8,14 +8,16 @@ descriptor_out_file="${COMPONENT_DESCRIPTOR_PATH}"
 
 echo "enriching creating component descriptor from ${BASE_DEFINITION_PATH}"
 
-# translates all images defined the images.yaml into component descriptor resources.
-# For detailed documentation see https://github.com/gardener/component-cli/blob/main/docs/reference/components-cli_image-vector_add.md
-# the konnectivity-server is temporary excluded until the component-descriptor for the replica-reloader is released
-component-cli image-vector add --comp-desc ${BASE_DEFINITION_PATH} \
-  --image-vector "$repo_root_dir/charts/images.yaml" \
-  --component-prefixes eu.gcr.io/gardener-project/gardener \
-  --exclude-component-reference konnectivity-server \
-  --generic-dependencies hyperkube,kube-apiserver,kube-controller-manager,kube-scheduler,kube-proxy
+if [[ -f "$repo_root_dir/charts/images.yaml" ]]; then
+  # translates all images defined the images.yaml into component descriptor resources.
+  # For detailed documentation see https://github.com/gardener/component-cli/blob/main/docs/reference/components-cli_image-vector_add.md
+  # the konnectivity-server is temporary excluded until the component-descriptor for the replica-reloader is released
+  component-cli image-vector add --comp-desc ${BASE_DEFINITION_PATH} \
+    --image-vector "$repo_root_dir/charts/images.yaml" \
+    --component-prefixes eu.gcr.io/gardener-project/gardener \
+    --exclude-component-reference konnectivity-server \
+    --generic-dependencies hyperkube,kube-apiserver,kube-controller-manager,kube-scheduler,kube-proxy
+fi
 
 if [[ -d "$repo_root_dir/charts/" ]]; then
   for image_tpl_path in "$repo_root_dir/charts/"*"/templates/_images.tpl"; do
