@@ -515,7 +515,6 @@ var _ = Describe("resourcereferencemanager", func() {
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion).To(Equal(resourceVersion))
 			})
 
 			It("should accept because spec was not changed", func() {
