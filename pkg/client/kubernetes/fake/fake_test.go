@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
+	gardenseedmanagementfake "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
 	mockdiscovery "github.com/gardener/gardener/pkg/mock/client-go/discovery"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -88,6 +89,13 @@ var _ = Describe("Fake ClientSet", func() {
 		Expect(cs.Client()).To(BeIdenticalTo(client))
 	})
 
+	It("should correctly set apiReader attribute", func() {
+		apiReader := mockclient.NewMockReader(ctrl)
+		cs := builder.WithAPIReader(apiReader).Build()
+
+		Expect(cs.APIReader()).To(BeIdenticalTo(apiReader))
+	})
+
 	It("should correctly set directClient attribute", func() {
 		directClient := mockclient.NewMockClient(ctrl)
 		cs := builder.WithDirectClient(directClient).Build()
@@ -114,6 +122,13 @@ var _ = Describe("Fake ClientSet", func() {
 		cs := builder.WithGardenCore(gardenCore).Build()
 
 		Expect(cs.GardenCore()).To(BeIdenticalTo(gardenCore))
+	})
+
+	It("should correctly set gardenSeedManagement attribute", func() {
+		gardenSeedManagement := gardenseedmanagementfake.NewSimpleClientset()
+		cs := builder.WithGardenSeedManagement(gardenSeedManagement).Build()
+
+		Expect(cs.GardenSeedManagement()).To(BeIdenticalTo(gardenSeedManagement))
 	})
 
 	It("should correctly set apiextension attribute", func() {

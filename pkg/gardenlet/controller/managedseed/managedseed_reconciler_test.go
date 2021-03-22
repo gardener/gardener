@@ -49,6 +49,7 @@ var _ = Describe("Reconciler", func() {
 		actuator     *mockmanagedseed.MockActuator
 		recorder     *mockrecord.MockEventRecorder
 		c            *mockclient.MockClient
+		reader       *mockclient.MockReader
 		sw           *mockclient.MockStatusWriter
 
 		reconciler reconcile.Reconciler
@@ -67,10 +68,11 @@ var _ = Describe("Reconciler", func() {
 		actuator = mockmanagedseed.NewMockActuator(ctrl)
 		recorder = mockrecord.NewMockEventRecorder(ctrl)
 		c = mockclient.NewMockClient(ctrl)
+		reader = mockclient.NewMockReader(ctrl)
 		sw = mockclient.NewMockStatusWriter(ctrl)
 
 		gardenClient.EXPECT().Client().Return(c).AnyTimes()
-		gardenClient.EXPECT().DirectClient().Return(c).AnyTimes()
+		gardenClient.EXPECT().APIReader().Return(reader).AnyTimes()
 		c.EXPECT().Status().Return(sw).AnyTimes()
 
 		reconciler = newReconciler(gardenClient, actuator, recorder, gardenerlogger.NewNopLogger())
@@ -125,7 +127,7 @@ var _ = Describe("Reconciler", func() {
 						return nil
 					},
 				)
-				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
+				reader.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
 					func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Shoot) error {
 						*s = *shoot
 						return nil
@@ -185,7 +187,7 @@ var _ = Describe("Reconciler", func() {
 						return nil
 					},
 				)
-				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
+				reader.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
 					func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Shoot) error {
 						*s = *shoot
 						return nil

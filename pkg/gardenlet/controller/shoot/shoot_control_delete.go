@@ -87,7 +87,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		// all resources have already been deleted. We can delete the Shoot resource as a consequence.
 		errors.ToExecute("Retrieve the Shoot namespace in the Seed cluster", func() error {
 			botanist.SeedNamespaceObject = &corev1.Namespace{}
-			err := botanist.K8sSeedClient.DirectClient().Get(ctx, client.ObjectKey{Name: o.Shoot.SeedNamespace}, botanist.SeedNamespaceObject)
+			err := botanist.K8sSeedClient.APIReader().Get(ctx, client.ObjectKey{Name: o.Shoot.SeedNamespace}, botanist.SeedNamespaceObject)
 			if err != nil {
 				if apierrors.IsNotFound(err) {
 					o.Logger.Infof("Did not find '%s' namespace in the Seed cluster - nothing to be done", o.Shoot.SeedNamespace)
@@ -102,7 +102,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		// to delete anymore.
 		errors.ToExecute("Retrieve kube-apiserver deployment in the shoot namespace in the seed cluster", func() error {
 			deploymentKubeAPIServer := &appsv1.Deployment{}
-			if err := botanist.K8sSeedClient.DirectClient().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploymentKubeAPIServer); err != nil {
+			if err := botanist.K8sSeedClient.APIReader().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploymentKubeAPIServer); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return err
 				}
@@ -120,7 +120,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		// cleaned up.
 		errors.ToExecute("Retrieve the kube-controller-manager deployment in the shoot namespace in the seed cluster", func() error {
 			deploymentKubeControllerManager := &appsv1.Deployment{}
-			if err := botanist.K8sSeedClient.DirectClient().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager), deploymentKubeControllerManager); err != nil {
+			if err := botanist.K8sSeedClient.APIReader().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager), deploymentKubeControllerManager); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return err
 				}
@@ -603,7 +603,6 @@ func (c *Controller) removeFinalizerFrom(ctx context.Context, gardenClient kuber
 
 func needsControlPlaneDeployment(ctx context.Context, o *operation.Operation, kubeAPIServerDeploymentFound bool, infrastructure *extensionsv1alpha1.Infrastructure) (bool, error) {
 	var (
-		client    = o.K8sSeedClient.DirectClient()
 		namespace = o.Shoot.SeedNamespace
 		name      = o.Shoot.Info.Name
 	)
@@ -611,7 +610,7 @@ func needsControlPlaneDeployment(ctx context.Context, o *operation.Operation, ku
 	// If the `ControlPlane` resource and the kube-apiserver deployment do no longer exist then we don't want to re-deploy it.
 	// The reason for the second condition is that some providers inject a cloud-provider-config into the kube-apiserver deployment
 	// which is needed for it to run.
-	exists, err := extensionResourceStillExists(ctx, client, &extensionsv1alpha1.ControlPlane{}, namespace, name)
+	exists, err := extensionResourceStillExists(ctx, o.K8sSeedClient.APIReader(), &extensionsv1alpha1.ControlPlane{}, namespace, name)
 	if err != nil {
 		return false, err
 	}
@@ -629,8 +628,8 @@ func needsControlPlaneDeployment(ctx context.Context, o *operation.Operation, ku
 	return false, nil
 }
 
-func extensionResourceStillExists(ctx context.Context, c client.Client, obj client.Object, namespace, name string) (bool, error) {
-	if err := c.Get(ctx, kutil.Key(namespace, name), obj); err != nil {
+func extensionResourceStillExists(ctx context.Context, reader client.Reader, obj client.Object, namespace, name string) (bool, error) {
+	if err := reader.Get(ctx, kutil.Key(namespace, name), obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}

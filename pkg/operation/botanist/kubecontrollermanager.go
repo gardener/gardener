@@ -74,7 +74,7 @@ func (b *Botanist) WaitForKubeControllerManagerToBeActive(ctx context.Context) e
 
 // ScaleKubeControllerManagerToOne scales kube-controller-manager replicas to one.
 func (b *Botanist) ScaleKubeControllerManagerToOne(ctx context.Context) error {
-	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.DirectClient(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager), 1)
+	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager), 1)
 }
 
 func (b *Botanist) determineKubeControllerManagerReplicas(ctx context.Context) (int32, error) {

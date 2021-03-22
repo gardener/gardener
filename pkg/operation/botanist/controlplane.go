@@ -74,7 +74,7 @@ func (b *Botanist) EnsureClusterIdentity(ctx context.Context) error {
 	}
 
 	latestShoot := &gardencorev1beta1.Shoot{}
-	if err := b.K8sGardenClient.DirectClient().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, b.Shoot.Info.Name), latestShoot); err != nil {
+	if err := b.K8sGardenClient.APIReader().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, b.Shoot.Info.Name), latestShoot); err != nil {
 		return err
 	}
 
@@ -280,22 +280,18 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	}
 	b.K8sShootClient = nil
 
-	// use direct client here, as cached client sometimes causes scale functions not to work properly
-	// e.g. Deployments not scaled down/up
-	c := b.K8sSeedClient.DirectClient()
-
 	deployments := []string{
 		v1beta1constants.DeploymentNameGardenerResourceManager,
 		v1beta1constants.DeploymentNameKubeControllerManager,
 		v1beta1constants.DeploymentNameKubeAPIServer,
 	}
 	for _, deployment := range deployments {
-		if err := kubernetes.ScaleDeployment(ctx, c, kutil.Key(b.Shoot.SeedNamespace, deployment), 0); client.IgnoreNotFound(err) != nil {
+		if err := kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, deployment), 0); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
 
-	if err := c.Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); err != nil {
+	if err := b.K8sSeedClient.Client().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}, kubernetes.DefaultDeleteOptions...); err != nil {
 		if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
 			return err
 		}
@@ -320,12 +316,12 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 
 // ScaleKubeAPIServerToOne scales kube-apiserver replicas to one
 func (b *Botanist) ScaleKubeAPIServerToOne(ctx context.Context) error {
-	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.DirectClient(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1)
+	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1)
 }
 
 // ScaleGardenerResourceManagerToOne scales the gardener-resource-manager deployment
 func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error {
-	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.DirectClient(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager), 1)
+	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager), 1)
 }
 
 // PrepareKubeAPIServerForMigration deletes the kube-apiserver and deletes its hvpa
@@ -923,7 +919,7 @@ func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
 		sniEnabled = b.APIServerSNIEnabled()
 	)
 
-	if err := b.K8sSeedClient.DirectClient().Get(
+	if err := b.K8sSeedClient.APIReader().Get(
 		ctx,
 		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
 		svc,

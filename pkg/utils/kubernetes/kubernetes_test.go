@@ -26,7 +26,8 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	mock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/logger"
 	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -823,22 +824,22 @@ var _ = Describe("kubernetes", func() {
 
 	Describe("#WaitUntilLoadBalancerIsReady", func() {
 		var (
-			ctrl                  *gomock.Controller
-			k8sShootClient        *mock.MockInterface
-			k8sShootRuntimeClient *mockclient.MockClient
-			key                   = client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: "load-balancer"}
-			logger                = logrus.NewEntry(logger.NewNopLogger())
+			k8sShootClient kubernetes.Interface
+			reader         *mockclient.MockReader
+			key            = client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: "load-balancer"}
+			logger         = logrus.NewEntry(logger.NewNopLogger())
+			scheme         *runtime.Scheme
 		)
 
 		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-
-			k8sShootClient = mock.NewMockInterface(ctrl)
-			k8sShootRuntimeClient = mockclient.NewMockClient(ctrl)
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
+			scheme = runtime.NewScheme()
+			Expect(corev1.AddToScheme(scheme)).To(Succeed())
+			reader = mockclient.NewMockReader(ctrl)
+			c.EXPECT().Scheme().Return(scheme).AnyTimes()
+			k8sShootClient = fakeclientset.NewClientSetBuilder().
+				WithClient(c).
+				WithAPIReader(reader).
+				Build()
 		})
 
 		It("should return nil when the Service has .status.loadBalancer.ingress[]", func() {
@@ -861,8 +862,7 @@ var _ = Describe("kubernetes", func() {
 			)
 
 			gomock.InOrder(
-				k8sShootClient.EXPECT().Client().Return(k8sShootRuntimeClient),
-				k8sShootRuntimeClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(
+				c.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(
 					func(_ context.Context, _ client.ObjectKey, obj *corev1.Service) error {
 						*obj = *svc
 						return nil
@@ -895,20 +895,15 @@ var _ = Describe("kubernetes", func() {
 					Count:          1,
 					Type:           corev1.EventTypeWarning,
 				}
-				scheme = runtime.NewScheme()
 			)
-			Expect(corev1.AddToScheme(scheme)).To(Succeed())
 
 			gomock.InOrder(
-				k8sShootClient.EXPECT().Client().Return(k8sShootRuntimeClient),
-				k8sShootRuntimeClient.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(
+				c.EXPECT().Get(gomock.Any(), key, gomock.AssignableToTypeOf(&corev1.Service{})).DoAndReturn(
 					func(_ context.Context, _ client.ObjectKey, obj *corev1.Service) error {
 						*obj = *svc
 						return nil
 					}),
-				k8sShootClient.EXPECT().DirectClient().Return(k8sShootRuntimeClient),
-				k8sShootRuntimeClient.EXPECT().Scheme().Return(scheme).Times(2),
-				k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
+				reader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
 					func(_ context.Context, list *corev1.EventList, _ ...client.ListOption) error {
 						list.Items = append(list.Items, event)
 						return nil
@@ -925,17 +920,14 @@ var _ = Describe("kubernetes", func() {
 
 	Describe("#FetchEventMessages", func() {
 		var (
-			ctrl                  *gomock.Controller
-			k8sShootRuntimeClient *mockclient.MockClient
-			events                []corev1.Event
-			serviceObj            *corev1.Service
-			scheme                *runtime.Scheme
+			reader     *mockclient.MockReader
+			events     []corev1.Event
+			serviceObj *corev1.Service
+			scheme     *runtime.Scheme
 		)
 
 		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-
-			k8sShootRuntimeClient = mockclient.NewMockClient(ctrl)
+			reader = mockclient.NewMockReader(ctrl)
 
 			events = []corev1.Event{
 				{
@@ -968,27 +960,6 @@ var _ = Describe("kubernetes", func() {
 			}
 		})
 
-		AfterEach(func() {
-			ctrl.Finish()
-		})
-
-		JustBeforeEach(func() {
-			k8sShootRuntimeClient.EXPECT().Scheme().Return(scheme).AnyTimes()
-		})
-
-		Context("when no scheme is provided", func() {
-			BeforeEach(func() {
-				scheme = nil
-			})
-
-			It("should return an error", func() {
-				msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, serviceObj, corev1.EventTypeWarning, 1)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("scheme is not provided"))
-				Expect(msg).To(BeEmpty())
-			})
-		})
-
 		Context("when only objects of available scheme are used", func() {
 			BeforeEach(func() {
 				scheme = runtime.NewScheme()
@@ -998,7 +969,7 @@ var _ = Describe("kubernetes", func() {
 			It("should return an event message with only the latest event", func() {
 				var listOpts []client.ListOption
 				gomock.InOrder(
-					k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
+					reader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
 						func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
 							list.Items = append(list.Items, events...)
 							listOpts = listOptions
@@ -1006,7 +977,7 @@ var _ = Describe("kubernetes", func() {
 						}),
 				)
 
-				msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, serviceObj, corev1.EventTypeWarning, 1)
+				msg, err := FetchEventMessages(ctx, scheme, reader, serviceObj, corev1.EventTypeWarning, 1)
 
 				Expect(listOpts).To(ContainElement(client.MatchingFields{
 					"involvedObject.apiVersion": serviceObj.APIVersion,
@@ -1023,7 +994,7 @@ var _ = Describe("kubernetes", func() {
 			It("should return an event message with all events", func() {
 				var listOpts []client.ListOption
 				gomock.InOrder(
-					k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
+					reader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
 						func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
 							list.Items = append(list.Items, events...)
 							listOpts = listOptions
@@ -1031,7 +1002,7 @@ var _ = Describe("kubernetes", func() {
 						}),
 				)
 
-				msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, serviceObj, corev1.EventTypeWarning, len(events))
+				msg, err := FetchEventMessages(ctx, scheme, reader, serviceObj, corev1.EventTypeWarning, len(events))
 
 				Expect(listOpts).To(ContainElement(client.MatchingFields{
 					"involvedObject.apiVersion": serviceObj.APIVersion,
@@ -1049,14 +1020,14 @@ var _ = Describe("kubernetes", func() {
 			It("should not return a message because no events exist", func() {
 				var listOpts []client.ListOption
 				gomock.InOrder(
-					k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
+					reader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
 						func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
 							listOpts = listOptions
 							return nil
 						}),
 				)
 
-				msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, serviceObj, corev1.EventTypeWarning, len(events))
+				msg, err := FetchEventMessages(ctx, scheme, reader, serviceObj, corev1.EventTypeWarning, len(events))
 
 				Expect(listOpts).To(ContainElement(client.MatchingFields{
 					"involvedObject.apiVersion": serviceObj.APIVersion,
@@ -1072,14 +1043,14 @@ var _ = Describe("kubernetes", func() {
 			It("should not return a message because an error occurred", func() {
 				var listOpts []client.ListOption
 				gomock.InOrder(
-					k8sShootRuntimeClient.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
+					reader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
 						func(_ context.Context, list *corev1.EventList, listOptions ...client.ListOption) error {
 							listOpts = listOptions
 							return errors.New("foo")
 						}),
 				)
 
-				msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, serviceObj, corev1.EventTypeWarning, len(events))
+				msg, err := FetchEventMessages(ctx, scheme, reader, serviceObj, corev1.EventTypeWarning, len(events))
 
 				Expect(listOpts).To(ContainElement(client.MatchingFields{
 					"involvedObject.apiVersion": serviceObj.APIVersion,
@@ -1100,7 +1071,7 @@ var _ = Describe("kubernetes", func() {
 			})
 
 			It("should not return a message because type kind is not in scheme", func() {
-				msg, err := FetchEventMessages(ctx, k8sShootRuntimeClient, &corev1.Service{}, corev1.EventTypeWarning, len(events))
+				msg, err := FetchEventMessages(ctx, scheme, reader, &corev1.Service{}, corev1.EventTypeWarning, len(events))
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("failed identify GVK for object"))

@@ -242,7 +242,7 @@ var _ = Describe("KubeControllerManager", func() {
 				SeedNamespace: namespace,
 			}
 
-			kubernetesClient.EXPECT().DirectClient().Return(c)
+			kubernetesClient.EXPECT().Client().Return(c)
 		})
 
 		var patch = client.RawPatch(types.MergePatchType, []byte(`{"spec":{"replicas":1}}`))

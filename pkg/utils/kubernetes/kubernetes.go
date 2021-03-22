@@ -185,7 +185,8 @@ func WaitUntilLoadBalancerIsReady(ctx context.Context, kubeClient kubernetes.Int
 	}); err != nil {
 		const eventsLimit = 2
 
-		eventsErrorMessage, err2 := FetchEventMessages(ctx, kubeClient.DirectClient(), service, corev1.EventTypeWarning, eventsLimit)
+		// use API reader here, we don't want to cache all events
+		eventsErrorMessage, err2 := FetchEventMessages(ctx, kubeClient.Client().Scheme(), kubeClient.APIReader(), service, corev1.EventTypeWarning, eventsLimit)
 		if err2 != nil {
 			logger.Errorf("error %q occured while fetching events for error %q", err2, err)
 			return "", fmt.Errorf("'%w' occurred but could not fetch events for more information", err)
@@ -301,11 +302,8 @@ func ReconcileServicePorts(existingPorts []corev1.ServicePort, desiredPorts []co
 
 // FetchEventMessages gets events for the given object of the given `eventType` and returns them as a formatted output.
 // The function expects that the given `obj` is specified with a proper `metav1.TypeMeta`.
-func FetchEventMessages(ctx context.Context, c client.Client, obj client.Object, eventType string, eventsLimit int) (string, error) {
-	if c.Scheme() == nil {
-		return "", errors.New("scheme is not provided")
-	}
-	gvk, err := apiutil.GVKForObject(obj, c.Scheme())
+func FetchEventMessages(ctx context.Context, scheme *runtime.Scheme, reader client.Reader, obj client.Object, eventType string, eventsLimit int) (string, error) {
+	gvk, err := apiutil.GVKForObject(obj, scheme)
 	if err != nil {
 		return "", fmt.Errorf("failed identify GVK for object: %w", err)
 	}
@@ -325,7 +323,7 @@ func FetchEventMessages(ctx context.Context, c client.Client, obj client.Object,
 		"type":                      eventType,
 	}
 	eventList := &corev1.EventList{}
-	if err := c.List(ctx, eventList, fieldSelector); err != nil {
+	if err := reader.List(ctx, eventList, fieldSelector); err != nil {
 		return "", fmt.Errorf("error '%v' occurred while fetching more details", err)
 	}
 
@@ -430,7 +428,7 @@ func OwnedBy(obj client.Object, apiVersion, kind, name string, uid types.UID) bo
 // is provided then it will be applied for each object right after listing all objects. If no object remains then nil
 // is returned. The Items field in the list object will be populated with the result returned from the server after
 // applying the filter function (if provided).
-func NewestObject(ctx context.Context, c client.Client, listObj client.ObjectList, filterFn func(client.Object) bool, listOpts ...client.ListOption) (client.Object, error) {
+func NewestObject(ctx context.Context, c client.Reader, listObj client.ObjectList, filterFn func(client.Object) bool, listOpts ...client.ListOption) (client.Object, error) {
 	if err := c.List(ctx, listObj, listOpts...); err != nil {
 		return nil, err
 	}
@@ -478,7 +476,7 @@ func NewestObject(ctx context.Context, c client.Client, listObj client.ObjectLis
 }
 
 // NewestPodForDeployment returns the most recently created Pod object for the given deployment.
-func NewestPodForDeployment(ctx context.Context, c client.Client, deployment *appsv1.Deployment) (*corev1.Pod, error) {
+func NewestPodForDeployment(ctx context.Context, c client.Reader, deployment *appsv1.Deployment) (*corev1.Pod, error) {
 	listOpts := []client.ListOption{client.InNamespace(deployment.Namespace)}
 	if deployment.Spec.Selector != nil {
 		listOpts = append(listOpts, client.MatchingLabels(deployment.Spec.Selector.MatchLabels))
