@@ -152,9 +152,13 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing CloudProfile controller: %w", err)
 	}
 
+	csrController, err := csrcontroller.NewCSRController(ctx, f.clientMap)
+	if err != nil {
+		return fmt.Errorf("failed initializing CloudProfile controller: %w", err)
+	}
+
 	var (
 		controllerRegistrationController = controllerregistrationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, secrets)
-		csrController                    = csrcontroller.NewCSRController(f.clientMap, f.k8sInformers, f.recorder)
 		quotaController                  = quotacontroller.NewQuotaController(f.clientMap, f.k8sGardenCoreInformers, f.recorder)
 		plantController                  = plantcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
 		projectController                = projectcontroller.NewProjectController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)

@@ -31,8 +31,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/sirupsen/logrus"
@@ -57,26 +55,21 @@ func (c *Controller) csrUpdate(_, newObj interface{}) {
 }
 
 // NewCSRReconciler creates a new instance of a reconciler which reconciles CSRs.
-func NewCSRReconciler(l logrus.FieldLogger, clientMap clientmap.ClientMap) reconcile.Reconciler {
+func NewCSRReconciler(l logrus.FieldLogger, gardenClient kubernetes.Interface) reconcile.Reconciler {
 	return &csrReconciler{
-		logger:    l,
-		clientMap: clientMap,
+		logger:       l,
+		gardenClient: gardenClient,
 	}
 }
 
 type csrReconciler struct {
-	logger    logrus.FieldLogger
-	clientMap clientmap.ClientMap
+	logger       logrus.FieldLogger
+	gardenClient kubernetes.Interface
 }
 
 func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	csr := &certificatesv1beta1.CertificateSigningRequest{}
-	if err := gardenClient.Client().Get(ctx, request.NamespacedName, csr); err != nil {
+	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, csr); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
 			return reconcile.Result{}, nil
@@ -111,7 +104,7 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 
 	csrLogger.Infof("[CSR APPROVER] %s", csr.Name)
 
-	approved, err := authorize(ctx, gardenClient.Client(), csr, authorizationv1beta1.ResourceAttributes{Group: "certificates.k8s.io", Resource: "certificatesigningrequests", Verb: "create", Subresource: "seedclient"})
+	approved, err := authorize(ctx, r.gardenClient.Client(), csr, authorizationv1beta1.ResourceAttributes{Group: "certificates.k8s.io", Resource: "certificatesigningrequests", Verb: "create", Subresource: "seedclient"})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -124,7 +117,7 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 			Reason:  "AutoApproved",
 			Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
 		})
-		_, err := gardenClient.Kubernetes().CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(ctx, csr, kubernetes.DefaultUpdateOptions())
+		_, err := r.gardenClient.Kubernetes().CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(ctx, csr, kubernetes.DefaultUpdateOptions())
 		return reconcile.Result{}, err
 	}
 
