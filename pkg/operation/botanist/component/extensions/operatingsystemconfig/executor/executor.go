@@ -16,14 +16,13 @@ package executor
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
-	"path/filepath"
 	"text/template"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor/templates"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount"
@@ -36,8 +35,10 @@ import (
 )
 
 var (
-	tplName = "execute-cloud-config.tpl.sh"
-	tpl     *template.Template
+	tplName = "execute-cloud-config"
+	//go:embed templates/scripts/execute-cloud-config.tpl.sh
+	tplContent string
+	tpl        *template.Template
 )
 
 func init() {
@@ -45,7 +46,7 @@ func init() {
 	tpl, err = template.
 		New(tplName).
 		Funcs(sprig.TxtFuncMap()).
-		Parse(string(templates.MustAsset(filepath.Join("scripts", tplName))))
+		Parse(tplContent)
 	if err != nil {
 		panic(err)
 	}

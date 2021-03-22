@@ -15,12 +15,13 @@
 package test
 
 import (
+	"embed"
+
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
-	"github.com/gobuffalo/packr"
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var (
@@ -29,13 +30,12 @@ var (
 
 // DescribeTest returns a function which can be used in tests for the
 // template generator implementation. It receives an instance of a template
-// generator and a packr Box with the test files to be used in the tests.
-var DescribeTest = func(g generator.Generator, box packr.Box) func() {
+// generator and embedded files with the test files to be used in the tests.
+var DescribeTest = func(g generator.Generator, files embed.FS) func() {
 	return func() {
-
-		ginkgo.It("should render correctly", func() {
-			expectedCloudInit, err := box.Find("cloud-init")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		It("should render correctly", func() {
+			expectedCloudInit, err := files.ReadFile("cloud-init")
+			Expect(err).NotTo(HaveOccurred())
 
 			cloudInit, _, err := g.Generate(&generator.OperatingSystemConfig{
 				Object: &extensionsv1alpha1.OperatingSystemConfig{},
@@ -62,8 +62,8 @@ var DescribeTest = func(g generator.Generator, box packr.Box) func() {
 				Bootstrap: true,
 			})
 
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(cloudInit).To(gomega.Equal(expectedCloudInit))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cloudInit).To(Equal(expectedCloudInit))
 		})
 	}
 }

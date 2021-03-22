@@ -16,7 +16,7 @@ package kubelet
 
 import (
 	"bytes"
-	"path/filepath"
+	_ "embed"
 	"strings"
 	"text/template"
 
@@ -31,15 +31,16 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet/templates"
 	oscutils "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var (
-	tplNameHealthMonitor = "health-monitor.tpl.sh"
-	tplHealthMonitor     *template.Template
+	tplNameHealthMonitor = "health-monitor"
+	//go:embed templates/scripts/health-monitor.tpl.sh
+	tplContentHealthMonitor string
+	tplHealthMonitor        *template.Template
 )
 
 func init() {
@@ -47,7 +48,7 @@ func init() {
 	tplHealthMonitor, err = template.
 		New(tplNameHealthMonitor).
 		Funcs(sprig.TxtFuncMap()).
-		Parse(string(templates.MustAsset(filepath.Join("scripts", tplNameHealthMonitor))))
+		Parse(tplContentHealthMonitor)
 	if err != nil {
 		panic(err)
 	}

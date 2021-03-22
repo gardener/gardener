@@ -16,13 +16,12 @@ package docker
 
 import (
 	"bytes"
-	"path/filepath"
+	_ "embed"
 	"text/template"
 
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker/templates"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/logrotate"
 	"github.com/gardener/gardener/pkg/utils"
 
@@ -31,8 +30,10 @@ import (
 )
 
 var (
-	tplNameHealthMonitor = "health-monitor.tpl.sh"
-	tplHealthMonitor     *template.Template
+	tplNameHealthMonitor = "health-monitor"
+	//go:embed templates/scripts/health-monitor.tpl.sh
+	tplContentHealthMonitor string
+	tplHealthMonitor        *template.Template
 )
 
 func init() {
@@ -40,7 +41,7 @@ func init() {
 	tplHealthMonitor, err = template.
 		New(tplNameHealthMonitor).
 		Funcs(sprig.TxtFuncMap()).
-		Parse(string(templates.MustAsset(filepath.Join("scripts", tplNameHealthMonitor))))
+		Parse(tplContentHealthMonitor)
 	if err != nil {
 		panic(err)
 	}

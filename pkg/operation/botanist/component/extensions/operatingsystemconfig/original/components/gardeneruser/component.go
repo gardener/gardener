@@ -16,12 +16,11 @@ package gardeneruser
 
 import (
 	"bytes"
-	"path/filepath"
+	_ "embed"
 	"text/template"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser/templates"
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/Masterminds/sprig"
@@ -29,8 +28,10 @@ import (
 )
 
 var (
-	tplName = "create.tpl.sh"
-	tpl     *template.Template
+	tplName = "create"
+	//go:embed templates/scripts/create.tpl.sh
+	tplContent string
+	tpl        *template.Template
 )
 
 func init() {
@@ -38,7 +39,7 @@ func init() {
 	tpl, err = template.
 		New(tplName).
 		Funcs(sprig.TxtFuncMap()).
-		Parse(string(templates.MustAsset(filepath.Join("scripts", tplName))))
+		Parse(tplContent)
 	if err != nil {
 		panic(err)
 	}
