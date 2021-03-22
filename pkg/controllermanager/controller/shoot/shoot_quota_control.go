@@ -16,14 +16,11 @@ package shoot
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/operation/common"
 
@@ -56,11 +53,11 @@ func (c *Controller) shootQuotaDelete(obj interface{}) {
 
 // NewShootQuotaReconciler creates a new instance of a reconciler which checks handles Shoots using SecretBindings that
 // references Quotas.
-func NewShootQuotaReconciler(l logrus.FieldLogger, cfg config.ShootQuotaControllerConfiguration, clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.Interface) reconcile.Reconciler {
+func NewShootQuotaReconciler(l logrus.FieldLogger, gardenClient kubernetes.Interface, cfg config.ShootQuotaControllerConfiguration, k8sGardenCoreInformers gardencoreinformers.Interface) reconcile.Reconciler {
 	return &shootQuotaReconciler{
 		logger:                 l,
 		cfg:                    cfg,
-		clientMap:              clientMap,
+		gardenClient:           gardenClient,
 		k8sGardenCoreInformers: k8sGardenCoreInformers,
 	}
 }
@@ -68,18 +65,13 @@ func NewShootQuotaReconciler(l logrus.FieldLogger, cfg config.ShootQuotaControll
 type shootQuotaReconciler struct {
 	logger                 logrus.FieldLogger
 	cfg                    config.ShootQuotaControllerConfiguration
-	clientMap              clientmap.ClientMap
+	gardenClient           kubernetes.Interface
 	k8sGardenCoreInformers gardencoreinformers.Interface
 }
 
 func (r *shootQuotaReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := gardenClient.Client().Get(ctx, request.NamespacedName, shoot); err != nil {
+	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
 			return reconcile.Result{}, nil
@@ -120,7 +112,7 @@ func (r *shootQuotaReconciler) Reconcile(ctx context.Context, request reconcile.
 		expirationTime = shoot.CreationTimestamp.Add(time.Duration(*clusterLifeTime*24) * time.Hour).Format(time.RFC3339)
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.ShootExpirationTimestamp, expirationTime)
 
-		shootUpdated, err := gardenClient.GardenCore().CoreV1beta1().Shoots(shoot.Namespace).Update(ctx, shoot, kubernetes.DefaultUpdateOptions())
+		shootUpdated, err := r.gardenClient.GardenCore().CoreV1beta1().Shoots(shoot.Namespace).Update(ctx, shoot, kubernetes.DefaultUpdateOptions())
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -136,12 +128,12 @@ func (r *shootQuotaReconciler) Reconcile(ctx context.Context, request reconcile.
 		r.logger.Info("[SHOOT QUOTA] Shoot cluster lifetime expired. Shoot will be deleted.")
 
 		// We have to annotate the Shoot to confirm the deletion.
-		if err := common.ConfirmDeletion(ctx, gardenClient.Client(), shoot); err != nil {
+		if err := common.ConfirmDeletion(ctx, r.gardenClient.Client(), shoot); err != nil {
 			return reconcile.Result{}, err
 		}
 
 		// Now we are allowed to delete the Shoot (to set the deletionTimestamp).
-		if err := gardenClient.GardenCore().CoreV1beta1().Shoots(shoot.Namespace).Delete(ctx, shoot.Name, metav1.DeleteOptions{}); err != nil {
+		if err := r.gardenClient.GardenCore().CoreV1beta1().Shoots(shoot.Namespace).Delete(ctx, shoot.Name, metav1.DeleteOptions{}); err != nil {
 			return reconcile.Result{}, err
 		}
 	}

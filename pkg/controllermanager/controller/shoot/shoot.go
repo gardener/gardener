@@ -43,29 +43,47 @@ import (
 
 // Controller controls Shoots.
 type Controller struct {
-	clientMap clientmap.ClientMap
-	config    *config.ControllerManagerConfiguration
-
-	shootMaintenanceQueue workqueue.RateLimitingInterface
-	shootQuotaQueue       workqueue.RateLimitingInterface
-	shootHibernationQueue workqueue.RateLimitingInterface
-	shootReferenceQueue   workqueue.RateLimitingInterface
-	configMapQueue        workqueue.RateLimitingInterface
+	config *config.ControllerManagerConfiguration
 
 	shootHibernationReconciler reconcile.Reconciler
 	shootMaintenanceReconciler reconcile.Reconciler
 	shootQuotaReconciler       reconcile.Reconciler
 	shootRefReconciler         reconcile.Reconciler
 	configMapReconciler        reconcile.Reconciler
+	hasSyncedFuncs             []cache.InformerSynced
 
-	hasSyncedFuncs         []cache.InformerSynced
+	shootMaintenanceQueue  workqueue.RateLimitingInterface
+	shootQuotaQueue        workqueue.RateLimitingInterface
+	shootHibernationQueue  workqueue.RateLimitingInterface
+	shootReferenceQueue    workqueue.RateLimitingInterface
+	configMapQueue         workqueue.RateLimitingInterface
 	numberOfRunningWorkers int
 	workerCh               chan int
 }
 
 // NewShootController takes a ClientMap, a GardenerInformerFactory, a KubernetesInformerFactory, a
 // ControllerManagerConfig struct and an EventRecorder to create a new Shoot controller.
-func NewShootController(ctx context.Context, clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) (*Controller, error) {
+func NewShootController(
+	ctx context.Context,
+	clientMap clientmap.ClientMap,
+	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory,
+	kubeInformerFactory kubeinformers.SharedInformerFactory,
+	config *config.ControllerManagerConfiguration,
+	recorder record.EventRecorder,
+) (
+	*Controller,
+	error,
+) {
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, err
+	}
+
+	runtimeShootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
+	}
+
 	var (
 		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
 		corev1Informer            = kubeInformerFactory.Core().V1()
@@ -80,12 +98,11 @@ func NewShootController(ctx context.Context, clientMap clientmap.ClientMap, k8sG
 	)
 
 	shootController := &Controller{
-		clientMap: clientMap,
-		config:    config,
+		config: config,
 
 		shootHibernationReconciler: NewShootHibernationReconciler(logger.Logger, clientMap, shootLister, NewHibernationScheduleRegistry(), recorder),
 		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, config.Controllers.ShootMaintenance, clientMap, gardenCoreV1beta1Informer, recorder),
-		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, config.Controllers.ShootQuota, clientMap, gardenCoreV1beta1Informer),
+		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient, config.Controllers.ShootQuota, gardenCoreV1beta1Informer),
 		configMapReconciler:        NewConfigMapReconciler(logger.Logger, clientMap, shootLister),
 
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
@@ -103,7 +120,7 @@ func NewShootController(ctx context.Context, clientMap clientmap.ClientMap, k8sG
 		DeleteFunc: shootController.shootMaintenanceDelete,
 	})
 
-	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	runtimeShootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootQuotaAdd,
 		DeleteFunc: shootController.shootQuotaDelete,
 	})
@@ -119,15 +136,6 @@ func NewShootController(ctx context.Context, clientMap clientmap.ClientMap, k8sG
 		UpdateFunc: shootController.configMapUpdate,
 	})
 
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, err
-	}
-
-	runtimeShootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
-	}
 	runtimeShootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootReferenceAdd,
 		UpdateFunc: shootController.shootReferenceUpdate,
