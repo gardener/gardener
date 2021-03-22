@@ -266,7 +266,10 @@ func (g *GardenerScheduler) startScheduler(ctx context.Context) {
 		panic(fmt.Errorf("failed to start ClientMap: %+v", err))
 	}
 
-	shootScheduler := shootcontroller.NewGardenerScheduler(g.ClientMap, g.K8sGardenCoreInformers, g.Config, g.Recorder)
+	shootScheduler, err := shootcontroller.NewGardenerScheduler(ctx, g.ClientMap, g.K8sGardenCoreInformers, g.Config, g.Recorder)
+	if err != nil {
+		panic(fmt.Errorf("failed to create shoot scheduler controller: %+v", err))
+	}
 	//backupBucketScheduler := backupbucketcontroller.NewGardenerScheduler(ctx, g.K8sGardenClient, g.K8sGardenCoreInformers, g.Config, g.Recorder)
 
 	// Initialize the Controller metrics collection.

@@ -40,6 +40,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -73,7 +74,7 @@ func (c *SchedulerController) shootAdd(obj interface{}) {
 	c.shootQueue.Add(key)
 }
 
-func (c *SchedulerController) shootUpdate(oldObj, newObj interface{}) {
+func (c *SchedulerController) shootUpdate(_, newObj interface{}) {
 	c.shootAdd(newObj)
 }
 
@@ -83,7 +84,6 @@ func NewReconciler(
 	config *config.SchedulerConfiguration,
 	clientMap clientmap.ClientMap,
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory,
-	shootLister gardencorelisters.ShootLister,
 	seedLister gardencorelisters.SeedLister,
 	cloudProfileLister gardencorelisters.CloudProfileLister,
 	recorder record.EventRecorder,
@@ -93,7 +93,6 @@ func NewReconciler(
 		config:                 config,
 		clientMap:              clientMap,
 		k8sGardenCoreInformers: k8sGardenCoreInformers,
-		shootLister:            shootLister,
 		seedLister:             seedLister,
 		cloudProfileLister:     cloudProfileLister,
 		recorder:               recorder,
@@ -105,7 +104,6 @@ type reconciler struct {
 	config                 *config.SchedulerConfiguration
 	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	shootLister            gardencorelisters.ShootLister
 	seedLister             gardencorelisters.SeedLister
 	cloudProfileLister     gardencorelisters.CloudProfileLister
 	recorder               record.EventRecorder
@@ -130,7 +128,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	schedulerLogger := logger.NewFieldLogger(logger.Logger, "scheduler", "shoot").WithField("shoot", shoot.Name)
 
 	// If no Seed is referenced, we try to determine an adequate one.
-	seed, err := determineSeed(shoot, r.seedLister, r.shootLister, r.cloudProfileLister, r.config.Schedulers.Shoot.Strategy)
+	seed, err := determineSeed(ctx, gardenClient.Client(), shoot, r.seedLister, r.cloudProfileLister, r.config.Schedulers.Shoot.Strategy)
 	if err != nil {
 		r.reportFailedScheduling(shoot, err)
 		return reconcile.Result{}, err
@@ -172,13 +170,23 @@ func (r *reconciler) reportEvent(project *gardencorev1beta1.Shoot, eventType str
 }
 
 // determineSeed returns an appropriate Seed cluster (or nil).
-func determineSeed(shoot *gardencorev1beta1.Shoot, seedLister gardencorelisters.SeedLister, shootLister gardencorelisters.ShootLister, cloudProfileLister gardencorelisters.CloudProfileLister, strategy config.CandidateDeterminationStrategy) (*gardencorev1beta1.Seed, error) {
+func determineSeed(
+	ctx context.Context,
+	gardenClient client.Client,
+	shoot *gardencorev1beta1.Shoot,
+	seedLister gardencorelisters.SeedLister,
+	cloudProfileLister gardencorelisters.CloudProfileLister,
+	strategy config.CandidateDeterminationStrategy,
+) (
+	*gardencorev1beta1.Seed,
+	error,
+) {
 	seedList, err := seedLister.List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
-	shootList, err := shootLister.List(labels.Everything())
-	if err != nil {
+	shootList := &gardencorev1beta1.ShootList{}
+	if err := gardenClient.List(ctx, shootList); err != nil {
 		return nil, err
 	}
 	cloudProfile, err := cloudProfileLister.Get(shoot.Spec.CloudProfileName)
@@ -201,7 +209,7 @@ func determineSeed(shoot *gardencorev1beta1.Shoot, seedLister gardencorelisters.
 	if err != nil {
 		return nil, err
 	}
-	filteredSeeds, err = filterCandidates(shoot, shootList, filteredSeeds)
+	filteredSeeds, err = filterCandidates(shoot, shootList.Items, filteredSeeds)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +217,7 @@ func determineSeed(shoot *gardencorev1beta1.Shoot, seedLister gardencorelisters.
 	if err != nil {
 		return nil, err
 	}
-	return getSeedWithLeastShootsDeployed(filteredSeeds, shootList)
+	return getSeedWithLeastShootsDeployed(filteredSeeds, shootList.Items)
 }
 
 func isUsableSeed(seed *gardencorev1beta1.Seed) bool {
@@ -288,7 +296,7 @@ func applyStrategy(shoot *gardencorev1beta1.Shoot, seedList []*gardencorev1beta1
 	return candidates, nil
 }
 
-func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []*gardencorev1beta1.Shoot, seedList []*gardencorev1beta1.Seed) ([]*gardencorev1beta1.Seed, error) {
+func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []gardencorev1beta1.Shoot, seedList []*gardencorev1beta1.Seed) ([]*gardencorev1beta1.Seed, error) {
 	var (
 		candidates      []*gardencorev1beta1.Seed
 		candidateErrors = make(map[string]error)
@@ -326,7 +334,7 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []*gardencorev1b
 }
 
 // getSeedWithLeastShootsDeployed finds the best candidate (i.e. the one managing the smallest number of shoots right now).
-func getSeedWithLeastShootsDeployed(seedList []*gardencorev1beta1.Seed, shootList []*gardencorev1beta1.Shoot) (*gardencorev1beta1.Seed, error) {
+func getSeedWithLeastShootsDeployed(seedList []*gardencorev1beta1.Seed, shootList []gardencorev1beta1.Shoot) (*gardencorev1beta1.Seed, error) {
 	var (
 		bestCandidate *gardencorev1beta1.Seed
 		min           *int
@@ -406,7 +414,7 @@ func determineCandidatesWithMinimalDistanceStrategy(seeds []*gardencorev1beta1.S
 	return candidates
 }
 
-func generateSeedUsageMap(shootList []*gardencorev1beta1.Shoot) map[string]int {
+func generateSeedUsageMap(shootList []gardencorev1beta1.Shoot) map[string]int {
 	m := map[string]int{}
 
 	for _, shoot := range shootList {
