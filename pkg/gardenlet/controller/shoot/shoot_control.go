@@ -43,6 +43,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
@@ -550,6 +551,14 @@ func (c *Controller) updateShootStatusOperationStart(ctx context.Context, g gard
 		description = "Reconciliation of Shoot cluster state initialized."
 		operationTypeSwitched = false
 
+	case gardencorev1beta1.LastOperationTypeRestore:
+		description = "Restoration of Shoot cluster state initialized."
+		operationTypeSwitched = false
+
+	case gardencorev1beta1.LastOperationTypeMigrate:
+		description = "Migration of Shoot cluster control plane initialized."
+		operationTypeSwitched = false
+
 	case gardencorev1beta1.LastOperationTypeDelete:
 		description = "Deletion of Shoot cluster in progress."
 		operationTypeSwitched = shoot.Status.LastOperation != nil && shoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeDelete
@@ -567,6 +576,10 @@ func (c *Controller) updateShootStatusOperationStart(ctx context.Context, g gard
 
 			if len(shoot.Status.TechnicalID) == 0 {
 				shoot.Status.TechnicalID = shootNamespace
+			}
+
+			if !equality.Semantic.DeepEqual(shoot.Status.SeedName, shoot.Spec.SeedName) && operationType != gardencorev1beta1.LastOperationTypeMigrate {
+				shoot.Status.SeedName = shoot.Spec.SeedName
 			}
 
 			shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
@@ -595,6 +608,14 @@ func (c *Controller) updateShootStatusOperationSuccess(ctx context.Context, g ga
 	switch operationType {
 	case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile:
 		description = "Shoot cluster state has been successfully reconciled."
+		setConditionsToProgressing = true
+
+	case gardencorev1beta1.LastOperationTypeMigrate:
+		description = "Shoot cluster state has been successfully migrated."
+		setConditionsToProgressing = true
+
+	case gardencorev1beta1.LastOperationTypeRestore:
+		description = "Shoot cluster state has been successfully restored."
 		setConditionsToProgressing = true
 
 	case gardencorev1beta1.LastOperationTypeDelete:
@@ -636,7 +657,6 @@ func (c *Controller) updateShootStatusOperationSuccess(ctx context.Context, g ga
 				}
 			}
 
-			shoot.Status.SeedName = seedName
 			shoot.Status.IsHibernated = isHibernated
 			shoot.Status.RetryCycleStartTime = nil
 			shoot.Status.LastErrors = nil
