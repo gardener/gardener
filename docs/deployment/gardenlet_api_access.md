@@ -52,9 +52,10 @@ With the `Seed` name at hand, the authorizer checks for an **existing path** fro
 
 Today, the following rules are implemented:
 
-| Resource        | Verb        | Path                                   | Description            |
-| ----------------|-------------|----------------------------------------|------------------------|
-| `CloudProfile`  | Get         | `CloudProfile` -> `Shoot` -> `Seed`    | Allow `get` requests for CloudProfiles, referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `CloudProfile`s. |
+| Resource       | Verb  | Path                                | Description            |
+| -------------- | ----- | ----------------------------------- | ---------------------- |
+| `CloudProfile` | `get` | `CloudProfile` -> `Shoot` -> `Seed` | Allow `get` requests for `CloudProfile`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `CloudProfile`s. |
+| `ConfigMap`    | `get` | `ConfigMap` -> `Shoot` -> `Seed`    | Allow `get` requests for `ConfigMap`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `ConfigMap`s. |
 
 ### Implementation Details
 
