@@ -203,7 +203,7 @@ var _ = Describe("Shoot Care Control", func() {
 					defer test.WithVars(&NewOperation, operationFunc)()
 					careControl = NewDefaultCareControl(clientMapBuilder.Build(), gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
 
-					Expect(careControl.Care(shoot, key)).To(MatchError("error reading Garden secrets: require exactly ONE internal domain secret, but found 0"))
+					Expect(careControl.Care(shoot, key)).To(MatchError("error reading Garden secrets: need an internal domain secret but found none"))
 				})
 			})
 

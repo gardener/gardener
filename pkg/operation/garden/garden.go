@@ -26,12 +26,10 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -164,12 +162,6 @@ func DomainIsDefaultDomain(domain string, defaultDomains []*Domain) *Domain {
 	}
 	return nil
 }
-
-const (
-	// ControllerManagerInternalConfigMapName is the name of the internal config map in which the Gardener controller
-	// manager stores its configuration.
-	ControllerManagerInternalConfigMapName = "gardener-controller-manager-internal-config"
-)
 
 // ReadGardenSecrets reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
 // The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
@@ -308,8 +300,8 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 		// is used in all kubeconfigs. With that we have a robust endpoint stable against underlying ip/hostname changes.
 		// And there can only be one of this internal domain secret because otherwise the gardener would not know which
 		// domain it should use.
-		if numberOfInternalDomainSecrets != 1 {
-			return nil, fmt.Errorf("require exactly ONE internal domain secret, but found %d", numberOfInternalDomainSecrets)
+		if numberOfInternalDomainSecrets == 0 {
+			return nil, fmt.Errorf("need an internal domain secret but found none")
 		}
 	}
 
@@ -331,44 +323,6 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 	logger.Logger.Infof("Found secrets: %s", strings.Join(logInfo, ", "))
 
 	return secretsMap, nil
-}
-
-// VerifyInternalDomainSecret verifies that the internal domain secret matches to the internal domain secret used for
-// existing Shoot clusters. It is not allowed to change the internal domain secret if there are existing Shoot clusters.
-func VerifyInternalDomainSecret(ctx context.Context, gardenClient client.Client, numberOfShoots int, internalDomainSecret *corev1.Secret) error {
-	_, currentDomain, _, _, err := common.GetDomainInfoFromAnnotations(internalDomainSecret.Annotations)
-	if err != nil {
-		return fmt.Errorf("error getting information out of current internal domain secret: %+v", err)
-	}
-
-	internalConfigMap := &corev1.ConfigMap{}
-	err = gardenClient.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, ControllerManagerInternalConfigMapName), internalConfigMap)
-	if apierrors.IsNotFound(err) || numberOfShoots == 0 {
-		configMap := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      ControllerManagerInternalConfigMapName,
-				Namespace: v1beta1constants.GardenNamespace,
-			},
-		}
-
-		_, err := controllerutil.CreateOrUpdate(ctx, gardenClient, configMap, func() error {
-			configMap.Data = map[string]string{
-				v1beta1constants.GardenRoleInternalDomain: currentDomain,
-			}
-			return nil
-		})
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
-	oldDomain := internalConfigMap.Data[v1beta1constants.GardenRoleInternalDomain]
-	if oldDomain != currentDomain {
-		return fmt.Errorf("cannot change internal domain from '%s' to '%s' unless there are no more Shoots", oldDomain, currentDomain)
-	}
-
-	return nil
 }
 
 var monitoringRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.In, v1beta1constants.GardenRoleGlobalMonitoring)
