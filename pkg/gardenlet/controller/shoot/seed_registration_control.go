@@ -33,12 +33,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -723,7 +721,7 @@ func deployGardenlet(ctx context.Context, gardenClient, seedClient, shootedSeedC
 					"repository": repository,
 					"tag":        tag,
 				},
-				"podAnnotations":                 gardenletAnnotations(shoot),
+				"env":                            ensureGardenletEnvironment(shoot.Spec.DNS),
 				"revisionHistoryLimit":           1,
 				"vpa":                            true,
 				"imageVectorOverwrite":           imageVectorOverwrite,
@@ -963,23 +961,25 @@ func computeServerConfig(serverConfig *configv1alpha1.ServerConfiguration) (map[
 	}, nil
 }
 
-func gardenletAnnotations(shoot *gardencorev1beta1.Shoot) map[string]string {
-	var gardenletAnnotations map[string]string
+// ensureGardenletEnvironment sets the KUBERNETES_SERVICE_HOST to the API of the ManagedSeed cluster.
+// This is needed so that the deployed gardenlet can properly set the network policies allowing
+// access of control plane components of the hosted shoots to the API server of the (managed) seed.
+func ensureGardenletEnvironment(dns *gardencorev1beta1.DNS) []map[string]string {
+	const kubernetesServiceHost = "KUBERNETES_SERVICE_HOST"
+	var (
+		shootDomain = ""
+		env         []map[string]string
+	)
 
-	// if APIServerSNI is enabled for the Seed cluster then
-	// the gardenlet must be restarted, so the Pod injector would
-	// add `KUBERNETES_SERVICE_HOST` environment variable.
-	if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
-		vers, err := semver.NewVersion(shoot.Status.Gardener.Version)
-		// We can't really do anything in case of error - it is not a transient error.
-		// Throwing error would force another reconciliation that would fail again here.
-		// Reconciling from this point makes no sense, unless the Shoot is updated.
-		if err == nil && vers != nil && minimumAPIServerSNISidecarConstraint.Check(vers) {
-			gardenletAnnotations = map[string]string{
-				"networking.gardener.cloud/seed-sni-enabled": "true",
-			}
-		}
+	if dns != nil && dns.Domain != nil && len(*dns.Domain) != 0 {
+		shootDomain = common.GetAPIServerDomain(*dns.Domain)
 	}
 
-	return gardenletAnnotations
+	if len(shootDomain) != 0 {
+		env = append(env, map[string]string{
+			"name":  kubernetesServiceHost,
+			"value": shootDomain,
+		})
+	}
+	return env
 }
