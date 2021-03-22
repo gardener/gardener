@@ -70,21 +70,11 @@ func NewGardenerScheduler(
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
 
-	var (
-		coreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
-
-		seedInformer         = coreV1beta1Informer.Seeds()
-		seedLister           = seedInformer.Lister()
-		cloudProfileInformer = coreV1beta1Informer.CloudProfiles()
-		cloudProfileLister   = cloudProfileInformer.Lister()
-		shootQueue           = workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(config.Schedulers.Shoot.RetrySyncPeriod.Duration, 12*time.Hour), "gardener-shoot-scheduler")
-	)
-
 	schedulerController := &SchedulerController{
 		k8sGardenCoreInformers: gardenCoreInformerFactory,
-		reconciler:             NewReconciler(logger.Logger, config, clientMap, gardenCoreInformerFactory, seedLister, cloudProfileLister, recorder),
+		reconciler:             NewReconciler(logger.Logger, config, gardenClient, recorder),
 		config:                 config,
-		shootQueue:             shootQueue,
+		shootQueue:             workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(config.Schedulers.Shoot.RetrySyncPeriod.Duration, 12*time.Hour), "gardener-shoot-scheduler"),
 		workerCh:               make(chan int),
 	}
 
@@ -93,11 +83,7 @@ func NewGardenerScheduler(
 		UpdateFunc: schedulerController.shootUpdate,
 	})
 
-	schedulerController.hasSyncedFuncs = append(schedulerController.hasSyncedFuncs,
-		shootInformer.HasSynced,
-		cloudProfileInformer.Informer().HasSynced,
-		seedInformer.Informer().HasSynced,
-	)
+	schedulerController.hasSyncedFuncs = append(schedulerController.hasSyncedFuncs, shootInformer.HasSynced)
 
 	return schedulerController, nil
 }
