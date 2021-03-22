@@ -639,6 +639,63 @@ var _ = Describe("Actuator", func() {
 	})
 })
 
+var _ = Describe("Utils", func() {
+	Describe("#ensureGardenletEnvironment", func() {
+		const (
+			kubernetesServiceHost = "KUBERNETES_SERVICE_HOST"
+			preserveDomain        = "preserve-value.example.com"
+		)
+		var (
+			otherEnvDeployment = &seedmanagementv1alpha1.GardenletDeployment{
+				Env: []corev1.EnvVar{
+					corev1.EnvVar{Name: "TEST_VAR", Value: "TEST_VALUE"},
+				},
+			}
+			kubernetesServiceHostEnvDeployment = &seedmanagementv1alpha1.GardenletDeployment{
+				Env: []corev1.EnvVar{
+					corev1.EnvVar{Name: kubernetesServiceHost, Value: preserveDomain},
+				},
+			}
+
+			dnsWithDomain = &gardencorev1beta1.DNS{
+				Domain: pointer.StringPtr("my-shoot.example.com"),
+			}
+			dnsWithoutDomain = &gardencorev1beta1.DNS{
+				Domain: nil,
+			}
+		)
+
+		It("should not overwrite existing KUBERNETES_SERVICE_HOST environment", func() {
+			ensuredDeploymentWithDomain := ensureGardenletEnvironment(kubernetesServiceHostEnvDeployment, dnsWithDomain)
+			ensuredDeploymentWithoutDomain := ensureGardenletEnvironment(kubernetesServiceHostEnvDeployment, dnsWithoutDomain)
+
+			Expect(ensuredDeploymentWithDomain.Env[0].Name).To(Equal(kubernetesServiceHost))
+			Expect(ensuredDeploymentWithDomain.Env[0].Value).To(Equal(preserveDomain))
+			Expect(ensuredDeploymentWithDomain.Env[0].Value).ToNot(Equal(common.GetAPIServerDomain(*dnsWithDomain.Domain)))
+
+			Expect(ensuredDeploymentWithoutDomain.Env[0].Name).To(Equal(kubernetesServiceHost))
+			Expect(ensuredDeploymentWithoutDomain.Env[0].Value).To(Equal(preserveDomain))
+
+		})
+
+		It("should should not inject KUBERNETES_SERVICE_HOST environemnt", func() {
+			ensuredDeploymentWithoutDomain := ensureGardenletEnvironment(otherEnvDeployment, dnsWithoutDomain)
+
+			Expect(ensuredDeploymentWithoutDomain.Env).To(HaveLen(1))
+			Expect(ensuredDeploymentWithoutDomain.Env[0].Name).ToNot(Equal(kubernetesServiceHost))
+		})
+		It("should should inject KUBERNETES_SERVICE_HOST environemnt", func() {
+			ensuredDeploymentWithoutDomain := ensureGardenletEnvironment(otherEnvDeployment, dnsWithDomain)
+
+			Expect(ensuredDeploymentWithoutDomain.Env).To(HaveLen(2))
+			Expect(ensuredDeploymentWithoutDomain.Env[0].Name).ToNot(Equal(kubernetesServiceHost))
+			Expect(ensuredDeploymentWithoutDomain.Env[1].Name).To(Equal(kubernetesServiceHost))
+			Expect(ensuredDeploymentWithoutDomain.Env[1].Value).To(Equal(common.GetAPIServerDomain(*dnsWithDomain.Domain)))
+
+		})
+	})
+})
+
 func pullPolicyPtr(v corev1.PullPolicy) *corev1.PullPolicy { return &v }
 
 func bootstrapPtr(v seedmanagementv1alpha1.Bootstrap) *seedmanagementv1alpha1.Bootstrap { return &v }
