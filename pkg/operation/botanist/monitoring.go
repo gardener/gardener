@@ -110,7 +110,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		usersDashboards.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.GrafanaConfigMapUserDashboard]))
 	}
 
-	alerting, err := b.getCustomAlertingConfigs(ctx, b.GetSecretKeysOfRole(common.GardenRoleAlerting))
+	alerting, err := b.getCustomAlertingConfigs(ctx, b.GetSecretKeysOfRole(v1beta1constants.GardenRoleAlerting))
 	if err != nil {
 		return err
 	}
@@ -238,7 +238,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	// Check if we want to deploy an alertmanager into the shoot namespace.
 	if b.Shoot.WantsAlertmanager {
 		var (
-			alertingSMTPKeys = b.GetSecretKeysOfRole(common.GardenRoleAlerting)
+			alertingSMTPKeys = b.GetSecretKeysOfRole(v1beta1constants.GardenRoleAlerting)
 			emailConfigs     = []map[string]interface{}{}
 		)
 

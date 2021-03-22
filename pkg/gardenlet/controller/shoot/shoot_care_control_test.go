@@ -94,7 +94,7 @@ var _ = Describe("Shoot Care Control", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "internal-domain-secret",
 						Annotations: map[string]string{common.DNSProvider: "fooDNS", common.DNSDomain: "foo.bar"},
-						Labels:      map[string]string{v1beta1constants.GardenRole: common.GardenRoleInternalDomain},
+						Labels:      map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
 					},
 				},
 			}

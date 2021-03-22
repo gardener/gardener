@@ -113,7 +113,7 @@ var _ = Describe("ManagedSeed", func() {
 					Name:      name,
 					Namespace: namespace,
 					Labels: map[string]string{
-						v1beta1constants.GardenRole: common.GardenRoleDefaultDomain,
+						v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
 					},
 					Annotations: map[string]string{
 						common.DNSProvider: dnsProvider,

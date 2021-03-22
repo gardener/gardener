@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/pkg/operation/garden"
 
@@ -54,7 +55,7 @@ var _ = Describe("Garden", func() {
 					Data: data,
 				}
 				secrets = map[string]*corev1.Secret{
-					fmt.Sprintf("%s-%s", common.GardenRoleDefaultDomain, domain): secret,
+					fmt.Sprintf("%s-%s", constants.GardenRoleDefaultDomain, domain): secret,
 				}
 			)
 
@@ -74,7 +75,7 @@ var _ = Describe("Garden", func() {
 
 		It("should return an error", func() {
 			secrets := map[string]*corev1.Secret{
-				fmt.Sprintf("%s-%s", common.GardenRoleDefaultDomain, "nip"): {
+				fmt.Sprintf("%s-%s", constants.GardenRoleDefaultDomain, "nip"): {
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
 							common.DNSProvider: "aws",
@@ -112,7 +113,7 @@ var _ = Describe("Garden", func() {
 					Data: data,
 				}
 				secrets = map[string]*corev1.Secret{
-					common.GardenRoleInternalDomain: secret,
+					constants.GardenRoleInternalDomain: secret,
 				}
 			)
 
@@ -136,7 +137,7 @@ var _ = Describe("Garden", func() {
 
 		It("should return an error", func() {
 			secrets := map[string]*corev1.Secret{
-				common.GardenRoleInternalDomain: {
+				constants.GardenRoleInternalDomain: {
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
 							common.DNSProvider: "aws",
