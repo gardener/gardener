@@ -19,7 +19,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -32,57 +31,11 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Seed registration control", func() {
-	Describe("gardenletAnnotations", func() {
-		BeforeEach(func() {
-			gardenletfeatures.RegisterFeatureGates()
-		})
-
-		DescribeTable("with different values annotation", func(added bool, version string, SNIEnabled bool) {
-			Expect(gardenletfeatures.FeatureGate.SetFromMap(map[string]bool{"APIServerSNI": SNIEnabled})).NotTo(HaveOccurred())
-
-			s := &gardencorev1beta1.Shoot{
-				Status: gardencorev1beta1.ShootStatus{
-					Gardener: gardencorev1beta1.Gardener{
-						Version: version,
-					},
-				},
-			}
-
-			actualAnnotations := gardenletAnnotations(s)
-
-			if added {
-				Expect(actualAnnotations).To(HaveKeyWithValue("networking.gardener.cloud/seed-sni-enabled", "true"))
-				Expect(actualAnnotations).To(HaveLen(1))
-			} else {
-				Expect(actualAnnotations).To(BeEmpty())
-			}
-		},
-			Entry("should be added for SNIEnabled release 1.14.1", true, "1.14.1", true),
-			Entry("should be added for SNIEnabled pre-release 1.14", true, "1.14-dev", true),
-			Entry("should be added for SNIEnabled pre-release 1.14.0", true, "1.14.0-dev", true),
-			Entry("should be added for SNIEnabled release 1.13.3", true, "1.13.3", true),
-			Entry("should be added for SNIEnabled pre-release 1.13", true, "1.13-dev", true),
-			Entry("should be added for SNIEnabled pre-release 1.13.0", true, "1.13.0-dev", true),
-			Entry("should not be added for SNIEnabled release 1.12.8", false, "1.12.8", true),
-			Entry("should not be added for SNIEnabled unparsable version", false, "not a semver", true),
-
-			Entry("should not be added for SNIDisabled release 1.14.1", false, "1.14.1", false),
-			Entry("should not be added for SNIDisabled pre-release 1.14", false, "1.14-dev", false),
-			Entry("should not be added for SNIDisabled pre-release 1.14.0", false, "1.14.0-dev", false),
-			Entry("should not be added for SNIDisabled release 1.13.3", false, "1.13.3", false),
-			Entry("should not be added for SNIDisabled pre-release 1.13", false, "1.13-dev", false),
-			Entry("should not be added for SNIDisabled pre-release 1.13.0", false, "1.13.0-dev", false),
-			Entry("should not be added for SNIDisabled release 1.12.8", false, "1.12.8", false),
-			Entry("should not be added for SNIDisabled unparsable version", false, "not a semver", false),
-		)
-	})
-
 	Describe("deployGardenlet", func() {
 		var (
 			ctx context.Context
