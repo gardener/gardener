@@ -103,7 +103,6 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		controllerRegistrationInformer = f.k8sGardenCoreInformers.Core().V1beta1().ControllerRegistrations().Informer()
 		controllerInstallationInformer = f.k8sGardenCoreInformers.Core().V1beta1().ControllerInstallations().Informer()
 		projectInformer                = f.k8sGardenCoreInformers.Core().V1beta1().Projects().Informer()
-		secretBindingInformer          = f.k8sGardenCoreInformers.Core().V1beta1().SecretBindings().Informer()
 		seedInformer                   = f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Informer()
 		shootInformer                  = f.k8sGardenCoreInformers.Core().V1beta1().Shoots().Informer()
 		// Kubernetes core informers
@@ -121,7 +120,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	}
 
 	f.k8sGardenCoreInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), backupBucketInformer.HasSynced, backupEntryInformer.HasSynced, controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, projectInformer.HasSynced, secretBindingInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), backupBucketInformer.HasSynced, backupEntryInformer.HasSynced, controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, projectInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
 		return fmt.Errorf("timed out waiting for Garden core caches to sync")
 	}
 

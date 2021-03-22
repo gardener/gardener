@@ -63,7 +63,7 @@ func NewBuilder() *Builder {
 		cloudProfileFunc: func(context.Context, string) (*gardencorev1beta1.CloudProfile, error) {
 			return nil, fmt.Errorf("cloudprofile object is required but not set")
 		},
-		shootSecretFunc: func(context.Context, client.Client, string, string) (*corev1.Secret, error) {
+		shootSecretFunc: func(context.Context, string, string) (*corev1.Secret, error) {
 			return nil, fmt.Errorf("shoot secret object is required but not set")
 		},
 	}
@@ -125,22 +125,23 @@ func (b *Builder) WithCloudProfileObjectFromCluster(seedClient kubernetes.Interf
 
 // WithShootSecret sets the shootSecretFunc attribute at the Builder.
 func (b *Builder) WithShootSecret(secret *corev1.Secret) *Builder {
-	b.shootSecretFunc = func(context.Context, client.Client, string, string) (*corev1.Secret, error) { return secret, nil }
+	b.shootSecretFunc = func(context.Context, string, string) (*corev1.Secret, error) { return secret, nil }
 	return b
 }
 
-// WithShootSecretFromLister sets the shootSecretFunc attribute at the Builder after fetching it from the given lister.
-func (b *Builder) WithShootSecretFromSecretBindingLister(secretBindingLister gardencorelisters.SecretBindingLister) *Builder {
-	b.shootSecretFunc = func(ctx context.Context, c client.Client, namespace, secretBindingName string) (*corev1.Secret, error) {
-		binding, err := secretBindingLister.SecretBindings(namespace).Get(secretBindingName)
-		if err != nil {
+// WithShootSecretFromReader sets the shootSecretFunc attribute at the Builder after fetching it from the given reader.
+func (b *Builder) WithShootSecretFromReader(c client.Reader) *Builder {
+	b.shootSecretFunc = func(ctx context.Context, namespace, secretBindingName string) (*corev1.Secret, error) {
+		binding := &gardencorev1beta1.SecretBinding{}
+		if err := c.Get(ctx, kutil.Key(namespace, secretBindingName), binding); err != nil {
 			return nil, err
 		}
 
 		secret := &corev1.Secret{}
-		if err = c.Get(ctx, kutil.Key(binding.SecretRef.Namespace, binding.SecretRef.Name), secret); err != nil {
+		if err := c.Get(ctx, kutil.Key(binding.SecretRef.Namespace, binding.SecretRef.Name), secret); err != nil {
 			return nil, err
 		}
+
 		return secret, nil
 	}
 	return b
@@ -186,7 +187,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	}
 	shoot.CloudProfile = cloudProfile
 
-	secret, err := b.shootSecretFunc(ctx, c, shootObject.Namespace, shootObject.Spec.SecretBindingName)
+	secret, err := b.shootSecretFunc(ctx, shootObject.Namespace, shootObject.Spec.SecretBindingName)
 	if err != nil {
 		return nil, err
 	}

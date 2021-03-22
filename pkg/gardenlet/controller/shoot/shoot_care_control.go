@@ -290,6 +290,7 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 
 	operation, err := NewOperation(
 		ctx,
+		gardenClient,
 		seedClient,
 		c.config,
 		c.identity,

@@ -74,6 +74,7 @@ var defaultNewGarbageCollector = func(op *operation.Operation, init care.ShootCl
 // NewOperationFunc is a function used to create a new `operation.Operation` instance.
 type NewOperationFunc func(
 	ctx context.Context,
+	gardenClient kubernetes.Interface,
 	seedClient kubernetes.Interface,
 	config *config.GardenletConfiguration,
 	gardenerInfo *gardencorev1beta1.Gardener,
@@ -84,10 +85,14 @@ type NewOperationFunc func(
 	clientMap clientmap.ClientMap,
 	shoot *gardencorev1beta1.Shoot,
 	logger *logrus.Entry,
-) (*operation.Operation, error)
+) (
+	*operation.Operation,
+	error,
+)
 
 var defaultNewOperationFunc = func(
 	ctx context.Context,
+	gardenClient kubernetes.Interface,
 	seedClient kubernetes.Interface,
 	config *config.GardenletConfiguration,
 	gardenerInfo *gardencorev1beta1.Gardener,
@@ -98,7 +103,10 @@ var defaultNewOperationFunc = func(
 	clientMap clientmap.ClientMap,
 	shoot *gardencorev1beta1.Shoot,
 	logger *logrus.Entry,
-) (*operation.Operation, error) {
+) (
+	*operation.Operation,
+	error,
+) {
 	return operation.
 		NewBuilder().
 		WithLogger(logger).
@@ -109,6 +117,6 @@ var defaultNewOperationFunc = func(
 		WithImageVector(imageVector).
 		WithGardenFrom(k8sGardenCoreInformers, shoot.Namespace).
 		WithSeedFrom(k8sGardenCoreInformers, *shoot.Spec.SeedName).
-		WithShootFromCluster(k8sGardenCoreInformers, seedClient, shoot).
+		WithShootFromCluster(gardenClient, seedClient, shoot).
 		Build(ctx, clientMap)
 }
