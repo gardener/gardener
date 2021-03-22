@@ -1066,13 +1066,13 @@ func GetWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secre
 		ctx,
 		wildcardCerts,
 		client.InNamespace(v1beta1constants.GardenNamespace),
-		client.MatchingLabels{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert},
+		client.MatchingLabels{v1beta1constants.GardenRole: common.GardenRoleControlPlaneWildcardCert},
 	); err != nil {
 		return nil, err
 	}
 
 	if len(wildcardCerts.Items) > 1 {
-		return nil, fmt.Errorf("misconfigured seed cluster: not possible to provide more than one secret with annotation %s", common.ControlPlaneWildcardCert)
+		return nil, fmt.Errorf("misconfigured seed cluster: not possible to provide more than one secret with annotation %s", common.GardenRoleControlPlaneWildcardCert)
 	}
 
 	if len(wildcardCerts.Items) == 1 {

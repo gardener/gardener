@@ -48,7 +48,7 @@ var _ = Describe("seed", func() {
 
 	Describe("#GetWildcardCertificate", func() {
 		It("should return no wildcard certificate secret", func() {
-			runtimeClient.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert})
+			runtimeClient.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{v1beta1constants.GardenRole: common.GardenRoleControlPlaneWildcardCert})
 
 			secret, err := GetWildcardCertificate(context.TODO(), runtimeClient)
 
@@ -62,7 +62,7 @@ var _ = Describe("seed", func() {
 					{},
 				},
 			}
-			runtimeClient.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert}).DoAndReturn(
+			runtimeClient.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{v1beta1constants.GardenRole: common.GardenRoleControlPlaneWildcardCert}).DoAndReturn(
 				func(_ context.Context, secrets *corev1.SecretList, _ client.ListOption, _ client.ListOption) error {
 					*secrets = *secretList
 					return nil
@@ -81,7 +81,7 @@ var _ = Describe("seed", func() {
 					{},
 				},
 			}
-			runtimeClient.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert}).DoAndReturn(
+			runtimeClient.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{v1beta1constants.GardenRole: common.GardenRoleControlPlaneWildcardCert}).DoAndReturn(
 				func(_ context.Context, secrets *corev1.SecretList, _ client.ListOption, _ client.ListOption) error {
 					*secrets = *secretList
 					return nil
