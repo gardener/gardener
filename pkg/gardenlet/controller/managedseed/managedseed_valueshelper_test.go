@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -171,7 +170,6 @@ var _ = Describe("ValuesHelper", func() {
 			},
 			PodAnnotations: map[string]string{
 				"foo": "bar",
-				"networking.gardener.cloud/seed-sni-enabled": "true",
 			},
 			VPA: pointer.BoolPtr(true),
 		}
@@ -252,7 +250,6 @@ var _ = Describe("ValuesHelper", func() {
 						},
 						"podAnnotations": map[string]interface{}{
 							"foo": "bar",
-							"networking.gardener.cloud/seed-sni-enabled": "true",
 						},
 						"vpa":                            true,
 						"imageVectorOverwrite":           "image vector overwrite",
@@ -351,44 +348,4 @@ var _ = Describe("ValuesHelper", func() {
 		})
 	})
 
-	Describe("#getParentPodAnnotations", func() {
-		DescribeTable("seed-sni-enabled annotation", func(enabled bool, version string, added bool) {
-			Expect(gardenletfeatures.FeatureGate.SetFromMap(map[string]bool{"APIServerSNI": enabled})).To(Succeed())
-
-			shoot := &gardencorev1beta1.Shoot{
-				Status: gardencorev1beta1.ShootStatus{
-					Gardener: gardencorev1beta1.Gardener{
-						Version: version,
-					},
-				},
-			}
-
-			actualAnnotations := getParentPodAnnotations(shoot)
-
-			if added {
-				Expect(actualAnnotations).To(HaveKeyWithValue("networking.gardener.cloud/seed-sni-enabled", "true"))
-				Expect(actualAnnotations).To(HaveLen(1))
-			} else {
-				Expect(actualAnnotations).To(BeEmpty())
-			}
-		},
-			Entry("should be added for SNI enabled and release 1.14.1", true, "1.14.1", true),
-			Entry("should be added for SNI enabled and pre-release 1.14", true, "1.14-dev", true),
-			Entry("should be added for SNI enabled and pre-release 1.14.0", true, "1.14.0-dev", true),
-			Entry("should be added for SNI enabled and release 1.13.3", true, "1.13.3", true),
-			Entry("should be added for SNI enabled and pre-release 1.13", true, "1.13-dev", true),
-			Entry("should be added for SNI enabled and pre-release 1.13.0", true, "1.13.0-dev", true),
-			Entry("should not be added for SNI enabled and release 1.12.8", true, "1.12.8", false),
-			Entry("should not be added for SNI enabled and unparsable version", true, "not a semver", false),
-
-			Entry("should not be added for SNI disabled and release 1.14.1", false, "1.14.1", false),
-			Entry("should not be added for SNI disabled and pre-release 1.14", false, "1.14-dev", false),
-			Entry("should not be added for SNI disabled and pre-release 1.14.0", false, "1.14.0-dev", false),
-			Entry("should not be added for SNI disabled and release 1.13.3", false, "1.13.3", false),
-			Entry("should not be added for SNI disabled and pre-release 1.13", false, "1.13-dev", false),
-			Entry("should not be added for SNI disabled and pre-release 1.13.0", false, "1.13.0-dev", false),
-			Entry("should not be added for SNI disabled and release 1.12.8", false, "1.12.8", false),
-			Entry("should not be added for SNI disabled and unparsable version", false, "not a semver", false),
-		)
-	})
 })
