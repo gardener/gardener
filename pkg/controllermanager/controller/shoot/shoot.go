@@ -102,7 +102,7 @@ func NewShootController(
 
 		shootHibernationReconciler: NewShootHibernationReconciler(logger.Logger, clientMap, shootLister, NewHibernationScheduleRegistry(), recorder),
 		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, config.Controllers.ShootMaintenance, clientMap, gardenCoreV1beta1Informer, recorder),
-		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient, config.Controllers.ShootQuota, gardenCoreV1beta1Informer),
+		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootQuota, gardenCoreV1beta1Informer),
 		configMapReconciler:        NewConfigMapReconciler(logger.Logger, clientMap, shootLister),
 
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
