@@ -146,8 +146,13 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	// Initialize the workqueue metrics collection.
 	gardenmetrics.RegisterWorkqueMetrics()
 
+	// Create controllers.
+	cloudProfileController, err := cloudprofilecontroller.NewCloudProfileController(ctx, f.clientMap, f.recorder)
+	if err != nil {
+		return fmt.Errorf("failed initializing CloudProfile controller: %w", err)
+	}
+
 	var (
-		cloudProfileController           = cloudprofilecontroller.NewCloudProfileController(f.clientMap, f.k8sGardenCoreInformers, f.recorder)
 		controllerRegistrationController = controllerregistrationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, secrets)
 		csrController                    = csrcontroller.NewCSRController(f.clientMap, f.k8sInformers, f.recorder)
 		quotaController                  = quotacontroller.NewQuotaController(f.clientMap, f.k8sGardenCoreInformers, f.recorder)

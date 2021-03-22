@@ -30,15 +30,16 @@ import (
 
 // DetermineShootsAssociatedTo gets a <shootLister> to determine the Shoots resources which are associated
 // to given <obj> (either a CloudProfile a or a Seed object).
-func DetermineShootsAssociatedTo(obj interface{}, shootLister gardencorelisters.ShootLister) ([]string, error) {
-	var associatedShoots []string
-	shoots, err := shootLister.List(labels.Everything())
-	if err != nil {
+func DetermineShootsAssociatedTo(ctx context.Context, gardenClient client.Reader, obj interface{}) ([]string, error) {
+	shootList := &gardencorev1beta1.ShootList{}
+	if err := gardenClient.List(ctx, shootList); err != nil {
 		logger.Logger.Info(err.Error())
 		return nil, err
 	}
 
-	for _, shoot := range shoots {
+	var associatedShoots []string
+
+	for _, shoot := range shootList.Items {
 		switch t := obj.(type) {
 		case *gardencorev1beta1.CloudProfile:
 			cloudProfile := obj.(*gardencorev1beta1.CloudProfile)
@@ -59,6 +60,7 @@ func DetermineShootsAssociatedTo(obj interface{}, shootLister gardencorelisters.
 			return nil, fmt.Errorf("unable to determine Shoot associations, due to unknown type %t", t)
 		}
 	}
+
 	return associatedShoots, nil
 }
 

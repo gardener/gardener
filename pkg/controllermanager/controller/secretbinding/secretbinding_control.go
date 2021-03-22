@@ -114,7 +114,7 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 			return reconcile.Result{}, nil
 		}
 
-		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(secretBinding, r.shootLister)
+		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, gardenClient.Client(), secretBinding)
 		if err != nil {
 			secretBindingLogger.Error(err.Error())
 			return reconcile.Result{}, err

@@ -20,9 +20,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -59,30 +56,23 @@ func (c *Controller) cloudProfileDelete(obj interface{}) {
 }
 
 // NewCloudProfileReconciler creates a new instance of a reconciler which reconciles CloudProfiles.
-func NewCloudProfileReconciler(l logrus.FieldLogger, clientMap clientmap.ClientMap, shootLister gardencorelisters.ShootLister, recorder record.EventRecorder) reconcile.Reconciler {
+func NewCloudProfileReconciler(l logrus.FieldLogger, gardenClient client.Client, recorder record.EventRecorder) reconcile.Reconciler {
 	return &cloudProfileReconciler{
-		logger:      l,
-		clientMap:   clientMap,
-		shootLister: shootLister,
-		recorder:    recorder,
+		logger:       l,
+		gardenClient: gardenClient,
+		recorder:     recorder,
 	}
 }
 
 type cloudProfileReconciler struct {
-	logger      logrus.FieldLogger
-	clientMap   clientmap.ClientMap
-	shootLister gardencorelisters.ShootLister
-	recorder    record.EventRecorder
+	logger       logrus.FieldLogger
+	gardenClient client.Client
+	recorder     record.EventRecorder
 }
 
 func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := gardenClient.Client().Get(ctx, request.NamespacedName, cloudProfile); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, cloudProfile); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
 			return reconcile.Result{}, nil
@@ -101,7 +91,7 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 			return reconcile.Result{}, nil
 		}
 
-		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(cloudProfile, r.shootLister)
+		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, r.gardenClient, cloudProfile)
 		if err != nil {
 			cloudProfileLogger.Error(err.Error())
 			return reconcile.Result{}, err
@@ -110,7 +100,7 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 		if len(associatedShoots) == 0 {
 			cloudProfileLogger.Infof("No Shoots are referencing the CloudProfile. Deletion accepted.")
 
-			if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), cloudProfile, gardencorev1beta1.GardenerName); client.IgnoreNotFound(err) != nil {
+			if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); client.IgnoreNotFound(err) != nil {
 				logger.Logger.Errorf("could not remove finalizer from CloudProfile: %s", err.Error())
 				return reconcile.Result{}, err
 			}
@@ -124,10 +114,10 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 		return reconcile.Result{}, fmt.Errorf("CloudProfile %q still has references", cloudProfile.Name)
 	}
 
-	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), cloudProfile, gardencorev1beta1.GardenerName); err != nil {
+	if err := controllerutils.PatchAddFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
 		logger.Logger.Errorf("could not add finalizer to CloudProfile: %s", err.Error())
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, err
+	return reconcile.Result{}, nil
 }

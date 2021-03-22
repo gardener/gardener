@@ -16,12 +16,13 @@ package cloudprofile
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
@@ -35,48 +36,49 @@ import (
 
 // Controller controls CloudProfiles.
 type Controller struct {
-	clientMap              clientmap.ClientMap
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
+	reconciler     reconcile.Reconciler
+	hasSyncedFuncs []cache.InformerSynced
 
-	reconciler reconcile.Reconciler
-
-	cloudProfileLister gardencorelisters.CloudProfileLister
-	cloudProfileQueue  workqueue.RateLimitingInterface
-	cloudprofileSynced cache.InformerSynced
-
-	shootLister gardencorelisters.ShootLister
-
+	cloudProfileQueue      workqueue.RateLimitingInterface
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
 
 // NewCloudProfileController takes a Kubernetes client <k8sGardenClient> and a <k8sGardenCoreInformers> for the Garden clusters.
 // It creates and return a new Garden controller to control CloudProfiles.
-func NewCloudProfileController(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
-	var (
-		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
-		cloudProfileInformer      = gardenCoreV1beta1Informer.CloudProfiles()
-		shootLister               = gardenCoreV1beta1Informer.Shoots().Lister()
-	)
-
-	cloudProfileController := &Controller{
-		clientMap:              clientMap,
-		k8sGardenCoreInformers: k8sGardenCoreInformers,
-		cloudProfileLister:     cloudProfileInformer.Lister(),
-		cloudProfileQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "cloudprofile"),
-		shootLister:            shootLister,
-		reconciler:             NewCloudProfileReconciler(logger.Logger, clientMap, shootLister, recorder),
-		workerCh:               make(chan int),
+func NewCloudProfileController(
+	ctx context.Context,
+	clientMap clientmap.ClientMap,
+	recorder record.EventRecorder,
+) (
+	*Controller,
+	error,
+) {
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, err
 	}
 
-	cloudProfileInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	cloudProfileInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.CloudProfile{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
+	}
+
+	cloudProfileController := &Controller{
+		cloudProfileQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "cloudprofile"),
+		reconciler:        NewCloudProfileReconciler(logger.Logger, gardenClient.Client(), recorder),
+		workerCh:          make(chan int),
+	}
+
+	cloudProfileInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    cloudProfileController.cloudProfileAdd,
 		UpdateFunc: cloudProfileController.cloudProfileUpdate,
 		DeleteFunc: cloudProfileController.cloudProfileDelete,
 	})
-	cloudProfileController.cloudprofileSynced = cloudProfileInformer.Informer().HasSynced
 
-	return cloudProfileController
+	cloudProfileController.hasSyncedFuncs = append(cloudProfileController.hasSyncedFuncs, cloudProfileInformer.HasSynced)
+
+	return cloudProfileController, nil
 }
 
 // Run runs the Controller until the given stop channel can be read from.
@@ -84,7 +86,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
 	// Check if informers cache has been populated
-	if !cache.WaitForCacheSync(ctx.Done(), c.cloudprofileSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		logger.Logger.Error("Time out waiting for caches to sync")
 		return
 	}

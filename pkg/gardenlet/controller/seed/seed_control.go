@@ -228,7 +228,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 			}
 		}
 
-		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(seed, c.shootLister)
+		associatedShoots, err := controllerutils.DetermineShootsAssociatedTo(ctx, gardenClient.Client(), seed)
 		if err != nil {
 			seedLogger.Error(err.Error())
 			return err
