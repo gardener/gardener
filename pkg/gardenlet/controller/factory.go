@@ -106,7 +106,6 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		// Kubernetes core informers
 		namespaceInformer = f.k8sInformers.Core().V1().Namespaces().Informer()
 		secretInformer    = f.k8sInformers.Core().V1().Secrets().Informer()
-		configMapInformer = f.k8sInformers.Core().V1().ConfigMaps().Informer()
 	)
 
 	if err := f.clientMap.Start(ctx.Done()); err != nil {
@@ -124,7 +123,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	}
 
 	f.k8sInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), namespaceInformer.HasSynced, secretInformer.HasSynced, configMapInformer.HasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), namespaceInformer.HasSynced, secretInformer.HasSynced) {
 		return fmt.Errorf("timed out waiting for Kube caches to sync")
 	}
 

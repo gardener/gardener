@@ -846,7 +846,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 
 func (b *Botanist) getAuditPolicy(ctx context.Context, name, namespace string) (string, error) {
 	auditPolicyCm := &corev1.ConfigMap{}
-	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(namespace, name), auditPolicyCm); err != nil {
+	if err := b.K8sGardenClient.APIReader().Get(ctx, kutil.Key(namespace, name), auditPolicyCm); err != nil {
 		return "", err
 	}
 	auditPolicy, ok := auditPolicyCm.Data[auditPolicyConfigMapDataKey]

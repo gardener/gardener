@@ -18,17 +18,16 @@ import (
 	"context"
 	"fmt"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-
-	"github.com/golang/mock/gomock"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	corev1 "k8s.io/api/core/v1"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed"
 	graphpkg "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
-	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph/mock"
+	mockgraph "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph/mock"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
 	"github.com/go-logr/logr"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apiserver/pkg/authentication/user"
@@ -42,7 +41,7 @@ var _ = Describe("Seed", func() {
 		ctrl *gomock.Controller
 
 		logger     logr.Logger
-		graph      *mock.MockInterface
+		graph      *mockgraph.MockInterface
 		authorizer auth.Authorizer
 
 		seedName                string
@@ -54,7 +53,7 @@ var _ = Describe("Seed", func() {
 		ctrl = gomock.NewController(GinkgoT())
 
 		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
-		graph = mock.NewMockInterface(ctrl)
+		graph = mockgraph.NewMockInterface(ctrl)
 		authorizer = NewAuthorizer(logger, graph)
 
 		seedName = "seed"
@@ -148,6 +147,86 @@ var _ = Describe("Seed", func() {
 
 			It("should have no opinion because path to seed does not exists", func() {
 				graph.EXPECT().HasPathFrom(graphpkg.VertexTypeCloudProfile, "", cloudProfileName, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("no relationship found"))
+			})
+
+			It("should have no opinion because no get verb", func() {
+				attrs.Verb = "list"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("can only get individual resources of this type"))
+			})
+
+			It("should have no opinion because no resources requested", func() {
+				attrs.Subresource = "status"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("cannot get subresource"))
+			})
+
+			It("should have no opinion because no resource name is given", func() {
+				attrs.Name = ""
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("No Object name found"))
+			})
+
+			It("should allow because seed name is ambiguous", func() {
+				attrs.User = ambiguousUser
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+		})
+
+		Context("when requested for ConfigMaps", func() {
+			var (
+				name, namespace string
+				attrs           *auth.AttributesRecord
+			)
+
+			BeforeEach(func() {
+				name, namespace = "foo", "bar"
+				attrs = &auth.AttributesRecord{
+					User:            seedUser,
+					Name:            name,
+					Namespace:       namespace,
+					APIGroup:        corev1.SchemeGroupVersion.Group,
+					Resource:        "configmaps",
+					ResourceRequest: true,
+					Verb:            "get",
+				}
+			})
+
+			It("should allow because path to seed exists", func() {
+				graph.EXPECT().HasPathFrom(graphpkg.VertexTypeConfigMap, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
+			It("should have no opinion because path to seed does not exists", func() {
+				graph.EXPECT().HasPathFrom(graphpkg.VertexTypeConfigMap, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
 
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 

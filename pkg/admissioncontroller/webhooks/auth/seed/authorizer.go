@@ -22,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 )
@@ -47,6 +48,8 @@ var _ = auth.Authorizer(&authorizer{})
 var (
 	// Only take v1beta1 because the Authorize function only checks the resource group and the resource.
 	cloudProfileResource = gardencorev1beta1.Resource("cloudprofiles")
+
+	configMapResource = corev1.Resource("configmaps")
 )
 
 // TODO: Revisit all `DecisionNoOpinion` later. Today we cannot deny the request for backwards compatibility
@@ -64,6 +67,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		switch requestResource {
 		case cloudProfileResource:
 			return a.authorizeGet(seedName, graph.VertexTypeCloudProfile, attrs)
+		case configMapResource:
+			return a.authorizeGet(seedName, graph.VertexTypeConfigMap, attrs)
 		}
 	}
 
