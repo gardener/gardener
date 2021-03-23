@@ -452,7 +452,6 @@ rules:
 					Finalizers: []string{
 						"gardener.cloud/reference-protection",
 					},
-					ResourceVersion: "1",
 				},
 				Data: map[string]string{
 					"policy": validAuditPolicy,
@@ -505,7 +504,6 @@ rules:
 					shoot.Spec.Kubernetes.Version = "1.15"
 					newCm := cm.DeepCopy()
 					newCm.Data["policy"] = anotherValidAuditPolicy
-					newCm.ResourceVersion = "2"
 
 					mockReader.EXPECT().List(gomock.Any(), &gardencorev1beta1.ShootList{}, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
 						*list = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{
@@ -523,21 +521,18 @@ rules:
 				It("has no data key", func() {
 					newCm := cm.DeepCopy()
 					newCm.Data = nil
-					newCm.ResourceVersion = "2"
 					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "missing '.data.policy' in audit policy configmap", "")
 				})
 
 				It("has empty policy", func() {
 					newCm := cm.DeepCopy()
 					newCm.Data["policy"] = ""
-					newCm.ResourceVersion = "2"
 					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "empty audit policy. Provide non-empty audit policy", "")
 				})
 
 				It("fails listing shoots", func() {
 					newCm := cm.DeepCopy()
 					newCm.Data["policy"] = anotherValidAuditPolicy
-					newCm.ResourceVersion = "2"
 
 					mockReader.EXPECT().List(gomock.Any(), &gardencorev1beta1.ShootList{}, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
 						return fmt.Errorf("fake")
@@ -550,7 +545,6 @@ rules:
 					shoot.ObjectMeta.Name = "fakeName"
 					newCm := cm.DeepCopy()
 					newCm.Data["policy"] = v1AuditPolicy
-					newCm.ResourceVersion = "2"
 
 					mockReader.EXPECT().List(gomock.Any(), &gardencorev1beta1.ShootList{}, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
 						*list = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{
@@ -566,7 +560,6 @@ rules:
 					cm.DeepCopy()
 					newCm := cm.DeepCopy()
 					newCm.Data["policy"] = invalidAuditPolicy
-					newCm.ResourceVersion = "2"
 
 					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "Unsupported value: \"FakeLevel\"", "")
 				})
@@ -575,7 +568,6 @@ rules:
 					cm.DeepCopy()
 					newCm := cm.DeepCopy()
 					newCm.Data["policy"] = missingKeyAuditPolicy
-					newCm.ResourceVersion = "2"
 
 					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "did not find expected key", "")
 				})

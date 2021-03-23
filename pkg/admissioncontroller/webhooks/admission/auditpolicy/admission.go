@@ -192,14 +192,15 @@ func (h *handler) admitConfigMap(ctx context.Context, request admission.Request)
 		return acadmission.Allowed("configmap is not referenced by a Shoot")
 	}
 
-	if oldCm.ResourceVersion == cm.ResourceVersion {
-		return acadmission.Allowed("audit policy not changed")
-	}
-
 	auditPolicy, err := getAuditPolicy(cm)
 	if err != nil {
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
+	oldAuditPolicy, ok := oldCm.Data[auditPolicyConfigMapDataKey]
+	if ok && oldAuditPolicy == auditPolicy {
+		return acadmission.Allowed("audit policy not changed")
+	}
+
 	schemaVersion, errCode, err := validateAuditPolicySemantics(auditPolicy)
 	if err != nil {
 		return admission.Errored(errCode, err)
