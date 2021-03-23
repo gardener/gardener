@@ -24,6 +24,10 @@ const (
 	// the Seed cluster of a core.gardener.cloud/v1beta1 BackupEntry.
 	BackupEntrySeedName = "spec.seedName"
 
+	// ProjectNamespace is the field selector path for filtering by namespace
+	// for core.gardener.cloud/{v1beta1,v1beta1} Project.
+	ProjectNamespace = "spec.namespace"
+
 	// RegistrationRefName is the field selector path for finding
 	// the ControllerRegistration name of a core.gardener.cloud/{v1beta1,v1beta1} ControllerInstallation.
 	RegistrationRefName = "spec.registrationRef.name"
