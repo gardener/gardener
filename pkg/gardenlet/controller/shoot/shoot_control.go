@@ -187,15 +187,15 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	// fetch related objects required for shoot operation
-	project, err := gutil.ProjectForNamespaceFromLister(c.k8sGardenCoreInformers.Core().V1beta1().Projects().Lister(), shoot.Namespace)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
 	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
+	}
+
+	// fetch related objects required for shoot operation
+	project, _, err := gutil.ProjectAndNamespaceFromReader(ctx, gardenClient.APIReader(), shoot.Namespace)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
@@ -258,7 +258,7 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 		WithProject(project).
 		WithInternalDomainFromSecrets(gardenSecrets).
 		WithDefaultDomainsFromSecrets(gardenSecrets).
-		Build()
+		Build(ctx)
 	if err != nil {
 		return nil, err
 	}

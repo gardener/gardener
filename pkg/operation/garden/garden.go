@@ -41,21 +41,24 @@ import (
 // NewBuilder returns a new Builder.
 func NewBuilder() *Builder {
 	return &Builder{
-		projectFunc:        func() (*gardencorev1beta1.Project, error) { return nil, fmt.Errorf("project is required but not set") },
+		projectFunc: func(context.Context) (*gardencorev1beta1.Project, error) {
+			return nil, fmt.Errorf("project is required but not set")
+		},
 		internalDomainFunc: func() (*Domain, error) { return nil, fmt.Errorf("internal domain is required but not set") },
 	}
 }
 
 // WithProject sets the projectFunc attribute at the Builder.
 func (b *Builder) WithProject(project *gardencorev1beta1.Project) *Builder {
-	b.projectFunc = func() (*gardencorev1beta1.Project, error) { return project, nil }
+	b.projectFunc = func(context.Context) (*gardencorev1beta1.Project, error) { return project, nil }
 	return b
 }
 
-// WithProjectFromLister sets the projectFunc attribute after fetching it from the lister.
-func (b *Builder) WithProjectFromLister(projectLister gardencorelisters.ProjectLister, namespace string) *Builder {
-	b.projectFunc = func() (*gardencorev1beta1.Project, error) {
-		return gutil.ProjectForNamespaceFromLister(projectLister, namespace)
+// WithProjectFromReader sets the projectFunc attribute after fetching it from the lister.
+func (b *Builder) WithProjectFromReader(reader client.Reader, namespace string) *Builder {
+	b.projectFunc = func(ctx context.Context) (*gardencorev1beta1.Project, error) {
+		project, _, err := gutil.ProjectAndNamespaceFromReader(ctx, reader, namespace)
+		return project, err
 	}
 	return b
 }
@@ -85,10 +88,10 @@ func (b *Builder) WithDefaultDomainsFromSecrets(secrets map[string]*corev1.Secre
 }
 
 // Build initializes a new Garden object.
-func (b *Builder) Build() (*Garden, error) {
+func (b *Builder) Build(ctx context.Context) (*Garden, error) {
 	garden := &Garden{}
 
-	project, err := b.projectFunc()
+	project, err := b.projectFunc(ctx)
 	if err != nil {
 		return nil, err
 	}

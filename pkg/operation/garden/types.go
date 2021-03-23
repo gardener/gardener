@@ -15,12 +15,14 @@
 package garden
 
 import (
+	"context"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 // Builder is an object that builds Garden objects.
 type Builder struct {
-	projectFunc        func() (*gardencorev1beta1.Project, error)
+	projectFunc        func(context.Context) (*gardencorev1beta1.Project, error)
 	internalDomainFunc func() (*Domain, error)
 	defaultDomainsFunc func() ([]*Domain, error)
 }

@@ -57,7 +57,7 @@ func NewBuilder() *Builder {
 		configFunc: func() (*config.GardenletConfiguration, error) {
 			return nil, fmt.Errorf("config is required but not set")
 		},
-		gardenFunc: func(map[string]*corev1.Secret) (*garden.Garden, error) {
+		gardenFunc: func(context.Context, map[string]*corev1.Secret) (*garden.Garden, error) {
 			return nil, fmt.Errorf("garden object is required but not set")
 		},
 		gardenerInfoFunc: func() (*gardencorev1beta1.Gardener, error) {
@@ -95,19 +95,19 @@ func (b *Builder) WithConfig(cfg *config.GardenletConfiguration) *Builder {
 
 // WithGarden sets the gardenFunc attribute at the Builder.
 func (b *Builder) WithGarden(g *garden.Garden) *Builder {
-	b.gardenFunc = func(_ map[string]*corev1.Secret) (*garden.Garden, error) { return g, nil }
+	b.gardenFunc = func(context.Context, map[string]*corev1.Secret) (*garden.Garden, error) { return g, nil }
 	return b
 }
 
 // WithGardenFrom sets the gardenFunc attribute at the Builder which will build a new Garden object.
-func (b *Builder) WithGardenFrom(k8sGardenCoreInformers gardencoreinformers.Interface, namespace string) *Builder {
-	b.gardenFunc = func(secrets map[string]*corev1.Secret) (*garden.Garden, error) {
+func (b *Builder) WithGardenFrom(reader client.Reader, namespace string) *Builder {
+	b.gardenFunc = func(ctx context.Context, secrets map[string]*corev1.Secret) (*garden.Garden, error) {
 		return garden.
 			NewBuilder().
-			WithProjectFromLister(k8sGardenCoreInformers.Projects().Lister(), namespace).
+			WithProjectFromReader(reader, namespace).
 			WithInternalDomainFromSecrets(secrets).
 			WithDefaultDomainsFromSecrets(secrets).
-			Build()
+			Build(ctx)
 	}
 	return b
 }
@@ -245,7 +245,7 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 	}
 	operation.Secrets = secrets
 
-	garden, err := b.gardenFunc(secrets)
+	garden, err := b.gardenFunc(ctx, secrets)
 	if err != nil {
 		return nil, err
 	}

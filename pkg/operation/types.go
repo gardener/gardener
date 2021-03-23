@@ -38,7 +38,7 @@ import (
 // Builder is an object that builds Operation objects.
 type Builder struct {
 	configFunc                func() (*config.GardenletConfiguration, error)
-	gardenFunc                func(map[string]*corev1.Secret) (*garden.Garden, error)
+	gardenFunc                func(context.Context, map[string]*corev1.Secret) (*garden.Garden, error)
 	gardenerInfoFunc          func() (*gardencorev1beta1.Gardener, error)
 	gardenClusterIdentityFunc func() (string, error)
 	imageVectorFunc           func() (imagevector.ImageVector, error)
