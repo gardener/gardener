@@ -267,19 +267,15 @@ func (g *GardenerScheduler) startScheduler(ctx context.Context) {
 	if err != nil {
 		panic(fmt.Errorf("failed to create shoot scheduler controller: %+v", err))
 	}
-	//backupBucketScheduler := backupbucketcontroller.NewGardenerScheduler(ctx, g.K8sGardenClient, g.K8sGardenCoreInformers, g.Config, g.Recorder)
 
 	// Initialize the Controller metrics collection.
 	gardenmetrics.RegisterControllerMetrics(
 		scheduler.ControllerWorkerSum,
 		scheduler.ScrapeFailures,
 		shootScheduler,
-		// backupBucketScheduler,
 	)
 
 	go shootScheduler.Run(ctx)
-	// TODO: Enable later
-	// go backupBucketScheduler.Run(ctx, g.K8sGardenCoreInformers)
 
 	// Shutdown handling
 	<-ctx.Done()
