@@ -115,11 +115,12 @@ github.com/gardener/gardener-resource-manager/pkg/manager
 # github.com/gardener/hvpa-controller v0.3.1
 ## explicit
 github.com/gardener/hvpa-controller/api/v1alpha1
-# github.com/gardener/landscaper/apis v0.6.0
+# github.com/gardener/landscaper/apis v0.7.0
 ## explicit
 github.com/gardener/landscaper/apis/config
 github.com/gardener/landscaper/apis/core
 github.com/gardener/landscaper/apis/core/v1alpha1
+github.com/gardener/landscaper/apis/core/v1alpha1/helper
 github.com/gardener/landscaper/apis/deployer/container
 # github.com/gardener/machine-controller-manager v0.33.0
 ## explicit

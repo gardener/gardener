@@ -20,6 +20,8 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/utils/pointer"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -744,4 +746,33 @@ func (f *GardenerFramework) WaitForManagedSeedToBeDeleted(ctx context.Context, m
 		}
 		return retry.MinorError(fmt.Errorf("managed seed %s still exists", managedSeed.Name))
 	})
+}
+
+// BuildSeedSpecForTestrun builds a minimal seed spec to be used during testing
+func BuildSeedSpecForTestrun(name string, backupProvider *string) *gardencorev1beta1.SeedSpec {
+	seedSpec := &gardencorev1beta1.SeedSpec{
+		SecretRef: &corev1.SecretReference{
+			Name:      name,
+			Namespace: gardencorev1beta1constants.GardenNamespace,
+		},
+		Taints: []gardencorev1beta1.SeedTaint{
+			{
+				Key:   SeedTaintTestRun,
+				Value: pointer.StringPtr(GetTestRunID()),
+			},
+		},
+		Settings: &gardencorev1beta1.SeedSettings{
+			Scheduling: &gardencorev1beta1.SeedSettingScheduling{
+				Visible: false,
+			},
+		},
+	}
+
+	if backupProvider != nil {
+		seedSpec.Backup = &gardencorev1beta1.SeedBackup{
+			Provider: *backupProvider,
+		}
+	}
+
+	return seedSpec
 }
