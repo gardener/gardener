@@ -49,6 +49,8 @@ var _ = Describe("errors", func() {
 		Entry("configuration problem with coder", NewErrorWithCodes("InvalidParameterValue", gardencorev1beta1.ErrorConfigurationProblem), "error occurred: InvalidParameterValue", NewErrorWithCodes("error occurred: InvalidParameterValue", gardencorev1beta1.ErrorConfigurationProblem)),
 		Entry("retryable configuration problem", errors.New("pod disruption budget default/pdb is misconfigured and requires zero voluntary evictions"), "", NewErrorWithCodes("pod disruption budget default/pdb is misconfigured and requires zero voluntary evictions", gardencorev1beta1.ErrorRetryableConfigurationProblem)),
 		Entry("retryable configuration problem with coder", NewErrorWithCodes("pod disruption budget default/pdb is misconfigured and requires zero voluntary evictions", gardencorev1beta1.ErrorRetryableConfigurationProblem), "", NewErrorWithCodes("pod disruption budget default/pdb is misconfigured and requires zero voluntary evictions", gardencorev1beta1.ErrorRetryableConfigurationProblem)),
+		Entry("retryable infrastructure dependencies", errors.New("Code=\"RetryableError\" Message=\"A retryable error occurred"), "", NewErrorWithCodes("Code=\"RetryableError\" Message=\"A retryable error occurred", gardencorev1beta1.ErrorRetryableInfraDependencies)),
+		Entry("retryable infrastructure dependencies with coder", NewErrorWithCodes("Code=\"RetryableError\" Message=\"A retryable error occurred", gardencorev1beta1.ErrorRetryableInfraDependencies), "", NewErrorWithCodes("Code=\"RetryableError\" Message=\"A retryable error occurred", gardencorev1beta1.ErrorRetryableInfraDependencies)),
 	)
 
 	DescribeTable("#ExtractErrorCodes",
