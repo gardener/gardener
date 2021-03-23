@@ -15,35 +15,15 @@
 package utils
 
 import (
-	"fmt"
-
 	"github.com/gardener/gardener/pkg/apis/core"
-	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 )
 
 // SkipVerification is a common function to skip object verification during admission
 func SkipVerification(operation admission.Operation, metadata metav1.ObjectMeta) bool {
 	return operation == admission.Update && metadata.DeletionTimestamp != nil
-}
-
-// GetProject retrieves the project with the corresponding namespace
-func GetProject(namespace string, projectLister corelisters.ProjectLister) (*core.Project, error) {
-	projects, err := projectLister.List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	for _, project := range projects {
-		if project.Spec.Namespace != nil && *project.Spec.Namespace == namespace {
-			return project, nil
-		}
-	}
-
-	return nil, fmt.Errorf("no project found for namespace %q", namespace)
 }
 
 // IsSeedUsedByShoot checks whether there is a shoot cluster referencing the provided seed name

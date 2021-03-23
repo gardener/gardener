@@ -627,7 +627,7 @@ var _ = Describe("dns", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).To(MatchError(apierrors.NewInternalError(fmt.Errorf("no project found for namespace %q", shoot.Namespace))))
+				Expect(err).To(MatchError(apierrors.NewInternalError(fmt.Errorf("Project.core.gardener.cloud %q not found", shoot.Namespace))))
 			})
 
 			It("should reject because no domain was configured for the shoot and default domain secret is missing", func() {

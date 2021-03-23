@@ -188,7 +188,7 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 	}
 
 	// fetch related objects required for shoot operation
-	project, err := common.ProjectForNamespace(c.k8sGardenCoreInformers.Core().V1beta1().Projects().Lister(), shoot.Namespace)
+	project, err := gutil.ProjectForNamespaceFromLister(c.k8sGardenCoreInformers.Core().V1beta1().Projects().Lister(), shoot.Namespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

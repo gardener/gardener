@@ -24,7 +24,6 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -56,7 +55,7 @@ func (b *Builder) WithProject(project *gardencorev1beta1.Project) *Builder {
 // WithProjectFromLister sets the projectFunc attribute after fetching it from the lister.
 func (b *Builder) WithProjectFromLister(projectLister gardencorelisters.ProjectLister, namespace string) *Builder {
 	b.projectFunc = func() (*gardencorev1beta1.Project, error) {
-		return common.ProjectForNamespace(projectLister, namespace)
+		return gutil.ProjectForNamespaceFromLister(projectLister, namespace)
 	}
 	return b
 }

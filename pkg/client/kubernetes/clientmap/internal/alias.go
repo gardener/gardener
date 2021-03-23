@@ -18,7 +18,7 @@ import (
 	"net"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // github.com/gardener/gardener/pkg/client/kubernetes aliases
@@ -33,8 +33,8 @@ var (
 
 // github.com/gardener/gardener/pkg/operation/common aliases
 var (
-	// ProjectForNamespaceWithClient is an alias to common.ProjectForNamespaceWithClient which allows it to be mocked for testing.
-	ProjectForNamespaceWithClient = common.ProjectForNamespaceWithClient
+	// ProjectAndNamespaceFromReader is an alias to gutil.ProjectAndNamespaceFromReader which allows it to be mocked for testing.
+	ProjectAndNamespaceFromReader = gutil.ProjectAndNamespaceFromReader
 )
 
 // net aliases

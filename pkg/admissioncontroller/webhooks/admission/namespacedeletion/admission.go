@@ -32,8 +32,8 @@ import (
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 const (
@@ -49,6 +49,9 @@ var namespaceGVK = metav1.GroupVersionKind{Group: "", Kind: "Namespace", Version
 func New(ctx context.Context, logger logr.Logger, cache cache.Cache) (*handler, error) {
 	// Initialize caches here to ensure the readyz informer check will only succeed once informers required for this
 	// handler have synced so that http requests can be served quicker with pre-syncronized caches.
+	if _, err := cache.GetInformer(ctx, &corev1.Namespace{}); err != nil {
+		return nil, err
+	}
 	if _, err := cache.GetInformer(ctx, &gardencorev1beta1.Project{}); err != nil {
 		return nil, err
 	}
@@ -109,21 +112,19 @@ func (h *handler) admitNamespace(ctx context.Context, request admission.Request)
 	// TODO: we should use a direct lookup here, as we might falsely allow the request, if our cache is
 	// out of sync and doesn't know about the project. We should use a field selector for looking up the project
 	// belonging to a given namespace.
-	project, err := common.ProjectForNamespaceWithClient(ctx, h.cacheReader, request.Name)
+	project, namespace, err := gutil.ProjectAndNamespaceFromReader(ctx, h.cacheReader, request.Name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return acadmission.Allowed("namespace does not belong to a project")
+			if namespace == nil {
+				return acadmission.Allowed("namespace is already gone")
+			}
+			return acadmission.Allowed("project for namespace not found")
 		}
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	// we do not receive the namespace object in the `.object` field of the admission request, we need to get it ourselves.
-	namespace := &corev1.Namespace{}
-	if err := h.apiReader.Get(ctx, client.ObjectKey{Name: request.Name}, namespace); err != nil {
-		if apierrors.IsNotFound(err) {
-			return acadmission.Allowed("namespace is already gone")
-		}
-		return admission.Errored(http.StatusInternalServerError, err)
+	if project == nil {
+		return acadmission.Allowed("does not belong to a project")
 	}
 
 	switch {

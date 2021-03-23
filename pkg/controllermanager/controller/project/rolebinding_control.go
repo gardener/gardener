@@ -21,7 +21,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 func (c *Controller) roleBindingUpdate(ctx context.Context, _, new interface{}) {
@@ -47,7 +47,7 @@ func (c *Controller) roleBindingDelete(ctx context.Context, obj interface{}) {
 
 		logger.Logger.Debugf("[PROJECT RECONCILE] %q rolebinding modified", key)
 
-		project, err := common.ProjectForNamespaceWithClient(ctx, c.gardenClient, namespace)
+		project, _, err := gutil.ProjectAndNamespaceFromReader(ctx, c.gardenClient, namespace)
 		if err != nil {
 			logger.Logger.Errorf("Couldn't get list keys for object %+v: %v", obj, err)
 			return

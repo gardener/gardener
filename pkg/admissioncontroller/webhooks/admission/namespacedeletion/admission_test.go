@@ -37,6 +37,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("handler", func() {
@@ -57,6 +58,8 @@ var _ = Describe("handler", func() {
 		statusCodeInternalError int32 = http.StatusInternalServerError
 
 		namespaceName     = "foo"
+		projectName       = "bar"
+		namespace         *corev1.Namespace
 		shootMetadataList *metav1.PartialObjectMetadataList
 	)
 
@@ -67,10 +70,19 @@ var _ = Describe("handler", func() {
 		mockCache = mockcache.NewMockCache(ctrl)
 		mockReader = mockclient.NewMockReader(ctrl)
 
+		namespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   namespaceName,
+				Labels: map[string]string{"project.gardener.cloud/name": projectName},
+			},
+		}
+
 		shootMetadataList = &metav1.PartialObjectMetadataList{}
 		shootMetadataList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 
+		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&corev1.Namespace{}))
 		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
+
 		handler, err = namespacedeletion.New(ctx, logger, mockCache)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(inject.APIReaderInto(mockReader, handler)).To(BeTrue())
@@ -115,73 +127,68 @@ var _ = Describe("handler", func() {
 	})
 
 	It("should pass because no projects available", func() {
-		mockCache.EXPECT().List(gomock.Any(), &gardencorev1beta1.ProjectList{}).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
+		mockCache.EXPECT().Get(gomock.Any(), kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace) error {
+			namespace.DeepCopyInto(obj)
 			return nil
 		})
-		test(admissionv1.Delete, true, statusCodeAllowed, "does not belong to a project")
+		mockCache.EXPECT().Get(gomock.Any(), kutil.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+		test(admissionv1.Delete, true, statusCodeAllowed, "project for namespace not found")
 	})
 
 	It("should pass because namespace is not project related", func() {
-		mockCache.EXPECT().List(gomock.Any(), &gardencorev1beta1.ProjectList{}).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
-			list.Items = []gardencorev1beta1.Project{
-				project("namespace1", "project1"),
-				project("namespace2", "project2"),
-			}
+		mockCache.EXPECT().Get(gomock.Any(), kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace) error {
+			(&corev1.Namespace{}).DeepCopyInto(obj)
 			return nil
 		})
+
 		test(admissionv1.Delete, true, statusCodeAllowed, "does not belong to a project")
 	})
 
-	It("should fail because listing projects fails", func() {
-		mockCache.EXPECT().List(gomock.Any(), &gardencorev1beta1.ProjectList{}).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
-			return fmt.Errorf("fake")
-		})
+	It("should fail because get namespace fails", func() {
+		mockCache.EXPECT().Get(gomock.Any(), kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(fmt.Errorf("fake"))
+
 		test(admissionv1.Delete, false, statusCodeInternalError, "fake")
+	})
+
+	It("should fail because getting the projects fails", func() {
+		mockCache.EXPECT().Get(gomock.Any(), kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace) error {
+			namespace.DeepCopyInto(obj)
+			return nil
+		})
+		mockCache.EXPECT().Get(gomock.Any(), kutil.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).Return(fmt.Errorf("fake"))
+
+		test(admissionv1.Delete, false, statusCodeInternalError, "fake")
+	})
+
+	It("should pass because namespace is already gone", func() {
+		mockCache.EXPECT().Get(gomock.Any(), kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+		test(admissionv1.Delete, true, statusCodeAllowed, "already gone")
 	})
 
 	Context("related project available", func() {
 		var relatedProject gardencorev1beta1.Project
 
-		BeforeEach(func() {
-			relatedProject = project(namespaceName, "project2")
-			mockCache.EXPECT().List(gomock.Any(), &gardencorev1beta1.ProjectList{}).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
-				list.Items = []gardencorev1beta1.Project{
-					project("namespace1", "project1"),
-					relatedProject,
-				}
-				return nil
-			})
-		})
-
-		It("should fail because get namespace fails", func() {
-			mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, &corev1.Namespace{}).DoAndReturn(func(_ context.Context, key client.ObjectKey, ns *corev1.Namespace) error {
-				return fmt.Errorf("fake")
-			})
-			test(admissionv1.Delete, false, statusCodeInternalError, "fake")
-		})
-
-		It("should pass because namespace is already gone", func() {
-			mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, &corev1.Namespace{}).DoAndReturn(func(_ context.Context, key client.ObjectKey, ns *corev1.Namespace) error {
-				return apierrors.NewNotFound(schema.GroupResource{Resource: "namepsaces"}, namespaceName)
-			})
-			test(admissionv1.Delete, true, statusCodeAllowed, "already gone")
-		})
-
 		It("should pass because namespace is already marked for deletion", func() {
-			mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, &corev1.Namespace{}).DoAndReturn(func(_ context.Context, key client.ObjectKey, ns *corev1.Namespace) error {
-				ns.SetName(namespaceName)
+			mockCache.EXPECT().Get(gomock.Any(), kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace) error {
 				now := metav1.Now()
-				ns.SetDeletionTimestamp(&now)
+				namespace.SetDeletionTimestamp(&now)
+				namespace.DeepCopyInto(obj)
 				return nil
 			})
+			mockCache.EXPECT().Get(gomock.Any(), kutil.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
+
 			test(admissionv1.Delete, true, statusCodeAllowed, "already marked for deletion")
 		})
 
 		It("should forbid namespace deletion because project is not marked for deletion", func() {
-			mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, &corev1.Namespace{}).DoAndReturn(func(_ context.Context, key client.ObjectKey, ns *corev1.Namespace) error {
-				ns.SetName(namespaceName)
+			mockCache.EXPECT().Get(gomock.Any(), kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace) error {
+				namespace.DeepCopyInto(obj)
 				return nil
 			})
+			mockCache.EXPECT().Get(gomock.Any(), kutil.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
+
 			test(admissionv1.Delete, false, statusCodeInvalid, "direct deletion of namespace")
 		})
 
@@ -190,8 +197,12 @@ var _ = Describe("handler", func() {
 				now := metav1.Now()
 				relatedProject.SetDeletionTimestamp(&now)
 
-				mockReader.EXPECT().Get(gomock.Any(), client.ObjectKey{Name: namespaceName}, &corev1.Namespace{}).DoAndReturn(func(_ context.Context, key client.ObjectKey, ns *corev1.Namespace) error {
-					ns.SetName(namespaceName)
+				mockCache.EXPECT().Get(gomock.Any(), kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace) error {
+					namespace.DeepCopyInto(obj)
+					return nil
+				})
+				mockCache.EXPECT().Get(gomock.Any(), kutil.Key(projectName), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project) error {
+					relatedProject.DeepCopyInto(obj)
 					return nil
 				})
 			})
@@ -200,6 +211,7 @@ var _ = Describe("handler", func() {
 				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
 					return fmt.Errorf("fake")
 				})
+
 				test(admissionv1.Delete, false, statusCodeInternalError, "fake")
 			})
 
@@ -207,39 +219,18 @@ var _ = Describe("handler", func() {
 				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
 					return nil
 				})
+
 				test(admissionv1.Delete, true, statusCodeAllowed, "namespace doesn't contain any shoots")
 			})
 
 			It("should forbid namespace deletion because it still contain shoots", func() {
 				mockReader.EXPECT().List(gomock.Any(), shootMetadataList, client.InNamespace(namespaceName), client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-					list.Items = []metav1.PartialObjectMetadata{
-						shootMetadata(namespaceName, "shoot1"),
-					}
+					list.Items = []metav1.PartialObjectMetadata{{ObjectMeta: metav1.ObjectMeta{Name: "shoot1", Namespace: namespaceName}}}
 					return nil
 				})
+
 				test(admissionv1.Delete, false, statusCodeInvalid, "still contains Shoots")
 			})
 		})
 	})
 })
-
-func project(namespace, name string) gardencorev1beta1.Project {
-	namespaceRef := namespace
-	return gardencorev1beta1.Project{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: gardencorev1beta1.ProjectSpec{
-			Namespace: &namespaceRef,
-		},
-	}
-}
-
-func shootMetadata(namespace, name string) metav1.PartialObjectMetadata {
-	return metav1.PartialObjectMetadata{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-	}
-}

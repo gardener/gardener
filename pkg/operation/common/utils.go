@@ -24,9 +24,7 @@ import (
 	"strings"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -42,7 +40,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -128,44 +125,6 @@ func ExtractShootDetailsFromBackupEntryName(backupEntryName string) (shootTechni
 func ReplaceCloudProviderConfigKey(cloudProviderConfig, separator, key, value string) string {
 	keyValueRegexp := regexp.MustCompile(fmt.Sprintf(`(\Q%s\E%s)([^\n]*)`, key, separator))
 	return keyValueRegexp.ReplaceAllString(cloudProviderConfig, fmt.Sprintf(`${1}%q`, strings.Replace(value, `$`, `$$`, -1)))
-}
-
-// ProjectForNamespace returns the project object responsible for a given <namespace>.
-// It tries to identify the project object by looking for the namespace name in the project spec.
-func ProjectForNamespace(projectLister gardencorelisters.ProjectLister, namespaceName string) (*gardencorev1beta1.Project, error) {
-	projectList, err := projectLister.List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	var projects []gardencorev1beta1.Project
-	for _, p := range projectList {
-		projects = append(projects, *p)
-	}
-
-	return projectForNamespace(projects, namespaceName)
-}
-
-// ProjectForNamespaceWithClient returns the project object responsible for a given <namespace>.
-// It tries to identify the project object by looking for the namespace name in the project spec.
-func ProjectForNamespaceWithClient(ctx context.Context, c client.Reader, namespaceName string) (*gardencorev1beta1.Project, error) {
-	projectList := &gardencorev1beta1.ProjectList{}
-	err := c.List(ctx, projectList)
-	if err != nil {
-		return nil, err
-	}
-
-	return projectForNamespace(projectList.Items, namespaceName)
-}
-
-func projectForNamespace(projects []gardencorev1beta1.Project, namespaceName string) (*gardencorev1beta1.Project, error) {
-	for _, project := range projects {
-		if project.Spec.Namespace != nil && *project.Spec.Namespace == namespaceName {
-			return &project, nil
-		}
-	}
-
-	return nil, apierrors.NewNotFound(gardencorev1beta1.Resource("Project"), fmt.Sprintf("for namespace %s", namespaceName))
 }
 
 // DeleteHvpa delete all resources required for the HVPA in the given namespace.
