@@ -61,6 +61,7 @@ import (
 	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
 	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -1008,7 +1009,7 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 			b.Shoot.SeedNamespace,
 			&dns.OwnerValues{
 				Name:    DNSInternalName,
-				Active:  true,
+				Active:  pointer.BoolPtr(true),
 				OwnerID: ownerID,
 			},
 		)
@@ -1034,7 +1035,7 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 			b.Shoot.SeedNamespace,
 			&dns.OwnerValues{
 				Name:    DNSExternalName,
-				Active:  true,
+				Active:  pointer.BoolPtr(true),
 				OwnerID: ownerID,
 			},
 		)

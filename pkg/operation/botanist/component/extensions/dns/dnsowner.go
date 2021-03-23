@@ -23,6 +23,7 @@ import (
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -31,7 +32,7 @@ import (
 type OwnerValues struct {
 	Name    string
 	OwnerID string
-	Active  bool
+	Active  *bool
 }
 
 // NewOwner creates a new instance of DeployWaiter for a specific DNS emptyOwner.
@@ -52,10 +53,15 @@ type owner struct {
 func (o *owner) Deploy(ctx context.Context) error {
 	obj := o.emptyOwner()
 
+	active := o.values.Active
+	if active == nil {
+		active = pointer.BoolPtr(true)
+	}
+
 	_, err := controllerutil.CreateOrUpdate(ctx, o.client, obj, func() error {
 		obj.Spec = dnsv1alpha1.DNSOwnerSpec{
 			OwnerId: o.values.OwnerID,
-			Active:  &o.values.Active,
+			Active:  active,
 		}
 		return nil
 	})

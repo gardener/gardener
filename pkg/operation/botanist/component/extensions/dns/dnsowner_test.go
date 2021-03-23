@@ -64,7 +64,7 @@ var _ = Describe("#DNSOwner", func() {
 
 		vals = &OwnerValues{
 			Name:    "test-deploy",
-			Active:  true,
+			Active:  pointer.BoolPtr(true),
 			OwnerID: ownerID,
 		}
 
@@ -87,6 +87,19 @@ var _ = Describe("#DNSOwner", func() {
 
 	Describe("#Deploy", func() {
 		It("should create correct DNSOwner", func() {
+			Expect(defaultDepWaiter.Deploy(ctx)).ToNot(HaveOccurred())
+
+			actualDNSOwner := &dnsv1alpha1.DNSOwner{}
+			err := c.Get(ctx, client.ObjectKey{Name: deployNS + "-" + dnsOwnerName}, actualDNSOwner)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualDNSOwner).To(DeepDerivativeEqual(expectedDNSOwner))
+		})
+
+		It("should create correct DNSOwner if active is not set explicitly", func() {
+			vals.Active = nil
+			defaultDepWaiter = NewOwner(c, deployNS, vals)
+
 			Expect(defaultDepWaiter.Deploy(ctx)).ToNot(HaveOccurred())
 
 			actualDNSOwner := &dnsv1alpha1.DNSOwner{}
