@@ -25,7 +25,7 @@ EFFECTIVE_VERSION                   := $(VERSION)-$(shell git rev-parse HEAD)
 REPO_ROOT                           := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 LOCAL_GARDEN_LABEL                  := local-garden
 REMOTE_GARDEN_LABEL                 := remote-garden
-CR_VERSION                          := $(shell go mod edit -json | jq -r '.Require[] | select(.Path=="sigs.k8s.io/controller-runtime") | .Version')
+CR_VERSION                          := $(shell go list -m -f '{{ .Version }}' sigs.k8s.io/controller-runtime)
 ACTIVATE_SEEDAUTHORIZER             := false
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
