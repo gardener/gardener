@@ -148,7 +148,7 @@ func (h *handler) admitShoot(ctx context.Context, request admission.Request) adm
 
 	auditPolicy, err := getAuditPolicy(auditPolicyCm)
 	if err != nil {
-		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting auditlog policy from ConfigMap %s/%s: %w", cmRef.Namespace, cmRef.Name, err))
+		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting auditlog policy from ConfigMap %s/%s: %w", shoot.Namespace, cmRef.Name, err))
 	}
 
 	schemaVersion, errCode, err := validateAuditPolicySemantics(auditPolicy)
@@ -160,7 +160,7 @@ func (h *handler) admitShoot(ctx context.Context, request admission.Request) adm
 	if isValidVersion, err := IsValidAuditPolicyVersion(shoot.Spec.Kubernetes.Version, schemaVersion); err != nil {
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	} else if !isValidVersion {
-		err := fmt.Errorf("your shoot cluster version %q is not compatible with audit policy version %q", shoot.Spec.Kubernetes.Version, schemaVersion.GroupVersion().String())
+		err := fmt.Errorf("your shoot cluster kubernetes version %q is not compatible with audit policy version %q", shoot.Spec.Kubernetes.Version, schemaVersion.GroupVersion().String())
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
 
@@ -220,7 +220,7 @@ func (h *handler) admitConfigMap(ctx context.Context, request admission.Request)
 func validateAuditPolicySemantics(auditPolicy string) (schemaVersion *schema.GroupVersionKind, errCode int32, err error) {
 	auditPolicyObj, schemaVersion, err := policyDecoder.Decode([]byte(auditPolicy), nil, nil)
 	if err != nil {
-		return nil, http.StatusUnprocessableEntity, fmt.Errorf("failed to decode the provided audit policy err=%v", err)
+		return nil, http.StatusUnprocessableEntity, fmt.Errorf("failed to decode the provided audit policy: %w", err)
 	}
 	auditPolicyInternal, ok := auditPolicyObj.(*audit_internal.Policy)
 	if !ok {
@@ -228,7 +228,7 @@ func validateAuditPolicySemantics(auditPolicy string) (schemaVersion *schema.Gro
 	}
 	errList := auditvalidation.ValidatePolicy(auditPolicyInternal)
 	if len(errList) != 0 {
-		return nil, http.StatusUnprocessableEntity, fmt.Errorf("provided invalid audit policy err=%v", errList)
+		return nil, http.StatusUnprocessableEntity, fmt.Errorf("provided invalid audit policy: %v", errList)
 	}
 	return schemaVersion, 0, nil
 }
