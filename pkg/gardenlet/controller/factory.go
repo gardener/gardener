@@ -137,7 +137,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 
 	// Read Garden secrets from any seed namespace as we assume they are synced accordingly by the Gardener Controller Manager.
 	// This requires adaption if we'll decide not to sync all Secrets for all Seeds in the future.
-	secrets, err := garden.ReadGardenSecrets(
+	_, err = garden.ReadGardenSecrets(
 		ctx,
 		k8sGardenClient.Cache(),
 		f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister(),
@@ -163,7 +163,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 
 	var (
 		controllerInstallationController = controllerinstallationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace, f.gardenClusterIdentity)
-		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.healthManager, secrets, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
+		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.healthManager, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
 		shootController                  = shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.identity, f.gardenClusterIdentity, imageVector, f.recorder)
 	)
 

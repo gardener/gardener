@@ -215,6 +215,7 @@ var gardenRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, select
 
 func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFunc, seedLister gardencorelisters.SeedLister, namespace string) (map[string]*corev1.Secret, error) {
 	var (
+		logInfo                             []string
 		secretsMap                          = make(map[string]*corev1.Secret)
 		numberOfInternalDomainSecrets       = 0
 		numberOfOpenVPNDiffieHellmanSecrets = 0
@@ -237,7 +238,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 			}
 			defaultDomainSecret := secret
 			secretsMap[fmt.Sprintf("%s-%s", common.GardenRoleDefaultDomain, domain)] = &defaultDomainSecret
-			logger.Logger.Infof("Found default domain secret %s for domain %s.", secret.Name, domain)
+			logInfo = append(logInfo, fmt.Sprintf("default domain secret %q for domain %q", secret.Name, domain))
 		}
 
 		// Retrieving internal domain secrets based on all secrets in the Garden namespace which have
@@ -250,7 +251,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 			}
 			internalDomainSecret := secret
 			secretsMap[common.GardenRoleInternalDomain] = &internalDomainSecret
-			logger.Logger.Infof("Found internal domain secret %s for domain %s.", secret.Name, domain)
+			logInfo = append(logInfo, fmt.Sprintf("internal domain secret %q for domain %q", secret.Name, domain))
 			numberOfInternalDomainSecrets++
 		}
 
@@ -263,7 +264,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 				return nil, fmt.Errorf("cannot use OpenVPN Diffie Hellman secret '%s' as it does not contain key '%s' (whose value should be the actual Diffie Hellman key)", secret.Name, key)
 			}
 			secretsMap[common.GardenRoleOpenVPNDiffieHellman] = &openvpnDiffieHellman
-			logger.Logger.Infof("Found OpenVPN Diffie Hellman secret %s.", secret.Name)
+			logInfo = append(logInfo, fmt.Sprintf("OpenVPN Diffie Hellman secret %q", secret.Name))
 			numberOfOpenVPNDiffieHellmanSecrets++
 		}
 
@@ -276,7 +277,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 			}
 			alertingSecret := secret
 			secretsMap[common.GardenRoleAlerting] = &alertingSecret
-			logger.Logger.Infof("Found alerting secret %s.", secret.Name)
+			logInfo = append(logInfo, fmt.Sprintf("alerting secret %q", secret.Name))
 			numberOfAlertingSecrets++
 		}
 
@@ -285,7 +286,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 		if secret.Labels[v1beta1constants.GardenRole] == common.GardenRoleGlobalMonitoring {
 			monitoringSecret := secret
 			secretsMap[common.GardenRoleGlobalMonitoring] = &monitoringSecret
-			logger.Logger.Infof("Found monitoring basic auth secret %s.", secret.Name)
+			logInfo = append(logInfo, fmt.Sprintf("monitoring basic auth secret %q", secret.Name))
 		}
 	}
 
@@ -326,6 +327,8 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 	if numberOfAlertingSecrets > 1 {
 		return nil, fmt.Errorf("can only accept at most one alerting secret, but found %d", numberOfAlertingSecrets)
 	}
+
+	logger.Logger.Infof("Found secrets: %s", strings.Join(logInfo, ", "))
 
 	return secretsMap, nil
 }

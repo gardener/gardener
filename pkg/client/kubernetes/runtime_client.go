@@ -115,8 +115,8 @@ func AggregatorCacheFunc(newCache cache.NewCacheFunc, typeToNewCache map[client.
 
 		gvkToCache := make(map[schema.GroupVersionKind]cache.Cache)
 		for object, fn := range typeToNewCache {
-			gvks, _, err := scheme.ObjectKinds(object)
-			if err != nil || len(gvks) != 1 {
+			gvk, err := apiutil.GVKForObject(object, scheme)
+			if err != nil {
 				return nil, err
 			}
 
@@ -125,7 +125,7 @@ func AggregatorCacheFunc(newCache cache.NewCacheFunc, typeToNewCache map[client.
 				return nil, err
 			}
 
-			gvkToCache[gvks[0]] = cache
+			gvkToCache[gvk] = cache
 		}
 
 		return kcache.NewAggregator(fallbackCache, gvkToCache, scheme), nil
