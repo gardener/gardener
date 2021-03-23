@@ -22,7 +22,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -364,8 +363,8 @@ func (p *projectRBAC) deleteExtensionRolesResources(ctx context.Context, wantedE
 
 func (p *projectRBAC) getExtensionRolesResourceLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.GardenRole: v1beta1constants.LabelExtensionProjectRole,
-		common.ProjectName:          p.project.Name,
+		v1beta1constants.GardenRole:  v1beta1constants.LabelExtensionProjectRole,
+		v1beta1constants.ProjectName: p.project.Name,
 	}
 }
 

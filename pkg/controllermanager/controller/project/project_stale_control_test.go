@@ -25,7 +25,6 @@ import (
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/project"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation/common"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -164,7 +163,7 @@ var _ = Describe("ProjectStaleControl", func() {
 				}
 				defer test.WithVar(&NowFunc, nowFunc)
 
-				namespace.Annotations = map[string]string{common.ProjectSkipStaleCheck: "true"}
+				namespace.Annotations = map[string]string{v1beta1constants.ProjectSkipStaleCheck: "true"}
 				Expect(kubeCoreInformerFactory.Core().V1().Namespaces().Informer().GetStore().Update(namespace)).To(Succeed())
 
 				expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)

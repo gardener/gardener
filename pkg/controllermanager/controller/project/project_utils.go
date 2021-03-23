@@ -17,18 +17,17 @@ package project
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 func namespaceLabelsFromProject(project *gardencorev1beta1.Project) map[string]string {
 	return map[string]string{
-		v1beta1constants.GardenRole: v1beta1constants.GardenRoleProject,
-		common.ProjectName:          project.Name,
+		v1beta1constants.GardenRole:  v1beta1constants.GardenRoleProject,
+		v1beta1constants.ProjectName: project.Name,
 	}
 }
 
 func namespaceAnnotationsFromProject(project *gardencorev1beta1.Project) map[string]string {
 	return map[string]string{
-		common.NamespaceProject: string(project.UID),
+		v1beta1constants.NamespaceProject: string(project.UID),
 	}
 }
