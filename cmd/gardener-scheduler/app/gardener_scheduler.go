@@ -22,7 +22,6 @@ import (
 
 	"github.com/gardener/gardener/cmd/utils"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
@@ -125,14 +124,13 @@ func NewCommandStartGardenerScheduler() *cobra.Command {
 // GardenerScheduler represents all the parameters required to start the
 // Gardener scheduler.
 type GardenerScheduler struct {
-	Config                 *config.SchedulerConfiguration
-	Identity               *gardencorev1beta1.Gardener
-	GardenerNamespace      string
-	ClientMap              clientmap.ClientMap
-	K8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	Logger                 *logrus.Logger
-	Recorder               record.EventRecorder
-	LeaderElection         *leaderelection.LeaderElectionConfig
+	Config            *config.SchedulerConfiguration
+	Identity          *gardencorev1beta1.Gardener
+	GardenerNamespace string
+	ClientMap         clientmap.ClientMap
+	Logger            *logrus.Logger
+	Recorder          record.EventRecorder
+	LeaderElection    *leaderelection.LeaderElectionConfig
 }
 
 // NewGardenerScheduler is the main entry point of instantiating a new Gardener Scheduler.
@@ -197,12 +195,11 @@ func NewGardenerScheduler(ctx context.Context, cfg *config.SchedulerConfiguratio
 	}
 
 	return &GardenerScheduler{
-		Config:                 cfg,
-		ClientMap:              clientMap,
-		Logger:                 logger,
-		Recorder:               recorder,
-		K8sGardenCoreInformers: gardencoreinformers.NewSharedInformerFactory(k8sGardenClient.GardenCore(), 0),
-		LeaderElection:         leaderElectionConfig,
+		Config:         cfg,
+		ClientMap:      clientMap,
+		Logger:         logger,
+		Recorder:       recorder,
+		LeaderElection: leaderElectionConfig,
 	}, nil
 }
 
@@ -266,7 +263,7 @@ func (g *GardenerScheduler) startScheduler(ctx context.Context) {
 		panic(fmt.Errorf("failed to start ClientMap: %+v", err))
 	}
 
-	shootScheduler, err := shootcontroller.NewGardenerScheduler(ctx, g.ClientMap, g.K8sGardenCoreInformers, g.Config, g.Recorder)
+	shootScheduler, err := shootcontroller.NewGardenerScheduler(ctx, g.ClientMap, g.Config, g.Recorder)
 	if err != nil {
 		panic(fmt.Errorf("failed to create shoot scheduler controller: %+v", err))
 	}

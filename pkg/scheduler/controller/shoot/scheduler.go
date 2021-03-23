@@ -21,7 +21,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -38,8 +37,6 @@ import (
 
 // SchedulerController controls Seeds.
 type SchedulerController struct {
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-
 	config         *config.SchedulerConfiguration
 	reconciler     reconcile.Reconciler
 	hasSyncedFuncs []cache.InformerSynced
@@ -53,7 +50,6 @@ type SchedulerController struct {
 func NewGardenerScheduler(
 	ctx context.Context,
 	clientMap clientmap.ClientMap,
-	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
 	config *config.SchedulerConfiguration,
 	recorder record.EventRecorder,
 ) (
@@ -71,11 +67,10 @@ func NewGardenerScheduler(
 	}
 
 	schedulerController := &SchedulerController{
-		k8sGardenCoreInformers: gardenCoreInformerFactory,
-		reconciler:             NewReconciler(logger.Logger, config, gardenClient, recorder),
-		config:                 config,
-		shootQueue:             workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(config.Schedulers.Shoot.RetrySyncPeriod.Duration, 12*time.Hour), "gardener-shoot-scheduler"),
-		workerCh:               make(chan int),
+		reconciler: NewReconciler(logger.Logger, config, gardenClient, recorder),
+		config:     config,
+		shootQueue: workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(config.Schedulers.Shoot.RetrySyncPeriod.Duration, 12*time.Hour), "gardener-shoot-scheduler"),
+		workerCh:   make(chan int),
 	}
 
 	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -91,7 +86,6 @@ func NewGardenerScheduler(
 // Run runs the SchedulerController until the given stop channel can be read from.
 func (c *SchedulerController) Run(ctx context.Context) {
 	var waitGroup sync.WaitGroup
-	c.k8sGardenCoreInformers.Start(ctx.Done())
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
