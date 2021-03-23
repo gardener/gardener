@@ -50,6 +50,8 @@ var (
 	// group and the resource (but it ignores the version).
 	cloudProfileResource  = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource     = corev1.Resource("configmaps")
+	namespaceResource     = corev1.Resource("namespaces")
+	projectResource       = gardencorev1beta1.Resource("projects")
 	secretBindingResource = gardencorev1beta1.Resource("secretbindings")
 )
 
@@ -70,6 +72,10 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeGet(seedName, graph.VertexTypeCloudProfile, attrs)
 		case configMapResource:
 			return a.authorizeGet(seedName, graph.VertexTypeConfigMap, attrs)
+		case namespaceResource:
+			return a.authorizeGet(seedName, graph.VertexTypeNamespace, attrs)
+		case projectResource:
+			return a.authorizeGet(seedName, graph.VertexTypeProject, attrs)
 		case secretBindingResource:
 			return a.authorizeGet(seedName, graph.VertexTypeSecretBinding, attrs)
 		}
