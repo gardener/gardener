@@ -177,10 +177,6 @@ func (h *handler) admitConfigMap(ctx context.Context, request admission.Request)
 		cm    = &corev1.ConfigMap{}
 	)
 
-	if err := h.getOldObject(request, oldCm); err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
-
 	if request.Operation != admissionv1.Update {
 		return acadmission.Allowed("operation is not update")
 	}
@@ -195,6 +191,10 @@ func (h *handler) admitConfigMap(ctx context.Context, request admission.Request)
 	auditPolicy, err := getAuditPolicy(cm)
 	if err != nil {
 		return admission.Errored(http.StatusUnprocessableEntity, err)
+	}
+
+	if err = h.getOldObject(request, oldCm); err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
 	}
 	oldAuditPolicy, ok := oldCm.Data[auditPolicyConfigMapDataKey]
 	if ok && oldAuditPolicy == auditPolicy {
