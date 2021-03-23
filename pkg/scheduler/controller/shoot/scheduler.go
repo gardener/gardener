@@ -16,12 +16,13 @@ package shoot
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/scheduler"
@@ -36,73 +37,57 @@ import (
 
 // SchedulerController controls Seeds.
 type SchedulerController struct {
-	clientMap              clientmap.ClientMap
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
+	config         *config.SchedulerConfiguration
+	reconciler     reconcile.Reconciler
+	hasSyncedFuncs []cache.InformerSynced
 
-	config *config.SchedulerConfiguration
-
-	reconciler reconcile.Reconciler
-	recorder   record.EventRecorder
-
-	cloudProfileLister gardencorelisters.CloudProfileLister
-	cloudProfileSynced cache.InformerSynced
-
-	seedLister gardencorelisters.SeedLister
-	seedSynced cache.InformerSynced
-
-	shootLister gardencorelisters.ShootLister
-	shootSynced cache.InformerSynced
-	shootQueue  workqueue.RateLimitingInterface
-
+	shootQueue             workqueue.RateLimitingInterface
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
 
-// NewGardenerScheduler takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a <sharedInformerFactory>, a struct containing the scheduler configuration and a <recorder> for
-// event recording. It creates a new NewGardenerScheduler.
-func NewGardenerScheduler(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.SchedulerConfiguration, recorder record.EventRecorder) *SchedulerController {
-	var (
-		coreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
-
-		shootInformer        = coreV1beta1Informer.Shoots()
-		shootLister          = shootInformer.Lister()
-		seedInformer         = coreV1beta1Informer.Seeds()
-		seedLister           = seedInformer.Lister()
-		cloudProfileInformer = coreV1beta1Informer.CloudProfiles()
-		cloudProfileLister   = cloudProfileInformer.Lister()
-		shootQueue           = workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(config.Schedulers.Shoot.RetrySyncPeriod.Duration, 12*time.Hour), "gardener-shoot-scheduler")
-	)
-
-	schedulerController := &SchedulerController{
-		clientMap:              clientMap,
-		k8sGardenCoreInformers: gardenCoreInformerFactory,
-		reconciler:             NewReconciler(logger.Logger, config, clientMap, gardenCoreInformerFactory, shootLister, seedLister, cloudProfileLister, recorder),
-		config:                 config,
-		recorder:               recorder,
-		cloudProfileLister:     cloudProfileLister,
-		seedLister:             seedLister,
-		shootQueue:             shootQueue,
-		shootLister:            shootLister,
-		workerCh:               make(chan int),
+// NewGardenerScheduler creates a new scheduler controller.
+func NewGardenerScheduler(
+	ctx context.Context,
+	clientMap clientmap.ClientMap,
+	config *config.SchedulerConfiguration,
+	recorder record.EventRecorder,
+) (
+	*SchedulerController,
+	error,
+) {
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, err
 	}
 
-	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	shootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
+	}
+
+	schedulerController := &SchedulerController{
+		reconciler: NewReconciler(logger.Logger, config, gardenClient, recorder),
+		config:     config,
+		shootQueue: workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(config.Schedulers.Shoot.RetrySyncPeriod.Duration, 12*time.Hour), "gardener-shoot-scheduler"),
+		workerCh:   make(chan int),
+	}
+
+	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    schedulerController.shootAdd,
 		UpdateFunc: schedulerController.shootUpdate,
 	})
-	schedulerController.cloudProfileSynced = cloudProfileInformer.Informer().HasSynced
-	schedulerController.seedSynced = seedInformer.Informer().HasSynced
-	schedulerController.shootSynced = shootInformer.Informer().HasSynced
 
-	return schedulerController
+	schedulerController.hasSyncedFuncs = append(schedulerController.hasSyncedFuncs, shootInformer.HasSynced)
+
+	return schedulerController, nil
 }
 
 // Run runs the SchedulerController until the given stop channel can be read from.
 func (c *SchedulerController) Run(ctx context.Context) {
 	var waitGroup sync.WaitGroup
 
-	c.k8sGardenCoreInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), c.cloudProfileSynced, c.seedSynced, c.shootSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
