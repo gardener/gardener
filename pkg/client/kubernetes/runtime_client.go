@@ -20,11 +20,14 @@ import (
 	"fmt"
 	"time"
 
+	kcache "github.com/gardener/gardener/pkg/client/kubernetes/cache"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -96,6 +99,37 @@ func setClientOptionsDefaults(config *rest.Config, options *client.Options) erro
 	}
 
 	return nil
+}
+
+// AggregatorCacheFunc returns a `cache.NewCacheFunc` which creates a cache that holds different cache implementations depending on the objects' GVKs.
+func AggregatorCacheFunc(newCache cache.NewCacheFunc, typeToNewCache map[client.Object]cache.NewCacheFunc, scheme *runtime.Scheme) cache.NewCacheFunc {
+	return func(config *rest.Config, options cache.Options) (cache.Cache, error) {
+		if err := setCacheOptionsDefaults(&options); err != nil {
+			return nil, err
+		}
+
+		fallbackCache, err := newCache(config, options)
+		if err != nil {
+			return nil, err
+		}
+
+		gvkToCache := make(map[schema.GroupVersionKind]cache.Cache)
+		for object, fn := range typeToNewCache {
+			gvk, err := apiutil.GVKForObject(object, scheme)
+			if err != nil {
+				return nil, err
+			}
+
+			cache, err := fn(config, options)
+			if err != nil {
+				return nil, err
+			}
+
+			gvkToCache[gvk] = cache
+		}
+
+		return kcache.NewAggregator(fallbackCache, gvkToCache, scheme), nil
+	}
 }
 
 // NewRuntimeCache creates a new cache.Cache with the given config and options. It can be used

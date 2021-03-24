@@ -28,6 +28,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -77,6 +78,7 @@ var _ = Describe("GardenClientMap", func() {
 				Expect(fns).To(ConsistOfConfigFuncs(
 					kubernetes.WithRESTConfig(restConfig),
 					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
+					kubernetes.WithUncached(&corev1.Secret{}),
 				))
 				return fakeCS, nil
 			}

@@ -33,6 +33,8 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/garden"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -141,15 +143,14 @@ type CareControlInterface interface {
 // NewDefaultCareControl returns a new instance of the default implementation CareControlInterface that
 // implements the documented semantics for caring for Shoots. You should use an instance returned from NewDefaultCareControl()
 // for any scenario other than testing.
-func NewDefaultCareControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardencorev1beta1.Gardener, gardenClusterIdentity string, config *config.GardenletConfiguration) CareControlInterface {
+func NewDefaultCareControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.Interface, imageVector imagevector.ImageVector, identity *gardencorev1beta1.Gardener, gardenClusterIdentity string, config *config.GardenletConfiguration) CareControlInterface {
 	return &defaultCareControl{
-		clientMap,
-		k8sGardenCoreInformers,
-		secrets,
-		imageVector,
-		identity,
-		gardenClusterIdentity,
-		config,
+		clientMap:              clientMap,
+		k8sGardenCoreInformers: k8sGardenCoreInformers,
+		imageVector:            imageVector,
+		identity:               identity,
+		gardenClusterIdentity:  gardenClusterIdentity,
+		config:                 config,
 	}
 }
 
@@ -167,11 +168,12 @@ var (
 type defaultCareControl struct {
 	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.Interface
-	secrets                map[string]*corev1.Secret
 	imageVector            imagevector.ImageVector
 	identity               *gardencorev1beta1.Gardener
 	gardenClusterIdentity  string
 	config                 *config.GardenletConfiguration
+
+	gardenSecrets map[string]*corev1.Secret
 }
 
 func (c *defaultCareControl) conditionThresholdsToProgressingMapping() map[gardencorev1beta1.ConditionType]time.Duration {
@@ -277,13 +279,22 @@ func (c *defaultCareControl) Care(shootObj *gardencorev1beta1.Shoot, key string)
 		return nil
 	}
 
+	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
+	if c.gardenSecrets == nil {
+		secrets, err := garden.ReadGardenSecrets(ctx, gardenClient.Cache(), c.k8sGardenCoreInformers.Seeds().Lister(), seedpkg.ComputeGardenNamespace(*shoot.Spec.SeedName))
+		if err != nil {
+			return fmt.Errorf("error reading Garden secrets: %w", err)
+		}
+		c.gardenSecrets = secrets
+	}
+
 	operation, err := NewOperation(
 		ctx,
 		seedClient,
 		c.config,
 		c.identity,
 		c.gardenClusterIdentity,
-		c.secrets,
+		c.gardenSecrets,
 		c.imageVector,
 		c.k8sGardenCoreInformers,
 		c.clientMap,

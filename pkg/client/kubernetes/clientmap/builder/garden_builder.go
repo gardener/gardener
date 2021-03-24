@@ -31,6 +31,7 @@ import (
 type GardenClientMapBuilder struct {
 	restConfig *rest.Config
 	logger     logrus.FieldLogger
+	seedName   string
 }
 
 // NewGardenClientMapBuilder creates a new GardenClientMapBuilder.
@@ -51,6 +52,12 @@ func (b *GardenClientMapBuilder) WithRESTConfig(cfg *rest.Config) *GardenClientM
 	return b
 }
 
+// ForSeed sets the seed that will be used to construct a new client to the garden cluster.
+func (b *GardenClientMapBuilder) ForSeed(name string) *GardenClientMapBuilder {
+	b.seedName = name
+	return b
+}
+
 // Build builds the GardenClientMap using the provided attributes.
 func (b *GardenClientMapBuilder) Build() (clientmap.ClientMap, error) {
 	if b.logger == nil {
@@ -62,5 +69,6 @@ func (b *GardenClientMapBuilder) Build() (clientmap.ClientMap, error) {
 
 	return internal.NewGardenClientMap(&internal.GardenClientSetFactory{
 		RESTConfig: b.restConfig,
+		SeedName:   b.seedName,
 	}, b.logger), nil
 }

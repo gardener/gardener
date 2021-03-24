@@ -76,14 +76,14 @@ func NewGardenControllerFactory(clientMap clientmap.ClientMap, gardenCoreInforme
 }
 
 var (
-	noControlPlaneSecrets = utils.MustNewRequirement(
+	noControlPlaneSecretsReq = utils.MustNewRequirement(
 		v1beta1constants.GardenRole,
 		selection.NotIn,
 		v1beta1constants.ControlPlaneSecretRoles...,
 	)
 
 	// uncontrolledSecretSelector is a selector for objects which are managed by operators/users and not created Gardener controllers.
-	uncontrolledSecretSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(noControlPlaneSecrets)}
+	uncontrolledSecretSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(noControlPlaneSecretsReq)}
 )
 
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
@@ -137,10 +137,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return errors.New("Timed out waiting for Kube caches to sync")
 	}
 
-	secrets, err := garden.ReadGardenSecrets(f.k8sInformers, f.k8sGardenCoreInformers)
-	runtime.Must(err)
-
-	runtime.Must(garden.BootstrapCluster(ctx, k8sGardenClient, v1beta1constants.GardenNamespace, secrets))
+	runtime.Must(garden.BootstrapCluster(ctx, k8sGardenClient, v1beta1constants.GardenNamespace, f.k8sInformers.Core().V1().Secrets().Lister()))
 	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
 
 	// Initialize the workqueue metrics collection.
@@ -158,7 +155,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	}
 
 	var (
-		controllerRegistrationController = controllerregistrationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, secrets)
+		controllerRegistrationController = controllerregistrationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers)
 		quotaController                  = quotacontroller.NewQuotaController(f.clientMap, f.k8sGardenCoreInformers, f.recorder)
 		plantController                  = plantcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
 		projectController                = projectcontroller.NewProjectController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)

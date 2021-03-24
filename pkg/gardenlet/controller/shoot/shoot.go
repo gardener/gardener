@@ -36,7 +36,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/prometheus/client_golang/prometheus"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -56,7 +55,6 @@ type Controller struct {
 	controllerInstallationControl ControllerInstallationControlInterface
 	seedRegistrationControl       SeedRegistrationControlInterface
 	recorder                      record.EventRecorder
-	secrets                       map[string]*corev1.Secret
 	imageVector                   imagevector.ImageVector
 	shootReconciliationDueTracker *reconciliationDueTracker
 
@@ -70,9 +68,7 @@ type Controller struct {
 	shootSeedQueue              workqueue.RateLimitingInterface
 	seedRegistrationQueue       workqueue.RateLimitingInterface
 
-	controllerInstallationSynced cache.InformerSynced
-	seedSynced                   cache.InformerSynced
-	shootSynced                  cache.InformerSynced
+	hasSyncedFuncs []cache.InformerSynced
 
 	numberOfRunningWorkers int
 	workerCh               chan int
@@ -82,7 +78,7 @@ type Controller struct {
 // holding information about the acting Gardener, a <shootInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
 func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, identity *gardencorev1beta1.Gardener,
-	gardenClusterIdentity string, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
+	gardenClusterIdentity string, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
 	var (
 		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
 
@@ -103,11 +99,10 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 		config:                        config,
 		identity:                      identity,
 		gardenClusterIdentity:         gardenClusterIdentity,
-		careControl:                   NewDefaultCareControl(clientMap, gardenCoreV1beta1Informer, secrets, imageVector, identity, gardenClusterIdentity, config),
+		careControl:                   NewDefaultCareControl(clientMap, gardenCoreV1beta1Informer, imageVector, identity, gardenClusterIdentity, config),
 		controllerInstallationControl: NewDefaultControllerInstallationControl(clientMap, gardenCoreV1beta1Informer, recorder),
 		seedRegistrationControl:       NewDefaultSeedRegistrationControl(clientMap, recorder, logger.Logger),
 		recorder:                      recorder,
-		secrets:                       secrets,
 		imageVector:                   imageVector,
 		shootReconciliationDueTracker: newReconciliationDueTracker(),
 
@@ -159,9 +154,11 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 		},
 	})
 
-	shootController.controllerInstallationSynced = controllerInstallationInformer.Informer().HasSynced
-	shootController.seedSynced = seedInformer.Informer().HasSynced
-	shootController.shootSynced = shootInformer.Informer().HasSynced
+	shootController.hasSyncedFuncs = []cache.InformerSynced{
+		controllerInstallationInformer.Informer().HasSynced,
+		seedInformer.Informer().HasSynced,
+		shootInformer.Informer().HasSynced,
+	}
 
 	return shootController
 }
@@ -170,7 +167,7 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.controllerInstallationSynced, c.seedSynced, c.shootSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
