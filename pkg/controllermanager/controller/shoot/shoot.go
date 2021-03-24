@@ -83,6 +83,10 @@ func NewShootController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
+	configMapInformer, err := gardenClient.Cache().GetInformer(ctx, &corev1.ConfigMap{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ConfigMap Informer: %w", err)
+	}
 
 	var (
 		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
@@ -94,8 +98,6 @@ func NewShootController(
 		cloudProfileInformer = gardenCoreV1beta1Informer.CloudProfiles()
 		cloudProfileLister   = cloudProfileInformer.Lister()
 
-		configMapInformer = corev1Informer.ConfigMaps()
-
 		secretInformer = corev1Informer.Secrets()
 		secretLister   = secretInformer.Lister()
 	)
@@ -106,7 +108,7 @@ func NewShootController(
 		shootHibernationReconciler: NewShootHibernationReconciler(logger.Logger, clientMap, shootLister, NewHibernationScheduleRegistry(), recorder),
 		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, gardenClient, config.Controllers.ShootMaintenance, cloudProfileLister, recorder),
 		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootQuota, gardenCoreV1beta1Informer),
-		configMapReconciler:        NewConfigMapReconciler(logger.Logger, clientMap, shootLister),
+		configMapReconciler:        NewConfigMapReconciler(logger.Logger, gardenClient.Client()),
 
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
 		shootQuotaQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),
@@ -134,7 +136,7 @@ func NewShootController(
 		DeleteFunc: shootController.shootHibernationDelete,
 	})
 
-	configMapInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	configMapInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.configMapAdd,
 		UpdateFunc: shootController.configMapUpdate,
 	})
@@ -148,7 +150,7 @@ func NewShootController(
 		shootInformer.Informer().HasSynced,
 		runtimeShootInformer.HasSynced,
 		gardenCoreV1beta1Informer.Quotas().Informer().HasSynced,
-		configMapInformer.Informer().HasSynced,
+		configMapInformer.HasSynced,
 	}
 
 	runtimeSecretLister := func(ctx context.Context, secretList *corev1.SecretList, opts ...client.ListOption) error {
