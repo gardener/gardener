@@ -10,9 +10,10 @@ The `Shoot` resource contains a `.spec.purpose` field indicating how the shoot i
 
 ## Behavioral Differences
 
-So far, the only difference in the way the shoot cluster is set up is that
+The following enlists the differences in the way the shoot clusters are set up based on the selected purpose:
 
 * `testing` shoot clusters **do not** get a monitoring or a logging stack as part of their control planes.
+* `production` shoot clusters get at least two replicas of the `kube-apiserver` for their control planes.
 
 There are also differences with respect to how `testing` shoots are scheduled after creation, please consult the [Scheduler documentation](../concepts/scheduler.md).
 
