@@ -36,7 +36,6 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 const (
@@ -128,17 +127,24 @@ func New(
 	}
 }
 
+const (
+	// CommandApply is a constant for the "apply" command.
+	CommandApply = "apply"
+	// CommandDestroy is a constant for the "destroy" command.
+	CommandDestroy = "destroy"
+)
+
 // Apply executes a Terraform Pod by running the 'terraform apply' command.
 func (t *terraformer) Apply(ctx context.Context) error {
-	if !t.configurationDefined {
+	if !t.configurationInitialized {
 		return errors.New("terraformer configuration has not been defined, cannot execute Terraformer")
 	}
-	return t.execute(ctx, "apply")
+	return t.execute(ctx, CommandApply)
 }
 
 // Destroy executes a Terraform Pod by running the 'terraform destroy' command.
 func (t *terraformer) Destroy(ctx context.Context) error {
-	if err := t.execute(ctx, "destroy"); err != nil {
+	if err := t.execute(ctx, CommandDestroy); err != nil {
 		return err
 	}
 	return t.CleanupConfiguration(ctx)
@@ -149,31 +155,29 @@ func (t *terraformer) Destroy(ctx context.Context) error {
 func (t *terraformer) execute(ctx context.Context, command string) error {
 	logger := t.logger.WithValues("command", command)
 
-	var allConfigurationResourcesExist = false
-	logger.V(1).Info("Waiting until all configuration resources exist")
-
-	// We should retry the preparation check in order to allow the kube-apiserver to actually create the ConfigMaps.
-	if err := retry.UntilTimeout(ctx, 5*time.Second, 30*time.Second, func(ctx context.Context) (done bool, err error) {
+	// When not both configuration and state were freshly initialized then we should check whether all configuration
+	// resources still exist. If yes then we can safely continue. If nothing exists then we exit early and don't run the
+	// pod. Otherwise, we might return an error in case we don't tolerate that resources are missing. We only tolerate
+	// this when the command is 'destroy'. This is because the CleanupConfiguration() function could have already
+	// deleted some of the resources (but not all). Hence, without the toleration we would end up in a deadlock and
+	// manual action would be required.
+	if !(t.configurationInitialized && t.stateInitialized) {
 		numberOfExistingResources, err := t.NumberOfResources(ctx)
 		if err != nil {
-			return retry.SevereError(err)
+			return err
 		}
-		if numberOfExistingResources == 0 {
-			logger.Info("All ConfigMaps and Secrets missing, can not execute Terraformer pod")
-			return retry.Ok()
-		} else if numberOfExistingResources == numberOfConfigResources {
+
+		switch {
+		case numberOfExistingResources == numberOfConfigResources:
 			logger.Info("All ConfigMaps and Secrets exist, will execute Terraformer pod")
-			allConfigurationResourcesExist = true
-			return retry.Ok()
-		} else {
-			logger.Error(fmt.Errorf("ConfigMaps or Secrets are missing"), "Cannot execute Terraformer pod")
-			return retry.MinorError(fmt.Errorf("%d/%d Terraform resources are missing", numberOfConfigResources-numberOfExistingResources, numberOfConfigResources))
+		case numberOfExistingResources == 0:
+			logger.Info("All ConfigMaps and Secrets missing, can not execute Terraformer pod")
+			return nil
+		case command != CommandDestroy:
+			errResourcesMissing := fmt.Errorf("%d/%d Terraform resources are missing", numberOfConfigResources-numberOfExistingResources, numberOfConfigResources)
+			logger.Error(errResourcesMissing, "Cannot execute Terraformer pod")
+			return errResourcesMissing
 		}
-	}); err != nil {
-		return err
-	}
-	if !allConfigurationResourcesExist {
-		return nil
 	}
 
 	// Check if an existing Terraformer pod is still running. If yes, then adopt it. If no, then deploy a new pod (if
@@ -214,7 +218,7 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 	// something at all. If it does not contain anything, then the 'apply' could never be executed, probably
 	// because of syntax errors. In this case, we want to skip the Terraform destroy pod (as it wouldn't do anything
 	// anyway) and just delete the related ConfigMaps/Secrets.
-	if command == "destroy" {
+	if command == CommandDestroy {
 		deployNewPod = !t.IsStateEmpty(ctx)
 	}
 

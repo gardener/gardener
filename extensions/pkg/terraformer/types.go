@@ -38,8 +38,9 @@ import (
 // * envVars is a list of environment variables which will be injected in the resulting
 //   Terraform pod. These variables can contain Terraform variables (i.e., must be prefixed
 //   with TF_VAR_).
-// * configurationDefined indicates whether the required configuration ConfigMaps/Secrets have been
+// * configurationInitialized indicates whether the Terraform variables secret and Terraform script ConfigMap have been
 //   successfully defined.
+// * stateInitialized indicates whether the Terraform state ConfigMap has been successfully defined.
 // * logLevel configures the log level for the Terraformer Pod (only compatible with terraformer@v2,
 //   defaults to "info")
 // * terminationGracePeriodSeconds is the respective Pod spec field passed to Terraformer Pods.
@@ -58,11 +59,13 @@ type terraformer struct {
 	image     string
 	ownerRef  *metav1.OwnerReference
 
-	configName           string
-	variablesName        string
-	stateName            string
-	envVars              []corev1.EnvVar
-	configurationDefined bool
+	configName    string
+	variablesName string
+	stateName     string
+	envVars       []corev1.EnvVar
+
+	configurationInitialized bool
+	stateInitialized         bool
 
 	logLevel                      string
 	terminationGracePeriodSeconds int64
