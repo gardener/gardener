@@ -79,7 +79,7 @@ func NewShootController(
 		return nil, err
 	}
 
-	runtimeShootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	shootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
@@ -92,9 +92,6 @@ func NewShootController(
 		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
 		corev1Informer            = kubeInformerFactory.Core().V1()
 
-		shootInformer = gardenCoreV1beta1Informer.Shoots()
-		shootLister   = shootInformer.Lister()
-
 		cloudProfileInformer = gardenCoreV1beta1Informer.CloudProfiles()
 		cloudProfileLister   = cloudProfileInformer.Lister()
 
@@ -105,7 +102,7 @@ func NewShootController(
 	shootController := &Controller{
 		config: config,
 
-		shootHibernationReconciler: NewShootHibernationReconciler(logger.Logger, clientMap, shootLister, NewHibernationScheduleRegistry(), recorder),
+		shootHibernationReconciler: NewShootHibernationReconciler(logger.Logger, gardenClient, NewHibernationScheduleRegistry(), recorder),
 		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, gardenClient, config.Controllers.ShootMaintenance, cloudProfileLister, recorder),
 		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootQuota, gardenCoreV1beta1Informer),
 		configMapReconciler:        NewConfigMapReconciler(logger.Logger, gardenClient.Client()),
@@ -119,18 +116,18 @@ func NewShootController(
 		workerCh: make(chan int),
 	}
 
-	runtimeShootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootMaintenanceAdd,
 		UpdateFunc: shootController.shootMaintenanceUpdate,
 		DeleteFunc: shootController.shootMaintenanceDelete,
 	})
 
-	runtimeShootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootQuotaAdd,
 		DeleteFunc: shootController.shootQuotaDelete,
 	})
 
-	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootHibernationAdd,
 		UpdateFunc: shootController.shootHibernationUpdate,
 		DeleteFunc: shootController.shootHibernationDelete,
@@ -141,14 +138,13 @@ func NewShootController(
 		UpdateFunc: shootController.configMapUpdate,
 	})
 
-	runtimeShootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootReferenceAdd,
 		UpdateFunc: shootController.shootReferenceUpdate,
 	})
 
 	shootController.hasSyncedFuncs = []cache.InformerSynced{
-		shootInformer.Informer().HasSynced,
-		runtimeShootInformer.HasSynced,
+		shootInformer.HasSynced,
 		gardenCoreV1beta1Informer.Quotas().Informer().HasSynced,
 		configMapInformer.HasSynced,
 	}
