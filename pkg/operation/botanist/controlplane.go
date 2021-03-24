@@ -632,6 +632,10 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		maxReplicas = autoscaler.MaxReplicas
 	}
 
+	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
+		minReplicas = 2
+	}
+
 	if b.ManagedSeed != nil && b.ManagedSeedAPIServer != nil && !hvpaEnabled {
 		defaultValues["replicas"] = *b.ManagedSeedAPIServer.Replicas
 		defaultValues["apiServerResources"] = map[string]interface{}{
