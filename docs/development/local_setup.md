@@ -239,6 +239,8 @@ To close the tunnels and remove the locally-running Docker containers, run:
 make remote-garden-down
 ```
 
+> Note: The minimum K8S version of the remote cluster that can be used as Garden cluster is `1.19.x`.
+
 #### Prepare the Gardener
 
 Now, that you have started your local cluster, we can go ahead and register the Gardener API Server.
