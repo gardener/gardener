@@ -21,9 +21,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/project"
 	"github.com/gardener/gardener/pkg/logger"
@@ -53,7 +50,6 @@ var _ = Describe("ProjectStaleControl", func() {
 			k8sGardenRuntimeStatusWriter *mockclient.MockStatusWriter
 			gardenCoreInformerFactory    gardencoreinformers.SharedInformerFactory
 			kubeCoreInformerFactory      kubecoreinformers.SharedInformerFactory
-			clientMap                    *fakeclientmap.ClientMap
 
 			oldTimenowFunc func() time.Time
 
@@ -97,14 +93,6 @@ var _ = Describe("ProjectStaleControl", func() {
 			gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			kubeCoreInformerFactory = kubecoreinformers.NewSharedInformerFactory(nil, 0)
 
-			clientMap = fakeclientmap.
-				NewClientMap().
-				AddClient(keys.ForGarden(), fakeclientset.
-					NewClientSetBuilder().
-					WithClient(k8sGardenRuntimeClient).
-					Build(),
-				)
-
 			logger.Logger = logger.NewNopLogger()
 
 			project = &gardencorev1beta1.Project{
@@ -147,7 +135,7 @@ var _ = Describe("ProjectStaleControl", func() {
 			reconciler = NewProjectStaleReconciler(
 				logger.NewNopLogger(),
 				cfg,
-				clientMap,
+				k8sGardenRuntimeClient,
 				gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(),
 				gardenCoreInformerFactory.Core().V1beta1().Plants().Lister(),
 				gardenCoreInformerFactory.Core().V1beta1().BackupEntries().Lister(),

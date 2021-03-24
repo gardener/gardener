@@ -20,7 +20,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -201,7 +201,7 @@ var _ = Describe("ProjectControlReconcile", func() {
 				Config: resourceQuota,
 			}
 
-			c.EXPECT().Get(ctx, kutils.Key(namespace, ResourceQuotaName), gomock.AssignableToTypeOf(&corev1.ResourceQuota{})).
+			c.EXPECT().Get(ctx, kutil.Key(namespace, ResourceQuotaName), gomock.AssignableToTypeOf(&corev1.ResourceQuota{})).
 				Return(apierrors.NewNotFound(corev1.Resource("resourcequota"), "resourcequota"))
 
 			expectedResourceQuota := resourceQuota.DeepCopy()
@@ -233,7 +233,7 @@ var _ = Describe("ProjectControlReconcile", func() {
 				},
 			}
 
-			c.EXPECT().Get(ctx, kutils.Key(namespace, ResourceQuotaName), gomock.AssignableToTypeOf(&corev1.ResourceQuota{})).
+			c.EXPECT().Get(ctx, kutil.Key(namespace, ResourceQuotaName), gomock.AssignableToTypeOf(&corev1.ResourceQuota{})).
 				DoAndReturn(func(_ context.Context, _ client.ObjectKey, resourceQuota *corev1.ResourceQuota) error {
 					*resourceQuota = *existingResourceQuota
 					return nil

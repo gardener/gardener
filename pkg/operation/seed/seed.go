@@ -269,15 +269,17 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		return err
 	}
 
-	if _, err := kutil.TryUpdateNamespace(ctx, k8sSeedClient.Kubernetes(), retry.DefaultBackoff, gardenNamespace.ObjectMeta, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
-		kutil.SetMetaDataLabel(&ns.ObjectMeta, "role", v1beta1constants.GardenNamespace)
-		return ns, nil
+	if err := kutil.TryUpdate(ctx, retry.DefaultRetry, k8sSeedClient.Client(), gardenNamespace, func() error {
+		kutil.SetMetaDataLabel(&gardenNamespace.ObjectMeta, "role", v1beta1constants.GardenNamespace)
+		return nil
 	}); err != nil {
 		return err
 	}
-	if _, err := kutil.TryUpdateNamespace(ctx, k8sSeedClient.Kubernetes(), retry.DefaultBackoff, metav1.ObjectMeta{Name: metav1.NamespaceSystem}, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
-		kutil.SetMetaDataLabel(&ns.ObjectMeta, "role", metav1.NamespaceSystem)
-		return ns, nil
+
+	namespaceKubeSystem := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: metav1.NamespaceSystem}}
+	if err := kutil.TryUpdate(ctx, retry.DefaultRetry, k8sSeedClient.Client(), namespaceKubeSystem, func() error {
+		kutil.SetMetaDataLabel(&namespaceKubeSystem.ObjectMeta, "role", metav1.NamespaceSystem)
+		return nil
 	}); err != nil {
 		return err
 	}

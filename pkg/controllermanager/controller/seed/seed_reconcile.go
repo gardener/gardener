@@ -40,6 +40,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -86,23 +87,14 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: seed.ComputeGardenNamespace(seedObj.Name),
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(seedObj, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed")),
-			},
 		},
 	}
 
-	// TODO: use controllerutil.CreateOrUpdate once cache is graduated to beta https://github.com/gardener/gardener/issues/2822
-	if err := gardenClient.Client().Create(ctx, namespace); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return reconcileResult(err)
-		}
-		if _, err2 := kutil.TryUpdateNamespace(ctx, gardenClient.Kubernetes(), retry.DefaultRetry, metav1.ObjectMeta{Name: namespace.Name}, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
-			ns.OwnerReferences = namespace.OwnerReferences
-			return ns, nil
-		}); err2 != nil {
-			return reconcileResult(err2)
-		}
+	if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient.Client(), namespace, func() error {
+		namespace.OwnerReferences = []metav1.OwnerReference{*metav1.NewControllerRef(seedObj, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))}
+		return nil
+	}); err != nil {
+		return reconcileResult(err)
 	}
 
 	syncedSecrets, err := r.syncGardenSecrets(ctx, gardenClient, namespace)

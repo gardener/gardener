@@ -16,24 +16,18 @@ package project
 
 import (
 	"context"
-	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
-	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -70,11 +64,11 @@ func (c *Controller) projectDelete(obj interface{}) {
 }
 
 // NewProjectReconciler creates a new instance of a reconciler which reconciles Projects.
-func NewProjectReconciler(l logrus.FieldLogger, config *config.ProjectControllerConfiguration, clientMap clientmap.ClientMap, recorder record.EventRecorder, namespaceLister kubecorev1listers.NamespaceLister) reconcile.Reconciler {
+func NewProjectReconciler(l logrus.FieldLogger, config *config.ProjectControllerConfiguration, gardenClient kubernetes.Interface, recorder record.EventRecorder, namespaceLister kubecorev1listers.NamespaceLister) reconcile.Reconciler {
 	return &projectReconciler{
 		logger:          l,
 		config:          config,
-		clientMap:       clientMap,
+		gardenClient:    gardenClient,
 		recorder:        recorder,
 		namespaceLister: namespaceLister,
 	}
@@ -83,19 +77,14 @@ func NewProjectReconciler(l logrus.FieldLogger, config *config.ProjectController
 type projectReconciler struct {
 	logger          logrus.FieldLogger
 	config          *config.ProjectControllerConfiguration
-	clientMap       clientmap.ClientMap
+	gardenClient    kubernetes.Interface
 	recorder        record.EventRecorder
 	namespaceLister kubecorev1listers.NamespaceLister
 }
 
 func (r *projectReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	project := &gardencorev1beta1.Project{}
-	if err := gardenClient.Client().Get(ctx, request.NamespacedName, project); err != nil {
+	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
 			return reconcile.Result{}, nil
@@ -108,10 +97,10 @@ func (r *projectReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	projectLogger.Infof("[PROJECT RECONCILE] %s", project.Name)
 
 	if project.DeletionTimestamp != nil {
-		return r.delete(ctx, project, gardenClient)
+		return r.delete(ctx, project, r.gardenClient.Client(), r.gardenClient.APIReader())
 	}
 
-	return r.reconcile(ctx, project, gardenClient)
+	return r.reconcile(ctx, project, r.gardenClient.Client(), r.gardenClient.APIReader())
 }
 
 func newProjectLogger(project *gardencorev1beta1.Project) logrus.FieldLogger {
@@ -119,14 +108,6 @@ func newProjectLogger(project *gardencorev1beta1.Project) logrus.FieldLogger {
 		return logger.Logger
 	}
 	return logger.NewFieldLogger(logger.Logger, "project", project.Name)
-}
-
-func updateProjectStatus(ctx context.Context, g gardencore.Interface, objectMeta metav1.ObjectMeta, transform func(project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error)) (*gardencorev1beta1.Project, error) {
-	project, err := kutils.TryUpdateProjectStatus(ctx, g, retry.DefaultRetry, objectMeta, transform)
-	if err != nil {
-		newProjectLogger(project).Errorf("Error updating the status of the project: %q", err.Error())
-	}
-	return project, err
 }
 
 func (r *projectReconciler) reportEvent(project *gardencorev1beta1.Project, isError bool, eventReason, messageFmt string, args ...interface{}) {
