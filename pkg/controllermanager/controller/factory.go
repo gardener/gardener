@@ -159,6 +159,11 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Plant controller: %w", err)
 	}
 
+	quotaController, err := quotacontroller.NewQuotaController(ctx, f.clientMap, f.k8sGardenCoreInformers, f.recorder)
+	if err != nil {
+		return fmt.Errorf("failed initializing Quota controller: %w", err)
+	}
+
 	secretBindingController, err := secretbindingcontroller.NewSecretBindingController(ctx, f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing SecretBinding controller: %w", err)
@@ -166,7 +171,6 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 
 	var (
 		controllerRegistrationController = controllerregistrationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers)
-		quotaController                  = quotacontroller.NewQuotaController(f.clientMap, f.k8sGardenCoreInformers, f.recorder)
 		projectController                = projectcontroller.NewProjectController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
 		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
 		eventController                  = eventcontroller.NewController(f.clientMap, f.cfg.Controllers.Event)

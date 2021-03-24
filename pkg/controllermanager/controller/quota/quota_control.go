@@ -22,8 +22,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -33,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -59,10 +58,10 @@ func (c *Controller) quotaDelete(obj interface{}) {
 }
 
 // NewQuotaReconciler creates a new instance of a reconciler which reconciles Quotas.
-func NewQuotaReconciler(l logrus.FieldLogger, clientMap clientmap.ClientMap, recorder record.EventRecorder, secretBindingLister gardencorelisters.SecretBindingLister) reconcile.Reconciler {
+func NewQuotaReconciler(l logrus.FieldLogger, gardenClient client.Client, recorder record.EventRecorder, secretBindingLister gardencorelisters.SecretBindingLister) reconcile.Reconciler {
 	return &quotaReconciler{
 		logger:              l,
-		clientMap:           clientMap,
+		gardenClient:        gardenClient,
 		recorder:            recorder,
 		secretBindingLister: secretBindingLister,
 	}
@@ -70,19 +69,14 @@ func NewQuotaReconciler(l logrus.FieldLogger, clientMap clientmap.ClientMap, rec
 
 type quotaReconciler struct {
 	logger              logrus.FieldLogger
-	clientMap           clientmap.ClientMap
+	gardenClient        client.Client
 	recorder            record.EventRecorder
 	secretBindingLister gardencorelisters.SecretBindingLister
 }
 
 func (r *quotaReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	quota := &gardencorev1beta1.Quota{}
-	if err := gardenClient.Client().Get(ctx, request.NamespacedName, quota); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, quota); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
 			return reconcile.Result{}, nil
@@ -111,7 +105,7 @@ func (r *quotaReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 			quotaLogger.Info("No SecretBindings are referencing the Quota. Deletion accepted.")
 
 			// Remove finalizer from Quota
-			if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), quota, gardencorev1beta1.GardenerName); err != nil {
+			if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, quota, gardencorev1beta1.GardenerName); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed removing finalizer from quota: %w", err)
 			}
 
@@ -125,7 +119,7 @@ func (r *quotaReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 		return reconcile.Result{}, errors.New("quota still has references")
 	}
 
-	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), quota, gardencorev1beta1.GardenerName); err != nil {
+	if err := controllerutils.PatchAddFinalizers(ctx, r.gardenClient, quota, gardencorev1beta1.GardenerName); err != nil {
 		quotaLogger.Errorf("Could not add finalizer to Quota: %s", err.Error())
 		return reconcile.Result{}, err
 	}
