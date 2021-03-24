@@ -91,6 +91,9 @@ func NewShootController(
 		shootInformer = gardenCoreV1beta1Informer.Shoots()
 		shootLister   = shootInformer.Lister()
 
+		cloudProfileInformer = gardenCoreV1beta1Informer.CloudProfiles()
+		cloudProfileLister   = cloudProfileInformer.Lister()
+
 		configMapInformer = corev1Informer.ConfigMaps()
 
 		secretInformer = corev1Informer.Secrets()
@@ -101,7 +104,7 @@ func NewShootController(
 		config: config,
 
 		shootHibernationReconciler: NewShootHibernationReconciler(logger.Logger, clientMap, shootLister, NewHibernationScheduleRegistry(), recorder),
-		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, config.Controllers.ShootMaintenance, clientMap, gardenCoreV1beta1Informer, recorder),
+		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, gardenClient, config.Controllers.ShootMaintenance, cloudProfileLister, recorder),
 		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootQuota, gardenCoreV1beta1Informer),
 		configMapReconciler:        NewConfigMapReconciler(logger.Logger, clientMap, shootLister),
 
@@ -114,7 +117,7 @@ func NewShootController(
 		workerCh: make(chan int),
 	}
 
-	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	runtimeShootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootMaintenanceAdd,
 		UpdateFunc: shootController.shootMaintenanceUpdate,
 		DeleteFunc: shootController.shootMaintenanceDelete,
