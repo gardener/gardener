@@ -16,12 +16,14 @@ package secretbinding
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
@@ -36,18 +38,10 @@ import (
 
 // Controller controls SecretBindings.
 type Controller struct {
-	clientMap              clientmap.ClientMap
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
+	reconciler     reconcile.Reconciler
+	hasSyncedFuncs []cache.InformerSynced
 
-	reconciler reconcile.Reconciler
-	recorder   record.EventRecorder
-
-	secretBindingLister gardencorelisters.SecretBindingLister
-	secretBindingQueue  workqueue.RateLimitingInterface
-	secretBindingSynced cache.InformerSynced
-
-	shootLister gardencorelisters.ShootLister
-
+	secretBindingQueue     workqueue.RateLimitingInterface
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
@@ -55,43 +49,53 @@ type Controller struct {
 // NewSecretBindingController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <secretBindingInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewSecretBindingController(clientMap clientmap.ClientMap, gardenInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
-	var (
-		gardenCoreV1beta1Informer = gardenInformerFactory.Core().V1beta1()
-		corev1Informer            = kubeInformerFactory.Core().V1()
+func NewSecretBindingController(
+	ctx context.Context,
+	clientMap clientmap.ClientMap,
+	gardenInformerFactory gardencoreinformers.SharedInformerFactory,
+	kubeInformerFactory kubeinformers.SharedInformerFactory,
+	recorder record.EventRecorder,
+) (
+	*Controller,
+	error,
+) {
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, err
+	}
 
-		secretBindingInformer = gardenCoreV1beta1Informer.SecretBindings()
-		secretBindingLister   = secretBindingInformer.Lister()
-		secretLister          = corev1Informer.Secrets().Lister()
-		shootLister           = gardenCoreV1beta1Informer.Shoots().Lister()
+	secretBindingInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.SecretBinding{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get SecretBinding Informer: %w", err)
+	}
+
+	var (
+		secretLister = kubeInformerFactory.Core().V1().Secrets().Lister()
+		shootLister  = gardenInformerFactory.Core().V1beta1().Shoots().Lister()
 	)
 
 	secretBindingController := &Controller{
-		clientMap:              clientMap,
-		k8sGardenCoreInformers: gardenInformerFactory,
-		reconciler:             NewSecretBindingReconciler(logger.Logger, clientMap, recorder, secretBindingLister, secretLister, shootLister),
-		recorder:               recorder,
-		secretBindingLister:    secretBindingLister,
-		secretBindingQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SecretBinding"),
-		shootLister:            shootLister,
-		workerCh:               make(chan int),
+		reconciler:         NewSecretBindingReconciler(logger.Logger, gardenClient.Client(), recorder, secretLister, shootLister),
+		secretBindingQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SecretBinding"),
+		workerCh:           make(chan int),
 	}
 
-	secretBindingInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	secretBindingInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    secretBindingController.secretBindingAdd,
 		UpdateFunc: secretBindingController.secretBindingUpdate,
 		DeleteFunc: secretBindingController.secretBindingDelete,
 	})
-	secretBindingController.secretBindingSynced = secretBindingInformer.Informer().HasSynced
 
-	return secretBindingController
+	secretBindingController.hasSyncedFuncs = append(secretBindingController.hasSyncedFuncs, secretBindingInformer.HasSynced)
+
+	return secretBindingController, nil
 }
 
 // Run runs the Controller until the given stop channel can be read from.
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.secretBindingSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}

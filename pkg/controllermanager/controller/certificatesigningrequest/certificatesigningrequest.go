@@ -60,7 +60,7 @@ func NewCSRController(
 
 	csrInformer, err := gardenClient.Cache().GetInformer(ctx, &certificatesv1beta1.CertificateSigningRequest{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
+		return nil, fmt.Errorf("failed to get CSR Informer: %w", err)
 	}
 
 	csrController := &Controller{

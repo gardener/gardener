@@ -151,7 +151,12 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 
 	csrController, err := csrcontroller.NewCSRController(ctx, f.clientMap)
 	if err != nil {
-		return fmt.Errorf("failed initializing CloudProfile controller: %w", err)
+		return fmt.Errorf("failed initializing CSR controller: %w", err)
+	}
+
+	secretBindingController, err := secretbindingcontroller.NewSecretBindingController(ctx, f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.recorder)
+	if err != nil {
+		return fmt.Errorf("failed initializing SecretBinding controller: %w", err)
 	}
 
 	var (
@@ -159,7 +164,6 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		quotaController                  = quotacontroller.NewQuotaController(f.clientMap, f.k8sGardenCoreInformers, f.recorder)
 		plantController                  = plantcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
 		projectController                = projectcontroller.NewProjectController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
-		secretBindingController          = secretbindingcontroller.NewSecretBindingController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.recorder)
 		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
 		eventController                  = eventcontroller.NewController(f.clientMap, f.cfg.Controllers.Event)
 	)
