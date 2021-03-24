@@ -111,7 +111,10 @@ func (b *Botanist) DeployInternalDNS(ctx context.Context) error {
 // enabled and if not DeployWaiter which removes the external DNSProvider.
 func (b *Botanist) DefaultExternalDNSProvider(seedClient client.Client) component.DeployWaiter {
 	if b.NeedsExternalDNS() {
-		return dns.NewDNSProvider(
+		return dns.NewProvider(
+			b.Logger,
+			seedClient,
+			b.Shoot.SeedNamespace,
 			&dns.ProviderValues{
 				Name:       DNSExternalName,
 				Purpose:    DNSExternalName,
@@ -126,55 +129,44 @@ func (b *Botanist) DefaultExternalDNSProvider(seedClient client.Client) componen
 					Exclude: b.Shoot.ExternalDomain.ExcludeZones,
 				},
 			},
-			b.Shoot.SeedNamespace,
-			b.K8sSeedClient.ChartApplier(),
-			b.ChartsRootPath,
-			b.Logger,
-			seedClient,
 			nil,
 		)
 	}
 
-	return component.OpDestroy(dns.NewDNSProvider(
+	return component.OpDestroy(dns.NewProvider(
+		b.Logger,
+		seedClient,
+		b.Shoot.SeedNamespace,
 		&dns.ProviderValues{
 			Name:    DNSExternalName,
 			Purpose: DNSExternalName,
 		},
-		b.Shoot.SeedNamespace,
-		b.K8sSeedClient.ChartApplier(),
-		b.ChartsRootPath,
-		b.Logger,
-		seedClient,
 		nil,
 	))
 }
 
 // DefaultExternalDNSEntry returns DeployWaiter which removes the external DNSEntry.
 func (b *Botanist) DefaultExternalDNSEntry(seedClient client.Client) component.DeployWaiter {
-	return component.OpDestroy(dns.NewDNSEntry(
+	return component.OpDestroy(dns.NewEntry(
+		b.Logger,
+		seedClient,
+		b.Shoot.SeedNamespace,
 		&dns.EntryValues{
 			Name: DNSExternalName,
 			TTL:  *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		},
-		b.Shoot.SeedNamespace,
-		b.K8sSeedClient.ChartApplier(),
-		b.ChartsRootPath,
-		b.Logger,
-		seedClient,
 		nil,
 	))
 }
 
 // DefaultExternalDNSOwner returns DeployWaiter which removes the external DNSOwner.
 func (b *Botanist) DefaultExternalDNSOwner(seedClient client.Client) component.DeployWaiter {
-	return component.OpDestroy(dns.NewDNSOwner(
+	return component.OpDestroy(dns.NewOwner(
+		seedClient,
+		b.Shoot.SeedNamespace,
 		&dns.OwnerValues{
 			Name: DNSExternalName,
 		},
-		b.Shoot.SeedNamespace,
-		b.K8sSeedClient.ChartApplier(),
-		b.ChartsRootPath,
-		seedClient,
 	))
 }
 
@@ -182,7 +174,10 @@ func (b *Botanist) DefaultExternalDNSOwner(seedClient client.Client) component.D
 // enabled and if not, DeployWaiter which removes the internal DNSProvider.
 func (b *Botanist) DefaultInternalDNSProvider(seedClient client.Client) component.DeployWaiter {
 	if b.NeedsInternalDNS() {
-		return dns.NewDNSProvider(
+		return dns.NewProvider(
+			b.Logger,
+			seedClient,
+			b.Shoot.SeedNamespace,
 			&dns.ProviderValues{
 				Name:       DNSInternalName,
 				Purpose:    DNSInternalName,
@@ -196,55 +191,44 @@ func (b *Botanist) DefaultInternalDNSProvider(seedClient client.Client) componen
 					Exclude: b.Garden.InternalDomain.ExcludeZones,
 				},
 			},
-			b.Shoot.SeedNamespace,
-			b.K8sSeedClient.ChartApplier(),
-			b.ChartsRootPath,
-			b.Logger,
-			seedClient,
 			nil,
 		)
 	}
 
-	return component.OpDestroy(dns.NewDNSProvider(
+	return component.OpDestroy(dns.NewProvider(
+		b.Logger,
+		seedClient,
+		b.Shoot.SeedNamespace,
 		&dns.ProviderValues{
 			Name:    DNSInternalName,
 			Purpose: DNSInternalName,
 		},
-		b.Shoot.SeedNamespace,
-		b.K8sSeedClient.ChartApplier(),
-		b.ChartsRootPath,
-		b.Logger,
-		seedClient,
 		nil,
 	))
 }
 
 // DefaultInternalDNSEntry returns DeployWaiter which removes the internal DNSEntry.
 func (b *Botanist) DefaultInternalDNSEntry(seedClient client.Client) component.DeployWaiter {
-	return component.OpDestroy(dns.NewDNSEntry(
+	return component.OpDestroy(dns.NewEntry(
+		b.Logger,
+		seedClient,
+		b.Shoot.SeedNamespace,
 		&dns.EntryValues{
 			Name: DNSInternalName,
 			TTL:  *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		},
-		b.Shoot.SeedNamespace,
-		b.K8sSeedClient.ChartApplier(),
-		b.ChartsRootPath,
-		b.Logger,
-		seedClient,
 		nil,
 	))
 }
 
 // DefaultInternalDNSOwner returns a DeployWaiter which removes the internal DNSOwner.
 func (b *Botanist) DefaultInternalDNSOwner(seedClient client.Client) component.DeployWaiter {
-	return component.OpDestroy(dns.NewDNSOwner(
+	return component.OpDestroy(dns.NewOwner(
+		seedClient,
+		b.Shoot.SeedNamespace,
 		&dns.OwnerValues{
 			Name: DNSInternalName,
 		},
-		b.Shoot.SeedNamespace,
-		b.K8sSeedClient.ChartApplier(),
-		b.ChartsRootPath,
-		seedClient,
 	))
 }
 
@@ -297,7 +281,10 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context, gardenClient, see
 			}
 			providerName := GenerateDNSProviderName(*secretName, *providerType)
 
-			additionalProviders[providerName] = dns.NewDNSProvider(
+			additionalProviders[providerName] = dns.NewProvider(
+				b.Logger,
+				seedClient,
+				b.Shoot.SeedNamespace,
 				&dns.ProviderValues{
 					Name:       providerName,
 					Purpose:    providerName,
@@ -313,11 +300,6 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context, gardenClient, see
 						Exclude: excludeZones,
 					},
 				},
-				b.Shoot.SeedNamespace,
-				b.K8sSeedClient.ChartApplier(),
-				b.ChartsRootPath,
-				b.Logger,
-				seedClient,
 				nil,
 			)
 		}
@@ -336,17 +318,15 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context, gardenClient, see
 
 	for _, p := range providerList.Items {
 		if _, ok := additionalProviders[p.Name]; !ok {
-			additionalProviders[p.Name] = component.OpDestroy(dns.NewDNSProvider(
+			additionalProviders[p.Name] = component.OpDestroy(dns.NewProvider(
+				b.Logger,
+				seedClient,
+				b.Shoot.SeedNamespace,
 				&dns.ProviderValues{
 					Name:    p.Name,
 					Purpose: p.Name,
 					Labels:  map[string]string{v1beta1constants.GardenRole: DNSProviderRoleAdditional},
 				},
-				b.Shoot.SeedNamespace,
-				b.K8sSeedClient.ChartApplier(),
-				b.ChartsRootPath,
-				b.Logger,
-				seedClient,
 				nil,
 			))
 		}

@@ -38,6 +38,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -108,30 +109,26 @@ func (b *Botanist) MigrateIngressDNSRecord(ctx context.Context) error {
 
 // DefaultNginxIngressDNSEntry returns a Deployer which removes existing nginx ingress DNSEntry.
 func (b *Botanist) DefaultNginxIngressDNSEntry(seedClient client.Client) component.DeployWaiter {
-	return component.OpDestroy(dns.NewDNSEntry(
+	return component.OpDestroy(dns.NewEntry(
+		b.Logger,
+		seedClient,
+		b.Shoot.SeedNamespace,
 		&dns.EntryValues{
 			Name: common.ShootDNSIngressName,
 			TTL:  *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		},
-		b.Shoot.SeedNamespace,
-		b.K8sSeedClient.ChartApplier(),
-		b.ChartsRootPath,
-		b.Logger,
-		seedClient,
 		nil,
 	))
 }
 
 // DefaultNginxIngressDNSOwner returns DeployWaiter which removes the nginx ingress DNSOwner.
 func (b *Botanist) DefaultNginxIngressDNSOwner(seedClient client.Client) component.DeployWaiter {
-	return component.OpDestroy(dns.NewDNSOwner(
+	return component.OpDestroy(dns.NewOwner(
+		seedClient,
+		b.Shoot.SeedNamespace,
 		&dns.OwnerValues{
 			Name: common.ShootDNSIngressName,
 		},
-		b.Shoot.SeedNamespace,
-		b.K8sSeedClient.ChartApplier(),
-		b.ChartsRootPath,
-		seedClient,
 	))
 }
 
@@ -139,18 +136,19 @@ func (b *Botanist) DefaultNginxIngressDNSOwner(seedClient client.Client) compone
 func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Client) {
 	if b.NeedsExternalDNS() && !b.Shoot.HibernationEnabled && gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.Info.Spec.Addons) {
 		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + common.ShootDNSIngressName
-		b.Shoot.Components.Extensions.DNS.NginxOwner = dns.NewDNSOwner(
+		b.Shoot.Components.Extensions.DNS.NginxOwner = dns.NewOwner(
+			seedClient,
+			b.Shoot.SeedNamespace,
 			&dns.OwnerValues{
 				Name:    common.ShootDNSIngressName,
-				Active:  true,
+				Active:  pointer.BoolPtr(true),
 				OwnerID: ownerID,
 			},
-			b.Shoot.SeedNamespace,
-			b.K8sSeedClient.ChartApplier(),
-			b.ChartsRootPath,
-			seedClient,
 		)
-		b.Shoot.Components.Extensions.DNS.NginxEntry = dns.NewDNSEntry(
+		b.Shoot.Components.Extensions.DNS.NginxEntry = dns.NewEntry(
+			b.Logger,
+			seedClient,
+			b.Shoot.SeedNamespace,
 			&dns.EntryValues{
 				Name:    common.ShootDNSIngressName,
 				DNSName: b.Shoot.GetIngressFQDN("*"),
@@ -158,11 +156,6 @@ func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Clie
 				OwnerID: ownerID,
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 			},
-			b.Shoot.SeedNamespace,
-			b.K8sSeedClient.ChartApplier(),
-			b.ChartsRootPath,
-			b.Logger,
-			seedClient,
 			nil,
 		)
 	}

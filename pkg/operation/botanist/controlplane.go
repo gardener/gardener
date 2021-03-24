@@ -61,6 +61,7 @@ import (
 	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
 	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -1003,18 +1004,19 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 
 	if b.NeedsInternalDNS() {
 		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSInternalName
-		b.Shoot.Components.Extensions.DNS.InternalOwner = dns.NewDNSOwner(
+		b.Shoot.Components.Extensions.DNS.InternalOwner = dns.NewOwner(
+			seedClient,
+			b.Shoot.SeedNamespace,
 			&dns.OwnerValues{
 				Name:    DNSInternalName,
-				Active:  true,
+				Active:  pointer.BoolPtr(true),
 				OwnerID: ownerID,
 			},
-			b.Shoot.SeedNamespace,
-			b.K8sSeedClient.ChartApplier(),
-			b.ChartsRootPath,
-			seedClient,
 		)
-		b.Shoot.Components.Extensions.DNS.InternalEntry = dns.NewDNSEntry(
+		b.Shoot.Components.Extensions.DNS.InternalEntry = dns.NewEntry(
+			b.Logger,
+			seedClient,
+			b.Shoot.SeedNamespace,
 			&dns.EntryValues{
 				Name:    DNSInternalName,
 				DNSName: common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
@@ -1022,29 +1024,25 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 				OwnerID: ownerID,
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 			},
-			b.Shoot.SeedNamespace,
-			b.K8sSeedClient.ChartApplier(),
-			b.ChartsRootPath,
-			b.Logger,
-			seedClient,
 			nil,
 		)
 	}
 
 	if b.NeedsExternalDNS() {
 		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSExternalName
-		b.Shoot.Components.Extensions.DNS.ExternalOwner = dns.NewDNSOwner(
+		b.Shoot.Components.Extensions.DNS.ExternalOwner = dns.NewOwner(
+			seedClient,
+			b.Shoot.SeedNamespace,
 			&dns.OwnerValues{
 				Name:    DNSExternalName,
-				Active:  true,
+				Active:  pointer.BoolPtr(true),
 				OwnerID: ownerID,
 			},
-			b.Shoot.SeedNamespace,
-			b.K8sSeedClient.ChartApplier(),
-			b.ChartsRootPath,
-			seedClient,
 		)
-		b.Shoot.Components.Extensions.DNS.ExternalEntry = dns.NewDNSEntry(
+		b.Shoot.Components.Extensions.DNS.ExternalEntry = dns.NewEntry(
+			b.Logger,
+			seedClient,
+			b.Shoot.SeedNamespace,
 			&dns.EntryValues{
 				Name:    DNSExternalName,
 				DNSName: common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
@@ -1052,11 +1050,6 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 				OwnerID: ownerID,
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 			},
-			b.Shoot.SeedNamespace,
-			b.K8sSeedClient.ChartApplier(),
-			b.ChartsRootPath,
-			b.Logger,
-			seedClient,
 			nil,
 		)
 	}

@@ -17,83 +17,115 @@ package dns
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // ProviderValues contains the values used to create a DNSProvider.
 type ProviderValues struct {
-	Name       string            `json:"name,omitempty"`
-	Purpose    string            `json:"purpose,omitempty"`
-	Provider   string            `json:"provider,omitempty"`
-	Labels     map[string]string `json:"labels,omitempty"`
-	SecretData map[string][]byte `json:"secretData,omitempty"`
-	Domains    *IncludeExclude   `json:"domains,omitempty"`
-	Zones      *IncludeExclude   `json:"zones,omitempty"`
+	Name       string
+	Purpose    string
+	Provider   string
+	Labels     map[string]string
+	SecretData map[string][]byte
+	Domains    *IncludeExclude
+	Zones      *IncludeExclude
 }
 
 // IncludeExclude contain slices of excluded and included domains/zones.
 type IncludeExclude struct {
-	Include []string `json:"include,omitempty"`
-	Exclude []string `json:"exclude,omitempty"`
+	Include []string
+	Exclude []string
 }
 
-// NewDNSProvider creates a new instance of DeployWaiter for a specific DNS provider.
+// NewProvider creates a new instance of DeployWaiter for a specific DNS emptyProvider.
 // <waiter> is optional and it's defaulted to github.com/gardener/gardener/pkg/utils/retry.DefaultOps()
-func NewDNSProvider(
-	values *ProviderValues,
-	shootNamespace string,
-	applier kubernetes.ChartApplier,
-	chartsRootPath string,
+func NewProvider(
 	logger logrus.FieldLogger,
 	client client.Client,
+	namespace string,
+	values *ProviderValues,
 	waiter retry.Ops,
 ) component.DeployWaiter {
 	if waiter == nil {
 		waiter = retry.DefaultOps()
 	}
 
-	return &dnsProvider{
-		values:         values,
-		shootNamespace: shootNamespace,
-		ChartApplier:   applier,
-		chartPath:      filepath.Join(chartsRootPath, "seed-dns", "provider"),
-		logger:         logger,
-		client:         client,
-		waiter:         waiter,
+	return &provider{
+		logger:    logger,
+		client:    client,
+		namespace: namespace,
+		values:    values,
+		waiter:    waiter,
 	}
 }
 
-type dnsProvider struct {
-	values         *ProviderValues
-	shootNamespace string
-	kubernetes.ChartApplier
-	chartPath string
+type provider struct {
 	logger    logrus.FieldLogger
 	client    client.Client
+	namespace string
+	values    *ProviderValues
 	waiter    retry.Ops
 }
 
-func (d *dnsProvider) Deploy(ctx context.Context) error {
-	return d.Apply(ctx, d.chartPath, d.shootNamespace, d.values.Name, kubernetes.Values(d.values))
+func (p *provider) Deploy(ctx context.Context) error {
+	var (
+		secret      = p.emptySecret()
+		dnsProvider = p.emptyProvider()
+	)
+
+	if _, err := controllerutil.CreateOrUpdate(ctx, p.client, secret, func() error {
+		secret.Labels = p.values.Labels
+		secret.Type = corev1.SecretTypeOpaque
+		secret.Data = p.values.SecretData
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	_, err := controllerutil.CreateOrUpdate(ctx, p.client, dnsProvider, func() error {
+		dnsProvider.Labels = p.values.Labels
+
+		dnsProvider.Spec = dnsv1alpha1.DNSProviderSpec{
+			Type:      p.values.Provider,
+			SecretRef: &corev1.SecretReference{Name: secret.Name},
+		}
+
+		if p.values.Domains != nil {
+			dnsProvider.Spec.Domains = &dnsv1alpha1.DNSSelection{
+				Include: p.values.Domains.Include,
+				Exclude: p.values.Domains.Exclude,
+			}
+		}
+
+		if p.values.Zones != nil {
+			dnsProvider.Spec.Zones = &dnsv1alpha1.DNSSelection{
+				Include: p.values.Zones.Include,
+				Exclude: p.values.Zones.Exclude,
+			}
+		}
+
+		return nil
+	})
+	return err
 }
 
-func (d *dnsProvider) Destroy(ctx context.Context) error {
-	return client.IgnoreNotFound(d.client.Delete(ctx, d.provider()))
+func (p *provider) Destroy(ctx context.Context) error {
+	return client.IgnoreNotFound(p.client.Delete(ctx, p.emptyProvider()))
 }
 
-func (d *dnsProvider) Wait(ctx context.Context) error {
+func (p *provider) Wait(ctx context.Context) error {
 	var (
 		status  string
 		message string
@@ -104,44 +136,47 @@ func (d *dnsProvider) Wait(ctx context.Context) error {
 		timeout               = 2 * time.Minute
 	)
 
-	if err := d.waiter.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
-		provider := &dnsv1alpha1.DNSProvider{}
-		if err := d.client.Get(
+	if err := p.waiter.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
+		obj := &dnsv1alpha1.DNSProvider{}
+		if err := p.client.Get(
 			ctx,
-			client.ObjectKey{Name: d.values.Name, Namespace: d.shootNamespace},
-			provider,
+			client.ObjectKey{Name: p.values.Name, Namespace: p.namespace},
+			obj,
 		); err != nil {
 			return retry.SevereError(err)
 		}
 
-		if provider.Status.State == dnsv1alpha1.STATE_READY {
+		if obj.Status.State == dnsv1alpha1.STATE_READY {
 			return retry.Ok()
 		}
 
-		status = provider.Status.State
-		if msg := provider.Status.Message; msg != nil {
+		status = obj.Status.State
+		if msg := obj.Status.Message; msg != nil {
 			message = *msg
 		}
-		providerErr := fmt.Errorf("DNS provider %q is not ready (status=%s, message=%s)", d.values.Name, status, message)
+		providerErr := fmt.Errorf("DNS emptyProvider %q is not ready (status=%s, message=%s)", p.values.Name, status, message)
 
-		d.logger.Infof("Waiting for %q DNS provider to be ready... (status=%s, message=%s)", d.values.Name, status, message)
+		p.logger.Infof("Waiting for %q DNS emptyProvider to be ready... (status=%s, message=%s)", p.values.Name, status, message)
 		if status == dnsv1alpha1.STATE_ERROR || status == dnsv1alpha1.STATE_INVALID {
 			return retry.MinorOrSevereError(retryCountUntilSevere, int(severeThreshold.Nanoseconds()/interval.Nanoseconds()), providerErr)
 		}
 
 		return retry.MinorError(providerErr)
 	}); err != nil {
-		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed to create DNS provider for %q DNS record: %q (status=%s, message=%s)", d.values.Name, err.Error(), status, message))
+		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed to create DNS emptyProvider for %q DNS record: %q (status=%s, message=%s)", p.values.Name, err.Error(), status, message))
 	}
 
 	return nil
 }
 
-func (d *dnsProvider) WaitCleanup(ctx context.Context) error {
-	return kutil.WaitUntilResourceDeleted(ctx, d.client, d.provider(), 5*time.Second)
+func (p *provider) WaitCleanup(ctx context.Context) error {
+	return kutil.WaitUntilResourceDeleted(ctx, p.client, p.emptyProvider(), 5*time.Second)
 }
 
-// provider returs a empty DNSProvider used for deletion.
-func (d *dnsProvider) provider() *dnsv1alpha1.DNSProvider {
-	return &dnsv1alpha1.DNSProvider{ObjectMeta: metav1.ObjectMeta{Name: d.values.Name, Namespace: d.shootNamespace}}
+func (p *provider) emptySecret() *corev1.Secret {
+	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "extensions-dns-" + p.values.Name, Namespace: p.namespace}}
+}
+
+func (p *provider) emptyProvider() *dnsv1alpha1.DNSProvider {
+	return &dnsv1alpha1.DNSProvider{ObjectMeta: metav1.ObjectMeta{Name: p.values.Name, Namespace: p.namespace}}
 }

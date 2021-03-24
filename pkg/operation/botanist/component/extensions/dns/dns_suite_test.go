@@ -17,7 +17,6 @@ package dns_test
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -54,5 +53,3 @@ func (o *fakeOps) Until(ctx context.Context, interval time.Duration, f retry.Fun
 func (o *fakeOps) UntilTimeout(ctx context.Context, interval, timeout time.Duration, f retry.Func) error {
 	return o.Until(ctx, 0, f)
 }
-
-var chartsRootPath = filepath.Join("..", "..", "..", "..", "..", "..", "charts")

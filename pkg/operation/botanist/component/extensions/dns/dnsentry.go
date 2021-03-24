@@ -17,11 +17,9 @@ package dns
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -30,64 +28,78 @@ import (
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // EntryValues contains the values used to create a DNSEntry
 type EntryValues struct {
-	Name    string   `json:"name,omitempty"`
-	DNSName string   `json:"dnsName,omitempty"`
-	Targets []string `json:"targets,omitempty"`
-	OwnerID string   `json:"ownerID,omitempty"`
-	TTL     int64    `json:"ttl,omitempty"`
+	Name    string
+	DNSName string
+	Targets []string
+	OwnerID string
+	TTL     int64
 }
 
-// NewDNSEntry creates a new instance of DeployWaiter for a specific DNS entry.
+// NewEntry creates a new instance of DeployWaiter for a specific DNS emptyEntry.
 // <waiter> is optional and it's defaulted to github.com/gardener/gardener/pkg/utils/retry.DefaultOps()
-func NewDNSEntry(
-	values *EntryValues,
-	shootNamespace string,
-	applier kubernetes.ChartApplier,
-	chartsRootPath string,
+func NewEntry(
 	logger logrus.FieldLogger,
 	client client.Client,
+	namespace string,
+	values *EntryValues,
 	waiter retry.Ops,
-
 ) component.DeployWaiter {
 	if waiter == nil {
 		waiter = retry.DefaultOps()
 	}
 
-	return &dnsEntry{
-		ChartApplier:   applier,
-		chartPath:      filepath.Join(chartsRootPath, "seed-dns", "entry"),
-		client:         client,
-		logger:         logger,
-		shootNamespace: shootNamespace,
-		values:         values,
-		waiter:         waiter,
+	return &entry{
+		logger:    logger,
+		client:    client,
+		namespace: namespace,
+		values:    values,
+		waiter:    waiter,
 	}
 }
 
-type dnsEntry struct {
-	values         *EntryValues
-	shootNamespace string
-	kubernetes.ChartApplier
-	chartPath string
+type entry struct {
 	logger    logrus.FieldLogger
 	client    client.Client
+	namespace string
+	values    *EntryValues
 	waiter    retry.Ops
 }
 
-func (d *dnsEntry) Deploy(ctx context.Context) error {
-	return d.Apply(ctx, d.chartPath, d.shootNamespace, d.values.Name, kubernetes.Values(d.values))
+func (e *entry) Deploy(ctx context.Context) error {
+	obj := e.emptyEntry()
+
+	_, err := controllerutil.CreateOrUpdate(ctx, e.client, obj, func() error {
+		obj.Spec = dnsv1alpha1.DNSEntrySpec{
+			DNSName: e.values.DNSName,
+			TTL:     pointer.Int64Ptr(120),
+			Targets: e.values.Targets,
+		}
+
+		if e.values.TTL > 0 {
+			obj.Spec.TTL = &e.values.TTL
+		}
+
+		if len(e.values.OwnerID) > 0 {
+			obj.Spec.OwnerId = &e.values.OwnerID
+		}
+
+		return nil
+	})
+	return err
 }
 
-func (d *dnsEntry) Destroy(ctx context.Context) error {
-	return client.IgnoreNotFound(d.client.Delete(ctx, d.entry()))
+func (e *entry) Destroy(ctx context.Context) error {
+	return client.IgnoreNotFound(e.client.Delete(ctx, e.emptyEntry()))
 }
 
-func (d *dnsEntry) Wait(ctx context.Context) error {
+func (e *entry) Wait(ctx context.Context) error {
 	var (
 		status  string
 		message string
@@ -98,49 +110,44 @@ func (d *dnsEntry) Wait(ctx context.Context) error {
 		timeout               = 2 * time.Minute
 	)
 
-	if err := d.waiter.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
+	if err := e.waiter.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
 		retryCountUntilSevere++
 
-		entry := &dnsv1alpha1.DNSEntry{}
-		if err := d.client.Get(
-			ctx,
-			client.ObjectKey{Name: d.values.Name, Namespace: d.shootNamespace},
-			entry,
-		); err != nil {
-			if apierrors.IsNotFound(err) {
-				return retry.MinorError(err)
+		obj := &dnsv1alpha1.DNSEntry{}
+		if err2 := e.client.Get(ctx, client.ObjectKey{Name: e.values.Name, Namespace: e.namespace}, obj); err2 != nil {
+			if apierrors.IsNotFound(err2) {
+				return retry.MinorError(err2)
 			}
-			return retry.SevereError(err)
+			return retry.SevereError(err2)
 		}
 
-		if entry.Status.ObservedGeneration == entry.Generation && entry.Status.State == dnsv1alpha1.STATE_READY {
+		if obj.Status.ObservedGeneration == obj.Generation && obj.Status.State == dnsv1alpha1.STATE_READY {
 			return retry.Ok()
 		}
 
-		status = entry.Status.State
-		if msg := entry.Status.Message; msg != nil {
+		status = obj.Status.State
+		if msg := obj.Status.Message; msg != nil {
 			message = *msg
 		}
-		entryErr := fmt.Errorf("DNS record %q is not ready (status=%s, message=%s)", d.values.Name, status, message)
+		entryErr := fmt.Errorf("DNS record %q is not ready (status=%s, message=%s)", e.values.Name, status, message)
 
-		d.logger.Infof("Waiting for %q DNS record to be ready... (status=%s, message=%s)", d.values.Name, status, message)
+		e.logger.Infof("Waiting for %q DNS record to be ready... (status=%s, message=%s)", e.values.Name, status, message)
 		if status == dnsv1alpha1.STATE_ERROR || status == dnsv1alpha1.STATE_INVALID {
 			return retry.MinorOrSevereError(retryCountUntilSevere, int(severeThreshold.Nanoseconds()/interval.Nanoseconds()), entryErr)
 		}
 
 		return retry.MinorError(entryErr)
 	}); err != nil {
-		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed to create %q DNS record: %q (status=%s, message=%s)", d.values.Name, err.Error(), status, message))
+		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed to create %q DNS record: %q (status=%s, message=%s)", e.values.Name, err.Error(), status, message))
 	}
 
 	return nil
 }
 
-func (d *dnsEntry) WaitCleanup(ctx context.Context) error {
-	return kutil.WaitUntilResourceDeleted(ctx, d.client, d.entry(), 5*time.Second)
+func (e *entry) WaitCleanup(ctx context.Context) error {
+	return kutil.WaitUntilResourceDeleted(ctx, e.client, e.emptyEntry(), 5*time.Second)
 }
 
-// entry returns an empty DNSEntry used for deletion.
-func (d *dnsEntry) entry() *dnsv1alpha1.DNSEntry {
-	return &dnsv1alpha1.DNSEntry{ObjectMeta: metav1.ObjectMeta{Name: d.values.Name, Namespace: d.shootNamespace}}
+func (e *entry) emptyEntry() *dnsv1alpha1.DNSEntry {
+	return &dnsv1alpha1.DNSEntry{ObjectMeta: metav1.ObjectMeta{Name: e.values.Name, Namespace: e.namespace}}
 }
