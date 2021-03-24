@@ -31,29 +31,27 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // reconcilePlantForMatchingSecret checks if there is a plant resource that references this secret and then reconciles the plant again
-func (c *Controller) reconcilePlantForMatchingSecret(obj interface{}) {
+func (c *Controller) reconcilePlantForMatchingSecret(ctx context.Context, obj interface{}) {
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
 		logger.Logger.Errorf("Could not convert object %v into Secret", obj)
 		return
 	}
 
-	plants, err := c.plantLister.List(labels.Everything())
-	if err != nil {
+	plantList := &gardencorev1beta1.PlantList{}
+	if err := c.gardenClient.List(ctx, plantList); err != nil {
 		logger.Logger.Errorf("Couldn't list plants for updated secret %+v: %v", obj, err)
 		return
 	}
 
-	for _, plant := range plants {
+	for _, plant := range plantList.Items {
 		if isPlantSecret(plant, kutil.Key(secret.Namespace, secret.Name)) {
 			key, err := cache.MetaNamespaceKeyFunc(plant)
 			if err != nil {
@@ -68,14 +66,14 @@ func (c *Controller) reconcilePlantForMatchingSecret(obj interface{}) {
 }
 
 // plantSecretUpdate calls reconcilePlantForMatchingSecret with the updated secret
-func (c *Controller) plantSecretUpdate(oldObj, newObj interface{}) {
+func (c *Controller) plantSecretUpdate(ctx context.Context, oldObj, newObj interface{}) {
 	old, ok1 := oldObj.(*corev1.Secret)
 	new, ok2 := newObj.(*corev1.Secret)
 	if !ok1 || !ok2 {
 		return
 	}
 	if old.ResourceVersion != new.ResourceVersion {
-		c.reconcilePlantForMatchingSecret(newObj)
+		c.reconcilePlantForMatchingSecret(ctx, newObj)
 	}
 }
 
@@ -114,32 +112,27 @@ func (c *Controller) plantDelete(obj interface{}) {
 }
 
 // NewPlantReconciler creates a new instance of a reconciler which reconciles Plants.
-func NewPlantReconciler(l logrus.FieldLogger, config *config.PlantControllerConfiguration, clientMap clientmap.ClientMap, secretsLister kubecorev1listers.SecretLister, recorder record.EventRecorder) reconcile.Reconciler {
+func NewPlantReconciler(l logrus.FieldLogger, clientMap clientmap.ClientMap, gardenClient client.Client, config *config.PlantControllerConfiguration, secretsLister kubecorev1listers.SecretLister) reconcile.Reconciler {
 	return &plantReconciler{
 		logger:        l,
-		config:        config,
 		clientMap:     clientMap,
+		gardenClient:  gardenClient,
+		config:        config,
 		secretsLister: secretsLister,
-		recorder:      recorder,
 	}
 }
 
 type plantReconciler struct {
 	logger        logrus.FieldLogger
-	config        *config.PlantControllerConfiguration
 	clientMap     clientmap.ClientMap
+	gardenClient  client.Client
+	config        *config.PlantControllerConfiguration
 	secretsLister kubecorev1listers.SecretLister
-	recorder      record.EventRecorder
 }
 
 func (r *plantReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	plant := &gardencorev1beta1.Plant{}
-	if err := gardenClient.Client().Get(ctx, request.NamespacedName, plant); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, plant); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
 			return reconcile.Result{}, nil
@@ -149,12 +142,12 @@ func (r *plantReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 	}
 
 	if plant.DeletionTimestamp != nil {
-		if err := r.delete(ctx, plant, gardenClient.Client()); err != nil {
+		if err := r.delete(ctx, plant, r.gardenClient); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
-	if err := r.reconcile(ctx, plant, gardenClient.Client()); err != nil {
+	if err := r.reconcile(ctx, plant, r.gardenClient); err != nil {
 		return reconcile.Result{}, err
 	}
 
