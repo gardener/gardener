@@ -544,15 +544,6 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 		return err
 	}
 
-	kubeAPIServer := shoot.Spec.Kubernetes.KubeAPIServer
-	if hasAuditPolicy(kubeAPIServer) {
-		auditPolicy, err := r.configMapLister.ConfigMaps(shoot.Namespace).Get(shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name)
-		if err != nil {
-			return err
-		}
-		kubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion = auditPolicy.ResourceVersion
-	}
-
 	for _, resource := range shoot.Spec.Resources {
 		// Get the APIResource for the current resource
 		apiResource, err := r.getAPIResource(resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
@@ -607,14 +598,6 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 	}
 
 	return nil
-}
-
-func hasAuditPolicy(apiServerConfig *core.KubeAPIServerConfig) bool {
-	return apiServerConfig != nil &&
-		apiServerConfig.AuditConfig != nil &&
-		apiServerConfig.AuditConfig.AuditPolicy != nil &&
-		apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil &&
-		len(apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name) != 0
 }
 
 func (r *ReferenceManager) lookupSecret(ctx context.Context, namespace, name string) error {

@@ -52,14 +52,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/sets"
-	audit_internal "k8s.io/apiserver/pkg/apis/audit"
-	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
-	auditv1alpha1 "k8s.io/apiserver/pkg/apis/audit/v1alpha1"
-	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
-	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -384,19 +377,6 @@ func (b *Botanist) deployOrRestoreControlPlane(ctx context.Context, controlPlane
 const (
 	auditPolicyConfigMapDataKey = "policy"
 )
-
-var (
-	runtimeScheme = runtime.NewScheme()
-	codecs        = serializer.NewCodecFactory(runtimeScheme)
-	decoder       = codecs.UniversalDecoder()
-)
-
-func init() {
-	_ = auditv1alpha1.AddToScheme(runtimeScheme)
-	_ = auditv1beta1.AddToScheme(runtimeScheme)
-	_ = auditv1.AddToScheme(runtimeScheme)
-	_ = audit_internal.AddToScheme(runtimeScheme)
-}
 
 // getResourcesForAPIServer returns the cpu and memory requirements for API server based on nodeCount
 func getResourcesForAPIServer(nodeCount int32, scalingClass string) (string, string, string, string) {
@@ -858,39 +838,7 @@ func (b *Botanist) getAuditPolicy(ctx context.Context, name, namespace string) (
 	if !ok {
 		return "", fmt.Errorf("missing '.data.policy' in audit policy configmap %v/%v", namespace, name)
 	}
-	if len(auditPolicy) == 0 {
-		return "", fmt.Errorf("empty audit policy. Provide non-empty audit policy")
-	}
-	auditPolicyObj, schemaVersion, err := decoder.Decode([]byte(auditPolicy), nil, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode the provided audit policy err=%v", err)
-	}
-
-	if isValidVersion, err := IsValidAuditPolicyVersion(b.ShootVersion(), schemaVersion); err != nil {
-		return "", err
-	} else if !isValidVersion {
-		return "", fmt.Errorf("your shoot cluster version %q is not compatible with audit policy version %q", b.ShootVersion(), schemaVersion.GroupVersion().String())
-	}
-
-	auditPolicyInternal, ok := auditPolicyObj.(*audit_internal.Policy)
-	if !ok {
-		return "", fmt.Errorf("failure to cast to audit Policy type: %v", schemaVersion)
-	}
-	errList := auditvalidation.ValidatePolicy(auditPolicyInternal)
-	if len(errList) != 0 {
-		return "", fmt.Errorf("provided invalid audit policy err=%v", errList)
-	}
 	return auditPolicy, nil
-}
-
-// IsValidAuditPolicyVersion checks whether the api server support the provided audit policy apiVersion
-func IsValidAuditPolicyVersion(shootVersion string, schemaVersion *schema.GroupVersionKind) (bool, error) {
-	auditGroupVersion := schemaVersion.GroupVersion().String()
-
-	if auditGroupVersion == "audit.k8s.io/v1" {
-		return version.CheckVersionMeetsConstraint(shootVersion, ">= v1.12")
-	}
-	return true, nil
 }
 
 // DefaultKubeAPIServerService returns a deployer for kube-apiserver service.
