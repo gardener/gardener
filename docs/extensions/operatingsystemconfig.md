@@ -20,7 +20,7 @@ The reasons for that will become evident later.
 
 Gardener installs a few components onto every worker machine in order to allow it to join the shoot cluster.
 There is the `kubelet` process, some scripts for continuously checking the health of `kubelet` and `docker`, but also configuration for log rotation, CA certificates, etc.
-The complete configuration you can find [here](../../charts/seed-operatingsystemconfig/original/templates). We are calling this the "original" user-data.
+The complete configuration you can find [here](../../pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components). We are calling this the "original" user-data.
 
 ## How does Gardener bootstrap the machines?
 
@@ -199,6 +199,6 @@ If CRI configurations are not supported it is recommended create a validating we
 ## References and additional resources
 
 * [`OperatingSystemConfig` API (Golang specification)](../../pkg/apis/extensions/v1alpha1/types_operatingsystemconfig.go)
-* [`downloader` script](../../charts/seed-operatingsystemconfig/downloader/templates/scripts/_download-cloud-config.sh) (fetching the "original" user-data and the execution script)
+* [`downloader` script](../../pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader/templates/scripts/download-cloud-config.tpl.sh) (fetching the "original" user-data and the execution script)
 * [Original user-data templates](../../charts/seed-operatingsystemconfig/original/templates)
-* [Execution script](../../charts/shoot-cloud-config/templates/scripts/_cloud-config-script.sh)  (applying the "original" user-data)
+* [Execution script](../../pkg/operation/botanist/component/extensions/operatingsystemconfig/executor/templates/scripts/execute-cloud-config.tpl.sh)  (applying the "original" user-data)
