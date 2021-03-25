@@ -100,6 +100,7 @@ func (f *GardenerFramework) BeforeEach() {
 func validateGardenerConfig(cfg *GardenerConfig) {
 	if cfg == nil {
 		ginkgo.Fail("no gardener framework configuration provided")
+		return // make linters happy
 	}
 	if !StringSet(cfg.GardenerKubeconfig) {
 		ginkgo.Fail("you need to specify the correct path for the kubeconfig")

@@ -95,6 +95,7 @@ func (f *ManagedSeedFramework) AfterEach(ctx context.Context) {
 func validateManagedSeedConfig(cfg *ManagedSeedConfig) {
 	if cfg == nil {
 		ginkgo.Fail("no configuration provided")
+		return // make linters happy
 	}
 	if !StringSet(cfg.ManagedSeedName) {
 		ginkgo.Fail("You should specify a name for the managed seed")
