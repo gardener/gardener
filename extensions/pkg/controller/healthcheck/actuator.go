@@ -27,17 +27,20 @@ import (
 )
 
 /*
-	Each extension can register multiple HealthCheckActuator with various HealthChecks for checking the API Objects it deploys.
-	Each NewActuator is responsible for a single extension resource (e.g Worker) - predicates can be defined for fine-grained control over which objects to watch.
+	Each extension can register multiple HealthCheckActuators with various health checks to check the API Objects it deploys.
+	Each new actuator is responsible for a single extension resource (e.g Worker) - predicates can be defined for fine-grained control over which objects to watch.
 
-    The HealthCheck Reconciler triggers the registered NewActuator to execute the health checks.
-	After, the Reconciler writes Conditions to the extension resource. One condition per HealthConditionType (e.g multiple checks that contribute to the HealthConditionType XYZ result in one Condition with .type XYZ).
-	To contribute to the Shoot's health, the Gardener/Gardenlet checks each extension for Conditions containing one of the following HealthConditionTypes: SystemComponentsHealthy, EveryNodeReady, ControlPlaneHealthy.
-	However extensions are free to choose any healthCheckType.
+    The HealthCheck reconciler triggers the registered actuator to execute the health checks.
+	After, the reconciler writes conditions to the extension resource. Multiple checks that contribute to the HealthConditionType XYZ result in only one condition with .type XYZ).
+	To contribute to the Shoot's health, the Gardener/Gardenlet checks each extension for conditions containing one of the following HealthConditionTypes:
+      - SystemComponentsHealthy,
+      - EveryNodeReady,
+      - ControlPlaneHealthy.
+	However, extensions are free to choose any healthCheckType.
 
 	Generic HealthCheck functions for various API Objects are provided and can be reused.
 	Many providers deploy helm charts via managed resources that are picked up by the resource-manager making sure that
-	the helm chart is applied and all its components (Deployments, StatefulSets, DeamonSets, ...) are healthy.
+	the helm chart is applied and all its components (Deployments, StatefulSets, DaemonSets, ...) are healthy.
 	To integrate, the health check controller can also check the health of managed resources.
 
 	More sophisticated checks should be implemented in the extension itself by using the HealthCheck interface.
@@ -66,28 +69,29 @@ type ConditionTypeToHealthCheck struct {
 // HealthCheckActuator acts upon registered resources.
 type HealthCheckActuator interface {
 	// ExecuteHealthCheckFunctions is regularly called by the health check controller
-	// Executes all registered Health Checks and aggregates the result
-	// Returns Result for each healthConditionTypes registered with the individual health checks.
-	// returns an error if it could not execute the health checks
-	// returning an error results in a condition with with type "Unknown" with reason "ConditionCheckError"
+	// Executes all registered health checks and aggregates the results.
+	// Returns
+	//  - Result for each healthConditionTypes registered with the individual health checks.
+	//  - an error if it could not execute the health checks.
+	//    This results in a condition with with type "Unknown" with reason "ConditionCheckError".
 	ExecuteHealthCheckFunctions(context.Context, types.NamespacedName) (*[]Result, error)
 }
 
 // Result represents an aggregated health status for the health checks performed on the dependent API Objects of an extension resource.
-// An Result refers to a single healthConditionTypes (e.g SystemComponentsHealthy) of an extension Resource.
+// A Result refers to a single healthConditionType (e.g SystemComponentsHealthy) of an extension Resource.
 type Result struct {
-	// HealthConditionType is being used as the .type field of the Condition that the HealthCheck controller writes to the extension Resource.
+	// HealthConditionType is used as the .type field of the Condition that the HealthCheck controller writes to the extension Resource.
 	// To contribute to the Shoot's health, the Gardener checks each extension for a Health Condition Type of SystemComponentsHealthy, EveryNodeReady, ControlPlaneHealthy.
 	HealthConditionType string
 	// Status contains the status for the health checks that have been performed for an extension resource
 	Status gardencorev1beta1.ConditionStatus
-	// Detail contains details for health checks being unsuccessful
+	// Detail contains details to why the health checks are unsuccessful
 	Detail *string
 	// SuccessfulChecks is the amount of successful health checks
 	SuccessfulChecks int
-	// ProgressingChecks is the amount of health checks that were progressing
+	// ProgressingChecks is the amount of progressing health checks
 	ProgressingChecks int
-	// UnsuccessfulChecks is the amount of health checks that were not successful
+	// UnsuccessfulChecks is the amount of unsuccessful health checks
 	UnsuccessfulChecks int
 	// FailedChecks is the amount of health checks that could not be performed (e.g client could not reach Api Server)
 	// Results in a condition with with type "Unknown" with reason "ConditionCheckError" for this healthConditionType
@@ -126,8 +130,6 @@ type SingleCheckResult struct {
 	Status gardencorev1beta1.ConditionStatus
 	// Detail contains details for the health check being unsuccessful
 	Detail string
-	// Reason contains the reason for the health check being unsuccessful
-	Reason string
 	// Codes optionally contains a list of error codes related to the health check
 	Codes []gardencorev1beta1.ErrorCode
 	// ProgressingThreshold is the threshold duration after which a health check that reported the `Progressing` status

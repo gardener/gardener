@@ -103,18 +103,16 @@ var _ = Describe("health", func() {
 
 	Describe("#checkMachineDeploymentsHealthy", func() {
 		It("should  return true for nil", func() {
-			isHealthy, reason, err := checkMachineDeploymentsHealthy(nil)
+			isHealthy, err := checkMachineDeploymentsHealthy(nil)
 
 			Expect(isHealthy).To(BeTrue())
-			Expect(reason).To(BeEmpty())
 			Expect(err).To(Succeed())
 		})
 
 		It("should  return true for an empty list", func() {
-			isHealthy, reason, err := checkMachineDeploymentsHealthy([]machinev1alpha1.MachineDeployment{})
+			isHealthy, err := checkMachineDeploymentsHealthy([]machinev1alpha1.MachineDeployment{})
 
 			Expect(isHealthy).To(BeTrue())
-			Expect(reason).To(BeEmpty())
 			Expect(err).To(Succeed())
 		})
 
@@ -136,10 +134,9 @@ var _ = Describe("health", func() {
 				},
 			}
 
-			isHealthy, reason, err := checkMachineDeploymentsHealthy(machineDeployments)
+			isHealthy, err := checkMachineDeploymentsHealthy(machineDeployments)
 
 			Expect(isHealthy).To(BeTrue())
-			Expect(reason).To(BeEmpty())
 			Expect(err).To(Succeed())
 		})
 
@@ -161,10 +158,9 @@ var _ = Describe("health", func() {
 				}
 			)
 
-			isHealthy, reason, err := checkMachineDeploymentsHealthy(machineDeployments)
+			isHealthy, err := checkMachineDeploymentsHealthy(machineDeployments)
 
 			Expect(isHealthy).To(BeFalse())
-			Expect(reason).To(Equal("MachineDeploymentHasFailedMachines"))
 			Expect(err).ToNot(Succeed())
 		})
 
@@ -182,28 +178,25 @@ var _ = Describe("health", func() {
 				},
 			}
 
-			isHealthy, reason, err := checkMachineDeploymentsHealthy(machineDeployments)
+			isHealthy, err := checkMachineDeploymentsHealthy(machineDeployments)
 
 			Expect(isHealthy).To(BeFalse())
-			Expect(reason).To(Equal("MachineDeploymentUnhealthy"))
 			Expect(err).ToNot(Succeed())
 		})
 	})
 
 	Describe("#checkNodesScalingUp", func() {
 		It("should return true if number of ready nodes equal number of desired machines", func() {
-			status, reason, err := checkNodesScalingUp(nil, 1, 1)
+			status, err := checkNodesScalingUp(nil, 1, 1)
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionTrue))
-			Expect(reason).To(BeEmpty())
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should return an error if not enough machine objects as desired were created", func() {
-			status, reason, err := checkNodesScalingUp(&machinev1alpha1.MachineList{}, 0, 1)
+			status, err := checkNodesScalingUp(&machinev1alpha1.MachineList{}, 0, 1)
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
-			Expect(reason).To(Equal("MissingMachines"))
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -218,10 +211,9 @@ var _ = Describe("health", func() {
 				},
 			}
 
-			status, reason, err := checkNodesScalingUp(machineList, 0, 1)
+			status, err := checkNodesScalingUp(machineList, 0, 1)
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
-			Expect(reason).To(Equal("ErroneousMachines"))
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -236,10 +228,9 @@ var _ = Describe("health", func() {
 				},
 			}
 
-			status, reason, err := checkNodesScalingUp(machineList, 0, 1)
+			status, err := checkNodesScalingUp(machineList, 0, 1)
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
-			Expect(reason).To(Equal("MissingNodes"))
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -254,10 +245,9 @@ var _ = Describe("health", func() {
 				},
 			}
 
-			status, reason, err := checkNodesScalingUp(machineList, 0, 1)
+			status, err := checkNodesScalingUp(machineList, 0, 1)
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionProgressing))
-			Expect(reason).To(Equal("PendingMachines"))
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -268,20 +258,18 @@ var _ = Describe("health", func() {
 				},
 			}
 
-			status, reason, err := checkNodesScalingUp(machineList, 0, 1)
+			status, err := checkNodesScalingUp(machineList, 0, 1)
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionProgressing))
-			Expect(reason).To(Equal("PendingMachines"))
 			Expect(err).To(HaveOccurred())
 		})
 	})
 
 	Describe("#checkNodesScalingDown", func() {
 		It("should return true if number of registered nodes equal number of desired machines", func() {
-			status, reason, err := checkNodesScalingDown(nil, nil, 1, 1)
+			status, err := checkNodesScalingDown(nil, nil, 1, 1)
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionTrue))
-			Expect(reason).To(BeEmpty())
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -292,10 +280,9 @@ var _ = Describe("health", func() {
 				},
 			}
 
-			status, reason, err := checkNodesScalingDown(&machinev1alpha1.MachineList{}, nodeList, 2, 1)
+			status, err := checkNodesScalingDown(&machinev1alpha1.MachineList{}, nodeList, 2, 1)
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
-			Expect(reason).To(Equal("MachineNotFound"))
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -318,18 +305,16 @@ var _ = Describe("health", func() {
 				}
 			)
 
-			status, reason, err := checkNodesScalingDown(machineList, nodeList, 2, 1)
+			status, err := checkNodesScalingDown(machineList, nodeList, 2, 1)
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
-			Expect(reason).To(Equal("NodeUnexpectedlyCordoned"))
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should return an error if there are more nodes then machines", func() {
-			status, reason, err := checkNodesScalingDown(&machinev1alpha1.MachineList{}, &corev1.NodeList{Items: []corev1.Node{{}}}, 2, 1)
+			status, err := checkNodesScalingDown(&machinev1alpha1.MachineList{}, &corev1.NodeList{Items: []corev1.Node{{}}}, 2, 1)
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionFalse))
-			Expect(reason).To(Equal("TooManyNodes"))
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -353,10 +338,9 @@ var _ = Describe("health", func() {
 				}
 			)
 
-			status, reason, err := checkNodesScalingDown(machineList, nodeList, 2, 1)
+			status, err := checkNodesScalingDown(machineList, nodeList, 2, 1)
 
 			Expect(status).To(Equal(gardencorev1beta1.ConditionProgressing))
-			Expect(reason).To(Equal("DrainingMachines"))
 			Expect(err).To(HaveOccurred())
 		})
 	})

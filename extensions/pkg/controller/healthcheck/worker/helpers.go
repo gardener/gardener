@@ -16,6 +16,7 @@ package worker
 
 import (
 	"fmt"
+	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
@@ -79,27 +80,27 @@ func CheckMachineDeployment(deployment *machinev1alpha1.MachineDeployment) error
 	return nil
 }
 
-func checkMachineDeploymentsHealthy(machineDeployments []machinev1alpha1.MachineDeployment) (bool, string, error) {
+func checkMachineDeploymentsHealthy(machineDeployments []machinev1alpha1.MachineDeployment) (bool, error) {
 	for _, deployment := range machineDeployments {
 		for _, failedMachine := range deployment.Status.FailedMachines {
-			return false, "MachineDeploymentHasFailedMachines", fmt.Errorf("machine %s failed: %s", failedMachine.Name, failedMachine.LastOperation.Description)
+			return false, fmt.Errorf("machine %q failed: %s", failedMachine.Name, failedMachine.LastOperation.Description)
 		}
 
 		if err := CheckMachineDeployment(&deployment); err != nil {
-			return false, "MachineDeploymentUnhealthy", fmt.Errorf("machine deployment %s in namespace %s is unhealthy: %v", deployment.Name, deployment.Namespace, err)
+			return false, fmt.Errorf("machine deployment %q in namespace %q is unhealthy: %v", deployment.Name, deployment.Namespace, err)
 		}
 	}
 
-	return true, "", nil
+	return true, nil
 }
 
-func checkNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, desiredMachines int) (gardencorev1beta1.ConditionStatus, string, error) {
+func checkNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, desiredMachines int) (gardencorev1beta1.ConditionStatus, error) {
 	if readyNodes == desiredMachines {
-		return gardencorev1beta1.ConditionTrue, "", nil
+		return gardencorev1beta1.ConditionTrue, nil
 	}
 
 	if machineObjects := len(machineList.Items); machineObjects < desiredMachines {
-		return gardencorev1beta1.ConditionFalse, "MissingMachines", fmt.Errorf("not enough machine objects created yet (%d/%d)", machineObjects, desiredMachines)
+		return gardencorev1beta1.ConditionFalse, fmt.Errorf("not enough machine objects created yet (%d/%d)", machineObjects, desiredMachines)
 	}
 
 	var pendingMachines, erroneousMachines int
@@ -118,18 +119,18 @@ func checkNodesScalingUp(machineList *machinev1alpha1.MachineList, readyNodes, d
 	}
 
 	if erroneousMachines > 0 {
-		return gardencorev1beta1.ConditionFalse, "ErroneousMachines", fmt.Errorf("%d machine objects are erroneous", erroneousMachines)
+		return gardencorev1beta1.ConditionFalse, fmt.Errorf("%s erroneous", cosmeticMachineMessage(erroneousMachines))
 	}
 	if pendingMachines == 0 {
-		return gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Errorf("not enough ready worker nodes registered in the cluster (%d/%d)", readyNodes, desiredMachines)
+		return gardencorev1beta1.ConditionFalse, fmt.Errorf("not enough ready worker nodes registered in the cluster (%d/%d)", readyNodes, desiredMachines)
 	}
 
-	return gardencorev1beta1.ConditionProgressing, "PendingMachines", fmt.Errorf("%s being provisioned and should join the cluster and become ready soon", cosmeticMachineMessage(pendingMachines))
+	return gardencorev1beta1.ConditionProgressing, fmt.Errorf("%s provisioning and should join the cluster soon", cosmeticMachineMessage(pendingMachines))
 }
 
-func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList *corev1.NodeList, registeredNodes, desiredMachines int) (gardencorev1beta1.ConditionStatus, string, error) {
+func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList *corev1.NodeList, registeredNodes, desiredMachines int) (gardencorev1beta1.ConditionStatus, error) {
 	if registeredNodes == desiredMachines {
-		return gardencorev1beta1.ConditionTrue, "", nil
+		return gardencorev1beta1.ConditionTrue, nil
 	}
 
 	// Check if all nodes that are cordoned map to machines with a deletion timestamp. This might be the case during
@@ -146,10 +147,10 @@ func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList *c
 		if node.Spec.Unschedulable {
 			machine, ok := nodeNameToMachine[node.Name]
 			if !ok {
-				return gardencorev1beta1.ConditionFalse, "MachineNotFound", fmt.Errorf("machine object for cordoned node %s not found", node.Name)
+				return gardencorev1beta1.ConditionFalse, fmt.Errorf("machine object for cordoned node %q not found", node.Name)
 			}
 			if machine.DeletionTimestamp == nil {
-				return gardencorev1beta1.ConditionFalse, "NodeUnexpectedlyCordoned", fmt.Errorf("cordoned node %s found but corresponding machine object does not have deletion timestam", node.Name)
+				return gardencorev1beta1.ConditionFalse, fmt.Errorf("cordoned node %q found but corresponding machine object does not have a deletion timestamp", node.Name)
 			}
 			cordonedNodes++
 		}
@@ -157,10 +158,10 @@ func checkNodesScalingDown(machineList *machinev1alpha1.MachineList, nodeList *c
 
 	// If there are still more nodes than desired then report an error.
 	if registeredNodes-cordonedNodes != desiredMachines {
-		return gardencorev1beta1.ConditionFalse, "TooManyNodes", fmt.Errorf("too many worker nodes registered, exceeds maximum desired machine count (%d/%d)", registeredNodes, desiredMachines)
+		return gardencorev1beta1.ConditionFalse, fmt.Errorf("too many worker nodes are registered. Exceeding maximum desired machine count (%d/%d)", registeredNodes, desiredMachines)
 	}
 
-	return gardencorev1beta1.ConditionProgressing, "DrainingMachines", fmt.Errorf("%s being drained and about to being deprovisioned", cosmeticMachineMessage(cordonedNodes))
+	return gardencorev1beta1.ConditionProgressing, fmt.Errorf("%s waiting to be completely drained from pods. If this persists, check your pod disruption budgets and pending finalizers. Please note, that nodes that fail to be drained will be deleted automatically", cosmeticMachineMessage(cordonedNodes))
 }
 
 func getDesiredMachineCount(machineDeployments []machinev1alpha1.MachineDeployment) int {
@@ -175,8 +176,7 @@ func getDesiredMachineCount(machineDeployments []machinev1alpha1.MachineDeployme
 
 func checkConditionStatus(condition *machinev1alpha1.MachineDeploymentCondition, expectedStatus machinev1alpha1.ConditionStatus) error {
 	if condition.Status != expectedStatus {
-		return fmt.Errorf("condition %q has invalid status %s (expected %s) due to %s: %s",
-			condition.Type, condition.Status, expectedStatus, condition.Reason, condition.Message)
+		return fmt.Errorf("%s (%s)", strings.Trim(condition.Message, "."), condition.Reason)
 	}
 	return nil
 }

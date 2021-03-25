@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -94,16 +95,21 @@ func (healthChecker *StatefulSetHealthChecker) Check(ctx context.Context, reques
 		err = healthChecker.shootClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, statefulSet)
 	}
 	if err != nil {
-		err := fmt.Errorf("failed to retrieve StatefulSet '%s' in namespace '%s': %v", healthChecker.name, request.Namespace, err)
+		if apierrors.IsNotFound(err) {
+			return &healthcheck.SingleCheckResult{
+				Status: gardencorev1beta1.ConditionFalse,
+				Detail: fmt.Sprintf("StatefulSet %q in namespace %q not found", healthChecker.name, request.Namespace),
+			}, nil
+		}
+		err := fmt.Errorf("failed to retrieve StatefulSet %q in namespace %q: %v", healthChecker.name, request.Namespace, err)
 		healthChecker.logger.Error(err, "Health check failed")
 		return nil, err
 	}
-	if isHealthy, reason, err := statefulSetIsHealthy(statefulSet); !isHealthy {
+	if isHealthy, err := statefulSetIsHealthy(statefulSet); !isHealthy {
 		healthChecker.logger.Error(err, "Health check failed")
 		return &healthcheck.SingleCheckResult{
 			Status: gardencorev1beta1.ConditionFalse,
 			Detail: err.Error(),
-			Reason: *reason,
 		}, nil
 	}
 
@@ -112,11 +118,10 @@ func (healthChecker *StatefulSetHealthChecker) Check(ctx context.Context, reques
 	}, nil
 }
 
-func statefulSetIsHealthy(statefulSet *appsv1.StatefulSet) (bool, *string, error) {
+func statefulSetIsHealthy(statefulSet *appsv1.StatefulSet) (bool, error) {
 	if err := health.CheckStatefulSet(statefulSet); err != nil {
-		reason := "StatefulSetUnhealthy"
-		err := fmt.Errorf("statefulSet %s in namespace %s is unhealthy: %v", statefulSet.Name, statefulSet.Namespace, err)
-		return false, &reason, err
+		err := fmt.Errorf("statefulSet %q in namespace %q is unhealthy: %v", statefulSet.Name, statefulSet.Namespace, err)
+		return false, err
 	}
-	return true, nil, nil
+	return true, nil
 }

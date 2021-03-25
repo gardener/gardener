@@ -54,7 +54,7 @@ func (h *HealthChecker) CheckPlantClusterNodes(ctx context.Context, condition ga
 		return exitCondition
 	}
 
-	updatedCondition := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, string(gardencorev1beta1.PlantEveryNodeReady), "Every node registered to the cluster is ready.")
+	updatedCondition := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionTrue, string(gardencorev1beta1.PlantEveryNodeReady), "All nodes are ready.")
 	return updatedCondition
 }
 

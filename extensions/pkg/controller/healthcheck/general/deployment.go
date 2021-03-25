@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -94,17 +95,23 @@ func (healthChecker *DeploymentHealthChecker) Check(ctx context.Context, request
 		err = healthChecker.shootClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, deployment)
 	}
 	if err != nil {
-		err := fmt.Errorf("failed to retrieve deployment '%s' in namespace '%s': %v", healthChecker.name, request.Namespace, err)
+		if apierrors.IsNotFound(err) {
+			return &healthcheck.SingleCheckResult{
+				Status: gardencorev1beta1.ConditionFalse,
+				Detail: fmt.Sprintf("deployment %q in namespace %q not found", healthChecker.name, request.Namespace),
+			}, nil
+		}
+
+		err := fmt.Errorf("failed to retrieve deployment %q in namespace %q: %v", healthChecker.name, request.Namespace, err)
 		healthChecker.logger.Error(err, "Health check failed")
 		return nil, err
 	}
 
-	if isHealthy, reason, err := deploymentIsHealthy(deployment); !isHealthy {
+	if isHealthy, err := deploymentIsHealthy(deployment); !isHealthy {
 		healthChecker.logger.Error(err, "Health check failed")
 		return &healthcheck.SingleCheckResult{
 			Status: gardencorev1beta1.ConditionFalse,
 			Detail: err.Error(),
-			Reason: *reason,
 		}, nil
 	}
 
@@ -113,11 +120,10 @@ func (healthChecker *DeploymentHealthChecker) Check(ctx context.Context, request
 	}, nil
 }
 
-func deploymentIsHealthy(deployment *appsv1.Deployment) (bool, *string, error) {
+func deploymentIsHealthy(deployment *appsv1.Deployment) (bool, error) {
 	if err := health.CheckDeployment(deployment); err != nil {
-		reason := "DeploymentUnhealthy"
-		err := fmt.Errorf("deployment %s in namespace %s is unhealthy: %v", deployment.Name, deployment.Namespace, err)
-		return false, &reason, err
+		err := fmt.Errorf("deployment %q in namespace %q is unhealthy: %v", deployment.Name, deployment.Namespace, err)
+		return false, err
 	}
-	return true, nil, nil
+	return true, nil
 }
