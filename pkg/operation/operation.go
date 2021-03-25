@@ -181,7 +181,7 @@ func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Inter
 			NewBuilder().
 			WithShootObject(s).
 			WithCloudProfileObjectFromReader(gardenClient.APIReader()).
-			WithShootSecretFromSecretBindingLister(k8sGardenCoreInformers.SecretBindings().Lister()).
+			WithShootSecretFromReader(gardenClient.APIReader()).
 			WithProjectName(gardenObj.Project.Name).
 			WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
 			WithInternalDomain(gardenObj.InternalDomain).
@@ -193,7 +193,7 @@ func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Inter
 
 // WithShootFromCluster sets the shootFunc attribute at the Builder which will build a new Shoot object constructed from the cluster resource.
 // The shoot status is still taken from the passed `shoot`, though.
-func (b *Builder) WithShootFromCluster(k8sGardenCoreInformers gardencoreinformers.Interface, seedClient kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
+func (b *Builder) WithShootFromCluster(gardenClient, seedClient kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
 	b.shootFunc = func(ctx context.Context, c client.Client, gardenObj *garden.Garden, seedObj *seed.Seed) (*shoot.Shoot, error) {
 		shootNamespace := shoot.ComputeTechnicalID(gardenObj.Project.Name, s)
 
@@ -201,7 +201,7 @@ func (b *Builder) WithShootFromCluster(k8sGardenCoreInformers gardencoreinformer
 			NewBuilder().
 			WithShootObjectFromCluster(seedClient, shootNamespace).
 			WithCloudProfileObjectFromCluster(seedClient, shootNamespace).
-			WithShootSecretFromSecretBindingLister(k8sGardenCoreInformers.SecretBindings().Lister()).
+			WithShootSecretFromReader(gardenClient.APIReader()).
 			WithProjectName(gardenObj.Project.Name).
 			WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
 			WithInternalDomain(gardenObj.InternalDomain).

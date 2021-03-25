@@ -291,7 +291,7 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 		NewBuilder().
 		WithShootObject(shoot).
 		WithCloudProfileObject(cloudProfile).
-		WithShootSecretFromSecretBindingLister(c.k8sGardenCoreInformers.Core().V1beta1().SecretBindings().Lister()).
+		WithShootSecretFromReader(gardenClient.APIReader()).
 		WithProjectName(project.Name).
 		WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
 		WithInternalDomain(gardenObj.InternalDomain).

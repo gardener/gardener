@@ -46,10 +46,11 @@ type authorizer struct {
 var _ = auth.Authorizer(&authorizer{})
 
 var (
-	// Only take v1beta1 because the Authorize function only checks the resource group and the resource.
-	cloudProfileResource = gardencorev1beta1.Resource("cloudprofiles")
-
-	configMapResource = corev1.Resource("configmaps")
+	// Only take v1beta1 for the core.gardener.cloud API group because the Authorize function only checks the resource
+	// group and the resource (but it ignores the version).
+	cloudProfileResource  = gardencorev1beta1.Resource("cloudprofiles")
+	configMapResource     = corev1.Resource("configmaps")
+	secretBindingResource = gardencorev1beta1.Resource("secretbindings")
 )
 
 // TODO: Revisit all `DecisionNoOpinion` later. Today we cannot deny the request for backwards compatibility
@@ -69,6 +70,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeGet(seedName, graph.VertexTypeCloudProfile, attrs)
 		case configMapResource:
 			return a.authorizeGet(seedName, graph.VertexTypeConfigMap, attrs)
+		case secretBindingResource:
+			return a.authorizeGet(seedName, graph.VertexTypeSecretBinding, attrs)
 		}
 	}
 

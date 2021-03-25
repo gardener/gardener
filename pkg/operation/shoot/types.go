@@ -39,14 +39,13 @@ import (
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Builder is an object that builds Shoot objects.
 type Builder struct {
 	shootObjectFunc  func(context.Context) (*gardencorev1beta1.Shoot, error)
 	cloudProfileFunc func(context.Context, string) (*gardencorev1beta1.CloudProfile, error)
-	shootSecretFunc  func(context.Context, client.Client, string, string) (*corev1.Secret, error)
+	shootSecretFunc  func(context.Context, string, string) (*corev1.Secret, error)
 	projectName      string
 	internalDomain   *garden.Domain
 	defaultDomains   []*garden.Domain

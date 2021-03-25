@@ -710,6 +710,7 @@ func opFunc(op *operation.Operation, err error) NewOperationFunc {
 	return func(
 		_ context.Context,
 		_ kubernetes.Interface,
+		_ kubernetes.Interface,
 		_ *config.GardenletConfiguration,
 		_ *gardencorev1beta1.Gardener,
 		_ string,
