@@ -52,6 +52,7 @@ func (e *ErrorWithCodes) Error() string {
 var (
 	unauthorizedRegexp                  = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|InvalidAuthenticationTokenTenant|SignatureDoesNotMatch|Authentication failed|AuthFailure|AuthorizationFailed|invalid character|invalid_grant|invalid_client|Authorization Profile was not found|cannot fetch token|no active subscriptions|InvalidAccessKeyId|InvalidSecretAccessKey|query returned no results|UnauthorizedOperation|not authorized)`)
 	quotaExceededRegexp                 = regexp.MustCompile(`(?i)(LimitExceeded|Quota|Throttling|Too many requests)`)
+	quotaExceededNegativeRegexp         = regexp.MustCompile(`(?i)(DNS record.+Throttling)`)
 	insufficientPrivilegesRegexp        = regexp.MustCompile(`(?i)(AccessDenied|OperationNotAllowed|Error 403)`)
 	dependenciesRegexp                  = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict|inactive billing state|ReadOnlyDisabledSubscription|is already being used|InUseSubnetCannotBeDeleted|VnetInUse|InUseRouteTableCannotBeDeleted|timeout while waiting for state to become|InvalidCidrBlock|already busy for|InsufficientFreeAddressesInSubnet|InternalServerError|RetryableError|Future#WaitForCompletion: context has been cancelled|internalerror|internal server error|A resource with the ID|VnetAddressSpaceCannotChangeDueToPeerings)`)
 	resourcesDepletedRegexp             = regexp.MustCompile(`(?i)(not available in the current hardware cluster|InsufficientInstanceCapacity|SkuNotAvailable|ZonalAllocationFailed|out of stock)`)
@@ -96,7 +97,7 @@ func DetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 	if unauthorizedRegexp.MatchString(message) {
 		codes.Insert(string(gardencorev1beta1.ErrorInfraUnauthorized))
 	}
-	if quotaExceededRegexp.MatchString(message) {
+	if quotaExceededRegexp.MatchString(message) && !quotaExceededNegativeRegexp.MatchString(message) {
 		codes.Insert(string(gardencorev1beta1.ErrorInfraQuotaExceeded))
 	}
 	if insufficientPrivilegesRegexp.MatchString(message) {

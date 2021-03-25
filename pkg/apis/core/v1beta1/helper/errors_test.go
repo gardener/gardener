@@ -38,6 +38,8 @@ var _ = Describe("errors", func() {
 		Entry("unauthorized", errors.New("unauthorized"), "", NewErrorWithCodes("unauthorized", gardencorev1beta1.ErrorInfraUnauthorized)),
 		Entry("unauthorized with coder", NewErrorWithCodes("", gardencorev1beta1.ErrorInfraUnauthorized), "", NewErrorWithCodes("", gardencorev1beta1.ErrorInfraUnauthorized)),
 		Entry("quota exceeded", errors.New("limitexceeded"), "", NewErrorWithCodes("limitexceeded", gardencorev1beta1.ErrorInfraQuotaExceeded)),
+		Entry("quota exceeded (throttling)", errors.New("throttling"), "", NewErrorWithCodes("throttling", gardencorev1beta1.ErrorInfraQuotaExceeded)),
+		Entry("no quota exceeded (temporary throttling)", errors.New("Failed to create DNS provider for \"internal\" DNS record. blabla. Throttling"), "", errors.New("Failed to create DNS provider for \"internal\" DNS record. blabla. Throttling")),
 		Entry("quota exceeded with coder", NewErrorWithCodes("limitexceeded", gardencorev1beta1.ErrorInfraQuotaExceeded), "", NewErrorWithCodes("limitexceeded", gardencorev1beta1.ErrorInfraQuotaExceeded)),
 		Entry("insufficient privileges", errors.New("accessdenied"), "", NewErrorWithCodes("accessdenied", gardencorev1beta1.ErrorInfraInsufficientPrivileges)),
 		Entry("insufficient privileges with coder", NewErrorWithCodes("accessdenied", gardencorev1beta1.ErrorInfraInsufficientPrivileges), "", NewErrorWithCodes("accessdenied", gardencorev1beta1.ErrorInfraInsufficientPrivileges)),
