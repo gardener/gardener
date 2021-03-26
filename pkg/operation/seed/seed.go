@@ -452,7 +452,7 @@ func RunReconcileSeedFlow(
 				},
 			}
 
-			currentResources, err := common.GetContainerResourcesInStatefulSet(ctx, k8sSeedClient.Client(), kutil.Key(v1beta1constants.GardenNamespace, "loki"))
+			currentResources, err := kutil.GetContainerResourcesInStatefulSet(ctx, k8sSeedClient.Client(), kutil.Key(v1beta1constants.GardenNamespace, "loki"))
 			if err != nil {
 				return err
 			}
