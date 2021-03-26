@@ -47,11 +47,11 @@ import (
 
 var (
 	kubeSystemLabels = labels.Set{
-		common.ShootNoCleanup:            "true",
+		v1beta1constants.ShootNoCleanup:  "true",
 		v1beta1constants.GardenerPurpose: metav1.NamespaceSystem,
 	}
 	podsLabels = labels.Set{
-		common.ShootNoCleanup:                "true",
+		v1beta1constants.ShootNoCleanup:      "true",
 		common.ManagedResourceLabelKeyOrigin: common.ManagedResourceLabelValueGardener,
 	}
 	// WebhookConstraintMatchers contains a list of all api resources which can break

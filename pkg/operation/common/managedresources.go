@@ -17,6 +17,8 @@ package common
 import (
 	"context"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+
 	"github.com/gardener/gardener-resource-manager/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -80,7 +82,7 @@ func NewManagedResourceSecret(c client.Client, name, namespace string) (string, 
 // NewManagedResourceForShoot constructs a new ManagedResource object for the shoot's Gardener-Resource-Manager.
 func NewManagedResourceForShoot(c client.Client, name, namespace string, keepObjects bool) *manager.ManagedResource {
 	var (
-		injectedLabels = map[string]string{ShootNoCleanup: "true"}
+		injectedLabels = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
 		labels         = map[string]string{ManagedResourceLabelKeyOrigin: ManagedResourceLabelValueGardener}
 	)
 
@@ -99,7 +101,7 @@ func NewManagedResourceForSeed(c client.Client, name, namespace string, keepObje
 		KeepObjects(keepObjects)
 }
 
-// ManagedResourceSecretName returns the name of a corev1.Scret for the given name of a
+// ManagedResourceSecretName returns the name of a corev1.Secret for the given name of a
 // resourcesv1alpha1.ManagedResource.
 func ManagedResourceSecretName(managedResourceName string) string {
 	return ManagedResourceSecretPrefix + managedResourceName
