@@ -94,14 +94,18 @@ func WaitUntilLokiReceivesLogs(ctx context.Context, interval time.Duration, f *f
 	})
 
 	if err != nil {
+		d := time.Now().Add(5 * time.Minute)
+		dumpLogsCtx, dumpLogsCancel := context.WithDeadline(context.Background(), d)
+		defer dumpLogsCancel()
+
 		f.Logger.Info("Dump Loki logs")
-		if dumpError := f.DumpLogsForPodInNamespace(ctx, "", c, lokiNamespace, "loki-0"); dumpError != nil {
+		if dumpError := f.DumpLogsForPodInNamespace(dumpLogsCtx, "", c, lokiNamespace, "loki-0"); dumpError != nil {
 			f.Logger.Error(dumpError.Error())
 		}
 
 		f.Logger.Info("Dump Fluent-bit logs")
 		labels := client.MatchingLabels{"app": "fluent-bit"}
-		if dumpError := f.DumpLogsForPodsWithLabelsInNamespace(ctx, "", c, "garden", labels); dumpError != nil {
+		if dumpError := f.DumpLogsForPodsWithLabelsInNamespace(dumpLogsCtx, "", c, "garden", labels); dumpError != nil {
 			f.Logger.Error(dumpError.Error())
 		}
 	}
