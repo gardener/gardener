@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretutil "github.com/gardener/gardener/pkg/utils/secrets"
 
-	"github.com/gardener/gardener-resource-manager/pkg/manager"
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
@@ -561,20 +560,9 @@ func ReconcileShootWebhooks(ctx context.Context, c client.Client, namespace, pro
 	if err != nil {
 		return err
 	}
+	data := map[string][]byte{"mutatingwebhookconfiguration.yaml": webhookConfiguration}
 
-	if err := manager.
-		NewSecret(c).
-		WithNamespacedName(namespace, ShootWebhooksResourceName).
-		WithKeyValues(map[string][]byte{"mutatingwebhookconfiguration.yaml": webhookConfiguration}).
-		Reconcile(ctx); err != nil {
-		return errors.Wrapf(err, "could not create or update secret '%s/%s' of managed resource containing shoot webhooks", namespace, ShootWebhooksResourceName)
-	}
-
-	if err := manager.
-		NewManagedResource(c).
-		WithNamespacedName(namespace, ShootWebhooksResourceName).
-		WithSecretRef(ShootWebhooksResourceName).
-		Reconcile(ctx); err != nil {
+	if err := managedresources.Create(ctx, c, namespace, ShootWebhooksResourceName, false, "", data, nil, nil, nil); err != nil {
 		return errors.Wrapf(err, "could not create or update managed resource '%s/%s' containing shoot webhooks", namespace, ShootWebhooksResourceName)
 	}
 

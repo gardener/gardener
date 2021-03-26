@@ -33,6 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8sretry "k8s.io/client-go/util/retry"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -55,15 +56,17 @@ func SecretName(name string, withPrefix bool) string {
 }
 
 // New initiates a new ManagedResource object which can be reconciled.
-func New(client client.Client, namespace, name, class string, keepObjects bool, labels, injectedLabels map[string]string, forceOverwriteAnnotations *bool) *manager.ManagedResource {
+func New(client client.Client, namespace, name, class string, keepObjects *bool, labels, injectedLabels map[string]string, forceOverwriteAnnotations *bool) *manager.ManagedResource {
 	mr := manager.
 		NewManagedResource(client).
 		WithNamespacedName(namespace, name).
 		WithClass(class).
-		KeepObjects(keepObjects).
 		WithLabels(labels).
 		WithInjectedLabels(injectedLabels)
 
+	if keepObjects != nil {
+		mr = mr.KeepObjects(*keepObjects)
+	}
 	if forceOverwriteAnnotations != nil {
 		mr = mr.ForceOverwriteAnnotations(*forceOverwriteAnnotations)
 	}
@@ -78,12 +81,12 @@ func NewForShoot(c client.Client, namespace, name string, keepObjects bool) *man
 		labels         = map[string]string{LabelKeyOrigin: LabelValueGardener}
 	)
 
-	return New(c, namespace, name, "", keepObjects, labels, injectedLabels, nil)
+	return New(c, namespace, name, "", &keepObjects, labels, injectedLabels, nil)
 }
 
 // NewForSeed constructs a new ManagedResource object for the seed's Gardener-Resource-Manager.
 func NewForSeed(c client.Client, namespace, name string, keepObjects bool) *manager.ManagedResource {
-	return New(c, namespace, name, v1beta1constants.SeedResourceManagerClass, keepObjects, nil, nil, nil)
+	return New(c, namespace, name, v1beta1constants.SeedResourceManagerClass, &keepObjects, nil, nil, nil)
 }
 
 // NewSecret initiates a new Secret object which can be reconciled.
@@ -106,14 +109,14 @@ func CreateFromUnstructured(ctx context.Context, client client.Client, namespace
 		data = append(data, []byte("\n---\n")...)
 		data = append(data, bytes...)
 	}
-	return Create(ctx, client, namespace, name, secretNameWithPrefix, class, map[string][]byte{name: data}, keepObjects, injectedLabels, false)
+	return Create(ctx, client, namespace, name, secretNameWithPrefix, class, map[string][]byte{name: data}, &keepObjects, injectedLabels, pointer.BoolPtr(false))
 }
 
 // Create creates a managed resource and its secret with the given name, class, key, and data in the given namespace.
-func Create(ctx context.Context, client client.Client, namespace, name string, secretNameWithPrefix bool, class string, data map[string][]byte, keepObjects bool, injectedLabels map[string]string, forceOverwriteAnnotations bool) error {
+func Create(ctx context.Context, client client.Client, namespace, name string, secretNameWithPrefix bool, class string, data map[string][]byte, keepObjects *bool, injectedLabels map[string]string, forceOverwriteAnnotations *bool) error {
 	var (
 		secretName, secret = NewSecret(client, namespace, name, data, secretNameWithPrefix)
-		managedResource    = New(client, namespace, name, class, keepObjects, nil, injectedLabels, &forceOverwriteAnnotations).WithSecretRef(secretName)
+		managedResource    = New(client, namespace, name, class, keepObjects, nil, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName)
 	)
 
 	return deployManagedResource(ctx, secret, managedResource)
@@ -252,5 +255,5 @@ func RenderChartAndCreate(ctx context.Context, namespace string, name string, se
 		injectedLabels = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
 	}
 
-	return Create(ctx, client, namespace, name, secretNameWithPrefix, "", map[string][]byte{chartName: data}, false, injectedLabels, forceOverwriteAnnotations)
+	return Create(ctx, client, namespace, name, secretNameWithPrefix, "", map[string][]byte{chartName: data}, pointer.BoolPtr(false), injectedLabels, &forceOverwriteAnnotations)
 }

@@ -33,9 +33,9 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener-resource-manager/pkg/manager"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -261,25 +261,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	}
 	conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionTrue, "RegistrationValid", "Chart could be rendered successfully.")
 
-	// Create secret
-	data := release.AsSecretData()
-
-	var secretName = controllerInstallation.Name
-	if err := manager.
-		NewSecret(seedClient.Client()).
-		WithNamespacedName(v1beta1constants.GardenNamespace, secretName).
-		WithKeyValues(data).
-		Reconcile(ctx); err != nil {
-		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "InstallationFailed", fmt.Sprintf("Creation of ManagedResource secret %q failed: %+v", secretName, err))
-		return err
-	}
-
-	if err := manager.
-		NewManagedResource(seedClient.Client()).
-		WithNamespacedName(v1beta1constants.GardenNamespace, controllerInstallation.Name).
-		WithSecretRef(secretName).
-		WithClass(v1beta1constants.SeedResourceManagerClass).
-		Reconcile(ctx); err != nil {
+	if err := managedresources.Create(ctx, seedClient.Client(), v1beta1constants.GardenNamespace, controllerInstallation.Name, false, v1beta1constants.SeedResourceManagerClass, release.AsSecretData(), nil, nil, nil); err != nil {
 		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "InstallationFailed", fmt.Sprintf("Creation of ManagedResource %q failed: %+v", controllerInstallation.Name, err))
 		return err
 	}
