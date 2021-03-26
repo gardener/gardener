@@ -19,6 +19,10 @@ import (
 	"fmt"
 	"time"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/utils/chart"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -146,4 +150,21 @@ func KeepManagedResourceObjects(ctx context.Context, c client.Client, namespace,
 	}
 
 	return nil
+}
+
+// RenderChartAndCreate renders a chart and creates a ManagedResource for the gardener-resource-manager
+// out of the results.
+func RenderChartAndCreate(ctx context.Context, namespace string, name string, client client.Client, chartRenderer chartrenderer.Interface, chart chart.Interface, values map[string]interface{}, imageVector imagevector.ImageVector, chartNamespace string, version string, withNoCleanupLabel bool, forceOverwriteAnnotations bool) error {
+	chartName, data, err := chart.Render(chartRenderer, chartNamespace, imageVector, version, version, values)
+	if err != nil {
+		return errors.Wrapf(err, "could not render chart")
+	}
+
+	// Create or update managed resource referencing the previously created secret
+	var injectedLabels map[string]string
+	if withNoCleanupLabel {
+		injectedLabels = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
+	}
+
+	return Create(ctx, client, namespace, name, "", chartName, data, false, injectedLabels, forceOverwriteAnnotations)
 }
