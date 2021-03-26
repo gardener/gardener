@@ -474,18 +474,6 @@ func GetDomainInfoFromAnnotations(annotations map[string]string) (provider strin
 	return
 }
 
-// CurrentReplicaCount returns the current replicaCount for the given deployment.
-func CurrentReplicaCount(ctx context.Context, client client.Client, namespace, deploymentName string) (int32, error) {
-	deployment := &appsv1.Deployment{}
-	if err := client.Get(ctx, kutil.Key(namespace, deploymentName), deployment); err != nil && !apierrors.IsNotFound(err) {
-		return 0, err
-	}
-	if deployment.Spec.Replicas == nil {
-		return 0, nil
-	}
-	return *deployment.Spec.Replicas, nil
-}
-
 // RespectShootSyncPeriodOverwrite checks whether to respect the sync period overwrite of a Shoot or not.
 func RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite bool, shoot *gardencorev1beta1.Shoot) bool {
 	return respectSyncPeriodOverwrite || shoot.Namespace == v1beta1constants.GardenNamespace
