@@ -17,7 +17,7 @@ Consequently, please refer to the [offical documentation](https://github.com/kub
 
 The `Shoot` API allows to configure a few flags of the `cluster-autoscaler`:
 * `.spec.kubernetes.clusterAutoscaler.ScaleDownDelayAfterAdd` defines how long after scale up that scale down evaluation resumes (default: `1h`).
-* `.spec.kubernetes.clusterAutoscaler.ScaleDownDelayAfterDelete` defines how long after node deletion that scale down evaluation resumes, defaults to scanInterval (defaults to `ScanInterval`).
+* `.spec.kubernetes.clusterAutoscaler.ScaleDownDelayAfterDelete` defines how long after node deletion that scale down evaluation resumes (defaults to `ScanInterval`).
 * `.spec.kubernetes.clusterAutoscaler.ScaleDownDelayAfterFailure` defines how long after scale down failure that scale down evaluation resumes (default: `3m`).
 * `.spec.kubernetes.clusterAutoscaler.ScaleDownUnneededTime` defines how long a node should be unneeded before it is eligible for scale down (default: `30m`).
 * `.spec.kubernetes.clusterAutoscaler.ScaleDownUtilizationThreshold` defines the threshold in % under which a node is being removed.
