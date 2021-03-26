@@ -176,23 +176,6 @@ func projectForNamespace(projects []gardencorev1beta1.Project, namespaceName str
 	return nil, apierrors.NewNotFound(gardencorev1beta1.Resource("Project"), fmt.Sprintf("for namespace %s", namespaceName))
 }
 
-// GardenerDeletionGracePeriod is the default grace period for Gardener's force deletion methods.
-var GardenerDeletionGracePeriod = 5 * time.Minute
-
-// ShouldObjectBeRemoved determines whether the given object should be gone now.
-// This is calculated by first checking the deletion timestamp of an object: If the deletion timestamp
-// is unset, the object should not be removed - i.e. this returns false.
-// Otherwise, it is checked whether the deletionTimestamp is before the current time minus the
-// grace period.
-func ShouldObjectBeRemoved(obj metav1.Object, gracePeriod time.Duration) bool {
-	deletionTimestamp := obj.GetDeletionTimestamp()
-	if deletionTimestamp == nil {
-		return false
-	}
-
-	return deletionTimestamp.Time.Before(time.Now().Add(-gracePeriod))
-}
-
 // DeleteHvpa delete all resources required for the HVPA in the given namespace.
 func DeleteHvpa(ctx context.Context, k8sClient kubernetes.Interface, namespace string) error {
 	if k8sClient == nil {
