@@ -55,15 +55,20 @@ func SecretName(name string, withPrefix bool) string {
 }
 
 // New initiates a new ManagedResource object which can be reconciled.
-func New(client client.Client, namespace, name, class string, keepObjects bool, labels, injectedLabels map[string]string, forceOverwriteAnnotations bool) *manager.ManagedResource {
-	return manager.
+func New(client client.Client, namespace, name, class string, keepObjects bool, labels, injectedLabels map[string]string, forceOverwriteAnnotations *bool) *manager.ManagedResource {
+	mr := manager.
 		NewManagedResource(client).
 		WithNamespacedName(namespace, name).
 		WithClass(class).
 		KeepObjects(keepObjects).
 		WithLabels(labels).
-		WithInjectedLabels(injectedLabels).
-		ForceOverwriteAnnotations(forceOverwriteAnnotations)
+		WithInjectedLabels(injectedLabels)
+
+	if forceOverwriteAnnotations != nil {
+		mr = mr.ForceOverwriteAnnotations(*forceOverwriteAnnotations)
+	}
+
+	return mr
 }
 
 // NewForShoot constructs a new ManagedResource object for the shoot's Gardener-Resource-Manager.
@@ -73,12 +78,12 @@ func NewForShoot(c client.Client, namespace, name string, keepObjects bool) *man
 		labels         = map[string]string{LabelKeyOrigin: LabelValueGardener}
 	)
 
-	return New(c, namespace, name, "", keepObjects, labels, injectedLabels, false)
+	return New(c, namespace, name, "", keepObjects, labels, injectedLabels, nil)
 }
 
 // NewForSeed constructs a new ManagedResource object for the seed's Gardener-Resource-Manager.
 func NewForSeed(c client.Client, namespace, name string, keepObjects bool) *manager.ManagedResource {
-	return New(c, namespace, name, v1beta1constants.SeedResourceManagerClass, keepObjects, nil, nil, false)
+	return New(c, namespace, name, v1beta1constants.SeedResourceManagerClass, keepObjects, nil, nil, nil)
 }
 
 // NewSecret initiates a new Secret object which can be reconciled.
@@ -108,7 +113,7 @@ func CreateFromUnstructured(ctx context.Context, client client.Client, namespace
 func Create(ctx context.Context, client client.Client, namespace, name string, secretNameWithPrefix bool, class string, data map[string][]byte, keepObjects bool, injectedLabels map[string]string, forceOverwriteAnnotations bool) error {
 	var (
 		secretName, secret = NewSecret(client, namespace, name, data, secretNameWithPrefix)
-		managedResource    = New(client, namespace, name, class, keepObjects, nil, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName)
+		managedResource    = New(client, namespace, name, class, keepObjects, nil, injectedLabels, &forceOverwriteAnnotations).WithSecretRef(secretName)
 	)
 
 	return deployManagedResource(ctx, secret, managedResource)
