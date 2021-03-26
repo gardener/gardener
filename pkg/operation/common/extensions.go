@@ -37,69 +37,9 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
-
-// SyncClusterResourceToSeed creates or updates the `extensions.gardener.cloud/v1alpha1.Cluster` resource in the seed
-// cluster by adding the shoot, seed, and cloudprofile specification.
-func SyncClusterResourceToSeed(ctx context.Context, client client.Client, clusterName string, shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) error {
-	if shoot.Spec.SeedName == nil {
-		return nil
-	}
-
-	var (
-		cluster = &extensionsv1alpha1.Cluster{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: clusterName,
-			},
-		}
-
-		cloudProfileObj *gardencorev1beta1.CloudProfile
-		seedObj         *gardencorev1beta1.Seed
-		shootObj        *gardencorev1beta1.Shoot
-	)
-
-	if cloudProfile != nil {
-		cloudProfileObj = cloudProfile.DeepCopy()
-		cloudProfileObj.TypeMeta = metav1.TypeMeta{
-			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-			Kind:       "CloudProfile",
-		}
-	}
-
-	if seed != nil {
-		seedObj = seed.DeepCopy()
-		seedObj.TypeMeta = metav1.TypeMeta{
-			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-			Kind:       "Seed",
-		}
-	}
-
-	if shoot != nil {
-		shootObj = shoot.DeepCopy()
-		shootObj.TypeMeta = metav1.TypeMeta{
-			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
-			Kind:       "Shoot",
-		}
-	}
-
-	_, err := controllerutil.CreateOrUpdate(ctx, client, cluster, func() error {
-		if cloudProfileObj != nil {
-			cluster.Spec.CloudProfile = runtime.RawExtension{Object: cloudProfileObj}
-		}
-		if seedObj != nil {
-			cluster.Spec.Seed = runtime.RawExtension{Object: seedObj}
-		}
-		if shootObj != nil {
-			cluster.Spec.Shoot = runtime.RawExtension{Object: shootObj}
-		}
-		return nil
-	})
-	return err
-}
 
 // WaitUntilExtensionCRReady waits until the given extension resource has become ready.
 func WaitUntilExtensionCRReady(

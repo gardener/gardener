@@ -125,7 +125,7 @@ func (c *Controller) syncClusterResourceToSeed(ctx context.Context, shoot *garde
 		return fmt.Errorf("could not initialize a new Kubernetes client for the seed cluster: %+v", err)
 	}
 
-	return common.SyncClusterResourceToSeed(ctx, seedClient.Client(), clusterName, shoot, cloudProfile, seed)
+	return gardenerextensions.SyncClusterResourceToSeed(ctx, seedClient.Client(), clusterName, shoot, cloudProfile, seed)
 }
 
 func (c *Controller) checkSeedAndSyncClusterResource(ctx context.Context, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) error {

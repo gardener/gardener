@@ -19,8 +19,8 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
@@ -81,7 +81,7 @@ func (c *shootClusterIdentity) Deploy(ctx context.Context) error {
 			return err
 		}
 
-		return common.SyncClusterResourceToSeed(ctx, c.seedClient, c.seedNamespace, shoot, nil, nil)
+		return extensions.SyncClusterResourceToSeed(ctx, c.seedClient, c.seedNamespace, shoot, nil, nil)
 	}
 	return nil
 }
