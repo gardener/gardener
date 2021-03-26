@@ -82,17 +82,13 @@ func CreateFromUnstructured(ctx context.Context, client client.Client, namespace
 		data = append(data, []byte("\n---\n")...)
 		data = append(data, bytes...)
 	}
-	return Create(ctx, client, namespace, name, secretNameWithPrefix, class, name, data, keepObjects, injectedLabels, false)
+	return Create(ctx, client, namespace, name, secretNameWithPrefix, class, map[string][]byte{name: data}, keepObjects, injectedLabels, false)
 }
 
 // Create creates a managed resource and its secret with the given name, class, key, and data in the given namespace.
-func Create(ctx context.Context, client client.Client, namespace, name string, secretNameWithPrefix bool, class, key string, data []byte, keepObjects bool, injectedLabels map[string]string, forceOverwriteAnnotations bool) error {
-	if key == "" {
-		key = name
-	}
-
+func Create(ctx context.Context, client client.Client, namespace, name string, secretNameWithPrefix bool, class string, data map[string][]byte, keepObjects bool, injectedLabels map[string]string, forceOverwriteAnnotations bool) error {
 	// Create or update secret containing the rendered rbac manifests
-	secretName, secret := NewSecret(client, namespace, name, map[string][]byte{key: data}, secretNameWithPrefix)
+	secretName, secret := NewSecret(client, namespace, name, data, secretNameWithPrefix)
 	if err := secret.Reconcile(ctx); err != nil {
 		return errors.Wrapf(err, "could not create or update secret '%s/%s' of managed resources", namespace, secretName)
 	}
@@ -194,5 +190,5 @@ func RenderChartAndCreate(ctx context.Context, namespace string, name string, se
 		injectedLabels = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
 	}
 
-	return Create(ctx, client, namespace, name, secretNameWithPrefix, "", chartName, data, false, injectedLabels, forceOverwriteAnnotations)
+	return Create(ctx, client, namespace, name, secretNameWithPrefix, "", map[string][]byte{chartName: data}, false, injectedLabels, forceOverwriteAnnotations)
 }
