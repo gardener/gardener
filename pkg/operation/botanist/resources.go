@@ -59,5 +59,5 @@ func (b *Botanist) DeployReferencedResources(ctx context.Context) error {
 
 // DestroyReferencedResources deletes the managed resource containing referenced resources from the Seed cluster.
 func (b *Botanist) DestroyReferencedResources(ctx context.Context) error {
-	return client.IgnoreNotFound(managedresources.Delete(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, ManagedResourceName))
+	return client.IgnoreNotFound(managedresources.Delete(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, ManagedResourceName, false))
 }

@@ -90,7 +90,7 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 
 func (a *genericActuator) deleteMachineControllerManager(ctx context.Context, logger logr.Logger, workerObj *extensionsv1alpha1.Worker) error {
 	logger.Info("Deleting the machine-controller-manager")
-	if err := managedresources.Delete(ctx, a.client, workerObj.Namespace, McmShootResourceName); err != nil {
+	if err := managedresources.Delete(ctx, a.client, workerObj.Namespace, McmShootResourceName, false); err != nil {
 		return errors.Wrapf(err, "could not delete managed resource containing mcm chart for worker '%s'", kutil.ObjectName(workerObj))
 	}
 

@@ -90,7 +90,12 @@ func Create(ctx context.Context, client client.Client, namespace, name, class, k
 }
 
 // Delete deletes the managed resource and its secret with the given name in the given namespace.
-func Delete(ctx context.Context, client client.Client, namespace string, name string) error {
+func Delete(ctx context.Context, client client.Client, namespace string, name string, secretNameWithPrefix bool) error {
+	secretName := name
+	if secretNameWithPrefix {
+		secretName = SecretNameWithPrefix(name)
+	}
+
 	if err := manager.
 		NewManagedResource(client).
 		WithNamespacedName(namespace, name).
@@ -100,9 +105,9 @@ func Delete(ctx context.Context, client client.Client, namespace string, name st
 
 	if err := manager.
 		NewSecret(client).
-		WithNamespacedName(namespace, name).
+		WithNamespacedName(namespace, secretName).
 		Delete(ctx); err != nil {
-		return errors.Wrapf(err, "could not delete secret '%s/%s' of managed resource", namespace, name)
+		return errors.Wrapf(err, "could not delete secret '%s/%s' of managed resource", namespace, secretName)
 	}
 
 	return nil

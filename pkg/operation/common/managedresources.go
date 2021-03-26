@@ -38,7 +38,7 @@ func DeployManagedResourceForShoot(ctx context.Context, c client.Client, name, n
 
 // DeleteManagedResourceForShoot deploys a ManagedResource CR for the shoot's gardener-resource-manager.
 func DeleteManagedResourceForShoot(ctx context.Context, c client.Client, name, namespace string) error {
-	return deleteManagedResource(ctx, c, name, namespace, manager.NewManagedResource(c).WithNamespacedName(namespace, name))
+	return managedresources.Delete(ctx, c, namespace, name, true)
 }
 
 // DeployManagedResourceForSeed deploys a ManagedResource CR for the seed's gardener-resource-manager.
@@ -48,7 +48,7 @@ func DeployManagedResourceForSeed(ctx context.Context, c client.Client, name, na
 
 // DeleteManagedResourceForSeed deploys a ManagedResource CR for the seed's gardener-resource-manager.
 func DeleteManagedResourceForSeed(ctx context.Context, c client.Client, name, namespace string) error {
-	return deleteManagedResource(ctx, c, name, namespace, manager.NewManagedResource(c).WithNamespacedName(namespace, name))
+	return managedresources.Delete(ctx, c, namespace, name, true)
 }
 
 func deployManagedResource(ctx context.Context, c client.Client, name, namespace string, data map[string][]byte, managedResource *manager.ManagedResource) error {
@@ -59,15 +59,6 @@ func deployManagedResource(ctx context.Context, c client.Client, name, namespace
 	}
 
 	return managedResource.WithSecretRef(secretName).Reconcile(ctx)
-}
-
-func deleteManagedResource(ctx context.Context, c client.Client, name, namespace string, managedResource *manager.ManagedResource) error {
-	_, secret := NewManagedResourceSecret(c, name, namespace)
-
-	if err := managedResource.Delete(ctx); err != nil {
-		return err
-	}
-	return secret.Delete(ctx)
 }
 
 // NewManagedResourceSecret constructs a new Secret object containing manifests managed by the Gardener-Resource-Manager

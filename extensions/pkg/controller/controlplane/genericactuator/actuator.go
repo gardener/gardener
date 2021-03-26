@@ -389,11 +389,11 @@ func (a *actuator) deleteControlPlane(
 	cluster *extensionscontroller.Cluster,
 ) error {
 	// Delete the managed resources
-	if err := managedresources.Delete(ctx, a.client, cp.Namespace, StorageClassesChartResourceName); err != nil {
+	if err := managedresources.Delete(ctx, a.client, cp.Namespace, StorageClassesChartResourceName, false); err != nil {
 		return errors.Wrapf(err, "could not delete managed resource containing storage classes chart for controlplane '%s'", kutil.ObjectName(cp))
 	}
 	if a.controlPlaneShootCRDsChart != nil {
-		if err := managedresources.Delete(ctx, a.client, cp.Namespace, ControlPlaneShootCRDsChartResourceName); err != nil {
+		if err := managedresources.Delete(ctx, a.client, cp.Namespace, ControlPlaneShootCRDsChartResourceName, false); err != nil {
 			return errors.Wrapf(err, "could not delete managed resource containing shoot CRDs chart for controlplane '%s'", kutil.ObjectName(cp))
 		}
 
@@ -404,7 +404,7 @@ func (a *actuator) deleteControlPlane(
 			return errors.Wrapf(err, "error while waiting for managed resource containing shoot CRDs chart for controlplane '%s' to be deleted", kutil.ObjectName(cp))
 		}
 	}
-	if err := managedresources.Delete(ctx, a.client, cp.Namespace, ControlPlaneShootChartResourceName); err != nil {
+	if err := managedresources.Delete(ctx, a.client, cp.Namespace, ControlPlaneShootChartResourceName, false); err != nil {
 		return errors.Wrapf(err, "could not delete managed resource containing shoot chart for controlplane '%s'", kutil.ObjectName(cp))
 	}
 
@@ -446,7 +446,7 @@ func (a *actuator) deleteControlPlane(
 			return errors.Wrapf(err, "could not delete network policy for shoot webhooks in namespace '%s'", cp.Namespace)
 		}
 
-		if err := managedresources.Delete(ctx, a.client, cp.Namespace, ShootWebhooksResourceName); err != nil {
+		if err := managedresources.Delete(ctx, a.client, cp.Namespace, ShootWebhooksResourceName, false); err != nil {
 			return errors.Wrapf(err, "could not delete managed resource containing shoot webhooks for controlplane '%s'", kutil.ObjectName(cp))
 		}
 
