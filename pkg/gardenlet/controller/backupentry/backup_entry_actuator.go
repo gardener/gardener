@@ -24,6 +24,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/extensions"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -186,7 +187,7 @@ func makeDescription(stats *flow.Stats) string {
 }
 
 func (a *actuator) waitUntilBackupBucketReconciled(ctx context.Context) error {
-	if err := common.WaitUntilObjectReadyWithHealthFunction(
+	if err := extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		a.gardenClient.DirectClient(),
 		a.logger,

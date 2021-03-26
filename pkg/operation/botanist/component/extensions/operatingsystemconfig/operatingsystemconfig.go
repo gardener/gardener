@@ -24,11 +24,11 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -194,7 +194,7 @@ func (o *operatingSystemConfig) Deploy(ctx context.Context) error {
 func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *v1alpha1.ShootState) error {
 	fns := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
 		d := o.newDeployer(worker, purpose)
-		return common.RestoreExtensionWithDeployFunction(ctx, o.client, shootState, extensionsv1alpha1.OperatingSystemConfigResource, o.values.Namespace, d.deploy)
+		return extensions.RestoreExtensionWithDeployFunction(ctx, o.client, shootState, extensionsv1alpha1.OperatingSystemConfigResource, o.values.Namespace, d.deploy)
 	})
 
 	return flow.Parallel(fns...)(ctx)
@@ -205,7 +205,7 @@ func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *v1alpha
 // method.
 func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 	fns := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
-		return common.WaitUntilExtensionCRReady(
+		return extensions.WaitUntilExtensionCRReady(
 			ctx,
 			o.client,
 			o.logger,
@@ -258,7 +258,7 @@ func (o *operatingSystemConfig) Wait(ctx context.Context) error {
 
 // Migrate migrates the OperatingSystemConfig custom resources.
 func (o *operatingSystemConfig) Migrate(ctx context.Context) error {
-	return common.MigrateExtensionCRs(
+	return extensions.MigrateExtensionCRs(
 		ctx,
 		o.client,
 		&extensionsv1alpha1.OperatingSystemConfigList{},
@@ -269,7 +269,7 @@ func (o *operatingSystemConfig) Migrate(ctx context.Context) error {
 
 // WaitMigrate waits until the OperatingSystemConfig custom resource have been successfully migrated.
 func (o *operatingSystemConfig) WaitMigrate(ctx context.Context) error {
-	return common.WaitUntilExtensionCRsMigrated(
+	return extensions.WaitUntilExtensionCRsMigrated(
 		ctx,
 		o.client,
 		&extensionsv1alpha1.OperatingSystemConfigList{},
@@ -286,7 +286,7 @@ func (o *operatingSystemConfig) Destroy(ctx context.Context) error {
 }
 
 func (o *operatingSystemConfig) deleteOperatingSystemConfigResources(ctx context.Context, wantedOSCNames sets.String) error {
-	return common.DeleteExtensionCRs(
+	return extensions.DeleteExtensionCRs(
 		ctx,
 		o.client,
 		&extensionsv1alpha1.OperatingSystemConfigList{},
@@ -300,7 +300,7 @@ func (o *operatingSystemConfig) deleteOperatingSystemConfigResources(ctx context
 
 // WaitCleanup waits until the OperatingSystemConfig CRD is deleted
 func (o *operatingSystemConfig) WaitCleanup(ctx context.Context) error {
-	return common.WaitUntilExtensionCRsDeleted(
+	return extensions.WaitUntilExtensionCRsDeleted(
 		ctx,
 		o.client,
 		o.logger,

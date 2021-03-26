@@ -27,7 +27,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
@@ -389,7 +389,7 @@ func waitForBackupBucketToBeReady(ctx context.Context, c client.Client, logger *
 		healthFuncs = append(healthFuncs, health.ExtensionOperationHasBeenUpdatedSince(minOperationUpdateTime[0]))
 	}
 
-	return common.WaitUntilObjectReadyWithHealthFunction(
+	return extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		c,
 		logger,
@@ -406,7 +406,7 @@ func waitForBackupBucketToBeReady(ctx context.Context, c client.Client, logger *
 }
 
 func waitForBackupBucketToBeDeleted(ctx context.Context, c client.Client, logger *logrus.Entry, backupBucket *extensionsv1alpha1.BackupBucket) error {
-	return common.WaitUntilExtensionCRDeleted(
+	return extensions.WaitUntilExtensionCRDeleted(
 		ctx,
 		c,
 		logger,

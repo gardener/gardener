@@ -21,8 +21,8 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 
 	"github.com/sirupsen/logrus"
@@ -117,7 +117,7 @@ func (e *extension) Destroy(ctx context.Context) error {
 // Wait waits until the Extension resources are ready.
 func (e *extension) Wait(ctx context.Context) error {
 	fns := e.forEach(func(ctx context.Context, extension extensionsv1alpha1.Extension, timeout time.Duration) error {
-		return common.WaitUntilExtensionCRReady(
+		return extensions.WaitUntilExtensionCRReady(
 			ctx,
 			e.client,
 			e.logger,
@@ -137,7 +137,7 @@ func (e *extension) Wait(ctx context.Context) error {
 
 // WaitCleanup waits until the Extension resources are cleaned up.
 func (e *extension) WaitCleanup(ctx context.Context) error {
-	return common.WaitUntilExtensionCRsDeleted(
+	return extensions.WaitUntilExtensionCRsDeleted(
 		ctx,
 		e.client,
 		e.logger,
@@ -156,7 +156,7 @@ func (e *extension) Restore(ctx context.Context, shootState *gardencorev1alpha1.
 	fns := e.forEach(func(ctx context.Context, extension extensionsv1alpha1.Extension, _ time.Duration) error {
 		deployer := &deployer{e.client, extension}
 
-		return common.RestoreExtensionWithDeployFunction(
+		return extensions.RestoreExtensionWithDeployFunction(
 			ctx,
 			e.client,
 			shootState,
@@ -171,7 +171,7 @@ func (e *extension) Restore(ctx context.Context, shootState *gardencorev1alpha1.
 
 // Migrate migrates the Extension resources.
 func (e *extension) Migrate(ctx context.Context) error {
-	return common.MigrateExtensionCRs(
+	return extensions.MigrateExtensionCRs(
 		ctx,
 		e.client,
 		&extensionsv1alpha1.ExtensionList{},
@@ -182,7 +182,7 @@ func (e *extension) Migrate(ctx context.Context) error {
 
 // WaitMigrate waits until the Extension resources are migrated successfully.
 func (e *extension) WaitMigrate(ctx context.Context) error {
-	return common.WaitUntilExtensionCRsMigrated(
+	return extensions.WaitUntilExtensionCRsMigrated(
 		ctx,
 		e.client,
 		&extensionsv1alpha1.ExtensionList{},
@@ -203,7 +203,7 @@ func (e *extension) DeleteStaleResources(ctx context.Context) error {
 }
 
 func (e *extension) deleteExtensionResources(ctx context.Context, wantedExtensionTypes sets.String) error {
-	return common.DeleteExtensionCRs(
+	return extensions.DeleteExtensionCRs(
 		ctx,
 		e.client,
 		&extensionsv1alpha1.ExtensionList{},

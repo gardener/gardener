@@ -23,8 +23,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 
 	"github.com/sirupsen/logrus"
@@ -108,7 +108,7 @@ func (c *containerRuntime) Destroy(ctx context.Context) error {
 // Wait waits until the ContainerRuntime resources are ready.
 func (c *containerRuntime) Wait(ctx context.Context) error {
 	fns := c.forEachContainerRuntime(func(ctx context.Context, workerName string, cr gardencorev1beta1.ContainerRuntime) error {
-		return common.WaitUntilExtensionCRReady(
+		return extensions.WaitUntilExtensionCRReady(
 			ctx,
 			c.client,
 			c.logger,
@@ -128,7 +128,7 @@ func (c *containerRuntime) Wait(ctx context.Context) error {
 
 // WaitCleanup waits until the ContainerRuntime resources are cleaned up.
 func (c *containerRuntime) WaitCleanup(ctx context.Context) error {
-	return common.WaitUntilExtensionCRsDeleted(
+	return extensions.WaitUntilExtensionCRsDeleted(
 		ctx,
 		c.client,
 		c.logger,
@@ -146,7 +146,7 @@ func (c *containerRuntime) WaitCleanup(ctx context.Context) error {
 func (c *containerRuntime) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
 	fns := c.forEachContainerRuntime(func(ctx context.Context, workerName string, cr gardencorev1beta1.ContainerRuntime) error {
 		rd := resourceDeployer{c.values.Namespace, workerName, cr, c.client}
-		return common.RestoreExtensionWithDeployFunction(ctx, c.client, shootState, extensionsv1alpha1.ContainerRuntimeResource, c.values.Namespace, rd.deploy)
+		return extensions.RestoreExtensionWithDeployFunction(ctx, c.client, shootState, extensionsv1alpha1.ContainerRuntimeResource, c.values.Namespace, rd.deploy)
 	})
 
 	return flow.Parallel(fns...)(ctx)
@@ -154,7 +154,7 @@ func (c *containerRuntime) Restore(ctx context.Context, shootState *gardencorev1
 
 // Migrate migrates the ContainerRuntime resources.
 func (c *containerRuntime) Migrate(ctx context.Context) error {
-	return common.MigrateExtensionCRs(
+	return extensions.MigrateExtensionCRs(
 		ctx,
 		c.client,
 		&extensionsv1alpha1.ContainerRuntimeList{},
@@ -165,7 +165,7 @@ func (c *containerRuntime) Migrate(ctx context.Context) error {
 
 // WaitMigrate waits until the ContainerRuntime resources are migrated successfully.
 func (c *containerRuntime) WaitMigrate(ctx context.Context) error {
-	return common.WaitUntilExtensionCRsMigrated(
+	return extensions.WaitUntilExtensionCRsMigrated(
 		ctx,
 		c.client,
 		&extensionsv1alpha1.ContainerRuntimeList{},
@@ -191,7 +191,7 @@ func (c *containerRuntime) DeleteStaleResources(ctx context.Context) error {
 }
 
 func (c *containerRuntime) deleteContainerRuntimeResources(ctx context.Context, wantedContainerRuntimeTypes sets.String) error {
-	return common.DeleteExtensionCRs(
+	return extensions.DeleteExtensionCRs(
 		ctx,
 		c.client,
 		&extensionsv1alpha1.ContainerRuntimeList{},

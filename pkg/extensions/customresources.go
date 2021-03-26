@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+package extensions
 
 import (
 	"context"
@@ -27,6 +27,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -40,6 +41,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// TimeNow returns the current time. Exposed for testing.
+var TimeNow = time.Now
 
 // WaitUntilExtensionCRReady waits until the given extension resource has become ready.
 func WaitUntilExtensionCRReady(
@@ -144,7 +148,7 @@ func DeleteExtensionCR(
 	obj.SetNamespace(namespace)
 	obj.SetName(name)
 
-	if err := ConfirmDeletion(ctx, c, obj); err != nil {
+	if err := common.ConfirmDeletion(ctx, c, obj); err != nil {
 		return err
 	}
 

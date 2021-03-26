@@ -24,6 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
@@ -333,7 +334,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					&DownloaderConfigFn, downloaderConfigFn,
 					&OriginalConfigFn, originalConfigFn,
 					&TimeNow, mockNow.Do,
-					&common.TimeNow, mockNow.Do,
+					&extensions.TimeNow, mockNow.Do,
 				)()
 
 				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
@@ -485,7 +486,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			})
 
 			It("should return error if not deleted successfully", func() {
-				defer test.WithVars(&common.TimeNow, mockNow.Do)()
+				defer test.WithVars(&extensions.TimeNow, mockNow.Do)()
 				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				expectedOSC := extensionsv1alpha1.OperatingSystemConfig{

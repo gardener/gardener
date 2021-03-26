@@ -29,8 +29,8 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 const (
@@ -157,7 +157,7 @@ func (c *controlPlane) deploy(ctx context.Context, operation string) (extensions
 
 // Restore uses the seed client and the ShootState to create the ControlPlane resources and restore their state.
 func (c *controlPlane) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
-	return common.RestoreExtensionWithDeployFunction(
+	return extensions.RestoreExtensionWithDeployFunction(
 		ctx,
 		c.client,
 		shootState,
@@ -169,7 +169,7 @@ func (c *controlPlane) Restore(ctx context.Context, shootState *gardencorev1alph
 
 // Migrate migrates the ControlPlane resources.
 func (c *controlPlane) Migrate(ctx context.Context) error {
-	return common.MigrateExtensionCRs(
+	return extensions.MigrateExtensionCRs(
 		ctx,
 		c.client,
 		&extensionsv1alpha1.ControlPlaneList{},
@@ -180,7 +180,7 @@ func (c *controlPlane) Migrate(ctx context.Context) error {
 
 // Destroy deletes the ControlPlane resource.
 func (c *controlPlane) Destroy(ctx context.Context) error {
-	return common.DeleteExtensionCR(
+	return extensions.DeleteExtensionCR(
 		ctx,
 		c.client,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
@@ -191,7 +191,7 @@ func (c *controlPlane) Destroy(ctx context.Context) error {
 
 // Wait waits until the ControlPlane resource is ready.
 func (c *controlPlane) Wait(ctx context.Context) error {
-	return common.WaitUntilExtensionCRReady(
+	return extensions.WaitUntilExtensionCRReady(
 		ctx,
 		c.client,
 		c.logger,
@@ -216,7 +216,7 @@ func (c *controlPlane) Wait(ctx context.Context) error {
 
 // WaitMigrate waits until the ControlPlane resources are migrated successfully.
 func (c *controlPlane) WaitMigrate(ctx context.Context) error {
-	return common.WaitUntilExtensionCRMigrated(
+	return extensions.WaitUntilExtensionCRMigrated(
 		ctx,
 		c.client,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
@@ -229,7 +229,7 @@ func (c *controlPlane) WaitMigrate(ctx context.Context) error {
 
 // WaitCleanup waits until the ControlPlane resource is deleted.
 func (c *controlPlane) WaitCleanup(ctx context.Context) error {
-	return common.WaitUntilExtensionCRDeleted(
+	return extensions.WaitUntilExtensionCRDeleted(
 		ctx,
 		c.client,
 		c.logger,

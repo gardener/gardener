@@ -23,6 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
@@ -178,7 +179,7 @@ var _ = Describe("Extension", func() {
 		})
 
 		It("should return error if not deleted successfully", func() {
-			defer test.WithVars(&common.TimeNow, mockNow.Do)()
+			defer test.WithVars(&extensions.TimeNow, mockNow.Do)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			expectedExtension := extensionsv1alpha1.Extension{
@@ -254,7 +255,7 @@ var _ = Describe("Extension", func() {
 		It("should properly restore the extensions state if it exists", func() {
 			defer test.WithVars(
 				&extension.TimeNow, mockNow.Do,
-				&common.TimeNow, mockNow.Do,
+				&extensions.TimeNow, mockNow.Do,
 			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 

@@ -22,11 +22,11 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
-	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -227,7 +227,7 @@ var _ = Describe("ControlPlane", func() {
 		})
 
 		It("should return error if not deleted successfully (purpose != exposure)", func() {
-			defer test.WithVars(&common.TimeNow, mockNow.Do)()
+			defer test.WithVars(&extensions.TimeNow, mockNow.Do)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			fakeErr := fmt.Errorf("some random error")
@@ -247,7 +247,7 @@ var _ = Describe("ControlPlane", func() {
 		})
 
 		It("should return error if not deleted successfully (purpose == exposure)", func() {
-			defer test.WithVars(&common.TimeNow, mockNow.Do)()
+			defer test.WithVars(&extensions.TimeNow, mockNow.Do)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			values.Purpose = extensionsv1alpha1.Exposure
@@ -320,7 +320,7 @@ var _ = Describe("ControlPlane", func() {
 		It("should properly restore the controlplane state if it exists (purpose != exposure)", func() {
 			defer test.WithVars(
 				&controlplane.TimeNow, mockNow.Do,
-				&common.TimeNow, mockNow.Do,
+				&extensions.TimeNow, mockNow.Do,
 			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
@@ -346,7 +346,7 @@ var _ = Describe("ControlPlane", func() {
 		It("should properly restore the controlplane state if it exists (purpose == exposure)", func() {
 			defer test.WithVars(
 				&controlplane.TimeNow, mockNow.Do,
-				&common.TimeNow, mockNow.Do,
+				&extensions.TimeNow, mockNow.Do,
 			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 

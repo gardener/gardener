@@ -25,6 +25,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -217,7 +218,7 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 // waitUntilBackupBucketExtensionReconciled waits until BackupBucket Extension resource reconciled from seed.
 // It also copies the generatedSecret from seed to garden.
 func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context) error {
-	return common.WaitUntilExtensionCRReady(
+	return extensions.WaitUntilExtensionCRReady(
 		ctx,
 		a.seedClient.DirectClient(),
 		a.logger,
@@ -284,7 +285,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 
 // deleteBackupBucketExtension deletes BackupBucket extension resource in seed.
 func (a *actuator) deleteBackupBucketExtension(ctx context.Context) error {
-	return common.DeleteExtensionCR(
+	return extensions.DeleteExtensionCR(
 		ctx,
 		a.seedClient.DirectClient(),
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupBucket{} },
@@ -295,7 +296,7 @@ func (a *actuator) deleteBackupBucketExtension(ctx context.Context) error {
 
 // waitUntilBackupBucketExtensionDeleted waits until backup bucket extension resource is deleted in seed cluster.
 func (a *actuator) waitUntilBackupBucketExtensionDeleted(ctx context.Context) error {
-	return common.WaitUntilExtensionCRDeleted(
+	return extensions.WaitUntilExtensionCRDeleted(
 		ctx,
 		a.seedClient.DirectClient(),
 		a.logger,
