@@ -341,7 +341,7 @@ func (k *kubeControllerManager) emptyManagedResource() *resourcesv1alpha1.Manage
 }
 
 func (k *kubeControllerManager) emptyManagedResourceSecret() *corev1.Secret {
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretNameWithPrefix(managedResourceName), Namespace: k.namespace}}
+	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(managedResourceName, true), Namespace: k.namespace}}
 }
 
 func (k *kubeControllerManager) computeServerPort() int32 {

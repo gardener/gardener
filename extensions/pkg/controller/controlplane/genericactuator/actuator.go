@@ -313,7 +313,7 @@ func (a *actuator) reconcileControlPlane(
 		return false, err
 	}
 
-	if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, ControlPlaneShootChartResourceName, a.client, chartRenderer, a.controlPlaneShootChart, values, a.imageVector, metav1.NamespaceSystem, version, true, false); err != nil {
+	if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, ControlPlaneShootChartResourceName, false, a.client, chartRenderer, a.controlPlaneShootChart, values, a.imageVector, metav1.NamespaceSystem, version, true, false); err != nil {
 		return false, errors.Wrapf(err, "could not apply control plane shoot chart for controlplane '%s'", kutil.ObjectName(cp))
 	}
 
@@ -324,7 +324,7 @@ func (a *actuator) reconcileControlPlane(
 			return false, err
 		}
 
-		if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, ControlPlaneShootCRDsChartResourceName, a.client, chartRenderer, a.controlPlaneShootCRDsChart, values, a.imageVector, metav1.NamespaceSystem, version, true, false); err != nil {
+		if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, ControlPlaneShootCRDsChartResourceName, false, a.client, chartRenderer, a.controlPlaneShootCRDsChart, values, a.imageVector, metav1.NamespaceSystem, version, true, false); err != nil {
 			return false, errors.Wrapf(err, "could not apply control plane shoot CRDs chart for controlplane '%s'", kutil.ObjectName(cp))
 		}
 	}
@@ -335,7 +335,7 @@ func (a *actuator) reconcileControlPlane(
 		return false, err
 	}
 
-	if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, StorageClassesChartResourceName, a.client, chartRenderer, a.storageClassesChart, values, a.imageVector, metav1.NamespaceSystem, version, true, true); err != nil {
+	if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, StorageClassesChartResourceName, false, a.client, chartRenderer, a.storageClassesChart, values, a.imageVector, metav1.NamespaceSystem, version, true, true); err != nil {
 		return false, errors.Wrapf(err, "could not apply storage classes chart for controlplane '%s'", kutil.ObjectName(cp))
 	}
 

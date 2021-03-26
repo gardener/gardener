@@ -212,7 +212,7 @@ var _ = Describe("KubeControllerManager", func() {
 						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 						c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
-						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretNameWithPrefix(managedResourceName), Namespace: namespace}}).Return(fakeErr),
+						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(managedResourceName, true), Namespace: namespace}}).Return(fakeErr),
 					)
 
 					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
@@ -247,7 +247,7 @@ var _ = Describe("KubeControllerManager", func() {
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, managedresources.SecretNameWithPrefix(managedResourceName)), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, managedresources.SecretName(managedResourceName, true)), gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
 					)
 
@@ -282,7 +282,7 @@ var _ = Describe("KubeControllerManager", func() {
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, managedresources.SecretNameWithPrefix(managedResourceName)), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, managedresources.SecretName(managedResourceName, true)), gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
@@ -515,7 +515,7 @@ subjects:
 
 				managedResourceSecret = &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      managedresources.SecretNameWithPrefix(managedResourceName),
+						Name:      managedresources.SecretName(managedResourceName, true),
 						Namespace: namespace,
 					},
 					Type: corev1.SecretTypeOpaque,
@@ -532,7 +532,7 @@ subjects:
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						SecretRefs: []corev1.LocalObjectReference{
-							{Name: managedresources.SecretNameWithPrefix(managedResourceName)},
+							{Name: managedresources.SecretName(managedResourceName, true)},
 						},
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 						KeepObjects:  pointer.BoolPtr(false),
@@ -603,7 +603,7 @@ subjects:
 
 					if is112Version || is113Version {
 						gomock.InOrder(
-							c.EXPECT().Get(ctx, kutil.Key(namespace, managedresources.SecretNameWithPrefix(managedResourceName)), gomock.AssignableToTypeOf(&corev1.Secret{})),
+							c.EXPECT().Get(ctx, kutil.Key(namespace, managedresources.SecretName(managedResourceName, true)), gomock.AssignableToTypeOf(&corev1.Secret{})),
 							c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 								Expect(obj).To(DeepEqual(managedResourceSecret))
 							}),
@@ -615,7 +615,7 @@ subjects:
 					} else {
 						gomock.InOrder(
 							c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
-							c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretNameWithPrefix(managedResourceName), Namespace: namespace}}),
+							c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(managedResourceName, true), Namespace: namespace}}),
 						)
 					}
 

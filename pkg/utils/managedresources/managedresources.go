@@ -41,18 +41,13 @@ const (
 	SecretPrefix = "managedresource-"
 )
 
-// SecretNameWithPrefix returns the name of a corev1.Secret for the given name of a resourcesv1alpha1.ManagedResource with the
-// prefix.
-func SecretNameWithPrefix(managedResourceName string) string {
-	return SecretPrefix + managedResourceName
-}
-
-func secretName(name string, withPrefix bool) string {
-	out := name
+// SecretName returns the name of a corev1.Secret for the given name of a resourcesv1alpha1.ManagedResource. If
+// <withPrefix> is set then the name will be prefixed with 'managedresource-'.
+func SecretName(name string, withPrefix bool) string {
 	if withPrefix {
-		out = SecretNameWithPrefix(name)
+		return SecretPrefix + name
 	}
-	return out
+	return name
 }
 
 // New initiates a new ManagedResource object which can be reconciled.
@@ -69,7 +64,7 @@ func New(client client.Client, namespace, name, class string, keepObjects bool, 
 
 // NewSecret initiates a new Secret object which can be reconciled.
 func NewSecret(client client.Client, namespace, name string, data map[string][]byte, secretNameWithPrefix bool) (string, *manager.Secret) {
-	secretName := secretName(name, secretNameWithPrefix)
+	secretName := SecretName(name, secretNameWithPrefix)
 	return secretName, manager.
 		NewSecret(client).
 		WithNamespacedName(namespace, secretName).
@@ -77,7 +72,7 @@ func NewSecret(client client.Client, namespace, name string, data map[string][]b
 }
 
 // CreateFromUnstructured creates a managed resource and its secret with the given name, class, and objects in the given namespace.
-func CreateFromUnstructured(ctx context.Context, client client.Client, namespace, name, class string, objs []*unstructured.Unstructured, keepObjects bool, injectedLabels map[string]string) error {
+func CreateFromUnstructured(ctx context.Context, client client.Client, namespace, name string, secretNameWithPrefix bool, class string, objs []*unstructured.Unstructured, keepObjects bool, injectedLabels map[string]string) error {
 	var data []byte
 	for _, obj := range objs {
 		bytes, err := obj.MarshalJSON()
@@ -87,18 +82,19 @@ func CreateFromUnstructured(ctx context.Context, client client.Client, namespace
 		data = append(data, []byte("\n---\n")...)
 		data = append(data, bytes...)
 	}
-	return Create(ctx, client, namespace, name, class, name, data, keepObjects, injectedLabels, false)
+	return Create(ctx, client, namespace, name, secretNameWithPrefix, class, name, data, keepObjects, injectedLabels, false)
 }
 
 // Create creates a managed resource and its secret with the given name, class, key, and data in the given namespace.
-func Create(ctx context.Context, client client.Client, namespace, name, class, key string, data []byte, keepObjects bool, injectedLabels map[string]string, forceOverwriteAnnotations bool) error {
+func Create(ctx context.Context, client client.Client, namespace, name string, secretNameWithPrefix bool, class, key string, data []byte, keepObjects bool, injectedLabels map[string]string, forceOverwriteAnnotations bool) error {
 	if key == "" {
 		key = name
 	}
 
 	// Create or update secret containing the rendered rbac manifests
-	if err := NewSecret(client, namespace, name, map[string][]byte{key: data}).Reconcile(ctx); err != nil {
-		return errors.Wrapf(err, "could not create or update secret '%s/%s' of managed resources", namespace, name)
+	secretName, secret := NewSecret(client, namespace, name, map[string][]byte{key: data}, secretNameWithPrefix)
+	if err := secret.Reconcile(ctx); err != nil {
+		return errors.Wrapf(err, "could not create or update secret '%s/%s' of managed resources", namespace, secretName)
 	}
 
 	if err := New(client, namespace, name, class, keepObjects, nil, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName).Reconcile(ctx); err != nil {
@@ -110,7 +106,7 @@ func Create(ctx context.Context, client client.Client, namespace, name, class, k
 
 // Delete deletes the managed resource and its secret with the given name in the given namespace.
 func Delete(ctx context.Context, client client.Client, namespace string, name string, secretNameWithPrefix bool) error {
-	secretName := secretName(name, secretNameWithPrefix)
+	secretName := SecretName(name, secretNameWithPrefix)
 
 	if err := manager.
 		NewManagedResource(client).
@@ -186,7 +182,7 @@ func UpdateKeepObjects(ctx context.Context, c client.Client, namespace, name str
 
 // RenderChartAndCreate renders a chart and creates a ManagedResource for the gardener-resource-manager
 // out of the results.
-func RenderChartAndCreate(ctx context.Context, namespace string, name string, client client.Client, chartRenderer chartrenderer.Interface, chart chart.Interface, values map[string]interface{}, imageVector imagevector.ImageVector, chartNamespace string, version string, withNoCleanupLabel bool, forceOverwriteAnnotations bool) error {
+func RenderChartAndCreate(ctx context.Context, namespace string, name string, secretNameWithPrefix bool, client client.Client, chartRenderer chartrenderer.Interface, chart chart.Interface, values map[string]interface{}, imageVector imagevector.ImageVector, chartNamespace string, version string, withNoCleanupLabel bool, forceOverwriteAnnotations bool) error {
 	chartName, data, err := chart.Render(chartRenderer, chartNamespace, imageVector, version, version, values)
 	if err != nil {
 		return errors.Wrapf(err, "could not render chart")
@@ -198,5 +194,5 @@ func RenderChartAndCreate(ctx context.Context, namespace string, name string, cl
 		injectedLabels = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
 	}
 
-	return Create(ctx, client, namespace, name, "", chartName, data, false, injectedLabels, forceOverwriteAnnotations)
+	return Create(ctx, client, namespace, name, secretNameWithPrefix, "", chartName, data, false, injectedLabels, forceOverwriteAnnotations)
 }

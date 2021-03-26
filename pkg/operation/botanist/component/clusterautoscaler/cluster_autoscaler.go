@@ -334,7 +334,7 @@ func (c *clusterAutoscaler) emptyManagedResource() *resourcesv1alpha1.ManagedRes
 }
 
 func (c *clusterAutoscaler) emptyManagedResourceSecret() *corev1.Secret {
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretNameWithPrefix(managedResourceTargetName), Namespace: c.namespace}}
+	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(managedResourceTargetName, true), Namespace: c.namespace}}
 }
 
 func (c *clusterAutoscaler) computeCommand() []string {
