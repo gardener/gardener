@@ -33,7 +33,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -218,31 +217,6 @@ var _ = Describe("common", func() {
 		Entry("no special characters", "foo", "bar", "baz"),
 		Entry("with special characters", "foo", `C*ko4P++$"x`, `"$++*ab*$c4k`),
 		Entry("with special characters", "foo", "P+*4", `P*$8uOkv6+4`),
-	)
-
-	DescribeTable("#GetDomainInfoFromAnnotations",
-		func(annotations map[string]string, expectedProvider, expectedDomain, expectedIncludeZones, expectedExcludeZones, expectedErr gomegatypes.GomegaMatcher) {
-			provider, domain, includeZones, excludeZones, err := GetDomainInfoFromAnnotations(annotations)
-			Expect(provider).To(expectedProvider)
-			Expect(domain).To(expectedDomain)
-			Expect(includeZones).To(expectedIncludeZones)
-			Expect(excludeZones).To(expectedExcludeZones)
-			Expect(err).To(expectedErr)
-		},
-
-		Entry("no annotations", nil, BeEmpty(), BeEmpty(), BeEmpty(), BeEmpty(), HaveOccurred()),
-		Entry("no domain", map[string]string{
-			DNSProvider: "bar",
-		}, BeEmpty(), BeEmpty(), BeEmpty(), BeEmpty(), HaveOccurred()),
-		Entry("no provider", map[string]string{
-			DNSProvider: "bar",
-		}, BeEmpty(), BeEmpty(), BeEmpty(), BeEmpty(), HaveOccurred()),
-		Entry("all present", map[string]string{
-			DNSProvider:     "bar",
-			DNSDomain:       "foo",
-			DNSIncludeZones: "a,b,c",
-			DNSExcludeZones: "d,e,f",
-		}, Equal("bar"), Equal("foo"), Equal([]string{"a", "b", "c"}), Equal([]string{"d", "e", "f"}), Not(HaveOccurred())),
 	)
 
 	Describe("#CheckIfDeletionIsConfirmed", func() {

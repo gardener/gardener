@@ -140,9 +140,3 @@ func EffectiveShootMaintenanceTimeWindow(shoot *v1beta1.Shoot) *utils.Maintenanc
 func GardenEtcdEncryptionSecretName(shootName string) string {
 	return fmt.Sprintf("%s.%s", shootName, common.EtcdEncryptionSecretName)
 }
-
-// GetAPIServerDomain returns the fully qualified domain name of for the api-server for the Shoot cluster. The
-// end result is 'api.<domain>'.
-func GetAPIServerDomain(domain string) string {
-	return fmt.Sprintf("%s.%s", common.APIServerPrefix, domain)
-}

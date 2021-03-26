@@ -40,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -93,7 +94,7 @@ var _ = Describe("Shoot Care Control", func() {
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "internal-domain-secret",
-						Annotations: map[string]string{common.DNSProvider: "fooDNS", common.DNSDomain: "foo.bar"},
+						Annotations: map[string]string{gutil.DNSProvider: "fooDNS", gutil.DNSDomain: "foo.bar"},
 						Labels:      map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
 					},
 				},

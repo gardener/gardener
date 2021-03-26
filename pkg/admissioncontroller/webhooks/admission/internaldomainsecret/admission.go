@@ -31,8 +31,7 @@ import (
 	gardercore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/common"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -78,7 +77,7 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 	if request.SubResource != "" {
 		return acadmission.Allowed("subresources on Secrets are not handled")
 	}
-	seedName := gardenerutils.ComputeSeedName(request.Namespace)
+	seedName := gutil.ComputeSeedName(request.Namespace)
 	if request.Namespace != v1beta1constants.GardenNamespace && seedName == "" {
 		return acadmission.Allowed("only secrets from the garden and seed namespaces are handled")
 	}
@@ -104,7 +103,7 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 		if err := h.decoder.Decode(request, secret); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
-		if _, _, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations); err != nil {
+		if _, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations); err != nil {
 			return admission.Errored(http.StatusUnprocessableEntity, err)
 		}
 
@@ -119,11 +118,11 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
-		_, oldDomain, _, _, err := common.GetDomainInfoFromAnnotations(oldSecret.Annotations)
+		_, oldDomain, _, _, err := gutil.GetDomainInfoFromAnnotations(oldSecret.Annotations)
 		if err != nil {
 			return admission.Errored(http.StatusUnprocessableEntity, err)
 		}
-		_, newDomain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
+		_, newDomain, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 		if err != nil {
 			return admission.Errored(http.StatusUnprocessableEntity, err)
 		}

@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/version"
 
@@ -139,7 +140,7 @@ func GetInternalDomain(secrets map[string]*corev1.Secret) (*Domain, error) {
 }
 
 func constructDomainFromSecret(secret *corev1.Secret) (*Domain, error) {
-	provider, domain, includeZones, excludeZones, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
+	provider, domain, includeZones, excludeZones, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +224,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role default-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleDefaultDomain {
-			_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
+			_, domain, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				logger.Logger.Warnf("error getting information out of default domain secret %s: %+v", secret.Name, err)
 				continue
@@ -236,7 +237,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 		// Retrieving internal domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role internal-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleInternalDomain {
-			_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
+			_, domain, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				logger.Logger.Warnf("error getting information out of internal domain secret %s: %+v", secret.Name, err)
 				continue
