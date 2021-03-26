@@ -36,8 +36,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CreateManagedResourceFromUnstructured creates a managed resource and its secret with the given name, class, and objects in the given namespace.
-func CreateManagedResourceFromUnstructured(ctx context.Context, client client.Client, namespace, name, class string, objs []*unstructured.Unstructured, keepObjects bool, injectedLabels map[string]string) error {
+// CreateFromUnstructured creates a managed resource and its secret with the given name, class, and objects in the given namespace.
+func CreateFromUnstructured(ctx context.Context, client client.Client, namespace, name, class string, objs []*unstructured.Unstructured, keepObjects bool, injectedLabels map[string]string) error {
 	var data []byte
 	for _, obj := range objs {
 		bytes, err := obj.MarshalJSON()
@@ -47,11 +47,11 @@ func CreateManagedResourceFromUnstructured(ctx context.Context, client client.Cl
 		data = append(data, []byte("\n---\n")...)
 		data = append(data, bytes...)
 	}
-	return CreateManagedResource(ctx, client, namespace, name, class, name, data, keepObjects, injectedLabels, false)
+	return Create(ctx, client, namespace, name, class, name, data, keepObjects, injectedLabels, false)
 }
 
-// CreateManagedResource creates a managed resource and its secret with the given name, class, key, and data in the given namespace.
-func CreateManagedResource(ctx context.Context, client client.Client, namespace, name, class, key string, data []byte, keepObjects bool, injectedLabels map[string]string, forceOverwriteAnnotations bool) error {
+// Create creates a managed resource and its secret with the given name, class, key, and data in the given namespace.
+func Create(ctx context.Context, client client.Client, namespace, name, class, key string, data []byte, keepObjects bool, injectedLabels map[string]string, forceOverwriteAnnotations bool) error {
 	if key == "" {
 		key = name
 	}
@@ -78,8 +78,8 @@ func CreateManagedResource(ctx context.Context, client client.Client, namespace,
 	return nil
 }
 
-// DeleteManagedResource deletes the managed resource and its secret with the given name in the given namespace.
-func DeleteManagedResource(ctx context.Context, client client.Client, namespace string, name string) error {
+// Delete deletes the managed resource and its secret with the given name in the given namespace.
+func Delete(ctx context.Context, client client.Client, namespace string, name string) error {
 	if err := manager.
 		NewManagedResource(client).
 		WithNamespacedName(namespace, name).
@@ -100,8 +100,8 @@ func DeleteManagedResource(ctx context.Context, client client.Client, namespace 
 // IntervalWait is the interval when waiting for managed resources.
 var IntervalWait = 2 * time.Second
 
-// WaitUntilManagedResourceHealthy waits until the given managed resource is healthy.
-func WaitUntilManagedResourceHealthy(ctx context.Context, client client.Client, namespace, name string) error {
+// WaitUntilHealthy waits until the given managed resource is healthy.
+func WaitUntilHealthy(ctx context.Context, client client.Client, namespace, name string) error {
 	obj := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -122,8 +122,8 @@ func WaitUntilManagedResourceHealthy(ctx context.Context, client client.Client, 
 	})
 }
 
-// WaitUntilManagedResourceDeleted waits until the given managed resource is deleted.
-func WaitUntilManagedResourceDeleted(ctx context.Context, client client.Client, namespace, name string) error {
+// WaitUntilDeleted waits until the given managed resource is deleted.
+func WaitUntilDeleted(ctx context.Context, client client.Client, namespace, name string) error {
 	mr := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -133,8 +133,8 @@ func WaitUntilManagedResourceDeleted(ctx context.Context, client client.Client, 
 	return kutil.WaitUntilResourceDeleted(ctx, client, mr, IntervalWait)
 }
 
-// KeepManagedResourceObjects updates the keepObjects field of the managed resource with the given name in the given namespace.
-func KeepManagedResourceObjects(ctx context.Context, c client.Client, namespace, name string, keepObjects bool) error {
+// UpdateKeepObjects updates the keepObjects field of the managed resource with the given name in the given namespace.
+func UpdateKeepObjects(ctx context.Context, c client.Client, namespace, name string, keepObjects bool) error {
 	resource := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

@@ -71,13 +71,13 @@ var _ = Describe("managedresources", func() {
 		c = mockclient.NewMockClient(ctrl)
 	})
 
-	Describe("#KeepManagedResourceObjects", func() {
+	Describe("#UpdateKeepObjects", func() {
 		It("should update the managed resource if the value of keepObjects is different", func() {
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
 				DoAndReturn(clientGet(managedResource(false)))
 			c.EXPECT().Update(ctx, managedResource(true)).Return(nil)
 
-			err := KeepManagedResourceObjects(ctx, c, namespace, name, true)
+			err := UpdateKeepObjects(ctx, c, namespace, name, true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -85,7 +85,7 @@ var _ = Describe("managedresources", func() {
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
 				DoAndReturn(clientGet(managedResource(true)))
 
-			err := KeepManagedResourceObjects(ctx, c, namespace, name, true)
+			err := UpdateKeepObjects(ctx, c, namespace, name, true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -93,7 +93,7 @@ var _ = Describe("managedresources", func() {
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
 				Return(apierrors.NewNotFound(schema.GroupResource{}, name))
 
-			err := KeepManagedResourceObjects(ctx, c, namespace, name, true)
+			err := UpdateKeepObjects(ctx, c, namespace, name, true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -102,16 +102,16 @@ var _ = Describe("managedresources", func() {
 				DoAndReturn(clientGet(managedResource(false)))
 			c.EXPECT().Update(ctx, managedResource(true)).Return(errors.New("error"))
 
-			err := KeepManagedResourceObjects(ctx, c, namespace, name, true)
+			err := UpdateKeepObjects(ctx, c, namespace, name, true)
 			Expect(err).To(HaveOccurred())
 		})
 	})
 
-	Describe("#WaitUntilManagedResourceHealthy", func() {
+	Describe("#WaitUntilHealthy", func() {
 		It("should fail when the managed resource cannot be read", func() {
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr)
 
-			Expect(WaitUntilManagedResourceHealthy(ctx, c, namespace, name)).To(MatchError(fakeErr))
+			Expect(WaitUntilHealthy(ctx, c, namespace, name)).To(MatchError(fakeErr))
 		})
 
 		It("should retry when the managed resource is not healthy yet", func() {
@@ -203,7 +203,7 @@ var _ = Describe("managedresources", func() {
 				})),
 			)
 
-			Expect(WaitUntilManagedResourceHealthy(ctx, c, namespace, name)).To(Succeed())
+			Expect(WaitUntilHealthy(ctx, c, namespace, name)).To(Succeed())
 		})
 	})
 })

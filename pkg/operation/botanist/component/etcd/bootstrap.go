@@ -321,14 +321,14 @@ func (b *bootstrapper) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilManagedResourceHealthy(timeoutCtx, b.client, b.namespace, managedResourceControlName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, b.client, b.namespace, managedResourceControlName)
 }
 
 func (b *bootstrapper) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilManagedResourceDeleted(timeoutCtx, b.client, b.namespace, managedResourceControlName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, managedResourceControlName)
 }
 
 var (

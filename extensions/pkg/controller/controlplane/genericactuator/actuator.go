@@ -389,34 +389,34 @@ func (a *actuator) deleteControlPlane(
 	cluster *extensionscontroller.Cluster,
 ) error {
 	// Delete the managed resources
-	if err := managedresources.DeleteManagedResource(ctx, a.client, cp.Namespace, StorageClassesChartResourceName); err != nil {
+	if err := managedresources.Delete(ctx, a.client, cp.Namespace, StorageClassesChartResourceName); err != nil {
 		return errors.Wrapf(err, "could not delete managed resource containing storage classes chart for controlplane '%s'", kutil.ObjectName(cp))
 	}
 	if a.controlPlaneShootCRDsChart != nil {
-		if err := managedresources.DeleteManagedResource(ctx, a.client, cp.Namespace, ControlPlaneShootCRDsChartResourceName); err != nil {
+		if err := managedresources.Delete(ctx, a.client, cp.Namespace, ControlPlaneShootCRDsChartResourceName); err != nil {
 			return errors.Wrapf(err, "could not delete managed resource containing shoot CRDs chart for controlplane '%s'", kutil.ObjectName(cp))
 		}
 
 		// Wait for shoot CRDs chart ManagedResource deletion before deleting the shoot chart ManagedResource
 		timeoutCtx1, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
-		if err := managedresources.WaitUntilManagedResourceDeleted(timeoutCtx1, a.client, cp.Namespace, ControlPlaneShootCRDsChartResourceName); err != nil {
+		if err := managedresources.WaitUntilDeleted(timeoutCtx1, a.client, cp.Namespace, ControlPlaneShootCRDsChartResourceName); err != nil {
 			return errors.Wrapf(err, "error while waiting for managed resource containing shoot CRDs chart for controlplane '%s' to be deleted", kutil.ObjectName(cp))
 		}
 	}
-	if err := managedresources.DeleteManagedResource(ctx, a.client, cp.Namespace, ControlPlaneShootChartResourceName); err != nil {
+	if err := managedresources.Delete(ctx, a.client, cp.Namespace, ControlPlaneShootChartResourceName); err != nil {
 		return errors.Wrapf(err, "could not delete managed resource containing shoot chart for controlplane '%s'", kutil.ObjectName(cp))
 	}
 
 	timeoutCtx2, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
-	if err := managedresources.WaitUntilManagedResourceDeleted(timeoutCtx2, a.client, cp.Namespace, StorageClassesChartResourceName); err != nil {
+	if err := managedresources.WaitUntilDeleted(timeoutCtx2, a.client, cp.Namespace, StorageClassesChartResourceName); err != nil {
 		return errors.Wrapf(err, "error while waiting for managed resource containing storage classes chart for controlplane '%s' to be deleted", kutil.ObjectName(cp))
 	}
 
 	timeoutCtx3, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
-	if err := managedresources.WaitUntilManagedResourceDeleted(timeoutCtx3, a.client, cp.Namespace, ControlPlaneShootChartResourceName); err != nil {
+	if err := managedresources.WaitUntilDeleted(timeoutCtx3, a.client, cp.Namespace, ControlPlaneShootChartResourceName); err != nil {
 		return errors.Wrapf(err, "error while waiting for managed resource containing shoot chart for controlplane '%s' to be deleted", kutil.ObjectName(cp))
 	}
 
@@ -446,13 +446,13 @@ func (a *actuator) deleteControlPlane(
 			return errors.Wrapf(err, "could not delete network policy for shoot webhooks in namespace '%s'", cp.Namespace)
 		}
 
-		if err := managedresources.DeleteManagedResource(ctx, a.client, cp.Namespace, ShootWebhooksResourceName); err != nil {
+		if err := managedresources.Delete(ctx, a.client, cp.Namespace, ShootWebhooksResourceName); err != nil {
 			return errors.Wrapf(err, "could not delete managed resource containing shoot webhooks for controlplane '%s'", kutil.ObjectName(cp))
 		}
 
 		timeoutCtx4, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
-		if err := managedresources.WaitUntilManagedResourceDeleted(timeoutCtx4, a.client, cp.Namespace, ShootWebhooksResourceName); err != nil {
+		if err := managedresources.WaitUntilDeleted(timeoutCtx4, a.client, cp.Namespace, ShootWebhooksResourceName); err != nil {
 			return errors.Wrapf(err, "error while waiting for managed resource containing shoot webhooks for controlplane '%s' to be deleted", kutil.ObjectName(cp))
 		}
 	}
@@ -535,15 +535,15 @@ func (a *actuator) Migrate(
 	cluster *extensionscontroller.Cluster,
 ) error {
 	// Keep objects for shoot managed resources so that they are not deleted from the shoot during the migration
-	if err := managedresources.KeepManagedResourceObjects(ctx, a.client, cp.Namespace, ControlPlaneShootChartResourceName, true); err != nil {
+	if err := managedresources.UpdateKeepObjects(ctx, a.client, cp.Namespace, ControlPlaneShootChartResourceName, true); err != nil {
 		return errors.Wrapf(err, "could not keep objects of managed resource containing shoot chart for controlplane '%s'", kutil.ObjectName(cp))
 	}
 	if a.controlPlaneShootCRDsChart != nil {
-		if err := managedresources.KeepManagedResourceObjects(ctx, a.client, cp.Namespace, ControlPlaneShootCRDsChartResourceName, true); err != nil {
+		if err := managedresources.UpdateKeepObjects(ctx, a.client, cp.Namespace, ControlPlaneShootCRDsChartResourceName, true); err != nil {
 			return errors.Wrapf(err, "could not keep objects of managed resource containing shoot CRDs chart for controlplane '%s'", kutil.ObjectName(cp))
 		}
 	}
-	if err := managedresources.KeepManagedResourceObjects(ctx, a.client, cp.Namespace, StorageClassesChartResourceName, true); err != nil {
+	if err := managedresources.UpdateKeepObjects(ctx, a.client, cp.Namespace, StorageClassesChartResourceName, true); err != nil {
 		return errors.Wrapf(err, "could not keep objects of managed resource containing storage classes chart for controlplane '%s'", kutil.ObjectName(cp))
 	}
 

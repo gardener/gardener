@@ -437,7 +437,7 @@ func (k *kubeScheduler) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute*2)
 	defer cancel()
 
-	return managedresources.WaitUntilManagedResourceHealthy(timeoutCtx, k.client, k.namespace, "gardener-kube-scheduler")
+	return managedresources.WaitUntilHealthy(timeoutCtx, k.client, k.namespace, "gardener-kube-scheduler")
 }
 
 func (k *kubeScheduler) WaitCleanup(ctx context.Context) error {

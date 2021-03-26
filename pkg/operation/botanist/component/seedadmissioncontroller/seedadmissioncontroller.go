@@ -402,14 +402,14 @@ func (g *gardenerSeedAdmissionController) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilManagedResourceHealthy(timeoutCtx, g.client, g.namespace, managedResourceName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, g.client, g.namespace, managedResourceName)
 }
 
 func (g *gardenerSeedAdmissionController) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilManagedResourceDeleted(timeoutCtx, g.client, g.namespace, managedResourceName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, g.client, g.namespace, managedResourceName)
 }
 
 var versionConstraintK8sGreaterEqual115 *semver.Constraints

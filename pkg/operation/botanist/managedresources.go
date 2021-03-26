@@ -78,7 +78,7 @@ func (b *Botanist) KeepObjectsForAllManagedResources(ctx context.Context) error 
 	}
 
 	for _, resource := range managedResources.Items {
-		if err := managedresources.KeepManagedResourceObjects(ctx, b.K8sSeedClient.DirectClient(), resource.Namespace, resource.Name, true); err != nil {
+		if err := managedresources.UpdateKeepObjects(ctx, b.K8sSeedClient.DirectClient(), resource.Namespace, resource.Name, true); err != nil {
 			return err
 		}
 	}

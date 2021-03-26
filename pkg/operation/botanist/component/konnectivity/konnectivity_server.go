@@ -97,10 +97,10 @@ type ServerOptions struct {
 	// IstioIngressLabels are the istio-ingressgateway's labels.
 	IstioIngressLabels map[string]string
 	// Healthy probes that konnectivity-server is healthy.
-	// Defaults to managedresources.WaitUntilManagedResourceHealthy.
+	// Defaults to managedresources.WaitUntilHealthy.
 	Healthy Prober
 	// Removed probes that konnectivity-server is removed.
-	// Defaults to managedresources.WaitUntilManagedResourceDeleted.
+	// Defaults to managedresources.WaitUntilDeleted.
 	Removed Prober
 }
 
@@ -119,11 +119,11 @@ func NewServer(so *ServerOptions) (KonnectivityServer, error) {
 	}
 
 	if so.Healthy == nil {
-		so.Healthy = managedresources.WaitUntilManagedResourceHealthy
+		so.Healthy = managedresources.WaitUntilHealthy
 	}
 
 	if so.Removed == nil {
-		so.Removed = managedresources.WaitUntilManagedResourceDeleted
+		so.Removed = managedresources.WaitUntilDeleted
 	}
 
 	return &konnectivityServer{ServerOptions: so}, nil
