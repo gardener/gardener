@@ -326,7 +326,7 @@ func (k *kubeScheduler) emptyManagedResource() *resourcesv1alpha1.ManagedResourc
 }
 
 func (k *kubeScheduler) emptyManagedResourceSecret() *corev1.Secret {
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: common.ManagedResourceSecretName(managedResourceName), Namespace: k.namespace}}
+	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretNameWithPrefix(managedResourceName), Namespace: k.namespace}}
 }
 
 func (k *kubeScheduler) reconcileShootResources(ctx context.Context) error {

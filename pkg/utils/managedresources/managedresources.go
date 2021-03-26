@@ -36,6 +36,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	// SecretPrefix is the prefix that can be used for secrets referenced by managed resources.
+	SecretPrefix = "managedresource-"
+)
+
+// SecretNameWithPrefix returns the name of a corev1.Secret for the given name of a resourcesv1alpha1.ManagedResource with the
+// prefix.
+func SecretNameWithPrefix(managedResourceName string) string {
+	return SecretPrefix + managedResourceName
+}
+
 // CreateFromUnstructured creates a managed resource and its secret with the given name, class, and objects in the given namespace.
 func CreateFromUnstructured(ctx context.Context, client client.Client, namespace, name, class string, objs []*unstructured.Unstructured, keepObjects bool, injectedLabels map[string]string) error {
 	var data []byte

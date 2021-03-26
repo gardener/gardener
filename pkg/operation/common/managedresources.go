@@ -18,6 +18,7 @@ import (
 	"context"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	"github.com/gardener/gardener-resource-manager/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,9 +29,6 @@ const (
 	ManagedResourceLabelKeyOrigin = "origin"
 	// ManagedResourceLabelValueGardener is a value for a label on a managed resource with the value 'gardener'.
 	ManagedResourceLabelValueGardener = "gardener"
-
-	// ManagedResourceSecretPrefix is the prefix that is used for secrets referenced by managed resources.
-	ManagedResourceSecretPrefix = "managedresource-"
 )
 
 // DeployManagedResourceForShoot deploys a ManagedResource CR for the shoot's gardener-resource-manager.
@@ -75,7 +73,7 @@ func deleteManagedResource(ctx context.Context, c client.Client, name, namespace
 // NewManagedResourceSecret constructs a new Secret object containing manifests managed by the Gardener-Resource-Manager
 // which can be reconciled.
 func NewManagedResourceSecret(c client.Client, name, namespace string) (string, *manager.Secret) {
-	secretName := ManagedResourceSecretName(name)
+	secretName := managedresources.SecretNameWithPrefix(name)
 	return secretName, manager.NewSecret(c).WithNamespacedName(namespace, secretName)
 }
 
@@ -99,10 +97,4 @@ func NewManagedResourceForSeed(c client.Client, name, namespace string, keepObje
 		WithNamespacedName(namespace, name).
 		WithClass("seed").
 		KeepObjects(keepObjects)
-}
-
-// ManagedResourceSecretName returns the name of a corev1.Secret for the given name of a
-// resourcesv1alpha1.ManagedResource.
-func ManagedResourceSecretName(managedResourceName string) string {
-	return ManagedResourceSecretPrefix + managedResourceName
 }
