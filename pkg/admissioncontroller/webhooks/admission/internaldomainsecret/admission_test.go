@@ -52,10 +52,10 @@ var _ = Describe("handler", func() {
 		ctrl       *gomock.Controller
 		mockReader *mockclient.MockReader
 
-		statusCodeAllowed       int32 = http.StatusOK
-		statusCodeBadRequest    int32 = http.StatusBadRequest
-		statusCodeForbidden     int32 = http.StatusForbidden
-		statusCodeInternalError int32 = http.StatusInternalServerError
+		statusCodeAllowed             int32 = http.StatusOK
+		statusCodeUnprocessableEntity int32 = http.StatusUnprocessableEntity
+		statusCodeForbidden           int32 = http.StatusForbidden
+		statusCodeInternalError       int32 = http.StatusInternalServerError
 
 		namespaceName     = "foo"
 		shootMetadataList *metav1.PartialObjectMetadataList
@@ -141,7 +141,7 @@ var _ = Describe("handler", func() {
 
 			mockReader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain}, client.Limit(1))
 
-			test(admissionv1.Create, false, statusCodeBadRequest, "")
+			test(admissionv1.Create, false, statusCodeUnprocessableEntity, "")
 		})
 
 		It("should pass because no other internal domain secret exists", func() {
@@ -156,7 +156,7 @@ var _ = Describe("handler", func() {
 
 			mockReader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain}, client.Limit(1))
 
-			test(admissionv1.Create, true, statusCodeAllowed, "no internal domain secrets exist")
+			test(admissionv1.Create, true, statusCodeAllowed, "internal domain secret is valid")
 		})
 	})
 
@@ -175,7 +175,7 @@ var _ = Describe("handler", func() {
 			request.Object.Raw = encode(&corev1.Secret{})
 			request.OldObject.Raw = encode(&corev1.Secret{})
 
-			test(admissionv1.Update, false, statusCodeBadRequest, "")
+			test(admissionv1.Update, false, statusCodeUnprocessableEntity, "")
 		})
 
 		It("should fail because the old secret misses domain info", func() {
@@ -189,7 +189,7 @@ var _ = Describe("handler", func() {
 			})
 			request.OldObject.Raw = encode(&corev1.Secret{})
 
-			test(admissionv1.Update, false, statusCodeBadRequest, "")
+			test(admissionv1.Update, false, statusCodeUnprocessableEntity, "")
 		})
 
 		It("should forbid because the domain is changed but shoot listing failed", func() {

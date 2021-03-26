@@ -135,7 +135,7 @@ webhooks:
     service:
       namespace: garden
       name: gardener-admission-controller
-      path: /webhooks/admission/seedrestriction
+      path: /webhooks/admission/validate-internal-domain
     {{- end }}
     caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
   sideEffects: None

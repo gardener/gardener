@@ -90,10 +90,10 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 		if _, _, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations); err != nil {
-			return admission.Errored(http.StatusBadRequest, err)
+			return admission.Errored(http.StatusUnprocessableEntity, err)
 		}
 
-		return acadmission.Allowed("no internal domain secrets exist")
+		return acadmission.Allowed("internal domain secret is valid")
 
 	case admissionv1.Update:
 		secret, oldSecret := &corev1.Secret{}, &corev1.Secret{}
@@ -106,11 +106,11 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 
 		_, oldDomain, _, _, err := common.GetDomainInfoFromAnnotations(oldSecret.Annotations)
 		if err != nil {
-			return admission.Errored(http.StatusBadRequest, err)
+			return admission.Errored(http.StatusUnprocessableEntity, err)
 		}
 		_, newDomain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
 		if err != nil {
-			return admission.Errored(http.StatusBadRequest, err)
+			return admission.Errored(http.StatusUnprocessableEntity, err)
 		}
 
 		if oldDomain != newDomain {
