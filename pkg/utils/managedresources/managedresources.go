@@ -39,6 +39,10 @@ import (
 const (
 	// SecretPrefix is the prefix that can be used for secrets referenced by managed resources.
 	SecretPrefix = "managedresource-"
+	// LabelKeyOrigin is a key for a label on a managed resource with the value 'origin'.
+	LabelKeyOrigin = "origin"
+	// LabelValueGardener is a value for a label on a managed resource with the value 'gardener'.
+	LabelValueGardener = "gardener"
 )
 
 // SecretName returns the name of a corev1.Secret for the given name of a resourcesv1alpha1.ManagedResource. If
@@ -60,6 +64,21 @@ func New(client client.Client, namespace, name, class string, keepObjects bool, 
 		WithLabels(labels).
 		WithInjectedLabels(injectedLabels).
 		ForceOverwriteAnnotations(forceOverwriteAnnotations)
+}
+
+// NewForShoot constructs a new ManagedResource object for the shoot's Gardener-Resource-Manager.
+func NewForShoot(c client.Client, name, namespace string, keepObjects bool) *manager.ManagedResource {
+	var (
+		injectedLabels = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
+		labels         = map[string]string{LabelKeyOrigin: LabelValueGardener}
+	)
+
+	return New(c, namespace, name, "", keepObjects, labels, injectedLabels, false)
+}
+
+// NewForSeed constructs a new ManagedResource object for the seed's Gardener-Resource-Manager.
+func NewForSeed(c client.Client, name, namespace string, keepObjects bool) *manager.ManagedResource {
+	return New(c, namespace, name, v1beta1constants.SeedResourceManagerClass, keepObjects, nil, nil, false)
 }
 
 // NewSecret initiates a new Secret object which can be reconciled.
