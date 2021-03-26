@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -277,7 +278,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		// disallow any changes to the annotations of a shoot that references a seed which is already marked for deletion
 		// except changes to the deletion confirmation annotation
 		if !reflect.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
-			newConfirmation, newHasConfirmation := newMeta.Annotations[common.ConfirmationDeletion]
+			newConfirmation, newHasConfirmation := newMeta.Annotations[gutil.ConfirmationDeletion]
 
 			// copy the new confirmation value to the old annotations to see if
 			// anything else was changed other than the confirmation annotation
@@ -285,11 +286,11 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 				if oldMeta.Annotations == nil {
 					oldMeta.Annotations = make(map[string]string)
 				}
-				oldMeta.Annotations[common.ConfirmationDeletion] = newConfirmation
+				oldMeta.Annotations[gutil.ConfirmationDeletion] = newConfirmation
 			}
 
 			if !reflect.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
-				return admission.NewForbidden(a, fmt.Errorf("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion: only the '%s' annotation can be changed", shoot.Name, seed.Name, common.ConfirmationDeletion))
+				return admission.NewForbidden(a, fmt.Errorf("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion: only the '%s' annotation can be changed", shoot.Name, seed.Name, gutil.ConfirmationDeletion))
 			}
 		}
 

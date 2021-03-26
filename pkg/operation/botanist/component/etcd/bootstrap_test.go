@@ -22,7 +22,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -617,9 +617,9 @@ status: {}
 			})
 
 			It("should fail when the deletion confirmation fails", func() {
-				oldTimeNow := common.TimeNow
-				defer func() { common.TimeNow = oldTimeNow }()
-				common.TimeNow = timeNowFunc
+				oldTimeNow := gutil.TimeNow
+				defer func() { gutil.TimeNow = oldTimeNow }()
+				gutil.TimeNow = timeNowFunc
 
 				gomock.InOrder(
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
@@ -631,9 +631,9 @@ status: {}
 			})
 
 			It("should fail when the managed resource deletion fails", func() {
-				oldTimeNow := common.TimeNow
-				defer func() { common.TimeNow = oldTimeNow }()
-				common.TimeNow = timeNowFunc
+				oldTimeNow := gutil.TimeNow
+				defer func() { gutil.TimeNow = oldTimeNow }()
+				gutil.TimeNow = timeNowFunc
 
 				gomock.InOrder(
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
@@ -646,9 +646,9 @@ status: {}
 			})
 
 			It("should fail when the secret deletion fails", func() {
-				oldTimeNow := common.TimeNow
-				defer func() { common.TimeNow = oldTimeNow }()
-				common.TimeNow = timeNowFunc
+				oldTimeNow := gutil.TimeNow
+				defer func() { gutil.TimeNow = oldTimeNow }()
+				gutil.TimeNow = timeNowFunc
 
 				gomock.InOrder(
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
@@ -662,9 +662,9 @@ status: {}
 			})
 
 			It("should successfully delete all resources", func() {
-				oldTimeNow := common.TimeNow
-				defer func() { common.TimeNow = oldTimeNow }()
-				common.TimeNow = timeNowFunc
+				oldTimeNow := gutil.TimeNow
+				defer func() { gutil.TimeNow = oldTimeNow }()
+				gutil.TimeNow = timeNowFunc
 
 				gomock.InOrder(
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
@@ -680,9 +680,9 @@ status: {}
 
 		Describe("#WaitCleanup", func() {
 			It("should fail when the wait for the managed resource deletion fails", func() {
-				oldTimeNow := common.TimeNow
-				defer func() { common.TimeNow = oldTimeNow }()
-				common.TimeNow = timeNowFunc
+				oldTimeNow := gutil.TimeNow
+				defer func() { gutil.TimeNow = oldTimeNow }()
+				gutil.TimeNow = timeNowFunc
 
 				c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr)
 
@@ -690,9 +690,9 @@ status: {}
 			})
 
 			It("should fail when the wait for the managed resource deletion times out", func() {
-				oldTimeNow := common.TimeNow
-				defer func() { common.TimeNow = oldTimeNow }()
-				common.TimeNow = timeNowFunc
+				oldTimeNow := gutil.TimeNow
+				defer func() { gutil.TimeNow = oldTimeNow }()
+				gutil.TimeNow = timeNowFunc
 
 				oldTimeout := TimeoutWaitForManagedResource
 				defer func() { TimeoutWaitForManagedResource = oldTimeout }()
@@ -704,9 +704,9 @@ status: {}
 			})
 
 			It("should successfully delete all resources", func() {
-				oldTimeNow := common.TimeNow
-				defer func() { common.TimeNow = oldTimeNow }()
-				common.TimeNow = timeNowFunc
+				oldTimeNow := gutil.TimeNow
+				defer func() { gutil.TimeNow = oldTimeNow }()
+				gutil.TimeNow = timeNowFunc
 
 				c.EXPECT().Get(gomock.Any(), kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 

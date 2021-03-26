@@ -28,7 +28,7 @@ import (
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry"
-	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -182,14 +182,18 @@ var _ = Describe("#BackupEntry", func() {
 		})
 
 		It("should return error when it's not deleted successfully", func() {
-			defer test.WithVars(&extensions.TimeNow, mockNow.Do)()
+			defer test.WithVars(
+				&extensions.TimeNow, mockNow.Do,
+				&gutil.TimeNow, mockNow.Do,
+			)()
+
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			expected := extensionsv1alpha1.BackupEntry{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: name,
 					Annotations: map[string]string{
-						common.ConfirmationDeletion:        "true",
+						gutil.ConfirmationDeletion:         "true",
 						v1beta1constants.GardenerTimestamp: now.UTC().String(),
 					},
 				}}

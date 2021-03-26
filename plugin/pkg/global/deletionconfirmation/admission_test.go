@@ -22,7 +22,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 
@@ -116,7 +116,7 @@ var _ = Describe("deleteconfirmation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					shoot.Annotations = map[string]string{
-						common.ConfirmationDeletion: "false",
+						gutil.ConfirmationDeletion: "false",
 					}
 					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
 
@@ -129,7 +129,7 @@ var _ = Describe("deleteconfirmation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					shoot.Annotations = map[string]string{
-						common.ConfirmationDeletion: "true",
+						gutil.ConfirmationDeletion: "true",
 					}
 					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
 
@@ -148,7 +148,7 @@ var _ = Describe("deleteconfirmation", func() {
 								Name:      shoot.Name,
 								Namespace: shoot.Namespace,
 								Annotations: map[string]string{
-									common.ConfirmationDeletion: "true",
+									gutil.ConfirmationDeletion: "true",
 								},
 							},
 						}, nil
@@ -165,7 +165,7 @@ var _ = Describe("deleteconfirmation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					shoot.Annotations = map[string]string{
-						common.ConfirmationDeletion:  "true",
+						gutil.ConfirmationDeletion:   "true",
 						v1beta1constants.ShootIgnore: "true",
 					}
 					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
@@ -180,7 +180,7 @@ var _ = Describe("deleteconfirmation", func() {
 				It("should allow because all shoots have the deletion confirmation annotation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, "", core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
-					shoot.Annotations = map[string]string{common.ConfirmationDeletion: "true"}
+					shoot.Annotations = map[string]string{gutil.ConfirmationDeletion: "true"}
 					shoot2 := shoot.DeepCopy()
 					shoot2.Name = "dummy2"
 
@@ -197,7 +197,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 					shoot2 := shoot.DeepCopy()
 					shoot2.Name = "dummy2"
-					shoot.Annotations = map[string]string{common.ConfirmationDeletion: "true"}
+					shoot.Annotations = map[string]string{gutil.ConfirmationDeletion: "true"}
 
 					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
 					Expect(shootStore.Add(shoot2)).NotTo(HaveOccurred())
@@ -212,7 +212,7 @@ var _ = Describe("deleteconfirmation", func() {
 		Context("Project resources", func() {
 			It("should do nothing because the resource is already removed", func() {
 				attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
-				msg := `project.core.gardener.cloud "dummy" not found`
+				msg := `project.core.gutil.cloud "dummy" not found`
 
 				gardenClient.AddReactor("get", "projects", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, nil, fmt.Errorf(msg)
@@ -239,7 +239,7 @@ var _ = Describe("deleteconfirmation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					project.Annotations = map[string]string{
-						common.ConfirmationDeletion: "false",
+						gutil.ConfirmationDeletion: "false",
 					}
 					Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
 
@@ -252,7 +252,7 @@ var _ = Describe("deleteconfirmation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					project.Annotations = map[string]string{
-						common.ConfirmationDeletion: "true",
+						gutil.ConfirmationDeletion: "true",
 					}
 					Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
 
@@ -269,7 +269,7 @@ var _ = Describe("deleteconfirmation", func() {
 							ObjectMeta: metav1.ObjectMeta{
 								Name: project.Name,
 								Annotations: map[string]string{
-									common.ConfirmationDeletion: "true",
+									gutil.ConfirmationDeletion: "true",
 								},
 							},
 						}, nil
@@ -285,7 +285,7 @@ var _ = Describe("deleteconfirmation", func() {
 				It("should allow because all projects have the deletion confirmation annotation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Project").WithVersion("version"), "", "", core.Resource("projects").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
-					project.Annotations = map[string]string{common.ConfirmationDeletion: "true"}
+					project.Annotations = map[string]string{gutil.ConfirmationDeletion: "true"}
 					project2 := project.DeepCopy()
 					project2.Name = "dummy2"
 
@@ -302,7 +302,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 					project2 := project.DeepCopy()
 					project2.Name = "dummy2"
-					project.Annotations = map[string]string{common.ConfirmationDeletion: "true"}
+					project.Annotations = map[string]string{gutil.ConfirmationDeletion: "true"}
 
 					Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
 					Expect(projectStore.Add(project2)).NotTo(HaveOccurred())

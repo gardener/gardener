@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
@@ -303,7 +304,7 @@ func (b *bootstrapper) Destroy(ctx context.Context) error {
 		return fmt.Errorf("cannot debootstrap etcd-druid because there are still druidv1alpha1.Etcd resources left in the cluster")
 	}
 
-	if err := common.ConfirmDeletion(ctx, b.client, &apiextensionsv1beta1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}); err != nil {
+	if err := gutil.ConfirmDeletion(ctx, b.client, &apiextensionsv1beta1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}); err != nil {
 		return err
 	}
 
@@ -355,7 +356,7 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.4
   labels:
-    ` + common.GardenerDeletionProtected + `: "true"
+    ` + gutil.DeletionProtected + `: "true"
 spec:
   group: druid.gardener.cloud
   names:

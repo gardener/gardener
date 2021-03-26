@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	scheduler "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -172,7 +173,7 @@ func (f *GardenerFramework) DeleteShoot(ctx context.Context, shoot *gardencorev1
 
 		// First we annotate the shoot to be deleted.
 		err = f.AnnotateShoot(ctx, shoot, map[string]string{
-			common.ConfirmationDeletion: "true",
+			gutil.ConfirmationDeletion: "true",
 		})
 		if err != nil {
 			return retry.MinorError(err)

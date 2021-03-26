@@ -23,6 +23,7 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -165,7 +166,7 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 	}
 
 	projectLogger.Infof("[STALE PROJECT RECONCILE] Deleting Project now because it's auto-delete timestamp is expired")
-	if err := common.ConfirmDeletion(ctx, r.gardenClient, project); err != nil {
+	if err := gutil.ConfirmDeletion(ctx, r.gardenClient, project); err != nil {
 		return err
 	}
 	return r.gardenClient.Delete(ctx, project)

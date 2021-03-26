@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -390,7 +391,10 @@ var _ = Describe("Worker", func() {
 		})
 
 		It("should return error if not deleted successfully", func() {
-			defer test.WithVars(&extensions.TimeNow, mockNow.Do)()
+			defer test.WithVars(
+				&extensions.TimeNow, mockNow.Do,
+				&gutil.TimeNow, mockNow.Do,
+			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			fakeErr := fmt.Errorf("some random error")

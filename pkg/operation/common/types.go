@@ -25,10 +25,6 @@ const (
 	// BasicAuthSecretName is the name of the secret containing basic authentication credentials for the kube-apiserver.
 	BasicAuthSecretName = "kube-apiserver-basic-auth"
 
-	// ConfirmationDeletion is an annotation on a Shoot and Project resources whose value must be set to "true" in order to
-	// allow deleting the resource (if the annotation is not set any DELETE request will be denied).
-	ConfirmationDeletion = "confirmation.gardener.cloud/deletion"
-
 	// EtcdEncryptionSecretName is the name of the shoot-specific secret which contains
 	// that shoot's EncryptionConfiguration. The EncryptionConfiguration contains a key
 	// which the shoot's apiserver uses for encrypting selected etcd content.
@@ -57,11 +53,6 @@ const (
 
 	// EtcdEncryptionKeySecretLen is the expected length in bytes of the EncryptionConfiguration's key
 	EtcdEncryptionKeySecretLen = 32
-
-	// GardenerDeletionProtected is a label on CustomResourceDefinitions indicating that the deletion is protected, i.e.
-	// it must be confirmed with the `confirmation.gardener.cloud/deletion=true` annotation before a `DELETE` call
-	// is accepted.
-	GardenerDeletionProtected = "gardener.cloud/deletion-protected"
 
 	// ETCDEncryptionConfigDataName is the name of ShootState data entry holding the current key and encryption state used to encrypt shoot resources
 	ETCDEncryptionConfigDataName = "etcdEncryptionConfiguration"

@@ -20,9 +20,7 @@ import (
 	"fmt"
 	"math/big"
 	"net"
-	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -47,12 +45,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// TimeNow returns the current time. Exposed for testing.
-var TimeNow = time.Now
 
 // GetSecretKeysWithPrefix returns a list of keys of the given map <m> which are prefixed with <kind>.
 func GetSecretKeysWithPrefix(kind string, m map[string]*corev1.Secret) []string {
@@ -469,46 +463,6 @@ func GetSecretFromSecretRef(ctx context.Context, c client.Client, secretRef *cor
 		return nil, err
 	}
 	return secret, nil
-}
-
-// CheckIfDeletionIsConfirmed returns whether the deletion of an object is confirmed or not.
-func CheckIfDeletionIsConfirmed(obj client.Object) error {
-	annotations := obj.GetAnnotations()
-	if annotations == nil {
-		return annotationRequiredError()
-	}
-
-	value := annotations[ConfirmationDeletion]
-	if confirmed, err := strconv.ParseBool(value); err != nil || !confirmed {
-		return annotationRequiredError()
-	}
-	return nil
-}
-
-func annotationRequiredError() error {
-	return fmt.Errorf("must have a %q annotation to delete", ConfirmationDeletion)
-}
-
-// ConfirmDeletion adds Gardener's deletion confirmation annotation to the given object and sends an UPDATE request.
-func ConfirmDeletion(ctx context.Context, c client.Client, obj client.Object) error {
-	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return err
-			}
-			return nil
-		}
-
-		existing := obj.DeepCopyObject()
-		kutil.SetMetaDataAnnotation(obj, ConfirmationDeletion, "true")
-		kutil.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
-
-		if reflect.DeepEqual(existing, obj) {
-			return nil
-		}
-
-		return c.Update(ctx, obj)
-	})
 }
 
 // ExtensionID returns an identifier for the given extension kind/type.

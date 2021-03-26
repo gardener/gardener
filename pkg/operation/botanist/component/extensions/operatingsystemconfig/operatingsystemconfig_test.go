@@ -30,8 +30,8 @@ import (
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -486,7 +486,10 @@ var _ = Describe("OperatingSystemConfig", func() {
 			})
 
 			It("should return error if not deleted successfully", func() {
-				defer test.WithVars(&extensions.TimeNow, mockNow.Do)()
+				defer test.WithVars(
+					&extensions.TimeNow, mockNow.Do,
+					&gutil.TimeNow, mockNow.Do,
+				)()
 				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 				expectedOSC := extensionsv1alpha1.OperatingSystemConfig{
@@ -494,7 +497,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Name:      "osc1",
 						Namespace: namespace,
 						Annotations: map[string]string{
-							common.ConfirmationDeletion:        "true",
+							gutil.ConfirmationDeletion:         "true",
 							v1beta1constants.GardenerTimestamp: now.UTC().String(),
 						},
 					},

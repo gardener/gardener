@@ -27,6 +27,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -227,7 +228,10 @@ var _ = Describe("ControlPlane", func() {
 		})
 
 		It("should return error if not deleted successfully (purpose != exposure)", func() {
-			defer test.WithVars(&extensions.TimeNow, mockNow.Do)()
+			defer test.WithVars(
+				&extensions.TimeNow, mockNow.Do,
+				&gutil.TimeNow, mockNow.Do,
+			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			fakeErr := fmt.Errorf("some random error")
@@ -247,7 +251,10 @@ var _ = Describe("ControlPlane", func() {
 		})
 
 		It("should return error if not deleted successfully (purpose == exposure)", func() {
-			defer test.WithVars(&extensions.TimeNow, mockNow.Do)()
+			defer test.WithVars(
+				&extensions.TimeNow, mockNow.Do,
+				&gutil.TimeNow, mockNow.Do,
+			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			values.Purpose = extensionsv1alpha1.Exposure

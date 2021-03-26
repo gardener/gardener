@@ -44,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -360,7 +361,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 
 	if versionConstraintK8sGreaterEqual115.Check(g.kubernetesVersion) {
 		validatingWebhookConfiguration.Webhooks[0].ObjectSelector = &metav1.LabelSelector{
-			MatchLabels: map[string]string{common.GardenerDeletionProtected: "true"},
+			MatchLabels: map[string]string{gutil.DeletionProtected: "true"},
 		}
 	}
 

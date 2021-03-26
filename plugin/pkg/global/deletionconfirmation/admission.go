@@ -35,7 +35,7 @@ import (
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 const (
@@ -145,7 +145,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 			if shootIgnored(obj) {
 				return fmt.Errorf("cannot delete shoot if %s annotation is set", v1beta1constants.ShootIgnore)
 			}
-			return common.CheckIfDeletionIsConfirmed(obj)
+			return gutil.CheckIfDeletionIsConfirmed(obj)
 		}
 
 	case core.Kind("Project"):
@@ -166,7 +166,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 		liveLookup = func() (client.Object, error) {
 			return d.gardenCoreClient.Core().Projects().Get(ctx, a.GetName(), kubernetes.DefaultGetOptions())
 		}
-		checkFunc = common.CheckIfDeletionIsConfirmed
+		checkFunc = gutil.CheckIfDeletionIsConfirmed
 
 	default:
 		return nil

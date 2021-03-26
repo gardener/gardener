@@ -29,6 +29,7 @@ import (
 	seedmanagementv1alpha1constants "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -263,7 +264,7 @@ func (r *replica) CreateManagedSeed(ctx context.Context, c client.Client) error 
 // DeleteShoot deletes this replica's shoot using the given context and client.
 func (r *replica) DeleteShoot(ctx context.Context, c client.Client) error {
 	if r.shoot != nil {
-		if err := kutil.SetAnnotationAndUpdate(ctx, c, r.shoot, common.ConfirmationDeletion, "true"); err != nil {
+		if err := kutil.SetAnnotationAndUpdate(ctx, c, r.shoot, gutil.ConfirmationDeletion, "true"); err != nil {
 			return err
 		}
 		return client.IgnoreNotFound(c.Delete(ctx, r.shoot))
