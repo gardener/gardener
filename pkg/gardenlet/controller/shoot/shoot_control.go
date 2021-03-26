@@ -38,7 +38,7 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
@@ -248,7 +248,7 @@ func shouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
 const taskID = "initializeOperation"
 
 func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Entry, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (*operation.Operation, error) {
-	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient.Cache(), c.seedLister, gardenerutils.ComputeGardenNamespace(seed.Name))
+	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient.Cache(), c.seedLister, gutil.ComputeGardenNamespace(seed.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -305,8 +305,8 @@ func (c *Controller) deleteShoot(ctx context.Context, logger *logrus.Entry, gard
 
 		operationType              = gardencorev1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
 		respectSyncPeriodOverwrite = c.respectSyncPeriodOverwrite()
-		failed                     = common.IsShootFailed(shoot)
-		ignored                    = common.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot)
+		failed                     = gutil.IsShootFailed(shoot)
+		ignored                    = gutil.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot)
 		failedOrIgnored            = failed || ignored
 	)
 
@@ -395,13 +395,13 @@ func (c *Controller) reconcileShoot(ctx context.Context, logger *logrus.Entry, g
 		key                                        = shootKey(shoot)
 		operationType                              = gardencorev1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
 		respectSyncPeriodOverwrite                 = c.respectSyncPeriodOverwrite()
-		failed                                     = common.IsShootFailed(shoot)
-		ignored                                    = common.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot)
+		failed                                     = gutil.IsShootFailed(shoot)
+		ignored                                    = gutil.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot)
 		failedOrIgnored                            = failed || ignored
 		reconcileInMaintenanceOnly                 = c.reconcileInMaintenanceOnly()
-		isUpToDate                                 = common.IsObservedAtLatestGenerationAndSucceeded(shoot)
-		isNowInEffectiveShootMaintenanceTimeWindow = common.IsNowInEffectiveShootMaintenanceTimeWindow(shoot)
-		alreadyReconciledDuringThisTimeWindow      = common.LastReconciliationDuringThisTimeWindow(shoot)
+		isUpToDate                                 = gutil.IsObservedAtLatestGenerationAndSucceeded(shoot)
+		isNowInEffectiveShootMaintenanceTimeWindow = gutil.IsNowInEffectiveShootMaintenanceTimeWindow(shoot)
+		alreadyReconciledDuringThisTimeWindow      = gutil.LastReconciliationDuringThisTimeWindow(shoot)
 		regularReconciliationIsDue                 = isUpToDate && isNowInEffectiveShootMaintenanceTimeWindow && !alreadyReconciledDuringThisTimeWindow
 		reconcileAllowed                           = !failedOrIgnored && ((!reconcileInMaintenanceOnly && !confineSpecUpdateRollout(shoot.Spec.Maintenance)) || !isUpToDate || (isNowInEffectiveShootMaintenanceTimeWindow && !alreadyReconciledDuringThisTimeWindow))
 	)
@@ -514,13 +514,13 @@ func (c *Controller) scheduleNextSync(logger logrus.FieldLogger, shoot *gardenco
 }
 
 func (c *Controller) durationUntilNextShootSync(shoot *gardencorev1beta1.Shoot, regularReconciliationIsDue bool) time.Duration {
-	syncPeriod := common.SyncPeriodOfShoot(c.respectSyncPeriodOverwrite(), c.config.Controllers.Shoot.SyncPeriod.Duration, shoot)
+	syncPeriod := gutil.SyncPeriodOfShoot(c.respectSyncPeriodOverwrite(), c.config.Controllers.Shoot.SyncPeriod.Duration, shoot)
 	if !c.reconcileInMaintenanceOnly() && !confineSpecUpdateRollout(shoot.Spec.Maintenance) {
 		return syncPeriod
 	}
 
 	now := time.Now()
-	window := common.EffectiveShootMaintenanceTimeWindow(shoot)
+	window := gutil.EffectiveShootMaintenanceTimeWindow(shoot)
 
 	return window.RandomDurationUntilNext(now, regularReconciliationIsDue)
 }

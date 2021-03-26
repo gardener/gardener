@@ -20,7 +20,7 @@ import (
 	"github.com/gardener/gardener/charts"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
-	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // DefaultKonnectivityServer returns a deployer for the konnectivity-server.
@@ -48,8 +48,8 @@ func (b *Botanist) DefaultKonnectivityServer() (konnectivity.KonnectivityServer,
 		Image:     image.String(),
 		Replicas:  b.Shoot.GetReplicas(2),
 		Hosts: []string{
-			common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
-			common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+			gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
+			gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 		},
 		IstioIngressLabels: b.Config.SNI.Ingress.Labels,
 	})

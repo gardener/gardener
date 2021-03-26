@@ -27,10 +27,10 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/common"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
@@ -49,8 +49,8 @@ func (c *Controller) prepareShootForMigration(ctx context.Context, logger *logru
 		err error
 
 		respectSyncPeriodOverwrite = c.respectSyncPeriodOverwrite()
-		failed                     = common.IsShootFailed(shoot)
-		ignored                    = common.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot)
+		failed                     = gutil.IsShootFailed(shoot)
+		ignored                    = gutil.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot)
 	)
 
 	if failed || ignored {

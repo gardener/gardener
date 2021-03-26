@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -164,8 +165,8 @@ var _ = Describe("deleteconfirmation", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
 
 					shoot.Annotations = map[string]string{
-						common.ConfirmationDeletion: "true",
-						common.ShootIgnore:          "true",
+						common.ConfirmationDeletion:  "true",
+						v1beta1constants.ShootIgnore: "true",
 					}
 					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
 

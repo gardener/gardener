@@ -30,7 +30,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -49,7 +48,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -474,120 +472,6 @@ func GetDomainInfoFromAnnotations(annotations map[string]string) (provider strin
 	return
 }
 
-// RespectShootSyncPeriodOverwrite checks whether to respect the sync period overwrite of a Shoot or not.
-func RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite bool, shoot *gardencorev1beta1.Shoot) bool {
-	return respectSyncPeriodOverwrite || shoot.Namespace == v1beta1constants.GardenNamespace
-}
-
-// ShouldIgnoreShoot determines whether a Shoot should be ignored or not.
-func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *gardencorev1beta1.Shoot) bool {
-	if !RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite, shoot) {
-		return false
-	}
-
-	value, ok := shoot.Annotations[ShootIgnore]
-	if !ok {
-		return false
-	}
-
-	ignore, _ := strconv.ParseBool(value)
-	return ignore
-}
-
-// IsShootFailed checks if a Shoot is failed.
-func IsShootFailed(shoot *gardencorev1beta1.Shoot) bool {
-	lastOperation := shoot.Status.LastOperation
-
-	return lastOperation != nil && lastOperation.State == gardencorev1beta1.LastOperationStateFailed &&
-		shoot.Generation == shoot.Status.ObservedGeneration &&
-		shoot.Status.Gardener.Version == version.Get().GitVersion
-}
-
-// IsNowInEffectiveShootMaintenanceTimeWindow checks if the current time is in the effective
-// maintenance time window of the Shoot.
-func IsNowInEffectiveShootMaintenanceTimeWindow(shoot *gardencorev1beta1.Shoot) bool {
-	return EffectiveShootMaintenanceTimeWindow(shoot).Contains(time.Now())
-}
-
-// LastReconciliationDuringThisTimeWindow returns true if <now> is contained in the given effective maintenance time
-// window of the shoot and if the <lastReconciliation> did not happen longer than the longest possible duration of a
-// maintenance time window.
-func LastReconciliationDuringThisTimeWindow(shoot *gardencorev1beta1.Shoot) bool {
-	if shoot.Status.LastOperation == nil {
-		return false
-	}
-
-	var (
-		timeWindow         = EffectiveShootMaintenanceTimeWindow(shoot)
-		now                = time.Now()
-		lastReconciliation = shoot.Status.LastOperation.LastUpdateTime.Time
-	)
-
-	return timeWindow.Contains(lastReconciliation) && now.UTC().Sub(lastReconciliation.UTC()) <= gardencorev1beta1.MaintenanceTimeWindowDurationMaximum
-}
-
-// IsObservedAtLatestGenerationAndSucceeded checks whether the Shoot's generation has changed or if the LastOperation status
-// is Succeeded.
-func IsObservedAtLatestGenerationAndSucceeded(shoot *gardencorev1beta1.Shoot) bool {
-	lastOperation := shoot.Status.LastOperation
-	return shoot.Generation == shoot.Status.ObservedGeneration &&
-		(lastOperation != nil && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded)
-}
-
-// SyncPeriodOfShoot determines the sync period of the given shoot.
-//
-// If no overwrite is allowed, the defaultMinSyncPeriod is returned.
-// Otherwise, the overwrite is parsed. If an error occurs or it is smaller than the defaultMinSyncPeriod,
-// the defaultMinSyncPeriod is returned. Otherwise, the overwrite is returned.
-func SyncPeriodOfShoot(respectSyncPeriodOverwrite bool, defaultMinSyncPeriod time.Duration, shoot *gardencorev1beta1.Shoot) time.Duration {
-	if !RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite, shoot) {
-		return defaultMinSyncPeriod
-	}
-
-	syncPeriodOverwrite, ok := shoot.Annotations[ShootSyncPeriod]
-	if !ok {
-		return defaultMinSyncPeriod
-	}
-
-	syncPeriod, err := time.ParseDuration(syncPeriodOverwrite)
-	if err != nil {
-		return defaultMinSyncPeriod
-	}
-
-	if syncPeriod < defaultMinSyncPeriod {
-		return defaultMinSyncPeriod
-	}
-	return syncPeriod
-}
-
-// EffectiveMaintenanceTimeWindow cuts a maintenance time window at the end with a guess of 15 minutes. It is subtracted from the end
-// of a maintenance time window to use a best-effort kind of finishing the operation before the end.
-// Generally, we can't make sure that the maintenance operation is done by the end of the time window anyway (considering large
-// clusters with hundreds of nodes, a rolling update will take several hours).
-func EffectiveMaintenanceTimeWindow(timeWindow *utils.MaintenanceTimeWindow) *utils.MaintenanceTimeWindow {
-	return timeWindow.WithEnd(timeWindow.End().Add(0, -15, 0))
-}
-
-// EffectiveShootMaintenanceTimeWindow returns the effective MaintenanceTimeWindow of the given Shoot.
-func EffectiveShootMaintenanceTimeWindow(shoot *gardencorev1beta1.Shoot) *utils.MaintenanceTimeWindow {
-	maintenance := shoot.Spec.Maintenance
-	if maintenance == nil || maintenance.TimeWindow == nil {
-		return utils.AlwaysTimeWindow
-	}
-
-	timeWindow, err := utils.ParseMaintenanceTimeWindow(maintenance.TimeWindow.Begin, maintenance.TimeWindow.End)
-	if err != nil {
-		return utils.AlwaysTimeWindow
-	}
-
-	return EffectiveMaintenanceTimeWindow(timeWindow)
-}
-
-// GardenEtcdEncryptionSecretName returns the name to the 'backup' of the etcd encryption secret in the Garden cluster.
-func GardenEtcdEncryptionSecretName(shootName string) string {
-	return fmt.Sprintf("%s.%s", shootName, EtcdEncryptionSecretName)
-}
-
 // ReadServiceAccountSigningKeySecret reads the signing key secret to extract the signing key.
 // It errors if there is no value at ServiceAccountSigningKeySecretDataKey.
 func ReadServiceAccountSigningKeySecret(secret *corev1.Secret) (string, error) {
@@ -607,12 +491,6 @@ func GetServiceAccountSigningKeySecret(ctx context.Context, c client.Client, sho
 	}
 
 	return ReadServiceAccountSigningKeySecret(secret)
-}
-
-// GetAPIServerDomain returns the fully qualified domain name of for the api-server for the Shoot cluster. The
-// end result is 'api.<domain>'.
-func GetAPIServerDomain(domain string) string {
-	return fmt.Sprintf("%s.%s", APIServerPrefix, domain)
 }
 
 // GetSecretFromSecretRef gets the Secret object from <secretRef>.

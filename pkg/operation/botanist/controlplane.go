@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -922,8 +923,8 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 			ApiserverClusterIP: clusterIP,
 			NamespaceUID:       b.SeedNamespaceObject.UID,
 			Hosts: []string{
-				common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
-				common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+				gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
+				gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 			},
 			Name: v1beta1constants.DeploymentNameKubeAPIServer,
 			IstioIngressGateway: controlplane.IstioIngressGateway{
@@ -958,7 +959,7 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 			b.Shoot.SeedNamespace,
 			&dns.EntryValues{
 				Name:    DNSInternalName,
-				DNSName: common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+				DNSName: gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 				Targets: []string{b.APIServerAddress},
 				OwnerID: ownerID,
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
@@ -984,7 +985,7 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 			b.Shoot.SeedNamespace,
 			&dns.EntryValues{
 				Name:    DNSExternalName,
-				DNSName: common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
+				DNSName: gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 				Targets: []string{b.APIServerAddress},
 				OwnerID: ownerID,
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,

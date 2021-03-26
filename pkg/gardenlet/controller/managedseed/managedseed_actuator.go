@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
@@ -562,7 +563,7 @@ func ensureGardenletEnvironment(deployment *seedmanagementv1alpha1.GardenletDepl
 	}
 
 	if dns != nil && dns.Domain != nil && len(*dns.Domain) != 0 {
-		shootDomain = common.GetAPIServerDomain(*dns.Domain)
+		shootDomain = gutil.GetAPIServerDomain(*dns.Domain)
 	}
 
 	if len(shootDomain) != 0 {

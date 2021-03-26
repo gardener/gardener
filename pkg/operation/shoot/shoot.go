@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/Masterminds/semver"
@@ -340,14 +341,14 @@ func (s *Shoot) ComputeOutOfClusterAPIServerAddress(apiServerAddress string, use
 	}
 
 	if gardencorev1beta1helper.ShootUsesUnmanagedDNS(s.Info) {
-		return common.GetAPIServerDomain(s.InternalClusterDomain)
+		return gutil.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
 	if useInternalClusterDomain {
-		return common.GetAPIServerDomain(s.InternalClusterDomain)
+		return gutil.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
-	return common.GetAPIServerDomain(*s.ExternalClusterDomain)
+	return gutil.GetAPIServerDomain(*s.ExternalClusterDomain)
 }
 
 // IPVSEnabled returns true if IPVS is enabled for the shoot.

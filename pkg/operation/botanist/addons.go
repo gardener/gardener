@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
@@ -407,7 +408,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 
 	if b.Shoot.KonnectivityTunnelEnabled {
 		konnectivityAgentConfig := map[string]interface{}{
-			"proxyHost": common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+			"proxyHost": gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-konnectivity-agent": b.CheckSums["konnectivity-agent"],
 			},

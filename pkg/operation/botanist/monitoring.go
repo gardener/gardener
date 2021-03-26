@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
@@ -169,8 +170,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				},
 			},
 			"shoot": map[string]interface{}{
-				"apiserver":           fmt.Sprintf("https://%s", common.GetAPIServerDomain(b.Shoot.InternalClusterDomain)),
-				"apiserverServerName": common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+				"apiserver":           fmt.Sprintf("https://%s", gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain)),
+				"apiserverServerName": gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 				"sniEnabled":          b.APIServerSNIEnabled(),
 				"provider":            b.Shoot.Info.Spec.Provider.Type,
 				"name":                b.Shoot.Info.Name,

@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
@@ -137,14 +138,14 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			"kube-apiserver",
 			fmt.Sprintf("kube-apiserver.%s", b.Shoot.SeedNamespace),
 			fmt.Sprintf("kube-apiserver.%s.svc", b.Shoot.SeedNamespace),
-			common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+			gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 		}, kubernetes.DNSNamesForService("kubernetes", "default")...)
 
 		kubeControllerManagerCertDNSNames = kubernetes.DNSNamesForService(kubecontrollermanager.ServiceName, b.Shoot.SeedNamespace)
 		kubeSchedulerCertDNSNames         = kubernetes.DNSNamesForService(kubescheduler.ServiceName, b.Shoot.SeedNamespace)
 
 		konnectivityServerDNSNames = append([]string{
-			common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+			gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 		}, kubernetes.DNSNamesForService(konnectivity.ServerName, b.Shoot.SeedNamespace)...)
 
 		etcdCertDNSNames = append(
@@ -164,7 +165,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 	}
 
 	if b.Shoot.ExternalClusterDomain != nil {
-		apiServerCertDNSNames = append(apiServerCertDNSNames, *(b.Shoot.Info.Spec.DNS.Domain), common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain))
+		apiServerCertDNSNames = append(apiServerCertDNSNames, *(b.Shoot.Info.Spec.DNS.Domain), gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain))
 	}
 
 	secretList := []secrets.ConfigInterface{

@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -142,7 +143,7 @@ func (d *DeletionConfirmation) Validate(ctx context.Context, a admission.Attribu
 		}
 		checkFunc = func(obj client.Object) error {
 			if shootIgnored(obj) {
-				return fmt.Errorf("cannot delete shoot if %s annotation is set", common.ShootIgnore)
+				return fmt.Errorf("cannot delete shoot if %s annotation is set", v1beta1constants.ShootIgnore)
 			}
 			return common.CheckIfDeletionIsConfirmed(obj)
 		}
@@ -260,7 +261,7 @@ func shootIgnored(obj client.Object) bool {
 		return false
 	}
 	ignore := false
-	if value, ok := annotations[common.ShootIgnore]; ok {
+	if value, ok := annotations[v1beta1constants.ShootIgnore]; ok {
 		ignore, _ = strconv.ParseBool(value)
 	}
 	return ignore

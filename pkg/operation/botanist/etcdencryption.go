@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/infodata"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -110,7 +111,7 @@ func (b *Botanist) ApplyEncryptionConfiguration(ctx context.Context) error {
 func (b *Botanist) RemoveOldETCDEncryptionSecretFromGardener(ctx context.Context) error {
 	etcdSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.GardenEtcdEncryptionSecretName(b.Shoot.Info.Name),
+			Name:      gutil.GardenEtcdEncryptionSecretName(b.Shoot.Info.Name),
 			Namespace: b.Shoot.Info.Namespace,
 		},
 	}

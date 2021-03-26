@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/Masterminds/semver"
@@ -124,7 +125,7 @@ func (r *shootMaintenanceReconciler) Reconcile(ctx context.Context, request reco
 func requeueAfterDuration(shoot *gardencorev1beta1.Shoot) time.Duration {
 	var (
 		now             = time.Now()
-		window          = common.EffectiveShootMaintenanceTimeWindow(shoot)
+		window          = gutil.EffectiveShootMaintenanceTimeWindow(shoot)
 		duration        = window.RandomDurationUntilNext(now, false)
 		nextMaintenance = time.Now().UTC().Add(duration)
 	)
@@ -283,7 +284,7 @@ func shouldKubernetesVersionBeUpdated(shoot *gardencorev1beta1.Shoot, profile *g
 }
 
 func mustMaintainNow(shoot *gardencorev1beta1.Shoot) bool {
-	return hasMaintainNowAnnotation(shoot) || common.IsNowInEffectiveShootMaintenanceTimeWindow(shoot)
+	return hasMaintainNowAnnotation(shoot) || gutil.IsNowInEffectiveShootMaintenanceTimeWindow(shoot)
 }
 
 func hasMaintainNowAnnotation(shoot *gardencorev1beta1.Shoot) bool {

@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/shootsecrets"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
@@ -305,9 +306,9 @@ type projectSecret struct {
 // the project namespace in the Garden cluster and the monitoring credentials for the
 // user-facing monitoring stack are also copied.
 func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
-	kubecfgURL := common.GetAPIServerDomain(b.Shoot.InternalClusterDomain)
+	kubecfgURL := gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain)
 	if b.Shoot.ExternalClusterDomain != nil {
-		kubecfgURL = common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain)
+		kubecfgURL = gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain)
 	}
 
 	// Secrets which are created by Gardener itself are usually excluded from informers to improve performance.

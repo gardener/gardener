@@ -211,17 +211,6 @@ const (
 	// ShootOperationReconcile is a constant for an annotation on a Shoot indicating that a Shoot reconciliation shall be triggered.
 	ShootOperationReconcile = "reconcile"
 
-	// ShootSyncPeriod is a constant for an annotation on a Shoot which may be used to overwrite the global Shoot controller sync period.
-	// The value must be a duration. It can also be used to disable the reconciliation at all by setting it to 0m. Disabling the reconciliation
-	// does only mean that the period reconciliation is disabled. However, when the Gardener is restarted/redeployed or the specification is
-	// changed then the reconciliation flow will be executed.
-	ShootSyncPeriod = "shoot.gardener.cloud/sync-period"
-
-	// ShootIgnore is a constant for an annotation on a Shoot which may be used to tell the Gardener that the Shoot with this name should be
-	// ignored completely. That means that the Shoot will never reach the reconciliation flow (independent of the operation (create/update/
-	// delete)).
-	ShootIgnore = "shoot.gardener.cloud/ignore"
-
 	// ManagedResourceShootCoreName is the name of the shoot core managed resource.
 	ManagedResourceShootCoreName = "shoot-core"
 

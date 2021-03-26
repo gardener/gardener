@@ -32,6 +32,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
@@ -671,7 +672,7 @@ var _ = Describe("Utils", func() {
 
 			Expect(ensuredDeploymentWithDomain.Env[0].Name).To(Equal(kubernetesServiceHost))
 			Expect(ensuredDeploymentWithDomain.Env[0].Value).To(Equal(preserveDomain))
-			Expect(ensuredDeploymentWithDomain.Env[0].Value).ToNot(Equal(common.GetAPIServerDomain(*dnsWithDomain.Domain)))
+			Expect(ensuredDeploymentWithDomain.Env[0].Value).ToNot(Equal(gutil.GetAPIServerDomain(*dnsWithDomain.Domain)))
 
 			Expect(ensuredDeploymentWithoutDomain.Env[0].Name).To(Equal(kubernetesServiceHost))
 			Expect(ensuredDeploymentWithoutDomain.Env[0].Value).To(Equal(preserveDomain))
@@ -690,7 +691,7 @@ var _ = Describe("Utils", func() {
 			Expect(ensuredDeploymentWithoutDomain.Env).To(HaveLen(2))
 			Expect(ensuredDeploymentWithoutDomain.Env[0].Name).ToNot(Equal(kubernetesServiceHost))
 			Expect(ensuredDeploymentWithoutDomain.Env[1].Name).To(Equal(kubernetesServiceHost))
-			Expect(ensuredDeploymentWithoutDomain.Env[1].Value).To(Equal(common.GetAPIServerDomain(*dnsWithDomain.Domain)))
+			Expect(ensuredDeploymentWithoutDomain.Env[1].Value).To(Equal(gutil.GetAPIServerDomain(*dnsWithDomain.Domain)))
 
 		})
 	})
