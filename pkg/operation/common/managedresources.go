@@ -52,20 +52,13 @@ func DeleteManagedResourceForSeed(ctx context.Context, c client.Client, name, na
 }
 
 func deployManagedResource(ctx context.Context, c client.Client, name, namespace string, data map[string][]byte, managedResource *manager.ManagedResource) error {
-	secretName, secret := NewManagedResourceSecret(c, name, namespace)
+	secretName, secret := managedresources.NewSecret(c, name, namespace, data, true)
 
-	if err := secret.WithKeyValues(data).Reconcile(ctx); err != nil {
+	if err := secret.Reconcile(ctx); err != nil {
 		return err
 	}
 
 	return managedResource.WithSecretRef(secretName).Reconcile(ctx)
-}
-
-// NewManagedResourceSecret constructs a new Secret object containing manifests managed by the Gardener-Resource-Manager
-// which can be reconciled.
-func NewManagedResourceSecret(c client.Client, name, namespace string) (string, *manager.Secret) {
-	secretName := managedresources.SecretNameWithPrefix(name)
-	return secretName, manager.NewSecret(c).WithNamespacedName(namespace, secretName)
 }
 
 // NewManagedResourceForShoot constructs a new ManagedResource object for the shoot's Gardener-Resource-Manager.
@@ -75,17 +68,10 @@ func NewManagedResourceForShoot(c client.Client, name, namespace string, keepObj
 		labels         = map[string]string{ManagedResourceLabelKeyOrigin: ManagedResourceLabelValueGardener}
 	)
 
-	return manager.NewManagedResource(c).
-		WithNamespacedName(namespace, name).
-		WithLabels(labels).
-		WithInjectedLabels(injectedLabels).
-		KeepObjects(keepObjects)
+	return managedresources.New(c, namespace, name, "", keepObjects, labels, injectedLabels, false)
 }
 
 // NewManagedResourceForSeed constructs a new ManagedResource object for the seed's Gardener-Resource-Manager.
 func NewManagedResourceForSeed(c client.Client, name, namespace string, keepObjects bool) *manager.ManagedResource {
-	return manager.NewManagedResource(c).
-		WithNamespacedName(namespace, name).
-		WithClass("seed").
-		KeepObjects(keepObjects)
+	return managedresources.New(c, namespace, name, v1beta1constants.SeedResourceManagerClass, keepObjects, nil, nil, false)
 }

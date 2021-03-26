@@ -47,6 +47,35 @@ func SecretNameWithPrefix(managedResourceName string) string {
 	return SecretPrefix + managedResourceName
 }
 
+func secretName(name string, withPrefix bool) string {
+	out := name
+	if withPrefix {
+		out = SecretNameWithPrefix(name)
+	}
+	return out
+}
+
+// New initiates a new ManagedResource object which can be reconciled.
+func New(client client.Client, namespace, name, class string, keepObjects bool, labels, injectedLabels map[string]string, forceOverwriteAnnotations bool) *manager.ManagedResource {
+	return manager.
+		NewManagedResource(client).
+		WithNamespacedName(namespace, name).
+		WithClass(class).
+		KeepObjects(keepObjects).
+		WithLabels(labels).
+		WithInjectedLabels(injectedLabels).
+		ForceOverwriteAnnotations(forceOverwriteAnnotations)
+}
+
+// NewSecret initiates a new Secret object which can be reconciled.
+func NewSecret(client client.Client, namespace, name string, data map[string][]byte, secretNameWithPrefix bool) (string, *manager.Secret) {
+	secretName := secretName(name, secretNameWithPrefix)
+	return secretName, manager.
+		NewSecret(client).
+		WithNamespacedName(namespace, secretName).
+		WithKeyValues(data)
+}
+
 // CreateFromUnstructured creates a managed resource and its secret with the given name, class, and objects in the given namespace.
 func CreateFromUnstructured(ctx context.Context, client client.Client, namespace, name, class string, objs []*unstructured.Unstructured, keepObjects bool, injectedLabels map[string]string) error {
 	var data []byte
@@ -68,21 +97,11 @@ func Create(ctx context.Context, client client.Client, namespace, name, class, k
 	}
 
 	// Create or update secret containing the rendered rbac manifests
-	if err := manager.NewSecret(client).
-		WithNamespacedName(namespace, name).
-		WithKeyValues(map[string][]byte{key: data}).
-		Reconcile(ctx); err != nil {
+	if err := NewSecret(client, namespace, name, map[string][]byte{key: data}).Reconcile(ctx); err != nil {
 		return errors.Wrapf(err, "could not create or update secret '%s/%s' of managed resources", namespace, name)
 	}
 
-	if err := manager.NewManagedResource(client).
-		WithNamespacedName(namespace, name).
-		WithClass(class).
-		WithInjectedLabels(injectedLabels).
-		KeepObjects(keepObjects).
-		WithSecretRef(name).
-		ForceOverwriteAnnotations(forceOverwriteAnnotations).
-		Reconcile(ctx); err != nil {
+	if err := New(client, namespace, name, class, keepObjects, nil, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName).Reconcile(ctx); err != nil {
 		return errors.Wrapf(err, "could not create or update managed resource '%s/%s'", namespace, name)
 	}
 
@@ -91,10 +110,7 @@ func Create(ctx context.Context, client client.Client, namespace, name, class, k
 
 // Delete deletes the managed resource and its secret with the given name in the given namespace.
 func Delete(ctx context.Context, client client.Client, namespace string, name string, secretNameWithPrefix bool) error {
-	secretName := name
-	if secretNameWithPrefix {
-		secretName = SecretNameWithPrefix(name)
-	}
+	secretName := secretName(name, secretNameWithPrefix)
 
 	if err := manager.
 		NewManagedResource(client).
