@@ -67,7 +67,7 @@ func New(client client.Client, namespace, name, class string, keepObjects bool, 
 }
 
 // NewForShoot constructs a new ManagedResource object for the shoot's Gardener-Resource-Manager.
-func NewForShoot(c client.Client, name, namespace string, keepObjects bool) *manager.ManagedResource {
+func NewForShoot(c client.Client, namespace, name string, keepObjects bool) *manager.ManagedResource {
 	var (
 		injectedLabels = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
 		labels         = map[string]string{LabelKeyOrigin: LabelValueGardener}
@@ -77,7 +77,7 @@ func NewForShoot(c client.Client, name, namespace string, keepObjects bool) *man
 }
 
 // NewForSeed constructs a new ManagedResource object for the seed's Gardener-Resource-Manager.
-func NewForSeed(c client.Client, name, namespace string, keepObjects bool) *manager.ManagedResource {
+func NewForSeed(c client.Client, namespace, name string, keepObjects bool) *manager.ManagedResource {
 	return New(c, namespace, name, v1beta1constants.SeedResourceManagerClass, keepObjects, nil, nil, false)
 }
 
@@ -115,20 +115,20 @@ func Create(ctx context.Context, client client.Client, namespace, name string, s
 }
 
 // CreateForSeed deploys a ManagedResource CR for the seed's gardener-resource-manager.
-func CreateForSeed(ctx context.Context, client client.Client, name, namespace string, keepObjects bool, data map[string][]byte) error {
+func CreateForSeed(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error {
 	var (
 		secretName, secret = NewSecret(client, namespace, name, data, true)
-		managedResource    = NewForSeed(client, name, namespace, keepObjects).WithSecretRef(secretName)
+		managedResource    = NewForSeed(client, namespace, name, keepObjects).WithSecretRef(secretName)
 	)
 
 	return deployManagedResource(ctx, secret, managedResource)
 }
 
 // CreateForShoot deploys a ManagedResource CR for the shoot's gardener-resource-manager.
-func CreateForShoot(ctx context.Context, client client.Client, name, namespace string, keepObjects bool, data map[string][]byte) error {
+func CreateForShoot(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error {
 	var (
 		secretName, secret = NewSecret(client, namespace, name, data, true)
-		managedResource    = NewForShoot(client, name, namespace, keepObjects).WithSecretRef(secretName)
+		managedResource    = NewForShoot(client, namespace, name, keepObjects).WithSecretRef(secretName)
 	)
 
 	return deployManagedResource(ctx, secret, managedResource)

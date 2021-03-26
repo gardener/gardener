@@ -291,7 +291,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	}
 	resources["crd.yaml"] = crdYAML.Bytes()
 
-	return managedresources.CreateForSeed(ctx, b.client, managedResourceControlName, b.namespace, false, resources)
+	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
@@ -309,7 +309,7 @@ func (b *bootstrapper) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.DeleteForSeed(ctx, b.client, managedResourceControlName, b.namespace)
+	return managedresources.DeleteForSeed(ctx, b.client, b.namespace, managedResourceControlName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy

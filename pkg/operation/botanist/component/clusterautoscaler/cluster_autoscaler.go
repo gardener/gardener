@@ -276,7 +276,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, c.client, managedResourceTargetName, c.namespace, false, data)
+	return managedresources.CreateForShoot(ctx, c.client, c.namespace, managedResourceTargetName, false, data)
 }
 
 func getLabels() map[string]string {

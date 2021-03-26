@@ -32,7 +32,7 @@ func (k *kubeControllerManager) deployShootManagedResource(ctx context.Context) 
 		if err != nil {
 			return err
 		}
-		return managedresources.CreateForShoot(ctx, k.seedClient, managedResourceName, k.namespace, false, data)
+		return managedresources.CreateForShoot(ctx, k.seedClient, k.namespace, managedResourceName, false, data)
 	}
 
 	return kutil.DeleteObjects(

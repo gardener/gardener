@@ -334,7 +334,7 @@ func (k *kubeScheduler) reconcileShootResources(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		return managedresources.CreateForShoot(ctx, k.client, managedResourceName, k.namespace, false, data)
+		return managedresources.CreateForShoot(ctx, k.client, k.namespace, managedResourceName, false, data)
 	}
 
 	return kutil.DeleteObjects(ctx, k.client, k.emptyManagedResource(), k.emptyManagedResourceSecret())

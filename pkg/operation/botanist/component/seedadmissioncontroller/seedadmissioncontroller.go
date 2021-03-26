@@ -379,11 +379,11 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, g.client, managedResourceName, g.namespace, false, resources)
+	return managedresources.CreateForSeed(ctx, g.client, g.namespace, managedResourceName, false, resources)
 }
 
 func (g *gardenerSeedAdmissionController) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, g.client, managedResourceName, g.namespace)
+	return managedresources.DeleteForSeed(ctx, g.client, g.namespace, managedResourceName)
 }
 
 func getLabels() map[string]string {

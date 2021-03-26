@@ -522,11 +522,11 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, k.Client, ServerName, k.Namespace, false, resources)
+	return managedresources.CreateForSeed(ctx, k.Client, k.Namespace, ServerName, false, resources)
 }
 
 func (k *konnectivityServer) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, k.Client, ServerName, k.Namespace)
+	return managedresources.DeleteForSeed(ctx, k.Client, k.Namespace, ServerName)
 }
 
 func (k *konnectivityServer) Wait(ctx context.Context) error {

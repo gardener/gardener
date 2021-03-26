@@ -52,11 +52,11 @@ func (n *namespaces) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, n.client, ManagedResourceName, n.namespace, true, data)
+	return managedresources.CreateForShoot(ctx, n.client, n.namespace, ManagedResourceName, true, data)
 }
 
 func (n *namespaces) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForShoot(ctx, n.client, ManagedResourceName, n.namespace)
+	return managedresources.DeleteForShoot(ctx, n.client, n.namespace, ManagedResourceName)
 }
 
 func (n *namespaces) Wait(_ context.Context) error        { return nil }

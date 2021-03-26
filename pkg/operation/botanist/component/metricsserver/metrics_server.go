@@ -109,11 +109,11 @@ func (m *metricsServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, m.client, ManagedResourceName, m.namespace, false, data)
+	return managedresources.CreateForShoot(ctx, m.client, m.namespace, ManagedResourceName, false, data)
 }
 
 func (m *metricsServer) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForShoot(ctx, m.client, ManagedResourceName, m.namespace)
+	return managedresources.DeleteForShoot(ctx, m.client, m.namespace, ManagedResourceName)
 }
 
 func (m *metricsServer) Wait(_ context.Context) error        { return nil }

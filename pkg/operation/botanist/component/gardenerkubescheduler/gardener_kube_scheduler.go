@@ -418,7 +418,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, k.client, "gardener-kube-scheduler", k.namespace, false, resources)
+	return managedresources.CreateForSeed(ctx, k.client, k.namespace, "gardener-kube-scheduler", false, resources)
 }
 
 func getLabels() map[string]string {

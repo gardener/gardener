@@ -201,7 +201,7 @@ func (b *Botanist) DeployManagedResourceForAddons(ctx context.Context) error {
 			return fmt.Errorf("error rendering %q chart: %+v", name, err)
 		}
 
-		if err := managedresources.CreateForShoot(ctx, b.K8sSeedClient.Client(), name, b.Shoot.SeedNamespace, false, renderedChart.AsSecretData()); err != nil {
+		if err := managedresources.CreateForShoot(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, name, false, renderedChart.AsSecretData()); err != nil {
 			return err
 		}
 	}
