@@ -106,14 +106,41 @@ func CreateFromUnstructured(ctx context.Context, client client.Client, namespace
 
 // Create creates a managed resource and its secret with the given name, class, key, and data in the given namespace.
 func Create(ctx context.Context, client client.Client, namespace, name string, secretNameWithPrefix bool, class string, data map[string][]byte, keepObjects bool, injectedLabels map[string]string, forceOverwriteAnnotations bool) error {
-	// Create or update secret containing the rendered rbac manifests
-	secretName, secret := NewSecret(client, namespace, name, data, secretNameWithPrefix)
+	var (
+		secretName, secret = NewSecret(client, namespace, name, data, secretNameWithPrefix)
+		managedResource    = New(client, namespace, name, class, keepObjects, nil, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName)
+	)
+
+	return deployManagedResource(ctx, secret, managedResource)
+}
+
+// CreateForSeed deploys a ManagedResource CR for the seed's gardener-resource-manager.
+func CreateForSeed(ctx context.Context, client client.Client, name, namespace string, keepObjects bool, data map[string][]byte) error {
+	var (
+		secretName, secret = NewSecret(client, namespace, name, data, true)
+		managedResource    = NewForSeed(client, name, namespace, keepObjects).WithSecretRef(secretName)
+	)
+
+	return deployManagedResource(ctx, secret, managedResource)
+}
+
+// CreateForShoot deploys a ManagedResource CR for the shoot's gardener-resource-manager.
+func CreateForShoot(ctx context.Context, client client.Client, name, namespace string, keepObjects bool, data map[string][]byte) error {
+	var (
+		secretName, secret = NewSecret(client, namespace, name, data, true)
+		managedResource    = NewForShoot(client, name, namespace, keepObjects).WithSecretRef(secretName)
+	)
+
+	return deployManagedResource(ctx, secret, managedResource)
+}
+
+func deployManagedResource(ctx context.Context, secret *manager.Secret, managedResource *manager.ManagedResource) error {
 	if err := secret.Reconcile(ctx); err != nil {
-		return errors.Wrapf(err, "could not create or update secret '%s/%s' of managed resources", namespace, secretName)
+		return errors.Wrapf(err, "could not create or update secret of managed resources")
 	}
 
-	if err := New(client, namespace, name, class, keepObjects, nil, injectedLabels, forceOverwriteAnnotations).WithSecretRef(secretName).Reconcile(ctx); err != nil {
-		return errors.Wrapf(err, "could not create or update managed resource '%s/%s'", namespace, name)
+	if err := managedResource.Reconcile(ctx); err != nil {
+		return errors.Wrapf(err, "could not create or update managed resource")
 	}
 
 	return nil
@@ -138,6 +165,17 @@ func Delete(ctx context.Context, client client.Client, namespace string, name st
 	}
 
 	return nil
+}
+
+var (
+	// DeleteForSeed is a function alias for deleteWithSecretNamePrefix.
+	DeleteForSeed = deleteWithSecretNamePrefix
+	// DeleteForShoot is a function alias for deleteWithSecretNamePrefix.
+	DeleteForShoot = deleteWithSecretNamePrefix
+)
+
+func deleteWithSecretNamePrefix(ctx context.Context, client client.Client, namespace string, name string) error {
+	return Delete(ctx, client, namespace, name, true)
 }
 
 // IntervalWait is the interval when waiting for managed resources.

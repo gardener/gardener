@@ -24,7 +24,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
@@ -523,11 +522,11 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return common.DeployManagedResourceForSeed(ctx, k.Client, ServerName, k.Namespace, false, resources)
+	return managedresources.CreateForSeed(ctx, k.Client, ServerName, k.Namespace, false, resources)
 }
 
 func (k *konnectivityServer) Destroy(ctx context.Context) error {
-	return common.DeleteManagedResourceForSeed(ctx, k.Client, ServerName, k.Namespace)
+	return managedresources.DeleteForSeed(ctx, k.Client, ServerName, k.Namespace)
 }
 
 func (k *konnectivityServer) Wait(ctx context.Context) error {

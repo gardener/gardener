@@ -42,7 +42,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -380,11 +379,11 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return common.DeployManagedResourceForSeed(ctx, g.client, managedResourceName, g.namespace, false, resources)
+	return managedresources.CreateForSeed(ctx, g.client, managedResourceName, g.namespace, false, resources)
 }
 
 func (g *gardenerSeedAdmissionController) Destroy(ctx context.Context) error {
-	return common.DeleteManagedResourceForSeed(ctx, g.client, managedResourceName, g.namespace)
+	return managedresources.DeleteForSeed(ctx, g.client, managedResourceName, g.namespace)
 }
 
 func getLabels() map[string]string {

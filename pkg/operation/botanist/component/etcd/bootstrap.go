@@ -24,7 +24,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -292,7 +291,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	}
 	resources["crd.yaml"] = crdYAML.Bytes()
 
-	return common.DeployManagedResourceForSeed(ctx, b.client, managedResourceControlName, b.namespace, false, resources)
+	return managedresources.CreateForSeed(ctx, b.client, managedResourceControlName, b.namespace, false, resources)
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
@@ -310,7 +309,7 @@ func (b *bootstrapper) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	return common.DeleteManagedResourceForSeed(ctx, b.client, managedResourceControlName, b.namespace)
+	return managedresources.DeleteForSeed(ctx, b.client, managedResourceControlName, b.namespace)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy

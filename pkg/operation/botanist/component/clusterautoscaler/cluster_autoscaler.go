@@ -24,7 +24,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -277,7 +276,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return common.DeployManagedResourceForShoot(ctx, c.client, managedResourceTargetName, c.namespace, false, data)
+	return managedresources.CreateForShoot(ctx, c.client, managedResourceTargetName, c.namespace, false, data)
 }
 
 func getLabels() map[string]string {

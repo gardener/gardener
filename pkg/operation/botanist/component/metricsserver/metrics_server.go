@@ -21,7 +21,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -110,11 +109,11 @@ func (m *metricsServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return common.DeployManagedResourceForShoot(ctx, m.client, ManagedResourceName, m.namespace, false, data)
+	return managedresources.CreateForShoot(ctx, m.client, ManagedResourceName, m.namespace, false, data)
 }
 
 func (m *metricsServer) Destroy(ctx context.Context) error {
-	return common.DeleteManagedResourceForShoot(ctx, m.client, ManagedResourceName, m.namespace)
+	return managedresources.DeleteForShoot(ctx, m.client, ManagedResourceName, m.namespace)
 }
 
 func (m *metricsServer) Wait(_ context.Context) error        { return nil }
