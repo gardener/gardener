@@ -97,7 +97,7 @@ func (r *configMapReconciler) Reconcile(ctx context.Context, request reconcile.R
 			if shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion != configMap.ResourceVersion {
 				logger.Logger.Infof("[SHOOT CONFIGMAP controller] schedule for reconciliation shoot %v ", shootKey)
 				// send empty patch to let the admission webhook in GAC add or update the config map resource version
-				if err := kubernetes.SubmitEmptyPatch(context.TODO(), r.gardenClient, &shoot); err != nil {
+				if err := kubernetes.SubmitEmptyPatch(ctx, r.gardenClient, &shoot); err != nil {
 					return reconcile.Result{}, err
 				}
 			}

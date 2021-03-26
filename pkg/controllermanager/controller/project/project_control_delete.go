@@ -44,7 +44,8 @@ func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1bet
 
 		if !isEmpty {
 			r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceNotEmpty, "Cannot release namespace %q because it still contains Shoots.", *namespace)
-			_ = kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
+
+			_ = kutil.TryPatchStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
 				project.Status.Phase = gardencorev1beta1.ProjectTerminating
 				return nil
 			})
@@ -54,7 +55,7 @@ func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1bet
 		released, err := r.releaseNamespace(ctx, gardenClient, project, *namespace)
 		if err != nil {
 			r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceDeletionFailed, err.Error())
-			_ = kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
+			_ = kutil.TryPatchStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
 				project.Status.Phase = gardencorev1beta1.ProjectFailed
 				return nil
 			})
@@ -63,7 +64,7 @@ func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1bet
 
 		if !released {
 			r.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceMarkedForDeletion, "Successfully marked namespace %q for deletion.", *namespace)
-			_ = kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
+			_ = kutil.TryPatchStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
 				project.Status.Phase = gardencorev1beta1.ProjectTerminating
 				return nil
 			})

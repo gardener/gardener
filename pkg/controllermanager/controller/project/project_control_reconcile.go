@@ -65,7 +65,7 @@ func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1
 
 	// If the project has no phase yet then we update it to be 'pending'.
 	if len(project.Status.Phase) == 0 {
-		if err := kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
+		if err := kutil.TryPatchStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
 			project.Status.Phase = gardencorev1beta1.ProjectPending
 			return nil
 		}); err != nil {
@@ -80,7 +80,7 @@ func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1
 	namespace, err := r.reconcileNamespaceForProject(ctx, gardenClient, project, ownerReference)
 	if err != nil {
 		r.recorder.Eventf(project, corev1.EventTypeWarning, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
-		_ = kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
+		_ = kutil.TryPatchStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
 			project.Status.Phase = gardencorev1beta1.ProjectFailed
 			return nil
 		})
@@ -90,12 +90,12 @@ func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1
 
 	// Update the name of the created namespace in the projects '.spec.namespace' field.
 	if ns := project.Spec.Namespace; ns == nil {
-		if err := kutil.TryUpdate(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
+		if err := kutil.TryPatch(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
 			project.Spec.Namespace = &namespace.Name
 			return nil
 		}); err != nil {
 			r.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
-			_ = kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
+			_ = kutil.TryPatchStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
 				project.Status.Phase = gardencorev1beta1.ProjectFailed
 				return nil
 			})
@@ -123,7 +123,7 @@ func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1
 	rbac, err := projectrbac.New(gardenClient, project)
 	if err != nil {
 		r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while preparing for reconciling RBAC resources for namespace %q: %+v", namespace.Name, err)
-		_ = kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
+		_ = kutil.TryPatchStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
 			project.Status.Phase = gardencorev1beta1.ProjectFailed
 			return nil
 		})
@@ -132,7 +132,7 @@ func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1
 
 	if err := rbac.Deploy(ctx); err != nil {
 		r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while reconciling RBAC resources for namespace %q: %+v", namespace.Name, err)
-		_ = kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
+		_ = kutil.TryPatchStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
 			project.Status.Phase = gardencorev1beta1.ProjectFailed
 			return nil
 		})
@@ -141,7 +141,7 @@ func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1
 
 	if err := rbac.DeleteStaleExtensionRolesResources(ctx); err != nil {
 		r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while deleting stale RBAC rules for extension roles: %+v", err)
-		_ = kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
+		_ = kutil.TryPatchStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
 			project.Status.Phase = gardencorev1beta1.ProjectFailed
 			return nil
 		})
@@ -152,7 +152,7 @@ func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1
 	quotaConfig, err := quotaConfiguration(r.config, project)
 	if err != nil {
 		r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while setting up ResourceQuota: %+v", err)
-		_ = kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
+		_ = kutil.TryPatchStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
 			project.Status.Phase = gardencorev1beta1.ProjectFailed
 			return nil
 		})
@@ -162,7 +162,7 @@ func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1
 	if quotaConfig != nil {
 		if err := createOrUpdateResourceQuota(ctx, gardenClient, namespace.Name, ownerReference, *quotaConfig); err != nil {
 			r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while setting up ResourceQuota: %+v", err)
-			_ = kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
+			_ = kutil.TryPatchStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
 				project.Status.Phase = gardencorev1beta1.ProjectFailed
 				return nil
 			})
@@ -171,7 +171,7 @@ func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1
 	}
 
 	// Update the project status to mark it as 'ready'.
-	if err := kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
+	if err := kutil.TryPatchStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
 		project.Status.Phase = gardencorev1beta1.ProjectReady
 		project.Status.ObservedGeneration = generation
 		return nil
@@ -210,7 +210,7 @@ func (r *projectReconciler) reconcileNamespaceForProject(ctx context.Context, ga
 		},
 	}
 
-	if err := kutil.TryUpdate(ctx, retry.DefaultBackoff, gardenClient, namespace, func() error {
+	if err := kutil.TryPatch(ctx, retry.DefaultBackoff, gardenClient, namespace, func() error {
 		if !apiequality.Semantic.DeepDerivative(projectLabels, namespace.Labels) {
 			return fmt.Errorf("namespace cannot be used as it needs the project labels %#v", projectLabels)
 		}

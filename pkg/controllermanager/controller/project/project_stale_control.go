@@ -246,7 +246,7 @@ func (r *projectStaleReconciler) relevantSecretBindingsInUse(isSecretBindingRele
 }
 
 func (r *projectStaleReconciler) markProjectAsNotStale(ctx context.Context, client client.Client, project *gardencorev1beta1.Project) error {
-	return kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, client, project, func() error {
+	return kutil.TryPatchStatus(ctx, retry.DefaultBackoff, client, project, func() error {
 		project.Status.StaleSinceTimestamp = nil
 		project.Status.StaleAutoDeleteTimestamp = nil
 		return nil
@@ -254,7 +254,7 @@ func (r *projectStaleReconciler) markProjectAsNotStale(ctx context.Context, clie
 }
 
 func (r *projectStaleReconciler) markProjectAsStale(ctx context.Context, client client.Client, project *gardencorev1beta1.Project, nowFunc func() metav1.Time) error {
-	return kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, client, project, func() error {
+	return kutil.TryPatchStatus(ctx, retry.DefaultBackoff, client, project, func() error {
 		if project.Status.StaleSinceTimestamp == nil {
 			now := nowFunc()
 			project.Status.StaleSinceTimestamp = &now
