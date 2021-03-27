@@ -51,7 +51,8 @@ func (e *ErrorWithCodes) Error() string {
 
 var (
 	unauthorizedRegexp                  = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|InvalidAuthenticationTokenTenant|SignatureDoesNotMatch|Authentication failed|AuthFailure|AuthorizationFailed|invalid character|invalid_grant|invalid_client|Authorization Profile was not found|cannot fetch token|no active subscriptions|InvalidAccessKeyId|InvalidSecretAccessKey|query returned no results|UnauthorizedOperation|not authorized|InvalidSubscriptionId)`)
-	quotaExceededRegexp                 = regexp.MustCompile(`(?i)(LimitExceeded|Quota|Throttling|Too many requests)`)
+	quotaExceededRegexp                 = regexp.MustCompile(`(?i)(LimitExceeded|Quotas)`)
+	rateLimitsExceededRegexp            = regexp.MustCompile(`(?i)(Throttling|Too many requests)`)
 	insufficientPrivilegesRegexp        = regexp.MustCompile(`(?i)(AccessDenied|OperationNotAllowed|Error 403)`)
 	dependenciesRegexp                  = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict|inactive billing state|ReadOnlyDisabledSubscription|is already being used|InUseSubnetCannotBeDeleted|VnetInUse|InUseRouteTableCannotBeDeleted|timeout while waiting for state to become|InvalidCidrBlock|already busy for|InsufficientFreeAddressesInSubnet|InternalServerError|Future#WaitForCompletion: context has been cancelled|internalerror|internal server error|A resource with the ID|VnetAddressSpaceCannotChangeDueToPeerings|InternalBillingError)`)
 	retryableDependenciesRegexp         = regexp.MustCompile(`(?i)(RetryableError)`)
@@ -99,6 +100,9 @@ func DetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 	}
 	if quotaExceededRegexp.MatchString(message) {
 		codes.Insert(string(gardencorev1beta1.ErrorInfraQuotaExceeded))
+	}
+	if rateLimitsExceededRegexp.MatchString(message) {
+		codes.Insert(string(gardencorev1beta1.ErrorInfraRateLimitsExceeded))
 	}
 	if insufficientPrivilegesRegexp.MatchString(message) {
 		codes.Insert(string(gardencorev1beta1.ErrorInfraInsufficientPrivileges))
@@ -209,10 +213,25 @@ func HasNonRetryableErrorCode(lastErrors ...gardencorev1beta1.LastError) bool {
 				code == gardencorev1beta1.ErrorInfraInsufficientPrivileges ||
 				code == gardencorev1beta1.ErrorInfraDependencies ||
 				code == gardencorev1beta1.ErrorInfraQuotaExceeded ||
+				code == gardencorev1beta1.ErrorInfraRateLimitsExceeded ||
 				code == gardencorev1beta1.ErrorConfigurationProblem {
 				return true
 			}
 		}
 	}
+	return false
+}
+
+// HasErrorCode checks whether at least one LastError from the given slice of LastErrors <lastErrors>
+// contains the given ErrorCode <code>.
+func HasErrorCode(lastErrors []gardencorev1beta1.LastError, code gardencorev1beta1.ErrorCode) bool {
+	for _, lastError := range lastErrors {
+		for _, current := range lastError.Codes {
+			if current == code {
+				return true
+			}
+		}
+	}
+
 	return false
 }
