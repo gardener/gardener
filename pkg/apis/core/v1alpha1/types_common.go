@@ -29,6 +29,9 @@ const (
 	// ErrorInfraQuotaExceeded indicates that the last error occurred due to infrastructure quota limits.
 	// It is classified as a non-retryable error code.
 	ErrorInfraQuotaExceeded ErrorCode = "ERR_INFRA_QUOTA_EXCEEDED"
+	// ErrorInfraRequestThrottling indicates that the last error occurred due to exceeded infrastructure API throttling limit.
+	// It is classified as a retryable error code.
+	ErrorInfraRequestThrottling ErrorCode = "ERR_INFRA_REQUEST_THROTTLING"
 	// ErrorInfraDependencies indicates that the last error occurred due to dependent objects on the infrastructure level.
 	// It is classified as a non-retryable error code.
 	ErrorInfraDependencies ErrorCode = "ERR_INFRA_DEPENDENCIES"

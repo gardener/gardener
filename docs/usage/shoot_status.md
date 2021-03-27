@@ -98,6 +98,7 @@ Known error codes are:
 - `ERR_INFRA_UNAUTHORIZED` - indicates that the last error occurred due to invalid infrastructure credentials. It is classified as a non-retryable error code.
 - `ERR_INFRA_INSUFFICIENT_PRIVILEGES` - indicates that the last error occurred due to insufficient infrastructure privileges. It is classified as a non-retryable error code.
 - `ERR_INFRA_QUOTA_EXCEEDED` - indicates that the last error occurred due to infrastructure quota limits. It is classified as a non-retryable error code.
+- `ERR_INFRA_REQUEST_THROTTLING` - indicates that the last error occurred due to exceeded infrastructure API throttling limit. It is classified as a retryable error code.
 - `ERR_INFRA_DEPENDENCIES` - indicates that the last error occurred due to dependent objects on the infrastructure level. It is classified as a non-retryable error code.
 - `ERR_RETRYABLE_INFRA_DEPENDENCIES` - indicates that the last error occurred due to dependent objects on the infrastructure level, but the operation should be retried.
 - `ERR_INFRA_RESOURCES_DEPLETED` - indicates that the last error occurred due to depleted resource in the infrastructure.
