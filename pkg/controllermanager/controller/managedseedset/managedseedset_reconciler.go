@@ -135,6 +135,7 @@ func (r *reconciler) delete(ctx context.Context, set *seedmanagementv1alpha1.Man
 		if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient.Client(), set, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not remove gardener finalizer: %w", err)
 		}
+		return reconcile.Result{}, nil
 	}
 
 	// Return success result

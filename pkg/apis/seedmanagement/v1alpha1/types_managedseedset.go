@@ -173,6 +173,10 @@ type PendingReplica struct {
 	Reason PendingReplicaReason `json:"reason" protobuf:"bytes,2,opt,name=reason,casttype=PendingReplicaReason"`
 	// Since is the moment in time since the replica is pending with the specified reason.
 	Since metav1.Time `json:"since" protobuf:"bytes,3,opt,name=since"`
+	// Retries is the number of times the shoot operation (reconcile or delete) has been retried after having failed.
+	// Only applicable if Reason is ShootReconciling or ShootDeleting.
+	// +optional
+	Retries *int32 `json:"retries,omitempty" protobuf:"varint,4,opt,name=retries"`
 }
 
 // TODO Condition constants

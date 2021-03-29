@@ -435,6 +435,11 @@ func (in *ManagedSeedTemplate) DeepCopy() *ManagedSeedTemplate {
 func (in *PendingReplica) DeepCopyInto(out *PendingReplica) {
 	*out = *in
 	in.Since.DeepCopyInto(&out.Since)
+	if in.Retries != nil {
+		in, out := &in.Retries, &out.Retries
+		*out = new(int32)
+		**out = **in
+	}
 	return
 }
 

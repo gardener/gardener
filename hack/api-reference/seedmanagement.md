@@ -1111,6 +1111,19 @@ Kubernetes meta/v1.Time
 <p>Since is the moment in time since the replica is pending with the specified reason.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>retries</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Retries is the number of times the shoot operation (reconcile or delete) has been retried after having failed.
+Only applicable if Reason is ShootReconciling or ShootDeleting.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="seedmanagement.gardener.cloud/v1alpha1.PendingReplicaReason">PendingReplicaReason

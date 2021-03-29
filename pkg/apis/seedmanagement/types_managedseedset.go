@@ -158,6 +158,9 @@ type PendingReplica struct {
 	Reason PendingReplicaReason
 	// Since is the moment in time since the replica is pending with the specified reason.
 	Since metav1.Time
+	// Retries is the number of times the shoot operation (reconcile or delete) has been retried after having failed.
+	// Only applicable if Reason is ShootReconciling or ShootDeleting.
+	Retries *int32
 }
 
 // TODO Condition constants

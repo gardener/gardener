@@ -14000,6 +14000,13 @@ func schema_pkg_apis_seedmanagement_v1alpha1_PendingReplica(ref common.Reference
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
+					"retries": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Retries is the number of times the shoot operation (reconcile or delete) has been retried after having failed. Only applicable if Reason is ShootReconciling or ShootDeleting.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 				},
 				Required: []string{"name", "reason", "since"},
 			},

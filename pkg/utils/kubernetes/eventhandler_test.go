@@ -42,7 +42,7 @@ var _ = Describe("eventhandler", func() {
 	var (
 		ctrl *gomock.Controller
 
-		c        *mockclient.MockClient
+		r        *mockclient.MockReader
 		p        *mockpredicate.MockPredicate
 		cpf      *mockkubernetes.MockControllerPredicateFactory
 		enqueuer *mockkubernetes.MockEnqueuer
@@ -60,7 +60,7 @@ var _ = Describe("eventhandler", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		c = mockclient.NewMockClient(ctrl)
+		r = mockclient.NewMockReader(ctrl)
 		p = mockpredicate.NewMockPredicate(ctrl)
 		cpf = mockkubernetes.NewMockControllerPredicateFactory(ctrl)
 		enqueuer = mockkubernetes.NewMockEnqueuer(ctrl)
@@ -75,7 +75,7 @@ var _ = Describe("eventhandler", func() {
 				{Type: &seedmanagementv1alpha1.ManagedSeedSet{}},
 			},
 			Ctx:                        ctx,
-			Client:                     c,
+			Reader:                     r,
 			ControllerPredicateFactory: cpf,
 			Enqueuer:                   enqueuer,
 			Scheme:                     scheme,
@@ -113,7 +113,7 @@ var _ = Describe("eventhandler", func() {
 
 	var (
 		expectGetManagedSeedSet = func(found bool, times int) {
-			c.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedSet{})).DoAndReturn(
+			r.EXPECT().Get(ctx, Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeedSet{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *seedmanagementv1alpha1.ManagedSeedSet) error {
 					if found {
 						*s = *set
@@ -124,7 +124,7 @@ var _ = Describe("eventhandler", func() {
 			).Times(times)
 		}
 		expectGetShoot = func(found bool, times int) {
-			c.EXPECT().Get(ctx, Key(namespace, name+"-0"), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
+			r.EXPECT().Get(ctx, Key(namespace, name+"-0"), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Shoot) error {
 					if found {
 						*s = *shoot

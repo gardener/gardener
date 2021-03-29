@@ -22,8 +22,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -35,6 +33,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -45,9 +44,9 @@ import (
 
 // Controller controls ManagedSeedSets.
 type Controller struct {
-	gardenClient client.Client
-	config       *config.ControllerManagerConfiguration
-	reconciler   reconcile.Reconciler
+	gardenClient kubernetes.Interface
+
+	reconciler reconcile.Reconciler
 
 	managedSeedSetInformer runtimecache.Informer
 	shootInformer          runtimecache.Informer
@@ -101,8 +100,7 @@ func NewManagedSeedSetController(
 	reconciler := NewReconciler(gardenClient, actuator, config.Controllers.ManagedSeedSet, recorder, logger)
 
 	return &Controller{
-		gardenClient:           gardenClient.Client(),
-		config:                 config,
+		gardenClient:           gardenClient,
 		reconciler:             reconciler,
 		managedSeedSetInformer: managedSeedSetInformer,
 		shootInformer:          shootInformer,
@@ -124,21 +122,16 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		DeleteFunc: c.managedSeedSetDelete,
 	})
 
-	// Initialize scheme
-	scheme := runtime.NewScheme()
-	utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
-	utilruntime.Must(seedmanagementv1alpha1.AddToScheme(scheme))
-
 	// Add event handler for controlled shoots
 	c.shootInformer.AddEventHandler(&kutils.ControlledResourceEventHandler{
 		ControllerTypes: []kutils.ControllerType{
 			{Type: &seedmanagementv1alpha1.ManagedSeedSet{}},
 		},
 		Ctx:                        ctx,
-		Client:                     c.gardenClient,
-		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(filterShoot),
+		Reader:                     c.gardenClient.Cache(),
+		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterShoot),
 		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedSetAdd(obj) }),
-		Scheme:                     scheme,
+		Scheme:                     kubernetes.GardenScheme,
 		Logger:                     c.logger,
 	})
 
@@ -148,10 +141,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 			{Type: &seedmanagementv1alpha1.ManagedSeedSet{}},
 		},
 		Ctx:                        ctx,
-		Client:                     c.gardenClient,
-		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(filterManagedSeed),
+		Reader:                     c.gardenClient.Cache(),
+		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterManagedSeed),
 		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedSetAdd(obj) }),
-		Scheme:                     scheme,
+		Scheme:                     kubernetes.GardenScheme,
 		Logger:                     c.logger,
 	})
 
@@ -166,10 +159,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 			{Type: &seedmanagementv1alpha1.ManagedSeedSet{}},
 		},
 		Ctx:                        ctx,
-		Client:                     c.gardenClient,
-		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(filterSeed),
+		Reader:                     c.gardenClient.Cache(),
+		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterSeed),
 		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedSetAdd(obj) }),
-		Scheme:                     scheme,
+		Scheme:                     kubernetes.GardenScheme,
 		Logger:                     c.logger,
 	})
 

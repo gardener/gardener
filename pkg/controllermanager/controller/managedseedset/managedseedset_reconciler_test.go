@@ -189,7 +189,7 @@ var _ = Describe("Reconciler", func() {
 
 				result, err := reconciler.Reconcile(ctx, request)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result).To(Equal(reconcile.Result{RequeueAfter: syncPeriod}))
+				Expect(result).To(Equal(reconcile.Result{}))
 			})
 		})
 	})

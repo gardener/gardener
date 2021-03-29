@@ -46,6 +46,7 @@ controllers:
     ttlNonShootEvents: 1h
   managedSeedSet:
     concurrentSyncs: 5
+  # maxShootRetries: 3
     syncPeriod: 30m
 leaderElection:
   leaderElect: true

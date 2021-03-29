@@ -35,19 +35,19 @@ type ControllerPredicateFactory interface {
 }
 
 // ControllerPredicateFactoryFunc is a function that implements ControllerPredicateFactory.
-type ControllerPredicateFactoryFunc func(client.Object, client.Object, bool) bool
+type ControllerPredicateFactoryFunc func(client.Object, client.Object, client.Object, bool) bool
 
 // NewControllerPredicate creates and returns a new Predicate with the given controller.
 func (f ControllerPredicateFactoryFunc) NewControllerPredicate(controller client.Object) predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			return f(e.Object, controller, false)
+			return f(e.Object, nil, controller, false)
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return f(e.ObjectNew, controller, false)
+			return f(e.ObjectNew, e.ObjectOld, controller, false)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			return f(e.Object, controller, true)
+			return f(e.Object, nil, controller, true)
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
 			return false
@@ -77,8 +77,8 @@ type ControlledResourceEventHandler struct {
 	ControllerTypes []ControllerType
 	// Ctx is the context used to get controller objects.
 	Ctx context.Context
-	// Client is the client used to get controller objects.
-	Client client.Client
+	// Reader is the reader used to get controller objects.
+	Reader client.Reader
 	// ControllerPredicateFactory is used to create a predicate to check if an object event is of interest to a controller,
 	// before enqueueing it. If nil, the controller is always enqueued.
 	ControllerPredicateFactory ControllerPredicateFactory
@@ -237,7 +237,7 @@ func (h *ControlledResourceEventHandler) getControllerByName(namespace, name str
 	if ct.Namespace != nil {
 		namespace = *ct.Namespace
 	}
-	if err := h.Client.Get(h.Ctx, Key(namespace, name), controller); err != nil {
+	if err := h.Reader.Get(h.Ctx, Key(namespace, name), controller); err != nil {
 		return nil
 	}
 
@@ -269,7 +269,7 @@ func (h *ControlledResourceEventHandler) getControllerByRef(namespace string, co
 	if ct.Namespace != nil {
 		namespace = *ct.Namespace
 	}
-	if err := h.Client.Get(h.Ctx, Key(namespace, controllerRef.Name), controller); err != nil {
+	if err := h.Reader.Get(h.Ctx, Key(namespace, controllerRef.Name), controller); err != nil {
 		return nil
 	}
 
@@ -286,7 +286,7 @@ func (h *ControlledResourceEventHandler) getControllerByRef(namespace string, co
 }
 
 func (h *ControlledResourceEventHandler) logEnqueue(controller, obj client.Object, eventType string) {
-	h.Logger.Infof("Enqueueing %s %s due to %s event on %s %s", h.getLastControllerKind(), ObjectName(controller),
+	h.Logger.Debugf("Enqueueing %s %s due to %s event on %s %s", h.getLastControllerKind(), ObjectName(controller),
 		eventType, h.getObjectKind(obj), ObjectName(obj))
 }
 

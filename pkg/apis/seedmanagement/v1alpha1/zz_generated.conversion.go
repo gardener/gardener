@@ -639,6 +639,7 @@ func autoConvert_v1alpha1_PendingReplica_To_seedmanagement_PendingReplica(in *Pe
 	out.Name = in.Name
 	out.Reason = seedmanagement.PendingReplicaReason(in.Reason)
 	out.Since = in.Since
+	out.Retries = (*int32)(unsafe.Pointer(in.Retries))
 	return nil
 }
 
@@ -651,6 +652,7 @@ func autoConvert_seedmanagement_PendingReplica_To_v1alpha1_PendingReplica(in *se
 	out.Name = in.Name
 	out.Reason = PendingReplicaReason(in.Reason)
 	out.Since = in.Since
+	out.Retries = (*int32)(unsafe.Pointer(in.Retries))
 	return nil
 }
 

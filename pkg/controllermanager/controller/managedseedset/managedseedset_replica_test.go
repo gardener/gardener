@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -331,22 +332,8 @@ var _ = Describe("Replica", func() {
 	})
 
 	Describe("#CreateManagedSeed", func() {
-		It("should clean the retries and create the managed seed", func() {
-			shoot := &gardencorev1beta1.Shoot{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      replicaName,
-					Namespace: namespace,
-					Annotations: map[string]string{
-						seedmanagementv1alpha1constants.AnnotationRetries: "1",
-					},
-				},
-			}
-			c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
-				func(_ context.Context, s *gardencorev1beta1.Shoot) error {
-					Expect(s.Annotations).To(Not(HaveKey(seedmanagementv1alpha1constants.AnnotationRetries)))
-					return nil
-				},
-			)
+		It("should create the managed seed", func() {
+			shoot := shoot(nil, "", "", "", false)
 			c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
 				func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed) error {
 					Expect(ms).To(Equal(&seedmanagementv1alpha1.ManagedSeed{
@@ -393,24 +380,9 @@ var _ = Describe("Replica", func() {
 
 	Describe("#DeleteShoot", func() {
 		It("should clean the retries, confirm the deletion, and delete the shoot", func() {
-			shoot := &gardencorev1beta1.Shoot{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      replicaName,
-					Namespace: namespace,
-					Annotations: map[string]string{
-						seedmanagementv1alpha1constants.AnnotationRetries: "1",
-					},
-				},
-			}
-			c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
-				func(_ context.Context, s *gardencorev1beta1.Shoot) error {
-					Expect(s.Annotations).To(Not(HaveKey(seedmanagementv1alpha1constants.AnnotationRetries)))
-					*shoot = *s
-					return nil
-				},
-			)
-			c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
-				func(_ context.Context, s *gardencorev1beta1.Shoot) error {
+			shoot := shoot(nil, "", "", "", false)
+			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, s *gardencorev1beta1.Shoot, _ client.Patch) error {
 					Expect(s.Annotations).To(HaveKeyWithValue(common.ConfirmationDeletion, "true"))
 					*shoot = *s
 					return nil
@@ -448,10 +420,9 @@ var _ = Describe("Replica", func() {
 	Describe("#RetryShoot", func() {
 		It("should set the operation to retry and the retries to 1", func() {
 			shoot := shoot(nil, "", "", "", false)
-			c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
-				func(_ context.Context, s *gardencorev1beta1.Shoot) error {
+			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, s *gardencorev1beta1.Shoot, _ client.Patch) error {
 					Expect(s.Annotations).To(HaveKeyWithValue(gardencorev1beta1constants.GardenerOperation, common.ShootOperationRetry))
-					Expect(s.Annotations).To(HaveKeyWithValue(seedmanagementv1alpha1constants.AnnotationRetries, "1"))
 					return nil
 				},
 			)
@@ -459,28 +430,6 @@ var _ = Describe("Replica", func() {
 			replica := NewReplica(set, shoot, nil, nil, false)
 			err := replica.RetryShoot(ctx, c)
 			Expect(err).ToNot(HaveOccurred())
-		})
-	})
-
-	Describe("#GetShootRetries", func() {
-		It("should return the shoot retries", func() {
-			shoot := &gardencorev1beta1.Shoot{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      replicaName,
-					Namespace: namespace,
-					Annotations: map[string]string{
-						seedmanagementv1alpha1constants.AnnotationRetries: "1",
-					},
-				},
-			}
-
-			replica := NewReplica(set, shoot, nil, nil, false)
-			Expect(replica.GetShootRetries()).To(Equal(1))
-		})
-
-		It("should return 0", func() {
-			replica := NewReplica(set, shoot(nil, "", "", "", false), nil, nil, false)
-			Expect(replica.GetShootRetries()).To(Equal(0))
 		})
 	})
 })

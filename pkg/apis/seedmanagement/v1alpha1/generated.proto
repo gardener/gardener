@@ -297,6 +297,11 @@ message PendingReplica {
 
   // Since is the moment in time since the replica is pending with the specified reason.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time since = 3;
+
+  // Retries is the number of times the shoot operation (reconcile or delete) has been retried after having failed.
+  // Only applicable if Reason is ShootReconciling or ShootDeleting.
+  // +optional
+  optional int32 retries = 4;
 }
 
 // RollingUpdateStrategy is used to communicate parameters for RollingUpdateStrategyType.

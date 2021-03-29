@@ -15,9 +15,7 @@
 package constants
 
 const (
-	// AnnotationProtectFromDeletion is a constant for an annotation on a managed seed replica shoot to protect it from deletion.
+	// AnnotationProtectFromDeletion is a constant for an annotation on a replica of a ManagedSeedSet
+	//(either ManagedSeed or Shoot) to protect it from deletion..
 	AnnotationProtectFromDeletion = "seedmanagement.gardener.cloud/protect-from-deletion"
-
-	// AnnotationRetries is a constant for an annotation on a managed seed replica shoot to count the number of retries.
-	AnnotationRetries = "seedmanagement.gardener.cloud/retries"
 )

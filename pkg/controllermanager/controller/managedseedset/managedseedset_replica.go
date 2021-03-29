@@ -49,15 +49,15 @@ type ReplicaStatus int
 
 // Replica status constants
 const (
-	StatusShootReconcileFailed  ReplicaStatus = iota // 0
-	StatusShootDeleteFailed                          // 1
-	StatusShootReconciling                           // 2
-	StatusShootDeleting                              // 3
-	StatusShootReconciled                            // 4
-	StatusManagedSeedPreparing                       // 5
-	StatusManagedSeedDeleting                        // 6
-	StatusManagedSeedRegistered                      // 7
-	StatusUnknown                                    // 8
+	StatusUnknown               ReplicaStatus = iota // 0
+	StatusShootReconcileFailed                       // 1
+	StatusShootDeleteFailed                          // 2
+	StatusShootReconciling                           // 3
+	StatusShootDeleting                              // 4
+	StatusShootReconciled                            // 5
+	StatusManagedSeedPreparing                       // 6
+	StatusManagedSeedDeleting                        // 7
+	StatusManagedSeedRegistered                      // 8
 )
 
 // String returns a representation of this replica status as a string.
@@ -113,8 +113,6 @@ type Replica interface {
 	DeleteManagedSeed(ctx context.Context, c client.Client) error
 	// RetryShoot retries this replica's shoot using the given context and client.
 	RetryShoot(ctx context.Context, c client.Client) error
-	// GetShootRetries returns this replica's shoot number of retries.
-	GetShootRetries() int
 }
 
 // ReplicaFactory provides a method for creating new replicas.
@@ -253,9 +251,6 @@ func (r *replica) CreateShoot(ctx context.Context, c client.Client, ordinal int)
 // CreateManagedSeed initializes this replica's managed seed, and then creates it using the given context and client.
 func (r *replica) CreateManagedSeed(ctx context.Context, c client.Client) error {
 	if r.managedSeed == nil {
-		if err := r.cleanShootRetries(ctx, c); err != nil {
-			return err
-		}
 		var err error
 		if r.managedSeed, err = newManagedSeed(r.set, r.GetOrdinal()); err != nil {
 			return err
@@ -268,10 +263,7 @@ func (r *replica) CreateManagedSeed(ctx context.Context, c client.Client) error 
 // DeleteShoot deletes this replica's shoot using the given context and client.
 func (r *replica) DeleteShoot(ctx context.Context, c client.Client) error {
 	if r.shoot != nil {
-		if err := r.cleanShootRetries(ctx, c); err != nil {
-			return err
-		}
-		if err := kutil.SetAnnotationsAndUpdate(ctx, c, r.shoot, common.ConfirmationDeletion, "true"); err != nil {
+		if err := kutil.SetAnnotationAndUpdate(ctx, c, r.shoot, common.ConfirmationDeletion, "true"); err != nil {
 			return err
 		}
 		return client.IgnoreNotFound(c.Delete(ctx, r.shoot))
@@ -292,32 +284,10 @@ func (r *replica) RetryShoot(ctx context.Context, c client.Client) error {
 	if r.shoot == nil {
 		return nil
 	}
-	if err := kutil.SetAnnotationsAndUpdate(ctx, c, r.shoot, gardencorev1beta1constants.GardenerOperation, common.ShootOperationRetry,
-		seedmanagementv1alpha1constants.AnnotationRetries, strconv.Itoa(r.GetShootRetries()+1)); err != nil {
+	if err := kutil.SetAnnotationAndUpdate(ctx, c, r.shoot, gardencorev1beta1constants.GardenerOperation, common.ShootOperationRetry); err != nil {
 		return err
 	}
 	return nil
-}
-
-// GetShootRetries returns this replica's shoot number of retries.
-func (r *replica) GetShootRetries() int {
-	if r.shoot == nil {
-		return 0
-	}
-	if value, ok := r.shoot.Annotations[seedmanagementv1alpha1constants.AnnotationRetries]; ok {
-		if n, err := strconv.Atoi(value); err == nil {
-			return n
-		}
-	}
-	return 0
-}
-
-// cleanShootRetries removes the "retries" annotation from this replica's shoot.
-func (r *replica) cleanShootRetries(ctx context.Context, c client.Client) error {
-	if r.shoot == nil {
-		return nil
-	}
-	return kutil.DeleteAnnotationsAndUpdate(ctx, c, r.shoot, seedmanagementv1alpha1constants.AnnotationRetries)
 }
 
 func shootReconcileSucceeded(shoot *gardencorev1beta1.Shoot) bool {

@@ -37,7 +37,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
-	clientretry "k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
@@ -78,65 +77,14 @@ func HasMetaDataAnnotation(meta metav1.Object, key, value string) bool {
 	return ok && val == value
 }
 
-// SetAnnotationsAndUpdate sets the given annotations on the given object and updates it, taking care of conflicts.
-func SetAnnotationsAndUpdate(ctx context.Context, c client.Client, obj client.Object, keyValues ...string) error {
-	annotations := keyValuesToAnnotations(keyValues...)
-	if !hasAnnotations(obj, annotations) {
-		return clientretry.RetryOnConflict(clientretry.DefaultBackoff, func() error {
-			setAnnotations(obj, annotations)
-			return c.Update(ctx, obj)
-		})
-	}
-	return nil
-}
-
-// DeleteAnnotationsAndUpdate deletes the given annotations on the given object and updates it, taking care of conflicts.
-func DeleteAnnotationsAndUpdate(ctx context.Context, c client.Client, obj client.Object, keys ...string) error {
-	if !doesNotHaveAnnotationKeys(obj, keys...) {
-		return clientretry.RetryOnConflict(clientretry.DefaultBackoff, func() error {
-			deleteAnnotations(obj, keys...)
-			return c.Update(ctx, obj)
-		})
-	}
-	return nil
-}
-
-func keyValuesToAnnotations(keyValues ...string) map[string]string {
-	annotations := make(map[string]string)
-	for i := 0; i < len(keyValues)-1; i += 2 {
-		annotations[keyValues[i]] = keyValues[i+1]
-	}
-	return annotations
-}
-
-func hasAnnotations(obj client.Object, annotations map[string]string) bool {
-	for key, value := range annotations {
-		if !HasMetaDataAnnotation(obj, key, value) {
-			return false
-		}
-	}
-	return true
-}
-
-func doesNotHaveAnnotationKeys(obj client.Object, keys ...string) bool {
-	for _, key := range keys {
-		if _, ok := obj.GetAnnotations()[key]; ok {
-			return false
-		}
-	}
-	return true
-}
-
-func setAnnotations(obj client.Object, annotations map[string]string) {
-	for key, value := range annotations {
+// SetAnnotationAndUpdate sets the annotation on the given object and updates it.
+func SetAnnotationAndUpdate(ctx context.Context, c client.Client, obj client.Object, key, value string) error {
+	if !HasMetaDataAnnotation(obj, key, value) {
+		objCopy := obj.DeepCopyObject()
 		SetMetaDataAnnotation(obj, key, value)
+		return c.Patch(ctx, obj, client.MergeFrom(objCopy))
 	}
-}
-
-func deleteAnnotations(obj client.Object, keys ...string) {
-	for _, key := range keys {
-		delete(obj.GetAnnotations(), key)
-	}
+	return nil
 }
 
 func nameAndNamespace(namespaceOrName string, nameOpt ...string) (namespace, name string) {

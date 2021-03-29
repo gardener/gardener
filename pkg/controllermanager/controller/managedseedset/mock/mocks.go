@@ -189,20 +189,6 @@ func (mr *MockReplicaMockRecorder) GetShootHealthStatus() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShootHealthStatus", reflect.TypeOf((*MockReplica)(nil).GetShootHealthStatus))
 }
 
-// GetShootRetries mocks base method.
-func (m *MockReplica) GetShootRetries() int {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetShootRetries")
-	ret0, _ := ret[0].(int)
-	return ret0
-}
-
-// GetShootRetries indicates an expected call of GetShootRetries.
-func (mr *MockReplicaMockRecorder) GetShootRetries() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShootRetries", reflect.TypeOf((*MockReplica)(nil).GetShootRetries))
-}
-
 // GetStatus mocks base method.
 func (m *MockReplica) GetStatus() managedseedset.ReplicaStatus {
 	m.ctrl.T.Helper()
