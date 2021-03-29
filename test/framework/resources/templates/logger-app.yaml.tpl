@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: logger
-        image: k8s.gcr.io/logs-generator:v0.1.1
+        image: eu.gcr.io/gardener-project/3rd/k8s_gcr_io/logs-generator:v0.1.1
         args:
           - /bin/sh
           - -c
