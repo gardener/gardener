@@ -60,6 +60,7 @@ import (
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -391,6 +392,23 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient, k8sSeedClient kubern
 		lokiVpa := &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "loki-vpa", Namespace: v1beta1constants.GardenNamespace}}
 		if err := k8sSeedClient.Client().Delete(ctx, lokiVpa); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
 			return err
+		}
+
+		if conf.Logging != nil && conf.Logging.Loki != nil && conf.Logging.Loki.Garden != nil &&
+			conf.Logging.Loki.Garden.Priority != nil {
+			priority := *conf.Logging.Loki.Garden.Priority
+			if err := deletePriorityClassIfValueNotTheSame(ctx, k8sSeedClient.Client(), common.GardenLokiPriorityClassName, priority); err != nil {
+				return err
+			}
+			lokiValues["priorityClass"] = map[string]interface{}{
+				"value": priority,
+				"name":  common.GardenLokiPriorityClassName,
+			}
+		} else {
+			pc := &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: common.GardenLokiPriorityClassName}}
+			if err := k8sSeedClient.Client().Delete(ctx, pc); client.IgnoreNotFound(err) != nil {
+				return err
+			}
 		}
 
 		if hvpaEnabled {
@@ -1292,4 +1310,20 @@ func deleteIngressController(ctx context.Context, c client.Client) error {
 		&rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress", Namespace: v1beta1constants.GardenNamespace}},
 		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "nginx-ingress-k8s-backend", Namespace: v1beta1constants.GardenNamespace}},
 	)
+}
+
+func deletePriorityClassIfValueNotTheSame(ctx context.Context, k8sClient client.Client, priorityClassName string, valueToCompare int32) error {
+	pc := &schedulingv1.PriorityClass{}
+	err := k8sClient.Get(ctx, kutil.Key(priorityClassName), pc)
+	if err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return err
+		}
+		return nil
+	}
+	if valueToCompare == pc.Value {
+		return nil
+	}
+
+	return client.IgnoreNotFound(k8sClient.Delete(ctx, pc))
 }

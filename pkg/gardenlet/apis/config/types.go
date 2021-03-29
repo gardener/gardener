@@ -309,10 +309,24 @@ type FluentBit struct {
 	OutputSection *string
 }
 
+// Loki contains configuration for the Loki.
+type Loki struct {
+	// Garden contains configuration for the Loki in garden namespace.
+	Garden *GardenLoki
+}
+
+// GardenLoki contains configuration for the Loki in garden namespace.
+type GardenLoki struct {
+	// Priority is the priority value for the Loki
+	Priority *int32
+}
+
 // Logging contains configuration for the logging stack.
 type Logging struct {
 	// FluentBit contains configurations for the fluent-bit
 	FluentBit *FluentBit
+	// Loki contains configuration for the Loki
+	Loki *Loki
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.
