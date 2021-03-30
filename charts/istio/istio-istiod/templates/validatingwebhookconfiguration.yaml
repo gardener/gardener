@@ -6,6 +6,7 @@ metadata:
 {{ .Values.labels | toYaml | indent 4 }}
 webhooks:
   - name: validation.istio.io
+    timeoutSeconds: 10
     clientConfig:
       service:
         name: istiod
