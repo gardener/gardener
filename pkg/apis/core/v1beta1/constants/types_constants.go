@@ -65,6 +65,10 @@ const (
 	// the Gardenlet pod.
 	DeploymentNameGardenlet = "gardenlet"
 
+	// DeploymentNameVPNSeedServer is a constant for the name of a Kubernetes deployment object that contains
+	// the vpn-seed-server pod.
+	DeploymentNameVPNSeedServer = "vpn-seed-server"
+
 	// DeploymentNameKubeScheduler is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-scheduler pod.
 	DeploymentNameKubeScheduler = "kube-scheduler"

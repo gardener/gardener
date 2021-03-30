@@ -391,9 +391,14 @@ spec:
           readOnly: false
       {{- else if not .Values.konnectivityTunnel.enabled }}
       - name: vpn-seed
+      {{- if .Values.reversedVPN.enabled }}
+        image: {{ index .Values.images "vpn-seed-client" }}
+      {{- else }}
         image: {{ index .Values.images "vpn-seed" }}
+      {{- end }}
         imagePullPolicy: IfNotPresent
         env:
+      {{- if not .Values.reversedVPN.enabled }}
         - name: MAIN_VPN_SEED
           value: "true"
         - name: OPENVPN_PORT
@@ -406,6 +411,7 @@ spec:
           value: /srv/secrets/vpn-seed/tls.crt
         - name: APISERVER_AUTH_MODE_CLIENT_CERT_KEY
           value: /srv/secrets/vpn-seed/tls.key
+      {{- end }}
         - name: SERVICE_NETWORK
           value: {{ .Values.shootNetworks.services }}
         - name: POD_NETWORK
@@ -414,10 +420,6 @@ spec:
         - name: NODE_NETWORK
           value: {{ .Values.shootNetworks.nodes }}
         {{- end }}
-        ports:
-        - name: tcp-tunnel
-          containerPort: 1194
-          protocol: TCP
         {{- if .Values.vpnSeedResources }}
         resources:
 {{ toYaml .Values.vpnSeedResources | indent 10 }}
@@ -514,10 +516,18 @@ spec:
       {{- else }}
       - name: vpn-seed
         secret:
+      {{- if .Values.reversedVPN.enabled }}
+          secretName: vpn-seed-client
+      {{- else }}
           secretName: vpn-seed
+      {{- end }}
       - name: vpn-seed-tlsauth
         secret:
+      {{- if .Values.reversedVPN.enabled }}
+          secretName: vpn-seed-server-tlsauth
+      {{- else }}
           secretName: vpn-seed-tlsauth
+      {{- end }}
       {{- end }}
       {{- if .Values.enableEtcdEncryption }}
       - name: etcd-encryption-secret

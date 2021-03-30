@@ -679,6 +679,36 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 					SigningCA: certificateAuthorities[konnectivity.SecretNameServerCA],
 				})
 		}
+	} else if b.Shoot.ReversedVPNEnabled {
+		secretList = append(secretList,
+			// Secret definition for vpn-shoot (OpenVPN client side)
+			&secrets.CertificateSecretConfig{
+				Name:       "vpn-shoot-client",
+				CommonName: "vpn-shoot-client",
+				CertType:   secrets.ClientCert,
+				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
+			},
+
+			// Secret definition for vpn-seed-server (OpenVPN server side)
+			&secrets.CertificateSecretConfig{
+				Name:       "vpn-seed-server",
+				CommonName: "vpn-seed-server",
+				CertType:   secrets.ServerCert,
+				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
+			},
+
+			// Secret definition for vpn-seed (OpenVPN client side)
+			&secrets.CertificateSecretConfig{
+				Name:       "vpn-seed-client",
+				CommonName: "vpn-seed-client",
+				CertType:   secrets.ClientCert,
+				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
+			},
+
+			&secrets.VPNTLSAuthConfig{
+				Name: "vpn-seed-server-tlsauth",
+			},
+		)
 	} else {
 		secretList = append(secretList,
 			// Secret definition for vpn-shoot (OpenVPN server side)

@@ -54,11 +54,20 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 
 	if b.Shoot.Info.DeletionTimestamp == nil {
 		if b.Shoot.KonnectivityTunnelEnabled {
-			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, "vpn-seed", "vpn-seed-tlsauth", "vpn-shoot"); err != nil {
+			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, "vpn-seed", "vpn-seed-tlsauth", "vpn-shoot", "vpn-seed-server", "vpn-seed-client", "vpn-shoot-client", "vpn-seed-server-tlsauth"); err != nil {
 				return err
 			}
 		} else {
 			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, konnectivity.SecretNameServerKubeconfig, konnectivity.SecretNameServerTLS); err != nil {
+				return err
+			}
+		}
+		if b.Shoot.ReversedVPNEnabled {
+			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, "vpn-seed", "vpn-seed-tlsauth", "vpn-shoot"); err != nil {
+				return err
+			}
+		} else {
+			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, "vpn-seed-server", "vpn-seed-client", "vpn-shoot-client", "vpn-seed-server-tlsauth"); err != nil {
 				return err
 			}
 		}

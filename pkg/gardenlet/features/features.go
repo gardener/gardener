@@ -35,6 +35,7 @@ var (
 		features.NodeLocalDNS:           {Default: false, PreRelease: featuregate.Alpha},
 		features.MountHostCADirectories: {Default: false, PreRelease: featuregate.Alpha},
 		features.SeedKubeScheduler:      {Default: false, PreRelease: featuregate.Alpha},
+		features.ReversedVPN:            {Default: false, PreRelease: featuregate.Alpha},
 	}
 )
 

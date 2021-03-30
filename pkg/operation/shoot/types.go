@@ -74,6 +74,7 @@ type Shoot struct {
 	IgnoreAlerts               bool
 	HibernationEnabled         bool
 	KonnectivityTunnelEnabled  bool
+	ReversedVPNEnabled         bool
 	NodeLocalDNSEnabled        bool
 	Networks                   *Networks
 

@@ -1,0 +1,19 @@
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: vpn-seed-server
+  namespace: {{ .Release.Namespace }}
+spec:
+  exportTo:
+  - '*'
+  host: vpn-seed-server.{{ .Release.Namespace }}.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 5000
+        tcpKeepalive:
+          interval: 75s
+          time: 7200s
+    tls:
+      mode: DISABLE

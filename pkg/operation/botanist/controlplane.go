@@ -533,6 +533,9 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 				"name":       konnectivity.ServerName,
 				"serverPort": konnectivity.ServerHTTPSPort,
 			},
+			"reversedVPN": map[string]interface{}{
+				"enabled": b.Shoot.ReversedVPNEnabled,
+			},
 			"hvpa": map[string]interface{}{
 				"enabled": hvpaEnabled,
 			},
@@ -555,6 +558,9 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		} else {
 			podAnnotations["checksum/secret-konnectivity-server"] = b.CheckSums[konnectivity.ServerName]
 		}
+	} else if b.Shoot.ReversedVPNEnabled {
+		podAnnotations["checksum/secret-vpn-seed-client"] = b.CheckSums["vpn-seed-client"]
+		podAnnotations["checksum/secret-vpn-seed-server-tlsauth"] = b.CheckSums["vpn-seed-server-tlsauth"]
 	} else {
 		podAnnotations["checksum/secret-vpn-seed"] = b.CheckSums["vpn-seed"]
 		podAnnotations["checksum/secret-vpn-seed-tlsauth"] = b.CheckSums["vpn-seed-tlsauth"]
@@ -757,6 +763,8 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	tunnelComponentImageName := charts.ImageNameVpnSeed
 	if b.Shoot.KonnectivityTunnelEnabled {
 		tunnelComponentImageName = charts.ImageNameKonnectivityServer
+	} else if b.Shoot.ReversedVPNEnabled {
+		tunnelComponentImageName = charts.ImageNameVpnSeedClient
 	}
 
 	values, err := b.InjectSeedShootImages(defaultValues,
@@ -904,6 +912,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 				Namespace: *b.Config.SNI.Ingress.Namespace,
 				Labels:    b.Config.SNI.Ingress.Labels,
 			},
+			InternalDNSNameApiserver: b.outOfClusterAPIServerFQDN(),
 		},
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),
@@ -931,6 +940,7 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 				Namespace: *b.Config.SNI.Ingress.Namespace,
 				Labels:    b.Config.SNI.Ingress.Labels,
 			},
+			InternalDNSNameApiserver: b.outOfClusterAPIServerFQDN(),
 		},
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),
@@ -1009,4 +1019,45 @@ func (b *Botanist) RestartControlPlanePods(ctx context.Context) error {
 		client.InNamespace(b.Shoot.SeedNamespace),
 		client.MatchingLabels{v1beta1constants.LabelPodMaintenanceRestart: "true"},
 	)
+}
+
+func (b *Botanist) DeployVPNServer(ctx context.Context) error {
+
+	var (
+		nodeNetwork      = b.Shoot.GetNodeNetwork()
+		vpnTLSAuthSecret = b.Secrets["vpn-seed-server-tlsauth"]
+		vpnServerSecret  = b.Secrets["vpn-seed-server"]
+		vpnServerConfig  = map[string]interface{}{
+			"podNetwork":     b.Shoot.Networks.Pods.String(),
+			"serviceNetwork": b.Shoot.Networks.Services.String(),
+			"tlsAuth":        vpnTLSAuthSecret.Data["vpn.tlsauth"],
+			"vpnSeedServerSecretData": map[string]interface{}{
+				"ca":     vpnServerSecret.Data["ca.crt"],
+				"tlsCrt": vpnServerSecret.Data["tls.crt"],
+				"tlsKey": vpnServerSecret.Data["tls.key"],
+			},
+			"podAnnotations": map[string]interface{}{
+				"checksum/secret-vpn-seed-server": b.CheckSums["vpn-seed-server"],
+			},
+			"vpaEnabled":               b.Shoot.WantsVerticalPodAutoscaler,
+			"internalDNSNameApiserver": b.outOfClusterAPIServerFQDN(),
+		}
+	)
+
+	// OpenVPN related values
+	if openvpnDiffieHellmanSecret, ok := b.Secrets[v1beta1constants.GardenRoleOpenVPNDiffieHellman]; ok {
+		vpnServerConfig["diffieHellmanKey"] = openvpnDiffieHellmanSecret.Data["dh2048.pem"]
+	}
+	if nodeNetwork != nil {
+		vpnServerConfig["nodeNetwork"] = *nodeNetwork
+	}
+
+	vpnSeedServer, err := b.InjectSeedShootImages(vpnServerConfig, charts.ImageNameVpnSeedServer)
+	if err != nil {
+		return err
+	}
+
+	values := common.GenerateAddonConfig(vpnSeedServer, true)
+
+	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameVPNSeedServer), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameVPNSeedServer, kubernetes.Values(values))
 }

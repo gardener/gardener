@@ -16,12 +16,14 @@ package shoot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -234,6 +236,15 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	shoot.KonnectivityTunnelEnabled = gardenletfeatures.FeatureGate.Enabled(features.KonnectivityTunnel) && kubernetesVersionGeq118
 	if konnectivityTunnelEnabled, err := strconv.ParseBool(shoot.Info.Annotations[v1beta1constants.AnnotationShootKonnectivityTunnel]); err == nil && kubernetesVersionGeq118 {
 		shoot.KonnectivityTunnelEnabled = konnectivityTunnelEnabled
+	}
+
+	shoot.ReversedVPNEnabled = gardenletfeatures.FeatureGate.Enabled(features.ReversedVPN)
+	if reversedVPNEnabled, err := strconv.ParseBool(shoot.Info.Annotations[v1alpha1constants.AnnotationReversedVPN]); err == nil {
+		shoot.ReversedVPNEnabled = reversedVPNEnabled
+	}
+
+	if !gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) || !gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) || shoot.KonnectivityTunnelEnabled {
+		panic(errors.New("Inconsistent feature gate, APIServerSNI or ManagedIstio is required for ReversedVPN!"))
 	}
 
 	needsClusterAutoscaler, err := gardencorev1beta1helper.ShootWantsClusterAutoscaler(shootObject)

@@ -196,3 +196,36 @@ spec:
             type_url: type.googleapis.com/envoy.tcp.metadataexchange.config.MetadataExchange
             value:
               protocol: istio-peer-exchange
+
+---
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: http-connect-listener
+  namespace: {{ .Release.Namespace }}
+spec:
+  workloadSelector:
+    labels:
+      app: istio-ingressgateway
+      istio: ingressgateway
+  configPatches:
+  - applyTo: NETWORK_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        name: 0.0.0.0_8132
+        portNumber: 8132
+        filterChain:
+          filter:
+            name: envoy.filters.network.http_connection_manager
+    patch:
+      operation: MERGE
+      value:
+        name: "envoy.filters.network.http_connection_manager"
+        typed_config:
+          "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
+          http_protocol_options:
+            accept_http_10: true
+          upgrade_configs:
+          - upgrade_type: CONNECT
