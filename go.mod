@@ -80,5 +80,6 @@ replace (
 	k8s.io/component-base => k8s.io/component-base v0.20.2
 	k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.20.2
+	sigs.k8s.io/controller-runtime => github.com/timebertt/controller-runtime v0.6.1-0.20210324082610-55b965eb86b1
 	sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-diff/v4 v4.0.3 // remove after https://github.com/kubernetes/kubernetes/pull/99038 is merged and released
 )

@@ -1295,7 +1295,7 @@ k8s.io/utils/trace
 # sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.14
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/pkg/client
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/proto/client
-# sigs.k8s.io/controller-runtime v0.8.3
+# sigs.k8s.io/controller-runtime v0.8.3 => github.com/timebertt/controller-runtime v0.6.1-0.20210324082610-55b965eb86b1
 ## explicit
 sigs.k8s.io/controller-runtime
 sigs.k8s.io/controller-runtime/pkg/builder
@@ -1369,6 +1369,7 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.2.0
 ## explicit
 sigs.k8s.io/yaml
+# sigs.k8s.io/controller-runtime => github.com/timebertt/controller-runtime v0.6.1-0.20210324082610-55b965eb86b1
 # github.com/emicklei/go-restful => github.com/emicklei/go-restful v2.9.5+incompatible
 # github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
 # github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1

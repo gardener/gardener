@@ -154,7 +154,7 @@ func (c *TinyCA) NewServingCert(names ...string) (CertPair, error) {
 			DNSNames: dnsNames,
 			IPs:      ips,
 		},
-		Usages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		Usages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 	})
 }
 
