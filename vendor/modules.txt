@@ -1244,6 +1244,7 @@ k8s.io/helm/pkg/version
 ## explicit
 k8s.io/klog
 # k8s.io/klog/v2 v2.4.0
+## explicit
 k8s.io/klog/v2
 # k8s.io/kube-aggregator v0.20.2 => k8s.io/kube-aggregator v0.20.2
 ## explicit
@@ -1369,7 +1370,6 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.2.0
 ## explicit
 sigs.k8s.io/yaml
-# sigs.k8s.io/controller-runtime => github.com/timebertt/controller-runtime v0.6.1-0.20210324082610-55b965eb86b1
 # github.com/emicklei/go-restful => github.com/emicklei/go-restful v2.9.5+incompatible
 # github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
 # github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
@@ -1385,4 +1385,5 @@ sigs.k8s.io/yaml
 # k8s.io/component-base => k8s.io/component-base v0.20.2
 # k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 # k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.20.2
+# sigs.k8s.io/controller-runtime => github.com/timebertt/controller-runtime v0.6.1-0.20210324082610-55b965eb86b1
 # sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-diff/v4 v4.0.3
