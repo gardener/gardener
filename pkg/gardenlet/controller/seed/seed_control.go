@@ -247,24 +247,17 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 			return err
 		}
 
-		associatedControllerInstallations, err := controllerutils.DetermineControllerInstallationAssociations(ctx, gardenClient.Client(), seed.Name)
-		if err != nil {
-			seedLogger.Error(err.Error())
-			return err
-		}
-
 		associatedBackupBuckets, err := controllerutils.DetermineBackupBucketAssociations(ctx, gardenClient.Client(), seed.Name)
 		if err != nil {
 			seedLogger.Error(err.Error())
 			return err
 		}
 
-		if len(associatedShoots) == 0 && len(associatedControllerInstallations) == 0 && len(associatedBackupBuckets) == 0 {
+		if len(associatedShoots) == 0 && len(associatedBackupBuckets) == 0 {
 			seedLogger.Info("No Shoots, ControllerInstallations or BackupBuckets are referencing the Seed. Deletion accepted.")
 
-			// Debootstrap the Seed cluster.
-			if err := seedpkg.DebootstrapCluster(ctx, seedClient); err != nil {
-				message := fmt.Sprintf("Failed to unbootstrap Seed Cluster (%s).", err.Error())
+			if err := seedpkg.RunDeleteSeedFlow(ctx, seedClient, gardenClient, seedObj, seedLogger); err != nil {
+				message := fmt.Sprintf("Failed to delete Seed Cluster (%s).", err.Error())
 				conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "DebootstrapFailed", message)
 				seedLogger.Error(message)
 				_ = c.updateSeedStatus(ctx, gardenClient.Client(), seed, "<unknown>", capacity, allocatable, conditionSeedBootstrapped)
@@ -305,11 +298,6 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 		parentLogMessage := "Can't delete Seed, because the following objects are still referencing it:"
 		if len(associatedShoots) != 0 {
 			message := fmt.Sprintf("%s Shoots=%v", parentLogMessage, associatedShoots)
-			seedLogger.Info(message)
-			c.recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
-		}
-		if len(associatedControllerInstallations) != 0 {
-			message := fmt.Sprintf("%s ControllerInstallations=%v", parentLogMessage, associatedControllerInstallations)
 			seedLogger.Info(message)
 			c.recorder.Event(seed, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
 		}
@@ -381,7 +369,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	}
 
 	// Bootstrap the Seed cluster.
-	if err := seedpkg.BootstrapCluster(ctx, gardenClient, seedClient, seedObj, gardenSecrets, c.imageVector, c.componentImageVectors, c.config.DeepCopy()); err != nil {
+	if err := seedpkg.RunReconcileSeedFlow(ctx, gardenClient, seedClient, seedObj, gardenSecrets, c.imageVector, c.componentImageVectors, c.config.DeepCopy(), seedLogger); err != nil {
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "BootstrappingFailed", err.Error())
 		_ = c.updateSeedStatus(ctx, gardenClient.Client(), seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped)
 		seedLogger.Errorf("Seed bootstrapping failed: %+v", err)
