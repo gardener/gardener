@@ -18,7 +18,7 @@ set -e
 
 echo "> Installing requirements"
 
-GO111MODULE=off go get golang.org/x/tools/cmd/goimports
+GO111MODULE=off go get -u golang.org/x/tools/cmd/goimports
 
 export GO111MODULE=on
 curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.27.0
