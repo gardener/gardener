@@ -15,15 +15,14 @@
 package main
 
 import (
-	"flag"
 	"os"
+
+	"k8s.io/component-base/logs"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/gardener/gardener/cmd/gardener-apiserver/app"
 	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/apiserver/features"
-
-	genericapiserver "k8s.io/apiserver/pkg/server"
-	"k8s.io/component-base/logs"
 )
 
 func main() {
@@ -33,10 +32,8 @@ func main() {
 	logs.InitLogs()
 	defer logs.FlushLogs()
 
-	stopCh := genericapiserver.SetupSignalHandler()
-	command := app.NewCommandStartGardenerAPIServer(os.Stdout, os.Stderr, stopCh)
-	command.Flags().AddGoFlagSet(flag.CommandLine)
-	if err := command.Execute(); err != nil {
+	ctx := signals.SetupSignalHandler()
+	if err := app.NewCommandStartGardenerAPIServer().ExecuteContext(ctx); err != nil {
 		os.Exit(1)
 	}
 }
