@@ -734,7 +734,27 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 			Expect(actual).To(Equal(expected))
 		})
 
-		It("should not add an extension", func() {
+		It("should not add an extension if Seed has a deletion timestamp", func() {
+			deletionTimestamp := metav1.Now()
+			seed := &gardencorev1beta1.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					DeletionTimestamp: &deletionTimestamp,
+				},
+				Spec: gardencorev1beta1.SeedSpec{
+					DNS: gardencorev1beta1.SeedDNS{
+						Provider: &gardencorev1beta1.SeedDNSProvider{
+							Type: providerType,
+						},
+					},
+				},
+			}
+
+			expected := sets.NewString()
+			actual := computeKindTypesForSeed(seed)
+			Expect(actual).To(Equal(expected))
+		})
+
+		It("should not add an extension if no provider configured", func() {
 			seed := &gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{},
 			}
@@ -794,17 +814,6 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 
 			Expect(names).To(Equal(sets.NewString(controllerRegistration7.Name)))
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should fail to compute the result and return error", func() {
-			wantedKindTypeCombinations := sets.NewString(
-				extensionsv1alpha1.ExtensionResource + "/foo",
-			)
-
-			names, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, len(shootList), seedObjectMeta)
-
-			Expect(names).To(BeNil())
-			Expect(err).To(HaveOccurred())
 		})
 	})
 
