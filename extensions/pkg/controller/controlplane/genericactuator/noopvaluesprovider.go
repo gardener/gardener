@@ -27,6 +27,8 @@ type NoopValuesProvider struct {
 	common.ClientContext
 }
 
+var _ ValuesProvider = &NoopValuesProvider{}
+
 // GetConfigChartValues returns the values for the config chart applied by this actuator.
 func (vp *NoopValuesProvider) GetConfigChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) (map[string]interface{}, error) {
 	return nil, nil
@@ -39,6 +41,11 @@ func (vp *NoopValuesProvider) GetControlPlaneChartValues(context.Context, *exten
 
 // GetControlPlaneShootChartValues returns the values for the control plane shoot chart applied by this actuator.
 func (vp *NoopValuesProvider) GetControlPlaneShootChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster, map[string]string) (map[string]interface{}, error) {
+	return nil, nil
+}
+
+// GetControlPlaneShootCRDsChartValues returns the values for the control plane shoot CRDs chart applied by this actuator.
+func (vp *NoopValuesProvider) GetControlPlaneShootCRDsChartValues(context.Context, *extensionsv1alpha1.ControlPlane, *extensionscontroller.Cluster) (map[string]interface{}, error) {
 	return nil, nil
 }
 

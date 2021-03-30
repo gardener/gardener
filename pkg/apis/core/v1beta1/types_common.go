@@ -32,6 +32,8 @@ const (
 	// ErrorInfraDependencies indicates that the last error occurred due to dependent objects on the infrastructure level.
 	// It is classified as a non-retryable error code.
 	ErrorInfraDependencies ErrorCode = "ERR_INFRA_DEPENDENCIES"
+	// ErrorRetryableInfraDependencies indicates that the last error occurred due to dependent objects on the infrastructure level, but operation should be retried.
+	ErrorRetryableInfraDependencies ErrorCode = "ERR_RETRYABLE_INFRA_DEPENDENCIES"
 	// ErrorInfraResourcesDepleted indicates that the last error occurred due to depleted resource in the infrastructure.
 	ErrorInfraResourcesDepleted ErrorCode = "ERR_INFRA_RESOURCES_DEPLETED"
 	// ErrorCleanupClusterResources indicates that the last error occurred due to resources in the cluster that are stuck in deletion.
