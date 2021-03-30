@@ -623,6 +623,11 @@ func needsControlPlaneDeployment(ctx context.Context, o *operation.Operation, ku
 		return false, nil
 	}
 
+	if providerStatus := infrastructure.Status.ProviderStatus; providerStatus != nil {
+		// The infrastructure resource has been found with a non-nil provider status, so redeploy the control plane
+		return true, nil
+	}
+
 	// The infrastructure resource has been found, but its provider status is nil
 	// In this case the control plane could not have been created at all, so no need to redeploy it
 	return false, nil
