@@ -27,6 +27,7 @@ setup_envtest_env ${ENVTEST_ASSETS_DIR}
 
 echo "> Test Cover"
 
+export KUBEBUILDER_CONTROLPLANE_START_TIMEOUT=1m
 GO111MODULE=on ginkgo -cover -timeout=2m -race -mod=vendor $@
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
