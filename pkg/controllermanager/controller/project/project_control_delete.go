@@ -23,7 +23,6 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -32,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1beta1.Project, gardenClient client.Client, gardenAPIReader client.Reader) (reconcile.Result, error) {
@@ -45,29 +43,20 @@ func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1bet
 		if !isEmpty {
 			r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceNotEmpty, "Cannot release namespace %q because it still contains Shoots.", *namespace)
 
-			_ = kutil.TryPatchStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
-				project.Status.Phase = gardencorev1beta1.ProjectTerminating
-				return nil
-			})
+			_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectTerminating })
 			return reconcile.Result{RequeueAfter: time.Minute}, nil
 		}
 
 		released, err := r.releaseNamespace(ctx, gardenClient, project, *namespace)
 		if err != nil {
 			r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceDeletionFailed, err.Error())
-			_ = kutil.TryPatchStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
-				project.Status.Phase = gardencorev1beta1.ProjectFailed
-				return nil
-			})
+			_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectFailed })
 			return reconcile.Result{}, err
 		}
 
 		if !released {
 			r.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceMarkedForDeletion, "Successfully marked namespace %q for deletion.", *namespace)
-			_ = kutil.TryPatchStatus(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
-				project.Status.Phase = gardencorev1beta1.ProjectTerminating
-				return nil
-			})
+			_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectTerminating })
 			return reconcile.Result{RequeueAfter: time.Minute}, nil
 		}
 	}

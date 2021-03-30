@@ -23,7 +23,6 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/operation/common"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -246,15 +244,14 @@ func (r *projectStaleReconciler) relevantSecretBindingsInUse(isSecretBindingRele
 }
 
 func (r *projectStaleReconciler) markProjectAsNotStale(ctx context.Context, client client.Client, project *gardencorev1beta1.Project) error {
-	return kutil.TryPatchStatus(ctx, retry.DefaultBackoff, client, project, func() error {
+	return updateStatus(ctx, client, project, func() {
 		project.Status.StaleSinceTimestamp = nil
 		project.Status.StaleAutoDeleteTimestamp = nil
-		return nil
 	})
 }
 
 func (r *projectStaleReconciler) markProjectAsStale(ctx context.Context, client client.Client, project *gardencorev1beta1.Project, nowFunc func() metav1.Time) error {
-	return kutil.TryPatchStatus(ctx, retry.DefaultBackoff, client, project, func() error {
+	return updateStatus(ctx, client, project, func() {
 		if project.Status.StaleSinceTimestamp == nil {
 			now := nowFunc()
 			project.Status.StaleSinceTimestamp = &now
@@ -265,7 +262,7 @@ func (r *projectStaleReconciler) markProjectAsStale(ctx context.Context, client 
 			// configuration value and correctly applying the changes to all Projects that had already been assigned
 			// such a timestamp.
 			project.Status.StaleAutoDeleteTimestamp = nil
-			return nil
+			return
 		}
 
 		// If the project got stale we compute an auto delete timestamp only if the configured stale grace period is
@@ -278,8 +275,6 @@ func (r *projectStaleReconciler) markProjectAsStale(ctx context.Context, client 
 		if project.Status.StaleAutoDeleteTimestamp == nil || autoDeleteTimestamp.After(project.Status.StaleAutoDeleteTimestamp.Time) {
 			project.Status.StaleAutoDeleteTimestamp = &autoDeleteTimestamp
 		}
-
-		return nil
 	})
 }
 

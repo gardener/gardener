@@ -28,6 +28,7 @@ import (
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -125,4 +126,10 @@ func (r *projectReconciler) reportEvent(project *gardencorev1beta1.Project, isEr
 	}
 
 	r.recorder.Eventf(project, eventType, eventReason, messageFmt, args...)
+}
+
+func updateStatus(ctx context.Context, c client.Client, project *gardencorev1beta1.Project, transform func()) error {
+	patch := client.StrategicMergeFrom(project.DeepCopy())
+	transform()
+	return c.Status().Patch(ctx, project, patch)
 }
