@@ -164,9 +164,9 @@ func ToSelectableFields(project *core.Project) fields.Set {
 	// amount of allocations needed to create the fields.Set. If you add any
 	// field here or the number of object-meta related fields changes, this should
 	// be adjusted.
-	projectSpecificFieldsSet := make(fields.Set, 3)
+	projectSpecificFieldsSet := make(fields.Set, 2)
 	projectSpecificFieldsSet[core.ProjectNamespace] = getNamespace(project)
-	return generic.AddObjectMetaFieldsSet(projectSpecificFieldsSet, &project.ObjectMeta, true)
+	return generic.AddObjectMetaFieldsSet(projectSpecificFieldsSet, &project.ObjectMeta, false)
 }
 
 // GetAttrs returns labels and fields of a given object for filtering purposes.
@@ -188,7 +188,7 @@ func MatchProject(label labels.Selector, field fields.Selector) storage.Selectio
 	}
 }
 
-// NamespaceTriggerFunc returns spec.seedName of given Project.
+// NamespaceTriggerFunc returns spec.namespace of given Project.
 func NamespaceTriggerFunc(obj runtime.Object) string {
 	project, ok := obj.(*core.Project)
 	if !ok {

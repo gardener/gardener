@@ -178,7 +178,7 @@ var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
 		result := ToSelectableFields(newProject("foo"))
 
-		Expect(result).To(HaveLen(3))
+		Expect(result).To(HaveLen(2))
 		Expect(result.Has(core.ProjectNamespace)).To(BeTrue())
 		Expect(result.Get(core.ProjectNamespace)).To(Equal("foo"))
 	})
