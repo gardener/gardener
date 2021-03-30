@@ -140,6 +140,35 @@ var _ = Describe("Project", func() {
 		})
 	})
 
+	Describe("#ProjectForNamespaceFromReader", func() {
+		It("should return an error because the listing failed", func() {
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{}), client.MatchingFields{gardencore.ProjectNamespace: namespaceName}).Return(fakeErr)
+
+			projectResult, err := ProjectForNamespaceFromReader(ctx, c, namespaceName)
+			Expect(err).To(MatchError(fakeErr))
+			Expect(projectResult).To(BeNil())
+		})
+
+		It("should return an error because the listing yielded no results", func() {
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{}), client.MatchingFields{gardencore.ProjectNamespace: namespaceName})
+
+			projectResult, err := ProjectForNamespaceFromReader(ctx, c, namespaceName)
+			Expect(err).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: gardencorev1beta1.GroupName, Resource: "Project"}, "<unknown>")))
+			Expect(projectResult).To(BeNil())
+		})
+
+		It("should return the project", func() {
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{}), client.MatchingFields{gardencore.ProjectNamespace: namespaceName}).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
+				(&gardencorev1beta1.ProjectList{Items: []gardencorev1beta1.Project{*project}}).DeepCopyInto(list)
+				return nil
+			})
+
+			projectResult, err := ProjectForNamespaceFromReader(ctx, c, namespaceName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(projectResult).To(Equal(project))
+		})
+	})
+
 	Describe("#ProjectAndNamespaceFromReader", func() {
 		It("should return an error because getting the namespace failed", func() {
 			c.EXPECT().Get(ctx, kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(fakeErr)
@@ -150,7 +179,7 @@ var _ = Describe("Project", func() {
 			Expect(projectResult).To(BeNil())
 		})
 
-		It("should return the namespace but no project beacuse labels missing", func() {
+		It("should return the namespace but no project because labels missing", func() {
 			c.EXPECT().Get(ctx, kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.Namespace) error {
 				namespace.DeepCopyInto(obj)
 				return nil

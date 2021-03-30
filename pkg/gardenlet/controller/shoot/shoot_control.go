@@ -193,7 +193,7 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 	}
 
 	// fetch related objects required for shoot operation
-	project, _, err := gutil.ProjectAndNamespaceFromReader(ctx, gardenClient.APIReader(), shoot.Namespace)
+	project, err := gutil.ProjectForNamespaceFromReader(ctx, gardenClient.APIReader(), shoot.Namespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

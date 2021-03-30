@@ -31,10 +31,10 @@ var (
 	NewClientSetWithConfig = kubernetes.NewWithConfig
 )
 
-// github.com/gardener/gardener/pkg/operation/common aliases
+// github.com/gardener/gardener/pkg/utils/gardener aliases
 var (
-	// ProjectAndNamespaceFromReader is an alias to gutil.ProjectAndNamespaceFromReader which allows it to be mocked for testing.
-	ProjectAndNamespaceFromReader = gutil.ProjectAndNamespaceFromReader
+	// ProjectForNamespaceFromReader is an alias to gutil.ProjectForNamespaceFromReader which allows it to be mocked for testing.
+	ProjectForNamespaceFromReader = gutil.ProjectForNamespaceFromReader
 )
 
 // net aliases

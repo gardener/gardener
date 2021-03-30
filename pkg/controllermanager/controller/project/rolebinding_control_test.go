@@ -84,7 +84,7 @@ var _ = Describe("#roleBindingDelete", func() {
 		func(roleBindingName string) {
 			rolebinding.Name = roleBindingName
 
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{})).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{}), client.MatchingFields{"spec.namespace": ns}).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
 				(&gardencorev1beta1.ProjectList{Items: []gardencorev1beta1.Project{*proj}}).DeepCopyInto(list)
 				return nil
 			})
@@ -107,7 +107,7 @@ var _ = Describe("#roleBindingDelete", func() {
 			proj.DeletionTimestamp = &now
 			rolebinding.Name = roleBindingName
 
-			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{})).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{}), client.MatchingFields{"spec.namespace": ns}).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
 				(&gardencorev1beta1.ProjectList{Items: []gardencorev1beta1.Project{*proj}}).DeepCopyInto(list)
 				return nil
 			})

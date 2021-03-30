@@ -66,6 +66,21 @@ func ProjectForNamespaceFromInternalLister(projectLister gardencoreinternalliste
 	return nil, apierrors.NewNotFound(gardencore.Resource("Project"), namespaceName)
 }
 
+// ProjectForNamespaceFromReader returns the Project responsible for a given <namespace>. It reads the namespace and
+// fetches the project name label. Then it will read the project with the respective name.
+func ProjectForNamespaceFromReader(ctx context.Context, reader client.Reader, namespaceName string) (*gardencorev1beta1.Project, error) {
+	projectList := &gardencorev1beta1.ProjectList{}
+	if err := reader.List(ctx, projectList, client.MatchingFields{gardencore.ProjectNamespace: namespaceName}); err != nil {
+		return nil, err
+	}
+
+	if len(projectList.Items) == 0 {
+		return nil, apierrors.NewNotFound(gardencorev1beta1.Resource("Project"), "<unknown>")
+	}
+
+	return &projectList.Items[0], nil
+}
+
 // ProjectAndNamespaceFromReader returns the Project responsible for a given <namespace>. It reads the namespace and
 // fetches the project name label. Then it will read the project with the respective name.
 func ProjectAndNamespaceFromReader(ctx context.Context, reader client.Reader, namespaceName string) (*gardencorev1beta1.Project, *corev1.Namespace, error) {

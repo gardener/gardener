@@ -78,14 +78,14 @@ var _ = Describe("ShootClientMap", func() {
 			},
 		}
 
-		internal.ProjectAndNamespaceFromReader = func(ctx context.Context, c client.Reader, namespaceName string) (*gardencorev1beta1.Project, *corev1.Namespace, error) {
+		internal.ProjectForNamespaceFromReader = func(ctx context.Context, c client.Reader, namespaceName string) (*gardencorev1beta1.Project, error) {
 			return &gardencorev1beta1.Project{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "eden",
 				},
 				Spec: gardencorev1beta1.ProjectSpec{
 					Namespace: pointer.StringPtr("garden-eden"),
-				}}, nil, nil
+				}}, nil
 		}
 		internal.LookupHost = func(host string) ([]string, error) {
 			Expect(host).To(Equal("kube-apiserver." + shoot.Status.TechnicalID + ".svc"))
@@ -177,7 +177,7 @@ var _ = Describe("ShootClientMap", func() {
 			Expect(err).To(MatchError(ContainSubstring("failed to get seed client: fake")))
 		})
 
-		It("should fail if ProjectAndNamespaceFromReader fails", func() {
+		It("should fail if ProjectForNamespaceFromReader fails", func() {
 			shoot.Status.TechnicalID = "" // trigger retrieval of project instead of relying on shoot status
 
 			fakeErr := fmt.Errorf("fake")
@@ -186,8 +186,8 @@ var _ = Describe("ShootClientMap", func() {
 					shoot.DeepCopyInto(obj.(*gardencorev1beta1.Shoot))
 					return nil
 				})
-			internal.ProjectAndNamespaceFromReader = func(ctx context.Context, c client.Reader, namespaceName string) (*gardencorev1beta1.Project, *corev1.Namespace, error) {
-				return nil, nil, fakeErr
+			internal.ProjectForNamespaceFromReader = func(ctx context.Context, c client.Reader, namespaceName string) (*gardencorev1beta1.Project, error) {
+				return nil, fakeErr
 			}
 
 			cs, err := cm.GetClient(ctx, key)

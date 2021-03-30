@@ -47,7 +47,7 @@ func (c *Controller) roleBindingDelete(ctx context.Context, obj interface{}) {
 
 		logger.Logger.Debugf("[PROJECT RECONCILE] %q rolebinding modified", key)
 
-		project, _, err := gutil.ProjectAndNamespaceFromReader(ctx, c.gardenClient, namespace)
+		project, err := gutil.ProjectForNamespaceFromReader(ctx, c.gardenClient, namespace)
 		if err != nil {
 			logger.Logger.Errorf("Couldn't get list keys for object %+v: %v", obj, err)
 			return
