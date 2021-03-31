@@ -178,14 +178,32 @@ func (a *actuator) createSNIIngressNamespace(ctx context.Context, shootClient ku
 	return err
 }
 
-func (a *actuator) deleteSNIIngressNamespace(ctx context.Context, shootClient kubernetes.Interface, namespaceName string) error {
-	sniIngressNamespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespaceName,
-		},
+// getSNIIngressNamespaceName returns the configured SNI Ingress Namespae Name or the default if unset.
+func getSNIIngressNamespaceName(gardenletConfig *configv1alpha1.GardenletConfiguration) (namespaceName string) {
+	namespaceName = configv1alpha1.DefaultSNIIngresNamespace
+
+	if gardenletConfig == nil {
+		return
 	}
 
-	return client.IgnoreNotFound(shootClient.Client().Delete(ctx, sniIngressNamespace))
+	if gardenletConfig.SNI == nil {
+		return
+	}
+
+	if gardenletConfig.SNI.Ingress == nil {
+		return
+	}
+
+	if gardenletConfig.SNI.Ingress.Namespace == nil {
+		return
+	}
+
+	if len(*gardenletConfig.SNI.Ingress.Namespace) == 0 {
+		return
+	}
+
+	namespaceName = *gardenletConfig.SNI.Ingress.Namespace
+	return
 }
 
 func (a *actuator) ensureGardenNamespaceDeleted(ctx context.Context, shootClient kubernetes.Interface) error {
@@ -293,8 +311,9 @@ func (a *actuator) deployGardenlet(ctx context.Context, shootClient kubernetes.I
 		return err
 	}
 
-	if err := a.createSNIIngressNamespace(ctx, shootClient, *gardenletConfig.SNI.Ingress.Namespace); err != nil {
-		return fmt.Errorf("could not create SNI ingress namespace %s in shoot %s: %w", *gardenletConfig.SNI.Ingress.Namespace, kutil.ObjectName(shoot), err)
+	sniIngressNamespaceName := getSNIIngressNamespaceName(gardenletConfig)
+	if err := a.createSNIIngressNamespace(ctx, shootClient, sniIngressNamespaceName); err != nil {
+		return fmt.Errorf("could not create SNI ingress namespace %s in shoot %s: %w", sniIngressNamespaceName, kutil.ObjectName(shoot), err)
 	}
 
 	values, err := a.prepareGardenletChartValues(
@@ -322,10 +341,6 @@ func (a *actuator) deleteGardenlet(ctx context.Context, shootClient kubernetes.I
 
 	if err := a.ensureSeedSecretsDeleted(ctx, &gardenletConfig.SeedConfig.SeedTemplate.Spec, managedSeed); err != nil {
 		return err
-	}
-
-	if err := a.deleteSNIIngressNamespace(ctx, shootClient, *gardenletConfig.SNI.Ingress.Namespace); err != nil {
-		return fmt.Errorf("failed to delete SNI ingress namespace %s in shoot %s: %w", *gardenletConfig.SNI.Ingress.Namespace, kutil.ObjectName(shoot), err)
 	}
 
 	// Prepare gardenlet chart values

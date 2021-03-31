@@ -38,6 +38,7 @@ import (
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -57,7 +58,7 @@ const (
 	kubeconfigSecretName = "test.kubeconfig"
 	backupSecretName     = "test-backup-secret"
 	seedSecretName       = "test-seed-secret"
-	sniIngressNamespace  = "istio-ingress"
+	sniIngressNamespace  = configv1alpha1.DefaultSNIIngresNamespace
 )
 
 var _ = Describe("Actuator", func() {
@@ -291,16 +292,6 @@ var _ = Describe("Actuator", func() {
 					return nil
 				},
 			)
-		}
-		expectEnsureSNIIngressDeleted = func() {
-			// Delete garden namespace
-			shc.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
-				func(_ context.Context, ns *corev1.Namespace) error {
-					Expect(ns.Name).To(Equal(*gardenletConfig.SNI.Ingress.Namespace))
-					return nil
-				},
-			)
-
 		}
 
 		expectCheckSeedSpec = func() {
@@ -662,7 +653,6 @@ var _ = Describe("Actuator", func() {
 
 				expectEnsureSeedDeleted()
 				expectEnsureSeedSecretsDeleted()
-				expectEnsureSNIIngressDeleted()
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection()
 				expectGetGardenletChartValues(true)
@@ -730,6 +720,25 @@ var _ = Describe("Utils", func() {
 			Expect(ensuredDeploymentWithoutDomain.Env[1].Value).To(Equal(gutil.GetAPIServerDomain(*dnsWithDomain.Domain)))
 
 		})
+	})
+
+	Describe("#ensureGardenletEnvironment", func() {
+		var (
+			customSNINamespaceName = "custom-sni-namesapce"
+		)
+		DescribeTable("#getSNIIngressNamespaceName",
+			func(gardenletConfig *configv1alpha1.GardenletConfiguration, expectedName string) {
+				Expect(getSNIIngressNamespaceName(gardenletConfig)).To(Equal(expectedName))
+			},
+
+			Entry("nil config", nil, configv1alpha1.DefaultSNIIngresNamespace),
+			Entry("empty gardenlet config", configv1alpha1.GardenletConfiguration{}, configv1alpha1.DefaultSNIIngresNamespace),
+			Entry("empty sni config", configv1alpha1.GardenletConfiguration{SNI: &configv1alpha1.SNI{}}, configv1alpha1.DefaultSNIIngresNamespace),
+			Entry("empty sniIngress config", configv1alpha1.GardenletConfiguration{SNI: &configv1alpha1.SNI{Ingress: &configv1alpha1.SNIIngress{}}}, configv1alpha1.DefaultSNIIngresNamespace),
+			Entry("nil namespace config", configv1alpha1.GardenletConfiguration{SNI: &configv1alpha1.SNI{Ingress: &configv1alpha1.SNIIngress{Namespace: nil}}}, configv1alpha1.DefaultSNIIngresNamespace),
+			Entry("empty namespace config", configv1alpha1.GardenletConfiguration{SNI: &configv1alpha1.SNI{Ingress: &configv1alpha1.SNIIngress{Namespace: pointer.StringPtr("")}}}, configv1alpha1.DefaultSNIIngresNamespace),
+			Entry("empty namespace config", configv1alpha1.GardenletConfiguration{SNI: &configv1alpha1.SNI{Ingress: &configv1alpha1.SNIIngress{Namespace: pointer.StringPtr(customSNINamespaceName)}}}, customSNINamespaceName),
+		)
 	})
 })
 
