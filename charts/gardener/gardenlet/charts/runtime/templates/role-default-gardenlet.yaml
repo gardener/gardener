@@ -1,6 +1,4 @@
 {{- if .Values.global.gardenlet.enabled }}
-# ClusterRole defines the required permissions for the gardenlet in the seed
-# For now, we provide escalation privileges required by gardener resoruce manager.
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: Role
