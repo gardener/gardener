@@ -125,7 +125,7 @@ var _ = Describe("ValuesHelper", func() {
 			},
 		}
 
-		vh = newValuesHelper(parentConfig, imageVector)
+		vh = NewValuesHelper(parentConfig, imageVector)
 
 		deployment = &seedmanagementv1alpha1.GardenletDeployment{
 			ReplicaCount:         pointer.Int32Ptr(1),
@@ -178,11 +178,11 @@ var _ = Describe("ValuesHelper", func() {
 			var bootstrapKubeconfig, kubeconfigSecret *corev1.SecretReference
 			if withBootstrap {
 				bootstrapKubeconfig = &corev1.SecretReference{
-					Name:      gardenletKubeconfigBootstrapSecretName,
+					Name:      "gardenlet-kubeconfig-bootstrap",
 					Namespace: v1beta1constants.GardenNamespace,
 				}
 				kubeconfigSecret = &corev1.SecretReference{
-					Name:      gardenletKubeconfigSecretName,
+					Name:      "gardenlet-kubeconfig",
 					Namespace: v1beta1constants.GardenNamespace,
 				}
 			} else {
@@ -293,12 +293,12 @@ var _ = Describe("ValuesHelper", func() {
 
 			if withBootstrap {
 				bootstrapKubeconfig := map[string]interface{}{
-					"name":       gardenletKubeconfigBootstrapSecretName,
+					"name":       "gardenlet-kubeconfig-bootstrap",
 					"namespace":  v1beta1constants.GardenNamespace,
 					"kubeconfig": bk,
 				}
 				kubeconfigSecret := map[string]interface{}{
-					"name":      gardenletKubeconfigSecretName,
+					"name":      "gardenlet-kubeconfig",
 					"namespace": v1beta1constants.GardenNamespace,
 				}
 

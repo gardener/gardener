@@ -1,0 +1,76 @@
+apiVersion: landscaper.gardener.cloud/v1alpha1
+kind: Installation
+metadata:
+  name: gardenlet
+  namespace: ls-system
+spec:
+  # inline component descriptor instead of referencing from registry
+  componentDescriptor:
+    inline:
+      meta:
+        schemaVersion: 'v2'
+      component:
+        name: 'github.com/gardener/gardener'
+        version: 'latest'
+        repositoryContexts: []
+        provider: 'internal'
+
+        # blueprint is not defined as a resource here, as it is inlined
+        resources:
+          #  image referenced in in blueprint in deployExecutions when rendering the deploy item
+          - type: ociImage
+            name: gardenlet-landscaper
+            version: 'latest'
+            relation: 'local'
+            access:
+              type: ociRegistry
+              imageReference: eu.gcr.io/gardener-project/gardener/landscaper-gardenlet:latest
+          #  read by the Gardenlet landscaper
+          - type: ociImage
+            name: gardenlet
+            version: 'latest'
+            relation: 'local'
+            access:
+              type: ociRegistry
+              imageReference: eu.gcr.io/gardener-project/gardener/gardenlet:latest
+
+  # inline blueprint instead of referencing from registry
+  blueprint:
+    inline:
+      filesystem:
+        blueprint.yaml: |
+#         paste the blueprint definition
+#         find the blueprint here: landscaper/gardenlet/blueprint.yaml
+
+  imports:
+    targets:
+      - name: seedCluster
+        target: '#seed-cluster'
+      - name: gardenCluster
+        target: '#garden-cluster'
+    data:
+      - name: seedBackupCredentials
+        configMapRef:
+          name: gardenlet-landscaper-config
+          namespace: ls-system
+          key: seedBackupCredentials
+      - name: deploymentConfiguration
+        configMapRef:
+          name: gardenlet-landscaper-config
+          namespace: ls-system
+          key: deploymentConfiguration
+      - name: componentConfiguration
+        configMapRef:
+          name: gardenlet-landscaper-config
+          namespace: ls-system
+          key: componentConfiguration
+      - name: imageVectorOverwrite
+        configMapRef:
+          name: gardenlet-image-vector-overwrite
+          namespace: ls-system
+          key: imageVectorOverwrite
+      - name: componentImageVectorOverwrites
+        configMapRef:
+          name: gardenlet-component-image-vector-overwrites
+          namespace: ls-system
+          key: componentImageVectorOverwrites

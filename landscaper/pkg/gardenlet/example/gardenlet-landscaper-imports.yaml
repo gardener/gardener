@@ -1,0 +1,70 @@
+apiVersion: gardenlet.gardener.landscaper.gardener.cloud/v1alpha1
+kind: Imports
+seedCluster:
+  apiVersion: landscaper.gardener.cloud/v1alpha1
+  kind: Target
+  spec:
+    type: landscaper.gardener.cloud/kubernetes-cluster
+    config:
+      kubeconfig: |
+        ---
+        apiVersion:...
+        # here goes the kubeconfig of the Seed cluster
+
+gardenCluster:
+  apiVersion: landscaper.gardener.cloud/v1alpha1
+  kind: Target
+  spec:
+    type: landscaper.gardener.cloud/kubernetes-cluster
+    config:
+      kubeconfig: |
+        ---
+        apiVersion:...
+        # here goes the kubeconfig of the target cluster
+
+# optional backup provider for the Seed cluster registered by the Gardenlet
+#seedBackupCredentials: |
+  # Provider-related secret keys
+  #
+  # Please checkout the documentation and example manifests of your provider to find out which data keys
+  # are expected.
+
+#deploymentConfiguration:
+#  replicaCount: 1
+#  revisionHistoryLimit: 1
+#  serviceAccountName: gardenlet
+#  resources:
+#    requests:
+#      cpu: 70m
+#      memory: 100Mi
+#    limits:
+#      cpu: 1000m
+#      memory: 2Gi
+#  podLabels:
+#    foo: bar
+#  podAnnotations:
+#    foo: bar
+  #  additionalVolumes: []
+  #  additionalVolumeMounts: []
+  #  env: []
+#  vpa: false
+
+# check example/20-componentconfig-gardenlet.yaml for what can be configured
+componentConfiguration:
+  #  apiVersion: gardenlet.config.gardener.cloud/v1alpha1
+  #  kind: GardenletConfiguration
+  # <optional Gardenlet component configuration to deviate from the default settings>
+
+  # seedConfig is mandatory
+  seedConfig:
+    metadata:
+      name: my-seed
+    spec:
+    #     <Check out the `spec` in the `50-seed.yaml` file to see what's possible to configure here>
+
+
+# componentImageVectorOverwrites: |
+#   ...
+
+# imageVectorOverwrite: |
+#   ...

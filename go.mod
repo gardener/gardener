@@ -8,10 +8,12 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.2.0
 	github.com/coreos/go-systemd/v22 v22.1.0
 	github.com/envoyproxy/go-control-plane v0.9.7-0.20200730005029-803dd64f0468
+	github.com/gardener/component-spec/bindings-go v0.0.33
 	github.com/gardener/etcd-druid v0.3.0
 	github.com/gardener/external-dns-management v0.7.18
 	github.com/gardener/gardener-resource-manager v0.18.0
 	github.com/gardener/hvpa-controller v0.3.1
+	github.com/gardener/landscaper/apis v0.6.0
 	github.com/gardener/machine-controller-manager v0.33.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.3.0
@@ -19,11 +21,11 @@ require (
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/mock v1.5.0
 	github.com/googleapis/gnostic v0.5.1
-	github.com/hashicorp/go-multierror v1.0.0
-	github.com/huandu/xstrings v1.3.1
+	github.com/hashicorp/go-multierror v1.1.0
+	github.com/huandu/xstrings v1.3.2
 	github.com/json-iterator/go v1.1.10
 	github.com/mholt/archiver v3.1.1+incompatible
-	github.com/onsi/ginkgo v1.14.1
+	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.5
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
@@ -35,7 +37,7 @@ require (
 	github.com/texttheater/golang-levenshtein v0.0.0-20191208221605-eb6844b05fc6
 	go.uber.org/zap v1.15.0
 	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
-	golang.org/x/lint v0.0.0-20200302205851-738671d3881b
+	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
 	gomodules.xyz/jsonpatch/v2 v2.1.0
 	gonum.org/v1/gonum v0.8.2

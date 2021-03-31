@@ -1,0 +1,51 @@
+apiVersion: landscaper.gardener.cloud/v1alpha1
+kind: Installation
+metadata:
+  name: gardenlet
+  namespace: ls-system
+spec:
+  blueprint:
+    ref:
+      # reference the component descriptor from the registry stored as an OCI artifact
+      # the component descriptor has internally a reference to the Blueprint
+      # Resolved reference: eu.gcr.io/gardener-project/landscaper/dev/components/component-descriptors/github.com/gardener/gardener:latest
+      repositoryContext:
+        type: ociRegistry
+        baseUrl: eu.gcr.io/gardener-project/landscaper/dev/components
+      componentName: github.com/gardener/gardener # name of the component descriptor
+      version: 'latest'
+      # name of the blueprint within the component descriptor
+      resourceName: gardenlet-blueprint
+
+  imports:
+    targets:
+      - name: seedCluster
+        target: '#seed-cluster'
+      - name: gardenCluster
+        target: '#garden-cluster'
+    data:
+      - name: seedBackupCredentials
+        configMapRef:
+          name: gardenlet-landscaper-config
+          namespace: ls-system
+          key: seedBackupCredentials
+      - name: deploymentConfiguration
+        configMapRef:
+          name: gardenlet-landscaper-config
+          namespace: ls-system
+          key: deploymentConfiguration
+      - name: componentConfiguration
+        configMapRef:
+          name: gardenlet-landscaper-config
+          namespace: ls-system
+          key: componentConfiguration
+      - name: imageVectorOverwrite
+        configMapRef:
+          name: gardenlet-image-vector-overwrite
+          namespace: ls-system
+          key: imageVectorOverwrite
+      - name: componentImageVectorOverwrites
+        configMapRef:
+          name: gardenlet-component-image-vector-overwrites
+          namespace: ls-system
+          key: componentImageVectorOverwrites

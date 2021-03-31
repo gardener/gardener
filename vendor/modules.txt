@@ -89,6 +89,15 @@ github.com/evanphx/json-patch
 github.com/fatih/color
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
+# github.com/gardener/component-spec/bindings-go v0.0.33
+## explicit
+github.com/gardener/component-spec/bindings-go/apis
+github.com/gardener/component-spec/bindings-go/apis/v2
+github.com/gardener/component-spec/bindings-go/apis/v2/cdutils
+github.com/gardener/component-spec/bindings-go/apis/v2/jsonscheme
+github.com/gardener/component-spec/bindings-go/apis/v2/validation
+github.com/gardener/component-spec/bindings-go/codec
+github.com/gardener/component-spec/bindings-go/utils/selector
 # github.com/gardener/etcd-druid v0.3.0
 ## explicit
 github.com/gardener/etcd-druid/api/v1alpha1
@@ -106,6 +115,12 @@ github.com/gardener/gardener-resource-manager/pkg/manager
 # github.com/gardener/hvpa-controller v0.3.1
 ## explicit
 github.com/gardener/hvpa-controller/api/v1alpha1
+# github.com/gardener/landscaper/apis v0.6.0
+## explicit
+github.com/gardener/landscaper/apis/config
+github.com/gardener/landscaper/apis/core
+github.com/gardener/landscaper/apis/core/v1alpha1
+github.com/gardener/landscaper/apis/deployer/container
 # github.com/gardener/machine-controller-manager v0.33.0
 ## explicit
 github.com/gardener/machine-controller-manager/pkg/apis/machine
@@ -206,7 +221,7 @@ github.com/googleapis/gnostic/openapiv2
 github.com/grpc-ecosystem/go-grpc-prometheus
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
-# github.com/hashicorp/go-multierror v1.0.0
+# github.com/hashicorp/go-multierror v1.1.0
 ## explicit
 github.com/hashicorp/go-multierror
 # github.com/hashicorp/golang-lru v0.5.4
@@ -223,7 +238,7 @@ github.com/hashicorp/hcl/hcl/token
 github.com/hashicorp/hcl/json/parser
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
-# github.com/huandu/xstrings v1.3.1
+# github.com/huandu/xstrings v1.3.2
 ## explicit
 github.com/huandu/xstrings
 # github.com/imdario/mergo v0.3.10
@@ -270,7 +285,7 @@ github.com/nxadm/tail/ratelimiter
 github.com/nxadm/tail/util
 github.com/nxadm/tail/watch
 github.com/nxadm/tail/winfile
-# github.com/onsi/ginkgo v1.14.1
+# github.com/onsi/ginkgo v1.14.2
 ## explicit
 github.com/onsi/ginkgo
 github.com/onsi/ginkgo/config
@@ -381,6 +396,12 @@ github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/hash
 github.com/ulikunitz/xz/internal/xlog
 github.com/ulikunitz/xz/lzma
+# github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f
+github.com/xeipuuv/gojsonpointer
+# github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415
+github.com/xeipuuv/gojsonreference
+# github.com/xeipuuv/gojsonschema v1.2.0
+github.com/xeipuuv/gojsonschema
 # github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 github.com/xi2/xz
 # go.etcd.io/etcd v0.5.0-alpha.5.0.20200910180754-dd1b699fc489
@@ -444,7 +465,7 @@ golang.org/x/crypto/scrypt
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/lint v0.0.0-20200302205851-738671d3881b
+# golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5
 ## explicit
 golang.org/x/lint
 golang.org/x/lint/golint
@@ -469,7 +490,7 @@ golang.org/x/net/websocket
 # golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
+# golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 golang.org/x/sync/singleflight
 # golang.org/x/sys v0.0.0-20201112073958-5cba982894dd
 golang.org/x/sys/cpu
@@ -501,7 +522,7 @@ golang.org/x/text/width
 # golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
 ## explicit
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20200616195046-dc31b401abb5
+# golang.org/x/tools v0.0.0-20201002184944-ecd9fd270d5d
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/gcexportdata
 golang.org/x/tools/go/internal/gcimporter

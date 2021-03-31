@@ -469,9 +469,9 @@ var _ = Describe("Actuator", func() {
 
 		expectPrepareGardenClientConnection = func() {
 			// Check if kubeconfig secret exists
-			shc.EXPECT().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, gardenletKubeconfigSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			shc.EXPECT().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, "gardenlet-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret) error {
-					return apierrors.NewNotFound(corev1.Resource("secret"), gardenletKubeconfigSecretName)
+					return apierrors.NewNotFound(corev1.Resource("secret"), "gardenlet-kubeconfig")
 				},
 			)
 
@@ -503,11 +503,11 @@ var _ = Describe("Actuator", func() {
 					if withBootstrap {
 						Expect(gc.GardenClientConnection.Kubeconfig).To(Equal(""))
 						Expect(gc.GardenClientConnection.KubeconfigSecret).To(Equal(&corev1.SecretReference{
-							Name:      gardenletKubeconfigSecretName,
+							Name:      "gardenlet-kubeconfig",
 							Namespace: v1beta1constants.GardenNamespace,
 						}))
 						Expect(gc.GardenClientConnection.BootstrapKubeconfig).To(Equal(&corev1.SecretReference{
-							Name:      gardenletKubeconfigBootstrapSecretName,
+							Name:      "gardenlet-kubeconfig-bootstrap",
 							Namespace: v1beta1constants.GardenNamespace,
 						}))
 					} else {

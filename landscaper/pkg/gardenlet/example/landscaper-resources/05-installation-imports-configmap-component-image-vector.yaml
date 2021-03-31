@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gardenlet-component-image-vector-overwrites
+  namespace: ls-system
+data:
+#  componentImageVectorOverwrites: |
+#    components:
+#      - imageVectorOverwrite: |
+#          images:
+#            - ....
