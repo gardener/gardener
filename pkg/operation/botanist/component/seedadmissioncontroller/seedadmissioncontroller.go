@@ -38,6 +38,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -60,6 +61,8 @@ const (
 	port            = 10250
 	volumeName      = Name + "-tls"
 	volumeMountPath = "/srv/gardener-seed-admission-controller"
+
+	defaultReplicas = int32(3)
 )
 
 // New creates a new instance of DeployWaiter for the gardener-seed-admission-controller.
@@ -68,12 +71,14 @@ func New(
 	namespace string,
 	image string,
 	kubernetesVersion *semver.Version,
+	settings *gardencorev1beta1.SeedSettingAdmissionController,
 ) component.DeployWaiter {
 	return &gardenerSeedAdmissionController{
 		client:            client,
 		namespace:         namespace,
 		image:             image,
 		kubernetesVersion: kubernetesVersion,
+		settings:          settings,
 	}
 }
 
@@ -82,6 +87,7 @@ type gardenerSeedAdmissionController struct {
 	namespace         string
 	image             string
 	kubernetesVersion *semver.Version
+	settings          *gardencorev1beta1.SeedSettingAdmissionController
 }
 
 func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
@@ -182,7 +188,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 			},
 			Spec: appsv1.DeploymentSpec{
 				RevisionHistoryLimit: pointer.Int32Ptr(1),
-				Replicas:             pointer.Int32Ptr(3),
+				Replicas:             pointer.Int32Ptr(replicasFromSettings(g.settings)),
 				Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{Labels: getLabels()},
@@ -403,6 +409,14 @@ func init() {
 
 	versionConstraintK8sGreaterEqual115, err = semver.NewConstraint(">= 1.15")
 	utilruntime.Must(err)
+}
+
+func replicasFromSettings(settings *gardencorev1beta1.SeedSettingAdmissionController) int32 {
+	if settings == nil || settings.Replicas <= 0 {
+		return defaultReplicas
+	}
+
+	return settings.Replicas
 }
 
 const (

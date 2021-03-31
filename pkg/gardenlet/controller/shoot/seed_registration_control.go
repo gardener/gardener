@@ -333,6 +333,13 @@ func getSeedSpec(shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev1beta1h
 		}
 	}
 
+	var admissionControllerSettings *gardencorev1beta1.SeedSettingAdmissionController
+	if shootedSeed.AdmissionControllerReplicas != nil {
+		admissionControllerSettings = &gardencorev1beta1.SeedSettingAdmissionController{
+			Replicas: *shootedSeed.AdmissionControllerReplicas,
+		}
+	}
+
 	// Initialize ingress
 	var ingress *gardencorev1beta1.Ingress
 	if shootedSeed.IngressController != nil {
@@ -365,6 +372,7 @@ func getSeedSpec(shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev1beta1h
 				Enabled: shootedSeed.DisableDNS == nil || !*shootedSeed.DisableDNS,
 			},
 			LoadBalancerServices: loadBalancerServices,
+			AdmissionController:  admissionControllerSettings,
 		},
 		Ingress: ingress,
 	}, nil

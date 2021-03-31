@@ -898,18 +898,22 @@ func runCreateSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, imageVe
 		return err
 	}
 	var (
-		repository = gsacImage.String()
-		tag        = version.Get().GitVersion
+		repository        = gsacImage.String()
+		tag               = version.Get().GitVersion
+		admissionSettings *gardencorev1beta1.SeedSettingAdmissionController
 	)
 	if gsacImage.Tag != nil {
 		repository = gsacImage.Repository
 		tag = *gsacImage.Tag
 	}
+	if seed.Info.Spec.Settings != nil {
+		admissionSettings = seed.Info.Spec.Settings.AdmissionController
+	}
 	gsacImage = &imagevector.Image{
 		Repository: repository,
 		Tag:        &tag,
 	}
-	gsac := seedadmissioncontroller.New(sc.Client(), v1beta1constants.GardenNamespace, gsacImage.String(), kubernetesVersion)
+	gsac := seedadmissioncontroller.New(sc.Client(), v1beta1constants.GardenNamespace, gsacImage.String(), kubernetesVersion, admissionSettings)
 
 	schedulerImage, err := imageVector.FindImage(charts.ImageNameKubeScheduler, imagevector.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
@@ -984,11 +988,16 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 		return err
 	}
 
+	var admissionSettings *gardencorev1beta1.SeedSettingAdmissionController
+	if seed.Info.Spec.Settings != nil {
+		admissionSettings = seed.Info.Spec.Settings.AdmissionController
+	}
+
 	//setup for flow graph
 	var (
 		dnsEntry        = getManagedIngressDNSEntry(sc, seed.GetIngressFQDN("*"), "", seedLogger)
 		autoscaler      = clusterautoscaler.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace)
-		gsac            = seedadmissioncontroller.New(sc.Client(), v1beta1constants.GardenNamespace, "", kubernetesVersion)
+		gsac            = seedadmissioncontroller.New(sc.Client(), v1beta1constants.GardenNamespace, "", kubernetesVersion, admissionSettings)
 		resourceManager = resourcemanager.New(sc.Client(), v1beta1constants.GardenNamespace, "", 0, resourcemanager.Values{})
 		etcdDruid       = etcd.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace, "", kubernetesVersion, nil)
 	)

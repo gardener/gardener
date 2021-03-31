@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
@@ -111,6 +112,68 @@ metadata:
   namespace: shoot--foo--bar
 spec:
   replicas: 3
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: gardener
+      role: seed-admission-controller
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: gardener
+        role: seed-admission-controller
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: gardener
+                  role: seed-admission-controller
+              topologyKey: kubernetes.io/hostname
+            weight: 100
+      containers:
+      - command:
+        - /gardener-seed-admission-controller
+        - --port=10250
+        - --tls-cert-dir=/srv/gardener-seed-admission-controller
+        image: ` + image + `
+        imagePullPolicy: IfNotPresent
+        name: gardener-seed-admission-controller
+        ports:
+        - containerPort: 10250
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 20m
+            memory: 50Mi
+        volumeMounts:
+        - mountPath: /srv/gardener-seed-admission-controller
+          name: gardener-seed-admission-controller-tls
+          readOnly: true
+      serviceAccountName: gardener-seed-admission-controller
+      volumes:
+      - name: gardener-seed-admission-controller-tls
+        secret:
+          secretName: gardener-seed-admission-controller-tls
+status: {}
+`
+		deploymentYAMLSingleReplica = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: gardener
+    role: seed-admission-controller
+  name: gardener-seed-admission-controller
+  namespace: shoot--foo--bar
+spec:
+  replicas: 1
   revisionHistoryLimit: 1
   selector:
     matchLabels:
@@ -328,7 +391,7 @@ status: {}
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 
-		seedAdmission = New(c, namespace, image, kubernetesVersion)
+		seedAdmission = New(c, namespace, image, kubernetesVersion, nil)
 
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -404,8 +467,26 @@ status: {}
 		})
 
 		It("should successfully deploy all resources (k8s >= 1.15)", func() {
-			seedAdmission = New(c, namespace, image, semver.MustParse("1.15.5"))
+			seedAdmission = New(c, namespace, image, semver.MustParse("1.15.5"), nil)
 			managedResourceSecret.Data["validatingwebhookconfiguration____gardener-seed-admission-controller.yaml"] = []byte(validatingWebhookConfigurationYAMLK8sGreaterEqual115)
+
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+					Expect(obj).To(DeepEqual(managedResourceSecret))
+				}),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+					Expect(obj).To(DeepEqual(managedResource))
+				}),
+			)
+
+			Expect(seedAdmission.Deploy(ctx)).To(Succeed())
+		})
+
+		It("should consider replicas setting from seed settings", func() {
+			seedAdmission = New(c, namespace, image, kubernetesVersion, &gardencorev1beta1.SeedSettingAdmissionController{Replicas: 1})
+			managedResourceSecret.Data["deployment__shoot--foo--bar__gardener-seed-admission-controller.yaml"] = []byte(deploymentYAMLSingleReplica)
 
 			gomock.InOrder(
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),

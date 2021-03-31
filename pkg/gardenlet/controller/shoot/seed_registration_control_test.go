@@ -168,7 +168,7 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 				})
 
 				It("should create the correct ManagedSeed resource, all custom", func() {
-					shoot := shoot("true,no-gardenlet,disable-dns,disable-capacity-reservation,protected,invisible,minimumVolumeSize=20Gi,apiServer.replicas=2,apiServer.autoscaler.minReplicas=2,apiServer.autoscaler.maxReplicas=5,blockCIDRs=169.254.169.254/32,shootDefaults.pods=100.96.0.0/11,shootDefaults.services=100.64.0.0/13,backup.provider=gcp,backup.region=europe-north1,loadBalancerServices.annotations.foo=bar,ingress.controller.kind=nginx")
+					shoot := shoot("true,no-gardenlet,disable-dns,disable-capacity-reservation,protected,invisible,minimumVolumeSize=20Gi,apiServer.replicas=2,apiServer.autoscaler.minReplicas=2,apiServer.autoscaler.maxReplicas=5,blockCIDRs=169.254.169.254/32,shootDefaults.pods=100.96.0.0/11,shootDefaults.services=100.64.0.0/13,backup.provider=gcp,backup.region=europe-north1,admissionController.replicas=1,loadBalancerServices.annotations.foo=bar,ingress.controller.kind=nginx")
 					shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(shoot)
 					Expect(err).ToNot(HaveOccurred())
 
@@ -231,6 +231,9 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 												},
 												LoadBalancerServices: &gardencorev1beta1.SeedSettingLoadBalancerServices{
 													Annotations: map[string]string{"foo": "bar"},
+												},
+												AdmissionController: &gardencorev1beta1.SeedSettingAdmissionController{
+													Replicas: 1,
 												},
 											},
 											Ingress: &gardencorev1beta1.Ingress{

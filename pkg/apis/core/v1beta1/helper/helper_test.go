@@ -729,6 +729,23 @@ var _ = Describe("helper", func() {
 				}))
 			})
 
+			It("should return admission controller settings", func() {
+				singleReplica := int32(1)
+				shoot.Annotations = map[string]string{
+					v1beta1constants.AnnotationShootUseAsSeed: "true,admissionController.replicas=1",
+				}
+
+				shootedSeed, err := ReadShootedSeed(shoot)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shootedSeed).To(Equal(&ShootedSeed{
+					APIServer:                   &defaultAPIServer,
+					AdmissionControllerReplicas: &singleReplica,
+					Backup:                      &gardencorev1beta1.SeedBackup{},
+					Resources:                   &defaultResources,
+				}))
+			})
+
 			It("should fail due to maxReplicas not being specified", func() {
 				shoot.Annotations = map[string]string{
 					v1beta1constants.AnnotationShootUseAsSeed: "true,apiServer.autoscaler.minReplicas=2",

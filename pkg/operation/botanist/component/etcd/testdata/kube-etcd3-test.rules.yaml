@@ -1,0 +1,106 @@
+groups:
+- name: kube-etcd3-test.rules
+  rules:
+  # alert if etcd is down
+  - alert: KubeEtcdTestDown
+    expr: sum(up{job="kube-etcd3-test"}) < 1
+    for: 5m
+    labels:
+      service: etcd
+      severity: blocker
+      type: seed
+      visibility: operator
+    annotations:
+      description: Etcd3 cluster test is unavailable or cannot be scraped. As long as etcd3 test is down the cluster is unreachable.
+      summary: Etcd3 test cluster down.
+  # etcd leader alerts
+  - alert: KubeEtcd3TestNoLeader
+    expr: sum(etcd_server_has_leader{job="kube-etcd3-test"}) < count(etcd_server_has_leader{job="kube-etcd3-test"})
+    for: 10m
+    labels:
+      service: etcd
+      severity: critical
+      type: seed
+      visibility: operator
+    annotations:
+      description: Etcd3 test has no leader. No communication with etcd test possible. Apiserver is read only.
+      summary: Etcd3 test has no leader.
+
+  ### etcd proposal alerts ###
+  # alert if there are several failed proposals within an hour
+  # Note: Increasing the failedProposals count to 80, known issue in etcd, fix in progress
+  # https://github.com/kubernetes/kubernetes/pull/64539 - fix in Kubernetes to be released with v1.15
+  # https://github.com/etcd-io/etcd/issues/9360 - ongoing discussion in etcd
+  # TODO (shreyas-s-rao): change value from 120 to 5 after upgrading to etcd 3.4
+  - alert: KubeEtcd3HighNumberOfFailedProposals
+    expr: increase(etcd_server_proposals_failed_total{job="kube-etcd3-test"}[1h]) > 120
+    labels:
+      service: etcd
+      severity: warning
+      type: seed
+      visibility: operator
+    annotations:
+      description: Etcd3 test pod {{ $labels.pod }} has seen {{ $value }} proposal failures
+        within the last hour.
+      summary: High number of failed etcd proposals
+
+  # etcd DB size alerts
+  - alert: KubeEtcd3DbSizeLimitApproaching
+    expr: (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-test"} > bool 7516193000) + (etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-test"} <= bool 8589935000) == 2 # between 7GB and 8GB
+    labels:
+      service: etcd
+      severity: warning
+      type: seed
+      visibility: all
+    annotations:
+      description: Etcd3 test DB size is approaching its current practical limit of 8GB. Etcd quota might need to be increased.
+      summary: Etcd3 test DB size is approaching its current practical limit.
+
+  - alert: KubeEtcd3DbSizeLimitCrossed
+    expr: etcd_mvcc_db_total_size_in_bytes{job="kube-etcd3-test"} > 8589935000 # above 8GB
+    labels:
+      service: etcd
+      severity: critical
+      type: seed
+      visibility: all
+    annotations:
+      description: Etcd3 test DB size has crossed its current practical limit of 8GB. Etcd quota must be increased to allow updates.
+      summary: Etcd3 test DB size has crossed its current practical limit.
+
+  - record: shoot:etcd_object_counts:sum_by_resource
+    expr: sum(etcd_object_counts) by (resource)
+  # etcd backup failure alerts
+  - alert: KubeEtcdDeltaBackupFailed
+    expr: (time() - etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-test",kind="Incr"} > bool 900) + (etcdbr_snapshot_required{job="kube-etcd3-backup-restore-test", kind="Incr"} >= bool 1) == 2
+    for: 15m
+    labels:
+      service: etcd
+      severity: critical
+      type: seed
+      visibility: operator
+    annotations:
+      description: No delta snapshot for the past at least 30 minutes.
+      summary: Etcd delta snapshot failure.
+  - alert: KubeEtcdFullBackupFailed
+    expr: (time() - etcdbr_snapshot_latest_timestamp{job="kube-etcd3-backup-restore-test",kind="Full"} > bool 86400) + (etcdbr_snapshot_required{job="kube-etcd3-backup-restore-test", kind="Full"} >= bool 1) == 2
+    for: 15m
+    labels:
+      service: etcd
+      severity: critical
+      type: seed
+      visibility: operator
+    annotations:
+      description: No full snapshot taken in the past day.
+      summary: Etcd full snapshot failure.
+
+  # etcd data restoration failure alert
+  - alert: KubeEtcdRestorationFailed
+    expr: rate(etcdbr_restoration_duration_seconds_count{job="kube-etcd3-backup-restore-test",succeeded="false"}[2m]) > 0
+    labels:
+      service: etcd
+      severity: critical
+      type: seed
+      visibility: operator
+    annotations:
+      description: Etcd data restoration was triggered, but has failed.
+      summary: Etcd data restoration failure.

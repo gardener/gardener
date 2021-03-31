@@ -247,6 +247,7 @@ type ShootedSeed struct {
 	Protected                       *bool
 	Visible                         *bool
 	LoadBalancerServicesAnnotations map[string]string
+	AdmissionControllerReplicas     *int32
 	MinimumVolumeSize               *string
 	APIServer                       *ShootedSeedAPIServer
 	BlockCIDRs                      []string
@@ -337,6 +338,12 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 		return nil, err
 	}
 	shootedSeed.IngressController = ingressController
+
+	admissionControllerReplicas, err := parseShootedSeedAdmissionController(settings)
+	if err != nil {
+		return nil, err
+	}
+	shootedSeed.AdmissionControllerReplicas = admissionControllerReplicas
 
 	if size, ok := settings["minimumVolumeSize"]; ok {
 		shootedSeed.MinimumVolumeSize = &size
@@ -572,6 +579,19 @@ func parseShootedSeedAPIServer(settings map[string]string) (*ShootedSeedAPIServe
 	}
 
 	return &apiServer, nil
+}
+
+func parseShootedSeedAdmissionController(settings map[string]string) (*int32, error) {
+	if replicasString, ok := settings["admissionController.replicas"]; ok {
+		replicas, err := parseInt32(replicasString)
+		if err != nil {
+			return nil, err
+		}
+
+		return &replicas, nil
+	}
+
+	return nil, nil
 }
 
 func parseShootedSeedAPIServerAutoscaler(settings map[string]string) (*ShootedSeedAPIServerAutoscaler, error) {

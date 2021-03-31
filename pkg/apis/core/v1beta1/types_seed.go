@@ -236,6 +236,9 @@ type SeedSettings struct {
 	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
 	// +optional
 	VerticalPodAutoscaler *SeedSettingVerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty" protobuf:"bytes,5,opt,name=verticalPodAutoscaler"`
+	// AdmissionController controls certain settings for the seed admission controller deployed in the seed.
+	// +optional
+	AdmissionController *SeedSettingAdmissionController `json:"admissionController,omitempty" protobuf:"bytes,6,opt,name=admissionController"`
 }
 
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
@@ -276,6 +279,14 @@ type SeedSettingVerticalPodAutoscaler struct {
 	// is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if
 	// your seed cluster already has another, manually/custom managed VPA deployment.
 	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
+}
+
+// SeedSettingAdmissionController controls certain settings for the seed admission controller deployed in the seed.
+type SeedSettingAdmissionController struct {
+	// Replicas controls the amount of replicas of the seed-admission-controller deployment (default to 3). When using
+	// a seed cluster with less than three nodes, this setting should be reduced accordingly in order to bootstrap the
+	// seed cluster successfully.
+	Replicas int32 `json:"replicas" protobuf:"bytes,1,opt,name=replicas"`
 }
 
 // SeedTaint describes a taint on a seed.
