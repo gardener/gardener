@@ -23,12 +23,14 @@ import (
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed"
 	graphpkg "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
 	mockgraph "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph/mock"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"k8s.io/apiserver/pkg/authentication/user"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
@@ -72,7 +74,7 @@ var _ = Describe("Seed", func() {
 	})
 
 	Describe("#Authorize", func() {
-		Context("when cases are unhandled", func() {
+		Context("when resource is unhandled", func() {
 			It("should have no opinion because no seed", func() {
 				attrs := auth.AttributesRecord{
 					User: &user.DefaultInfo{
@@ -165,7 +167,7 @@ var _ = Describe("Seed", func() {
 				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get]"))
 			})
 
-			It("should have no opinion because no resources requested", func() {
+			It("should have no opinion because request is for a subresource", func() {
 				attrs.Subresource = "status"
 
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
@@ -245,7 +247,7 @@ var _ = Describe("Seed", func() {
 				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get]"))
 			})
 
-			It("should have no opinion because no resources requested", func() {
+			It("should have no opinion because request is for a subresource", func() {
 				attrs.Subresource = "status"
 
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
@@ -325,7 +327,103 @@ var _ = Describe("Seed", func() {
 				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get]"))
 			})
 
-			It("should have no opinion because no resources requested", func() {
+			It("should have no opinion because request is for a subresource", func() {
+				attrs.Subresource = "status"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+			})
+
+			It("should have no opinion because no resource name is given", func() {
+				attrs.Name = ""
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("No Object name found"))
+			})
+
+			It("should allow because seed name is ambiguous", func() {
+				attrs.User = ambiguousUser
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+		})
+
+		Context("when requested for ShootStates", func() {
+			var (
+				name, namespace string
+				attrs           *auth.AttributesRecord
+			)
+
+			BeforeEach(func() {
+				name, namespace = "foo", "bar"
+				attrs = &auth.AttributesRecord{
+					User:            seedUser,
+					Name:            name,
+					Namespace:       namespace,
+					APIGroup:        gardencorev1alpha1.SchemeGroupVersion.Group,
+					Resource:        "shootstates",
+					ResourceRequest: true,
+					Verb:            "get",
+				}
+			})
+
+			It("should allow because verb is create", func() {
+				attrs.Verb = "create"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
+			DescribeTable("should return correct result if path exists",
+				func(verb string) {
+					attrs.Verb = verb
+
+					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeShootState, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+
+					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeShootState, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					decision, reason, err = authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("no relationship found"))
+				},
+
+				Entry("get", "get"),
+				Entry("patch", "patch"),
+				Entry("update", "update"),
+			)
+
+			DescribeTable("should have no opinion because no allowed verb",
+				func(verb string) {
+					attrs.Verb = verb
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get create update patch]"))
+				},
+
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+				Entry("delete", "delete"),
+			)
+
+			It("should have no opinion because request is for a subresource", func() {
 				attrs.Subresource = "status"
 
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
@@ -401,7 +499,7 @@ var _ = Describe("Seed", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(ContainSubstring("can only get individual resources of this type"))
+				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get]"))
 			})
 
 			It("should have no opinion because no resources requested", func() {
@@ -411,7 +509,7 @@ var _ = Describe("Seed", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(ContainSubstring("cannot get subresource"))
+				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
 			})
 
 			It("should have no opinion because no resource name is given", func() {
@@ -480,7 +578,7 @@ var _ = Describe("Seed", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(ContainSubstring("can only get individual resources of this type"))
+				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get]"))
 			})
 
 			It("should have no opinion because no resources requested", func() {
@@ -490,7 +588,7 @@ var _ = Describe("Seed", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(ContainSubstring("cannot get subresource"))
+				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
 			})
 
 			It("should have no opinion because no resource name is given", func() {

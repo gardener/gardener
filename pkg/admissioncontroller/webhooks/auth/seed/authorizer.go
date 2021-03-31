@@ -20,7 +20,9 @@ import (
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -54,6 +56,7 @@ var (
 	namespaceResource     = corev1.Resource("namespaces")
 	projectResource       = gardencorev1beta1.Resource("projects")
 	secretBindingResource = gardencorev1beta1.Resource("secretbindings")
+	shootStateResource    = gardencorev1alpha1.Resource("shootstates")
 )
 
 // TODO: Revisit all `DecisionNoOpinion` later. Today we cannot deny the request for backwards compatibility
@@ -78,6 +81,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeGet(seedName, graph.VertexTypeProject, attrs)
 		case secretBindingResource:
 			return a.authorizeGet(seedName, graph.VertexTypeSecretBinding, attrs)
+		case shootStateResource:
+			return a.authorizeShootState(seedName, attrs)
 		}
 	}
 
@@ -94,6 +99,24 @@ func (a *authorizer) authorizeGet(seedName string, fromType graph.VertexType, at
 	}
 
 	return a.authorize(seedName, fromType, attrs)
+}
+
+func (a *authorizer) authorizeShootState(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	if ok, reason := a.checkVerb(seedName, attrs, "get", "create", "update", "patch"); !ok {
+		return auth.DecisionNoOpinion, reason, nil
+	}
+
+	if ok, reason := a.checkSubresource(seedName, attrs); !ok {
+		return auth.DecisionNoOpinion, reason, nil
+	}
+
+	// When a new ShootState is created then it doesn't yet exist in the graph, so we only handle update operations
+	// here. The create case is handled in the SeedRestriction admission handler.
+	if attrs.GetVerb() == "create" {
+		return auth.DecisionAllow, "", nil
+	}
+
+	return a.authorize(seedName, graph.VertexTypeShootState, attrs)
 }
 
 func (a *authorizer) authorize(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {

@@ -26,6 +26,17 @@ Please note that the example shows a request to an object (`Shoot`) residing in 
 However, the `gardenlet` is also interacting with objects in API groups served by the `kube-apiserver` (e.g., `Secret`,`ConfigMap`, etc.).
 In this case, the consultation of the `SeedRestriction` admission plugin is performed by the `kube-apiserver` itself before it forwards the request to the `gardener-apiserver`.
 
+Today, the following rules are implemented:
+
+| Resource        | Verbs                              | Path                                          | Description |
+| --------------- | ---------------------------------- | --------------------------------------------- | ----------- |
+| `CloudProfile`  | `get`                              | `CloudProfile` -> `Shoot` -> `Seed`           | Allow only `get` requests for `CloudProfile`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
+| `ConfigMap`     | `get`                              | `ConfigMap` -> `Shoot` -> `Seed`              | Allow only `get` requests for `ConfigMap`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
+| `Namespace`     | `get`                              | `Namespace` -> `Shoot` -> `Seed`              | Allow `get` requests for `Namespace`s of `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
+| `Project`       | `get`                              | `Project` -> `Namespace` -> `Shoot` -> `Seed` | Allow `get` requests for `Project`s referenced by the `Namespace` of `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
+| `SecretBinding` | `get`                              | `SecretBinding` -> `Shoot` -> `Seed`          | Allow only `get` requests for `SecretBinding`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
+| `ShootState`    | `get`, `create`, `update`, `patch` | `ShootState` -> `Shoot` -> `Seed`             | Allow only `get`, `create`, `update`, `patch` requests for `ShootState`s belonging by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
+
 ## `SeedAuthorizer` Authorization Webhook Enablement
 
 The `SeedAuthorizer` is implemented as [Kubernetes authorization webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) and part of the [`gardener-admission-controller`](../concepts/admission-controller.md) component running in the garden cluster.
@@ -35,6 +46,7 @@ The `SeedAuthorizer` is implemented as [Kubernetes authorization webhook](https:
 ### Authorizer Decisions
 
 As mentioned earlier, it's the authorizer's job to evaluate API requests and return one of the following decisions:
+
 - `DecisionAllow`: The request is allowed, further configured authorizers won't be consulted.
 - `DecisionDeny`: The request is denied, further configured authorizers won't be consulted.
 - `DecisionNoOpinion`: A decision cannot be made, further configured authorizers will be consulted.
@@ -47,18 +59,8 @@ In cases this information is missing e.g., when a custom Kubeconfig is used, the
 Likewise, if `gardenlet` is responsible for more than one `Seed`, the name in the mentioned TLS certificate is `gardener.cloud:system:seed:<ambiguous>` and a definite decision cannot be made as well.
 The authorizer immediately returns with `DecisionNoOpinion` for all ambiguous cases which means that the request is neither allowed nor denied and further configured authorizers (e.g. RBAC) will be contacted.
 Thus, RBAC is still a considerable option to restrict the `gardenlet`'s access permission if the above explained preconditions are not given.
-   
-With the `Seed` name at hand, the authorizer checks for an **existing path** from the resource that a request is being made for to the `Seed` belonging to the `gardenlet`. See [Implementation-Details](#implementation-details) for more information.
 
-Today, the following rules are implemented:
-
-| Resource        | Verb  | Path                                          | Description            |
-| --------------- | ----- | --------------------------------------------- | ---------------------- |
-| `CloudProfile`  | `get` | `CloudProfile` -> `Shoot` -> `Seed`           | Allow `get` requests for `CloudProfile`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `CloudProfile`s. |
-| `ConfigMap`     | `get` | `ConfigMap` -> `Shoot` -> `Seed`              | Allow `get` requests for `ConfigMap`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `ConfigMap`s. |
-| `Namespace`     | `get` | `Namespace` -> `Shoot` -> `Seed`              | Allow `get` requests for `Namespace`s of `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `Namespace`s. |
-| `Project`       | `get` | `Project` -> `Namespace` -> `Shoot` -> `Seed` | Allow `get` requests for `Project`s referenced by the `Namespace` of `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `Project`s. |
-| `SecretBinding` | `get` | `SecretBinding` -> `Shoot` -> `Seed`          | Allow `get` requests for `SecretBinding`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `SecretBinding`s. |
+With the `Seed` name at hand, the authorizer checks for an **existing path** from the resource that a request is being made for to the `Seed` belonging to the `gardenlet`. Take a look at the [Implementation Details](#implementation-details) section for more information.
 
 ### Implementation Details
 

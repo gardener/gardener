@@ -25,7 +25,7 @@ import (
 )
 
 // FromUserInfoInterface returns the seed name and a boolean indicating whether the provided user has the
-// gardener.cloud:system:seeds group. If the seed name is ambigious then an empty string will be returned.
+// gardener.cloud:system:seeds group. If the seed name is ambiguous then an empty string will be returned.
 func FromUserInfoInterface(u user.Info) (string, bool) {
 	if u == nil {
 		return "", false
