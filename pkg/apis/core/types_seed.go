@@ -249,7 +249,7 @@ type SeedSettingVerticalPodAutoscaler struct {
 
 // SeedSettingAdmissionController controls certain settings for the seed admission controller deployed in the seed.
 type SeedSettingAdmissionController struct {
-	// Replicas controls the amount of replicas of the seed-admission-controller deployment (default to 3). When using
+	// Replicas controls the amount of replicas of the seed-admission-controller deployment (defaults to 3). When using
 	// a seed cluster with less than three nodes, this setting should be reduced accordingly in order to bootstrap the
 	// seed cluster successfully.
 	Replicas int32
