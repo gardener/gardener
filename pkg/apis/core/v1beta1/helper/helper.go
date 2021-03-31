@@ -582,16 +582,18 @@ func parseShootedSeedAPIServer(settings map[string]string) (*ShootedSeedAPIServe
 }
 
 func parseShootedSeedAdmissionController(settings map[string]string) (*int32, error) {
-	if replicasString, ok := settings["admissionController.replicas"]; ok {
-		replicas, err := parseInt32(replicasString)
-		if err != nil {
-			return nil, err
-		}
-
-		return &replicas, nil
+	replicasString, ok := settings["admissionController.replicas"]
+	if !ok {
+		return nil, nil
 	}
 
-	return nil, nil
+	replicas, err := parseInt32(replicasString)
+	if err != nil {
+		return nil, err
+	}
+
+	return &replicas, nil
+
 }
 
 func parseShootedSeedAPIServerAutoscaler(settings map[string]string) (*ShootedSeedAPIServerAutoscaler, error) {
