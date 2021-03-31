@@ -134,7 +134,7 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: tcp-stats-filter-1.7
+  name: tcp-stats-filter-1.9
   namespace: {{ .Release.Namespace }}
 spec:
   configPatches:
@@ -146,7 +146,7 @@ spec:
           filter:
             name: envoy.filters.network.tcp_proxy
       proxy:
-        proxyVersion: ^1\.7.*
+        proxyVersion: ^1\.9.*
     patch:
       operation: INSERT_BEFORE
       value:
@@ -176,7 +176,7 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: tcp-metadata-exchange-1.7
+  name: tcp-metadata-exchange-1.9
   namespace: {{ .Release.Namespace }}
 spec:
   configPatches:
@@ -184,7 +184,7 @@ spec:
     match:
       context: GATEWAY
       proxy:
-        proxyVersion: '^1\.7.*'
+        proxyVersion: '^1\.9.*'
       cluster: {}
     patch:
       operation: MERGE
@@ -222,7 +222,7 @@ spec:
     patch:
       operation: MERGE
       value:
-        name: "envoy.filters.network.http_connection_manager"
+        name: envoy.filters.network.http_connection_manager
         typed_config:
           "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
           http_protocol_options:

@@ -30,6 +30,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
@@ -65,6 +66,7 @@ var _ = Describe("ingress", func() {
 		s := runtime.NewScheme()
 		Expect(corev1.AddToScheme(s)).ToNot(HaveOccurred())
 		Expect(appsv1.AddToScheme(s)).ToNot(HaveOccurred())
+		Expect(networkingv1alpha3.AddToScheme(s)).ToNot(HaveOccurred())
 		Expect(policyv1beta1.AddToScheme(s)).ToNot(HaveOccurred())
 		c = fake.NewFakeClientWithScheme(s)
 		renderer := cr.NewWithServerVersion(&version.Info{})
