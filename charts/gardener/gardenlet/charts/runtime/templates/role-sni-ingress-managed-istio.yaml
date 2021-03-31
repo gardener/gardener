@@ -1,0 +1,34 @@
+{{- if .Values.global.gardenlet.enabled }}
+### Istio releated rules. Required even when ManagedIstio/APIServerSNI are not enabled due to clean-up reconciliations.
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: Role
+metadata:
+  name: gardener.cloud:system:gardenlet:managed-istio
+  namespace: "{{ required ".Values.global.gardenlet.config.sni.ingress.namespace is required" .Values.global.gardenlet.config.sni.ingress.namespace }}"
+  labels:
+    gardener.cloud/role: gardenlet
+    app: gardener
+    role: gardenlet
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - gateways
+  - envoyfilters
+  - virtualservices
+  verbs:
+  - delete
+  - get
+  - patch
+  - update
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - envoyfilters
+  verbs:
+  - create
+{{- end }}

@@ -1,0 +1,26 @@
+{{- if .Values.global.gardenlet.enabled }}
+# ClusterRole defines the required permissions for the gardenlet in the seed
+# For now, we provide escalation privileges required by gardener resoruce manager.
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: Role
+metadata:
+  name: gardener.cloud:system:gardenlet
+  namespace: default
+  labels:
+    gardener.cloud/role: gardenlet
+    app: gardener
+    role: gardenlet
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}

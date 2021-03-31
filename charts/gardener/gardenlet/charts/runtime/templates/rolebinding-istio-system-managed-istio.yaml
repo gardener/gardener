@@ -1,0 +1,28 @@
+{{- if .Values.global.gardenlet.enabled }}
+{{- if .Values.global.gardenlet.config.featureGates }}
+{{- if .Values.global.gardenlet.config.featureGates.ManagedIstio }}
+### Istio releated rules. Required only when ManagedIstio is enabled.
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: RoleBinding
+metadata:
+  name: gardener.cloud:system:gardenlet:managed-istio
+  namespace: istio-system
+  labels:
+    gardener.cloud/role: gardenlet
+    app: gardener
+    role: gardenlet
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gardener.cloud:system:gardenlet:managed-istio
+subjects:
+- kind: ServiceAccount
+  name: "{{ required ".Values.global.gardenlet.serviceAccountName is required" .Values.global.gardenlet.serviceAccountName }}"
+  namespace: garden
+{{- end }}
+{{- end }}
+{{- end }}

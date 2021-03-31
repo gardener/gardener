@@ -1,0 +1,70 @@
+{{- if .Values.global.gardenlet.enabled }}
+### Istio releated rules. Required even when ManagedIstio/APIServerSNI are not enabled due to clean-up reconciliations.
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: gardener.cloud:system:gardenlet:managed-istio
+  labels:
+    gardener.cloud/role: gardenlet
+    app: gardener
+    role: gardenlet
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  resourceNames:
+  - attributemanifests.config.istio.io
+  - clusterrbacconfigs.rbac.istio.io
+  - handlers.config.istio.io
+  - httpapispecbindings.config.istio.io
+  - httpapispecs.config.istio.io
+  - instances.config.istio.io
+  - meshpolicies.authentication.istio.io
+  - policies.authentication.istio.io
+  - quotaspecbindings.config.istio.io
+  - quotaspecs.config.istio.io
+  - rbacconfigs.rbac.istio.io
+  - rules.config.istio.io
+  - servicerolebindings.rbac.istio.io
+  - serviceroles.rbac.istio.io
+  verbs:
+  - delete
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingwebhookconfigurations
+  resourceNames:
+  - istiod
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - destinationrules
+  - gateways
+  - virtualservices
+  resourceNames:
+  - kube-apiserver
+  verbs:
+  - delete
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - destinationrules
+  - gateways
+  - virtualservices
+  verbs:
+  - create
+{{- end }}
