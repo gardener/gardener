@@ -192,6 +192,11 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				}
 			}
 
+			componentConfigValues["sni"] = map[string]interface{}{
+				"ingress": map[string]interface{}{
+					"namespace": gardenletconfigv1alpha1.DefaultSNIIngresNamespace,
+				},
+			}
 			if seedConfig != nil {
 				componentConfigValues["seedConfig"] = *seedConfig
 			}

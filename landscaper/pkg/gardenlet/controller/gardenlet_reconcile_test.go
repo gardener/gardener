@@ -96,6 +96,11 @@ var _ = Describe("Gardenlet Landscaper reconciliation testing", func() {
 					Namespace: "garden",
 				},
 			},
+			SNI: &gardenletconfigv1alpha1.SNI{
+				Ingress: &gardenletconfigv1alpha1.SNIIngress{
+					Namespace: pointer.StringPtr(gardenletconfigv1alpha1.DefaultSNIIngresNamespace),
+				},
+			},
 		}
 
 		mockController      *gomock.Controller

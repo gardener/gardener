@@ -722,22 +722,22 @@ var _ = Describe("Utils", func() {
 		})
 	})
 
-	Describe("#ensureGardenletEnvironment", func() {
+	Describe("#getSNIIngressNamespaceName", func() {
 		var (
 			customSNINamespaceName = "custom-sni-namesapce"
 		)
-		DescribeTable("#getSNIIngressNamespaceName",
+		DescribeTable("should always get a sni ingress namespace",
 			func(gardenletConfig *configv1alpha1.GardenletConfiguration, expectedName string) {
 				Expect(getSNIIngressNamespaceName(gardenletConfig)).To(Equal(expectedName))
 			},
 
 			Entry("nil config", nil, configv1alpha1.DefaultSNIIngresNamespace),
-			Entry("empty gardenlet config", configv1alpha1.GardenletConfiguration{}, configv1alpha1.DefaultSNIIngresNamespace),
-			Entry("empty sni config", configv1alpha1.GardenletConfiguration{SNI: &configv1alpha1.SNI{}}, configv1alpha1.DefaultSNIIngresNamespace),
-			Entry("empty sniIngress config", configv1alpha1.GardenletConfiguration{SNI: &configv1alpha1.SNI{Ingress: &configv1alpha1.SNIIngress{}}}, configv1alpha1.DefaultSNIIngresNamespace),
-			Entry("nil namespace config", configv1alpha1.GardenletConfiguration{SNI: &configv1alpha1.SNI{Ingress: &configv1alpha1.SNIIngress{Namespace: nil}}}, configv1alpha1.DefaultSNIIngresNamespace),
-			Entry("empty namespace config", configv1alpha1.GardenletConfiguration{SNI: &configv1alpha1.SNI{Ingress: &configv1alpha1.SNIIngress{Namespace: pointer.StringPtr("")}}}, configv1alpha1.DefaultSNIIngresNamespace),
-			Entry("empty namespace config", configv1alpha1.GardenletConfiguration{SNI: &configv1alpha1.SNI{Ingress: &configv1alpha1.SNIIngress{Namespace: pointer.StringPtr(customSNINamespaceName)}}}, customSNINamespaceName),
+			Entry("empty gardenlet config", &configv1alpha1.GardenletConfiguration{}, configv1alpha1.DefaultSNIIngresNamespace),
+			Entry("empty sni config", &configv1alpha1.GardenletConfiguration{SNI: &configv1alpha1.SNI{}}, configv1alpha1.DefaultSNIIngresNamespace),
+			Entry("empty sniIngress config", &configv1alpha1.GardenletConfiguration{SNI: &configv1alpha1.SNI{Ingress: &configv1alpha1.SNIIngress{}}}, configv1alpha1.DefaultSNIIngresNamespace),
+			Entry("nil namespace config", &configv1alpha1.GardenletConfiguration{SNI: &configv1alpha1.SNI{Ingress: &configv1alpha1.SNIIngress{Namespace: nil}}}, configv1alpha1.DefaultSNIIngresNamespace),
+			Entry("empty namespace config", &configv1alpha1.GardenletConfiguration{SNI: &configv1alpha1.SNI{Ingress: &configv1alpha1.SNIIngress{Namespace: pointer.StringPtr("")}}}, configv1alpha1.DefaultSNIIngresNamespace),
+			Entry("empty namespace config", &configv1alpha1.GardenletConfiguration{SNI: &configv1alpha1.SNI{Ingress: &configv1alpha1.SNIIngress{Namespace: pointer.StringPtr(customSNINamespaceName)}}}, customSNINamespaceName),
 		)
 	})
 })
