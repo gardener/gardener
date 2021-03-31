@@ -77,11 +77,11 @@ func suggest(listenHost string) (port int, resolvedHost string, err error) {
 	return
 }
 
-// SuggestPort suggests an address a process can listen on. It returns
+// suggestPort suggests an address a process can listen on. It returns
 // a tuple consisting of a free port and the hostname resolved to its IP.
 // It makes sure that new port allocated does not conflict with old ports
 // allocated within 1 minute.
-func SuggestPort(listenHost string) (port int, resolvedHost string, err error) {
+func suggestPort(listenHost string) (port int, resolvedHost string, err error) {
 	for i := 0; i < portConflictRetry; i++ {
 		port, resolvedHost, err = suggest(listenHost)
 		if err != nil {

@@ -45,10 +45,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	apiserverapp "github.com/gardener/gardener/cmd/gardener-apiserver/app"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
+	"github.com/gardener/gardener/pkg/apiserver"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -69,18 +66,12 @@ type GardenerAPIServer struct {
 	// If left unspecified, then Start will create a temporary directory and generate the needed
 	// certs and Stop will clean it up.
 	CertDir string
-	// caCert is the certificate of the CA that signed the GardenerAPIServer's serving cert.
-	caCert *secrets.Certificate
-	// restConfig is used to setup and register the APIServer with the envtest kube-apiserver.
-	restConfig *rest.Config
 	// Path is the path to the gardener-apiserver binary, can be set via TEST_ASSET_GARDENER_APISERVER.
 	// If Path is unset, gardener-apiserver will be started in-process.
 	Path string
 	// SecurePort is the secure port that the APIServer should listen on.
 	// If this is not specified, we default to a random free port on localhost.
 	SecurePort int
-	// listenURL is the URL we end up listening on.
-	listenURL *url.URL
 	// Args is a list of arguments which will passed to the APIServer binary.
 	// If not specified, the minimal set of arguments to run the APIServer will
 	// be used.
@@ -99,6 +90,12 @@ type GardenerAPIServer struct {
 	// returning from Start.
 	HealthCheckEndpoint string
 
+	// caCert is the certificate of the CA that signed the GardenerAPIServer's serving cert.
+	caCert *secrets.Certificate
+	// restConfig is used to setup and register the APIServer with the envtest kube-apiserver.
+	restConfig *rest.Config
+	// listenURL is the URL we end up listening on.
+	listenURL *url.URL
 	// terminateFunc holds a func that will terminate this GardenerAPIServer.
 	terminateFunc func()
 	// exited is a channel that will be closed, when this GardenerAPIServer exits.
@@ -106,59 +103,59 @@ type GardenerAPIServer struct {
 }
 
 // Start brings up the GardenerAPIServer, waits for it to be healthy and registers Gardener's APIs.
-func (a *GardenerAPIServer) Start() error {
-	if err := a.defaultSettings(); err != nil {
+func (g *GardenerAPIServer) Start() error {
+	if err := g.defaultSettings(); err != nil {
 		return err
 	}
 
-	a.exited = make(chan struct{})
-	if a.Path != "" {
-		if err := a.runAPIServerBinary(); err != nil {
+	g.exited = make(chan struct{})
+	if g.Path != "" {
+		if err := g.runAPIServerBinary(); err != nil {
 			return err
 		}
 	} else {
-		if err := a.runAPIServerInProcess(); err != nil {
+		if err := g.runAPIServerInProcess(); err != nil {
 			return err
 		}
 	}
 
-	startCtx, cancel := context.WithTimeout(context.Background(), a.StartTimeout)
+	startCtx, cancel := context.WithTimeout(context.Background(), g.StartTimeout)
 	defer cancel()
 
 	// TODO: retry starting GardenerAPIServer on failure
-	if err := a.waitUntilHealthy(startCtx); err != nil {
+	if err := g.waitUntilHealthy(startCtx); err != nil {
 		return fmt.Errorf("gardener-apiserver didn't get healthy: %w", err)
 	}
 
 	log.V(1).Info("registering Gardener APIs")
-	if err := a.registerGardenerAPIs(startCtx); err != nil {
+	if err := g.registerGardenerAPIs(startCtx); err != nil {
 		return fmt.Errorf("failed registering Gardener APIs: %w", err)
 	}
 	return nil
 }
 
-func (a *GardenerAPIServer) runAPIServerBinary() error {
-	log.V(1).Info("starting gardener-apiserver", "path", a.Path, "args", a.Args)
-	command := exec.Command(a.Path, a.Args...)
-	session, err := gexec.Start(command, a.Out, a.Err)
+func (g *GardenerAPIServer) runAPIServerBinary() error {
+	log.V(1).Info("starting gardener-apiserver", "path", g.Path, "args", g.Args)
+	command := exec.Command(g.Path, g.Args...)
+	session, err := gexec.Start(command, g.Out, g.Err)
 	if err != nil {
 		return err
 	}
 
-	a.terminateFunc = func() {
+	g.terminateFunc = func() {
 		session.Terminate()
 	}
 	go func() {
 		<-session.Exited
-		close(a.exited)
+		close(g.exited)
 	}()
 
 	return nil
 }
 
-func (a *GardenerAPIServer) runAPIServerInProcess() error {
+func (g *GardenerAPIServer) runAPIServerInProcess() error {
 	ctx, cancel := context.WithCancel(context.Background())
-	a.terminateFunc = cancel
+	g.terminateFunc = cancel
 
 	opts := apiserverapp.NewOptions()
 
@@ -173,16 +170,16 @@ func (a *GardenerAPIServer) runAPIServerInProcess() error {
 	// this will thereby also redirect output of client-go and other libs used by the tested code,
 	// meaning such logs will only be shown when tests are run with KUBEBUILDER_ATTACH_CONTROL_PLANE_OUTPUT=true or
 	// Err is explicitly set.
-	if a.Err == nil {
+	if g.Err == nil {
 		// a nil writer causes klog to panic
-		a.Err = ioutil.Discard
+		g.Err = ioutil.Discard
 	}
 	// --logtostderr defaults to true, which will cause klog to log to stderr even if we set a different output writer
-	a.Args = append(a.Args, "--logtostderr=false")
-	klog.SetOutput(a.Err)
+	g.Args = append(g.Args, "--logtostderr=false")
+	klog.SetOutput(g.Err)
 
-	log.V(1).Info("starting gardener-apiserver", "args", a.Args)
-	if err := pflagSet.Parse(a.Args); err != nil {
+	log.V(1).Info("starting gardener-apiserver", "args", g.Args)
+	if err := pflagSet.Parse(g.Args); err != nil {
 		return err
 	}
 
@@ -194,42 +191,42 @@ func (a *GardenerAPIServer) runAPIServerInProcess() error {
 		if err := opts.Run(ctx); err != nil {
 			log.Error(err, "gardener-apiserver exited with error")
 		}
-		close(a.exited)
+		close(g.exited)
 	}()
 
 	return nil
 }
 
 // defaultSettings applies defaults to this GardenerAPIServer's settings.
-func (a *GardenerAPIServer) defaultSettings() error {
+func (g *GardenerAPIServer) defaultSettings() error {
 	var err error
-	if a.EtcdURL == nil {
+	if g.EtcdURL == nil {
 		return fmt.Errorf("expected EtcdURL to be configured")
 	}
 
-	if a.CertDir == "" {
+	if g.CertDir == "" {
 		_, ca, dir, err := secrets.SelfGenerateTLSServerCertificate("gardener-apiserver",
 			[]string{"localhost", "gardener-apiserver.kube-system.svc"}, []net.IP{net.ParseIP("127.0.0.1")})
 		if err != nil {
 			return err
 		}
-		a.CertDir = dir
-		a.caCert = ca
+		g.CertDir = dir
+		g.caCert = ca
 	}
 
 	if binPath := os.Getenv(envGardenerAPIServerBin); binPath != "" {
-		a.Path = binPath
+		g.Path = binPath
 	}
-	if a.Path != "" {
-		_, err := os.Stat(a.Path)
+	if g.Path != "" {
+		_, err := os.Stat(g.Path)
 		if err != nil {
-			return fmt.Errorf("failed checking for gardener-apiserver binary under %q: %w", a.Path, err)
+			return fmt.Errorf("failed checking for gardener-apiserver binary under %q: %w", g.Path, err)
 		}
-		log.V(1).Info("using pre-built gardener-apiserver test binary", "path", a.Path)
+		log.V(1).Info("using pre-built gardener-apiserver test binary", "path", g.Path)
 	}
 
-	if a.SecurePort == 0 {
-		a.SecurePort, _, err = SuggestPort("")
+	if g.SecurePort == 0 {
+		g.SecurePort, _, err = suggestPort("")
 		if err != nil {
 			return err
 		}
@@ -240,56 +237,56 @@ func (a *GardenerAPIServer) defaultSettings() error {
 	if err != nil {
 		return err
 	}
-	a.listenURL = &url.URL{
+	g.listenURL = &url.URL{
 		Scheme: "https",
-		Host:   net.JoinHostPort(addr.IP.String(), strconv.Itoa(a.SecurePort)),
+		Host:   net.JoinHostPort(addr.IP.String(), strconv.Itoa(g.SecurePort)),
 	}
 
-	if a.HealthCheckEndpoint == "" {
-		a.HealthCheckEndpoint = "/healthz"
+	if g.HealthCheckEndpoint == "" {
+		g.HealthCheckEndpoint = "/healthz"
 	}
 
-	kubeconfigFile, err := a.prepareKubeconfigFile()
+	kubeconfigFile, err := g.prepareKubeconfigFile()
 	if err != nil {
 		return err
 	}
 
-	a.Args = append([]string{
+	g.Args = append([]string{
 		"--bind-address=" + addr.IP.String(),
-		"--etcd-servers=" + a.EtcdURL.String(),
-		"--tls-cert-file=" + filepath.Join(a.CertDir, "tls.crt"),
-		"--tls-private-key-file=" + filepath.Join(a.CertDir, "tls.key"),
-		"--secure-port=" + fmt.Sprintf("%d", a.SecurePort),
+		"--etcd-servers=" + g.EtcdURL.String(),
+		"--tls-cert-file=" + filepath.Join(g.CertDir, "tls.crt"),
+		"--tls-private-key-file=" + filepath.Join(g.CertDir, "tls.key"),
+		"--secure-port=" + fmt.Sprintf("%d", g.SecurePort),
 		"--cluster-identity=envtest",
-		"--authorization-always-allow-paths=" + a.HealthCheckEndpoint,
+		"--authorization-always-allow-paths=" + g.HealthCheckEndpoint,
 		"--authentication-kubeconfig=" + kubeconfigFile,
 		"--authorization-kubeconfig=" + kubeconfigFile,
 		"--kubeconfig=" + kubeconfigFile,
-	}, a.Args...)
+	}, g.Args...)
 
 	return nil
 }
 
 // prepareKubeconfigFile marshals the test environments rest config to a kubeconfig file in the CertDir.
-func (a *GardenerAPIServer) prepareKubeconfigFile() (string, error) {
-	kubeconfigBytes, err := util.MarshalKubeconfigWithClientCertificate(a.restConfig, nil, nil)
+func (g *GardenerAPIServer) prepareKubeconfigFile() (string, error) {
+	kubeconfigBytes, err := util.MarshalKubeconfigWithClientCertificate(g.restConfig, nil, nil)
 	if err != nil {
 		return "", err
 	}
-	kubeconfigFile := filepath.Join(a.CertDir, "kubeconfig.yaml")
+	kubeconfigFile := filepath.Join(g.CertDir, "kubeconfig.yaml")
 
 	return kubeconfigFile, ioutil.WriteFile(kubeconfigFile, kubeconfigBytes, 0600)
 }
 
 // waitUntilHealthy waits for the HealthCheckEndpoint to return 200.
-func (a *GardenerAPIServer) waitUntilHealthy(ctx context.Context) error {
+func (g *GardenerAPIServer) waitUntilHealthy(ctx context.Context) error {
 	// setup secure http client
 	certPool := x509.NewCertPool()
-	certPool.AppendCertsFromPEM(a.caCert.CertificatePEM)
+	certPool.AppendCertsFromPEM(g.caCert.CertificatePEM)
 	httpClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: certPool}}}
 
-	healthCheckURL := a.listenURL
-	healthCheckURL.Path = a.HealthCheckEndpoint
+	healthCheckURL := g.listenURL
+	healthCheckURL.Path = g.HealthCheckEndpoint
 
 	err := retry.Until(ctx, waitPollInterval, func(context.Context) (bool, error) {
 		res, err := httpClient.Get(healthCheckURL.String())
@@ -303,23 +300,16 @@ func (a *GardenerAPIServer) waitUntilHealthy(ctx context.Context) error {
 		return retry.MinorError(err)
 	})
 	if err != nil {
-		if stopErr := a.Stop(); stopErr != nil {
+		if stopErr := g.Stop(); stopErr != nil {
 			log.Error(stopErr, "failed stopping gardener-apiserver")
 		}
 	}
 	return err
 }
 
-var allGardenerAPIGroupVersions = []schema.GroupVersion{
-	gardencorev1beta1.SchemeGroupVersion,
-	gardencorev1alpha1.SchemeGroupVersion,
-	settingsv1alpha1.SchemeGroupVersion,
-	seedmanagementv1alpha1.SchemeGroupVersion,
-}
-
 // registerGardenerAPIs registers GardenerAPIServer's APIs in the test environment and waits for them to be discoverable.
-func (a *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
-	c, err := client.New(a.restConfig, client.Options{Scheme: kubernetes.GardenScheme})
+func (g *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
+	c, err := client.New(g.restConfig, client.Options{Scheme: kubernetes.GardenScheme})
 	if err != nil {
 		return err
 	}
@@ -341,8 +331,8 @@ func (a *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
 
 	// create APIServices for all API GroupVersions served by GardenerAPIServer
 	var allAPIServices []*apiregistrationv1.APIService
-	for _, gv := range allGardenerAPIGroupVersions {
-		apiService := a.apiServiceForSchemeGroupVersion(service, gv)
+	for _, gv := range apiserver.AllGardenerAPIGroupVersions {
+		apiService := g.apiServiceForSchemeGroupVersion(service, gv)
 		allAPIServices = append(allAPIServices, apiService)
 		if err := c.Create(ctx, apiService); err != nil {
 			return err
@@ -366,13 +356,13 @@ func (a *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
 	}
 
 	// wait for all APIGroupVersions to be discoverable
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(a.restConfig)
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(g.restConfig)
 	if err != nil {
 		return err
 	}
 
-	undiscoverableGardenerAPIGroups := make(sets.String, len(allGardenerAPIGroupVersions))
-	for _, gv := range allGardenerAPIGroupVersions {
+	undiscoverableGardenerAPIGroups := make(sets.String, len(apiserver.AllGardenerAPIGroupVersions))
+	for _, gv := range apiserver.AllGardenerAPIGroupVersions {
 		undiscoverableGardenerAPIGroups.Insert(gv.String())
 	}
 
@@ -398,8 +388,8 @@ func (a *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
 	})
 }
 
-func (a *GardenerAPIServer) apiServiceForSchemeGroupVersion(svc *corev1.Service, gv schema.GroupVersion) *apiregistrationv1.APIService {
-	port := int32(a.SecurePort)
+func (g *GardenerAPIServer) apiServiceForSchemeGroupVersion(svc *corev1.Service, gv schema.GroupVersion) *apiregistrationv1.APIService {
+	port := int32(g.SecurePort)
 	return &apiregistrationv1.APIService{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: apiServiceNameForSchemeGroupVersion(gv),
@@ -414,7 +404,7 @@ func (a *GardenerAPIServer) apiServiceForSchemeGroupVersion(svc *corev1.Service,
 			Version:              gv.Version,
 			GroupPriorityMinimum: 100,
 			VersionPriority:      100,
-			CABundle:             a.caCert.CertificatePEM,
+			CABundle:             g.caCert.CertificatePEM,
 		},
 	}
 }
@@ -424,20 +414,20 @@ func apiServiceNameForSchemeGroupVersion(gv schema.GroupVersion) string {
 }
 
 // Stop stops this GardenerAPIServer and cleans its temporary resources.
-func (a *GardenerAPIServer) Stop() error {
+func (g *GardenerAPIServer) Stop() error {
 	// trigger stop procedure
-	a.terminateFunc()
+	g.terminateFunc()
 
 	select {
-	case <-a.exited:
+	case <-g.exited:
 		break
-	case <-time.After(a.StopTimeout):
+	case <-time.After(g.StopTimeout):
 		return fmt.Errorf("timeout waiting for gardener-apiserver to stop")
 	}
 
 	// cleanup temp dirs
-	if a.CertDir != "" {
-		return os.RemoveAll(a.CertDir)
+	if g.CertDir != "" {
+		return os.RemoveAll(g.CertDir)
 	}
 	return nil
 }

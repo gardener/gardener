@@ -43,6 +43,7 @@ var _ = Describe("GardenerTestEnvironment", func() {
 		Expect(common.ConfirmDeletion(ctx, testClient, project)).To(Succeed())
 		Expect(testClient.Delete(ctx, project)).To(Succeed())
 	})
+
 	It("should be able to manipulate resource from core.gardener.cloud/v1alpha1", func() {
 		project := &gardencorev1alpha1.Project{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
 		Expect(testClient.Create(ctx, project)).To(Succeed())
@@ -50,10 +51,12 @@ var _ = Describe("GardenerTestEnvironment", func() {
 		Expect(common.ConfirmDeletion(ctx, testClient, project)).To(Succeed())
 		Expect(testClient.Delete(ctx, project)).To(Succeed())
 	})
+
 	It("should be able to manipulate resource from seedmanagement.gardener.cloud/v1alpha1", func() {
 		managedSeed := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "garden"}}
 		Expect(testClient.Create(ctx, managedSeed)).To(MatchError(ContainSubstring("ManagedSeed.seedmanagement.gardener.cloud \"foo\" is invalid")))
 	})
+
 	It("should be able to manipulate resource from settings.gardener.cloud/v1alpha1", func() {
 		managedSeed := &settingsv1alpha1.OpenIDConnectPreset{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "garden"}}
 		Expect(testClient.Create(ctx, managedSeed)).To(MatchError(ContainSubstring("OpenIDConnectPreset.settings.gardener.cloud \"foo\" is invalid")))
