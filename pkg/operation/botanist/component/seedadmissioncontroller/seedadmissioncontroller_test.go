@@ -17,6 +17,7 @@ package seedadmissioncontroller_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -112,68 +113,6 @@ metadata:
   namespace: shoot--foo--bar
 spec:
   replicas: 3
-  revisionHistoryLimit: 1
-  selector:
-    matchLabels:
-      app: gardener
-      role: seed-admission-controller
-  strategy: {}
-  template:
-    metadata:
-      creationTimestamp: null
-      labels:
-        app: gardener
-        role: seed-admission-controller
-    spec:
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app: gardener
-                  role: seed-admission-controller
-              topologyKey: kubernetes.io/hostname
-            weight: 100
-      containers:
-      - command:
-        - /gardener-seed-admission-controller
-        - --port=10250
-        - --tls-cert-dir=/srv/gardener-seed-admission-controller
-        image: ` + image + `
-        imagePullPolicy: IfNotPresent
-        name: gardener-seed-admission-controller
-        ports:
-        - containerPort: 10250
-        resources:
-          limits:
-            cpu: 100m
-            memory: 100Mi
-          requests:
-            cpu: 20m
-            memory: 50Mi
-        volumeMounts:
-        - mountPath: /srv/gardener-seed-admission-controller
-          name: gardener-seed-admission-controller-tls
-          readOnly: true
-      serviceAccountName: gardener-seed-admission-controller
-      volumes:
-      - name: gardener-seed-admission-controller-tls
-        secret:
-          secretName: gardener-seed-admission-controller-tls
-status: {}
-`
-		deploymentYAMLSingleReplica = `apiVersion: apps/v1
-kind: Deployment
-metadata:
-  creationTimestamp: null
-  labels:
-    app: gardener
-    role: seed-admission-controller
-  name: gardener-seed-admission-controller
-  namespace: shoot--foo--bar
-spec:
-  replicas: 1
   revisionHistoryLimit: 1
   selector:
     matchLabels:
@@ -486,7 +425,7 @@ status: {}
 
 		It("should consider replicas setting from seed settings", func() {
 			seedAdmission = New(c, namespace, image, kubernetesVersion, &gardencorev1beta1.SeedSettingAdmissionController{Replicas: 1})
-			managedResourceSecret.Data["deployment__shoot--foo--bar__gardener-seed-admission-controller.yaml"] = []byte(deploymentYAMLSingleReplica)
+			managedResourceSecret.Data["deployment__shoot--foo--bar__gardener-seed-admission-controller.yaml"] = []byte(strings.Replace(deploymentYAML, "replicas: 3", "replicas: 1", -1))
 
 			gomock.InOrder(
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
