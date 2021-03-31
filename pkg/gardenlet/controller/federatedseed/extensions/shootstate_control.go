@@ -264,7 +264,7 @@ func (s *ShootStateControl) getShootStateFromCluster(ctx context.Context, cluste
 	}
 
 	shootState := &gardencorev1alpha1.ShootState{}
-	if err := s.k8sGardenClient.Client().Get(ctx, kutil.Key(shoot.Namespace, shoot.Name), shootState); err != nil {
+	if err := s.k8sGardenClient.APIReader().Get(ctx, kutil.Key(shoot.Namespace, shoot.Name), shootState); err != nil {
 		return nil, err
 	}
 

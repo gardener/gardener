@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
@@ -47,8 +48,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // NewBuilder returns a new Builder.
@@ -494,11 +495,11 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 			Namespace: o.Shoot.Info.Namespace,
 		},
 	}
-	ownerReference := metav1.NewControllerRef(o.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
-	blockOwnerDeletion := false
-	ownerReference.BlockOwnerDeletion = &blockOwnerDeletion
 
-	_, err := controllerutil.CreateOrUpdate(ctx, o.K8sGardenClient.DirectClient(), shootState, func() error {
+	ownerReference := metav1.NewControllerRef(o.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
+	ownerReference.BlockOwnerDeletion = pointer.BoolPtr(false)
+
+	_, err := controllerutils.PatchOrCreate(ctx, o.K8sGardenClient.Client(), shootState, func() error {
 		shootState.OwnerReferences = []metav1.OwnerReference{*ownerReference}
 		return nil
 	})
