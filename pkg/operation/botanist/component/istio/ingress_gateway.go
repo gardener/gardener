@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
+	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -68,6 +69,15 @@ func NewIngressGateway(
 }
 
 func (i *ingress) Deploy(ctx context.Context) error {
+	// TODO(mvladev): Rotate this on on every istio version upgrade.
+	for _, filterName := range []string{"tcp-metadata-exchange-1.7", "tcp-stats-filter-1.7"} {
+		if err := crclient.IgnoreNotFound(i.client.Delete(ctx, &networkingv1alpha3.EnvoyFilter{
+			ObjectMeta: metav1.ObjectMeta{Name: filterName, Namespace: i.namespace},
+		})); err != nil {
+			return err
+		}
+	}
+
 	if err := i.client.Create(
 		ctx,
 		&corev1.Namespace{
