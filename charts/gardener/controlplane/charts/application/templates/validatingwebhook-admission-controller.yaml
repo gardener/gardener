@@ -95,6 +95,7 @@ webhooks:
 {{- if .Values.global.admission.seedRestriction.enabled }}
 - name: seed-restriction.gardener.cloud
   admissionReviewVersions: ["v1", "v1beta1"]
+  timeoutSeconds: 10
   rules: []
   failurePolicy: Fail
   clientConfig:
@@ -109,4 +110,33 @@ webhooks:
     caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
   sideEffects: None
 {{- end }}
+- name: internal-domain-secret.gardener.cloud
+  admissionReviewVersions: ["v1", "v1beta1"]
+  timeoutSeconds: 10
+  objectSelector:
+    matchLabels:
+      gardener.cloud/role: internal-domain
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - secrets
+  failurePolicy: Fail
+  clientConfig:
+    {{- if .Values.global.deployment.virtualGarden.enabled }}
+    url: https://gardener-admission-controller.garden/webhooks/admission/validate-internal-domain
+    {{- else }}
+    service:
+      namespace: garden
+      name: gardener-admission-controller
+      path: /webhooks/admission/validate-internal-domain
+    {{- end }}
+    caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
+  sideEffects: None
 {{- end }}

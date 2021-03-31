@@ -367,7 +367,7 @@ func assignDefaultDomainIfNeeded(shoot *core.Shoot, projectLister corelisters.Pr
 }
 
 func getDefaultDomains(secretLister kubecorev1listers.SecretLister) ([]string, error) {
-	selector, err := labels.Parse(fmt.Sprintf("%s=%s", v1beta1constants.GardenRole, common.GardenRoleDefaultDomain))
+	selector, err := labels.Parse(fmt.Sprintf("%s=%s", v1beta1constants.GardenRole, v1beta1constants.GardenRoleDefaultDomain))
 	if err != nil {
 		return nil, apierrors.NewInternalError(err)
 	}

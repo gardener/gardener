@@ -26,12 +26,10 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -117,7 +115,7 @@ func GetDefaultDomains(secrets map[string]*corev1.Secret) ([]*Domain, error) {
 	var defaultDomains []*Domain
 
 	for key, secret := range secrets {
-		if strings.HasPrefix(key, common.GardenRoleDefaultDomain) {
+		if strings.HasPrefix(key, v1beta1constants.GardenRoleDefaultDomain) {
 			domain, err := constructDomainFromSecret(secret)
 			if err != nil {
 				return nil, fmt.Errorf("error getting information out of default domain secret: %+v", err)
@@ -132,7 +130,7 @@ func GetDefaultDomains(secrets map[string]*corev1.Secret) ([]*Domain, error) {
 // GetInternalDomain finds the internal domain secret within the given map and returns the object
 // that contains all relevant information about the internal domain.
 func GetInternalDomain(secrets map[string]*corev1.Secret) (*Domain, error) {
-	internalDomainSecret, ok := secrets[common.GardenRoleInternalDomain]
+	internalDomainSecret, ok := secrets[v1beta1constants.GardenRoleInternalDomain]
 	if !ok {
 		return nil, nil
 	}
@@ -164,12 +162,6 @@ func DomainIsDefaultDomain(domain string, defaultDomains []*Domain) *Domain {
 	}
 	return nil
 }
-
-const (
-	// ControllerManagerInternalConfigMapName is the name of the internal config map in which the Gardener controller
-	// manager stores its configuration.
-	ControllerManagerInternalConfigMapName = "gardener-controller-manager-internal-config"
-)
 
 // ReadGardenSecrets reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
 // The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
@@ -230,62 +222,62 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 	for _, secret := range secretsGardenRole {
 		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role default-domain.
-		if secret.Labels[v1beta1constants.GardenRole] == common.GardenRoleDefaultDomain {
+		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleDefaultDomain {
 			_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				logger.Logger.Warnf("error getting information out of default domain secret %s: %+v", secret.Name, err)
 				continue
 			}
 			defaultDomainSecret := secret
-			secretsMap[fmt.Sprintf("%s-%s", common.GardenRoleDefaultDomain, domain)] = &defaultDomainSecret
+			secretsMap[fmt.Sprintf("%s-%s", v1beta1constants.GardenRoleDefaultDomain, domain)] = &defaultDomainSecret
 			logInfo = append(logInfo, fmt.Sprintf("default domain secret %q for domain %q", secret.Name, domain))
 		}
 
 		// Retrieving internal domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role internal-domain.
-		if secret.Labels[v1beta1constants.GardenRole] == common.GardenRoleInternalDomain {
+		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleInternalDomain {
 			_, domain, _, _, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				logger.Logger.Warnf("error getting information out of internal domain secret %s: %+v", secret.Name, err)
 				continue
 			}
 			internalDomainSecret := secret
-			secretsMap[common.GardenRoleInternalDomain] = &internalDomainSecret
+			secretsMap[v1beta1constants.GardenRoleInternalDomain] = &internalDomainSecret
 			logInfo = append(logInfo, fmt.Sprintf("internal domain secret %q for domain %q", secret.Name, domain))
 			numberOfInternalDomainSecrets++
 		}
 
 		// Retrieving Diffie-Hellman secret for OpenVPN based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role openvpn-diffie-hellman.
-		if secret.Labels[v1beta1constants.GardenRole] == common.GardenRoleOpenVPNDiffieHellman {
+		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleOpenVPNDiffieHellman {
 			openvpnDiffieHellman := secret
 			key := "dh2048.pem"
 			if _, ok := secret.Data[key]; !ok {
 				return nil, fmt.Errorf("cannot use OpenVPN Diffie Hellman secret '%s' as it does not contain key '%s' (whose value should be the actual Diffie Hellman key)", secret.Name, key)
 			}
-			secretsMap[common.GardenRoleOpenVPNDiffieHellman] = &openvpnDiffieHellman
+			secretsMap[v1beta1constants.GardenRoleOpenVPNDiffieHellman] = &openvpnDiffieHellman
 			logInfo = append(logInfo, fmt.Sprintf("OpenVPN Diffie Hellman secret %q", secret.Name))
 			numberOfOpenVPNDiffieHellmanSecrets++
 		}
 
 		// Retrieve the alerting secret to configure alerting. Either in cluster email alerting or
 		// external alertmanager configuration.
-		if secret.Labels[v1beta1constants.GardenRole] == common.GardenRoleAlerting {
+		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleAlerting {
 			authType := string(secret.Data["auth_type"])
 			if authType != "smtp" && authType != "none" && authType != "basic" && authType != "certificate" {
 				return nil, fmt.Errorf("invalid or missing field 'auth_type' in secret %s", secret.Name)
 			}
 			alertingSecret := secret
-			secretsMap[common.GardenRoleAlerting] = &alertingSecret
+			secretsMap[v1beta1constants.GardenRoleAlerting] = &alertingSecret
 			logInfo = append(logInfo, fmt.Sprintf("alerting secret %q", secret.Name))
 			numberOfAlertingSecrets++
 		}
 
 		// Retrieving basic auth secret for aggregate monitoring with a label
 		// indicating the Garden role global-monitoring.
-		if secret.Labels[v1beta1constants.GardenRole] == common.GardenRoleGlobalMonitoring {
+		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleGlobalMonitoring {
 			monitoringSecret := secret
-			secretsMap[common.GardenRoleGlobalMonitoring] = &monitoringSecret
+			secretsMap[v1beta1constants.GardenRoleGlobalMonitoring] = &monitoringSecret
 			logInfo = append(logInfo, fmt.Sprintf("monitoring basic auth secret %q", secret.Name))
 		}
 	}
@@ -308,8 +300,8 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 		// is used in all kubeconfigs. With that we have a robust endpoint stable against underlying ip/hostname changes.
 		// And there can only be one of this internal domain secret because otherwise the gardener would not know which
 		// domain it should use.
-		if numberOfInternalDomainSecrets != 1 {
-			return nil, fmt.Errorf("require exactly ONE internal domain secret, but found %d", numberOfInternalDomainSecrets)
+		if numberOfInternalDomainSecrets == 0 {
+			return nil, fmt.Errorf("need an internal domain secret but found none")
 		}
 	}
 
@@ -333,45 +325,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 	return secretsMap, nil
 }
 
-// VerifyInternalDomainSecret verifies that the internal domain secret matches to the internal domain secret used for
-// existing Shoot clusters. It is not allowed to change the internal domain secret if there are existing Shoot clusters.
-func VerifyInternalDomainSecret(ctx context.Context, gardenClient client.Client, numberOfShoots int, internalDomainSecret *corev1.Secret) error {
-	_, currentDomain, _, _, err := common.GetDomainInfoFromAnnotations(internalDomainSecret.Annotations)
-	if err != nil {
-		return fmt.Errorf("error getting information out of current internal domain secret: %+v", err)
-	}
-
-	internalConfigMap := &corev1.ConfigMap{}
-	err = gardenClient.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, ControllerManagerInternalConfigMapName), internalConfigMap)
-	if apierrors.IsNotFound(err) || numberOfShoots == 0 {
-		configMap := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      ControllerManagerInternalConfigMapName,
-				Namespace: v1beta1constants.GardenNamespace,
-			},
-		}
-
-		_, err := controllerutil.CreateOrUpdate(ctx, gardenClient, configMap, func() error {
-			configMap.Data = map[string]string{
-				common.GardenRoleInternalDomain: currentDomain,
-			}
-			return nil
-		})
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
-	oldDomain := internalConfigMap.Data[common.GardenRoleInternalDomain]
-	if oldDomain != currentDomain {
-		return fmt.Errorf("cannot change internal domain from '%s' to '%s' unless there are no more Shoots", oldDomain, currentDomain)
-	}
-
-	return nil
-}
-
-var monitoringRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.In, common.GardenRoleGlobalMonitoring)
+var monitoringRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.In, v1beta1constants.GardenRoleGlobalMonitoring)
 
 // BootstrapCluster bootstraps the Garden cluster and deploys various required manifests.
 func BootstrapCluster(ctx context.Context, k8sGardenClient kubernetes.Interface, gardenNamespace string, secretLister kubecorev1listers.SecretLister) error {
@@ -420,7 +374,7 @@ func generateMonitoringSecret(ctx context.Context, k8sGardenClient kubernetes.In
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, k8sGardenClient.Client(), secret, func() error {
 		secret.Labels = map[string]string{
-			v1beta1constants.GardenRole: common.GardenRoleGlobalMonitoring,
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleGlobalMonitoring,
 		}
 		secret.Type = corev1.SecretTypeOpaque
 		secret.Data = basicAuth.SecretData()

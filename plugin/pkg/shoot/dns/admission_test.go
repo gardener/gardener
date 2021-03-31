@@ -70,7 +70,7 @@ var _ = Describe("dns", func() {
 					Name:      "secret-1",
 					Namespace: v1beta1constants.GardenNamespace,
 					Labels: map[string]string{
-						v1beta1constants.GardenRole: common.GardenRoleDefaultDomain,
+						v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
 					},
 					Annotations: map[string]string{
 						common.DNSDomain:   domain,

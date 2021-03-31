@@ -53,8 +53,8 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	// Determine all default domain secrets and check whether the used Shoot domain matches a default domain.
 	if o.Shoot != nil && o.Shoot.Info.Spec.DNS != nil && o.Shoot.Info.Spec.DNS.Domain != nil {
 		var (
-			prefix            = fmt.Sprintf("%s-", common.GardenRoleDefaultDomain)
-			defaultDomainKeys = o.GetSecretKeysOfRole(common.GardenRoleDefaultDomain)
+			prefix            = fmt.Sprintf("%s-", v1beta1constants.GardenRoleDefaultDomain)
+			defaultDomainKeys = o.GetSecretKeysOfRole(v1beta1constants.GardenRoleDefaultDomain)
 		)
 		sort.Slice(defaultDomainKeys, func(i, j int) bool { return len(defaultDomainKeys[i]) >= len(defaultDomainKeys[j]) })
 		for _, key := range defaultDomainKeys {

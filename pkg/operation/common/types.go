@@ -82,24 +82,6 @@ const (
 	// ETCDEncryptionConfigDataName is the name of ShootState data entry holding the current key and encryption state used to encrypt shoot resources
 	ETCDEncryptionConfigDataName = "etcdEncryptionConfiguration"
 
-	// GardenRoleDefaultDomain is the value of the GardenRole key indicating type 'default-domain'.
-	GardenRoleDefaultDomain = "default-domain"
-
-	// GardenRoleInternalDomain is the value of the GardenRole key indicating type 'internal-domain'.
-	GardenRoleInternalDomain = "internal-domain"
-
-	// GardenRoleOpenVPNDiffieHellman is the value of the GardenRole key indicating type 'openvpn-diffie-hellman'.
-	GardenRoleOpenVPNDiffieHellman = "openvpn-diffie-hellman"
-
-	// GardenRoleGlobalMonitoring is the value of the GardenRole key indicating type 'global-monitoring'
-	GardenRoleGlobalMonitoring = "global-monitoring"
-
-	// GardenRoleAlerting is the value of GardenRole key indicating type 'alerting'.
-	GardenRoleAlerting = "alerting"
-
-	// GardenRoleHvpa is the value of GardenRole key indicating type 'hvpa'.
-	GardenRoleHvpa = "hvpa"
-
 	// GardenCreatedBy is the key for an annotation of a Shoot cluster whose value indicates contains the username
 	// of the user that created the resource.
 	GardenCreatedBy = "gardener.cloud/created-by"
@@ -266,10 +248,6 @@ const (
 
 	// ServiceAccountSigningKeySecretDataKey is the data key of a signing key Kubernetes secret.
 	ServiceAccountSigningKeySecretDataKey = "signing-key"
-
-	// ControlPlaneWildcardCert is the value of the GardenRole key indicating type 'controlplane-cert'.
-	// It refers to a wildcard tls certificate which can be used for services exposed under the corresponding domain.
-	ControlPlaneWildcardCert = "controlplane-cert"
 
 	// AlertManagerTLS is the name of the secret resource which holds the TLS certificate for Alert Manager.
 	AlertManagerTLS = "alertmanager-tls"

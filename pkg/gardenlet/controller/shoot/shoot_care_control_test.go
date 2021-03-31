@@ -94,7 +94,7 @@ var _ = Describe("Shoot Care Control", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        "internal-domain-secret",
 						Annotations: map[string]string{common.DNSProvider: "fooDNS", common.DNSDomain: "foo.bar"},
-						Labels:      map[string]string{v1beta1constants.GardenRole: common.GardenRoleInternalDomain},
+						Labels:      map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
 					},
 				},
 			}
@@ -203,7 +203,7 @@ var _ = Describe("Shoot Care Control", func() {
 					defer test.WithVars(&NewOperation, operationFunc)()
 					careControl = NewDefaultCareControl(clientMapBuilder.Build(), gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
 
-					Expect(careControl.Care(shoot, key)).To(MatchError("error reading Garden secrets: require exactly ONE internal domain secret, but found 0"))
+					Expect(careControl.Care(shoot, key)).To(MatchError("error reading Garden secrets: need an internal domain secret but found none"))
 				})
 			})
 

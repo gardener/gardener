@@ -452,7 +452,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		)
 
 		// OpenVPN related values
-		if openvpnDiffieHellmanSecret, ok := b.Secrets[common.GardenRoleOpenVPNDiffieHellman]; ok {
+		if openvpnDiffieHellmanSecret, ok := b.Secrets[v1beta1constants.GardenRoleOpenVPNDiffieHellman]; ok {
 			vpnShootConfig["diffieHellmanKey"] = openvpnDiffieHellmanSecret.Data["dh2048.pem"]
 		}
 

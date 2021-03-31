@@ -409,7 +409,7 @@ func (v *ManagedSeed) getSeedDNSProviderForCustomDomain(shoot *gardencore.Shoot)
 func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencore.Shoot) (*gardencore.SeedDNSProvider, error) {
 	// Get all default domain secrets in the garden namespace
 	defaultDomainSecrets, err := v.getSecrets(v1beta1constants.GardenNamespace, labels.SelectorFromValidatedSet(map[string]string{
-		v1beta1constants.GardenRole: common.GardenRoleDefaultDomain,
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
 	}))
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("could not list default domain secrets in namespace %s: %v", v1beta1constants.GardenNamespace, err))

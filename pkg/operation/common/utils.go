@@ -32,8 +32,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -200,7 +200,7 @@ func DeleteHvpa(ctx context.Context, k8sClient kubernetes.Interface, namespace s
 	}
 
 	listOptions := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", v1beta1constants.GardenRole, GardenRoleHvpa),
+		LabelSelector: fmt.Sprintf("%s=%s", v1beta1constants.GardenRole, v1beta1constants.GardenRoleHvpa),
 	}
 
 	// Delete all CRDs with label "gardener.cloud/role=hvpa"

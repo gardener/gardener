@@ -294,7 +294,7 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	if monitoringSecrets := common.GetSecretKeysWithPrefix(common.GardenRoleGlobalMonitoring, secrets); len(monitoringSecrets) > 0 {
+	if monitoringSecrets := common.GetSecretKeysWithPrefix(v1beta1constants.GardenRoleGlobalMonitoring, secrets); len(monitoringSecrets) > 0 {
 		for _, key := range monitoringSecrets {
 			secret := secrets[key]
 			secretObj := &corev1.Secret{
@@ -564,7 +564,7 @@ func RunReconcileSeedFlow(
 		"storage": seed.GetValidVolumeSize("1Gi"),
 	}
 
-	alertingSMTPKeys := common.GetSecretKeysWithPrefix(common.GardenRoleAlerting, secrets)
+	alertingSMTPKeys := common.GetSecretKeysWithPrefix(v1beta1constants.GardenRoleAlerting, secrets)
 
 	if seedWantsAlertmanager(alertingSMTPKeys, secrets) {
 		emailConfigs := make([]map[string]interface{}, 0, len(alertingSMTPKeys))
@@ -1258,13 +1258,13 @@ func GetWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secre
 		ctx,
 		wildcardCerts,
 		client.InNamespace(v1beta1constants.GardenNamespace),
-		client.MatchingLabels{v1beta1constants.GardenRole: common.ControlPlaneWildcardCert},
+		client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlaneWildcardCert},
 	); err != nil {
 		return nil, err
 	}
 
 	if len(wildcardCerts.Items) > 1 {
-		return nil, fmt.Errorf("misconfigured seed cluster: not possible to provide more than one secret with annotation %s", common.ControlPlaneWildcardCert)
+		return nil, fmt.Errorf("misconfigured seed cluster: not possible to provide more than one secret with annotation %s", v1beta1constants.GardenRoleControlPlaneWildcardCert)
 	}
 
 	if len(wildcardCerts.Items) == 1 {
