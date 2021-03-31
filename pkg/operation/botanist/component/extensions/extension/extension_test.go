@@ -42,6 +42,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -279,7 +280,7 @@ var _ = Describe("Extension", func() {
 				return mc
 			})
 			mc.EXPECT().Update(ctx, expectedWithState).Return(nil)
-			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState)
+			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 
 			defaultDepWaiter = extension.New(
 				log,

@@ -34,6 +34,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -133,7 +134,7 @@ var _ = Describe("Cleaner", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, cm2Key, &cm2).SetArg(2, cm2WithFinalizer),
 					timeOps.EXPECT().Now().Return(now),
-					test.EXPECTPatch(ctx, c, &cm2, &cm2WithFinalizer),
+					test.EXPECTPatch(ctx, c, &cm2, &cm2WithFinalizer, types.MergePatchType),
 				)
 
 				Expect(cleaner.Clean(ctx, c, &cm2, FinalizeGracePeriodSeconds(20))).To(Succeed())
@@ -214,7 +215,7 @@ var _ = Describe("Cleaner", func() {
 				gomock.InOrder(
 					c.EXPECT().List(ctx, list).SetArg(1, corev1.ConfigMapList{Items: []corev1.ConfigMap{cm2WithFinalizer}}),
 					timeOps.EXPECT().Now().Return(now),
-					test.EXPECTPatch(ctx, c, &cm2, &cm2WithFinalizer),
+					test.EXPECTPatch(ctx, c, &cm2, &cm2WithFinalizer, types.MergePatchType),
 				)
 
 				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(20))).To(Succeed())
