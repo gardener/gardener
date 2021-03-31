@@ -37,11 +37,6 @@ func init() {
 	gardencoreinstall.Install(gardenScheme)
 }
 
-// NewGardenDecoder returns a new Garden API decoder.
-func NewGardenDecoder() (runtime.Decoder, error) {
-	return serializer.NewCodecFactory(gardenScheme).UniversalDecoder(), nil
-}
-
 // SyncClusterResourceToSeed creates or updates the `extensions.gardener.cloud/v1alpha1.Cluster` resource in the seed
 // cluster by adding the shoot, seed, and cloudprofile specification.
 func SyncClusterResourceToSeed(
@@ -125,10 +120,7 @@ func GetCluster(ctx context.Context, c client.Client, namespace string) (*Cluste
 		return nil, err
 	}
 
-	decoder, err := NewGardenDecoder()
-	if err != nil {
-		return nil, err
-	}
+	decoder := NewGardenDecoder()
 
 	cloudProfile, err := CloudProfileFromCluster(decoder, cluster)
 	if err != nil {
@@ -213,10 +205,10 @@ func GetShoot(ctx context.Context, c client.Client, namespace string) (*gardenco
 		return nil, err
 	}
 
-	decoder, err := NewGardenDecoder()
-	if err != nil {
-		return nil, err
-	}
+	return ShootFromCluster(NewGardenDecoder(), cluster)
+}
 
-	return ShootFromCluster(decoder, cluster)
+// NewGardenDecoder returns a new Garden API decoder.
+func NewGardenDecoder() runtime.Decoder {
+	return serializer.NewCodecFactory(gardenScheme).UniversalDecoder()
 }

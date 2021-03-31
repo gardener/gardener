@@ -163,14 +163,10 @@ var _ = Describe("Predicate", func() {
 	)
 
 	Describe("#ClusterShootProviderType", func() {
-		var (
-			decoder runtime.Decoder
-			err     error
-		)
+		var decoder runtime.Decoder
 
 		BeforeEach(func() {
-			decoder, err = extensionscontroller.NewGardenDecoder()
-			gomega.Expect(err).To(gomega.Succeed())
+			decoder = extensionscontroller.NewGardenDecoder()
 		})
 
 		It("should match the type", func() {
@@ -199,14 +195,10 @@ var _ = Describe("Predicate", func() {
 	})
 
 	Describe("#ClusterShootKubernetesVersionAtLeast", func() {
-		var (
-			decoder runtime.Decoder
-			err     error
-		)
+		var decoder runtime.Decoder
 
 		BeforeEach(func() {
-			decoder, err = extensionscontroller.NewGardenDecoder()
-			gomega.Expect(err).To(gomega.Succeed())
+			decoder = extensionscontroller.NewGardenDecoder()
 		})
 
 		It("should match the minimum kubernetes version", func() {

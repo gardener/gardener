@@ -59,27 +59,21 @@ type AddArgs struct {
 // Add creates a new CSIMigration Controller and adds it to the Manager.
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, args AddArgs) error {
-	reconciler, err := NewReconciler(args.CSIMigrationKubernetesVersion, args.StorageClassNameToLegacyProvisioner)
-	if err != nil {
-		return err
-	}
-	args.ControllerOptions.Reconciler = reconciler
+	args.ControllerOptions.Reconciler = NewReconciler(args.CSIMigrationKubernetesVersion, args.StorageClassNameToLegacyProvisioner)
 
 	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)
 	if err != nil {
 		return err
 	}
 
-	decoder, err := extensionscontroller.NewGardenDecoder()
-	if err != nil {
-		return err
-	}
-
-	defaultPredicates := []predicate.Predicate{
-		extensionspredicate.ClusterShootProviderType(decoder, args.Type),
-		extensionspredicate.ClusterShootKubernetesVersionAtLeast(decoder, args.CSIMigrationKubernetesVersion),
-		ClusterCSIMigrationControllerNotFinished(),
-	}
+	var (
+		decoder           = extensionscontroller.NewGardenDecoder()
+		defaultPredicates = []predicate.Predicate{
+			extensionspredicate.ClusterShootProviderType(decoder, args.Type),
+			extensionspredicate.ClusterShootKubernetesVersionAtLeast(decoder, args.CSIMigrationKubernetesVersion),
+			ClusterCSIMigrationControllerNotFinished(),
+		}
+	)
 
 	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Cluster{}}, &handler.EnqueueRequestForObject{}, append(defaultPredicates, args.Predicates...)...)
 }
