@@ -1,4 +1,4 @@
-// Copyright (c) 2018 2020 SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,24 +15,41 @@
 package secretbinding
 
 import (
+	"context"
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("SecretBindingControl", func() {
+	var (
+		ctrl *gomock.Controller
+		c    *mockclient.MockClient
+
+		ctx     = context.TODO()
+		fakeErr = fmt.Errorf("fake err")
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		c = mockclient.NewMockClient(ctrl)
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
 	Describe("#mayReleaseSecret", func() {
 		var (
-			gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
-			reconciler                *secretBindingReconciler
+			reconciler *secretBindingReconciler
 
 			secretBinding1Namespace = "foo"
 			secretBinding1Name      = "bar"
@@ -43,16 +60,13 @@ var _ = Describe("SecretBindingControl", func() {
 		)
 
 		BeforeEach(func() {
-			gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-
-			secretBindingInformer := gardenCoreInformerFactory.Core().V1beta1().SecretBindings()
-			secretBindingLister := secretBindingInformer.Lister()
-
-			reconciler = &secretBindingReconciler{secretBindingLister: secretBindingLister}
+			reconciler = &secretBindingReconciler{gardenClient: c}
 		})
 
 		It("should return true as no other secretbinding exists", func() {
-			allowed, err := reconciler.mayReleaseSecret(secretBinding1Namespace, secretBinding1Name, secretNamespace, secretName)
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{}))
+
+			allowed, err := reconciler.mayReleaseSecret(ctx, secretBinding1Namespace, secretBinding1Name, secretNamespace, secretName)
 
 			Expect(allowed).To(BeTrue())
 			Expect(err).NotTo(HaveOccurred())
@@ -70,9 +84,12 @@ var _ = Describe("SecretBindingControl", func() {
 				},
 			}
 
-			Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(secretBinding)).To(Succeed())
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.SecretBindingList, _ ...client.ListOption) error {
+				(&gardencorev1beta1.SecretBindingList{Items: []gardencorev1beta1.SecretBinding{*secretBinding}}).DeepCopyInto(list)
+				return nil
+			})
 
-			allowed, err := reconciler.mayReleaseSecret(secretBinding1Namespace, secretBinding1Name, secretNamespace, secretName)
+			allowed, err := reconciler.mayReleaseSecret(ctx, secretBinding1Namespace, secretBinding1Name, secretNamespace, secretName)
 
 			Expect(allowed).To(BeTrue())
 			Expect(err).NotTo(HaveOccurred())
@@ -90,31 +107,24 @@ var _ = Describe("SecretBindingControl", func() {
 				},
 			}
 
-			Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(secretBinding)).To(Succeed())
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.SecretBindingList, _ ...client.ListOption) error {
+				(&gardencorev1beta1.SecretBindingList{Items: []gardencorev1beta1.SecretBinding{*secretBinding}}).DeepCopyInto(list)
+				return nil
+			})
 
-			allowed, err := reconciler.mayReleaseSecret(secretBinding1Namespace, secretBinding1Name, secretNamespace, secretName)
+			allowed, err := reconciler.mayReleaseSecret(ctx, secretBinding1Namespace, secretBinding1Name, secretNamespace, secretName)
 
 			Expect(allowed).To(BeFalse())
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should return an error as the list failed", func() {
-			reconciler.secretBindingLister = &fakeLister{
-				SecretBindingLister: reconciler.secretBindingLister,
-			}
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).Return(fakeErr)
 
-			allowed, err := reconciler.mayReleaseSecret(secretBinding1Namespace, secretBinding1Name, secretNamespace, secretName)
+			allowed, err := reconciler.mayReleaseSecret(ctx, secretBinding1Namespace, secretBinding1Name, secretNamespace, secretName)
 
 			Expect(allowed).To(BeFalse())
-			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(fakeErr))
 		})
 	})
 })
-
-type fakeLister struct {
-	gardencorelisters.SecretBindingLister
-}
-
-func (c *fakeLister) List(labels.Selector) ([]*gardencorev1beta1.SecretBinding, error) {
-	return nil, fmt.Errorf("fake error")
-}

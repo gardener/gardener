@@ -39,6 +39,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8scoreinformers "k8s.io/client-go/informers"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -136,12 +137,8 @@ var _ = Describe("SeedReconciler", func() {
 
 			It("should update the namespace and sync secrets", func() {
 				// cause namespace update
-				cl.EXPECT().Create(context.Background(), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewAlreadyExists(corev1.Resource("namespaces"), ""))
-
-				// expect update for existing namespace
-				incompleteNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace.Name}}
-				namespaceIf.EXPECT().Get(context.Background(), namespace.Name, kubernetes.DefaultGetOptions()).Return(incompleteNamespace, nil)
-				namespaceIf.EXPECT().Update(context.Background(), namespace, kubernetes.DefaultUpdateOptions()).Return(nil, nil)
+				cl.EXPECT().Get(context.Background(), kutil.Key("seed-"+seed.Name), gomock.AssignableToTypeOf(&corev1.Namespace{}))
+				cl.EXPECT().Update(context.Background(), gomock.AssignableToTypeOf(&corev1.Namespace{}))
 
 				// cause secret update
 				cl.EXPECT().Create(context.Background(), copySecretWithNamespace(newSecret, seedNamespace.Name)).Return(apierrors.NewAlreadyExists(corev1.Resource("secrets"), ""))
@@ -172,6 +169,7 @@ var _ = Describe("SeedReconciler", func() {
 			})
 
 			It("should create and copy assets", func() {
+				cl.EXPECT().Get(context.Background(), kutil.Key("seed-"+seed.Name), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 				cl.EXPECT().Create(context.Background(), namespace).Return(nil)
 				cl.EXPECT().Create(context.Background(), copySecretWithNamespace(secrets[0], namespace.Name)).Return(nil)
 				cl.EXPECT().Create(context.Background(), copySecretWithNamespace(secrets[1], namespace.Name)).Return(nil)

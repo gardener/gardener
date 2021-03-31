@@ -79,19 +79,21 @@ func NewShootController(
 		return nil, err
 	}
 
-	runtimeShootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	shootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
+	}
+	configMapInformer, err := gardenClient.Cache().GetInformer(ctx, &corev1.ConfigMap{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ConfigMap Informer: %w", err)
 	}
 
 	var (
 		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
 		corev1Informer            = kubeInformerFactory.Core().V1()
 
-		shootInformer = gardenCoreV1beta1Informer.Shoots()
-		shootLister   = shootInformer.Lister()
-
-		configMapInformer = corev1Informer.ConfigMaps()
+		cloudProfileInformer = gardenCoreV1beta1Informer.CloudProfiles()
+		cloudProfileLister   = cloudProfileInformer.Lister()
 
 		secretInformer = corev1Informer.Secrets()
 		secretLister   = secretInformer.Lister()
@@ -100,10 +102,10 @@ func NewShootController(
 	shootController := &Controller{
 		config: config,
 
-		shootHibernationReconciler: NewShootHibernationReconciler(logger.Logger, clientMap, shootLister, NewHibernationScheduleRegistry(), recorder),
-		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, config.Controllers.ShootMaintenance, clientMap, gardenCoreV1beta1Informer, recorder),
+		shootHibernationReconciler: NewShootHibernationReconciler(logger.Logger, gardenClient, NewHibernationScheduleRegistry(), recorder),
+		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, gardenClient, config.Controllers.ShootMaintenance, cloudProfileLister, recorder),
 		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootQuota, gardenCoreV1beta1Informer),
-		configMapReconciler:        NewConfigMapReconciler(logger.Logger, clientMap, shootLister),
+		configMapReconciler:        NewConfigMapReconciler(logger.Logger, gardenClient.Client()),
 
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
 		shootQuotaQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),
@@ -114,38 +116,37 @@ func NewShootController(
 		workerCh: make(chan int),
 	}
 
-	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootMaintenanceAdd,
 		UpdateFunc: shootController.shootMaintenanceUpdate,
 		DeleteFunc: shootController.shootMaintenanceDelete,
 	})
 
-	runtimeShootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootQuotaAdd,
 		DeleteFunc: shootController.shootQuotaDelete,
 	})
 
-	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootHibernationAdd,
 		UpdateFunc: shootController.shootHibernationUpdate,
 		DeleteFunc: shootController.shootHibernationDelete,
 	})
 
-	configMapInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	configMapInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.configMapAdd,
 		UpdateFunc: shootController.configMapUpdate,
 	})
 
-	runtimeShootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootReferenceAdd,
 		UpdateFunc: shootController.shootReferenceUpdate,
 	})
 
 	shootController.hasSyncedFuncs = []cache.InformerSynced{
-		shootInformer.Informer().HasSynced,
-		runtimeShootInformer.HasSynced,
+		shootInformer.HasSynced,
 		gardenCoreV1beta1Informer.Quotas().Informer().HasSynced,
-		configMapInformer.Informer().HasSynced,
+		configMapInformer.HasSynced,
 	}
 
 	runtimeSecretLister := func(ctx context.Context, secretList *corev1.SecretList, opts ...client.ListOption) error {

@@ -16,12 +16,14 @@ package project
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -32,26 +34,20 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Controller controls Projects.
 type Controller struct {
-	clientMap clientmap.ClientMap
-	config    *config.ControllerManagerConfiguration
+	gardenClient client.Client
 
 	projectReconciler      reconcile.Reconciler
 	projectStaleReconciler reconcile.Reconciler
+	hasSyncedFuncs         []cache.InformerSynced
 
-	projectLister gardencorelisters.ProjectLister
-
-	projectQueue      workqueue.RateLimitingInterface
-	projectStaleQueue workqueue.RateLimitingInterface
-
-	projectSynced     cache.InformerSynced
-	namespaceSynced   cache.InformerSynced
-	roleBindingSynced cache.InformerSynced
-
+	projectQueue           workqueue.RateLimitingInterface
+	projectStaleQueue      workqueue.RateLimitingInterface
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
@@ -59,14 +55,31 @@ type Controller struct {
 // NewProjectController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <projectInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) *Controller {
+func NewProjectController(
+	ctx context.Context,
+	clientMap clientmap.ClientMap,
+	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
+	kubeInformerFactory kubeinformers.SharedInformerFactory,
+	config *config.ControllerManagerConfiguration,
+	recorder record.EventRecorder,
+) (
+	*Controller,
+	error,
+) {
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, err
+	}
+
+	projectInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Project{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
+	}
+
 	var (
 		gardenCoreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
 		corev1Informer            = kubeInformerFactory.Core().V1()
 		rbacv1Informer            = kubeInformerFactory.Rbac().V1()
-
-		projectInformer = gardenCoreV1beta1Informer.Projects()
-		projectLister   = projectInformer.Lister()
 
 		shootInformer = gardenCoreV1beta1Informer.Shoots()
 		shootLister   = shootInformer.Lister()
@@ -93,39 +106,39 @@ func NewProjectController(clientMap clientmap.ClientMap, gardenCoreInformerFacto
 	)
 
 	projectController := &Controller{
-		clientMap:              clientMap,
-		projectReconciler:      NewProjectReconciler(logger.Logger, config.Controllers.Project, clientMap, recorder, namespaceLister),
-		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, clientMap, shootLister, plantLister, backupEntryLister, secretBindingLister, quotaLister, namespaceLister, secretLister),
-		config:                 config,
-		projectLister:          projectLister,
+		gardenClient:           gardenClient.Client(),
+		projectReconciler:      NewProjectReconciler(logger.Logger, config.Controllers.Project, gardenClient, recorder, namespaceLister),
+		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client(), shootLister, plantLister, backupEntryLister, secretBindingLister, quotaLister, namespaceLister, secretLister),
 		projectQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
 		projectStaleQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
 		workerCh:               make(chan int),
 	}
 
-	projectInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	projectInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    projectController.projectAdd,
 		UpdateFunc: projectController.projectUpdate,
 		DeleteFunc: projectController.projectDelete,
 	})
 
 	roleBindingInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		UpdateFunc: projectController.roleBindingUpdate,
-		DeleteFunc: projectController.roleBindingDelete,
+		UpdateFunc: func(oldObj, newObj interface{}) { projectController.roleBindingUpdate(ctx, oldObj, newObj) },
+		DeleteFunc: func(obj interface{}) { projectController.roleBindingDelete(ctx, obj) },
 	})
 
-	projectController.projectSynced = projectInformer.Informer().HasSynced
-	projectController.namespaceSynced = namespaceInformer.Informer().HasSynced
-	projectController.roleBindingSynced = roleBindingInformer.Informer().HasSynced
+	projectController.hasSyncedFuncs = append(projectController.hasSyncedFuncs,
+		projectInformer.HasSynced,
+		namespaceInformer.Informer().HasSynced,
+		roleBindingInformer.Informer().HasSynced,
+	)
 
-	return projectController
+	return projectController, nil
 }
 
 // Run runs the Controller until the given stop channel can be read from.
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.projectSynced, c.namespaceSynced, c.roleBindingSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}

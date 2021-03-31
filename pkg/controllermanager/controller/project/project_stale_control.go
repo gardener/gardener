@@ -16,18 +16,13 @@ package project
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/operation/common"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -45,7 +39,7 @@ import (
 func NewProjectStaleReconciler(
 	l logrus.FieldLogger,
 	config *config.ProjectControllerConfiguration,
-	clientMap clientmap.ClientMap,
+	gardenClient client.Client,
 	shootLister gardencorelisters.ShootLister,
 	plantLister gardencorelisters.PlantLister,
 	backupEntryLister gardencorelisters.BackupEntryLister,
@@ -57,7 +51,7 @@ func NewProjectStaleReconciler(
 	return &projectStaleReconciler{
 		logger:              l,
 		config:              config,
-		clientMap:           clientMap,
+		gardenClient:        gardenClient,
 		shootLister:         shootLister,
 		plantLister:         plantLister,
 		backupEntryLister:   backupEntryLister,
@@ -70,7 +64,7 @@ func NewProjectStaleReconciler(
 
 type projectStaleReconciler struct {
 	logger              logrus.FieldLogger
-	clientMap           clientmap.ClientMap
+	gardenClient        client.Client
 	config              *config.ProjectControllerConfiguration
 	shootLister         gardencorelisters.ShootLister
 	plantLister         gardencorelisters.PlantLister
@@ -82,13 +76,8 @@ type projectStaleReconciler struct {
 }
 
 func (r *projectStaleReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	project := &gardencorev1beta1.Project{}
-	if err := gardenClient.Client().Get(ctx, request.NamespacedName, project); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
 			return reconcile.Result{}, nil
@@ -97,7 +86,7 @@ func (r *projectStaleReconciler) Reconcile(ctx context.Context, request reconcil
 		return reconcile.Result{}, err
 	}
 
-	if err := r.reconcile(ctx, project, gardenClient); err != nil {
+	if err := r.reconcile(ctx, project); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -113,7 +102,7 @@ type projectInUseChecker struct {
 // Exposed for testing.
 var NowFunc = metav1.Now
 
-func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardencorev1beta1.Project, gardenClient kubernetes.Interface) error {
+func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardencorev1beta1.Project) error {
 	if project.DeletionTimestamp != nil || project.Spec.Namespace == nil {
 		return nil
 	}
@@ -134,14 +123,14 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 
 	if skipStaleCheck {
 		projectLogger.Infof("[STALE PROJECT RECONCILE] Namespace %q is annotated with %s, skipping the check and considering the project as 'not stale'", *project.Spec.Namespace, common.ProjectSkipStaleCheck)
-		return r.markProjectAsNotStale(ctx, gardenClient.Client(), project)
+		return r.markProjectAsNotStale(ctx, r.gardenClient, project)
 	}
 
 	// Skip projects that are not older than the configured minimum lifetime in days. This allows having Projects for a
 	// certain period of time until they are checked whether they got stale.
 	if project.CreationTimestamp.UTC().Add(time.Hour * 24 * time.Duration(*r.config.MinimumLifetimeDays)).After(NowFunc().UTC()) {
 		projectLogger.Infof("[STALE PROJECT RECONCILE] Project is not older than the configured minimum %d days lifetime (%v), considering it 'not stale'", *r.config.MinimumLifetimeDays, project.CreationTimestamp.UTC())
-		return r.markProjectAsNotStale(ctx, gardenClient.Client(), project)
+		return r.markProjectAsNotStale(ctx, r.gardenClient, project)
 	}
 
 	for _, check := range []projectInUseChecker{
@@ -157,12 +146,12 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 		}
 		if projectInUse {
 			projectLogger.Infof("[STALE PROJECT RECONCILE] Project is being marked as 'not stale' because it is used by %s", check.resource)
-			return r.markProjectAsNotStale(ctx, gardenClient.Client(), project)
+			return r.markProjectAsNotStale(ctx, r.gardenClient, project)
 		}
 	}
 
 	projectLogger.Infof("[STALE PROJECT RECONCILE] Project is being marked as 'stale' because it is not being used by any resource")
-	if err := r.markProjectAsStale(ctx, gardenClient.Client(), project, NowFunc); err != nil {
+	if err := r.markProjectAsStale(ctx, r.gardenClient, project, NowFunc); err != nil {
 		return err
 	}
 
@@ -176,10 +165,10 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 	}
 
 	projectLogger.Infof("[STALE PROJECT RECONCILE] Deleting Project now because it's auto-delete timestamp is expired")
-	if err := common.ConfirmDeletion(ctx, gardenClient.Client(), project); err != nil {
+	if err := common.ConfirmDeletion(ctx, r.gardenClient, project); err != nil {
 		return err
 	}
-	return gardenClient.Client().Delete(ctx, project)
+	return r.gardenClient.Delete(ctx, project)
 }
 
 func (r *projectStaleReconciler) projectInUseDueToShoots(namespace string) (bool, error) {
@@ -255,15 +244,14 @@ func (r *projectStaleReconciler) relevantSecretBindingsInUse(isSecretBindingRele
 }
 
 func (r *projectStaleReconciler) markProjectAsNotStale(ctx context.Context, client client.Client, project *gardencorev1beta1.Project) error {
-	return kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, client, project, func() error {
+	return updateStatus(ctx, client, project, func() {
 		project.Status.StaleSinceTimestamp = nil
 		project.Status.StaleAutoDeleteTimestamp = nil
-		return nil
 	})
 }
 
 func (r *projectStaleReconciler) markProjectAsStale(ctx context.Context, client client.Client, project *gardencorev1beta1.Project, nowFunc func() metav1.Time) error {
-	return kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, client, project, func() error {
+	return updateStatus(ctx, client, project, func() {
 		if project.Status.StaleSinceTimestamp == nil {
 			now := nowFunc()
 			project.Status.StaleSinceTimestamp = &now
@@ -274,7 +262,7 @@ func (r *projectStaleReconciler) markProjectAsStale(ctx context.Context, client 
 			// configuration value and correctly applying the changes to all Projects that had already been assigned
 			// such a timestamp.
 			project.Status.StaleAutoDeleteTimestamp = nil
-			return nil
+			return
 		}
 
 		// If the project got stale we compute an auto delete timestamp only if the configured stale grace period is
@@ -287,8 +275,6 @@ func (r *projectStaleReconciler) markProjectAsStale(ctx context.Context, client 
 		if project.Status.StaleAutoDeleteTimestamp == nil || autoDeleteTimestamp.After(project.Status.StaleAutoDeleteTimestamp.Time) {
 			project.Status.StaleAutoDeleteTimestamp = &autoDeleteTimestamp
 		}
-
-		return nil
 	})
 }
 

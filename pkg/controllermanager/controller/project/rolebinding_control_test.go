@@ -15,26 +15,32 @@
 package project
 
 import (
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
+	"context"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/logger"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("#roleBindingDelete", func() {
 	const ns = "test"
 
 	var (
-		c           *Controller
-		indexer     cache.Indexer
+		ctrl *gomock.Controller
+		c    *mockclient.MockClient
+
+		ctx         = context.TODO()
+		controller  *Controller
 		queue       workqueue.RateLimitingInterface
 		proj        *gardencorev1beta1.Project
 		rolebinding *rbacv1.RoleBinding
@@ -44,7 +50,9 @@ var _ = Describe("#roleBindingDelete", func() {
 		// This should not be here!!! Hidden dependency!!!
 		logger.Logger = logger.NewNopLogger()
 
-		indexer = cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+		ctrl = gomock.NewController(GinkgoT())
+		c = mockclient.NewMockClient(ctrl)
+
 		queue = workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 		proj = &gardencorev1beta1.Project{
 			ObjectMeta: metav1.ObjectMeta{Name: "project-1"},
@@ -55,20 +63,19 @@ var _ = Describe("#roleBindingDelete", func() {
 		rolebinding = &rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{Name: "role-1", Namespace: ns},
 		}
-		c = &Controller{
-			projectLister: gardencorelisters.NewProjectLister(indexer),
-			projectQueue:  queue,
+		controller = &Controller{
+			gardenClient: c,
+			projectQueue: queue,
 		}
 	})
 
 	AfterEach(func() {
+		ctrl.Finish()
 		queue.ShutDown()
 	})
 
 	It("should not requeue random rolebinding", func() {
-		Expect(indexer.Add(proj)).ToNot(HaveOccurred())
-
-		c.roleBindingDelete(rolebinding)
+		controller.roleBindingDelete(ctx, rolebinding)
 
 		Expect(queue.Len()).To(Equal(0), "no items in the queue")
 	})
@@ -76,9 +83,13 @@ var _ = Describe("#roleBindingDelete", func() {
 	DescribeTable("requeue when rolebinding is",
 		func(roleBindingName string) {
 			rolebinding.Name = roleBindingName
-			Expect(indexer.Add(proj)).ToNot(HaveOccurred())
 
-			c.roleBindingDelete(rolebinding)
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{})).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
+				(&gardencorev1beta1.ProjectList{Items: []gardencorev1beta1.Project{*proj}}).DeepCopyInto(list)
+				return nil
+			})
+
+			controller.roleBindingDelete(ctx, rolebinding)
 
 			Expect(queue.Len()).To(Equal(1), "only one item in queue")
 			actual, _ := queue.Get()
@@ -95,9 +106,13 @@ var _ = Describe("#roleBindingDelete", func() {
 			now := metav1.Now()
 			proj.DeletionTimestamp = &now
 			rolebinding.Name = roleBindingName
-			Expect(indexer.Add(proj)).ToNot(HaveOccurred())
 
-			c.roleBindingDelete(rolebinding)
+			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{})).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ProjectList, _ ...client.ListOption) error {
+				(&gardencorev1beta1.ProjectList{Items: []gardencorev1beta1.Project{*proj}}).DeepCopyInto(list)
+				return nil
+			})
+
+			controller.roleBindingDelete(ctx, rolebinding)
 
 			Expect(queue.Len()).To(Equal(0), "no projects in queue")
 		},

@@ -61,7 +61,7 @@ func NewCloudProfileController(
 
 	cloudProfileInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.CloudProfile{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
+		return nil, fmt.Errorf("failed to get CloudProfile Informer: %w", err)
 	}
 
 	cloudProfileController := &Controller{

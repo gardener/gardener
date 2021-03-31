@@ -16,11 +16,8 @@ package shoot
 
 import (
 	"context"
-	"fmt"
 
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -28,8 +25,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -56,28 +53,21 @@ func (c *Controller) configMapUpdate(oldObj, newObj interface{}) {
 }
 
 // NewConfigMapReconciler creates a new instance of a reconciler which reconciles ConfigMaps.
-func NewConfigMapReconciler(l logrus.FieldLogger, clientMap clientmap.ClientMap, shootLister gardencorelisters.ShootLister) reconcile.Reconciler {
+func NewConfigMapReconciler(l logrus.FieldLogger, gardenClient client.Client) reconcile.Reconciler {
 	return &configMapReconciler{
-		logger:      l,
-		clientMap:   clientMap,
-		shootLister: shootLister,
+		logger:       l,
+		gardenClient: gardenClient,
 	}
 }
 
 type configMapReconciler struct {
-	logger      logrus.FieldLogger
-	clientMap   clientmap.ClientMap
-	shootLister gardencorelisters.ShootLister
+	logger       logrus.FieldLogger
+	gardenClient client.Client
 }
 
 func (r *configMapReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	configMap := &corev1.ConfigMap{}
-	if err := gardenClient.Client().Get(ctx, request.NamespacedName, configMap); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, configMap); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
 			return reconcile.Result{}, nil
@@ -86,12 +76,12 @@ func (r *configMapReconciler) Reconcile(ctx context.Context, request reconcile.R
 		return reconcile.Result{}, err
 	}
 
-	shoots, err := r.shootLister.Shoots(configMap.Namespace).List(labels.Everything())
-	if err != nil {
+	shootList := &gardencorev1beta1.ShootList{}
+	if err := r.gardenClient.List(ctx, shootList, client.InNamespace(configMap.Namespace)); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	for _, shoot := range shoots {
+	for _, shoot := range shootList.Items {
 		if shoot.Spec.Kubernetes.KubeAPIServer != nil &&
 			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig != nil &&
 			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy != nil &&
@@ -106,8 +96,8 @@ func (r *configMapReconciler) Reconcile(ctx context.Context, request reconcile.R
 
 			if shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion != configMap.ResourceVersion {
 				logger.Logger.Infof("[SHOOT CONFIGMAP controller] schedule for reconciliation shoot %v ", shootKey)
-				// send empty patch to let the admission plugin add the config map resource version
-				if err := kubernetes.SubmitEmptyPatch(context.TODO(), gardenClient.Client(), shoot); err != nil {
+				// send empty patch to let the admission webhook in GAC add or update the config map resource version
+				if err := kubernetes.SubmitEmptyPatch(ctx, r.gardenClient, &shoot); err != nil {
 					return reconcile.Result{}, err
 				}
 			}

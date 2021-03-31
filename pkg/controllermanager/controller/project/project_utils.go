@@ -20,13 +20,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
-func setProjectPhase(phase gardencorev1beta1.ProjectPhase) func(*gardencorev1beta1.Project) (*gardencorev1beta1.Project, error) {
-	return func(project *gardencorev1beta1.Project) (*gardencorev1beta1.Project, error) {
-		project.Status.Phase = phase
-		return project, nil
-	}
-}
-
 func namespaceLabelsFromProject(project *gardencorev1beta1.Project) map[string]string {
 	return map[string]string{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleProject,
