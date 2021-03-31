@@ -20,6 +20,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -35,10 +36,10 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 )
 
 // ShootStateControl is used to update data about extensions and any resources required by them in the ShootState.
@@ -47,17 +48,17 @@ type ShootStateControl struct {
 	seedClient      kubernetes.Interface
 	log             *logrus.Entry
 	recorder        record.EventRecorder
-	shootRetriever  *ShootRetriever
+	decoder         runtime.Decoder
 }
 
-// NewShootStateControl creates a new instance of ShootStateControl
-func NewShootStateControl(k8sGardenClient, seedClient kubernetes.Interface, log *logrus.Entry, recorder record.EventRecorder, shootRetriever *ShootRetriever) *ShootStateControl {
+// NewShootStateControl creates a new instance of ShootStateControl.
+func NewShootStateControl(k8sGardenClient, seedClient kubernetes.Interface, log *logrus.Entry, recorder record.EventRecorder) *ShootStateControl {
 	return &ShootStateControl{
 		k8sGardenClient: k8sGardenClient,
 		seedClient:      seedClient,
 		log:             log,
 		recorder:        recorder,
-		shootRetriever:  shootRetriever,
+		decoder:         extensions.NewGardenDecoder(),
 	}
 }
 
@@ -253,9 +254,13 @@ func (s *ShootStateControl) getClusterFromRequest(ctx context.Context, req recon
 }
 
 func (s *ShootStateControl) getShootStateFromCluster(ctx context.Context, cluster *extensionsv1alpha1.Cluster) (*gardencorev1alpha1.ShootState, error) {
-	shoot, err := s.shootRetriever.FromCluster(cluster)
+	shoot, err := extensions.ShootFromCluster(s.decoder, cluster)
 	if err != nil {
 		return nil, err
+	}
+
+	if shoot == nil {
+		return nil, fmt.Errorf("cluster resource %s doesn't contain shoot resource in raw format", cluster.Name)
 	}
 
 	shootState := &gardencorev1alpha1.ShootState{}

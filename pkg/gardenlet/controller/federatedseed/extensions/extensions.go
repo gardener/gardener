@@ -42,20 +42,18 @@ type Controller struct {
 	numberOfRunningWorkers int
 
 	controllerArtifacts           controllerArtifacts
-	controllerInstallationControl controllerInstallationControl
-	shootStateControl             ShootStateControl
+	controllerInstallationControl *controllerInstallationControl
+	shootStateControl             *ShootStateControl
 }
 
 // NewController creates new controller that syncs extensions states to ShootState
 func NewController(ctx context.Context, gardenClient, seedClient kubernetes.Interface, seedName string, log *logrus.Entry, recorder record.EventRecorder) (*Controller, error) {
-	controllerArtifacts := newControllerArtifacts()
-
 	controller := &Controller{
 		log:      log,
 		workerCh: make(chan int),
 
-		controllerArtifacts: controllerArtifacts,
-		controllerInstallationControl: controllerInstallationControl{
+		controllerArtifacts: newControllerArtifacts(),
+		controllerInstallationControl: &controllerInstallationControl{
 			k8sGardenClient:             gardenClient,
 			seedClient:                  seedClient,
 			seedName:                    seedName,
@@ -64,16 +62,10 @@ func NewController(ctx context.Context, gardenClient, seedClient kubernetes.Inte
 			lock:                        &sync.RWMutex{},
 			kindToRequiredTypes:         make(map[string]sets.String),
 		},
-		shootStateControl: ShootStateControl{
-			k8sGardenClient: gardenClient,
-			seedClient:      seedClient,
-			log:             log,
-			recorder:        recorder,
-			shootRetriever:  NewShootRetriever(),
-		},
+		shootStateControl: NewShootStateControl(gardenClient, seedClient, log, recorder),
 	}
 
-	if err := controllerArtifacts.initialize(ctx, seedClient); err != nil {
+	if err := controller.controllerArtifacts.initialize(ctx, seedClient); err != nil {
 		return nil, err
 	}
 
@@ -109,7 +101,7 @@ func (s *Controller) Run(ctx context.Context, controllerInstallationWorkers, sho
 	return nil
 }
 
-func (s *Controller) createControllerInstallationWorkers(ctx context.Context, control controllerInstallationControl) {
+func (s *Controller) createControllerInstallationWorkers(ctx context.Context, control *controllerInstallationControl) {
 	controllerutils.CreateWorker(ctx, s.controllerInstallationControl.controllerInstallationQueue, "ControllerInstallation-Required", reconcile.Func(control.reconcileControllerInstallationRequired), &s.waitGroup, s.workerCh)
 
 	for kind, artifact := range s.controllerArtifacts.controllerInstallationArtifacts {
@@ -126,7 +118,7 @@ func (s *Controller) createControllerInstallationWorkers(ctx context.Context, co
 	}
 }
 
-func (s *Controller) createShootStateWorkers(ctx context.Context, control ShootStateControl) {
+func (s *Controller) createShootStateWorkers(ctx context.Context, control *ShootStateControl) {
 	for kind, artifact := range s.controllerArtifacts.stateArtifacts {
 		workerName := fmt.Sprintf("ShootState-%s", kind)
 		controllerutils.CreateWorker(ctx, artifact.queue, workerName, control.CreateShootStateSyncReconcileFunc(kind, artifact.newObjFunc), &s.waitGroup, s.workerCh)
