@@ -162,7 +162,7 @@ var _ = Describe("Seed", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(ContainSubstring("can only get individual resources of this type"))
+				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get]"))
 			})
 
 			It("should have no opinion because no resources requested", func() {
@@ -172,7 +172,7 @@ var _ = Describe("Seed", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(ContainSubstring("cannot get subresource"))
+				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
 			})
 
 			It("should have no opinion because no resource name is given", func() {
@@ -242,7 +242,7 @@ var _ = Describe("Seed", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(ContainSubstring("can only get individual resources of this type"))
+				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get]"))
 			})
 
 			It("should have no opinion because no resources requested", func() {
@@ -252,7 +252,7 @@ var _ = Describe("Seed", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(ContainSubstring("cannot get subresource"))
+				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
 			})
 
 			It("should have no opinion because no resource name is given", func() {
@@ -322,7 +322,7 @@ var _ = Describe("Seed", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(ContainSubstring("can only get individual resources of this type"))
+				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get]"))
 			})
 
 			It("should have no opinion because no resources requested", func() {
@@ -332,7 +332,7 @@ var _ = Describe("Seed", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(ContainSubstring("cannot get subresource"))
+				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
 			})
 
 			It("should have no opinion because no resource name is given", func() {
