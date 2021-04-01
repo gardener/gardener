@@ -336,7 +336,7 @@ spec:
       operation: ADD
       value:
         filters:
-        - name: envoy.filters.network.tcp_proxy
+        - name: envoy.tcp_proxy
           typed_config:
             "@type": "type.googleapis.com/envoy.config.filter.network.tcp_proxy.v2.TcpProxy"
             stat_prefix: outbound|443||kube-apiserver.<shoot-namespace>.svc.cluster.local
