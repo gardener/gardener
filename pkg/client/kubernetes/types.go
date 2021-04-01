@@ -23,6 +23,7 @@ import (
 	gardenextensionsscheme "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
 	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	gardenseedmanagementscheme "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/scheme"
+	gardensettingsscheme "github.com/gardener/gardener/pkg/client/settings/clientset/versioned/scheme"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
@@ -94,6 +95,8 @@ func init() {
 		corescheme.AddToScheme,
 		gardencorescheme.AddToScheme,
 		gardenseedmanagementscheme.AddToScheme,
+		gardensettingsscheme.AddToScheme,
+		apiregistrationscheme.AddToScheme,
 	)
 	utilruntime.Must(gardenSchemeBuilder.AddToScheme(GardenScheme))
 

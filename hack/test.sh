@@ -27,4 +27,5 @@ setup_envtest_env ${ENVTEST_ASSETS_DIR}
 
 echo "> Test"
 
+export KUBEBUILDER_CONTROLPLANE_START_TIMEOUT=1m
 GO111MODULE=on go test -race -mod=vendor $@ | grep -v 'no test files'

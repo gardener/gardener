@@ -150,6 +150,9 @@ func (s *APIServer) populateAPIServerCerts() error {
 		return err
 	}
 
+	if err := ioutil.WriteFile(filepath.Join(s.CertDir, "apiserver-ca.crt"), ca.CA.CertBytes(), 0640); err != nil {
+		return err
+	}
 	if err := ioutil.WriteFile(filepath.Join(s.CertDir, "apiserver.crt"), certData, 0640); err != nil {
 		return err
 	}

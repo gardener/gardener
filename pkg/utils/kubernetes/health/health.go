@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest"
+	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -238,6 +239,25 @@ func CheckNode(node *corev1.Node) error {
 	}
 
 	return nil
+}
+
+// CheckAPIService checks whether the given APIService is healthy.
+// An APIService is considered healthy if it has the `Available` condition and its status is `True`.
+func CheckAPIService(apiService *apiregistrationv1.APIService) error {
+	const (
+		requiredCondition       = apiregistrationv1.Available
+		requiredConditionStatus = apiregistrationv1.ConditionTrue
+	)
+
+	for _, condition := range apiService.Status.Conditions {
+		if condition.Type == requiredCondition {
+			return checkConditionState(
+				string(requiredCondition), string(requiredConditionStatus), string(condition.Status),
+				condition.Reason, condition.Message,
+			)
+		}
+	}
+	return requiredConditionMissing(string(requiredCondition))
 }
 
 var (

@@ -409,14 +409,11 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 	if g.Config.Server.HTTPS.TLS == nil {
 		g.Logger.Info("No TLS server certificates provided... self-generating them now...")
 
-		_, tempDir, err := secrets.SelfGenerateTLSServerCertificate(
+		_, _, tempDir, err := secrets.SelfGenerateTLSServerCertificate("gardenlet", []string{
 			"gardenlet",
-			[]string{
-				"gardenlet",
-				fmt.Sprintf("gardenlet.%s", v1beta1constants.GardenNamespace),
-				fmt.Sprintf("gardenlet.%s.svc", v1beta1constants.GardenNamespace),
-			},
-		)
+			fmt.Sprintf("gardenlet.%s", v1beta1constants.GardenNamespace),
+			fmt.Sprintf("gardenlet.%s.svc", v1beta1constants.GardenNamespace),
+		}, nil)
 		if err != nil {
 			return err
 		}

@@ -1266,6 +1266,7 @@ k8s.io/helm/pkg/version
 ## explicit
 k8s.io/klog
 # k8s.io/klog/v2 v2.4.0
+## explicit
 k8s.io/klog/v2
 # k8s.io/kube-aggregator v0.20.2 => k8s.io/kube-aggregator v0.20.2
 ## explicit
@@ -1317,7 +1318,7 @@ k8s.io/utils/trace
 # sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.14
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/pkg/client
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/proto/client
-# sigs.k8s.io/controller-runtime v0.8.3
+# sigs.k8s.io/controller-runtime v0.8.3 => github.com/gardener/controller-runtime v0.8.3-gardener.1
 ## explicit
 sigs.k8s.io/controller-runtime
 sigs.k8s.io/controller-runtime/pkg/builder
@@ -1406,4 +1407,5 @@ sigs.k8s.io/yaml
 # k8s.io/component-base => k8s.io/component-base v0.20.2
 # k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 # k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.20.2
+# sigs.k8s.io/controller-runtime => github.com/gardener/controller-runtime v0.8.3-gardener.1
 # sigs.k8s.io/structured-merge-diff/v4 => sigs.k8s.io/structured-merge-diff/v4 v4.0.3
