@@ -1,3 +1,28 @@
+---
+title: Bastion Management and SSH Key Pair Rotation
+gep-number: 15
+creation-date: 2021-03-31
+status: implementable
+authors:
+- "@petersutter"
+  reviewers:
+- TODO
+---
+
+# GEP-15: Bastion Management and SSH Key Pair Rotation
+
+## Table of Contents
+
+- [Motivation](#motivation)
+    - [Goals](#goals)
+    - [Non-Goals](#non-goals)
+- [Proposal](#proposal)
+    - [Involved Components](#involved-components)
+    - [SSH Flow](#ssh-flow)
+    - [Resource Example](#resource-example)
+- [SSH Key Pair Rotation](#ssh-key-pair-rotation)
+    - [Rotation Proposal](#rotation-proposal)
+
 ## Motivation
 `gardenctl` (v1) has the functionality to setup ssh sessions to the targeted shoot cluster. For this, infrastructure resources like vms, firewall rules etc. have to be created. `gardenctl` will clean up the resources after the SSH session. However there were issues in the past where that infrastructure resources did not get cleaned up properly, for example due to some error and was not retried. Hence the proposal, to have a dedicated controller (for each infrastructure) that manages the infrastructure resources. `gardenctl` also re-used the ssh node credentials for the bastion host. Instead, a new temporary SSH key pair should be created for the bastion host.
 The static shoot-specific SSH key pair should be rotated regularily, for example once in the maintenance time window.
@@ -88,7 +113,8 @@ The following is a list of involved components, that either need to be newly int
 10. `gardenlet`:
     - removes finalizer on `Bastion` resource in garden cluster
 
-**Example**
+### Resource Example
+
 `Bastion` resource in the garden cluster
 ```yaml
 apiVersion: operations.gardener.cloud/v1alpha1
@@ -154,7 +180,7 @@ status:
 ## SSH Key Pair Rotation
 Currently, the SSH key pair for the shoot nodes are created once during shoot cluster creation. These key pairs should be rotated on a regular basis.
 
-### Proposal
+### Rotation Proposal
 - `gardeneruser` original user data [component](https://github.com/gardener/gardener/tree/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser):
     - The `gardeneruser` [create script](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser/templates/scripts/create.tpl.sh) should be changed into a reconcile script script, and renamed accordingly. It needs to be adapted so that the `authorized_keys` file will be updated / overwritten with the current SSH public key from the cloud-config user data.
 - Rotation trigger:
