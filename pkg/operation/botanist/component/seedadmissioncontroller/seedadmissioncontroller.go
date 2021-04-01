@@ -60,6 +60,8 @@ const (
 	port            = 10250
 	volumeName      = Name + "-tls"
 	volumeMountPath = "/srv/gardener-seed-admission-controller"
+
+	defaultReplicas = int32(3)
 )
 
 // New creates a new instance of DeployWaiter for the gardener-seed-admission-controller.
@@ -85,6 +87,11 @@ type gardenerSeedAdmissionController struct {
 }
 
 func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
+	replicas, err := g.getReplicas(ctx)
+	if err != nil {
+		return err
+	}
+
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
@@ -174,7 +181,10 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 			},
 		}
 
-		deployment = &appsv1.Deployment{
+		// if maxUnavailable would not be set, new pods don't come up in small seed clusters
+		// (due to the pod anti affinity new pods are stuck in pending state)
+		maxUnavailable = intstr.FromInt(1)
+		deployment     = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      deploymentName,
 				Namespace: g.namespace,
@@ -182,8 +192,14 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 			},
 			Spec: appsv1.DeploymentSpec{
 				RevisionHistoryLimit: pointer.Int32Ptr(1),
-				Replicas:             pointer.Int32Ptr(3),
-				Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
+				Replicas:             pointer.Int32Ptr(replicas),
+				Strategy: appsv1.DeploymentStrategy{
+					Type: appsv1.RollingUpdateDeploymentStrategyType,
+					RollingUpdate: &appsv1.RollingUpdateDeployment{
+						MaxUnavailable: &maxUnavailable,
+					},
+				},
+				Selector: &metav1.LabelSelector{MatchLabels: getLabels()},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{Labels: getLabels()},
 					Spec: corev1.PodSpec{
@@ -403,6 +419,21 @@ func init() {
 
 	versionConstraintK8sGreaterEqual115, err = semver.NewConstraint(">= 1.15")
 	utilruntime.Must(err)
+}
+
+func (g *gardenerSeedAdmissionController) getReplicas(ctx context.Context) (int32, error) {
+	nodeList := &corev1.NodeList{}
+	err := g.client.List(ctx, nodeList)
+	if err != nil {
+		return 0, err
+	}
+
+	nodeCount := int32(len(nodeList.Items))
+	if nodeCount < defaultReplicas {
+		return nodeCount, nil
+	}
+
+	return defaultReplicas, nil
 }
 
 const (
