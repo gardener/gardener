@@ -376,8 +376,8 @@ status: {}
 			gomock.InOrder(
 				c.EXPECT().List(ctx, gomock.Any()).DoAndReturn(
 					func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-						Expect(list).To(BeAssignableToTypeOf(&corev1.NodeList{}))
-						list.(*corev1.NodeList).Items = make([]corev1.Node, 3)
+						Expect(list).To(BeAssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
+						list.(*metav1.PartialObjectMetadataList).Items = make([]metav1.PartialObjectMetadata, 3)
 						return nil
 					}),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -391,8 +391,8 @@ status: {}
 			gomock.InOrder(
 				c.EXPECT().List(ctx, gomock.Any()).DoAndReturn(
 					func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-						Expect(list).To(BeAssignableToTypeOf(&corev1.NodeList{}))
-						list.(*corev1.NodeList).Items = make([]corev1.Node, 3)
+						Expect(list).To(BeAssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
+						list.(*metav1.PartialObjectMetadataList).Items = make([]metav1.PartialObjectMetadata, 3)
 						return nil
 					}),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -408,8 +408,8 @@ status: {}
 			gomock.InOrder(
 				c.EXPECT().List(ctx, gomock.Any()).DoAndReturn(
 					func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-						Expect(list).To(BeAssignableToTypeOf(&corev1.NodeList{}))
-						list.(*corev1.NodeList).Items = make([]corev1.Node, 3)
+						Expect(list).To(BeAssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
+						list.(*metav1.PartialObjectMetadataList).Items = make([]metav1.PartialObjectMetadata, 3)
 						return nil
 					}),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -432,8 +432,8 @@ status: {}
 			gomock.InOrder(
 				c.EXPECT().List(ctx, gomock.Any()).DoAndReturn(
 					func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-						Expect(list).To(BeAssignableToTypeOf(&corev1.NodeList{}))
-						list.(*corev1.NodeList).Items = make([]corev1.Node, 3)
+						Expect(list).To(BeAssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
+						list.(*metav1.PartialObjectMetadataList).Items = make([]metav1.PartialObjectMetadata, 3)
 						return nil
 					}),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -455,8 +455,8 @@ status: {}
 			gomock.InOrder(
 				c.EXPECT().List(ctx, gomock.Any()).DoAndReturn(
 					func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-						Expect(list).To(BeAssignableToTypeOf(&corev1.NodeList{}))
-						list.(*corev1.NodeList).Items = make([]corev1.Node, 1)
+						Expect(list).To(BeAssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
+						list.(*metav1.PartialObjectMetadataList).Items = make([]metav1.PartialObjectMetadata, 1)
 						return nil
 					}),
 				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
