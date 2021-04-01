@@ -25,9 +25,9 @@ spec:
       operation: ADD
       value:
         filters:
-        - name: envoy.tcp_proxy
+        - name: envoy.filters.network.tcp_proxy
           typed_config:
-            "@type": "type.googleapis.com/envoy.config.filter.network.tcp_proxy.v2.TcpProxy"
+            "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
             stat_prefix: "outbound|443||{{ .Values.name }}.{{ .Release.Namespace }}.svc.cluster.local"
             cluster: "outbound|443||{{ .Values.name }}.{{ .Release.Namespace }}.svc.cluster.local"
         filter_chain_match:

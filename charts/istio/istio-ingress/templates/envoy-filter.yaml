@@ -80,7 +80,7 @@ spec:
       listener:
         filterChain:
           filter:
-            name: "envoy.tcp_proxy"
+            name: envoy.filters.network.tcp_proxy
     patch:
       operation: INSERT_BEFORE
       value:
@@ -92,7 +92,7 @@ spec:
             config:
               root_id: stats_outbound
               configuration:
-                "@type": "type.googleapis.com/google.protobuf.StringValue"
+                "@type": type.googleapis.com/google.protobuf.StringValue
                 value: |
                   {
                   }
@@ -144,7 +144,7 @@ spec:
       listener:
         filterChain:
           filter:
-            name: envoy.tcp_proxy
+            name: envoy.filters.network.tcp_proxy
       proxy:
         proxyVersion: ^1\.7.*
     patch:

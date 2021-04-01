@@ -310,7 +310,7 @@ spec:
       operation: MERGE
       value:
         listener_filters:
-        - name: envoy.listener.proxy_protocol
+        - name: envoy.filters.listener.proxy_protocol
 ```
 
 For each individual `Shoot` cluster, a dedicated [FilterChainMatch](https://www.envoyproxy.io/docs/envoy/v1.13.0/api-v2/api/v2/listener/listener_components.proto#listener-filterchainmatch) is added. It ensures that only Shoot API servers can receive traffic from this listener:
@@ -336,9 +336,9 @@ spec:
       operation: ADD
       value:
         filters:
-        - name: envoy.tcp_proxy
+        - name: envoy.filters.network.tcp_proxy
           typed_config:
-            "@type": "type.googleapis.com/envoy.config.filter.network.tcp_proxy.v2.TcpProxy"
+            "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
             stat_prefix: outbound|443||kube-apiserver.<shoot-namespace>.svc.cluster.local
             cluster: outbound|443||kube-apiserver.<shoot-namespace>.svc.cluster.local
         filter_chain_match:
