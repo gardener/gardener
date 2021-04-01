@@ -122,9 +122,127 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 	}
 	expectedClusterRole.Rules = []rbacv1.PolicyRule{
 		{
+			APIGroups: []string{""},
+			Resources: []string{"pods"},
+			Verbs:     []string{"list", "watch", "delete", "deletecollection"},
+		},
+		{
 			APIGroups: []string{"*"},
-			Resources: []string{"*"},
-			Verbs:     []string{"*"},
+			Resources: []string{"configmaps", "namespaces", "secrets", "serviceaccounts", "services"},
+			Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+		},
+		{
+			APIGroups: []string{""},
+			Resources: []string{"persistentvolumeclaims"},
+			Verbs:     []string{"get", "list", "watch", "patch", "update"},
+		},
+		{
+			APIGroups:     []string{""},
+			Resources:     []string{"persistentvolumeclaims"},
+			ResourceNames: []string{"alertmanager-db-alertmanager-0", "loki-loki-0", "prometheus-db-prometheus-0"},
+			Verbs:         []string{"delete"},
+		},
+		{
+			APIGroups: []string{"admissionregistration.k8s.io"},
+			Resources: []string{"mutatingwebhookconfigurations", "validatingwebhookconfigurations"},
+			Verbs:     []string{"create"},
+		},
+		{
+			APIGroups:     []string{"admissionregistration.k8s.io"},
+			Resources:     []string{"mutatingwebhookconfigurations"},
+			ResourceNames: []string{"vpa-webhook-config-seed"},
+			Verbs:         []string{"get", "delete", "update"},
+		},
+		{
+			APIGroups: []string{"apiextensions.k8s.io"},
+			Resources: []string{"customresourcedefinitions"},
+			Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
+		},
+		{
+			APIGroups:     []string{"apiextensions.k8s.io"},
+			Resources:     []string{"customresourcedefinitions"},
+			ResourceNames: []string{"hvpas.autoscaling.k8s.io"},
+			Verbs:         []string{"delete"},
+		},
+		{
+			APIGroups: []string{"apps"},
+			Resources: []string{"deployments", "statefulsets", "replicasets"},
+			Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+		},
+		{
+			APIGroups: []string{"autoscaling"},
+			Resources: []string{"horizontalpodautoscalers"},
+			Verbs:     []string{"create", "delete", "get", "patch", "update"},
+		},
+		{
+			APIGroups: []string{"autoscaling.k8s.io"},
+			Resources: []string{"hvpas"},
+			Verbs:     []string{"create", "get", "list", "watch"},
+		},
+		{
+			APIGroups:     []string{"autoscaling.k8s.io"},
+			Resources:     []string{"hvpas"},
+			ResourceNames: []string{"etcd-events", "etcd-main", "kube-apiserver", "loki"},
+			Verbs:         []string{"delete", "patch", "update"},
+		},
+		{
+			APIGroups: []string{"autoscaling.k8s.io"},
+			Resources: []string{"verticalpodautoscalers"},
+			Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
+		},
+		{
+			APIGroups: []string{"dns.gardener.cloud"},
+			Resources: []string{"dnsentries", "dnsowners", "dnsproviders"},
+			Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+		},
+		{
+			APIGroups: []string{"druid.gardener.cloud"},
+			Resources: []string{"etcds"},
+			Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
+		},
+		{
+			APIGroups: []string{"extensions.gardener.cloud"},
+			Resources: []string{"backupbuckets", "backupentries", "clusters", "containerruntimes", "controlplanes", "extensions", "infrastructures", "networks", "operatingsystemconfigs", "workers"},
+			Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
+		},
+		{
+			APIGroups: []string{"resources.gardener.cloud"},
+			Resources: []string{"managedresources"},
+			Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+		},
+		{
+			APIGroups: []string{"networking.k8s.io"},
+			Resources: []string{"networkpolicies"},
+			Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
+		},
+		{
+			APIGroups: []string{"extensions", "networking.k8s.io"},
+			Resources: []string{"ingresses"},
+			Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+		},
+		{
+			APIGroups: []string{"policy"},
+			Resources: []string{"poddisruptionbudgets"},
+			Verbs:     []string{"create", "delete", "get", "patch", "update"},
+		},
+		{
+			APIGroups: []string{"rbac.authorization.k8s.io"},
+			Resources: []string{"clusterrolebindings", "clusterroles", "rolebindings", "roles"},
+			Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+		},
+		{
+			APIGroups: []string{"rbac.authorization.k8s.io"},
+			Resources: []string{"clusterroles", "roles"},
+			Verbs:     []string{"bind", "escalate"},
+		},
+		{
+			APIGroups: []string{"scheduling.k8s.io"},
+			Resources: []string{"priorityclasses"},
+			Verbs:     []string{"create", "delete", "get", "patch", "update"},
+		},
+		{
+			NonResourceURLs: []string{"/healthz", "/version"},
+			Verbs:           []string{"get"},
 		},
 	}
 
