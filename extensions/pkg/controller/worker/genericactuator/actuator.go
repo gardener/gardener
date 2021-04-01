@@ -27,7 +27,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -64,7 +63,6 @@ type genericActuator struct {
 	clientset            kubernetes.Interface
 	reader               client.Reader
 	scheme               *runtime.Scheme
-	decoder              runtime.Decoder
 	gardenerClientset    gardenerkubernetes.Interface
 	chartApplier         gardenerkubernetes.ChartApplier
 	chartRendererFactory extensionscontroller.ChartRendererFactory
@@ -102,7 +100,6 @@ func (a *genericActuator) InjectAPIReader(reader client.Reader) error {
 
 func (a *genericActuator) InjectScheme(scheme *runtime.Scheme) error {
 	a.scheme = scheme
-	a.decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
 	return nil
 }
 
