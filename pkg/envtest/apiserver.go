@@ -269,7 +269,7 @@ func (g *GardenerAPIServer) defaultSettings() error {
 
 // prepareKubeconfigFile marshals the test environments rest config to a kubeconfig file in the CertDir.
 func (g *GardenerAPIServer) prepareKubeconfigFile() (string, error) {
-	kubeconfigBytes, err := util.MarshalKubeconfigWithClientCertificate(g.restConfig, nil, nil)
+	kubeconfigBytes, err := util.CreateGardenletKubeconfigWithClientCertificate(g.restConfig, nil, nil)
 	if err != nil {
 		return "", err
 	}
