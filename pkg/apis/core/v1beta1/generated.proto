@@ -1720,6 +1720,14 @@ message SeedSelector {
   repeated string providerTypes = 2;
 }
 
+// SeedSettingAdmissionController controls certain settings for the seed admission controller deployed in the seed.
+message SeedSettingAdmissionController {
+  // Replicas controls the amount of replicas of the seed-admission-controller deployment (defaults to 3). When using
+  // a seed cluster with less than three nodes, this setting should be reduced accordingly in order to bootstrap the
+  // seed cluster successfully.
+  optional int32 replicas = 1;
+}
+
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
 // seed. When enabled then this is done via PodPriority and requires the Seed cluster to have Kubernetes version 1.11
 // or the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API group enabled.
@@ -1782,6 +1790,10 @@ message SeedSettings {
   // VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
   // +optional
   optional SeedSettingVerticalPodAutoscaler verticalPodAutoscaler = 5;
+
+  // AdmissionController controls certain settings for the seed admission controller deployed in the seed.
+  // +optional
+  optional SeedSettingAdmissionController admissionController = 6;
 }
 
 // SeedSpec is the specification of a Seed.

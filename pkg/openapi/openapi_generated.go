@@ -140,6 +140,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks":                          schema_pkg_apis_core_v1alpha1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider":                          schema_pkg_apis_core_v1alpha1_SeedProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSelector":                          schema_pkg_apis_core_v1alpha1_SeedSelector(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingAdmissionController":        schema_pkg_apis_core_v1alpha1_SeedSettingAdmissionController(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation":  schema_pkg_apis_core_v1alpha1_SeedSettingExcessCapacityReservation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices":       schema_pkg_apis_core_v1alpha1_SeedSettingLoadBalancerServices(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling":                 schema_pkg_apis_core_v1alpha1_SeedSettingScheduling(ref),
@@ -274,6 +275,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks":                           schema_pkg_apis_core_v1beta1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider":                           schema_pkg_apis_core_v1beta1_SeedProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector":                           schema_pkg_apis_core_v1beta1_SeedSelector(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingAdmissionController":         schema_pkg_apis_core_v1beta1_SeedSettingAdmissionController(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation":   schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices":        schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling":                  schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref),
@@ -5558,6 +5560,28 @@ func schema_pkg_apis_core_v1alpha1_SeedSelector(ref common.ReferenceCallback) co
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_SeedSettingAdmissionController(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingAdmissionController controls certain settings for the seed admission controller deployed in the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"replicas": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Replicas controls the amount of replicas of the seed-admission-controller deployment (defaults to 3). When using a seed cluster with less than three nodes, this setting should be reduced accordingly in order to bootstrap the seed cluster successfully.",
+							Default:     0,
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+				Required: []string{"replicas"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_SeedSettingExcessCapacityReservation(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -5712,11 +5736,17 @@ func schema_pkg_apis_core_v1alpha1_SeedSettings(ref common.ReferenceCallback) co
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingVerticalPodAutoscaler"),
 						},
 					},
+					"admissionController": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AdmissionController controls certain settings for the seed admission controller deployed in the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingAdmissionController"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingVerticalPodAutoscaler"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingAdmissionController", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingVerticalPodAutoscaler"},
 	}
 }
 
@@ -11875,6 +11905,28 @@ func schema_pkg_apis_core_v1beta1_SeedSelector(ref common.ReferenceCallback) com
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_SeedSettingAdmissionController(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingAdmissionController controls certain settings for the seed admission controller deployed in the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"replicas": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Replicas controls the amount of replicas of the seed-admission-controller deployment (defaults to 3). When using a seed cluster with less than three nodes, this setting should be reduced accordingly in order to bootstrap the seed cluster successfully.",
+							Default:     0,
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+				Required: []string{"replicas"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -12029,11 +12081,17 @@ func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) com
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"),
 						},
 					},
+					"admissionController": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AdmissionController controls certain settings for the seed admission controller deployed in the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingAdmissionController"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingAdmissionController", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"},
 	}
 }
 

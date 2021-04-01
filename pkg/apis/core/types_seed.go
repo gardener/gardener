@@ -205,7 +205,7 @@ type SeedSettings struct {
 	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
 	VerticalPodAutoscaler *SeedSettingVerticalPodAutoscaler
 	// AdmissionController controls certain settings for the seed admission controller deployed in the seed.
-	AdmissionController *SeedSettingAdmissionController `json:"admissionController,omitempty" protobuf:"bytes,6,opt,name=admissionController"`
+	AdmissionController *SeedSettingAdmissionController
 }
 
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the

@@ -7230,6 +7230,38 @@ Kubernetes meta/v1.LabelSelector
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingAdmissionController">SeedSettingAdmissionController
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettings">SeedSettings</a>)
+</p>
+<p>
+<p>SeedSettingAdmissionController controls certain settings for the seed admission controller deployed in the seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>replicas</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>Replicas controls the amount of replicas of the seed-admission-controller deployment (defaults to 3). When using
+a seed cluster with less than three nodes, this setting should be reduced accordingly in order to bootstrap the
+seed cluster successfully.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettingExcessCapacityReservation">SeedSettingExcessCapacityReservation
 </h3>
 <p>
@@ -7476,6 +7508,20 @@ SeedSettingVerticalPodAutoscaler
 <td>
 <em>(Optional)</em>
 <p>VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>admissionController</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingAdmissionController">
+SeedSettingAdmissionController
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>AdmissionController controls certain settings for the seed admission controller deployed in the seed.</p>
 </td>
 </tr>
 </tbody>
