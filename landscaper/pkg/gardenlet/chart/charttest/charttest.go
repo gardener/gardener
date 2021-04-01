@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -252,7 +253,7 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 		clusterRole,
 	)).ToNot(HaveOccurred())
 	Expect(clusterRole.Labels).To(Equal(expectedClusterRole.Labels))
-	Expect(clusterRole.Rules).To(Equal(expectedClusterRole.Rules))
+	Expect(equality.Semantic.DeepEqual(clusterRole, expectedClusterRole)).To(BeTrue())
 
 	// RBAC - Cluster Role Binding
 	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
