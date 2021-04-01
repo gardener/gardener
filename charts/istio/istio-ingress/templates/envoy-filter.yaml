@@ -80,7 +80,7 @@ spec:
       listener:
         filterChain:
           filter:
-            name: "envoy.filters.network.tcp_proxy"
+            name: "envoy.tcp_proxy"
     patch:
       operation: INSERT_BEFORE
       value:
@@ -134,7 +134,7 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: tcp-stats-filter-1.9
+  name: tcp-stats-filter-1.7
   namespace: {{ .Release.Namespace }}
 spec:
   configPatches:
@@ -144,9 +144,9 @@ spec:
       listener:
         filterChain:
           filter:
-            name: envoy.filters.network.tcp_proxy
+            name: envoy.tcp_proxy
       proxy:
-        proxyVersion: ^1\.9.*
+        proxyVersion: ^1\.7.*
     patch:
       operation: INSERT_BEFORE
       value:
@@ -176,7 +176,7 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: tcp-metadata-exchange-1.9
+  name: tcp-metadata-exchange-1.7
   namespace: {{ .Release.Namespace }}
 spec:
   configPatches:
@@ -184,7 +184,7 @@ spec:
     match:
       context: GATEWAY
       proxy:
-        proxyVersion: '^1\.9.*'
+        proxyVersion: '^1\.7.*'
       cluster: {}
     patch:
       operation: MERGE
