@@ -22,7 +22,7 @@ LANDSCAPER_DIR=$(dirname "${0}")/../../landscaper
 
 source $(dirname "${0}")/common/helpers
 kubernetes_env="$(k8s_env)"
-PLATFORM='-'$( uname -m ); case $PLATFORM in -ppc64le|-arm64) ;; *) PLATFORM=;; esac 
+PLATFORM='-'$( uname -m ); case $PLATFORM in -ppc64le|-arm64) ;; *) PLATFORM=;; esac
 
 # test if we are running against a Minikube, Docker or kind Kubernetes local setup
 case "${kubernetes_env}" in
@@ -57,8 +57,8 @@ case "${kubernetes_env}" in
 mkdir -p ${DEV_DIR}/landscaper
 
 cp ${EXAMPLE_DIR}/20-componentconfig-*.yaml ${DEV_DIR}/
-cp ${LANDSCAPER_DIR}/gardenlet/example/gardenlet-landscaper-imports.yaml ${DEV_DIR}/landscaper
-cp ${LANDSCAPER_DIR}/gardenlet/example/run-locally/gardenlet-landscaper-component-descriptor-list.yaml ${DEV_DIR}/landscaper
+cp ${LANDSCAPER_DIR}/pkg/gardenlet/example/gardenlet-landscaper-imports.yaml ${DEV_DIR}/landscaper
+cp ${LANDSCAPER_DIR}/pkg/gardenlet/example/run-locally/gardenlet-landscaper-component-descriptor-list.yaml ${DEV_DIR}/landscaper
 
 kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden.yaml
 kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden-dev.yaml
