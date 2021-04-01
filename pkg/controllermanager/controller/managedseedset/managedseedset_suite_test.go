@@ -19,9 +19,12 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 )
 
 func TestManagedSeed(t *testing.T) {
+	controllermanagerfeatures.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "ControllerManager ManagedSeedSet Controller Suite")
 }

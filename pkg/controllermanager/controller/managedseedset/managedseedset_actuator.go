@@ -131,13 +131,14 @@ func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.Ma
 	switch {
 	case scalingOut:
 		// Initialize a new replica and create its shoot
-		if err := a.createReplica(ctx, set, status, int(status.NextReplicaNumber)); err != nil {
+		ordinal := getNextOrdinal(replicas, status)
+		if err := a.createReplica(ctx, set, status, ordinal); err != nil {
 			return status, err
 		}
 
 		// Increment Replicas and NextReplicaNumber in status
 		status.Replicas++
-		status.NextReplicaNumber++
+		status.NextReplicaNumber = int32(ordinal + 1)
 
 		return status, nil
 
@@ -196,7 +197,7 @@ func (a *actuator) reconcileReplica(
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason, pointer.Int32Ptr(retries+1))
 		} else {
 			a.infoEventf(set, "Not retrying shoot %s reconciliation since max retries has been reached", r.GetFullName())
-			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcileFailedReason, nil)
+			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcileFailedReason, &retries)
 		}
 		return true, nil
 
@@ -211,7 +212,7 @@ func (a *actuator) reconcileReplica(
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason, pointer.Int32Ptr(retries+1))
 		} else {
 			a.infoEventf(set, "Not retrying shoot %s deletion since max retries has been reached", r.GetFullName())
-			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeleteFailedReason, nil)
+			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeleteFailedReason, &retries)
 		}
 		return true, nil
 
@@ -347,6 +348,16 @@ func updatePendingReplica(status *seedmanagementv1alpha1.ManagedSeedSetStatus, n
 			Retries: retries,
 		}
 	}
+}
+
+func getNextOrdinal(replicas []Replica, status *seedmanagementv1alpha1.ManagedSeedSetStatus) int {
+	// Replicas are sorted by ordinal, so the ordinal of the last replica is also the largest one
+	if len(replicas) > 0 {
+		if nextOrdinal := replicas[len(replicas)-1].GetOrdinal() + 1; nextOrdinal > int(status.NextReplicaNumber) {
+			return nextOrdinal
+		}
+	}
+	return int(status.NextReplicaNumber)
 }
 
 func replicaIsReady(r Replica) bool {

@@ -144,7 +144,6 @@ var _ = Describe("Reconciler", func() {
 					Expect(mss.Finalizers).To(Equal([]string{gardencorev1beta1.GardenerName}))
 				})
 				actuator.EXPECT().Reconcile(ctx, set).Return(status, nil)
-				expectGetManagedSeedSet()
 				expectPatchManagedSeedSetStatus(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(&mss.Status).To(Equal(status))
 				})
@@ -165,7 +164,6 @@ var _ = Describe("Reconciler", func() {
 			It("should reconcile the ManagedSeedSet deletion and update the status", func() {
 				expectGetManagedSeedSet()
 				actuator.EXPECT().Reconcile(ctx, set).Return(status, nil)
-				expectGetManagedSeedSet()
 				expectPatchManagedSeedSetStatus(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(&mss.Status).To(Equal(status))
 				})
@@ -182,7 +180,6 @@ var _ = Describe("Reconciler", func() {
 				expectPatchManagedSeedSet(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(mss.Finalizers).To(BeEmpty())
 				})
-				expectGetManagedSeedSet()
 				expectPatchManagedSeedSetStatus(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(&mss.Status).To(Equal(status))
 				})

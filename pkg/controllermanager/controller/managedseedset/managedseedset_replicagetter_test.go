@@ -28,7 +28,10 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
+	"github.com/gardener/gardener/pkg/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("ReplicaGetter", func() {
@@ -47,6 +50,8 @@ var _ = Describe("ReplicaGetter", func() {
 		shoots       []gardencorev1beta1.Shoot
 		managedSeeds []seedmanagementv1alpha1.ManagedSeed
 		seeds        []gardencorev1beta1.Seed
+
+		cleanup func()
 	)
 
 	BeforeEach(func() {
@@ -118,9 +123,11 @@ var _ = Describe("ReplicaGetter", func() {
 			},
 		}
 
+		cleanup = test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.CachedRuntimeClients, true)
 	})
 
 	AfterEach(func() {
+		cleanup()
 		ctrl.Finish()
 	})
 
@@ -144,6 +151,16 @@ var _ = Describe("ReplicaGetter", func() {
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{}), client.MatchingLabelsSelector{Selector: selector}).DoAndReturn(
 				func(_ context.Context, seedList *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
 					seedList.Items = seeds
+					return nil
+				},
+			)
+			r.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}), client.InNamespace(set.Namespace), client.MatchingLabelsSelector{Selector: selector}).DoAndReturn(
+				func(_ context.Context, pomList *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+					var items []metav1.PartialObjectMetadata
+					for _, shoot := range shoots {
+						items = append(items, metav1.PartialObjectMetadata{ObjectMeta: shoot.ObjectMeta})
+					}
+					pomList.Items = items
 					return nil
 				},
 			)

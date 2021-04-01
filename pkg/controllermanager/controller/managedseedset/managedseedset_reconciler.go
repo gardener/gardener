@@ -30,7 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -152,10 +152,10 @@ func (r *reconciler) getLogger(set *seedmanagementv1alpha1.ManagedSeedSet) *logr
 }
 
 func (r *reconciler) updateStatus(ctx context.Context, set *seedmanagementv1alpha1.ManagedSeedSet, status *seedmanagementv1alpha1.ManagedSeedSetStatus) error {
-	return kutil.TryPatchStatus(ctx, retry.DefaultBackoff, r.gardenClient.Client(), set, func() error {
-		if status != nil {
-			set.Status = *status
-		}
+	if status == nil {
 		return nil
-	})
+	}
+	patch := client.StrategicMergeFrom(set.DeepCopy())
+	set.Status = *status
+	return r.gardenClient.Client().Status().Patch(ctx, set, patch)
 }
