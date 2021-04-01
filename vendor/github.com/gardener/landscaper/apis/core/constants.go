@@ -22,7 +22,7 @@ const (
 	// Labels
 
 	// LandscaperComponentLabelName is the name of the labels the holds the information about landscaper components.
-	// This label should be set on landscper related components like the landcaper controller or deployers.
+	// This label should be set on landscaper related components like the landscaper controller or deployers.
 	LandscaperComponentLabelName = "landscaper.gardener.cloud/component"
 
 	// Component Descriptor
@@ -41,4 +41,9 @@ const (
 
 	// InlineComponentDescriptorLabel is the label name used for nested inline component descriptors
 	InlineComponentDescriptorLabel = "landscaper.gardener.cloud/component-descriptor"
+
+	//
+	JSONSchemaResourceType = "landscaper.gardener.cloud/jsonschema"
+
+	JSONSchemaArtifactMediaType = "application/vnd.gardener.landscaper.jsonscheme.v1+json"
 )

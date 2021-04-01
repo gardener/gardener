@@ -58,6 +58,12 @@ type DeployItemSpec struct {
 	// +kubebuilder:validation:XEmbeddedResource
 	// +kubebuilder:validation:XPreserveUnknownFields
 	Configuration *runtime.RawExtension `json:"config,omitempty"`
+	// RegistryPullSecrets defines a list of registry credentials that are used to
+	// pull blueprints, component descriptors and jsonschemas from the respective registry.
+	// For more info see: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+	// Note that the type information is used to determine the secret key and the type of the secret.
+	// +optional
+	RegistryPullSecrets []ObjectReference `json:"registryPullSecrets,omitempty"`
 }
 
 // DeployItemStatus contains the status of a deploy item.

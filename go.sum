@@ -201,8 +201,8 @@ github.com/gardener/hvpa-controller v0.0.0-20191014062307-fad3bdf06a25/go.mod h1
 github.com/gardener/hvpa-controller v0.2.5/go.mod h1:rjsb3BPKJFMluudZ8/bhCCDQfFCF/0Um+rzXQI/MmfI=
 github.com/gardener/hvpa-controller v0.3.1 h1:VsOdcKZMcZDlUNVbFY8oqlKrb1GSCdmzPooKT/Tyi+Y=
 github.com/gardener/hvpa-controller v0.3.1/go.mod h1:rjsb3BPKJFMluudZ8/bhCCDQfFCF/0Um+rzXQI/MmfI=
-github.com/gardener/landscaper/apis v0.6.0 h1:VYHZBXQ/ibNyUNMCwVpwmypgQji+340RVjISBENi9oA=
-github.com/gardener/landscaper/apis v0.6.0/go.mod h1:++MW27PlSnbWM4AJipikw62RSprxO5TKVxZ8nh0e4Yw=
+github.com/gardener/landscaper/apis v0.7.0 h1:68CXx/Un3rI5x4W1dEk8ZhR4gblyuvnyR6iGRkairtA=
+github.com/gardener/landscaper/apis v0.7.0/go.mod h1:++MW27PlSnbWM4AJipikw62RSprxO5TKVxZ8nh0e4Yw=
 github.com/gardener/machine-controller-manager v0.27.0/go.mod h1:zlIxuLQMtRO+aXOFsG6qtYkBmggbWY82K7MSO051ARU=
 github.com/gardener/machine-controller-manager v0.33.0 h1:58Gh4MW7Yv9XoARKhP4wORDcn2Hofbuv/1OlMe9y1eY=
 github.com/gardener/machine-controller-manager v0.33.0/go.mod h1:jxxE+mGgXwg4iPlCHTG4GtUfK2CcHA6yYoIIowoxOZU=

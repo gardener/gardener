@@ -44,6 +44,7 @@ func Convert_v1alpha1_ExecutionSpec_To_core_ExecutionSpec(in *ExecutionSpec, out
 	if err := Convert_v1alpha1_DeployItemTemplateList_To_core_DeployItemTemplateList((*DeployItemTemplateList)(unsafe.Pointer(&in.DeployItems)), (*core.DeployItemTemplateList)(unsafe.Pointer(&out.DeployItems)), s); err != nil {
 		return err
 	}
+	out.RegistryPullSecrets = *(*[]core.ObjectReference)(unsafe.Pointer(&in.RegistryPullSecrets))
 	return nil
 }
 
@@ -52,6 +53,7 @@ func Convert_core_ExecutionSpec_To_v1alpha1_ExecutionSpec(in *core.ExecutionSpec
 	if err := Convert_core_DeployItemTemplateList_To_v1alpha1_DeployItemTemplateList((*core.DeployItemTemplateList)(unsafe.Pointer(&in.DeployItems)), (*DeployItemTemplateList)(unsafe.Pointer(&out.DeployItems)), s); err != nil {
 		return err
 	}
+	out.RegistryPullSecrets = *(*[]ObjectReference)(unsafe.Pointer(&in.RegistryPullSecrets))
 	return nil
 }
 

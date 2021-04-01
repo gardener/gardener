@@ -29,9 +29,7 @@ import (
 
 	"github.com/onsi/ginkgo"
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 )
 
 var managedSeedConfig *ManagedSeedConfig
@@ -200,7 +198,7 @@ func (f *ManagedSeedFramework) buildManagedSeed() (*seedmanagementv1alpha1.Manag
 	)
 
 	// Build seed spec
-	seedSpec := f.buildSeedSpec()
+	seedSpec := BuildSeedSpecForTestrun(fmt.Sprintf("seed-%s", f.Config.ManagedSeedName), &f.Config.BackupProvider)
 
 	if !f.Config.DeployGardenlet {
 		// Initialize seed template
@@ -246,27 +244,4 @@ func (f *ManagedSeedFramework) buildManagedSeed() (*seedmanagementv1alpha1.Manag
 			Gardenlet:    gardenlet,
 		},
 	}, nil
-}
-
-func (f *ManagedSeedFramework) buildSeedSpec() *gardencorev1beta1.SeedSpec {
-	return &gardencorev1beta1.SeedSpec{
-		Backup: &gardencorev1beta1.SeedBackup{
-			Provider: f.Config.BackupProvider,
-		},
-		SecretRef: &corev1.SecretReference{
-			Name:      fmt.Sprintf("seed-%s", f.Config.ManagedSeedName),
-			Namespace: v1beta1constants.GardenNamespace,
-		},
-		Taints: []gardencorev1beta1.SeedTaint{
-			{
-				Key:   SeedTaintTestRun,
-				Value: pointer.StringPtr(GetTestRunID()),
-			},
-		},
-		Settings: &gardencorev1beta1.SeedSettings{
-			Scheduling: &gardencorev1beta1.SeedSettingScheduling{
-				Visible: false,
-			},
-		},
-	}
 }

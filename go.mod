@@ -13,7 +13,7 @@ require (
 	github.com/gardener/external-dns-management v0.7.18
 	github.com/gardener/gardener-resource-manager v0.18.0
 	github.com/gardener/hvpa-controller v0.3.1
-	github.com/gardener/landscaper/apis v0.6.0
+	github.com/gardener/landscaper/apis v0.7.0
 	github.com/gardener/machine-controller-manager v0.33.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.3.0

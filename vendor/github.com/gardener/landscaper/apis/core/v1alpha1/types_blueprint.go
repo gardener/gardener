@@ -88,7 +88,7 @@ type FieldValueDefinition struct {
 	Name string `json:"name"`
 	// Schema defines the imported value as jsonschema.
 	// +optional
-	Schema JSONSchemaDefinition `json:"schema,omitempty"`
+	Schema *JSONSchemaDefinition `json:"schema,omitempty"`
 	// TargetType defines the type of the imported target.
 	// +optional
 	TargetType string `json:"targetType,omitempty"`
