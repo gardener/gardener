@@ -82,7 +82,6 @@ func (c *Controller) prepareShootForMigration(ctx context.Context, logger *logru
 func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	var (
 		ctx                          = context.TODO()
-		namespace                    = &corev1.Namespace{}
 		botanist                     *botanistpkg.Botanist
 		err                          error
 		tasksWithErrors              []string
@@ -114,7 +113,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		}),
 		utilerrors.ToExecute("Retrieve kube-apiserver deployment in the shoot namespace in the seed cluster", func() error {
 			deploymentKubeAPIServer := &appsv1.Deployment{}
-			if err := botanist.K8sSeedClient.Client().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploymentKubeAPIServer); err != nil {
+			if err := botanist.K8sSeedClient.APIReader().Get(ctx, kutil.Key(o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploymentKubeAPIServer); err != nil {
 				if !apierrors.IsNotFound(err) {
 					return err
 				}
@@ -126,13 +125,15 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 			return nil
 		}),
 		utilerrors.ToExecute("Retrieve the Shoot namespace in the Seed cluster", func() error {
-			if err := botanist.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: o.Shoot.SeedNamespace}, namespace); err != nil {
+			botanist.SeedNamespaceObject = &corev1.Namespace{}
+			err := botanist.K8sSeedClient.APIReader().Get(ctx, client.ObjectKey{Name: o.Shoot.SeedNamespace}, botanist.SeedNamespaceObject)
+			if err != nil {
 				if apierrors.IsNotFound(err) {
 					o.Logger.Infof("Did not find '%s' namespace in the Seed cluster - nothing to be done", o.Shoot.SeedNamespace)
 					return utilerrors.Cancel()
 				}
 			}
-			return nil
+			return err
 		}),
 	)
 
@@ -144,7 +145,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 	}
 
 	var (
-		nonTerminatingNamespace = namespace.Status.Phase != corev1.NamespaceTerminating
+		nonTerminatingNamespace = botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound
 		wakeupRequired          = (o.Shoot.Info.Status.IsHibernated || (!o.Shoot.Info.Status.IsHibernated && o.Shoot.HibernationEnabled)) && cleanupShootResources
 		defaultTimeout          = 10 * time.Minute
