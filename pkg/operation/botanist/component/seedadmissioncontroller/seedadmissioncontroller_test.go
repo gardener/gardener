@@ -176,7 +176,7 @@ metadata:
   name: gardener-seed-admission-controller
   namespace: shoot--foo--bar
 spec:
-  minAvailable: 1
+  maxUnavailable: 1
   selector:
     matchLabels:
       app: gardener

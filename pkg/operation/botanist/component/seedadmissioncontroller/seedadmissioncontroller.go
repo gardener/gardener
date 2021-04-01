@@ -258,7 +258,6 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 			},
 		}
 
-		minAvailable        = intstr.FromInt(1)
 		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      Name,
@@ -266,7 +265,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 				Labels:    getLabels(),
 			},
 			Spec: policyv1beta1.PodDisruptionBudgetSpec{
-				MinAvailable: &minAvailable,
+				MaxUnavailable: &maxUnavailable,
 				Selector: &metav1.LabelSelector{
 					MatchLabels: getLabels(),
 				},
