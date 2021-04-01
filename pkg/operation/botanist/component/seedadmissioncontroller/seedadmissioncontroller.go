@@ -192,7 +192,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 			},
 			Spec: appsv1.DeploymentSpec{
 				RevisionHistoryLimit: pointer.Int32Ptr(1),
-				Replicas:             pointer.Int32Ptr(replicas),
+				Replicas:             &replicas,
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
