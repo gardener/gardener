@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -38,7 +37,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -157,25 +155,18 @@ func (r *reconciler) syncGardenSecrets(ctx context.Context, gardenClient kuberne
 		fns = append(fns, func(ctx context.Context) error {
 			seedSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: secret.Annotations,
-					Labels:      secret.Labels,
-					Name:        secret.Name,
-					Namespace:   namespace.Name,
+					Name:      secret.Name,
+					Namespace: namespace.Name,
 				},
-				Data: secret.Data,
 			}
-			// TODO: use controllerutil.CreateOrUpdate once cache is graduated to beta https://github.com/gardener/gardener/issues/2822
-			if err := gardenClient.Client().Create(ctx, seedSecret); err != nil {
-				if !apierrors.IsAlreadyExists(err) {
-					return err
-				}
-				_, err2 := kutil.TryUpdateSecret(ctx, gardenClient.Kubernetes(), retry.DefaultRetry, seedSecret.ObjectMeta, func(obj *corev1.Secret) (*corev1.Secret, error) {
-					obj.Annotations = seedSecret.Annotations
-					obj.Labels = seedSecret.Labels
-					obj.Data = seedSecret.Data
-					return obj, nil
-				})
-				return err2
+
+			if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient.Client(), seedSecret, func() error {
+				seedSecret.Annotations = secret.Annotations
+				seedSecret.Labels = secret.Labels
+				seedSecret.Data = secret.Data
+				return nil
+			}); err != nil {
+				return err
 			}
 			return nil
 		})
