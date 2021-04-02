@@ -768,7 +768,7 @@ func RunReconcileSeedFlow(
 		},
 		"reserveExcessCapacity": seed.Info.Spec.Settings.ExcessCapacityReservation.Enabled,
 		"replicas": map[string]interface{}{
-			"reserve-excess-capacity": DesiredExcessCapacity(),
+			"reserve-excess-capacity": desiredExcessCapacity(),
 		},
 		"prometheus": map[string]interface{}{
 			"storage":                 seed.GetValidVolumeSize("10Gi"),
@@ -1165,32 +1165,19 @@ func getManagedIngressDNSEntry(k8sSeedClient kubernetes.Interface, seedFQDN stri
 	)
 }
 
-// DesiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes
+// desiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes
 // (on the seed) in terms of reserve-excess-capacity deployment replicas. Each deployment replica currently
 // corresponds to resources of (request/limits) 2 cores of CPU and 6Gi of RAM.
 // This roughly corresponds to a single, moderately large control-plane.
 // The logic for computation of desired excess capacity corresponds to deploying 2 such shoot control planes.
 // This excess capacity can be used for hosting new control planes or newly vertically scaled old control-planes.
-func DesiredExcessCapacity() int {
+func desiredExcessCapacity() int {
 	var (
 		replicasToSupportSingleShoot = 1
 		effectiveExcessCapacity      = 2
 	)
 
 	return effectiveExcessCapacity * replicasToSupportSingleShoot
-}
-
-// GetIngressFQDNDeprecated returns the fully qualified domain name of ingress sub-resource for the Seed cluster. The
-// end result is '<subDomain>.<shootName>.<projectName>.<seed-ingress-domain>'.
-// Only necessary to renew certificates for Alertmanager, Grafana, Prometheus
-// TODO: (timuthy) remove in future version.
-func (s *Seed) GetIngressFQDNDeprecated(subDomain, shootName, projectName string) string {
-	ingressDomain := s.IngressDomain()
-
-	if shootName == "" {
-		return fmt.Sprintf("%s.%s.%s", subDomain, projectName, ingressDomain)
-	}
-	return fmt.Sprintf("%s.%s.%s.%s", subDomain, shootName, projectName, ingressDomain)
 }
 
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Seed cluster. The
@@ -1271,11 +1258,6 @@ func GetWildcardCertificate(ctx context.Context, c client.Client) (*corev1.Secre
 		return &wildcardCerts.Items[0], nil
 	}
 	return nil, nil
-}
-
-// ComputeGardenNamespace returns the name of the namespace belonging to the given seed in the Garden cluster.
-func ComputeGardenNamespace(seedName string) string {
-	return fmt.Sprintf("seed-%s", seedName)
 }
 
 // determineClusterIdentity determines the identity of a cluster, in cases where the identity was
