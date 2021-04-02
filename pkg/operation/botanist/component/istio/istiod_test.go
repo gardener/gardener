@@ -22,7 +22,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/istio"
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -194,24 +193,6 @@ var _ = Describe("istiod", func() {
 					corev1.ResourceCPU:    resource.MustParse("100m"),
 				},
 			}))
-		})
-	})
-
-	// TODO (mvladev): Remove after 1 release
-	Describe("HPA", func() {
-		BeforeEach(func() {
-			Expect(c.Create(ctx, &autoscalingv1.HorizontalPodAutoscaler{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "istiod",
-					Namespace: deployNS,
-				},
-			})).To(Succeed())
-		})
-
-		It("removes leftover HPA", func() {
-			Expect(
-				c.Get(ctx, client.ObjectKey{Name: "istio", Namespace: deployNS}, &autoscalingv1.HorizontalPodAutoscaler{}),
-			).To(BeNotFoundError())
 		})
 	})
 
