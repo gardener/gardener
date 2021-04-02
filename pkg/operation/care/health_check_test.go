@@ -223,7 +223,6 @@ var _ = Describe("health check", func() {
 
 		seedNamespace     = "shoot--foo--bar"
 		kubernetesVersion = semver.MustParse("1.19.3")
-		gardenerVersion   = semver.MustParse("1.12.3")
 
 		// control plane deployments
 		gardenerResourceManagerDeployment = newDeployment(seedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager, v1beta1constants.GardenRoleControlPlane, true)
@@ -289,7 +288,7 @@ var _ = Describe("health check", func() {
 				deploymentLister = constDeploymentLister(deployments)
 				etcdLister       = constEtcdLister(etcds)
 				workerLister     = constWorkerLister(workers)
-				checker          = care.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
+				checker          = care.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion)
 			)
 
 			exitCondition, err := checker.CheckControlPlane(shoot, seedNamespace, condition, deploymentLister, etcdLister, workerLister)
@@ -406,7 +405,7 @@ var _ = Describe("health check", func() {
 		func(conditions []resourcesv1alpha1.ManagedResourceCondition, upToDate bool, conditionMatcher types.GomegaMatcher) {
 			var (
 				mr      = new(resourcesv1alpha1.ManagedResource)
-				checker = care.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
+				checker = care.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion)
 			)
 
 			if !upToDate {
@@ -554,7 +553,7 @@ var _ = Describe("health check", func() {
 					return nil
 				})
 
-				checker := care.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
+				checker := care.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion)
 
 				exitCondition, err := checker.CheckClusterNodes(ctx, c, workerPools, condition)
 				Expect(err).NotTo(HaveOccurred())
@@ -741,7 +740,7 @@ var _ = Describe("health check", func() {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
-				checker           = care.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
+				checker           = care.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion)
 			)
 
 			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, isTestingShoot, wantsAlertmanager, condition, deploymentLister, statefulSetLister)
@@ -801,7 +800,7 @@ var _ = Describe("health check", func() {
 		func(statefulSets []*appsv1.StatefulSet, isTestingShoot bool, conditionMatcher types.GomegaMatcher) {
 			var (
 				statefulSetLister = constStatefulSetLister(statefulSets)
-				checker           = care.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
+				checker           = care.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion)
 			)
 
 			exitCondition, err := checker.CheckLoggingControlPlane(seedNamespace, isTestingShoot, condition, statefulSetLister)
@@ -830,7 +829,7 @@ var _ = Describe("health check", func() {
 
 	DescribeTable("#FailedCondition",
 		func(thresholds map[gardencorev1beta1.ConditionType]time.Duration, lastOperation *gardencorev1beta1.LastOperation, transitionTime metav1.Time, now time.Time, condition gardencorev1beta1.Condition, reason, message string, expected types.GomegaMatcher) {
-			checker := care.NewHealthChecker(thresholds, nil, lastOperation, kubernetesVersion, gardenerVersion)
+			checker := care.NewHealthChecker(thresholds, nil, lastOperation, kubernetesVersion)
 			tmp1, tmp2 := care.Now, gardencorev1beta1helper.Now
 			defer func() {
 				care.Now, gardencorev1beta1helper.Now = tmp1, tmp2
@@ -1009,7 +1008,7 @@ var _ = Describe("health check", func() {
 	// CheckExtensionCondition
 	DescribeTable("#CheckExtensionCondition - HealthCheckReport",
 		func(healthCheckOutdatedThreshold *metav1.Duration, condition gardencorev1beta1.Condition, extensionsConditions []care.ExtensionCondition, expected types.GomegaMatcher) {
-			checker := care.NewHealthChecker(nil, healthCheckOutdatedThreshold, nil, kubernetesVersion, gardenerVersion)
+			checker := care.NewHealthChecker(nil, healthCheckOutdatedThreshold, nil, kubernetesVersion)
 			updatedCondition := checker.CheckExtensionCondition(condition, extensionsConditions)
 			if expected == nil {
 				Expect(updatedCondition).To(BeNil())

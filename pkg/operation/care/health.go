@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -174,7 +173,7 @@ func (h *Health) healthChecks(
 	}
 
 	var (
-		checker               = NewHealthChecker(thresholdMappings, healthCheckOutdatedThreshold, h.shoot.Info.Status.LastOperation, h.shoot.KubernetesVersion, h.shoot.GardenerVersion)
+		checker               = NewHealthChecker(thresholdMappings, healthCheckOutdatedThreshold, h.shoot.Info.Status.LastOperation, h.shoot.KubernetesVersion)
 		seedDeploymentLister  = makeDeploymentLister(ctx, h.seedClient.Client(), h.shoot.SeedNamespace, controlPlaneMonitoringLoggingSelector)
 		seedStatefulSetLister = makeStatefulSetLister(ctx, h.seedClient.Client(), h.shoot.SeedNamespace, controlPlaneMonitoringLoggingSelector)
 		seedEtcdLister        = makeEtcdLister(ctx, h.seedClient.Client(), h.shoot.SeedNamespace)
@@ -267,12 +266,7 @@ func (h *Health) checkSystemComponents(
 	condition gardencorev1beta1.Condition,
 	extensionConditions []ExtensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
-	managedResources := managedResourcesShoot.List()
-	if versionConstraintGreaterEqual113.Check(checker.gardenerVersion) {
-		managedResources = append(managedResources, metricsserver.ManagedResourceName)
-	}
-
-	for _, name := range managedResources {
+	for name := range managedResourcesShoot {
 		mr := &resourcesv1alpha1.ManagedResource{}
 		if err := h.seedClient.Client().Get(ctx, kutil.Key(h.shoot.SeedNamespace, name), mr); err != nil {
 			return nil, err
