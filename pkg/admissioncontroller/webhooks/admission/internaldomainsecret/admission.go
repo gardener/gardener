@@ -27,9 +27,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
+	gardenercore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
+	seedutils "github.com/gardener/gardener/pkg/operation/seed/utils"
 )
 
 const (
@@ -74,15 +76,19 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 	if request.SubResource != "" {
 		return acadmission.Allowed("subresources on Secrets are not handled")
 	}
+	seedName, err := seedutils.ComputeSeedName(request.Namespace)
+	if request.Namespace != v1beta1constants.GardenNamespace && err != nil {
+		return acadmission.Allowed("only secrets from the garden and seed namespaces are handled")
+	}
 
 	switch request.Operation {
 	case admissionv1.Create:
-		exists, err := h.internalDomainSecretExists(ctx)
+		exists, err := h.internalDomainSecretExists(ctx, request.Namespace)
 		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 		if exists {
-			return admission.Denied("cannot create internal domain secret because there can be only one secret with the 'internal-domain' secret role")
+			return admission.Denied("cannot create internal domain secret because there can be only one secret with the 'internal-domain' secret role per namespace")
 		}
 
 		secret := &corev1.Secret{}
@@ -114,7 +120,7 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 		}
 
 		if oldDomain != newDomain {
-			atLeastOneShoot, err := h.atLeastOneShootExists(ctx)
+			atLeastOneShoot, err := h.atLeastOneShootExists(ctx, seedName)
 			if err != nil {
 				return admission.Errored(http.StatusInternalServerError, err)
 			}
@@ -126,7 +132,7 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 		return acadmission.Allowed("domain didn't change or no shoot exists")
 
 	case admissionv1.Delete:
-		atLeastOneShoot, err := h.atLeastOneShootExists(ctx)
+		atLeastOneShoot, err := h.atLeastOneShootExists(ctx, seedName)
 		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
@@ -140,25 +146,33 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 	}
 }
 
-func (h *handler) atLeastOneShootExists(ctx context.Context) (bool, error) {
-	shoots := &metav1.PartialObjectMetadataList{}
+func (h *handler) atLeastOneShootExists(ctx context.Context, seedName string) (bool, error) {
+	var (
+		shoots      = &metav1.PartialObjectMetadataList{}
+		listOptions = []client.ListOption{client.Limit(1)}
+	)
+
+	if seedName != "" {
+		listOptions = withSeedNameSelector(listOptions, seedName)
+	}
+
 	shoots.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 
-	if err := h.apiReader.List(ctx, shoots, client.Limit(1)); err != nil {
+	if err := h.apiReader.List(ctx, shoots, listOptions...); err != nil {
 		return false, err
 	}
 
 	return len(shoots.Items) > 0, nil
 }
 
-func (h *handler) internalDomainSecretExists(ctx context.Context) (bool, error) {
+func (h *handler) internalDomainSecretExists(ctx context.Context, namespace string) (bool, error) {
 	secrets := &metav1.PartialObjectMetadataList{}
 	secrets.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("SecretList"))
 
 	if err := h.apiReader.List(
 		ctx,
 		secrets,
-		client.InNamespace(v1beta1constants.GardenNamespace),
+		client.InNamespace(namespace),
 		client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
 		client.Limit(1),
 	); err != nil {
@@ -166,4 +180,11 @@ func (h *handler) internalDomainSecretExists(ctx context.Context) (bool, error) 
 	}
 
 	return len(secrets.Items) > 0, nil
+}
+
+// withSeedNameSelector extends the given selector with spec.seedName=<seedName>
+func withSeedNameSelector(listOptions []client.ListOption, seedName string) []client.ListOption {
+	return append(listOptions, client.MatchingFields{
+		gardenercore.ShootSeedName: seedName,
+	})
 }
