@@ -16,7 +16,6 @@ package seed_test
 
 import (
 	"context"
-	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -30,6 +29,7 @@ import (
 	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
 	mockkubernetes "github.com/gardener/gardener/pkg/mock/client-go/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	seedutils "github.com/gardener/gardener/pkg/operation/seed/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 
@@ -81,7 +81,7 @@ var _ = Describe("SeedReconciler", func() {
 			}
 			namespace = &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: fmt.Sprintf("seed-%s", seed.Name),
+					Name: seedutils.ComputeGardenNamespace(seed.Name),
 					OwnerReferences: []metav1.OwnerReference{
 						*metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed")),
 					},
@@ -126,7 +126,7 @@ var _ = Describe("SeedReconciler", func() {
 				corev1If.EXPECT().Secrets(gomock.Any()).Return(secretIf).AnyTimes()
 				corev1If.EXPECT().Namespaces().Return(namespaceIf).AnyTimes()
 
-				seedNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("seed-%s", seed.Name)}}
+				seedNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: seedutils.ComputeGardenNamespace(seed.Name)}}
 
 				oldSecret = createSecret("existing", seedNamespace.Name, "old", "role", []byte("data"))
 				newSecret = createSecret("existing", v1beta1constants.GardenNamespace, "foo", "role", []byte("bar"))

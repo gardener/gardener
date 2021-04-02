@@ -43,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
+	seedutils "github.com/gardener/gardener/pkg/operation/seed/utils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -154,7 +155,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		ctx,
 		k8sGardenClient.Cache(),
 		f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister(),
-		seedpkg.ComputeGardenNamespace(seeds[0]),
+		seedutils.ComputeGardenNamespace(seeds[0]),
 	)
 	runtime.Must(err)
 

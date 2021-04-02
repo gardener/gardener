@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
+	seedutils "github.com/gardener/gardener/pkg/operation/seed/utils"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
@@ -247,7 +248,7 @@ func shouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
 const taskID = "initializeOperation"
 
 func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Entry, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (*operation.Operation, error) {
-	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient.Cache(), c.seedLister, seedpkg.ComputeGardenNamespace(seed.Name))
+	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient.Cache(), c.seedLister, seedutils.ComputeGardenNamespace(seed.Name))
 	if err != nil {
 		return nil, err
 	}
