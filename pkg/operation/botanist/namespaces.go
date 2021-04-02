@@ -44,8 +44,7 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), namespace, func() error {
 		namespace.Annotations = map[string]string{
-			v1beta1constants.ShootUID:           string(b.Shoot.Info.Status.UID),
-			v1beta1constants.DeprecatedShootUID: string(b.Shoot.Info.Status.UID),
+			v1beta1constants.ShootUID: string(b.Shoot.Info.Status.UID),
 		}
 		namespace.Labels = map[string]string{
 			v1beta1constants.GardenRole:              v1beta1constants.GardenRoleShoot,

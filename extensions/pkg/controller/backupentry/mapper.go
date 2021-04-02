@@ -83,10 +83,7 @@ func (m *namespaceToBackupEntryMapper) Map(obj client.Object) []reconcile.Reques
 		return nil
 	}
 
-	shootUID, ok := getDeprecatedAnnotation(namespace.Annotations, v1beta1constants.ShootUID, v1beta1constants.DeprecatedShootUID)
-	if !ok {
-		return nil
-	}
+	shootUID := namespace.Annotations[v1beta1constants.ShootUID]
 
 	var requests []reconcile.Request
 	for _, backupEntry := range backupEntryList.Items {
@@ -110,13 +107,4 @@ func (m *namespaceToBackupEntryMapper) Map(obj client.Object) []reconcile.Reques
 // associated Shoot's seed namespace have been modified.
 func NamespaceToBackupEntryMapper(client client.Client, predicates []predicate.Predicate) extensionshandler.Mapper {
 	return &namespaceToBackupEntryMapper{client, predicates}
-}
-
-func getDeprecatedAnnotation(annotations map[string]string, annotationKey, deprecatedAnnotationKey string) (string, bool) {
-	val, ok := annotations[annotationKey]
-	if !ok {
-		val, ok = annotations[deprecatedAnnotationKey]
-	}
-
-	return val, ok
 }
