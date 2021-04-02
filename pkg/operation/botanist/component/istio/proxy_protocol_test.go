@@ -146,14 +146,13 @@ var _ = Describe("Proxy protocol", func() {
 						Operation: v1alpha3.EnvoyFilter_Patch_MERGE,
 						Value: messageToStruct(&xdsAPI.Listener{
 							ListenerFilters: []*listenerv2.ListenerFilter{
-								{Name: "envoy.listener.proxy_protocol"},
+								{Name: "envoy.filters.listener.proxy_protocol"},
 							},
 						}),
 					},
 				}},
 			},
 		}
-
 	})
 
 	JustBeforeEach(func() {
