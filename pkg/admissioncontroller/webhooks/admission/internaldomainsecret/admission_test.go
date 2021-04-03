@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,13 +41,15 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	seedutils "github.com/gardener/gardener/pkg/operation/seed/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("handler", func() {
 	var (
-		ctx     = context.TODO()
-		fakeErr = fmt.Errorf("fake err")
-		logger  logr.Logger
+		ctx         = context.TODO()
+		fakeErr     = fmt.Errorf("fake err")
+		errNotFound = &apierrors.StatusError{ErrStatus: metav1.Status{Reason: metav1.StatusReasonNotFound}}
+		logger      logr.Logger
 
 		request admission.Request
 		handler admission.Handler
@@ -131,6 +134,11 @@ var _ = Describe("handler", func() {
 
 	Context("create", func() {
 		It("should fail because the check for other internal domain secrets failed", func() {
+			mockReader.EXPECT().Get(
+				gomock.Any(),
+				kutil.Key(gardenNamespaceName, resourceName),
+				gomock.AssignableToTypeOf(&corev1.Secret{}),
+			).Return(errNotFound)
 			mockReader.EXPECT().List(
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
@@ -143,6 +151,11 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should fail because another internal domain secret exists in the garden namesapce", func() {
+			mockReader.EXPECT().Get(
+				gomock.Any(),
+				kutil.Key(gardenNamespaceName, resourceName),
+				gomock.AssignableToTypeOf(&corev1.Secret{}),
+			).Return(errNotFound)
 			mockReader.EXPECT().List(
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
@@ -158,6 +171,11 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should fail because another internal domain secret exists in the same seed namesapce", func() {
+			mockReader.EXPECT().Get(
+				gomock.Any(),
+				kutil.Key(seedNamespace, resourceName),
+				gomock.AssignableToTypeOf(&corev1.Secret{}),
+			).Return(errNotFound)
 			mockReader.EXPECT().List(
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
@@ -173,6 +191,11 @@ var _ = Describe("handler", func() {
 		})
 
 		It("should fail because the object cannot be decoded", func() {
+			mockReader.EXPECT().Get(
+				gomock.Any(),
+				kutil.Key(gardenNamespaceName, resourceName),
+				gomock.AssignableToTypeOf(&corev1.Secret{}),
+			).Return(errNotFound)
 			mockReader.EXPECT().List(
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
@@ -187,6 +210,11 @@ var _ = Describe("handler", func() {
 		It("should fail because the secret misses domain info", func() {
 			request.Object.Raw = encode(&corev1.Secret{})
 
+			mockReader.EXPECT().Get(
+				gomock.Any(),
+				kutil.Key(gardenNamespaceName, resourceName),
+				gomock.AssignableToTypeOf(&corev1.Secret{}),
+			).Return(errNotFound)
 			mockReader.EXPECT().List(
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
@@ -208,6 +236,11 @@ var _ = Describe("handler", func() {
 				},
 			})
 
+			mockReader.EXPECT().Get(
+				gomock.Any(),
+				kutil.Key(gardenNamespaceName, resourceName),
+				gomock.AssignableToTypeOf(&corev1.Secret{}),
+			).Return(errNotFound)
 			mockReader.EXPECT().List(
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}),
@@ -217,6 +250,28 @@ var _ = Describe("handler", func() {
 			)
 
 			test(admissionv1.Create, gardenNamespaceName, true, statusCodeAllowed, "internal domain secret is valid")
+		})
+
+		It("should pass because the same secret already exist", func() {
+			returnSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: gardenNamespaceName,
+					Name:      resourceName,
+					Annotations: map[string]string{
+						"dns.gardener.cloud/provider": "foo",
+						"dns.gardener.cloud/domain":   "bar",
+					},
+				},
+			}
+			request.Object.Raw = encode(returnSecret)
+
+			mockReader.EXPECT().Get(
+				gomock.Any(),
+				kutil.Key(gardenNamespaceName, resourceName),
+				gomock.AssignableToTypeOf(&corev1.Secret{}),
+			).Return(nil)
+
+			test(admissionv1.Create, gardenNamespaceName, true, statusCodeAllowed, "")
 		})
 	})
 

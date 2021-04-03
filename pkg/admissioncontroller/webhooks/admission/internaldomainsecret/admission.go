@@ -22,6 +22,7 @@ import (
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -32,6 +33,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
 	seedutils "github.com/gardener/gardener/pkg/operation/seed/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -83,6 +85,13 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 
 	switch request.Operation {
 	case admissionv1.Create:
+		alreadyExists, err := h.secretAlreadyExists(ctx, request.Name, request.Namespace)
+		if err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+		if alreadyExists {
+			return admission.Allowed("the secret already exists")
+		}
 		exists, err := h.internalDomainSecretExists(ctx, request.Namespace)
 		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
@@ -180,6 +189,19 @@ func (h *handler) internalDomainSecretExists(ctx context.Context, namespace stri
 	}
 
 	return len(secrets.Items) > 0, nil
+}
+
+func (h *handler) secretAlreadyExists(ctx context.Context, name, namespace string) (bool, error) {
+	secret := &corev1.Secret{}
+
+	if err := h.apiReader.Get(ctx, kutil.Key(namespace, name), secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }
 
 // withSeedNameSelector extends the given selector with spec.seedName=<seedName>
