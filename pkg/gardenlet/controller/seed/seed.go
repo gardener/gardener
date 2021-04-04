@@ -16,7 +16,6 @@ package seed
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -28,14 +27,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -43,7 +39,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/controller/lease"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
@@ -173,33 +168,6 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	}()
 
 	logger.Logger.Info("Seed controller initialized.")
-
-	// Register Seed object if desired
-	if c.config.SeedConfig != nil {
-		// Convert gardenlet config to an external version
-		cfg, err := confighelper.ConvertGardenletConfigurationExternal(c.config)
-		if err != nil {
-			panic(fmt.Errorf("could not convert gardenlet configuration: %+v", err))
-		}
-
-		seed := &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: c.config.SeedConfig.Name}}
-
-		gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-		if err != nil {
-			panic(fmt.Errorf("could not register seed %q: failed to get garden client: %+v", seed.Name, err))
-		}
-
-		if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient.Client(), seed, func() error {
-			seed.Labels = utils.MergeStringMaps(map[string]string{
-				v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
-			}, c.config.SeedConfig.Labels)
-
-			seed.Spec = cfg.SeedConfig.Spec
-			return nil
-		}); err != nil {
-			panic(fmt.Errorf("could not register seed %q: %+v", seed.Name, err))
-		}
-	}
 
 	for i := 0; i < workers; i++ {
 		controllerutils.DeprecatedCreateWorker(ctx, c.seedQueue, "Seed", c.reconcileSeedKey, &waitGroup, c.workerCh)

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -42,10 +43,13 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -53,6 +57,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // DefaultImageVector is a constant for the path to the default image vector file.
@@ -134,8 +140,16 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("no seed selected by Gardenlet")
 	}
 
+	// Register Seed object if desired
+	if f.cfg.SeedConfig != nil {
+		if err := f.registerSeed(ctx, k8sGardenClient.Client()); err != nil {
+			return fmt.Errorf("failed to register the seed: %+v", err)
+		}
+	}
+
 	// Read Garden secrets from any seed namespace as we assume they are synced accordingly by the Gardener Controller Manager.
 	// This requires adaption if we'll decide not to sync all Secrets for all Seeds in the future.
+	// For newly created seed, this seed namespace is about to be created by the GCM.
 	_, err = garden.ReadGardenSecrets(
 		ctx,
 		k8sGardenClient.Cache(),
@@ -239,4 +253,48 @@ func seedNames(seedConfig *config.SeedConfig, seedLister gardencorelisters.SeedL
 	}
 
 	return names
+}
+
+// registerSeed create or update the seed resource if gardenlet is configured to takes care about it.
+func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenClient client.Client) error {
+	var (
+		seed = &gardencorev1beta1.Seed{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: f.cfg.SeedConfig.Name,
+			},
+		}
+		seedNamespaceName = seedpkg.ComputeGardenNamespace(f.cfg.SeedConfig.Name)
+		seedNamespace     = &corev1.Namespace{}
+	)
+
+	// Convert gardenlet config to an external version
+	cfg, err := confighelper.ConvertGardenletConfigurationExternal(f.cfg)
+	if err != nil {
+		return fmt.Errorf("could not convert gardenlet configuration: %+v", err)
+	}
+
+	if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient, seed, func() error {
+		seed.Labels = utils.MergeStringMaps(map[string]string{
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
+		}, f.cfg.SeedConfig.Labels)
+
+		seed.Spec = cfg.SeedConfig.Spec
+		return nil
+	}); err != nil {
+		return fmt.Errorf("could not register seed %q: %+v", seed.Name, err)
+	}
+
+	// wait seed namespace to be created by GCM
+	return retryutils.UntilTimeout(ctx, 5*time.Second, 2*time.Minute, func(context.Context) (done bool, err error) {
+		if err := gardenClient.Get(ctx, kutil.Key(seedNamespaceName), seedNamespace); err != nil {
+			if apierrors.IsNotFound(err) {
+				logger.Logger.Infof("Waiting until namespace %q is created.", seedNamespaceName)
+				return retryutils.MinorError(fmt.Errorf("namespace %q still not created", seedNamespaceName))
+			}
+			return retryutils.SevereError(err)
+		}
+
+		logger.Logger.Infof("Namespace %q has been created.", seedNamespaceName)
+		return retryutils.Ok()
+	})
 }
