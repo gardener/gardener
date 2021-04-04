@@ -6333,7 +6333,7 @@ string
 <p>Role represents the role of this member.
 IMPORTANT: Be aware that this field will be removed in the <code>v1</code> version of this API in favor of the <code>roles</code>
 list.
-TODO: Remove this field in favor of the <code>owner</code> role in <code>v1</code>.</p>
+TODO: Remove this field in favor of the <code>roles</code> list in <code>v1</code>.</p>
 </td>
 </tr>
 <tr>

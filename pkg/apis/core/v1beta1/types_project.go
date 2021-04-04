@@ -106,7 +106,7 @@ type ProjectMember struct {
 	// Role represents the role of this member.
 	// IMPORTANT: Be aware that this field will be removed in the `v1` version of this API in favor of the `roles`
 	// list.
-	// TODO: Remove this field in favor of the `owner` role in `v1`.
+	// TODO: Remove this field in favor of the `roles` list in `v1`.
 	Role string `json:"role" protobuf:"bytes,2,opt,name=role"`
 	// Roles represents the list of roles of this member.
 	// +optional
