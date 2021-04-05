@@ -37,7 +37,7 @@ const (
   - name: controlplane
     selector:
       matchExpressions:
-      - key: garden.sapcloud.io/role
+      - key: gardener.cloud/role
         operator: In
         values:
         - controlplane

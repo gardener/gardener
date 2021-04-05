@@ -26,7 +26,7 @@ func DependencyWatchdogConfiguration(role string) (string, error) {
   - name: ` + v1beta1constants.GardenRoleControlPlane + `
     selector:
       matchExpressions:
-      - key: ` + v1beta1constants.DeprecatedGardenRole + `
+      - key: ` + v1beta1constants.GardenRole + `
         operator: In
         values:
         - ` + v1beta1constants.GardenRoleControlPlane + `
