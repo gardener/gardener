@@ -16,9 +16,16 @@ spec:
     metadata:
       labels:
         networking.gardener.cloud/from-prometheus: allowed
+{{- if .Values.rbacSidecarEnabled }}
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-shoot-apiserver: allowed
+{{- end }}
 {{ toYaml .Values.labels | indent 8 }}
       annotations:
         checksum/configmap-loki-config: {{ include (print $.Template.BasePath "/loki-configmap.yaml") . | sha256sum }}
+{{- if .Values.rbacSidecarEnabled }}
+        checksum/kube-rbac-proxy-kubeconfig: {{ .Values.kubeRBACProxyKubeconfigCheckSum }}
+{{- end }}
     spec:
       serviceAccountName: loki
       securityContext:
@@ -72,11 +79,33 @@ spec:
               mountPath: /etc/loki
             - name: loki
               mountPath: "/data"
+{{- if .Values.rbacSidecarEnabled }}
+        - name: kube-rbac-proxy
+          image: {{ index .Values.global.images "kube-rbac-proxy" }}
+          args:
+          - --insecure-listen-address=0.0.0.0:8080
+          - --upstream=http://127.0.0.1:3100/
+          - --kubeconfig=/kubeconfig/kubeconfig
+          - --logtostderr=true
+          - --v=6
+          ports:
+          - name: kubeproxy
+            containerPort: {{ .Values.kubeProxy.port }}
+            protocol: TCP
+          volumeMounts:
+            - name: kubeconfig
+              mountPath: /kubeconfig
+{{- end}}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       volumes:
         - name: config
           configMap:
             name: loki-config
+{{- if .Values.rbacSidecarEnabled }}
+        - name: kubeconfig
+          secret:
+            secretName: kube-rbac-proxy-kubeconfig
+{{- end }}
   volumeClaimTemplates:
     - metadata:
         name: loki

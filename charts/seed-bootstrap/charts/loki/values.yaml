@@ -2,6 +2,7 @@ global:
   images:
     loki: image-repository:image-tag
     loki-curator: image-repository:image-tag
+    kube-rbac-proxy: image-repository:image-tag
   fluentbit:
     labels:
       gardener.cloud/role: logging
@@ -11,6 +12,9 @@ global:
 authEnabled: true
 
 annotations: {}
+
+rbacSidecarEnabled: false
+kubeRBACProxyKubeconfigCheckSum: bed9a4ef5410793c023b3551308661a1a1acafe9f93c9393714ce4f2c0134ac3
 
 labels:
   # deprecated label
@@ -77,6 +81,15 @@ service:
 
 curator:
   port: 2718
+
+kubeProxy:
+  port: 8080
+
+ingress:
+  class: nginx
+  hosts: 
+  - hostName: loki.ingress.example.com 
+    secretName: loki-tls
 
 hvpa:
   enabled: false

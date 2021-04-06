@@ -14,5 +14,11 @@ spec:
     protocol: TCP
     name: metrics
     targetPort: metrics
+{{- if .Values.rbacSidecarEnabled }}
+  - port: {{ .Values.kubeProxy.port }}
+    protocol: TCP
+    name: external
+    targetPort: {{ .Values.kubeProxy.port }}
+{{- end }}
   selector:
 {{ toYaml .Values.labels | indent 4 }}

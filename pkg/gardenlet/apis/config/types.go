@@ -336,12 +336,22 @@ type GardenLoki struct {
 	Priority *int32
 }
 
+// ShootNodeLogging contains configuration for the shoot node logging.
+type ShootNodeLogging struct {
+	// ShootPurposes denote which shoots can have node loggin by they purpose
+	ShootPurposes []string
+	// AllowAllExecptTesting allows all shoot of all purpose, except testing to have shoot node logging
+	AllowAllExecptTesting bool
+}
+
 // Logging contains configuration for the logging stack.
 type Logging struct {
 	// FluentBit contains configurations for the fluent-bit
 	FluentBit *FluentBit
 	// Loki contains configuration for the Loki
 	Loki *Loki
+	// ShootNodeLogging contains configurations for the shoot node logging
+	ShootNodeLogging *ShootNodeLogging
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

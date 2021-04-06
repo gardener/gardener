@@ -217,6 +217,10 @@ images:
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/loki-curator
   tag: "v0.35.0"
+- name: kube-rbac-proxy
+  sourceRepository: https://github.com/brancz/kube-rbac-proxy
+  repository: quay.io/brancz/kube-rbac-proxy
+  tag: v0.8.0
 
 # VPA
 - name: vpa-admission-controller

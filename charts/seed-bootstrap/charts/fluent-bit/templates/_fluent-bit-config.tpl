@@ -154,6 +154,7 @@
         QueueSync normal
         QueueName gardener-kubernetes-user
         FallbackToTagWhenMetadataIsMissing true
+        SendDeletedClustersLogsToDefaultClient true
         TagKey tag
         DropLogEntryWithoutK8sMetadata true
         ControllerSyncTimeout 120s

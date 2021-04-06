@@ -406,6 +406,14 @@ type GardenLoki struct {
 	Priority *int `json:"priority,omitempty" yaml:"priority,omitempty"`
 }
 
+// ShootNodeLogging contains configuration for the shoot node logging.
+type ShootNodeLogging struct {
+	// ShootPurposes denote which shoots can have node loggin by they purpose
+	ShootPurposes []string `json:"shootPurposes,omitempty" yaml:"shootPurposes,omitempty"`
+	// AllowAllExecptTesting allows all shoot of all purpose, except testing to have shoot node logging
+	AllowAllExecptTesting bool `json:"allowAllExecptTesting,omitempty" yaml:"allowAllExecptTesting,omitempty"`
+}
+
 // Logging contains configuration for the logging stack.
 type Logging struct {
 	// FluentBit contains configurations for the fluent-bit
@@ -414,6 +422,9 @@ type Logging struct {
 	// Loki contains configuration for the Loki
 	// +optional
 	Loki *Loki `json:"loki,omitempty" yaml:"loki,omitempty"`
+	// ShootNodeLogging contains configurations for the shoot node logging
+	// +optional
+	ShootNodeLogging *ShootNodeLogging `json:"shootNodeLogging,omitempty" yaml:"shootNodeLogging,omitempty"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

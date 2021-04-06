@@ -203,7 +203,11 @@ func DeleteVpa(ctx context.Context, c client.Client, namespace string, isShoot b
 
 // DeleteShootLoggingStack deletes all shoot resource of the logging stack in the given namespace.
 func DeleteShootLoggingStack(ctx context.Context, k8sClient client.Client, namespace string) error {
-	return DeleteLoki(ctx, k8sClient, namespace)
+	if err := DeleteLoki(ctx, k8sClient, namespace); err != nil {
+		return err
+	}
+
+	return DeleteShootNodeLoggingStack(ctx, k8sClient, namespace)
 }
 
 // DeleteLoki  deletes all resources of the Loki in a given namespace.
@@ -224,6 +228,23 @@ func DeleteLoki(ctx context.Context, k8sClient client.Client, namespace string) 
 			return err
 		}
 	}
+	return nil
+}
+
+// DeleteShootNodeLoggingStack deletes all shoot resource of the shoot-node logging stack in the given namespace.
+func DeleteShootNodeLoggingStack(ctx context.Context, k8sClient client.Client, namespace string) error {
+	resources := []client.Object{
+		&extensionsv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: SecretNameLokiKubeRBACProxyKubeconfig, Namespace: namespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: LokiTLS, Namespace: namespace}},
+	}
+
+	for _, resource := range resources {
+		if err := k8sClient.Delete(ctx, resource); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
+			return err
+		}
+	}
+
 	return nil
 }
 

@@ -37,6 +37,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	images, err := b.InjectSeedSeedImages(map[string]interface{}{},
 		charts.ImageNameLoki,
 		charts.ImageNameLokiCurator,
+		charts.ImageNameKubeRBACKProxy,
 	)
 	if err != nil {
 		return err
@@ -51,6 +52,25 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 	if b.ManagedSeed != nil {
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
+	}
+
+	if b.isShootNodeLoggingActivated() {
+		lokiValues["rbacSidecarEnabled"] = true
+		lokiValues["kubeRBACProxyKubeconfigCheckSum"] = b.CheckSums[common.SecretNameLokiKubeRBACProxyKubeconfig]
+		lokiValues["ingress"] = map[string]interface{}{
+			"class": getIngressClass(b.Seed.Info.Spec.Ingress),
+			"hosts": []map[string]interface{}{
+				{
+					"hostName":   b.ComputeLokiHost(),
+					"secretName": common.LokiTLS,
+				},
+			},
+		}
+	} else {
+		err := common.DeleteShootNodeLoggingStack(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
+		if err != nil {
+			return err
+		}
 	}
 
 	hvpaValues["enabled"] = hvpaEnabled
@@ -69,4 +89,21 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	}
 
 	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-bootstrap", "charts", "loki"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), kubernetes.Values(lokiValues))
+}
+
+func (b *Botanist) isShootNodeLoggingActivated() bool {
+	if gardenletfeatures.FeatureGate.Enabled(features.Logging) && b.Shoot != nil &&
+		b.Shoot.Purpose != gardencorev1beta1.ShootPurposeTesting && b.Config != nil &&
+		b.Config.Logging != nil && b.Config.Logging.ShootNodeLogging != nil {
+
+		return b.Config.Logging.ShootNodeLogging.AllowAllExecptTesting || func(allowedPurposes []string, purpose string) bool {
+			for _, allowedallowedPurpose := range allowedPurposes {
+				if allowedallowedPurpose == purpose {
+					return true
+				}
+			}
+			return false
+		}(b.Config.Logging.ShootNodeLogging.ShootPurposes, string(b.Shoot.Purpose))
+	}
+	return false
 }

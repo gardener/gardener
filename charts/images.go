@@ -85,6 +85,8 @@ const (
 	ImageNameLoki = "loki"
 	// ImageNameLokiCurator is a constant for an image in the image vector with name 'loki-curator'.
 	ImageNameLokiCurator = "loki-curator"
+	// ImageNameKubeRBACKProxy is a constant for an image in the image vector with name 'kube-rbac-proxy'.
+	ImageNameKubeRBACKProxy = "kube-rbac-proxy"
 	// ImageNameMetricsServer is a constant for an image in the image vector with name 'metrics-server'.
 	ImageNameMetricsServer = "metrics-server"
 	// ImageNameNginxIngressController is a constant for an image in the image vector with name 'nginx-ingress-controller'.

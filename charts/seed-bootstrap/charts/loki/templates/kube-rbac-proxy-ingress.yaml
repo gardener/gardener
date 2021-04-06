@@ -1,0 +1,37 @@
+{{- if .Values.rbacSidecarEnabled }}
+apiVersion: {{ include "ingressversion" . }}
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.ingress.class }}
+    nginx.ingress.kubernetes.io/configuration-snippet: "proxy_set_header X-Scope-OrgID operator;"
+  name: loki
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ toYaml .Values.labels | indent 4 }}
+spec:
+  tls:
+  {{- range .Values.ingress.hosts }}
+  - secretName: {{ required ".secretName is required" .secretName }}
+    hosts:
+    - {{ required ".hostName is required" .hostName }}
+  {{- end }}
+  rules:
+  {{- range .Values.ingress.hosts }}
+  - host: {{ required ".hostName is required" .hostName }}
+    http:
+      paths:
+      - backend:
+          {{- if semverCompare ">= 1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+          service:
+            name: loki
+            port:
+              number: 8080
+          {{- else }}
+          serviceName: loki
+          servicePort: 8080
+          {{- end }}
+        path: /
+        pathType: Prefix
+  {{- end }}
+{{- end }}

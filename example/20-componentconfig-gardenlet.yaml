@@ -107,6 +107,13 @@ featureGates:
 #     output: |-
 #       [Output]
 #           ...
+#   loki:
+#     garden:
+#       priority: 100
+#   shootNodeLogging:
+#     shootPurposes:
+#     - "development"
+#     allowAllExecptTesting: true
 # sni: # SNI configuration used for APIServerSNI and ManagedIstio feature gates with default values.
 #   ingress:
 #     serviceName: istio-ingress

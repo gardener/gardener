@@ -75,6 +75,24 @@ const (
 	// AlertManagerPrefix is a constant for a prefix used for the AlertManager instance.
 	AlertManagerPrefix = "au"
 
+	// LokiPrefix is a constant for a prefix used for the Loki instance.
+	LokiPrefix = "l"
+
+	// IngressPrefix is the part of a FQDN which will be used to construct the domain name for an ingress controller of
+	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the ingress domain would be
+	// '*.<IngressPrefix>.cluster.example.com'.
+	IngressPrefix = "ingress"
+
+	// APIServerPrefix is the part of a FQDN which will be used to construct the domain name for the kube-apiserver of
+	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the apiserver domain would be
+	// 'api.cluster.example.com'.
+	APIServerPrefix = "api"
+
+	// InternalDomainKey is a key which must be present in an internal domain constructed for a Shoot cluster. If the
+	// configured internal domain already contains it, it won't be added twice. If it does not contain it, it will be
+	// appended.
+	InternalDomainKey = "internal"
+
 	// CoreDNSDeploymentName is the name of the coredns deployment.
 	CoreDNSDeploymentName = "coredns"
 
@@ -127,6 +145,8 @@ const (
 	GrafanaTLS = "grafana-tls"
 	// PrometheusTLS is the name of the secret resource which holds the TLS certificate for Prometheus.
 	PrometheusTLS = "prometheus-tls"
+	// LokiTLS is the name of the secret resource which holds the TLS certificate for Loki.
+	LokiTLS = "loki-tls"
 
 	// EndUserCrtValidity is the time period a user facing certificate is valid.
 	EndUserCrtValidity = 730 * 24 * time.Hour // ~2 years, see https://support.apple.com/en-us/HT210176

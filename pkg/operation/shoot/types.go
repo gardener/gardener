@@ -91,6 +91,7 @@ type Components struct {
 	Extensions       *Extensions
 	NetworkPolicies  component.Deployer
 	SystemComponents *SystemComponents
+	Logging          *Logging
 }
 
 // ControlPlane contains references to K8S control plane components.
@@ -138,6 +139,10 @@ type DNS struct {
 	AdditionalProviders map[string]component.DeployWaiter
 	NginxOwner          component.DeployWaiter
 	NginxEntry          component.DeployWaiter
+}
+
+type Logging struct {
+	ShootRBACProxy component.DeployWaiter
 }
 
 // Networks contains pre-calculated subnets and IP address for various components.

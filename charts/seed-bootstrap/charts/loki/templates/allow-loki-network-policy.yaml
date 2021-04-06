@@ -30,6 +30,26 @@ spec:
     ports:
     - protocol: TCP
       port: {{ .Values.service.port }}
+{{- if .Values.rbacSidecarEnabled }}
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          role: garden
+      podSelector:
+        matchLabels:
+          app: nginx-ingress
+          component: controller
+    - namespaceSelector:
+        matchLabels:
+          role: kube-system
+      podSelector:
+        matchLabels:
+          app: nginx-ingress
+          component: controller
+    ports:
+    - protocol: TCP
+      port: {{ .Values.kubeProxy.port }}
+{{- end }}
   policyTypes:
   - Ingress
   egress: []
