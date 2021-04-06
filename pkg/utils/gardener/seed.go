@@ -15,7 +15,6 @@
 package utils
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -29,10 +28,10 @@ func ComputeGardenNamespace(seedName string) string {
 }
 
 // ComputeSeedName computes the name of the seed out of the seed namespace in the Garden cluster.
-func ComputeSeedName(seedNamespaceName string) (string, error) {
+func ComputeSeedName(seedNamespaceName string) string {
 	seedName := strings.TrimPrefix(seedNamespaceName, seedNamespaceNamePrefix)
 	if seedName == seedNamespaceName {
-		return "", fmt.Errorf("%q is not a valid seed namespace name", seedNamespaceName)
+		return ""
 	}
-	return seedName, nil
+	return seedName
 }

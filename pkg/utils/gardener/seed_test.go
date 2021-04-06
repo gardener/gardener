@@ -36,21 +36,17 @@ var _ = Describe("utils", func() {
 	)
 
 	DescribeTable("#ComputeSeedName",
-		func(name, expected string, expectErr bool) {
-			actual, err := ComputeSeedName(name)
-			if expectErr {
-				Expect(err).To(HaveOccurred())
-			} else {
-				Expect(actual).To(Equal(expected))
-			}
+		func(name, expected string) {
+			actual := ComputeSeedName(name)
+			Expect(actual).To(Equal(expected))
 		},
-		Entry("expect error with empty name", "", "", true),
-		Entry("expect error with garden name", "garden", "", true),
-		Entry("expect error with dash", "-", "", true),
-		Entry("expect success with empty name", "seed-", "", false),
-		Entry("expect success with dash name", "seed--", "-", false),
-		Entry("expect success with duplicated prefix", "seed-seed-", "seed-", false),
-		Entry("expect success with duplicated prefix", "seed-seed-a", "seed-a", false),
-		Entry("expect success with garden name", "seed-garden", "garden", false),
+		Entry("expect error with empty name", "", ""),
+		Entry("expect error with garden name", "garden", ""),
+		Entry("expect error with dash", "-", ""),
+		Entry("expect success with empty name", "seed-", ""),
+		Entry("expect success with dash name", "seed--", "-"),
+		Entry("expect success with duplicated prefix", "seed-seed-", "seed-"),
+		Entry("expect success with duplicated prefix", "seed-seed-a", "seed-a"),
+		Entry("expect success with garden name", "seed-garden", "garden"),
 	)
 })

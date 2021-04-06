@@ -137,7 +137,7 @@ var _ = Describe("SeedReconciler", func() {
 
 			It("should update the namespace and sync secrets", func() {
 				// cause namespace update
-				cl.EXPECT().Get(context.Background(), kutil.Key("seed-"+seed.Name), gomock.AssignableToTypeOf(&corev1.Namespace{}))
+				cl.EXPECT().Get(context.Background(), kutil.Key(gardenerutils.ComputeGardenNamespace(seed.Name)), gomock.AssignableToTypeOf(&corev1.Namespace{}))
 				cl.EXPECT().Update(context.Background(), gomock.AssignableToTypeOf(&corev1.Namespace{}))
 
 				// cause secret update
@@ -169,7 +169,7 @@ var _ = Describe("SeedReconciler", func() {
 			})
 
 			It("should create and copy assets", func() {
-				cl.EXPECT().Get(context.Background(), kutil.Key("seed-"+seed.Name), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+				cl.EXPECT().Get(context.Background(), kutil.Key(gardenerutils.ComputeGardenNamespace(seed.Name)), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 				cl.EXPECT().Create(context.Background(), namespace).Return(nil)
 				cl.EXPECT().Create(context.Background(), copySecretWithNamespace(secrets[0], namespace.Name)).Return(nil)
 				cl.EXPECT().Create(context.Background(), copySecretWithNamespace(secrets[1], namespace.Name)).Return(nil)

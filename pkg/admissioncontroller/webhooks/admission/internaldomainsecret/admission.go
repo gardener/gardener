@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
-	gardenercore "github.com/gardener/gardener/pkg/apis/core"
+	gardercore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -78,8 +78,8 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 	if request.SubResource != "" {
 		return acadmission.Allowed("subresources on Secrets are not handled")
 	}
-	seedName, err := gardenerutils.ComputeSeedName(request.Namespace)
-	if request.Namespace != v1beta1constants.GardenNamespace && err != nil {
+	seedName := gardenerutils.ComputeSeedName(request.Namespace)
+	if request.Namespace != v1beta1constants.GardenNamespace && seedName == "" {
 		return acadmission.Allowed("only secrets from the garden and seed namespaces are handled")
 	}
 
@@ -162,7 +162,9 @@ func (h *handler) atLeastOneShootExists(ctx context.Context, seedName string) (b
 	)
 
 	if seedName != "" {
-		listOptions = withSeedNameSelector(listOptions, seedName)
+		listOptions = append(listOptions, client.MatchingFields{
+			gardercore.ShootSeedName: seedName,
+		})
 	}
 
 	shoots.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
@@ -202,11 +204,4 @@ func (h *handler) secretAlreadyExists(ctx context.Context, name, namespace strin
 	}
 
 	return true, nil
-}
-
-// withSeedNameSelector extends the given selector with spec.seedName=<seedName>
-func withSeedNameSelector(listOptions []client.ListOption, seedName string) []client.ListOption {
-	return append(listOptions, client.MatchingFields{
-		gardenercore.ShootSeedName: seedName,
-	})
 }
