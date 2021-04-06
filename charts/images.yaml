@@ -151,7 +151,7 @@ images:
 - name: node-problem-detector
   sourceRepository: github.com/kubernetes/node-problem-detector
   repository: k8s.gcr.io/node-problem-detector/node-problem-detector
-  tag: "v0.8.5"
+  tag: "v0.8.7"
 
 # Shoot optional addons
 - name: kubernetes-dashboard
