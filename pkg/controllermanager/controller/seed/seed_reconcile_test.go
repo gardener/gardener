@@ -20,7 +20,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -140,14 +139,12 @@ var _ = Describe("SeedReconciler", func() {
 				cl.EXPECT().Get(context.Background(), kutil.Key(gardenerutils.ComputeGardenNamespace(seed.Name)), gomock.AssignableToTypeOf(&corev1.Namespace{}))
 				cl.EXPECT().Update(context.Background(), gomock.AssignableToTypeOf(&corev1.Namespace{}))
 
-				// cause secret update
-				cl.EXPECT().Create(context.Background(), copySecretWithNamespace(newSecret, seedNamespace.Name)).Return(apierrors.NewAlreadyExists(corev1.Resource("secrets"), ""))
-
 				// expect update for existing secret
-				secretIf.EXPECT().Get(context.Background(), oldSecret.Name, kubernetes.DefaultGetOptions()).Return(oldSecret, nil)
-				secretIf.EXPECT().Update(context.Background(), copySecretWithNamespace(newSecret, seedNamespace.Name), kubernetes.DefaultUpdateOptions()).Return(nil, nil)
+				cl.EXPECT().Get(context.Background(), kutil.Key(seedNamespace.Name, oldSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(nil)
+				cl.EXPECT().Update(context.Background(), gomock.AssignableToTypeOf(&corev1.Secret{}))
 
 				// expect create for non existing secret
+				cl.EXPECT().Get(context.Background(), kutil.Key(seedNamespace.Name, addedSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 				cl.EXPECT().Create(context.Background(), copySecretWithNamespace(addedSecret, seedNamespace.Name)).Return(nil)
 
 				// expect deletion for deleted secret in Garden namespace
@@ -171,7 +168,9 @@ var _ = Describe("SeedReconciler", func() {
 			It("should create and copy assets", func() {
 				cl.EXPECT().Get(context.Background(), kutil.Key(gardenerutils.ComputeGardenNamespace(seed.Name)), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 				cl.EXPECT().Create(context.Background(), namespace).Return(nil)
+				cl.EXPECT().Get(context.Background(), kutil.Key(namespace.Name, secrets[0].Name), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 				cl.EXPECT().Create(context.Background(), copySecretWithNamespace(secrets[0], namespace.Name)).Return(nil)
+				cl.EXPECT().Get(context.Background(), kutil.Key(namespace.Name, secrets[1].Name), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 				cl.EXPECT().Create(context.Background(), copySecretWithNamespace(secrets[1], namespace.Name)).Return(nil)
 
 				result, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})

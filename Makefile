@@ -190,7 +190,7 @@ generate:
 .PHONY: generate-sequential
 generate-sequential:
 	@GO111MODULE=off hack/update-protobuf.sh
-	@GO111MODULE=off hack/update-codegen.sh 
+	@GO111MODULE=off hack/update-codegen.sh
 	@hack/generate.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./landscaper/... ./test/...
 
 .PHONY: generate-extensions-crds
