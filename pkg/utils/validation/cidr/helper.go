@@ -53,7 +53,7 @@ func ValidateCIDRIsCanonical(fldPath *field.Path, cidrToValidate string) field.E
 		return allErrs
 	}
 	// CIDR parse error already validated
-	ipAdress, ipNet, _ := net.ParseCIDR(string(cidrToValidate))
+	ipAdress, ipNet, _ := net.ParseCIDR(cidrToValidate)
 	if ipNet != nil {
 		if !ipNet.IP.Equal(ipAdress) {
 			allErrs = append(allErrs, field.Invalid(fldPath, cidrToValidate, "must be valid canonical CIDR"))
