@@ -15,7 +15,7 @@
 package utils_test
 
 import (
-	. "github.com/gardener/gardener/pkg/operation/seed/utils"
+	. "github.com/gardener/gardener/pkg/utils/gardener"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

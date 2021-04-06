@@ -32,7 +32,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
-	seedutils "github.com/gardener/gardener/pkg/operation/seed/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -78,7 +78,7 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 	if request.SubResource != "" {
 		return acadmission.Allowed("subresources on Secrets are not handled")
 	}
-	seedName, err := seedutils.ComputeSeedName(request.Namespace)
+	seedName, err := gardenerutils.ComputeSeedName(request.Namespace)
 	if request.Namespace != v1beta1constants.GardenNamespace && err != nil {
 		return acadmission.Allowed("only secrets from the garden and seed namespaces are handled")
 	}

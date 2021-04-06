@@ -31,9 +31,9 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
-	seedutils "github.com/gardener/gardener/pkg/operation/seed/utils"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
@@ -140,7 +140,7 @@ func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1be
 		return err
 	}
 
-	secrets, err := gardenpkg.ReadGardenSecretsFromLister(ctx, c.secretLister, c.seedLister, seedutils.ComputeGardenNamespace(seed.Name))
+	secrets, err := gardenpkg.ReadGardenSecretsFromLister(ctx, c.secretLister, c.seedLister, gardenerutils.ComputeGardenNamespace(seed.Name))
 	if err != nil {
 		return err
 	}

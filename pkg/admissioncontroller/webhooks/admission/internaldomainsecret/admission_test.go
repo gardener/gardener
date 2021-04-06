@@ -40,7 +40,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	seedutils "github.com/gardener/gardener/pkg/operation/seed/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -92,7 +92,7 @@ var _ = Describe("handler", func() {
 		request.Name = resourceName
 
 		seedName = "aws"
-		seedNamespace = seedutils.ComputeGardenNamespace(seedName)
+		seedNamespace = gardenerutils.ComputeGardenNamespace(seedName)
 	})
 
 	AfterEach(func() {
