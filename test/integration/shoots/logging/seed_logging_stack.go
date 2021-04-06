@@ -93,7 +93,6 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, lokiServiceAccount))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, lokiService))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiConfigMapName}, lokiConfMap))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, lokiPriorityClass))
 	}, initializationTimeout)
 
 	f.Beta().Serial().CIt("should get container logs from loki for all namespaces", func(ctx context.Context) {
@@ -110,6 +109,8 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), lokiConfMap))
 		lokiService.Spec.ClusterIP = ""
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), lokiService))
+		lokiPriorityClassName := lokiSts.Spec.Template.Spec.PriorityClassName
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiPriorityClassName}, lokiPriorityClass))
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), lokiPriorityClass))
 		// Remove the Loki PVC as it is no needed for the test
 		lokiSts.Spec.VolumeClaimTemplates = nil
