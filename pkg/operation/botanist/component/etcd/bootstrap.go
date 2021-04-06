@@ -33,6 +33,7 @@ import (
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -142,6 +143,22 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					APIGroups: []string{druidv1alpha1.GroupVersion.Group},
 					Resources: []string{"etcds/status", "etcds/finalizers"},
 					Verbs:     []string{"get", "update", "patch", "create"},
+				},
+				{
+					APIGroups: []string{coordinationv1.GroupName},
+					Resources: []string{"leases"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups:     []string{coordinationv1.GroupName},
+					Resources:     []string{"leases"},
+					ResourceNames: []string{"druid-leader-election"},
+					Verbs:         []string{"get", "update", "patch"},
+				},
+				{
+					APIGroups: []string{corev1.GroupName},
+					Resources: []string{"persistentvolumeclaims"},
+					Verbs:     []string{"list"},
 				},
 			},
 		}
