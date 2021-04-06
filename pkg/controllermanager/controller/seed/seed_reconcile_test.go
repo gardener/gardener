@@ -16,7 +16,6 @@ package seed_test
 
 import (
 	"context"
-	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -30,6 +29,7 @@ import (
 	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
 	mockkubernetes "github.com/gardener/gardener/pkg/mock/client-go/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 
@@ -81,7 +81,7 @@ var _ = Describe("SeedReconciler", func() {
 			}
 			namespace = &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: fmt.Sprintf("seed-%s", seed.Name),
+					Name: gardenerutils.ComputeGardenNamespace(seed.Name),
 					OwnerReferences: []metav1.OwnerReference{
 						*metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed")),
 					},
@@ -126,7 +126,7 @@ var _ = Describe("SeedReconciler", func() {
 				corev1If.EXPECT().Secrets(gomock.Any()).Return(secretIf).AnyTimes()
 				corev1If.EXPECT().Namespaces().Return(namespaceIf).AnyTimes()
 
-				seedNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("seed-%s", seed.Name)}}
+				seedNamespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: gardenerutils.ComputeGardenNamespace(seed.Name)}}
 
 				oldSecret = createSecret("existing", seedNamespace.Name, "old", "role", []byte("data"))
 				newSecret = createSecret("existing", v1beta1constants.GardenNamespace, "foo", "role", []byte("bar"))
@@ -137,7 +137,7 @@ var _ = Describe("SeedReconciler", func() {
 
 			It("should update the namespace and sync secrets", func() {
 				// cause namespace update
-				cl.EXPECT().Get(context.Background(), kutil.Key("seed-"+seed.Name), gomock.AssignableToTypeOf(&corev1.Namespace{}))
+				cl.EXPECT().Get(context.Background(), kutil.Key(gardenerutils.ComputeGardenNamespace(seed.Name)), gomock.AssignableToTypeOf(&corev1.Namespace{}))
 				cl.EXPECT().Update(context.Background(), gomock.AssignableToTypeOf(&corev1.Namespace{}))
 
 				// cause secret update
@@ -169,7 +169,7 @@ var _ = Describe("SeedReconciler", func() {
 			})
 
 			It("should create and copy assets", func() {
-				cl.EXPECT().Get(context.Background(), kutil.Key("seed-"+seed.Name), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+				cl.EXPECT().Get(context.Background(), kutil.Key(gardenerutils.ComputeGardenNamespace(seed.Name)), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 				cl.EXPECT().Create(context.Background(), namespace).Return(nil)
 				cl.EXPECT().Create(context.Background(), copySecretWithNamespace(secrets[0], namespace.Name)).Return(nil)
 				cl.EXPECT().Create(context.Background(), copySecretWithNamespace(secrets[1], namespace.Name)).Return(nil)

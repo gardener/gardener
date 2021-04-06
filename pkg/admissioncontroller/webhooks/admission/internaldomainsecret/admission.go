@@ -22,14 +22,18 @@ import (
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
+	gardercore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -74,15 +78,26 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 	if request.SubResource != "" {
 		return acadmission.Allowed("subresources on Secrets are not handled")
 	}
+	seedName := gardenerutils.ComputeSeedName(request.Namespace)
+	if request.Namespace != v1beta1constants.GardenNamespace && seedName == "" {
+		return acadmission.Allowed("only secrets from the garden and seed namespaces are handled")
+	}
 
 	switch request.Operation {
 	case admissionv1.Create:
-		exists, err := h.internalDomainSecretExists(ctx)
+		alreadyExists, err := h.secretAlreadyExists(ctx, request.Name, request.Namespace)
+		if err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+		if alreadyExists {
+			return admission.Allowed("the secret already exists")
+		}
+		exists, err := h.internalDomainSecretExists(ctx, request.Namespace)
 		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 		if exists {
-			return admission.Denied("cannot create internal domain secret because there can be only one secret with the 'internal-domain' secret role")
+			return admission.Denied("cannot create internal domain secret because there can be only one secret with the 'internal-domain' secret role per namespace")
 		}
 
 		secret := &corev1.Secret{}
@@ -114,7 +129,7 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 		}
 
 		if oldDomain != newDomain {
-			atLeastOneShoot, err := h.atLeastOneShootExists(ctx)
+			atLeastOneShoot, err := h.atLeastOneShootExists(ctx, seedName)
 			if err != nil {
 				return admission.Errored(http.StatusInternalServerError, err)
 			}
@@ -126,7 +141,7 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 		return acadmission.Allowed("domain didn't change or no shoot exists")
 
 	case admissionv1.Delete:
-		atLeastOneShoot, err := h.atLeastOneShootExists(ctx)
+		atLeastOneShoot, err := h.atLeastOneShootExists(ctx, seedName)
 		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
@@ -140,25 +155,35 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 	}
 }
 
-func (h *handler) atLeastOneShootExists(ctx context.Context) (bool, error) {
-	shoots := &metav1.PartialObjectMetadataList{}
+func (h *handler) atLeastOneShootExists(ctx context.Context, seedName string) (bool, error) {
+	var (
+		shoots      = &metav1.PartialObjectMetadataList{}
+		listOptions = []client.ListOption{client.Limit(1)}
+	)
+
+	if seedName != "" {
+		listOptions = append(listOptions, client.MatchingFields{
+			gardercore.ShootSeedName: seedName,
+		})
+	}
+
 	shoots.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 
-	if err := h.apiReader.List(ctx, shoots, client.Limit(1)); err != nil {
+	if err := h.apiReader.List(ctx, shoots, listOptions...); err != nil {
 		return false, err
 	}
 
 	return len(shoots.Items) > 0, nil
 }
 
-func (h *handler) internalDomainSecretExists(ctx context.Context) (bool, error) {
+func (h *handler) internalDomainSecretExists(ctx context.Context, namespace string) (bool, error) {
 	secrets := &metav1.PartialObjectMetadataList{}
 	secrets.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("SecretList"))
 
 	if err := h.apiReader.List(
 		ctx,
 		secrets,
-		client.InNamespace(v1beta1constants.GardenNamespace),
+		client.InNamespace(namespace),
 		client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
 		client.Limit(1),
 	); err != nil {
@@ -166,4 +191,17 @@ func (h *handler) internalDomainSecretExists(ctx context.Context) (bool, error) 
 	}
 
 	return len(secrets.Items) > 0, nil
+}
+
+func (h *handler) secretAlreadyExists(ctx context.Context, name, namespace string) (bool, error) {
+	secret := &corev1.Secret{}
+
+	if err := h.apiReader.Get(ctx, kutil.Key(namespace, name), secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }

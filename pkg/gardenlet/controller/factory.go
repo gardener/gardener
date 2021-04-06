@@ -42,8 +42,8 @@ import (
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
-	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
@@ -154,7 +154,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		ctx,
 		k8sGardenClient.Cache(),
 		f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister(),
-		seedpkg.ComputeGardenNamespace(seeds[0]),
+		gardenerutils.ComputeGardenNamespace(seeds[0]),
 	)
 	runtime.Must(err)
 
@@ -263,7 +263,7 @@ func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenCli
 				Name: f.cfg.SeedConfig.Name,
 			},
 		}
-		seedNamespaceName = seedpkg.ComputeGardenNamespace(f.cfg.SeedConfig.Name)
+		seedNamespaceName = gardenerutils.ComputeGardenNamespace(f.cfg.SeedConfig.Name)
 		seedNamespace     = &corev1.Namespace{}
 	)
 

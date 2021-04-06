@@ -31,6 +31,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/test/framework"
 )
 
@@ -215,7 +216,7 @@ func (f *GardenletFramework) CreateInstallationImports(ctx context.Context) erro
 }
 
 func (f *GardenletFramework) createGardenletLandscaperConfig(ctx context.Context) error {
-	seedSpec := BuildSeedSpecForTestrun(fmt.Sprintf("seed-%s", f.ResourceSuffix), nil)
+	seedSpec := BuildSeedSpecForTestrun(gardenerutils.ComputeGardenNamespace(f.ResourceSuffix), nil)
 
 	// Initialize minimal Gardenlet config
 	config := &configv1alpha1.GardenletConfiguration{

@@ -19,6 +19,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -77,7 +78,7 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 	g.deleteAllIncomingEdges(VertexTypeNamespace, VertexTypeSeed, "", seed.Name)
 
 	seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", seed.Name)
-	namespaceVertex := g.getOrCreateVertex(VertexTypeNamespace, "", "seed-"+seed.Name)
+	namespaceVertex := g.getOrCreateVertex(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed.Name))
 	g.addEdge(namespaceVertex, seedVertex)
 
 	if seed.Spec.SecretRef != nil {
