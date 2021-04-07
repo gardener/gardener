@@ -892,6 +892,8 @@ func Convert_config_Loki_To_v1alpha1_Loki(in *config.Loki, out *Loki, s conversi
 
 func autoConvert_v1alpha1_ManagedSeedControllerConfiguration_To_config_ManagedSeedControllerConfiguration(in *ManagedSeedControllerConfiguration, out *config.ManagedSeedControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
+	out.WaitSyncPeriod = (*v1.Duration)(unsafe.Pointer(in.WaitSyncPeriod))
 	out.SyncJitterPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncJitterPeriod))
 	return nil
 }
@@ -903,6 +905,8 @@ func Convert_v1alpha1_ManagedSeedControllerConfiguration_To_config_ManagedSeedCo
 
 func autoConvert_config_ManagedSeedControllerConfiguration_To_v1alpha1_ManagedSeedControllerConfiguration(in *config.ManagedSeedControllerConfiguration, out *ManagedSeedControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = (*int)(unsafe.Pointer(in.ConcurrentSyncs))
+	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
+	out.WaitSyncPeriod = (*v1.Duration)(unsafe.Pointer(in.WaitSyncPeriod))
 	out.SyncJitterPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncJitterPeriod))
 	return nil
 }

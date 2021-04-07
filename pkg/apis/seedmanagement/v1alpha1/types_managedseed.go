@@ -181,8 +181,6 @@ type ManagedSeedStatus struct {
 }
 
 const (
-	// ManagedSeedShootExists is a condition type for indicating whether the ManagedSeed's shoot exists.
-	ManagedSeedShootExists gardencorev1beta1.ConditionType = "ShootExists"
 	// ManagedSeedShootReconciled is a condition type for indicating whether the ManagedSeed's shoot has been reconciled.
 	ManagedSeedShootReconciled gardencorev1beta1.ConditionType = "ShootReconciled"
 	// ManagedSeedSeedRegistered is a condition type for indicating whether the ManagedSeed's seed has been registered,

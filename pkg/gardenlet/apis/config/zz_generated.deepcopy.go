@@ -526,6 +526,16 @@ func (in *ManagedSeedControllerConfiguration) DeepCopyInto(out *ManagedSeedContr
 		*out = new(int)
 		**out = **in
 	}
+	if in.SyncPeriod != nil {
+		in, out := &in.SyncPeriod, &out.SyncPeriod
+		*out = new(v1.Duration)
+		**out = **in
+	}
+	if in.WaitSyncPeriod != nil {
+		in, out := &in.WaitSyncPeriod, &out.WaitSyncPeriod
+		*out = new(v1.Duration)
+		**out = **in
+	}
 	if in.SyncJitterPeriod != nil {
 		in, out := &in.SyncJitterPeriod, &out.SyncJitterPeriod
 		*out = new(v1.Duration)

@@ -63,6 +63,8 @@ controllers:
     syncPeriod: 1m
   managedSeed:
     concurrentSyncs: 5
+    syncPeriod: 1h
+    waitSyncPeriod: 15s
     syncJitterPeriod: 5m
 resources:
   capacity:

@@ -129,6 +129,12 @@ func ValidateManagedSeedControllerConfiguration(cfg *config.ManagedSeedControlle
 	if cfg.ConcurrentSyncs != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*cfg.ConcurrentSyncs), fldPath.Child("concurrentSyncs"))...)
 	}
+	if cfg.SyncPeriod != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(cfg.SyncPeriod.Duration), fldPath.Child("syncPeriod"))...)
+	}
+	if cfg.WaitSyncPeriod != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(cfg.WaitSyncPeriod.Duration), fldPath.Child("waitSyncPeriod"))...)
+	}
 	if cfg.SyncJitterPeriod != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(cfg.SyncJitterPeriod.Duration), fldPath.Child("syncJitterPeriod"))...)
 	}

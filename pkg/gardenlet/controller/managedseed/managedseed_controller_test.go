@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/cache"
 )
 
 const (
@@ -126,14 +127,24 @@ var _ = Describe("Controller", func() {
 	})
 
 	Describe("#managedSeedDelete", func() {
-		It("should do nothing because the new object is not a ManagedSeed", func() {
+		It("should do nothing because the object is not a ManagedSeed or a tombstone", func() {
 			c.managedSeedDelete(&gardencorev1beta1.Seed{})
+		})
+
+		It("should do nothing because the object is a tombstone of something else than a ManagedSeed", func() {
+			c.managedSeedDelete(cache.DeletedFinalStateUnknown{Key: key, Obj: &gardencorev1beta1.Seed{}})
 		})
 
 		It("should add the object to the queue", func() {
 			queue.EXPECT().Add(key)
 
 			c.managedSeedDelete(managedSeed)
+		})
+
+		It("should add the object to the queue", func() {
+			queue.EXPECT().Add(key)
+
+			c.managedSeedDelete(cache.DeletedFinalStateUnknown{Key: key, Obj: managedSeed})
 		})
 	})
 })

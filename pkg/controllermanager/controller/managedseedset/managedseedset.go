@@ -97,7 +97,7 @@ func NewManagedSeedSetController(
 	replicaFactory := ReplicaFactoryFunc(NewReplica)
 	replicaGetter := NewReplicaGetter(gardenClient, replicaFactory)
 	actuator := NewActuator(gardenClient, replicaGetter, replicaFactory, config.Controllers.ManagedSeedSet, recorder, logger)
-	reconciler := NewReconciler(gardenClient, actuator, config.Controllers.ManagedSeedSet, recorder, logger)
+	reconciler := NewReconciler(gardenClient, actuator, config.Controllers.ManagedSeedSet, logger)
 
 	return &Controller{
 		gardenClient:           gardenClient,

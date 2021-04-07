@@ -29,6 +29,7 @@ import (
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	mockmanagedseed "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed/mock"
 	gardenerlogger "github.com/gardener/gardener/pkg/logger"
+	mockrecord "github.com/gardener/gardener/pkg/mock/client-go/tools/record"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -38,6 +39,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -68,9 +70,11 @@ var _ = Describe("Actuator", func() {
 		clientMap         *mockclientmap.MockClientMap
 		vh                *mockmanagedseed.MockValuesHelper
 		gc                *mockclient.MockClient
+		gr                *mockclient.MockReader
 		sec               *mockclient.MockClient
 		shc               *mockclient.MockClient
 		shootChartApplier *mockkubernetes.MockChartApplier
+		recorder          *mockrecord.MockEventRecorder
 
 		actuator Actuator
 
@@ -81,10 +85,15 @@ var _ = Describe("Actuator", func() {
 		secretBinding    *gardencorev1beta1.SecretBinding
 		secret           *corev1.Secret
 		kubeconfigSecret *corev1.Secret
-		seed             *gardencorev1beta1.Seed
 
 		seedTemplate *gardencorev1beta1.SeedTemplate
 		gardenlet    *seedmanagementv1alpha1.Gardenlet
+
+		gardenNamespace     *corev1.Namespace
+		backupSecret        *corev1.Secret
+		seedSecret          *corev1.Secret
+		seed                *gardencorev1beta1.Seed
+		gardenletDeployment *appsv1.Deployment
 
 		mergedDeployment      *seedmanagementv1alpha1.GardenletDeployment
 		mergedGardenletConfig *configv1alpha1.GardenletConfiguration
@@ -100,17 +109,20 @@ var _ = Describe("Actuator", func() {
 		clientMap = mockclientmap.NewMockClientMap(ctrl)
 		vh = mockmanagedseed.NewMockValuesHelper(ctrl)
 		gc = mockclient.NewMockClient(ctrl)
+		gr = mockclient.NewMockReader(ctrl)
 		sec = mockclient.NewMockClient(ctrl)
 		shc = mockclient.NewMockClient(ctrl)
 		shootChartApplier = mockkubernetes.NewMockChartApplier(ctrl)
+		recorder = mockrecord.NewMockEventRecorder(ctrl)
 
 		gardenClient.EXPECT().Client().Return(gc).AnyTimes()
+		gardenClient.EXPECT().APIReader().Return(gr).AnyTimes()
 		gardenClient.EXPECT().RESTConfig().Return(&rest.Config{}).AnyTimes()
 		seedClient.EXPECT().Client().Return(sec).AnyTimes()
 		shootClient.EXPECT().Client().Return(shc).AnyTimes()
 		shootClient.EXPECT().ChartApplier().Return(shootChartApplier).AnyTimes()
 
-		actuator = newActuator(gardenClient, clientMap, vh, gardenerlogger.NewNopLogger())
+		actuator = newActuator(gardenClient, clientMap, vh, recorder, gardenerlogger.NewNopLogger())
 
 		ctx = context.TODO()
 
@@ -127,15 +139,20 @@ var _ = Describe("Actuator", func() {
 		}
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
+				Name:       name,
+				Namespace:  namespace,
+				Generation: 1,
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				SecretBindingName: secretBindingName,
 				SeedName:          pointer.StringPtr(seedName),
 			},
 			Status: gardencorev1beta1.ShootStatus{
-				TechnicalID: "shoot--" + namespace + "--" + name,
+				LastOperation: &gardencorev1beta1.LastOperation{
+					State: gardencorev1beta1.LastOperationStateSucceeded,
+				},
+				ObservedGeneration: 1,
+				TechnicalID:        "shoot--" + namespace + "--" + name,
 			},
 		}
 		secretBinding = &gardencorev1beta1.SecretBinding{
@@ -166,9 +183,9 @@ var _ = Describe("Actuator", func() {
 				"kubeconfig": []byte("kubeconfig"),
 			},
 		}
-		seed = &gardencorev1beta1.Seed{
+
+		seedTemplate = &gardencorev1beta1.SeedTemplate{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
 				Labels: map[string]string{
 					"foo": "bar",
 				},
@@ -195,14 +212,6 @@ var _ = Describe("Actuator", func() {
 				Ingress: &gardencorev1beta1.Ingress{},
 			},
 		}
-
-		seedTemplate = &gardencorev1beta1.SeedTemplate{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels:      seed.Labels,
-				Annotations: seed.Annotations,
-			},
-			Spec: seed.Spec,
-		}
 		gardenlet = &seedmanagementv1alpha1.Gardenlet{
 			Deployment: &seedmanagementv1alpha1.GardenletDeployment{
 				ReplicaCount:         pointer.Int32Ptr(1),
@@ -219,18 +228,62 @@ var _ = Describe("Actuator", func() {
 						Kind:       "GardenletConfiguration",
 					},
 					SeedConfig: &configv1alpha1.SeedConfig{
-						SeedTemplate: gardencorev1beta1.SeedTemplate{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels:      seed.Labels,
-								Annotations: seed.Annotations,
-							},
-							Spec: seed.Spec,
-						},
+						SeedTemplate: *seedTemplate,
 					},
 				},
 			},
 			Bootstrap:       bootstrapPtr(seedmanagementv1alpha1.BootstrapToken),
 			MergeWithParent: pointer.BoolPtr(true),
+		}
+
+		gardenNamespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: v1beta1constants.GardenNamespace,
+			},
+		}
+		backupSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      backupSecretName,
+				Namespace: namespace,
+				OwnerReferences: []metav1.OwnerReference{
+					*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
+				},
+			},
+			Data: secret.Data,
+			Type: corev1.SecretTypeOpaque,
+		}
+		seedSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      seedSecretName,
+				Namespace: namespace,
+				OwnerReferences: []metav1.OwnerReference{
+					*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
+				},
+			},
+			Data: map[string][]byte{
+				"foo":        []byte("bar"),
+				"kubeconfig": []byte("kubeconfig"),
+			},
+			Type: corev1.SecretTypeOpaque,
+		}
+		seed = &gardencorev1beta1.Seed{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+				Labels: utils.MergeStringMaps(seedTemplate.Labels, map[string]string{
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
+				}),
+				Annotations: seedTemplate.Annotations,
+				OwnerReferences: []metav1.OwnerReference{
+					*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
+				},
+			},
+			Spec: seedTemplate.Spec,
+		}
+		gardenletDeployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      v1beta1constants.DeploymentNameGardenlet,
+				Namespace: v1beta1constants.GardenNamespace,
+			},
 		}
 	})
 
@@ -239,10 +292,19 @@ var _ = Describe("Actuator", func() {
 	})
 
 	var (
+		expectGetShoot = func() {
+			gr.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Shoot) error {
+					*s = *shoot
+					return nil
+				},
+			)
+		}
+
 		expectCreateGardenNamespace = func() {
 			shc.EXPECT().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, _ *corev1.Namespace) error {
-					return apierrors.NewNotFound(corev1.Resource("namespace"), name)
+					return apierrors.NewNotFound(corev1.Resource("namespace"), v1beta1constants.GardenNamespace)
 				},
 			)
 			shc.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
@@ -252,18 +314,23 @@ var _ = Describe("Actuator", func() {
 				},
 			)
 		}
-		expectEnsureGardenNamespaceDeleted = func() {
-			// Delete garden namespace
+
+		expectDeleteGardenNamespace = func() {
 			shc.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
 				func(_ context.Context, ns *corev1.Namespace) error {
 					Expect(ns.Name).To(Equal(v1beta1constants.GardenNamespace))
 					return nil
 				},
 			)
+		}
 
-			// Check if garden namespace still exists
+		expectGetGardenNamespace = func(exists bool) {
 			shc.EXPECT().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, _ *corev1.Namespace) error {
+				func(_ context.Context, _ client.ObjectKey, ns *corev1.Namespace) error {
+					if exists {
+						*ns = *gardenNamespace
+						return nil
+					}
 					return apierrors.NewNotFound(corev1.Resource("namespace"), v1beta1constants.GardenNamespace)
 				},
 			)
@@ -308,17 +375,7 @@ var _ = Describe("Actuator", func() {
 			).Times(2)
 			gc.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, s *corev1.Secret) error {
-					Expect(s).To(Equal(&corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      backupSecretName,
-							Namespace: namespace,
-							OwnerReferences: []metav1.OwnerReference{
-								*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
-							},
-						},
-						Data: secret.Data,
-						Type: corev1.SecretTypeOpaque,
-					}))
+					Expect(s).To(Equal(backupSecret))
 					return nil
 				},
 			)
@@ -337,38 +394,17 @@ var _ = Describe("Actuator", func() {
 			)
 			gc.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, s *corev1.Secret) error {
-					Expect(s).To(Equal(&corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      seedSecretName,
-							Namespace: namespace,
-							OwnerReferences: []metav1.OwnerReference{
-								*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
-							},
-						},
-						Data: map[string][]byte{
-							"foo":        []byte("bar"),
-							"kubeconfig": []byte("kubeconfig"),
-						},
-						Type: corev1.SecretTypeOpaque,
-					}))
+					Expect(s).To(Equal(seedSecret))
 					return nil
 				},
 			)
 		}
 
-		expectEnsureSeedSecretsDeleted = func() {
+		expectDeleteSeedSecrets = func() {
 			// Delete backup secret
 			gc.EXPECT().Get(ctx, kutil.Key(namespace, backupSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
-					*s = corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      seedSecretName,
-							Namespace: namespace,
-							OwnerReferences: []metav1.OwnerReference{
-								*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
-							},
-						},
-					}
+					*s = *backupSecret
 					return nil
 				},
 			)
@@ -388,17 +424,27 @@ var _ = Describe("Actuator", func() {
 					return nil
 				},
 			)
+		}
 
-			// Check if the backup secret still exists
+		expectGetSeedSecrets = func(exist bool) {
+			// Get backup secret
 			gc.EXPECT().Get(ctx, kutil.Key(namespace, backupSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret) error {
+				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
+					if exist {
+						*s = *backupSecret
+						return nil
+					}
 					return apierrors.NewNotFound(corev1.Resource("secret"), backupSecretName)
 				},
 			)
 
-			// Check if the seed secret still exists
+			// Get seed secret
 			gc.EXPECT().Get(ctx, kutil.Key(namespace, seedSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret) error {
+				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
+					if exist {
+						*s = *seedSecret
+						return nil
+					}
 					return apierrors.NewNotFound(corev1.Resource("secret"), seedSecretName)
 				},
 			)
@@ -412,36 +458,28 @@ var _ = Describe("Actuator", func() {
 			)
 			gc.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
 				func(_ context.Context, s *gardencorev1beta1.Seed) error {
-					Expect(s).To(Equal(&gardencorev1beta1.Seed{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: name,
-							Labels: utils.MergeStringMaps(seed.Labels, map[string]string{
-								v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
-							}),
-							Annotations: seed.Annotations,
-							OwnerReferences: []metav1.OwnerReference{
-								*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
-							},
-						},
-						Spec: seed.Spec,
-					}))
+					Expect(s).To(Equal(seed))
 					return nil
 				},
 			)
 		}
 
-		expectEnsureSeedDeleted = func() {
-			// Delete the seed
+		expectDeleteSeed = func() {
 			gc.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
 				func(_ context.Context, s *gardencorev1beta1.Seed) error {
 					Expect(s.Name).To(Equal(name))
 					return nil
 				},
 			)
+		}
 
-			// Check if the seed still exists
+		expectGetSeed = func(exists bool) {
 			gc.EXPECT().Get(ctx, kutil.Key(name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Seed) error {
+					if exists {
+						*s = *seed
+						return nil
+					}
 					return apierrors.NewNotFound(gardencorev1beta1.Resource("seed"), name)
 				},
 			)
@@ -518,10 +556,10 @@ var _ = Describe("Actuator", func() {
 					Expect(gc.SeedConfig.SeedTemplate).To(Equal(gardencorev1beta1.SeedTemplate{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:        name,
-							Labels:      seed.Labels,
-							Annotations: seed.Annotations,
+							Labels:      seedTemplate.Labels,
+							Annotations: seedTemplate.Annotations,
 						},
-						Spec: seed.Spec,
+						Spec: seedTemplate.Spec,
 					}))
 					Expect(gc.SeedSelector).To(BeNil())
 					return gardenletChartValues, nil
@@ -536,25 +574,73 @@ var _ = Describe("Actuator", func() {
 		expectDeleteGardenletChart = func() {
 			shootChartApplier.EXPECT().Delete(ctx, filepath.Join(charts.Path, "gardener", "gardenlet"), v1beta1constants.GardenNamespace, "gardenlet", kubernetes.Values(gardenletChartValues)).Return(nil)
 		}
+
+		expectGetGardenletDeployment = func(exists bool) {
+			shc.EXPECT().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, v1beta1constants.DeploymentNameGardenlet), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, d *appsv1.Deployment) error {
+					if exists {
+						*d = *gardenletDeployment
+						return nil
+					}
+					return apierrors.NewNotFound(appsv1.Resource("deployment"), v1beta1constants.DeploymentNameGardenlet)
+				},
+			)
+		}
 	)
 
 	Describe("#Reconcile", func() {
+		BeforeEach(func() {
+			clientMap.EXPECT().GetClient(ctx, keys.ForShoot(shoot)).Return(shootClient, nil).AnyTimes()
+			clientMap.EXPECT().GetClient(ctx, keys.ForSeedWithName(seedName)).Return(seedClient, nil).AnyTimes()
+		})
+
+		It("should wait if the Shoot is still reconciling", func() {
+			shoot.ObjectMeta.Generation = 2
+			expectGetShoot()
+			recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Waiting for shoot %s to be reconciled", kutil.ObjectName(shoot))
+
+			status, wait, err := actuator.Reconcile(ctx, managedSeed)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(status.Conditions).To(ConsistOf(
+				MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(seedmanagementv1alpha1.ManagedSeedShootReconciled),
+					"Status": Equal(gardencorev1beta1.ConditionFalse),
+					"Reason": Equal(gardencorev1beta1.EventReconciling),
+				}),
+			))
+			Expect(wait).To(Equal(true))
+		})
+
 		Context("seed template", func() {
 			BeforeEach(func() {
 				managedSeed.Spec.SeedTemplate = seedTemplate
 			})
 
-			It("should reconcile the ManagedSeed creation or update", func() {
-				clientMap.EXPECT().GetClient(ctx, keys.ForShoot(shoot)).Return(shootClient, nil)
-				clientMap.EXPECT().GetClient(ctx, keys.ForSeedWithName(seedName)).Return(seedClient, nil)
-
-				expectCreateGardenNamespace()
+			It("should create the garden namespace, seed secrets, and seed", func() {
+				expectGetShoot()
 				expectCheckSeedSpec()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating garden namespace in shoot %s", kutil.ObjectName(shoot))
+				expectCreateGardenNamespace()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating seed %s secrets", name)
 				expectCreateSeedSecrets()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating seed %s", name)
 				expectCreateSeed()
 
-				err := actuator.Reconcile(ctx, managedSeed, shoot)
+				status, wait, err := actuator.Reconcile(ctx, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(status.Conditions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedShootReconciled),
+						"Status": Equal(gardencorev1beta1.ConditionTrue),
+						"Reason": Equal(gardencorev1beta1.EventReconciled),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						"Status": Equal(gardencorev1beta1.ConditionTrue),
+						"Reason": Equal(gardencorev1beta1.EventReconciled),
+					}),
+				))
+				Expect(wait).To(Equal(false))
 			})
 		})
 
@@ -563,56 +649,156 @@ var _ = Describe("Actuator", func() {
 				managedSeed.Spec.Gardenlet = gardenlet
 			})
 
-			It("should reconcile the ManagedSeed creation or update (with bootstrap)", func() {
-				clientMap.EXPECT().GetClient(ctx, keys.ForShoot(shoot)).Return(shootClient, nil)
-				clientMap.EXPECT().GetClient(ctx, keys.ForSeedWithName(seedName)).Return(seedClient, nil)
-
-				expectCreateGardenNamespace()
+			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap)", func() {
+				expectGetShoot()
 				expectCheckSeedSpec()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating garden namespace in shoot %s", kutil.ObjectName(shoot))
+				expectCreateGardenNamespace()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating seed %s secrets", name)
 				expectCreateSeedSecrets()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %s", kutil.ObjectName(shoot))
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection()
 				expectGetGardenletChartValues(true)
 				expectApplyGardenletChart()
 
-				err := actuator.Reconcile(ctx, managedSeed, shoot)
+				status, wait, err := actuator.Reconcile(ctx, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(status.Conditions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedShootReconciled),
+						"Status": Equal(gardencorev1beta1.ConditionTrue),
+						"Reason": Equal(gardencorev1beta1.EventReconciled),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						"Status": Equal(gardencorev1beta1.ConditionTrue),
+						"Reason": Equal(gardencorev1beta1.EventReconciled),
+					}),
+				))
+				Expect(wait).To(Equal(false))
 			})
 
-			It("should reconcile the ManagedSeed creation or update (without bootstrap)", func() {
+			It("should create the garden namespace and seed secrets, and deploy gardenlet (without bootstrap)", func() {
 				managedSeed.Spec.Gardenlet.Bootstrap = bootstrapPtr(seedmanagementv1alpha1.BootstrapNone)
 
-				clientMap.EXPECT().GetClient(ctx, keys.ForShoot(shoot)).Return(shootClient, nil)
-				clientMap.EXPECT().GetClient(ctx, keys.ForSeedWithName(seedName)).Return(seedClient, nil)
-
-				expectCreateGardenNamespace()
+				expectGetShoot()
 				expectCheckSeedSpec()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating garden namespace in shoot %s", kutil.ObjectName(shoot))
+				expectCreateGardenNamespace()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating seed %s secrets", name)
 				expectCreateSeedSecrets()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %s", kutil.ObjectName(shoot))
 				expectMergeWithParent()
 				expectGetGardenletChartValues(false)
 				expectApplyGardenletChart()
 
-				err := actuator.Reconcile(ctx, managedSeed, shoot)
+				status, wait, err := actuator.Reconcile(ctx, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(status.Conditions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedShootReconciled),
+						"Status": Equal(gardencorev1beta1.ConditionTrue),
+						"Reason": Equal(gardencorev1beta1.EventReconciled),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						"Status": Equal(gardencorev1beta1.ConditionTrue),
+						"Reason": Equal(gardencorev1beta1.EventReconciled),
+					}),
+				))
+				Expect(wait).To(Equal(false))
 			})
 		})
 	})
 
 	Describe("#Delete", func() {
+		BeforeEach(func() {
+			clientMap.EXPECT().GetClient(ctx, keys.ForShoot(shoot)).Return(shootClient, nil)
+		})
+
 		Context("seed template", func() {
 			BeforeEach(func() {
 				managedSeed.Spec.SeedTemplate = seedTemplate
 			})
 
-			It("should reconcile the ManagedSeed deletion", func() {
-				clientMap.EXPECT().GetClient(ctx, keys.ForShoot(shoot)).Return(shootClient, nil)
+			It("should delete the seed if it still exists", func() {
+				expectGetShoot()
+				expectGetSeed(true)
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed %s", name)
+				expectDeleteSeed()
 
-				expectEnsureSeedDeleted()
-				expectEnsureSeedSecretsDeleted()
-				expectEnsureGardenNamespaceDeleted()
-
-				err := actuator.Delete(ctx, managedSeed, shoot)
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(status.Conditions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						"Status": Equal(gardencorev1beta1.ConditionFalse),
+						"Reason": Equal(gardencorev1beta1.EventDeleting),
+					}),
+				))
+				Expect(wait).To(Equal(false))
+				Expect(removeFinalizer).To(Equal(false))
+			})
+
+			It("should delete the seed secrets if they still exist", func() {
+				expectGetShoot()
+				expectGetSeed(false)
+				expectGetSeedSecrets(true)
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed %s secrets", name)
+				expectDeleteSeedSecrets()
+
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(status.Conditions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						"Status": Equal(gardencorev1beta1.ConditionFalse),
+						"Reason": Equal(gardencorev1beta1.EventDeleting),
+					}),
+				))
+				Expect(wait).To(Equal(false))
+				Expect(removeFinalizer).To(Equal(false))
+			})
+
+			It("should delete the garden namespace if it still exists, and set wait to true", func() {
+				expectGetShoot()
+				expectGetSeed(false)
+				expectGetSeedSecrets(false)
+				expectGetGardenNamespace(true)
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting garden namespace from shoot %s", kutil.ObjectName(shoot))
+				expectDeleteGardenNamespace()
+
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(status.Conditions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						"Status": Equal(gardencorev1beta1.ConditionFalse),
+						"Reason": Equal(gardencorev1beta1.EventDeleting),
+					}),
+				))
+				Expect(wait).To(Equal(true))
+				Expect(removeFinalizer).To(Equal(false))
+			})
+
+			It("should do nothing if neither the seed, nor the seed secrets, nor the garden namespace exist, and set removeFinalizer to true", func() {
+				expectGetShoot()
+				expectGetSeed(false)
+				expectGetSeedSecrets(false)
+				expectGetGardenNamespace(false)
+
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(status.Conditions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						"Status": Equal(gardencorev1beta1.ConditionFalse),
+						"Reason": Equal(gardencorev1beta1.EventDeleted),
+					}),
+				))
+				Expect(wait).To(Equal(false))
+				Expect(removeFinalizer).To(Equal(true))
 			})
 		})
 
@@ -621,19 +807,109 @@ var _ = Describe("Actuator", func() {
 				managedSeed.Spec.Gardenlet = gardenlet
 			})
 
-			It("should reconcile the ManagedSeed deletion", func() {
-				clientMap.EXPECT().GetClient(ctx, keys.ForShoot(shoot)).Return(shootClient, nil)
+			It("should delete the seed if it still exists", func() {
+				expectGetShoot()
+				expectGetSeed(true)
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed %s", name)
+				expectDeleteSeed()
 
-				expectEnsureSeedDeleted()
-				expectEnsureSeedSecretsDeleted()
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(status.Conditions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						"Status": Equal(gardencorev1beta1.ConditionFalse),
+						"Reason": Equal(gardencorev1beta1.EventDeleting),
+					}),
+				))
+				Expect(wait).To(Equal(false))
+				Expect(removeFinalizer).To(Equal(false))
+			})
+
+			It("should delete gardenlet if it still exists", func() {
+				expectGetShoot()
+				expectGetSeed(false)
+				expectGetGardenletDeployment(true)
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting gardenlet from shoot %s", kutil.ObjectName(shoot))
 				expectMergeWithParent()
 				expectPrepareGardenClientConnection()
 				expectGetGardenletChartValues(true)
 				expectDeleteGardenletChart()
-				expectEnsureGardenNamespaceDeleted()
 
-				err := actuator.Delete(ctx, managedSeed, shoot)
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
 				Expect(err).ToNot(HaveOccurred())
+				Expect(status.Conditions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						"Status": Equal(gardencorev1beta1.ConditionFalse),
+						"Reason": Equal(gardencorev1beta1.EventDeleting),
+					}),
+				))
+				Expect(wait).To(Equal(true))
+				Expect(removeFinalizer).To(Equal(false))
+			})
+
+			It("should delete the seed secrets if they still exist", func() {
+				expectGetShoot()
+				expectGetSeed(false)
+				expectGetGardenletDeployment(false)
+				expectGetSeedSecrets(true)
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting seed %s secrets", name)
+				expectDeleteSeedSecrets()
+
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(status.Conditions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						"Status": Equal(gardencorev1beta1.ConditionFalse),
+						"Reason": Equal(gardencorev1beta1.EventDeleting),
+					}),
+				))
+				Expect(wait).To(Equal(false))
+				Expect(removeFinalizer).To(Equal(false))
+			})
+
+			It("should delete the garden namespace if it still exists, and set wait to true", func() {
+				expectGetShoot()
+				expectGetSeed(false)
+				expectGetGardenletDeployment(false)
+				expectGetSeedSecrets(false)
+				expectGetGardenNamespace(true)
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting garden namespace from shoot %s", kutil.ObjectName(shoot))
+				expectDeleteGardenNamespace()
+
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(status.Conditions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						"Status": Equal(gardencorev1beta1.ConditionFalse),
+						"Reason": Equal(gardencorev1beta1.EventDeleting),
+					}),
+				))
+				Expect(wait).To(Equal(true))
+				Expect(removeFinalizer).To(Equal(false))
+			})
+
+			It("should do nothing if neither the seed, nor gardenlet, nor the seed secrets, nor the garden namespace exist, and set removeFinalizer to true", func() {
+				expectGetShoot()
+				expectGetSeed(false)
+				expectGetGardenletDeployment(false)
+				expectGetSeedSecrets(false)
+				expectGetGardenNamespace(false)
+
+				status, wait, removeFinalizer, err := actuator.Delete(ctx, managedSeed)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(status.Conditions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						"Status": Equal(gardencorev1beta1.ConditionFalse),
+						"Reason": Equal(gardencorev1beta1.EventDeleted),
+					}),
+				))
+				Expect(wait).To(Equal(false))
+				Expect(removeFinalizer).To(Equal(true))
 			})
 		})
 	})

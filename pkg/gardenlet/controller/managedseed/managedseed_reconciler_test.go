@@ -16,21 +16,20 @@ package managedseed
 
 import (
 	"context"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	mockmanagedseed "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed/mock"
 	gardenerlogger "github.com/gardener/gardener/pkg/logger"
-	mockrecord "github.com/gardener/gardener/pkg/mock/client-go/tools/record"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -39,6 +38,9 @@ import (
 const (
 	name      = "test"
 	namespace = "garden"
+
+	syncPeriod     = 30 * time.Minute
+	waitSyncPeriod = 15 * time.Second
 )
 
 var _ = Describe("Reconciler", func() {
@@ -47,10 +49,10 @@ var _ = Describe("Reconciler", func() {
 
 		gardenClient *mockkubernetes.MockInterface
 		actuator     *mockmanagedseed.MockActuator
-		recorder     *mockrecord.MockEventRecorder
 		c            *mockclient.MockClient
-		reader       *mockclient.MockReader
 		sw           *mockclient.MockStatusWriter
+
+		cfg *config.ManagedSeedControllerConfiguration
 
 		reconciler reconcile.Reconciler
 
@@ -58,7 +60,7 @@ var _ = Describe("Reconciler", func() {
 		request reconcile.Request
 
 		managedSeed *seedmanagementv1alpha1.ManagedSeed
-		shoot       *gardencorev1beta1.Shoot
+		status      *seedmanagementv1alpha1.ManagedSeedStatus
 	)
 
 	BeforeEach(func() {
@@ -66,16 +68,18 @@ var _ = Describe("Reconciler", func() {
 
 		gardenClient = mockkubernetes.NewMockInterface(ctrl)
 		actuator = mockmanagedseed.NewMockActuator(ctrl)
-		recorder = mockrecord.NewMockEventRecorder(ctrl)
 		c = mockclient.NewMockClient(ctrl)
-		reader = mockclient.NewMockReader(ctrl)
 		sw = mockclient.NewMockStatusWriter(ctrl)
 
 		gardenClient.EXPECT().Client().Return(c).AnyTimes()
-		gardenClient.EXPECT().APIReader().Return(reader).AnyTimes()
 		c.EXPECT().Status().Return(sw).AnyTimes()
 
-		reconciler = newReconciler(gardenClient, actuator, recorder, gardenerlogger.NewNopLogger())
+		cfg = &config.ManagedSeedControllerConfiguration{
+			SyncPeriod:     &metav1.Duration{Duration: syncPeriod},
+			WaitSyncPeriod: &metav1.Duration{Duration: waitSyncPeriod},
+		}
+
+		reconciler = newReconciler(gardenClient, actuator, cfg, gardenerlogger.NewNopLogger())
 
 		ctx = context.TODO()
 		request = reconcile.Request{NamespacedName: kutil.Key(namespace, name)}
@@ -92,18 +96,8 @@ var _ = Describe("Reconciler", func() {
 				},
 			},
 		}
-		shoot = &gardencorev1beta1.Shoot{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       name,
-				Namespace:  namespace,
-				Generation: 1,
-			},
-			Status: gardencorev1beta1.ShootStatus{
-				LastOperation: &gardencorev1beta1.LastOperation{
-					State: gardencorev1beta1.LastOperationStateSucceeded,
-				},
-				ObservedGeneration: 1,
-			},
+		status = &seedmanagementv1alpha1.ManagedSeedStatus{
+			ObservedGeneration: 1,
 		}
 	})
 
@@ -111,65 +105,65 @@ var _ = Describe("Reconciler", func() {
 		ctrl.Finish()
 	})
 
+	var (
+		expectGetManagedSeed = func() {
+			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, ms *seedmanagementv1alpha1.ManagedSeed) error {
+					*ms = *managedSeed
+					return nil
+				},
+			)
+		}
+		expectPatchManagedSeed = func(expect func(*seedmanagementv1alpha1.ManagedSeed)) {
+			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ client.Patch) error {
+					expect(ms)
+					*managedSeed = *ms
+					return nil
+				},
+			)
+		}
+		expectPatchManagedSeedStatus = func(expect func(*seedmanagementv1alpha1.ManagedSeed)) {
+			sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ client.Patch) error {
+					expect(ms)
+					*managedSeed = *ms
+					return nil
+				},
+			)
+		}
+	)
+
 	Describe("#Reconcile", func() {
 		Context("reconcile", func() {
-			It("should reconcile the ManagedSeed creation or update", func() {
-				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, ms *seedmanagementv1alpha1.ManagedSeed) error {
-						*ms = *managedSeed
-						return nil
-					},
-				)
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(
-					func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ client.Patch) error {
-						Expect(ms.Finalizers).To(Equal([]string{gardencorev1beta1.GardenerName}))
-						*managedSeed = *ms
-						return nil
-					},
-				)
-				reader.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Shoot) error {
-						*s = *shoot
-						return nil
-					},
-				)
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "%s", gomock.AssignableToTypeOf(""))
-				actuator.EXPECT().Reconcile(ctx, managedSeed, shoot).Return(nil)
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, "%s", gomock.AssignableToTypeOf(""))
-				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, ms *seedmanagementv1alpha1.ManagedSeed) error {
-						*ms = *managedSeed
-						return nil
-					},
-				)
-				sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(
-					func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ client.Patch) error {
-						Expect(ms.Status.Conditions).To(ConsistOf(
-							MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal(seedmanagementv1alpha1.ManagedSeedShootExists),
-								"Status": Equal(gardencorev1beta1.ConditionTrue),
-								"Reason": Equal("ShootFound"),
-							}),
-							MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal(seedmanagementv1alpha1.ManagedSeedShootReconciled),
-								"Status": Equal(gardencorev1beta1.ConditionTrue),
-								"Reason": Equal("ShootReconciled"),
-							}),
-							MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-								"Status": Equal(gardencorev1beta1.ConditionTrue),
-								"Reason": Equal("SeedRegistered"),
-							}),
-						))
-						Expect(ms.Status.ObservedGeneration).To(Equal(int64(1)))
-						*managedSeed = *ms
-						return nil
-					},
-				)
+			It("should should add the finalizer, reconcile the ManagedSeed creation or update, and update the status (no wait)", func() {
+				expectGetManagedSeed()
+				expectPatchManagedSeed(func(ms *seedmanagementv1alpha1.ManagedSeed) {
+					Expect(ms.Finalizers).To(Equal([]string{gardencorev1beta1.GardenerName}))
+				})
+				actuator.EXPECT().Reconcile(ctx, managedSeed).Return(status, false, nil)
+				expectPatchManagedSeedStatus(func(ms *seedmanagementv1alpha1.ManagedSeed) {
+					Expect(&ms.Status).To(Equal(status))
+				})
 
 				result, err := reconciler.Reconcile(ctx, request)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(result).To(Equal(reconcile.Result{RequeueAfter: syncPeriod}))
+			})
+
+			It("should should add the finalizer, reconcile the ManagedSeed creation or update, and update the status (wait)", func() {
+				expectGetManagedSeed()
+				expectPatchManagedSeed(func(ms *seedmanagementv1alpha1.ManagedSeed) {
+					Expect(ms.Finalizers).To(Equal([]string{gardencorev1beta1.GardenerName}))
+				})
+				actuator.EXPECT().Reconcile(ctx, managedSeed).Return(status, true, nil)
+				expectPatchManagedSeedStatus(func(ms *seedmanagementv1alpha1.ManagedSeed) {
+					Expect(&ms.Status).To(Equal(status))
+				})
+
+				result, err := reconciler.Reconcile(ctx, request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{RequeueAfter: waitSyncPeriod}))
 			})
 		})
 
@@ -180,53 +174,39 @@ var _ = Describe("Reconciler", func() {
 				managedSeed.Finalizers = []string{gardencorev1beta1.GardenerName}
 			})
 
-			It("should reconcile the ManagedSeed deletion", func() {
-				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, ms *seedmanagementv1alpha1.ManagedSeed) error {
-						*ms = *managedSeed
-						return nil
-					},
-				)
-				reader.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Shoot) error {
-						*s = *shoot
-						return nil
-					},
-				)
-				actuator.EXPECT().Delete(ctx, managedSeed, shoot).Return(nil)
-				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, "%s", gomock.AssignableToTypeOf(""))
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(
-					func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ client.Patch) error {
-						Expect(ms.Finalizers).To(BeEmpty())
-						*managedSeed = *ms
-						return nil
-					},
-				)
-				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, ms *seedmanagementv1alpha1.ManagedSeed) error {
-						*ms = *managedSeed
-						return nil
-					},
-				)
-				sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(
-					func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ client.Patch) error {
-						Expect(ms.Status.Conditions).To(ConsistOf(
-							MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal(seedmanagementv1alpha1.ManagedSeedShootExists),
-								"Status": Equal(gardencorev1beta1.ConditionTrue),
-								"Reason": Equal("ShootFound"),
-							}),
-							MatchFields(IgnoreExtras, Fields{
-								"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
-								"Status": Equal(gardencorev1beta1.ConditionFalse),
-								"Reason": Equal("SeedUnregistered"),
-							}),
-						))
-						Expect(ms.Status.ObservedGeneration).To(Equal(int64(1)))
-						*managedSeed = *ms
-						return nil
-					},
-				)
+			It("should reconcile the ManagedSeed deletion and update the status (no wait)", func() {
+				expectGetManagedSeed()
+				actuator.EXPECT().Delete(ctx, managedSeed).Return(status, false, false, nil)
+				expectPatchManagedSeedStatus(func(ms *seedmanagementv1alpha1.ManagedSeed) {
+					Expect(&ms.Status).To(Equal(status))
+				})
+
+				result, err := reconciler.Reconcile(ctx, request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{RequeueAfter: syncPeriod}))
+			})
+
+			It("should reconcile the ManagedSeed deletion and update the status (wait)", func() {
+				expectGetManagedSeed()
+				actuator.EXPECT().Delete(ctx, managedSeed).Return(status, true, false, nil)
+				expectPatchManagedSeedStatus(func(ms *seedmanagementv1alpha1.ManagedSeed) {
+					Expect(&ms.Status).To(Equal(status))
+				})
+
+				result, err := reconciler.Reconcile(ctx, request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{RequeueAfter: waitSyncPeriod}))
+			})
+
+			It("should reconcile the ManagedSeed deletion, remove the finalizer, and update the status", func() {
+				expectGetManagedSeed()
+				actuator.EXPECT().Delete(ctx, managedSeed).Return(status, false, true, nil)
+				expectPatchManagedSeed(func(ms *seedmanagementv1alpha1.ManagedSeed) {
+					Expect(ms.Finalizers).To(BeEmpty())
+				})
+				expectPatchManagedSeedStatus(func(ms *seedmanagementv1alpha1.ManagedSeed) {
+					Expect(&ms.Status).To(Equal(status))
+				})
 
 				result, err := reconciler.Reconcile(ctx, request)
 				Expect(err).ToNot(HaveOccurred())

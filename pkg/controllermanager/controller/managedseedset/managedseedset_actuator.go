@@ -38,7 +38,7 @@ import (
 // Actuator acts upon ManagedSeedSet resources.
 type Actuator interface {
 	// Reconcile reconciles ManagedSeedSet creation, update, or deletion.
-	Reconcile(context.Context, *seedmanagementv1alpha1.ManagedSeedSet) (*seedmanagementv1alpha1.ManagedSeedSetStatus, error)
+	Reconcile(context.Context, *seedmanagementv1alpha1.ManagedSeedSet) (*seedmanagementv1alpha1.ManagedSeedSetStatus, bool, error)
 }
 
 // actuator is a concrete implementation of Actuator.
@@ -74,15 +74,21 @@ func NewActuator(
 var Now = metav1.Now
 
 // Reconcile reconciles ManagedSeedSet creation or update.
-func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.ManagedSeedSet) (*seedmanagementv1alpha1.ManagedSeedSetStatus, error) {
+func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.ManagedSeedSet) (status *seedmanagementv1alpha1.ManagedSeedSetStatus, removeFinalizer bool, err error) {
 	// Initialize status
-	status := set.Status.DeepCopy()
+	status = set.Status.DeepCopy()
 	status.ObservedGeneration = set.Generation
+
+	defer func() {
+		if err != nil {
+			a.errorEventf(set, err.Error())
+		}
+	}()
 
 	// Get replicas
 	replicas, err := a.replicaGetter.GetReplicas(ctx, set)
 	if err != nil {
-		return status, err
+		return status, false, err
 	}
 
 	// Sort replicas by ascending ordinal
@@ -124,7 +130,7 @@ func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.Ma
 	// Reconcile the pending replica, if any
 	if pendingReplica != nil {
 		if pending, err := a.reconcileReplica(ctx, set, status, pendingReplica, scalingIn); err != nil || pending {
-			return status, err
+			return status, false, err
 		}
 	}
 
@@ -133,27 +139,27 @@ func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.Ma
 		// Initialize a new replica and create its shoot
 		ordinal := getNextOrdinal(replicas, status)
 		if err := a.createReplica(ctx, set, status, ordinal); err != nil {
-			return status, err
+			return status, false, err
 		}
 
 		// Increment Replicas and NextReplicaNumber in status
 		status.Replicas++
 		status.NextReplicaNumber = int32(ordinal + 1)
 
-		return status, nil
+		return status, false, nil
 
 	case scalingIn:
 		// Determine the replica to be deleted
 		// From all deletable replicas, choose the one with lowest priority
 		if len(deletableReplicas) == 0 {
-			return status, fmt.Errorf("no deletable replicas found")
+			return status, false, fmt.Errorf("no deletable replicas found")
 		}
 		sort.Sort(ascendingPriority(deletableReplicas))
 		r := deletableReplicas[0]
 
 		// Delete the replica's managed seed (if it exists), or its shoot (if not)
 		if err := a.deleteReplica(ctx, set, status, r); err != nil {
-			return status, err
+			return status, false, err
 		}
 
 		// Decrement ReadyReplicas in status
@@ -161,19 +167,19 @@ func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.Ma
 			status.ReadyReplicas--
 		}
 
-		return status, nil
+		return status, false, nil
 	}
 
 	// Reconcile postponed replicas
 	for _, r := range postponedReplicas {
 		if pending, err := a.reconcileReplica(ctx, set, status, r, scalingIn); err != nil || pending {
-			return status, err
+			return status, false, err
 		}
 	}
 
 	a.getLogger(set).Debugf("Nothing to do")
 	status.PendingReplica = nil
-	return status, nil
+	return status, true, nil
 }
 
 func (a *actuator) reconcileReplica(
@@ -314,6 +320,11 @@ func (a *actuator) deleteReplica(
 func (a *actuator) infoEventf(set *seedmanagementv1alpha1.ManagedSeedSet, fmt string, args ...interface{}) {
 	a.recorder.Eventf(set, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, fmt, args...)
 	a.getLogger(set).Infof(fmt, args...)
+}
+
+func (a *actuator) errorEventf(set *seedmanagementv1alpha1.ManagedSeedSet, fmt string, args ...interface{}) {
+	a.recorder.Eventf(set, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, fmt, args...)
+	a.getLogger(set).Errorf(fmt, args...)
 }
 
 func (a *actuator) getLogger(set *seedmanagementv1alpha1.ManagedSeedSet) *logrus.Entry {

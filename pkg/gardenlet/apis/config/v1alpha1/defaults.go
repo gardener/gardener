@@ -290,6 +290,16 @@ func SetDefaults_ManagedSeedControllerConfiguration(obj *ManagedSeedControllerCo
 		obj.ConcurrentSyncs = &v
 	}
 
+	if obj.SyncPeriod == nil {
+		v := metav1.Duration{Duration: 1 * time.Hour}
+		obj.SyncPeriod = &v
+	}
+
+	if obj.WaitSyncPeriod == nil {
+		v := metav1.Duration{Duration: 15 * time.Second}
+		obj.WaitSyncPeriod = &v
+	}
+
 	if obj.SyncJitterPeriod == nil {
 		v := metav1.Duration{Duration: 5 * time.Minute}
 		obj.SyncJitterPeriod = &v
