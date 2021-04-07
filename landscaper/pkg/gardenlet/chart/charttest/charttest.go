@@ -104,7 +104,7 @@ func getEmptyPriorityClass() *schedulingv1.PriorityClass {
 }
 
 // ValidateGardenletChartRBAC validates the RBAC resources of the Gardenlet chart.
-func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLabels map[string]string, serviceAccountName string) {
+func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLabels map[string]string, serviceAccountName string, managedIstioEnabled bool) {
 	// Extend the labels with gardener.cloud/role=gardenlet label
 	expectedLabelsCopy := map[string]string{}
 	for k, v := range expectedLabels {
@@ -112,178 +112,369 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 	}
 	expectedLabelsCopy[gardencorev1beta1constants.GardenRole] = "gardenlet"
 
-	// RBAC - Cluster Role
-	clusterRole := &rbacv1.ClusterRole{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "gardener.cloud:system:gardenlet",
-		},
-	}
-	expectedClusterRole := *clusterRole
-	expectedClusterRole.Labels = expectedLabelsCopy
-	expectedClusterRole.Rules = []rbacv1.PolicyRule{
+	// Cluster Roles
+	clusterRoles := []rbacv1.ClusterRole{
 		{
-			APIGroups: []string{""},
-			Resources: []string{"pods"},
-			Verbs:     []string{"list", "watch", "delete", "deletecollection"},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:gardenlet",
+			},
 		},
 		{
-			APIGroups: []string{""},
-			Resources: []string{"configmaps", "namespaces", "secrets", "serviceaccounts", "services"},
-			Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
-		},
-		{
-			APIGroups: []string{""},
-			Resources: []string{"persistentvolumeclaims"},
-			Verbs:     []string{"get", "list", "watch", "patch", "update"},
-		},
-		{
-			APIGroups:     []string{""},
-			Resources:     []string{"persistentvolumeclaims"},
-			ResourceNames: []string{"alertmanager-db-alertmanager-0", "loki-loki-0", "prometheus-db-prometheus-0"},
-			Verbs:         []string{"delete"},
-		},
-		{
-			APIGroups: []string{"admissionregistration.k8s.io"},
-			Resources: []string{"mutatingwebhookconfigurations", "validatingwebhookconfigurations"},
-			Verbs:     []string{"create"},
-		},
-		{
-			APIGroups:     []string{"admissionregistration.k8s.io"},
-			Resources:     []string{"mutatingwebhookconfigurations"},
-			ResourceNames: []string{"vpa-webhook-config-seed"},
-			Verbs:         []string{"get", "delete", "update"},
-		},
-		{
-			APIGroups: []string{"apiextensions.k8s.io"},
-			Resources: []string{"customresourcedefinitions"},
-			Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
-		},
-		{
-			APIGroups:     []string{"apiextensions.k8s.io"},
-			Resources:     []string{"customresourcedefinitions"},
-			ResourceNames: []string{"hvpas.autoscaling.k8s.io"},
-			Verbs:         []string{"delete"},
-		},
-		{
-			APIGroups: []string{"apps"},
-			Resources: []string{"deployments", "statefulsets", "replicasets"},
-			Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
-		},
-		{
-			APIGroups: []string{"autoscaling"},
-			Resources: []string{"horizontalpodautoscalers"},
-			Verbs:     []string{"create", "delete", "get", "patch", "update"},
-		},
-		{
-			APIGroups: []string{"autoscaling.k8s.io"},
-			Resources: []string{"hvpas"},
-			Verbs:     []string{"create", "get", "list", "watch"},
-		},
-		{
-			APIGroups:     []string{"autoscaling.k8s.io"},
-			Resources:     []string{"hvpas"},
-			ResourceNames: []string{"etcd-events", "etcd-main", "kube-apiserver", "loki"},
-			Verbs:         []string{"delete", "patch", "update"},
-		},
-		{
-			APIGroups: []string{"autoscaling.k8s.io"},
-			Resources: []string{"verticalpodautoscalers"},
-			Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
-		},
-		{
-			APIGroups: []string{"dns.gardener.cloud"},
-			Resources: []string{"dnsentries", "dnsowners", "dnsproviders"},
-			Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
-		},
-		{
-			APIGroups: []string{"druid.gardener.cloud"},
-			Resources: []string{"etcds"},
-			Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
-		},
-		{
-			APIGroups: []string{"extensions.gardener.cloud"},
-			Resources: []string{"backupbuckets", "backupentries", "clusters", "containerruntimes", "controlplanes", "extensions", "infrastructures", "networks", "operatingsystemconfigs", "workers"},
-			Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
-		},
-		{
-			APIGroups: []string{"resources.gardener.cloud"},
-			Resources: []string{"managedresources"},
-			Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
-		},
-		{
-			APIGroups: []string{"networking.k8s.io"},
-			Resources: []string{"networkpolicies"},
-			Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
-		},
-		{
-			APIGroups: []string{"extensions", "networking.k8s.io"},
-			Resources: []string{"ingresses"},
-			Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
-		},
-		{
-			APIGroups: []string{"policy"},
-			Resources: []string{"poddisruptionbudgets"},
-			Verbs:     []string{"create", "delete", "get", "patch", "update"},
-		},
-		{
-			APIGroups: []string{"rbac.authorization.k8s.io"},
-			Resources: []string{"clusterrolebindings", "clusterroles", "rolebindings", "roles"},
-			Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
-		},
-		{
-			APIGroups: []string{"rbac.authorization.k8s.io"},
-			Resources: []string{"clusterroles", "roles"},
-			Verbs:     []string{"bind", "escalate"},
-		},
-		{
-			APIGroups: []string{"scheduling.k8s.io"},
-			Resources: []string{"priorityclasses"},
-			Verbs:     []string{"create", "delete", "get", "patch", "update"},
-		},
-		{
-			NonResourceURLs: []string{"/healthz", "/version"},
-			Verbs:           []string{"get"},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:gardenlet:managed-istio",
+			},
 		},
 	}
 
-	Expect(c.Get(
-		ctx,
-		kutil.Key(clusterRole.Name),
-		clusterRole,
-	)).ToNot(HaveOccurred())
-	Expect(clusterRole.Labels).To(Equal(expectedClusterRole.Labels))
-	Expect(clusterRole.Rules).To(Equal(expectedClusterRole.Rules))
-
-	// RBAC - Cluster Role Binding
-	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "gardener.cloud:system:gardenlet",
-		},
-	}
-	expectedClusterRoleBinding := *clusterRoleBinding
-	expectedClusterRoleBinding.Labels = expectedLabelsCopy
-	expectedClusterRoleBinding.RoleRef = rbacv1.RoleRef{
-		APIGroup: rbacv1.SchemeGroupVersion.Group,
-		Kind:     "ClusterRole",
-		Name:     clusterRole.Name,
-	}
-
-	expectedClusterRoleBinding.Subjects = []rbacv1.Subject{
+	expectedClusterRoleRules := [][]rbacv1.PolicyRule{
 		{
-			Kind:      "ServiceAccount",
-			Name:      serviceAccountName,
-			Namespace: gardencorev1beta1constants.GardenNamespace,
+			{
+				APIGroups: []string{""},
+				Resources: []string{"pods"},
+				Verbs:     []string{"list", "watch", "delete", "deletecollection"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"configmaps", "namespaces", "secrets", "serviceaccounts", "services"},
+				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"persistentvolumeclaims"},
+				Verbs:     []string{"get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups:     []string{""},
+				Resources:     []string{"persistentvolumeclaims"},
+				ResourceNames: []string{"alertmanager-db-alertmanager-0", "loki-loki-0", "prometheus-db-prometheus-0"},
+				Verbs:         []string{"delete"},
+			},
+			{
+				APIGroups: []string{"admissionregistration.k8s.io"},
+				Resources: []string{"mutatingwebhookconfigurations", "validatingwebhookconfigurations"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups:     []string{"admissionregistration.k8s.io"},
+				Resources:     []string{"mutatingwebhookconfigurations"},
+				ResourceNames: []string{"vpa-webhook-config-seed"},
+				Verbs:         []string{"get", "delete", "update"},
+			},
+			{
+				APIGroups: []string{"apiextensions.k8s.io"},
+				Resources: []string{"customresourcedefinitions"},
+				Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups:     []string{"apiextensions.k8s.io"},
+				Resources:     []string{"customresourcedefinitions"},
+				ResourceNames: []string{"hvpas.autoscaling.k8s.io"},
+				Verbs:         []string{"delete"},
+			},
+			{
+				APIGroups: []string{"apps"},
+				Resources: []string{"deployments", "statefulsets", "replicasets"},
+				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"autoscaling"},
+				Resources: []string{"horizontalpodautoscalers"},
+				Verbs:     []string{"create", "delete", "get", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"autoscaling.k8s.io"},
+				Resources: []string{"hvpas"},
+				Verbs:     []string{"create", "get", "list", "watch"},
+			},
+			{
+				APIGroups:     []string{"autoscaling.k8s.io"},
+				Resources:     []string{"hvpas"},
+				ResourceNames: []string{"etcd-events", "etcd-main", "kube-apiserver", "loki"},
+				Verbs:         []string{"delete", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"autoscaling.k8s.io"},
+				Resources: []string{"verticalpodautoscalers"},
+				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"dns.gardener.cloud"},
+				Resources: []string{"dnsentries", "dnsowners", "dnsproviders"},
+				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"druid.gardener.cloud"},
+				Resources: []string{"etcds"},
+				Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"extensions.gardener.cloud"},
+				Resources: []string{"backupbuckets", "backupentries", "clusters", "containerruntimes", "controlplanes", "extensions", "infrastructures", "networks", "operatingsystemconfigs", "workers"},
+				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"resources.gardener.cloud"},
+				Resources: []string{"managedresources"},
+				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"networking.k8s.io"},
+				Resources: []string{"networkpolicies"},
+				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"extensions", "networking.k8s.io"},
+				Resources: []string{"ingresses"},
+				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"policy"},
+				Resources: []string{"poddisruptionbudgets"},
+				Verbs:     []string{"create", "delete", "get", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"rbac.authorization.k8s.io"},
+				Resources: []string{"clusterrolebindings", "clusterroles", "rolebindings", "roles"},
+				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"rbac.authorization.k8s.io"},
+				Resources: []string{"clusterroles", "roles"},
+				Verbs:     []string{"bind", "escalate"},
+			},
+			{
+				APIGroups: []string{"scheduling.k8s.io"},
+				Resources: []string{"priorityclasses"},
+				Verbs:     []string{"create", "delete", "get", "patch", "update"},
+			},
+			{
+				NonResourceURLs: []string{"/healthz", "/version"},
+				Verbs:           []string{"get"},
+			},
+		},
+		{
+			{
+				APIGroups:     []string{"apiextensions.k8s.io"},
+				Resources:     []string{"customresourcedefinitions"},
+				ResourceNames: []string{"attributemanifests.config.istio.io", "clusterrbacconfigs.rbac.istio.io", "handlers.config.istio.io", "httpapispecbindings.config.istio.io", "httpapispecs.config.istio.io", "instances.config.istio.io", "meshpolicies.authentication.istio.io", "policies.authentication.istio.io", "quotaspecbindings.config.istio.io", "quotaspecs.config.istio.io", "rbacconfigs.rbac.istio.io", "rules.config.istio.io", "servicerolebindings.rbac.istio.io", "serviceroles.rbac.istio.io"},
+				Verbs:         []string{"delete"},
+			},
+			{
+				APIGroups:     []string{"admissionregistration.k8s.io"},
+				Resources:     []string{"validatingwebhookconfigurations"},
+				ResourceNames: []string{"istiod"},
+				Verbs:         []string{"get", "patch", "update"},
+			},
+			{
+				APIGroups:     []string{"networking.istio.io"},
+				Resources:     []string{"destinationrules", "gateways", "virtualservices"},
+				ResourceNames: []string{"kube-apiserver"},
+				Verbs:         []string{"delete", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"networking.istio.io"},
+				Resources: []string{"destinationrules", "gateways", "virtualservices"},
+				Verbs:     []string{"create"},
+			},
 		},
 	}
 
-	Expect(c.Get(
-		ctx,
-		kutil.Key(clusterRoleBinding.Name),
-		clusterRoleBinding,
-	)).ToNot(HaveOccurred())
-	Expect(clusterRoleBinding.Labels).To(Equal(expectedClusterRoleBinding.Labels))
-	Expect(clusterRoleBinding.RoleRef).To(Equal(expectedClusterRoleBinding.RoleRef))
-	Expect(clusterRoleBinding.Subjects).To(Equal(expectedClusterRoleBinding.Subjects))
+	for idx, cr := range clusterRoles {
+		Expect(c.Get(ctx, kutil.Key(cr.Name), &cr)).ToNot(HaveOccurred())
+		Expect(cr.Labels).To(Equal(expectedLabelsCopy))
+		Expect(cr.Rules).To(Equal(expectedClusterRoleRules[idx]))
+	}
+
+	// Cluster Role Bindings
+	clusterRoleBindings := []rbacv1.ClusterRoleBinding{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:gardenlet",
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:system:gardenlet:managed-istio",
+			},
+		},
+	}
+
+	for idx, crb := range clusterRoleBindings {
+		Expect(c.Get(ctx, kutil.Key(crb.Name), &crb)).ToNot(HaveOccurred())
+		Expect(crb.Labels).To(Equal(expectedLabelsCopy))
+		Expect(crb.RoleRef).To(Equal(rbacv1.RoleRef{
+			APIGroup: rbacv1.SchemeGroupVersion.Group,
+			Kind:     "ClusterRole",
+			Name:     clusterRoles[idx].Name,
+		}))
+		Expect(crb.Subjects).To(Equal([]rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      serviceAccountName,
+				Namespace: gardencorev1beta1constants.GardenNamespace,
+			},
+		}))
+	}
+
+	// Roles
+	const (
+		defaultNamespaceName     = "default"
+		istioSystemNamespaceName = "istio-system"
+	)
+	roles := []rbacv1.Role{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:gardenlet",
+				Namespace: defaultNamespaceName,
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:gardenlet",
+				Namespace: gardencorev1beta1constants.GardenNamespace,
+			},
+		},
+	}
+
+	if managedIstioEnabled {
+		roles = append(
+			roles,
+			rbacv1.Role{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener.cloud:system:gardenlet:managed-istio",
+					Namespace: istioSystemNamespaceName,
+				},
+			},
+			rbacv1.Role{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener.cloud:system:gardenlet:managed-istio",
+					Namespace: gardenletconfigv1alpha1.DefaultSNIIngresNamespace,
+				},
+			},
+		)
+	}
+
+	expectedRoleRules := [][]rbacv1.PolicyRule{
+		{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"endpoints"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+		},
+		{
+			{
+				APIGroups:     []string{"apps"},
+				Resources:     []string{"daemonsets"},
+				ResourceNames: []string{"fluent-bit"},
+				Verbs:         []string{"delete", "get", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"apps"},
+				Resources: []string{"daemonsets"},
+				Verbs:     []string{"create"},
+			},
+		},
+	}
+	if managedIstioEnabled {
+		expectedRoleRules = append(
+			expectedRoleRules,
+			[]rbacv1.PolicyRule{
+				{
+					APIGroups:     []string{"networking.istio.io"},
+					Resources:     []string{"destinationrules", "sidecars"},
+					ResourceNames: []string{"default"},
+					Verbs:         []string{"get", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"networking.istio.io"},
+					Resources: []string{"destinationrules", "sidecars"},
+					Verbs:     []string{"create"},
+				},
+				{
+					APIGroups:     []string{"security.istio.io"},
+					Resources:     []string{"peerauthentications"},
+					ResourceNames: []string{"default"},
+					Verbs:         []string{"get", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"security.istio.io"},
+					Resources: []string{"peerauthentications"},
+					Verbs:     []string{"create"},
+				},
+			},
+			[]rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"networking.istio.io"},
+					Resources: []string{"gateways", "envoyfilters", "virtualservices"},
+					Verbs:     []string{"delete", "get", "patch", "update"},
+				},
+				{
+					APIGroups: []string{"networking.istio.io"},
+					Resources: []string{"envoyfilters"},
+					Verbs:     []string{"create"},
+				},
+			},
+		)
+	}
+
+	for idx, role := range roles {
+		Expect(c.Get(ctx, kutil.Key(role.Namespace, role.Name), &role)).ToNot(HaveOccurred())
+		Expect(role.Labels).To(Equal(expectedLabelsCopy))
+		Expect(role.Rules).To(Equal(expectedRoleRules[idx]))
+	}
+
+	// Role Bindings
+	roleBindings := []rbacv1.RoleBinding{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:gardenlet",
+				Namespace: defaultNamespaceName,
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud:system:gardenlet",
+				Namespace: gardencorev1beta1constants.GardenNamespace,
+			},
+		},
+	}
+
+	if managedIstioEnabled {
+		roleBindings = append(
+			roleBindings,
+			rbacv1.RoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener.cloud:system:gardenlet:managed-istio",
+					Namespace: istioSystemNamespaceName,
+				},
+			},
+			rbacv1.RoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gardener.cloud:system:gardenlet:managed-istio",
+					Namespace: gardenletconfigv1alpha1.DefaultSNIIngresNamespace,
+				},
+			},
+		)
+	}
+
+	for idx, rb := range roleBindings {
+		Expect(c.Get(ctx, kutil.Key(rb.Namespace, rb.Name), &rb)).ToNot(HaveOccurred())
+		Expect(rb.Labels).To(Equal(expectedLabelsCopy))
+		Expect(rb.RoleRef).To(Equal(rbacv1.RoleRef{
+			APIGroup: rbacv1.SchemeGroupVersion.Group,
+			Kind:     "Role",
+			Name:     roles[idx].Name,
+		}))
+		Expect(rb.Subjects).To(Equal([]rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      serviceAccountName,
+				Namespace: gardencorev1beta1constants.GardenNamespace,
+			},
+		}))
+	}
+
 }
 
 // ValidateGardenletChartServiceAccount validates the Service Account of the Gardenlet chart.

@@ -277,7 +277,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				serviceAccountName = *deploymentConfiguration.ServiceAccountName
 			}
 
-			appliercommon.ValidateGardenletChartRBAC(ctx, c, expectedLabels, serviceAccountName)
+			appliercommon.ValidateGardenletChartRBAC(ctx, c, expectedLabels, serviceAccountName, false)
 
 			appliercommon.ValidateGardenletChartServiceAccount(ctx, c, seedClientConnectionKubeconfig != nil, expectedLabels, serviceAccountName)
 

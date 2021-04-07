@@ -415,7 +415,9 @@ var _ = Describe("Gardenlet Landscaper reconciliation testing", func() {
 					ctx,
 					fakeGardenletChartClient,
 					expectedLabels,
-					"gardenlet")
+					"gardenlet",
+					false,
+				)
 
 				appliercommon.ValidateGardenletChartServiceAccount(ctx,
 					fakeGardenletChartClient,
