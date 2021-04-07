@@ -36,6 +36,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -295,7 +296,8 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
 	etcdList := &druidv1alpha1.EtcdList{}
-	if err := b.client.List(ctx, etcdList); err != nil && !meta.IsNoMatchError(err) {
+	// Need to check for both error types. The DynamicRestMapper can hold a stale cache returning a path to a non-existing api-resource leading to a NotFound error.
+	if err := b.client.List(ctx, etcdList); err != nil && !meta.IsNoMatchError(err) && !apierrors.IsNotFound(err) {
 		return err
 	}
 
