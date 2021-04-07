@@ -74,6 +74,7 @@ func SyncClusterResourceToSeed(
 			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 			Kind:       "CloudProfile",
 		}
+		cloudProfileObj.ManagedFields = nil
 	}
 
 	if seed != nil {
@@ -82,6 +83,7 @@ func SyncClusterResourceToSeed(
 			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 			Kind:       "Seed",
 		}
+		seedObj.ManagedFields = nil
 	}
 
 	if shoot != nil {
@@ -90,6 +92,7 @@ func SyncClusterResourceToSeed(
 			APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
 			Kind:       "Shoot",
 		}
+		shootObj.ManagedFields = nil
 	}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, client, cluster, func() error {

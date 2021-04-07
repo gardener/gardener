@@ -47,7 +47,7 @@ const (
 	InternalDomainKey = "internal"
 )
 
-// GetDomainInfoFromAnnotations returns the provider and the domain that is specified in the give annotations.
+// GetDomainInfoFromAnnotations returns the provider and the domain that is specified in the given annotations.
 func GetDomainInfoFromAnnotations(annotations map[string]string) (provider string, domain string, includeZones, excludeZones []string, err error) {
 	if annotations == nil {
 		return "", "", nil, nil, fmt.Errorf("domain secret has no annotations")
