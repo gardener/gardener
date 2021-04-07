@@ -388,7 +388,7 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 				},
 				{
 					APIGroups: []string{"networking.istio.io"},
-					Resources: []string{"destinationrules", "sidecars"},
+					Resources: []string{"sidecars"},
 					Verbs:     []string{"create"},
 				},
 				{
@@ -510,7 +510,15 @@ func ValidateGardenletChartServiceAccount(ctx context.Context, c client.Client, 
 
 // ComputeExpectedGardenletConfiguration computes the expected Gardenlet configuration based
 // on input parameters.
-func ComputeExpectedGardenletConfiguration(componentConfigUsesTlsServerConfig, hasGardenClientConnectionKubeconfig, hasSeedClientConnectionKubeconfig bool, bootstrapKubeconfig *corev1.SecretReference, kubeconfigSecret *corev1.SecretReference, seedConfig *gardenletconfigv1alpha1.SeedConfig) gardenletconfigv1alpha1.GardenletConfiguration {
+func ComputeExpectedGardenletConfiguration(
+	componentConfigUsesTlsServerConfig,
+	hasGardenClientConnectionKubeconfig,
+	hasSeedClientConnectionKubeconfig bool,
+	bootstrapKubeconfig *corev1.SecretReference,
+	kubeconfigSecret *corev1.SecretReference,
+	seedConfig *gardenletconfigv1alpha1.SeedConfig,
+	featureGates map[string]bool,
+) gardenletconfigv1alpha1.GardenletConfiguration {
 	var (
 		zero   = 0
 		one    = 1
@@ -690,6 +698,8 @@ func ComputeExpectedGardenletConfiguration(componentConfigUsesTlsServerConfig, h
 	if seedConfig != nil {
 		config.SeedConfig = seedConfig
 	}
+
+	config.FeatureGates = featureGates
 
 	return config
 }

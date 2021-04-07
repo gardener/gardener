@@ -48,6 +48,7 @@ import (
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	"github.com/gardener/gardener/pkg/features"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -145,6 +146,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			deploymentConfiguration *seedmanagement.GardenletDeployment,
 			imageVectorOverwrite *string,
 			componentImageVectorOverwrites *string,
+			featureGates map[string]bool,
 		) {
 			gardenletValues := map[string]interface{}{
 				"enabled": true,
@@ -199,6 +201,10 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			}
 			if seedConfig != nil {
 				componentConfigValues["seedConfig"] = *seedConfig
+			}
+
+			if featureGates != nil {
+				componentConfigValues["featureGates"] = featureGates
 			}
 
 			if len(componentConfigValues) > 0 {
@@ -277,7 +283,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				serviceAccountName = *deploymentConfiguration.ServiceAccountName
 			}
 
-			appliercommon.ValidateGardenletChartRBAC(ctx, c, expectedLabels, serviceAccountName, false)
+			appliercommon.ValidateGardenletChartRBAC(ctx, c, expectedLabels, serviceAccountName, featureGates[string(features.ManagedIstio)])
 
 			appliercommon.ValidateGardenletChartServiceAccount(ctx, c, seedClientConnectionKubeconfig != nil, expectedLabels, serviceAccountName)
 
@@ -287,7 +293,9 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				seedClientConnectionKubeconfig != nil,
 				bootstrapKubeconfig,
 				bootstrapKubeconfigSecret,
-				seedConfig)
+				seedConfig,
+				featureGates,
+			)
 
 			appliercommon.VerifyGardenletComponentConfigConfigMap(ctx,
 				c,
@@ -350,17 +358,17 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				appliercommon.ValidateGardenletChartVPA(ctx, c)
 			}
 		},
-		Entry("verify the default values for the Gardenlet chart & the Gardenlet component config", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil),
-		Entry("verify Gardenlet with component config with TLS server configuration", pointer.StringPtr("dummy cert content"), pointer.StringPtr("dummy key content"), nil, nil, nil, nil, nil, nil, nil, nil, nil),
-		Entry("verify Gardenlet with component config having the Garden client connection kubeconfig set", nil, nil, pointer.StringPtr("dummy garden kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil),
-		Entry("verify Gardenlet with component config having the Seed client connection kubeconfig set", nil, nil, nil, pointer.StringPtr("dummy seed kubeconfig"), nil, nil, nil, nil, nil, nil, nil),
+		Entry("verify the default values for the Gardenlet chart & the Gardenlet component config", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil),
+		Entry("verify Gardenlet with component config with TLS server configuration", pointer.StringPtr("dummy cert content"), pointer.StringPtr("dummy key content"), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil),
+		Entry("verify Gardenlet with component config having the Garden client connection kubeconfig set", nil, nil, pointer.StringPtr("dummy garden kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil, nil),
+		Entry("verify Gardenlet with component config having the Seed client connection kubeconfig set", nil, nil, nil, pointer.StringPtr("dummy seed kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil),
 		Entry("verify Gardenlet with component config having a Bootstrap kubeconfig set", nil, nil, nil, nil, &corev1.SecretReference{
 			Name:      "gardenlet-kubeconfig-bootstrap",
 			Namespace: "garden",
 		}, &corev1.SecretReference{
 			Name:      "gardenlet-kubeconfig",
 			Namespace: gardencorev1beta1constants.GardenNamespace,
-		}, pointer.StringPtr("dummy bootstrap kubeconfig"), nil, nil, nil, nil),
+		}, pointer.StringPtr("dummy bootstrap kubeconfig"), nil, nil, nil, nil, nil),
 		Entry("verify that the SeedConfig is set in the component config Config Map", nil, nil, nil, nil, nil, nil, nil,
 			&gardenletconfigv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
@@ -368,19 +376,19 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 						Name: "sweet-seed",
 					},
 				},
-			}, nil, nil, nil),
+			}, nil, nil, nil, nil),
 
-		Entry("verify deployment with image vector override", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, pointer.StringPtr("dummy-override-content")),
+		Entry("verify deployment with image vector override", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, pointer.StringPtr("dummy-override-content"), nil),
 
-		Entry("verify deployment with component image vector override", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, pointer.StringPtr("dummy-override-content")),
+		Entry("verify deployment with component image vector override", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, pointer.StringPtr("dummy-override-content"), nil),
 
 		Entry("verify deployment with replica count", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			ReplicaCount: pointer.Int32Ptr(2),
-		}, nil, nil),
+		}, nil, nil, nil),
 
 		Entry("verify deployment with service account", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			ServiceAccountName: pointer.StringPtr("ax"),
-		}, nil, nil),
+		}, nil, nil, nil),
 
 		Entry("verify deployment with resources", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			Resources: &corev1.ResourceRequirements{
@@ -393,19 +401,19 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					corev1.ResourceMemory: resource.MustParse("25Mi"),
 				},
 			},
-		}, nil, nil),
+		}, nil, nil, nil),
 
 		Entry("verify deployment with pod labels", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			PodLabels: map[string]string{
 				"x": "y",
 			},
-		}, nil, nil),
+		}, nil, nil, nil),
 
 		Entry("verify deployment with pod annotations", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			PodAnnotations: map[string]string{
 				"x": "y",
 			},
-		}, nil, nil),
+		}, nil, nil, nil),
 
 		Entry("verify deployment with additional volumes", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			AdditionalVolumes: []corev1.Volume{
@@ -414,7 +422,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					VolumeSource: corev1.VolumeSource{},
 				},
 			},
-		}, nil, nil),
+		}, nil, nil, nil),
 
 		Entry("verify deployment with additional volume mounts", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			AdditionalVolumeMounts: []corev1.VolumeMount{
@@ -422,7 +430,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					Name: "a",
 				},
 			},
-		}, nil, nil),
+		}, nil, nil, nil),
 
 		Entry("verify deployment with env variables", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			Env: []corev1.EnvVar{
@@ -431,11 +439,12 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 					Value: "XY",
 				},
 			},
-		}, nil, nil),
+		}, nil, nil, nil),
 
 		Entry("verify deployment with VPA enabled", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
 			VPA: pointer.BoolPtr(true),
-		}, nil, nil),
+		}, nil, nil, nil),
+		Entry("verify Gardenlet RBACs when ManagedIstio is enabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.ManagedIstio): true}),
 	)
 })
 

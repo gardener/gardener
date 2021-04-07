@@ -431,7 +431,9 @@ var _ = Describe("Gardenlet Landscaper reconciliation testing", func() {
 					false,
 					landscaper.gardenletConfiguration.GardenClientConnection.BootstrapKubeconfig,
 					landscaper.gardenletConfiguration.GardenClientConnection.KubeconfigSecret,
-					landscaper.gardenletConfiguration.SeedConfig)
+					landscaper.gardenletConfiguration.SeedConfig,
+					nil,
+				)
 
 				appliercommon.VerifyGardenletComponentConfigConfigMap(ctx,
 					fakeGardenletChartClient,
