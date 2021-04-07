@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
@@ -59,7 +60,7 @@ var (
 // because older Gardenlet versions might not be compatible at the time this authorization plugin is enabled.
 // With `DecisionNoOpinion`, RBAC will be respected in the authorization chain afterwards.
 func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.Decision, string, error) {
-	seedName, isSeed := Identity(attrs.GetUser())
+	seedName, isSeed := seedidentity.FromUserInfoInterface(attrs.GetUser())
 	if !isSeed {
 		return auth.DecisionNoOpinion, "", nil
 	}

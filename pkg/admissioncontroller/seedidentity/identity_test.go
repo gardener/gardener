@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seed_test
+package seedidentity_test
 
 import (
-	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed"
+	. "github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -24,9 +24,9 @@ import (
 )
 
 var _ = Describe("identity", func() {
-	DescribeTable("#Identity",
+	DescribeTable("#FromUserInfoInterface",
 		func(u user.Info, expectedSeedName string, expectedIsSeedValue bool) {
-			seedName, isSeed := Identity(u)
+			seedName, isSeed := FromUserInfoInterface(u)
 
 			Expect(seedName).To(Equal(expectedSeedName))
 			Expect(isSeed).To(Equal(expectedIsSeedValue))

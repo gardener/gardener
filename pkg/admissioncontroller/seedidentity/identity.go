@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seed
+package seedidentity
 
 import (
 	"strings"
@@ -23,9 +23,9 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 )
 
-// Identity returns the seed name and a boolean indicating whether the provided user has the
+// FromUserInfoInterface returns the seed name and a boolean indicating whether the provided user has the
 // gardener.cloud:system:seeds group. If the seed name is ambigious then an empty string will be returned.
-func Identity(u user.Info) (string, bool) {
+func FromUserInfoInterface(u user.Info) (string, bool) {
 	if u == nil {
 		return "", false
 	}
