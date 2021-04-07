@@ -5,5 +5,5 @@ repositories:
     keyFile: ""
     name: stable
     password: ""
-    url: https://charts.bitnami.com/bitnami
+    url: https://storage.googleapis.com/gardener-public/integrationtests-charts
     username: ""
