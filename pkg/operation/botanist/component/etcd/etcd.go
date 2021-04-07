@@ -358,11 +358,10 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 	if e.hvpaConfig != nil && e.hvpaConfig.Enabled {
 		var (
-			hpaLabels                   = map[string]string{v1beta1constants.LabelRole: "etcd-hpa-" + e.role}
-			vpaLabels                   = map[string]string{v1beta1constants.LabelRole: "etcd-vpa-" + e.role}
-			updateModeAuto              = hvpav1alpha1.UpdateModeAuto
-			updateModeMaintenanceWindow = hvpav1alpha1.UpdateModeMaintenanceWindow
-			containerPolicyOff          = autoscalingv1beta2.ContainerScalingModeOff
+			hpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-hpa-" + e.role}
+			vpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-vpa-" + e.role}
+			updateModeAuto     = hvpav1alpha1.UpdateModeAuto
+			containerPolicyOff = autoscalingv1beta2.ContainerScalingModeOff
 		)
 
 		if _, err := controllerutil.CreateOrUpdate(ctx, e.client, hvpa, func() error {
@@ -424,7 +423,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				},
 				ScaleDown: hvpav1alpha1.ScaleType{
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: &updateModeMaintenanceWindow,
+						UpdateMode: e.hvpaConfig.ScaleDownUpdateMode,
 					},
 					StabilizationDuration: pointer.StringPtr("15m"),
 					MinChange: hvpav1alpha1.ScaleParams{
@@ -696,4 +695,6 @@ type HVPAConfig struct {
 	// MaintenanceTimeWindow contains begin and end of a time window that allows down-scaling the etcd in case its
 	// resource requests/limits are unnecessarily high.
 	MaintenanceTimeWindow gardencorev1beta1.MaintenanceTimeWindow
+	// The update mode to use for etcd scale down.
+	ScaleDownUpdateMode *string
 }
