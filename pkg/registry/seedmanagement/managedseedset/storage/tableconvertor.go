@@ -39,6 +39,7 @@ func newTableConvertor() rest.TableConvertor {
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
 			{Name: "Ready", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["ready"]},
+			{Name: "Pending", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["pending"]},
 			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
 		},
 	}
@@ -70,8 +71,14 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 			cells          = []interface{}{}
 		)
 
+		pending := ""
+		if managedSeedSet.Status.PendingReplica != nil {
+			pending = fmt.Sprintf("%s:%s", managedSeedSet.Status.PendingReplica.Name, managedSeedSet.Status.PendingReplica.Reason)
+		}
+
 		cells = append(cells, managedSeedSet.Name)
 		cells = append(cells, fmt.Sprintf("%d/%d", managedSeedSet.Status.ReadyReplicas, *managedSeedSet.Spec.Replicas))
+		cells = append(cells, pending)
 		cells = append(cells, metatable.ConvertToHumanReadableDateType(managedSeedSet.CreationTimestamp))
 
 		return cells, nil

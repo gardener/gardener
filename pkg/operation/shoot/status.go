@@ -41,7 +41,8 @@ var (
 	}
 )
 
-func statusValue(s Status) int {
+// StatusValue returns the value of the given Status.
+func StatusValue(s Status) int {
 	value, ok := shootStatusValues[s]
 	if !ok {
 		panic(fmt.Sprintf("invalid shoot status %q", s))
@@ -52,7 +53,7 @@ func statusValue(s Status) int {
 
 // OrWorse returns the worse Status of the given two states.
 func (s Status) OrWorse(other Status) Status {
-	if statusValue(other) < statusValue(s) {
+	if StatusValue(other) < StatusValue(s) {
 		return other
 	}
 	return s

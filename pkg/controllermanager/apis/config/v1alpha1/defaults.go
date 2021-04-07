@@ -125,6 +125,15 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		v := metav1.Duration{Duration: 5 * obj.Controllers.Seed.MonitorPeriod.Duration}
 		obj.Controllers.Seed.ShootMonitorPeriod = &v
 	}
+
+	if obj.Controllers.ManagedSeedSet == nil {
+		obj.Controllers.ManagedSeedSet = &ManagedSeedSetControllerConfiguration{
+			ConcurrentSyncs: 5,
+			SyncPeriod: metav1.Duration{
+				Duration: 30 * time.Minute,
+			},
+		}
+	}
 }
 
 // SetDefaults_ClientConnectionConfiguration sets defaults for the garden client connection.
@@ -157,5 +166,13 @@ func SetDefaults_LeaderElectionConfiguration(obj *LeaderElectionConfiguration) {
 func SetDefaults_EventControllerConfiguration(obj *EventControllerConfiguration) {
 	if obj.TTLNonShootEvents == nil {
 		obj.TTLNonShootEvents = &metav1.Duration{Duration: 1 * time.Hour}
+	}
+}
+
+// SetDefaults_ManagedSeedSetControllerConfiguration sets defaults for the given ManagedSeedSetControllerConfiguration.
+func SetDefaults_ManagedSeedSetControllerConfiguration(obj *ManagedSeedSetControllerConfiguration) {
+	if obj.MaxShootRetries == nil {
+		v := 3
+		obj.MaxShootRetries = &v
 	}
 }

@@ -15,10 +15,16 @@
 package validation
 
 import (
+	"fmt"
+	"regexp"
+	"strconv"
+
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
+	"github.com/gardener/gardener/pkg/utils"
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,7 +65,7 @@ func ValidateManagedSeedSetStatusUpdate(newManagedSeedSet, oldManagedSeedSet *se
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newManagedSeedSet.ObjectMeta, &oldManagedSeedSet.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateManagedSeedSetStatus(&newManagedSeedSet.Status, field.NewPath("status"))...)
+	allErrs = append(allErrs, ValidateManagedSeedSetStatus(&newManagedSeedSet.Status, newManagedSeedSet.Name, field.NewPath("status"))...)
 
 	statusPath := field.NewPath("status")
 	if newManagedSeedSet.Status.NextReplicaNumber < oldManagedSeedSet.Status.NextReplicaNumber {
@@ -99,28 +105,45 @@ func ValidateManagedSeedSetSpec(spec *seedmanagement.ManagedSeedSetSpec, fldPath
 	allErrs = append(allErrs, ValidateManagedSeedTemplateForManagedSeedSet(&spec.Template, selector, fldPath.Child("template"))...)
 	allErrs = append(allErrs, ValidateShootTemplateForManagedSeedSet(&spec.ShootTemplate, selector, fldPath.Child("shootTemplate"))...)
 
-	// Ensure updateStrategy.type is RollingUpdate if specified
-	if spec.UpdateStrategy != nil && spec.UpdateStrategy.Type != nil {
-		updateStrategyPath := fldPath.Child("updateStrategy")
-
-		switch *spec.UpdateStrategy.Type {
-		case "":
-			allErrs = append(allErrs, field.Required(updateStrategyPath.Child("type"), ""))
-		case seedmanagement.RollingUpdateStrategyType:
-			// Ensure rollingUpdate.partition is non-negative if specified
-			if spec.UpdateStrategy.RollingUpdate != nil && spec.UpdateStrategy.RollingUpdate.Partition != nil {
-				allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*spec.UpdateStrategy.RollingUpdate.Partition),
-					updateStrategyPath.Child("rollingUpdate", "partition"))...)
-			}
-		default:
-			allErrs = append(allErrs, field.NotSupported(updateStrategyPath.Child("type"),
-				*spec.UpdateStrategy.Type, []string{string(seedmanagement.RollingUpdateStrategyType)}))
-		}
+	if spec.UpdateStrategy != nil {
+		allErrs = append(allErrs, validateUpdateStrategy(spec.UpdateStrategy, fldPath.Child("updateStrategy"))...)
 	}
 
 	// Ensure revisionHistoryLimit is non-negative if specified
 	if spec.RevisionHistoryLimit != nil {
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*spec.RevisionHistoryLimit), fldPath.Child("revisionHistoryLimit"))...)
+	}
+
+	return allErrs
+}
+
+func validateUpdateStrategy(updateStrategy *seedmanagement.UpdateStrategy, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// Ensure updateStrategy.type is RollingUpdate if specified
+	if updateStrategy.Type != nil {
+		switch *updateStrategy.Type {
+		case "":
+			allErrs = append(allErrs, field.Required(fldPath.Child("type"), ""))
+		case seedmanagement.RollingUpdateStrategyType:
+			if updateStrategy.RollingUpdate != nil {
+				allErrs = append(allErrs, validateRollingUpdateStrategy(updateStrategy.RollingUpdate, fldPath.Child("rollingUpdate"))...)
+			}
+		default:
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("type"),
+				*updateStrategy.Type, []string{string(seedmanagement.RollingUpdateStrategyType)}))
+		}
+	}
+
+	return allErrs
+}
+
+func validateRollingUpdateStrategy(rus *seedmanagement.RollingUpdateStrategy, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// Ensure partition is non-negative if specified
+	if rus.Partition != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*rus.Partition), fldPath.Child("partition"))...)
 	}
 
 	return allErrs
@@ -147,63 +170,114 @@ func ValidateManagedSeedSetSpecUpdate(newSpec, oldSpec *seedmanagement.ManagedSe
 func ValidateManagedSeedTemplateForManagedSeedSet(template *seedmanagement.ManagedSeedTemplate, selector labels.Selector, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// Verify that the selector matches the labels in template.
-	if selector != nil && !selector.Empty() && !selector.Matches(labels.Set(template.Labels)) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("metadata", "labels"), template.Labels, "selector does not match template labels"))
-	}
-
+	allErrs = append(allErrs, validateTemplateLabels(&template.ObjectMeta, selector, fldPath.Child("metadata"))...)
 	allErrs = append(allErrs, ValidateManagedSeedTemplate(template, fldPath)...)
 
 	if template.Spec.Shoot != nil {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("spec", "shoot"), "shoot is forbidden"))
 	}
 
+	switch {
+	case template.Spec.SeedTemplate != nil:
+		allErrs = append(allErrs, validateSeedTemplateLabels(template.Spec.SeedTemplate, selector, fldPath.Child("spec", "seedTemplate"))...)
+	case template.Spec.Gardenlet != nil && template.Spec.Gardenlet.Config != nil:
+		configPath := fldPath.Child("spec", "gardenlet", "config")
+		gardenletConfig, err := confighelper.ConvertGardenletConfiguration(template.Spec.Gardenlet.Config)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(configPath, template.Spec.Gardenlet.Config, fmt.Sprintf("could not convert gardenlet config: %v", err)))
+			return allErrs
+		}
+		if gardenletConfig.SeedConfig == nil {
+			allErrs = append(allErrs, field.Required(configPath.Child("seedConfig"), "seedConfig is required"))
+		} else {
+			allErrs = append(allErrs, validateSeedTemplateLabels(&gardenletConfig.SeedConfig.SeedTemplate, selector, configPath.Child("seedConfig"))...)
+		}
+	}
+
 	return allErrs
+}
+
+func validateSeedTemplateLabels(template *gardencore.SeedTemplate, selector labels.Selector, fldPath *field.Path) field.ErrorList {
+	return validateTemplateLabels(&template.ObjectMeta, selector, fldPath.Child("metadata"))
 }
 
 // ValidateShootTemplateForManagedSeedSet validates the given ShootTemplate.
 func ValidateShootTemplateForManagedSeedSet(template *gardencore.ShootTemplate, selector labels.Selector, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// Verify that the selector matches the labels in template.
-	if selector != nil && !selector.Empty() && !selector.Matches(labels.Set(template.Labels)) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("metadata", "labels"), template.Labels, "selector does not match template labels"))
-	}
-
+	allErrs = append(allErrs, validateTemplateLabels(&template.ObjectMeta, selector, fldPath.Child("metadata"))...)
 	allErrs = append(allErrs, corevalidation.ValidateShootTemplate(template, fldPath)...)
 
 	return allErrs
 }
 
+func validateTemplateLabels(meta *metav1.ObjectMeta, selector labels.Selector, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// Verify that the selector matches the labels
+	if selector != nil && !selector.Empty() && !selector.Matches(labels.Set(meta.Labels)) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("labels"), meta.Labels, "selector does not match template labels"))
+	}
+
+	return allErrs
+}
+
 // ValidateManagedSeedSetStatus validates the given ManagedSeedSetStatus.
-func ValidateManagedSeedSetStatus(status *seedmanagement.ManagedSeedSetStatus, fieldPath *field.Path) field.ErrorList {
+func ValidateManagedSeedSetStatus(status *seedmanagement.ManagedSeedSetStatus, name string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	// Ensure integer fields are non-negative
-	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(status.ObservedGeneration, fieldPath.Child("observedGeneration"))...)
-	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(status.Replicas), fieldPath.Child("replicas"))...)
-	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(status.ReadyReplicas), fieldPath.Child("readyReplicas"))...)
-	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(status.CurrentReplicas), fieldPath.Child("currentReplicas"))...)
-	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(status.UpdatedReplicas), fieldPath.Child("updatedReplicas"))...)
-	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(status.NextReplicaNumber), fieldPath.Child("nextReplicaNumber"))...)
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(status.ObservedGeneration, fldPath.Child("observedGeneration"))...)
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(status.Replicas), fldPath.Child("replicas"))...)
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(status.ReadyReplicas), fldPath.Child("readyReplicas"))...)
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(status.CurrentReplicas), fldPath.Child("currentReplicas"))...)
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(status.UpdatedReplicas), fldPath.Child("updatedReplicas"))...)
+	allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(status.NextReplicaNumber), fldPath.Child("nextReplicaNumber"))...)
 	if status.CollisionCount != nil {
-		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*status.CollisionCount), fieldPath.Child("collisionCount"))...)
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*status.CollisionCount), fldPath.Child("collisionCount"))...)
 	}
 
 	// Ensure the numbers or ready, current, and updated replicas are not greater than the number of replicas
 	if status.ReadyReplicas > status.Replicas {
-		allErrs = append(allErrs, field.Invalid(fieldPath.Child("readyReplicas"), status.ReadyReplicas, "cannot be greater than status.replicas"))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("readyReplicas"), status.ReadyReplicas, "cannot be greater than status.replicas"))
 	}
 	if status.CurrentReplicas > status.Replicas {
-		allErrs = append(allErrs, field.Invalid(fieldPath.Child("currentReplicas"), status.CurrentReplicas, "cannot be greater than status.replicas"))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("currentReplicas"), status.CurrentReplicas, "cannot be greater than status.replicas"))
 	}
 	if status.UpdatedReplicas > status.Replicas {
-		allErrs = append(allErrs, field.Invalid(fieldPath.Child("updatedReplicas"), status.UpdatedReplicas, "cannot be greater than status.replicas"))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("updatedReplicas"), status.UpdatedReplicas, "cannot be greater than status.replicas"))
 	}
 
-	// Ensure the next replica number is greater than or equal to the number of replicas
-	if status.NextReplicaNumber < status.Replicas {
-		allErrs = append(allErrs, field.Invalid(fieldPath.Child("nextReplicaNumber"), status.ReadyReplicas, "cannot be less than status.replicas"))
+	if status.PendingReplica != nil {
+		allErrs = append(allErrs, validatePendingReplica(status.PendingReplica, name, fldPath.Child("pendingReplica"))...)
+	}
+
+	return allErrs
+}
+
+func validatePendingReplica(pendingReplica *seedmanagement.PendingReplica, name string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if parentName, ordinal := getParentNameAndOrdinal(pendingReplica.Name); parentName != name || ordinal < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("name"), pendingReplica.Name, "must contain the parent name and a valid ordinal"))
+	}
+
+	validValues := []string{
+		string(seedmanagement.ShootReconcilingReason),
+		string(seedmanagement.ShootDeletingReason),
+		string(seedmanagement.ShootReconcileFailedReason),
+		string(seedmanagement.ShootDeleteFailedReason),
+		string(seedmanagement.ManagedSeedPreparingReason),
+		string(seedmanagement.ManagedSeedDeletingReason),
+		string(seedmanagement.SeedNotReadyReason),
+		string(seedmanagement.ShootNotHealthyReason),
+	}
+	if !utils.ValueExists(string(pendingReplica.Reason), validValues) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("reason"), pendingReplica.Reason, validValues))
+	}
+
+	if pendingReplica.Retries != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*pendingReplica.Retries), fldPath.Child("retries"))...)
 	}
 
 	return allErrs
@@ -217,4 +291,21 @@ func isDecremented(new, old *int32) bool {
 		return false
 	}
 	return *new < *old
+}
+
+// parentNameAndOrdinalRegex is a regular expression that extracts the parent name and ordinal from a replica name.
+var parentNameAndOrdinalRegex = regexp.MustCompile("(.*)-([0-9]+)$")
+
+// getParentNameAndOrdinal gets the ordinal from the given replica object name.
+// If the object was not created by a ManagedSeedSet, its ordinal is considered to be -1.
+func getParentNameAndOrdinal(name string) (string, int) {
+	subMatches := parentNameAndOrdinalRegex.FindStringSubmatch(name)
+	if len(subMatches) < 3 {
+		return "", -1
+	}
+	ordinal, err := strconv.ParseInt(subMatches[2], 10, 32)
+	if err != nil {
+		return "", -1
+	}
+	return subMatches[1], int(ordinal)
 }

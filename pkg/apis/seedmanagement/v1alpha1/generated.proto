@@ -238,6 +238,11 @@ message ManagedSeedSetStatus {
   // +patchStrategy=merge
   // +optional
   repeated github.com.gardener.gardener.pkg.apis.core.v1beta1.Condition conditions = 10;
+
+  // PendingReplica, if not empty, indicates the replica that is currently pending creation, update, or deletion.
+  // This replica is in a state that requires the controller to wait for it to change before advancing to the next replica.
+  // +optional
+  optional PendingReplica pendingReplica = 11;
 }
 
 // ManagedSeedSpec is the specification of a ManagedSeed.
@@ -280,6 +285,23 @@ message ManagedSeedTemplate {
   // Specification of the desired behavior of the ManagedSeed.
   // +optional
   optional ManagedSeedSpec spec = 2;
+}
+
+// PendingReplica contains information about a replica that is currently pending creation, update, or deletion.
+message PendingReplica {
+  // Name is the replica name.
+  optional string name = 1;
+
+  // Reason is the reason for the replica to be pending.
+  optional string reason = 2;
+
+  // Since is the moment in time since the replica is pending with the specified reason.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time since = 3;
+
+  // Retries is the number of times the shoot operation (reconcile or delete) has been retried after having failed.
+  // Only applicable if Reason is ShootReconciling or ShootDeleting.
+  // +optional
+  optional int32 retries = 4;
 }
 
 // RollingUpdateStrategy is used to communicate parameters for RollingUpdateStrategyType.

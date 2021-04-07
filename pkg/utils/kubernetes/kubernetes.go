@@ -77,6 +77,16 @@ func HasMetaDataAnnotation(meta metav1.Object, key, value string) bool {
 	return ok && val == value
 }
 
+// SetAnnotationAndUpdate sets the annotation on the given object and updates it.
+func SetAnnotationAndUpdate(ctx context.Context, c client.Client, obj client.Object, key, value string) error {
+	if !HasMetaDataAnnotation(obj, key, value) {
+		objCopy := obj.DeepCopyObject()
+		SetMetaDataAnnotation(obj, key, value)
+		return c.Patch(ctx, obj, client.MergeFrom(objCopy))
+	}
+	return nil
+}
+
 func nameAndNamespace(namespaceOrName string, nameOpt ...string) (namespace, name string) {
 	if len(nameOpt) > 1 {
 		panic(fmt.Sprintf("more than name/namespace for key specified: %s/%v", namespaceOrName, nameOpt))
@@ -557,4 +567,13 @@ func MostRecentCompleteLogs(
 	}
 
 	return string(logs), nil
+}
+
+// IgnoreAlreadyExists returns nil on AlreadyExists errors.
+// All other values that are not AlreadyExists errors or nil are returned unmodified.
+func IgnoreAlreadyExists(err error) error {
+	if apierrors.IsAlreadyExists(err) {
+		return nil
+	}
+	return err
 }

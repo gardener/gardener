@@ -314,6 +314,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSpec":             schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedStatus":           schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedTemplate":         schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedTemplate(ref),
+		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.PendingReplica":              schema_pkg_apis_seedmanagement_v1alpha1_PendingReplica(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.RollingUpdateStrategy":       schema_pkg_apis_seedmanagement_v1alpha1_RollingUpdateStrategy(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Shoot":                       schema_pkg_apis_seedmanagement_v1alpha1_Shoot(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.UpdateStrategy":              schema_pkg_apis_seedmanagement_v1alpha1_UpdateStrategy(ref),
@@ -13850,12 +13851,18 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedSetStatus(ref common.Ref
 							},
 						},
 					},
+					"pendingReplica": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PendingReplica, if not empty, indicates the replica that is currently pending creation, update, or deletion. This replica is in a state that requires the controller to wait for it to change before advancing to the next replica.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.PendingReplica"),
+						},
+					},
 				},
 				Required: []string{"replicas"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.PendingReplica"},
 	}
 }
 
@@ -13960,6 +13967,52 @@ func schema_pkg_apis_seedmanagement_v1alpha1_ManagedSeedTemplate(ref common.Refe
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.ManagedSeedSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_seedmanagement_v1alpha1_PendingReplica(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PendingReplica contains information about a replica that is currently pending creation, update, or deletion.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the replica name.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"reason": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Reason is the reason for the replica to be pending.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"since": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Since is the moment in time since the replica is pending with the specified reason.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"retries": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Retries is the number of times the shoot operation (reconcile or delete) has been retried after having failed. Only applicable if Reason is ShootReconciling or ShootDeleting.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+				Required: []string{"name", "reason", "since"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

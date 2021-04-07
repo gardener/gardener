@@ -37,7 +37,13 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				},
 			},
 			Spec: seedmanagement.ManagedSeedSpec{
-				SeedTemplate: &core.SeedTemplate{},
+				SeedTemplate: &core.SeedTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							"foo": "bar",
+						},
+					},
+				},
 			},
 		}
 		shoot = &core.Shoot{
@@ -232,6 +238,10 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.template.spec.seedTemplate.metadata.labels"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.shootTemplate.metadata.labels"),
 				})),
 			))
@@ -330,6 +340,10 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.template.metadata.labels"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.template.spec.seedTemplate.metadata.labels"),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -442,19 +456,6 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 			))
 		})
 
-		It("should forbid invalid next replica number", func() {
-			newManagedSeedSet.Status.Replicas = 3
-
-			errorList := ValidateManagedSeedSetStatusUpdate(newManagedSeedSet, managedSeedSet)
-
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("status.nextReplicaNumber"),
-				})),
-			))
-		})
-
 		It("should forbid decrementing the next replica number or the collision count", func() {
 			newManagedSeedSet.Status.NextReplicaNumber = 1
 			newManagedSeedSet.Status.CollisionCount = pointer.Int32Ptr(0)
@@ -469,6 +470,31 @@ var _ = Describe("ManagedSeedSet Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("status.collisionCount"),
+				})),
+			))
+		})
+
+		It("should forbid invalid pending replica", func() {
+			newManagedSeedSet.Status.PendingReplica = &seedmanagement.PendingReplica{
+				Name:    "foo",
+				Reason:  "unknown",
+				Retries: pointer.Int32Ptr(-1),
+			}
+
+			errorList := ValidateManagedSeedSetStatusUpdate(newManagedSeedSet, managedSeedSet)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("status.pendingReplica.name"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("status.pendingReplica.reason"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("status.pendingReplica.retries"),
 				})),
 			))
 		})

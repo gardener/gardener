@@ -85,6 +85,9 @@ type ControllerManagerControllerConfiguration struct {
 	// ShootReference defines the configuration of the ShootReference controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
 	// +optional
 	ShootReference *ShootReferenceControllerConfiguration `json:"shootReference,omitempty"`
+	// ManagedSeedSet defines the configuration of the ManagedSeedSet controller.
+	// +optional
+	ManagedSeedSet *ManagedSeedSetControllerConfiguration `json:"managedSeedSet,omitempty"`
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
@@ -237,6 +240,19 @@ type ShootReferenceControllerConfiguration struct {
 	// audit policies and referenced in Shoots.
 	// +optional
 	ProtectAuditPolicyConfigMaps *bool `json:"protectAuditPolicyConfigMaps,omitempty"`
+}
+
+// ManagedSeedSetControllerConfiguration defines the configuration of the
+// ManagedSeedSet controller.
+type ManagedSeedSetControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+	// MaxShootRetries is the maximum number of times to retry failed shoots before giving up. Defaults to 3.
+	// +optional
+	MaxShootRetries *int `json:"maxShootRetries,omitempty"`
+	// SyncPeriod is the duration how often the existing resources are reconciled.
+	SyncPeriod metav1.Duration `json:"syncPeriod"`
 }
 
 // LeaderElectionConfiguration defines the configuration of leader election

@@ -137,6 +137,46 @@ type ManagedSeedSetStatus struct {
 	// +patchStrategy=merge
 	// +optional
 	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,10,rep,name=conditions"`
+	// PendingReplica, if not empty, indicates the replica that is currently pending creation, update, or deletion.
+	// This replica is in a state that requires the controller to wait for it to change before advancing to the next replica.
+	// +optional
+	PendingReplica *PendingReplica `json:"pendingReplica,omitempty" protobuf:"bytes,11,opt,name=pendingReplica"`
+}
+
+// PendingReplicaReason is a string enumeration type that enumerates all possible reasons for a replica to be pending.
+type PendingReplicaReason string
+
+const (
+	// ShootReconcilingReason indicates that the replica's shoot is reconciling.
+	ShootReconcilingReason PendingReplicaReason = "ShootReconciling"
+	// ShootDeletingReason indicates that the replica's shoot is deleting.
+	ShootDeletingReason PendingReplicaReason = "ShootDeleting"
+	// ShootReconcileFailedReason indicates that the reconciliation of this replica's shoot has failed.
+	ShootReconcileFailedReason PendingReplicaReason = "ShootReconcileFailed"
+	// ShootDeleteFailedReason indicates that the deletion of tis replica's shoot has failed.
+	ShootDeleteFailedReason PendingReplicaReason = "ShootDeleteFailed"
+	// ManagedSeedPreparingReason indicates that the replica's managed seed is preparing.
+	ManagedSeedPreparingReason PendingReplicaReason = "ManagedSeedPreparing"
+	// ManagedSeedDeletingReason indicates that the replica's managed seed is deleting.
+	ManagedSeedDeletingReason PendingReplicaReason = "ManagedSeedDeleting"
+	// SeedNotReadyReason indicates that the replica's seed is not ready.
+	SeedNotReadyReason PendingReplicaReason = "SeedNotReady"
+	// ShootNotHealthyReason indicates that the replica's shoot is not healthy.
+	ShootNotHealthyReason PendingReplicaReason = "ShootNotHealthy"
+)
+
+// PendingReplica contains information about a replica that is currently pending creation, update, or deletion.
+type PendingReplica struct {
+	// Name is the replica name.
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// Reason is the reason for the replica to be pending.
+	Reason PendingReplicaReason `json:"reason" protobuf:"bytes,2,opt,name=reason,casttype=PendingReplicaReason"`
+	// Since is the moment in time since the replica is pending with the specified reason.
+	Since metav1.Time `json:"since" protobuf:"bytes,3,opt,name=since"`
+	// Retries is the number of times the shoot operation (reconcile or delete) has been retried after having failed.
+	// Only applicable if Reason is ShootReconciling or ShootDeleting.
+	// +optional
+	Retries *int32 `json:"retries,omitempty" protobuf:"varint,4,opt,name=retries"`
 }
 
 // TODO Condition constants
