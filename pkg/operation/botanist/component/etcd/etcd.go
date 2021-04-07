@@ -352,11 +352,11 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 	if e.hvpaConfig != nil && e.hvpaConfig.Enabled {
 		var (
-			hpaLabels                   = map[string]string{v1beta1constants.LabelRole: "etcd-hpa-" + e.role}
-			vpaLabels                   = map[string]string{v1beta1constants.LabelRole: "etcd-vpa-" + e.role}
-			updateModeAuto              = hvpav1alpha1.UpdateModeAuto
-			updateModeMaintenanceWindow = hvpav1alpha1.UpdateModeMaintenanceWindow
-			containerPolicyOff          = autoscalingv1beta2.ContainerScalingModeOff
+			hpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-hpa-" + e.role}
+			vpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-vpa-" + e.role}
+			updateModeAuto     = hvpav1alpha1.UpdateModeAuto
+			updateModeOff      = hvpav1alpha1.UpdateModeOff
+			containerPolicyOff = autoscalingv1beta2.ContainerScalingModeOff
 		)
 
 		if _, err := controllerutil.CreateOrUpdate(ctx, e.client, hvpa, func() error {
@@ -418,7 +418,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				},
 				ScaleDown: hvpav1alpha1.ScaleType{
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: &updateModeMaintenanceWindow,
+						UpdateMode: &updateModeOff,
 					},
 					StabilizationDuration: pointer.StringPtr("15m"),
 					MinChange: hvpav1alpha1.ScaleParams{

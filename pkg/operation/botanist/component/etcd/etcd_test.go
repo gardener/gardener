@@ -89,13 +89,13 @@ var _ = Describe("Etcd", func() {
 			Begin: "1234",
 			End:   "5678",
 		}
-		now                         = time.Time{}
-		quota                       = resource.MustParse("8Gi")
-		garbageCollectionPolicy     = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
-		garbageCollectionPeriod     = metav1.Duration{Duration: 12 * time.Hour}
-		updateModeAuto              = hvpav1alpha1.UpdateModeAuto
-		updateModeMaintenanceWindow = hvpav1alpha1.UpdateModeMaintenanceWindow
-		containerPolicyOff          = autoscalingv1beta2.ContainerScalingModeOff
+		now                     = time.Time{}
+		quota                   = resource.MustParse("8Gi")
+		garbageCollectionPolicy = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
+		garbageCollectionPeriod = metav1.Duration{Duration: 12 * time.Hour}
+		updateModeAuto          = hvpav1alpha1.UpdateModeAuto
+		updateModeOff           = hvpav1alpha1.UpdateModeOff
+		containerPolicyOff      = autoscalingv1beta2.ContainerScalingModeOff
 
 		networkPolicyName = "allow-etcd"
 		etcdName          = "etcd-" + testRole
@@ -380,7 +380,7 @@ var _ = Describe("Etcd", func() {
 						},
 						ScaleDown: hvpav1alpha1.ScaleType{
 							UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-								UpdateMode: &updateModeMaintenanceWindow,
+								UpdateMode: &updateModeOff,
 							},
 							StabilizationDuration: pointer.StringPtr("15m"),
 							MinChange: hvpav1alpha1.ScaleParams{
