@@ -35,6 +35,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/common"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 const (
@@ -383,7 +384,7 @@ var _ = Describe("Replica", func() {
 			shoot := shoot(nil, "", "", "", false)
 			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, s *gardencorev1beta1.Shoot, _ client.Patch) error {
-					Expect(s.Annotations).To(HaveKeyWithValue(common.ConfirmationDeletion, "true"))
+					Expect(s.Annotations).To(HaveKeyWithValue(gutil.ConfirmationDeletion, "true"))
 					*shoot = *s
 					return nil
 				},

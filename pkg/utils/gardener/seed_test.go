@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils_test
+package gardener_test
 
 import (
 	. "github.com/gardener/gardener/pkg/utils/gardener"
@@ -23,7 +23,6 @@ import (
 )
 
 var _ = Describe("utils", func() {
-
 	DescribeTable("#ComputeGardenNamespace",
 		func(name, expected string) {
 			actual := ComputeGardenNamespace(name)

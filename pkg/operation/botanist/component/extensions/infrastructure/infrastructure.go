@@ -29,8 +29,8 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -161,7 +161,7 @@ func (i *infrastructure) deploy(ctx context.Context, operation string) (extensio
 
 // Restore uses the seed client and the ShootState to create the Infrastructure resources and restore their state.
 func (i *infrastructure) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
-	return common.RestoreExtensionWithDeployFunction(
+	return extensions.RestoreExtensionWithDeployFunction(
 		ctx,
 		i.client,
 		shootState,
@@ -173,7 +173,7 @@ func (i *infrastructure) Restore(ctx context.Context, shootState *gardencorev1al
 
 // Migrate migrates the Infrastructure resources.
 func (i *infrastructure) Migrate(ctx context.Context) error {
-	return common.MigrateExtensionCR(
+	return extensions.MigrateExtensionCR(
 		ctx,
 		i.client,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Infrastructure{} },
@@ -184,7 +184,7 @@ func (i *infrastructure) Migrate(ctx context.Context) error {
 
 // Destroy deletes the Infrastructure resource.
 func (i *infrastructure) Destroy(ctx context.Context) error {
-	return common.DeleteExtensionCR(
+	return extensions.DeleteExtensionCR(
 		ctx,
 		i.client,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Infrastructure{} },
@@ -195,7 +195,7 @@ func (i *infrastructure) Destroy(ctx context.Context) error {
 
 // Wait waits until the Infrastructure resource is ready.
 func (i *infrastructure) Wait(ctx context.Context) error {
-	return common.WaitUntilExtensionCRReady(
+	return extensions.WaitUntilExtensionCRReady(
 		ctx,
 		i.client,
 		i.logger,
@@ -220,7 +220,7 @@ func (i *infrastructure) Wait(ctx context.Context) error {
 
 // WaitMigrate waits until the Infrastructure resources are migrated successfully.
 func (i *infrastructure) WaitMigrate(ctx context.Context) error {
-	return common.WaitUntilExtensionCRMigrated(
+	return extensions.WaitUntilExtensionCRMigrated(
 		ctx,
 		i.client,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Infrastructure{} },
@@ -233,7 +233,7 @@ func (i *infrastructure) WaitMigrate(ctx context.Context) error {
 
 // WaitCleanup waits until the Infrastructure resource is deleted.
 func (i *infrastructure) WaitCleanup(ctx context.Context) error {
-	return common.WaitUntilExtensionCRDeleted(
+	return extensions.WaitUntilExtensionCRDeleted(
 		ctx,
 		i.client,
 		i.logger,

@@ -36,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 )
@@ -814,7 +815,7 @@ var _ = Describe("validator", func() {
 
 			It("should allow adding the deletion confirmation", func() {
 				shoot.Annotations = make(map[string]string)
-				shoot.Annotations[common.ConfirmationDeletion] = "true"
+				shoot.Annotations[gutil.ConfirmationDeletion] = "true"
 
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 

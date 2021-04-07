@@ -28,8 +28,8 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	"github.com/gardener/gardener/pkg/operation/common"
 	gardenerutils "github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -378,7 +378,7 @@ func getDefaultDomains(secretLister kubecorev1listers.SecretLister) ([]string, e
 
 	var defaultDomains []string
 	for _, domainSecret := range domainSecrets {
-		_, domain, _, _, err := common.GetDomainInfoFromAnnotations(domainSecret.GetAnnotations())
+		_, domain, _, _, err := gutil.GetDomainInfoFromAnnotations(domainSecret.GetAnnotations())
 		if err != nil {
 			return nil, err
 		}

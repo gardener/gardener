@@ -32,7 +32,7 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 )
 
@@ -73,8 +73,8 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 			},
 		}
 
-		deletionUnprotectedLabels    = map[string]string{common.GardenerDeletionProtected: "false"}
-		deletionConfirmedAnnotations = map[string]string{common.ConfirmationDeletion: "true"}
+		deletionUnprotectedLabels    = map[string]string{gutil.DeletionProtected: "false"}
+		deletionConfirmedAnnotations = map[string]string{gutil.ConfirmationDeletion: "true"}
 	)
 
 	BeforeEach(func() {

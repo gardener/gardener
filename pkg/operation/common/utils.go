@@ -20,9 +20,7 @@ import (
 	"fmt"
 	"math/big"
 	"net"
-	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -30,7 +28,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -48,13 +45,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
-	"k8s.io/client-go/util/retry"
-	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// TimeNow returns the current time. Exposed for testing.
-var TimeNow = time.Now
 
 // GetSecretKeysWithPrefix returns a list of keys of the given map <m> which are prefixed with <kind>.
 func GetSecretKeysWithPrefix(kind string, m map[string]*corev1.Secret) []string {
@@ -174,23 +166,6 @@ func projectForNamespace(projects []gardencorev1beta1.Project, namespaceName str
 	}
 
 	return nil, apierrors.NewNotFound(gardencorev1beta1.Resource("Project"), fmt.Sprintf("for namespace %s", namespaceName))
-}
-
-// GardenerDeletionGracePeriod is the default grace period for Gardener's force deletion methods.
-var GardenerDeletionGracePeriod = 5 * time.Minute
-
-// ShouldObjectBeRemoved determines whether the given object should be gone now.
-// This is calculated by first checking the deletion timestamp of an object: If the deletion timestamp
-// is unset, the object should not be removed - i.e. this returns false.
-// Otherwise, it is checked whether the deletionTimestamp is before the current time minus the
-// grace period.
-func ShouldObjectBeRemoved(obj metav1.Object, gracePeriod time.Duration) bool {
-	deletionTimestamp := obj.GetDeletionTimestamp()
-	if deletionTimestamp == nil {
-		return false
-	}
-
-	return deletionTimestamp.Time.Before(time.Now().Add(-gracePeriod))
 }
 
 // DeleteHvpa delete all resources required for the HVPA in the given namespace.
@@ -339,23 +314,6 @@ func DeleteSeedLoggingStack(ctx context.Context, k8sClient client.Client) error 
 	return DeleteLoki(ctx, k8sClient, v1beta1constants.GardenNamespace)
 }
 
-// GetContainerResourcesInStatefulSet  returns the containers resources in StatefulSet
-func GetContainerResourcesInStatefulSet(ctx context.Context, k8sClient client.Client, key client.ObjectKey) (map[string]*corev1.ResourceRequirements, error) {
-	statefulSet := &appsv1.StatefulSet{}
-	resourcesPerContainer := make(map[string]*corev1.ResourceRequirements)
-	if err := k8sClient.Get(ctx, key, statefulSet); client.IgnoreNotFound(err) != nil {
-		return nil, err
-	} else if !apierrors.IsNotFound(err) {
-		for _, container := range statefulSet.Spec.Template.Spec.Containers {
-			resourcesPerContainer[container.Name] = container.Resources.DeepCopy()
-		}
-		return resourcesPerContainer, nil
-	}
-
-	// Use the default resources defined in values file
-	return nil, nil
-}
-
 // DeleteReserveExcessCapacity deletes the deployment and priority class for excess capacity
 func DeleteReserveExcessCapacity(ctx context.Context, k8sClient client.Client) error {
 	if k8sClient == nil {
@@ -477,163 +435,6 @@ func DeleteGrafanaByRole(ctx context.Context, k8sClient kubernetes.Interface, na
 	return nil
 }
 
-// GetDomainInfoFromAnnotations returns the provider and the domain that is specified in the give annotations.
-func GetDomainInfoFromAnnotations(annotations map[string]string) (provider string, domain string, includeZones, excludeZones []string, err error) {
-	if annotations == nil {
-		return "", "", nil, nil, fmt.Errorf("domain secret has no annotations")
-	}
-
-	if providerAnnotation, ok := annotations[DNSProvider]; ok {
-		provider = providerAnnotation
-	}
-
-	if domainAnnotation, ok := annotations[DNSDomain]; ok {
-		domain = domainAnnotation
-	}
-
-	if includeZonesAnnotation, ok := annotations[DNSIncludeZones]; ok {
-		includeZones = strings.Split(includeZonesAnnotation, ",")
-	}
-	if excludeZonesAnnotation, ok := annotations[DNSExcludeZones]; ok {
-		excludeZones = strings.Split(excludeZonesAnnotation, ",")
-	}
-
-	if len(domain) == 0 {
-		return "", "", nil, nil, fmt.Errorf("missing dns domain annotation on domain secret")
-	}
-	if len(provider) == 0 {
-		return "", "", nil, nil, fmt.Errorf("missing dns provider annotation on domain secret")
-	}
-
-	return
-}
-
-// CurrentReplicaCount returns the current replicaCount for the given deployment.
-func CurrentReplicaCount(ctx context.Context, client client.Client, namespace, deploymentName string) (int32, error) {
-	deployment := &appsv1.Deployment{}
-	if err := client.Get(ctx, kutil.Key(namespace, deploymentName), deployment); err != nil && !apierrors.IsNotFound(err) {
-		return 0, err
-	}
-	if deployment.Spec.Replicas == nil {
-		return 0, nil
-	}
-	return *deployment.Spec.Replicas, nil
-}
-
-// RespectShootSyncPeriodOverwrite checks whether to respect the sync period overwrite of a Shoot or not.
-func RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite bool, shoot *gardencorev1beta1.Shoot) bool {
-	return respectSyncPeriodOverwrite || shoot.Namespace == v1beta1constants.GardenNamespace
-}
-
-// ShouldIgnoreShoot determines whether a Shoot should be ignored or not.
-func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *gardencorev1beta1.Shoot) bool {
-	if !RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite, shoot) {
-		return false
-	}
-
-	value, ok := shoot.Annotations[ShootIgnore]
-	if !ok {
-		return false
-	}
-
-	ignore, _ := strconv.ParseBool(value)
-	return ignore
-}
-
-// IsShootFailed checks if a Shoot is failed.
-func IsShootFailed(shoot *gardencorev1beta1.Shoot) bool {
-	lastOperation := shoot.Status.LastOperation
-
-	return lastOperation != nil && lastOperation.State == gardencorev1beta1.LastOperationStateFailed &&
-		shoot.Generation == shoot.Status.ObservedGeneration &&
-		shoot.Status.Gardener.Version == version.Get().GitVersion
-}
-
-// IsNowInEffectiveShootMaintenanceTimeWindow checks if the current time is in the effective
-// maintenance time window of the Shoot.
-func IsNowInEffectiveShootMaintenanceTimeWindow(shoot *gardencorev1beta1.Shoot) bool {
-	return EffectiveShootMaintenanceTimeWindow(shoot).Contains(time.Now())
-}
-
-// LastReconciliationDuringThisTimeWindow returns true if <now> is contained in the given effective maintenance time
-// window of the shoot and if the <lastReconciliation> did not happen longer than the longest possible duration of a
-// maintenance time window.
-func LastReconciliationDuringThisTimeWindow(shoot *gardencorev1beta1.Shoot) bool {
-	if shoot.Status.LastOperation == nil {
-		return false
-	}
-
-	var (
-		timeWindow         = EffectiveShootMaintenanceTimeWindow(shoot)
-		now                = time.Now()
-		lastReconciliation = shoot.Status.LastOperation.LastUpdateTime.Time
-	)
-
-	return timeWindow.Contains(lastReconciliation) && now.UTC().Sub(lastReconciliation.UTC()) <= gardencorev1beta1.MaintenanceTimeWindowDurationMaximum
-}
-
-// IsObservedAtLatestGenerationAndSucceeded checks whether the Shoot's generation has changed or if the LastOperation status
-// is Succeeded.
-func IsObservedAtLatestGenerationAndSucceeded(shoot *gardencorev1beta1.Shoot) bool {
-	lastOperation := shoot.Status.LastOperation
-	return shoot.Generation == shoot.Status.ObservedGeneration &&
-		(lastOperation != nil && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded)
-}
-
-// SyncPeriodOfShoot determines the sync period of the given shoot.
-//
-// If no overwrite is allowed, the defaultMinSyncPeriod is returned.
-// Otherwise, the overwrite is parsed. If an error occurs or it is smaller than the defaultMinSyncPeriod,
-// the defaultMinSyncPeriod is returned. Otherwise, the overwrite is returned.
-func SyncPeriodOfShoot(respectSyncPeriodOverwrite bool, defaultMinSyncPeriod time.Duration, shoot *gardencorev1beta1.Shoot) time.Duration {
-	if !RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite, shoot) {
-		return defaultMinSyncPeriod
-	}
-
-	syncPeriodOverwrite, ok := shoot.Annotations[ShootSyncPeriod]
-	if !ok {
-		return defaultMinSyncPeriod
-	}
-
-	syncPeriod, err := time.ParseDuration(syncPeriodOverwrite)
-	if err != nil {
-		return defaultMinSyncPeriod
-	}
-
-	if syncPeriod < defaultMinSyncPeriod {
-		return defaultMinSyncPeriod
-	}
-	return syncPeriod
-}
-
-// EffectiveMaintenanceTimeWindow cuts a maintenance time window at the end with a guess of 15 minutes. It is subtracted from the end
-// of a maintenance time window to use a best-effort kind of finishing the operation before the end.
-// Generally, we can't make sure that the maintenance operation is done by the end of the time window anyway (considering large
-// clusters with hundreds of nodes, a rolling update will take several hours).
-func EffectiveMaintenanceTimeWindow(timeWindow *utils.MaintenanceTimeWindow) *utils.MaintenanceTimeWindow {
-	return timeWindow.WithEnd(timeWindow.End().Add(0, -15, 0))
-}
-
-// EffectiveShootMaintenanceTimeWindow returns the effective MaintenanceTimeWindow of the given Shoot.
-func EffectiveShootMaintenanceTimeWindow(shoot *gardencorev1beta1.Shoot) *utils.MaintenanceTimeWindow {
-	maintenance := shoot.Spec.Maintenance
-	if maintenance == nil || maintenance.TimeWindow == nil {
-		return utils.AlwaysTimeWindow
-	}
-
-	timeWindow, err := utils.ParseMaintenanceTimeWindow(maintenance.TimeWindow.Begin, maintenance.TimeWindow.End)
-	if err != nil {
-		return utils.AlwaysTimeWindow
-	}
-
-	return EffectiveMaintenanceTimeWindow(timeWindow)
-}
-
-// GardenEtcdEncryptionSecretName returns the name to the 'backup' of the etcd encryption secret in the Garden cluster.
-func GardenEtcdEncryptionSecretName(shootName string) string {
-	return fmt.Sprintf("%s.%s", shootName, EtcdEncryptionSecretName)
-}
-
 // ReadServiceAccountSigningKeySecret reads the signing key secret to extract the signing key.
 // It errors if there is no value at ServiceAccountSigningKeySecretDataKey.
 func ReadServiceAccountSigningKeySecret(secret *corev1.Secret) (string, error) {
@@ -655,12 +456,6 @@ func GetServiceAccountSigningKeySecret(ctx context.Context, c client.Client, sho
 	return ReadServiceAccountSigningKeySecret(secret)
 }
 
-// GetAPIServerDomain returns the fully qualified domain name of for the api-server for the Shoot cluster. The
-// end result is 'api.<domain>'.
-func GetAPIServerDomain(domain string) string {
-	return fmt.Sprintf("%s.%s", APIServerPrefix, domain)
-}
-
 // GetSecretFromSecretRef gets the Secret object from <secretRef>.
 func GetSecretFromSecretRef(ctx context.Context, c client.Client, secretRef *corev1.SecretReference) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
@@ -668,46 +463,6 @@ func GetSecretFromSecretRef(ctx context.Context, c client.Client, secretRef *cor
 		return nil, err
 	}
 	return secret, nil
-}
-
-// CheckIfDeletionIsConfirmed returns whether the deletion of an object is confirmed or not.
-func CheckIfDeletionIsConfirmed(obj client.Object) error {
-	annotations := obj.GetAnnotations()
-	if annotations == nil {
-		return annotationRequiredError()
-	}
-
-	value := annotations[ConfirmationDeletion]
-	if confirmed, err := strconv.ParseBool(value); err != nil || !confirmed {
-		return annotationRequiredError()
-	}
-	return nil
-}
-
-func annotationRequiredError() error {
-	return fmt.Errorf("must have a %q annotation to delete", ConfirmationDeletion)
-}
-
-// ConfirmDeletion adds Gardener's deletion confirmation annotation to the given object and sends an UPDATE request.
-func ConfirmDeletion(ctx context.Context, c client.Client, obj client.Object) error {
-	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return err
-			}
-			return nil
-		}
-
-		existing := obj.DeepCopyObject()
-		kutil.SetMetaDataAnnotation(obj, ConfirmationDeletion, "true")
-		kutil.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
-
-		if reflect.DeepEqual(existing, obj) {
-			return nil
-		}
-
-		return c.Update(ctx, obj)
-	})
 }
 
 // ExtensionID returns an identifier for the given extension kind/type.

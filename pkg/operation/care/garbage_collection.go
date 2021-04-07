@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/version"
@@ -119,6 +119,9 @@ func (g *GarbageCollection) performGarbageCollectionShoot(ctx context.Context, s
 	return g.deleteStalePods(ctx, shootClient, podList)
 }
 
+// GardenerDeletionGracePeriod is the default grace period for Gardener's force deletion methods.
+const GardenerDeletionGracePeriod = 5 * time.Minute
+
 func (g *GarbageCollection) deleteStalePods(ctx context.Context, c client.Client, podList *corev1.PodList) error {
 	var result error
 
@@ -131,7 +134,7 @@ func (g *GarbageCollection) deleteStalePods(ctx context.Context, c client.Client
 			continue
 		}
 
-		if common.ShouldObjectBeRemoved(&pod, common.GardenerDeletionGracePeriod) {
+		if shouldObjectBeRemoved(&pod, GardenerDeletionGracePeriod) {
 			g.logger.Debugf("Deleting stuck terminating pod %q", pod.Name)
 			if err := c.Delete(ctx, &pod, kubernetes.ForceDeleteOptions...); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)
@@ -140,6 +143,20 @@ func (g *GarbageCollection) deleteStalePods(ctx context.Context, c client.Client
 	}
 
 	return result
+}
+
+// shouldObjectBeRemoved determines whether the given object should be gone now.
+// This is calculated by first checking the deletion timestamp of an object: If the deletion timestamp
+// is unset, the object should not be removed - i.e. this returns false.
+// Otherwise, it is checked whether the deletionTimestamp is before the current time minus the
+// grace period.
+func shouldObjectBeRemoved(obj metav1.Object, gracePeriod time.Duration) bool {
+	deletionTimestamp := obj.GetDeletionTimestamp()
+	if deletionTimestamp == nil {
+		return false
+	}
+
+	return deletionTimestamp.Time.Before(time.Now().Add(-gracePeriod))
 }
 
 func (g *GarbageCollection) removeStaleOutOfDiskNodeCondition(ctx context.Context) error {

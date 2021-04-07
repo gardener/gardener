@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -91,7 +90,7 @@ func (b *Botanist) determineKubeControllerManagerReplicas(ctx context.Context) (
 	if b.Shoot.HibernationEnabled == b.Shoot.Info.Status.IsHibernated {
 		// shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated, so keep the replicas which
 		// are controlled by the dependency-watchdog
-		return common.CurrentReplicaCount(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager)
+		return kutil.CurrentReplicaCountForDeployment(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager)
 	}
 
 	// shoot is being reconciled with .spec.hibernation.enabled!=.status.isHibernated, so deploy KCM. in case the

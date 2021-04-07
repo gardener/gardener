@@ -34,12 +34,13 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/network"
-	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -188,7 +189,8 @@ var _ = Describe("#Network", func() {
 
 		It("should return error when it's not deleted successfully", func() {
 			defer test.WithVars(
-				&common.TimeNow, mockNow.Do,
+				&extensions.TimeNow, mockNow.Do,
+				&gutil.TimeNow, mockNow.Do,
 			)()
 
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
@@ -198,7 +200,7 @@ var _ = Describe("#Network", func() {
 					Name:      networkName,
 					Namespace: networkNs,
 					Annotations: map[string]string{
-						common.ConfirmationDeletion:        "true",
+						gutil.ConfirmationDeletion:         "true",
 						v1beta1constants.GardenerTimestamp: now.UTC().String(),
 					},
 				}}
@@ -252,7 +254,7 @@ var _ = Describe("#Network", func() {
 		It("should restore the network state if it exists in the shoot state", func() {
 			defer test.WithVars(
 				&network.TimeNow, mockNow.Do,
-				&common.TimeNow, mockNow.Do,
+				&extensions.TimeNow, mockNow.Do,
 			)()
 
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
@@ -291,7 +293,7 @@ var _ = Describe("#Network", func() {
 		It("should migrate the resource", func() {
 			defer test.WithVars(
 				&network.TimeNow, mockNow.Do,
-				&common.TimeNow, mockNow.Do,
+				&extensions.TimeNow, mockNow.Do,
 			)()
 
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()

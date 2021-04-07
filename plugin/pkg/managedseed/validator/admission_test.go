@@ -28,7 +28,7 @@ import (
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	seedmanagementfake "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/managedseed/validator"
 
@@ -116,8 +116,8 @@ var _ = Describe("ManagedSeed", func() {
 						v1beta1constants.GardenRole: v1beta1constants.GardenRoleDefaultDomain,
 					},
 					Annotations: map[string]string{
-						common.DNSProvider: dnsProvider,
-						common.DNSDomain:   domain,
+						gutil.DNSProvider: dnsProvider,
+						gutil.DNSDomain:   domain,
 					},
 				},
 			}

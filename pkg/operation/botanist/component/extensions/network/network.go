@@ -22,8 +22,8 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -97,7 +97,7 @@ func (n *network) Deploy(ctx context.Context) error {
 
 // Restore uses the seed client and the ShootState to create the Network custom resource in the Shoot namespace in the Seed and restore its state
 func (n *network) Restore(ctx context.Context, shootState *v1alpha1.ShootState) error {
-	return common.RestoreExtensionWithDeployFunction(
+	return extensions.RestoreExtensionWithDeployFunction(
 		ctx,
 		n.client,
 		shootState,
@@ -109,7 +109,7 @@ func (n *network) Restore(ctx context.Context, shootState *v1alpha1.ShootState) 
 
 // Migrate migrates the Network custom resource
 func (n *network) Migrate(ctx context.Context) error {
-	return common.MigrateExtensionCR(
+	return extensions.MigrateExtensionCR(
 		ctx,
 		n.client,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Network{} },
@@ -120,7 +120,7 @@ func (n *network) Migrate(ctx context.Context) error {
 
 // WaitMigrate waits until the Network custom resource has been successfully migrated.
 func (n *network) WaitMigrate(ctx context.Context) error {
-	return common.WaitUntilExtensionCRMigrated(
+	return extensions.WaitUntilExtensionCRMigrated(
 		ctx,
 		n.client,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Network{} },
@@ -133,7 +133,7 @@ func (n *network) WaitMigrate(ctx context.Context) error {
 
 // Destroy deletes the Network CRD
 func (n *network) Destroy(ctx context.Context) error {
-	return common.DeleteExtensionCR(
+	return extensions.DeleteExtensionCR(
 		ctx,
 		n.client,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Network{} },
@@ -144,7 +144,7 @@ func (n *network) Destroy(ctx context.Context) error {
 
 // Wait waits until the Network CRD is ready (deployed or restored)
 func (n *network) Wait(ctx context.Context) error {
-	return common.WaitUntilExtensionCRReady(
+	return extensions.WaitUntilExtensionCRReady(
 		ctx,
 		n.client,
 		n.logger,
@@ -161,7 +161,7 @@ func (n *network) Wait(ctx context.Context) error {
 
 // WaitCleanup waits until the Network CRD is deleted
 func (n *network) WaitCleanup(ctx context.Context) error {
-	return common.WaitUntilExtensionCRDeleted(
+	return extensions.WaitUntilExtensionCRDeleted(
 		ctx,
 		n.client,
 		n.logger,

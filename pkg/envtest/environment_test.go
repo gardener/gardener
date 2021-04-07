@@ -25,7 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
-	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -40,7 +40,7 @@ var _ = Describe("GardenerTestEnvironment", func() {
 		project := &gardencorev1beta1.Project{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
 		Expect(testClient.Create(ctx, project)).To(Succeed())
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(project), project)).To(Succeed())
-		Expect(common.ConfirmDeletion(ctx, testClient, project)).To(Succeed())
+		Expect(gutil.ConfirmDeletion(ctx, testClient, project)).To(Succeed())
 		Expect(testClient.Delete(ctx, project)).To(Succeed())
 	})
 
@@ -48,7 +48,7 @@ var _ = Describe("GardenerTestEnvironment", func() {
 		project := &gardencorev1alpha1.Project{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
 		Expect(testClient.Create(ctx, project)).To(Succeed())
 		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(project), project)).To(Succeed())
-		Expect(common.ConfirmDeletion(ctx, testClient, project)).To(Succeed())
+		Expect(gutil.ConfirmDeletion(ctx, testClient, project)).To(Succeed())
 		Expect(testClient.Delete(ctx, project)).To(Succeed())
 	})
 

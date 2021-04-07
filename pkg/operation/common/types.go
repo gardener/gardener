@@ -25,26 +25,6 @@ const (
 	// BasicAuthSecretName is the name of the secret containing basic authentication credentials for the kube-apiserver.
 	BasicAuthSecretName = "kube-apiserver-basic-auth"
 
-	// ConfirmationDeletion is an annotation on a Shoot and Project resources whose value must be set to "true" in order to
-	// allow deleting the resource (if the annotation is not set any DELETE request will be denied).
-	ConfirmationDeletion = "confirmation.gardener.cloud/deletion"
-
-	// DNSProvider is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
-	// DNS provider.
-	DNSProvider = "dns.gardener.cloud/provider"
-
-	// DNSDomain is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
-	// domain name.
-	DNSDomain = "dns.gardener.cloud/domain"
-
-	// DNSIncludeZones is the key for an annotation on a Kubernetes Secret object whose value must point to a list
-	// of zones that shall be included.
-	DNSIncludeZones = "dns.gardener.cloud/include-zones"
-
-	// DNSExcludeZones is the key for an annotation on a Kubernetes Secret object whose value must point to a list
-	// of zones that shall be excluded.
-	DNSExcludeZones = "dns.gardener.cloud/exclude-zones"
-
 	// EtcdEncryptionSecretName is the name of the shoot-specific secret which contains
 	// that shoot's EncryptionConfiguration. The EncryptionConfiguration contains a key
 	// which the shoot's apiserver uses for encrypting selected etcd content.
@@ -74,11 +54,6 @@ const (
 	// EtcdEncryptionKeySecretLen is the expected length in bytes of the EncryptionConfiguration's key
 	EtcdEncryptionKeySecretLen = 32
 
-	// GardenerDeletionProtected is a label on CustomResourceDefinitions indicating that the deletion is protected, i.e.
-	// it must be confirmed with the `confirmation.gardener.cloud/deletion=true` annotation before a `DELETE` call
-	// is accepted.
-	GardenerDeletionProtected = "gardener.cloud/deletion-protected"
-
 	// ETCDEncryptionConfigDataName is the name of ShootState data entry holding the current key and encryption state used to encrypt shoot resources
 	ETCDEncryptionConfigDataName = "etcdEncryptionConfiguration"
 
@@ -103,21 +78,6 @@ const (
 
 	// AlertManagerPrefix is a constant for a prefix used for the AlertManager instance.
 	AlertManagerPrefix = "au"
-
-	// IngressPrefix is the part of a FQDN which will be used to construct the domain name for an ingress controller of
-	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the ingress domain would be
-	// '*.<IngressPrefix>.cluster.example.com'.
-	IngressPrefix = "ingress"
-
-	// APIServerPrefix is the part of a FQDN which will be used to construct the domain name for the kube-apiserver of
-	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the apiserver domain would be
-	// 'api.cluster.example.com'.
-	APIServerPrefix = "api"
-
-	// InternalDomainKey is a key which must be present in an internal domain constructed for a Shoot cluster. If the
-	// configured internal domain already contains it, it won't be added twice. If it does not contain it, it will be
-	// appended.
-	InternalDomainKey = "internal"
 
 	// CoreDNSDeploymentName is the name of the coredns deployment.
 	CoreDNSDeploymentName = "coredns"
@@ -210,17 +170,6 @@ const (
 
 	// ShootOperationReconcile is a constant for an annotation on a Shoot indicating that a Shoot reconciliation shall be triggered.
 	ShootOperationReconcile = "reconcile"
-
-	// ShootSyncPeriod is a constant for an annotation on a Shoot which may be used to overwrite the global Shoot controller sync period.
-	// The value must be a duration. It can also be used to disable the reconciliation at all by setting it to 0m. Disabling the reconciliation
-	// does only mean that the period reconciliation is disabled. However, when the Gardener is restarted/redeployed or the specification is
-	// changed then the reconciliation flow will be executed.
-	ShootSyncPeriod = "shoot.gardener.cloud/sync-period"
-
-	// ShootIgnore is a constant for an annotation on a Shoot which may be used to tell the Gardener that the Shoot with this name should be
-	// ignored completely. That means that the Shoot will never reach the reconciliation flow (independent of the operation (create/update/
-	// delete)).
-	ShootIgnore = "shoot.gardener.cloud/ignore"
 
 	// ManagedResourceShootCoreName is the name of the shoot core managed resource.
 	ManagedResourceShootCoreName = "shoot-core"

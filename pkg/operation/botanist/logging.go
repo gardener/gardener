@@ -57,7 +57,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	lokiValues["hvpa"] = hvpaValues
 
 	if hvpaEnabled {
-		currentResources, err := common.GetContainerResourcesInStatefulSet(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, "loki"))
+		currentResources, err := kutil.GetContainerResourcesInStatefulSet(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, "loki"))
 		if err != nil {
 			return err
 		}

@@ -42,8 +42,8 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -102,9 +102,9 @@ var _ = Describe("handler", func() {
 			otherResources = resources[2:]
 			fooResource    = metav1.GroupVersionResource{Group: "foo", Version: "bar", Resource: "baz"}
 
-			deletionUnprotectedLabels    = map[string]string{common.GardenerDeletionProtected: "false"}
-			deletionProtectedLabels      = map[string]string{common.GardenerDeletionProtected: "true"}
-			deletionConfirmedAnnotations = map[string]string{common.ConfirmationDeletion: "true"}
+			deletionUnprotectedLabels    = map[string]string{gutil.DeletionProtected: "false"}
+			deletionProtectedLabels      = map[string]string{gutil.DeletionProtected: "true"}
+			deletionConfirmedAnnotations = map[string]string{gutil.ConfirmationDeletion: "true"}
 		)
 
 		resourceToId := func(resource metav1.GroupVersionResource) string {

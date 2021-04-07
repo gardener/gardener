@@ -22,6 +22,7 @@ import (
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -126,7 +127,7 @@ func (r *shootQuotaReconciler) Reconcile(ctx context.Context, request reconcile.
 		r.logger.Info("[SHOOT QUOTA] Shoot cluster lifetime expired. Shoot will be deleted.")
 
 		// We have to annotate the Shoot to confirm the deletion.
-		if err := common.ConfirmDeletion(ctx, r.gardenClient, shoot); err != nil {
+		if err := gutil.ConfirmDeletion(ctx, r.gardenClient, shoot); err != nil {
 			return reconcile.Result{}, err
 		}
 

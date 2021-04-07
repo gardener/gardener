@@ -22,13 +22,14 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -390,7 +391,10 @@ var _ = Describe("Worker", func() {
 		})
 
 		It("should return error if not deleted successfully", func() {
-			defer test.WithVars(&common.TimeNow, mockNow.Do)()
+			defer test.WithVars(
+				&extensions.TimeNow, mockNow.Do,
+				&gutil.TimeNow, mockNow.Do,
+			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			fakeErr := fmt.Errorf("some random error")
@@ -444,7 +448,7 @@ var _ = Describe("Worker", func() {
 		It("should properly restore the worker state if it exists", func() {
 			defer test.WithVars(
 				&worker.TimeNow, mockNow.Do,
-				&common.TimeNow, mockNow.Do,
+				&extensions.TimeNow, mockNow.Do,
 			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 

@@ -34,8 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/operation/common"
 	sacadmission "github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 const (
@@ -150,7 +150,7 @@ func checkIfObjectDeletionIsConfirmed(log logr.Logger, object runtime.Object, ki
 		return nil
 	}
 
-	if err := common.CheckIfDeletionIsConfirmed(obj); err != nil {
+	if err := gutil.CheckIfDeletionIsConfirmed(obj); err != nil {
 		log.Info("Deletion is not confirmed - preventing deletion")
 		return err
 	}
@@ -162,14 +162,14 @@ func checkIfObjectDeletionIsConfirmed(log logr.Logger, object runtime.Object, ki
 // TODO: This function can be removed once the minimum seed Kubernetes version is bumped to >= 1.15. In 1.15, webhook
 // configurations may use object selectors, i.e., we can get rid of this custom filtering.
 func crdMustBeConsidered(log logr.Logger, labels map[string]string) bool {
-	val, ok := labels[common.GardenerDeletionProtected]
+	val, ok := labels[gutil.DeletionProtected]
 	if !ok {
-		log.Info("Ignoring CRD because it has no " + common.GardenerDeletionProtected + " label - allowing deletion")
+		log.Info("Ignoring CRD because it has no " + gutil.DeletionProtected + " label - allowing deletion")
 		return false
 	}
 
 	if ok, _ := strconv.ParseBool(val); !ok {
-		log.Info("Admitting CRD deletion because " + common.GardenerDeletionProtected + " label value is not true - allowing deletion")
+		log.Info("Admitting CRD deletion because " + gutil.DeletionProtected + " label value is not true - allowing deletion")
 		return false
 	}
 

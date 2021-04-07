@@ -17,9 +17,10 @@ package worker
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,7 +40,7 @@ var (
 	machineCRDs              []*apiextensionsv1beta1.CustomResourceDefinition
 	apiextensionsScheme      = runtime.NewScheme()
 	deletionProtectionLabels = map[string]string{
-		common.GardenerDeletionProtected: "true",
+		gutil.DeletionProtected: "true",
 	}
 )
 

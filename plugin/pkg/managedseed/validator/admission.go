@@ -32,7 +32,7 @@ import (
 	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
@@ -277,7 +277,7 @@ func (v *ManagedSeed) admitSeedSpec(spec *gardencore.SeedSpec, shoot *gardencore
 	}
 
 	// Initialize and validate DNS and ingress
-	ingressDomain := fmt.Sprintf("%s.%s", common.IngressPrefix, *(shoot.Spec.DNS.Domain))
+	ingressDomain := fmt.Sprintf("%s.%s", gutil.IngressPrefix, *(shoot.Spec.DNS.Domain))
 	if spec.Ingress != nil {
 		if gardencorehelper.NginxIngressEnabled(shoot.Spec.Addons) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("ingress"), fmt.Sprintf("seed ingress controller cannot be enabled on shoot %s", kutil.ObjectName(shoot))))
@@ -417,7 +417,7 @@ func (v *ManagedSeed) getSeedDNSProviderForDefaultDomain(shoot *gardencore.Shoot
 
 	// Search for a default domain secret that matches the shoot domain
 	for _, secret := range defaultDomainSecrets {
-		provider, domain, includeZones, excludeZones, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
+		provider, domain, includeZones, excludeZones, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 		if err != nil {
 			return nil, apierrors.NewInternalError(fmt.Errorf("could not get domain info from domain secret annotations: %v", err))
 		}

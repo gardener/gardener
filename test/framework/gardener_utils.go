@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	scheduler "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -165,14 +166,14 @@ func (f *GardenerFramework) DeleteShootAndWaitForDeletion(ctx context.Context, s
 // DeleteShoot deletes the test shoot
 func (f *GardenerFramework) DeleteShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
-		err = f.RemoveShootAnnotation(ctx, shoot, common.ShootIgnore)
+		err = f.RemoveShootAnnotation(ctx, shoot, gardencorev1beta1constants.ShootIgnore)
 		if err != nil {
 			return retry.MinorError(err)
 		}
 
 		// First we annotate the shoot to be deleted.
 		err = f.AnnotateShoot(ctx, shoot, map[string]string{
-			common.ConfirmationDeletion: "true",
+			gutil.ConfirmationDeletion: "true",
 		})
 		if err != nil {
 			return retry.MinorError(err)

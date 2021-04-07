@@ -21,8 +21,8 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -137,7 +137,7 @@ func (b *backupEntry) Restore(ctx context.Context, _ *gardencorev1alpha1.ShootSt
 
 // Migrate migrates the BackupEntry custom resource
 func (b *backupEntry) Migrate(ctx context.Context) error {
-	return common.MigrateExtensionCR(
+	return extensions.MigrateExtensionCR(
 		ctx,
 		b.client,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupEntry{} },
@@ -148,7 +148,7 @@ func (b *backupEntry) Migrate(ctx context.Context) error {
 
 // WaitMigrate waits until the BackupEntry custom resource has been successfully migrated.
 func (b *backupEntry) WaitMigrate(ctx context.Context) error {
-	return common.WaitUntilExtensionCRMigrated(
+	return extensions.WaitUntilExtensionCRMigrated(
 		ctx,
 		b.client,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupEntry{} },
@@ -161,7 +161,7 @@ func (b *backupEntry) WaitMigrate(ctx context.Context) error {
 
 // Destroy deletes the BackupEntry CRD
 func (b *backupEntry) Destroy(ctx context.Context) error {
-	return common.DeleteExtensionCR(
+	return extensions.DeleteExtensionCR(
 		ctx,
 		b.client,
 		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupEntry{} },
@@ -172,7 +172,7 @@ func (b *backupEntry) Destroy(ctx context.Context) error {
 
 // Wait waits until the BackupEntry CRD is ready (deployed or restored)
 func (b *backupEntry) Wait(ctx context.Context) error {
-	return common.WaitUntilExtensionCRReady(
+	return extensions.WaitUntilExtensionCRReady(
 		ctx,
 		b.client,
 		b.logger,
@@ -189,7 +189,7 @@ func (b *backupEntry) Wait(ctx context.Context) error {
 
 // WaitCleanup waits until the BackupEntry CRD is deleted
 func (b *backupEntry) WaitCleanup(ctx context.Context) error {
-	return common.WaitUntilExtensionCRDeleted(
+	return extensions.WaitUntilExtensionCRDeleted(
 		ctx,
 		b.client,
 		b.logger,

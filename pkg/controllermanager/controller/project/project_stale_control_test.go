@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 
@@ -79,11 +80,11 @@ var _ = Describe("ProjectStaleControl", func() {
 		)
 
 		BeforeSuite(func() {
-			oldTimenowFunc = common.TimeNow
+			oldTimenowFunc = gutil.TimeNow
 		})
 
 		AfterSuite(func() {
-			common.TimeNow = oldTimenowFunc
+			gutil.TimeNow = oldTimenowFunc
 		})
 
 		BeforeEach(func() {
@@ -383,14 +384,14 @@ var _ = Describe("ProjectStaleControl", func() {
 
 						expectStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, nowFunc)
 
-						common.TimeNow = func() time.Time {
+						gutil.TimeNow = func() time.Time {
 							return time.Date(1, 1, minimumLifetimeDays+1, 1, 0, 0, 0, time.UTC)
 						}
 
 						k8sGardenRuntimeClient.EXPECT().Get(context.TODO(), kutil.Key(projectName), project)
 						project.Annotations = map[string]string{
-							common.ConfirmationDeletion:        "true",
-							v1beta1constants.GardenerTimestamp: common.TimeNow().UTC().String(),
+							gutil.ConfirmationDeletion:         "true",
+							v1beta1constants.GardenerTimestamp: gutil.TimeNow().UTC().String(),
 						}
 						k8sGardenRuntimeClient.EXPECT().Update(context.TODO(), project)
 						k8sGardenRuntimeClient.EXPECT().Delete(context.TODO(), project)

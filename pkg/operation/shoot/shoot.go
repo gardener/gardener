@@ -35,6 +35,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/Masterminds/semver"
@@ -274,7 +275,7 @@ func (s *Shoot) GetIngressFQDN(subDomain string) string {
 	if s.Info.Spec.DNS == nil || s.Info.Spec.DNS.Domain == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s.%s.%s", subDomain, common.IngressPrefix, *(s.Info.Spec.DNS.Domain))
+	return fmt.Sprintf("%s.%s.%s", subDomain, gutil.IngressPrefix, *(s.Info.Spec.DNS.Domain))
 }
 
 // GetWorkerNames returns a list of names of the worker groups in the Shoot manifest.
@@ -340,14 +341,14 @@ func (s *Shoot) ComputeOutOfClusterAPIServerAddress(apiServerAddress string, use
 	}
 
 	if gardencorev1beta1helper.ShootUsesUnmanagedDNS(s.Info) {
-		return common.GetAPIServerDomain(s.InternalClusterDomain)
+		return gutil.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
 	if useInternalClusterDomain {
-		return common.GetAPIServerDomain(s.InternalClusterDomain)
+		return gutil.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
-	return common.GetAPIServerDomain(*s.ExternalClusterDomain)
+	return gutil.GetAPIServerDomain(*s.ExternalClusterDomain)
 }
 
 // IPVSEnabled returns true if IPVS is enabled for the shoot.
@@ -384,10 +385,10 @@ func ConstructInternalClusterDomain(shootName, shootProject string, internalDoma
 	if internalDomain == nil {
 		return ""
 	}
-	if strings.Contains(internalDomain.Domain, common.InternalDomainKey) {
+	if strings.Contains(internalDomain.Domain, gutil.InternalDomainKey) {
 		return fmt.Sprintf("%s.%s.%s", shootName, shootProject, internalDomain.Domain)
 	}
-	return fmt.Sprintf("%s.%s.%s.%s", shootName, shootProject, common.InternalDomainKey, internalDomain.Domain)
+	return fmt.Sprintf("%s.%s.%s.%s", shootName, shootProject, gutil.InternalDomainKey, internalDomain.Domain)
 }
 
 // ConstructExternalClusterDomain constructs the external Shoot cluster domain, i.e. the domain which will be put

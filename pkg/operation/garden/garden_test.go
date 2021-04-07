@@ -19,14 +19,13 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/pkg/operation/garden"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -46,10 +45,10 @@ var _ = Describe("Garden", func() {
 				secret = &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
-							common.DNSProvider:     provider,
-							common.DNSDomain:       domain,
-							common.DNSIncludeZones: strings.Join(includeZones, ","),
-							common.DNSExcludeZones: strings.Join(excludeZones, ","),
+							gutil.DNSProvider:     provider,
+							gutil.DNSDomain:       domain,
+							gutil.DNSIncludeZones: strings.Join(includeZones, ","),
+							gutil.DNSExcludeZones: strings.Join(excludeZones, ","),
 						},
 					},
 					Data: data,
@@ -78,7 +77,7 @@ var _ = Describe("Garden", func() {
 				fmt.Sprintf("%s-%s", constants.GardenRoleDefaultDomain, "nip"): {
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
-							common.DNSProvider: "aws",
+							gutil.DNSProvider: "aws",
 						},
 					},
 				},
@@ -104,10 +103,10 @@ var _ = Describe("Garden", func() {
 				secret = &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
-							common.DNSProvider:     provider,
-							common.DNSDomain:       domain,
-							common.DNSIncludeZones: strings.Join(includeZones, ","),
-							common.DNSExcludeZones: strings.Join(excludeZones, ","),
+							gutil.DNSProvider:     provider,
+							gutil.DNSDomain:       domain,
+							gutil.DNSIncludeZones: strings.Join(includeZones, ","),
+							gutil.DNSExcludeZones: strings.Join(excludeZones, ","),
 						},
 					},
 					Data: data,
@@ -140,7 +139,7 @@ var _ = Describe("Garden", func() {
 				constants.GardenRoleInternalDomain: {
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
-							common.DNSProvider: "aws",
+							gutil.DNSProvider: "aws",
 						},
 					},
 				},

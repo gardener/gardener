@@ -15,16 +15,16 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-
 	"github.com/Masterminds/semver"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ValidDeploymentContainerImageVersion validates compliance of a deployment container image to a minimum version
@@ -137,4 +137,16 @@ func (d *deploymentNamespaceLister) List(selector labels.Selector) ([]*appsv1.De
 	return filterDeployments(d.source, func(deployment *appsv1.Deployment) bool {
 		return deployment.Namespace == d.namespace && selector.Matches(labels.Set(deployment.Labels))
 	})
+}
+
+// CurrentReplicaCountForDeployment returns the current replicaCount for the given deployment.
+func CurrentReplicaCountForDeployment(ctx context.Context, client client.Client, namespace, deploymentName string) (int32, error) {
+	deployment := &appsv1.Deployment{}
+	if err := client.Get(ctx, Key(namespace, deploymentName), deployment); err != nil && !apierrors.IsNotFound(err) {
+		return 0, err
+	}
+	if deployment.Spec.Replicas == nil {
+		return 0, nil
+	}
+	return *deployment.Spec.Replicas, nil
 }
