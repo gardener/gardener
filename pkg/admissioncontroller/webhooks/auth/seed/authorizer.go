@@ -51,6 +51,7 @@ var _ = auth.Authorizer(&authorizer{})
 var (
 	// Only take v1beta1 for the core.gardener.cloud API group because the Authorize function only checks the resource
 	// group and the resource (but it ignores the version).
+	backupBucketResource  = gardencorev1beta1.Resource("backupbuckets")
 	cloudProfileResource  = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource     = corev1.Resource("configmaps")
 	namespaceResource     = corev1.Resource("namespaces")
@@ -71,6 +72,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 	if attrs.IsResourceRequest() {
 		requestResource := schema.GroupResource{Group: attrs.GetAPIGroup(), Resource: attrs.GetResource()}
 		switch requestResource {
+		case backupBucketResource:
+			return a.authorizeBackupBucket(seedName, attrs)
 		case cloudProfileResource:
 			return a.authorizeGet(seedName, graph.VertexTypeCloudProfile, attrs)
 		case configMapResource:
@@ -99,6 +102,25 @@ func (a *authorizer) authorizeGet(seedName string, fromType graph.VertexType, at
 	}
 
 	return a.authorize(seedName, fromType, attrs)
+}
+
+func (a *authorizer) authorizeBackupBucket(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	if ok, reason := a.checkVerb(seedName, attrs, "get", "list", "watch", "create", "update", "patch", "delete"); !ok {
+		return auth.DecisionNoOpinion, reason, nil
+	}
+
+	if ok, reason := a.checkSubresource(seedName, attrs, "status"); !ok {
+		return auth.DecisionNoOpinion, reason, nil
+	}
+
+	// When a new BackupBucket is created then it doesn't yet exist in the graph, so we only handle update operations
+	// here. The create case is handled in the SeedRestriction admission handler.
+	switch attrs.GetVerb() {
+	case "create", "list", "get", "watch":
+		return auth.DecisionAllow, "", nil
+	default:
+		return a.authorize(seedName, graph.VertexTypeBackupBucket, attrs)
+	}
 }
 
 func (a *authorizer) authorizeShootState(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {

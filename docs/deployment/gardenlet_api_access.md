@@ -28,14 +28,15 @@ In this case, the consultation of the `SeedRestriction` admission plugin is perf
 
 Today, the following rules are implemented:
 
-| Resource        | Verbs                              | Path                                          | Description |
-| --------------- | ---------------------------------- | --------------------------------------------- | ----------- |
-| `CloudProfile`  | `get`                              | `CloudProfile` -> `Shoot` -> `Seed`           | Allow only `get` requests for `CloudProfile`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
-| `ConfigMap`     | `get`                              | `ConfigMap` -> `Shoot` -> `Seed`              | Allow only `get` requests for `ConfigMap`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
-| `Namespace`     | `get`                              | `Namespace` -> `Shoot` -> `Seed`              | Allow `get` requests for `Namespace`s of `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
-| `Project`       | `get`                              | `Project` -> `Namespace` -> `Shoot` -> `Seed` | Allow `get` requests for `Project`s referenced by the `Namespace` of `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
-| `SecretBinding` | `get`                              | `SecretBinding` -> `Shoot` -> `Seed`          | Allow only `get` requests for `SecretBinding`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
-| `ShootState`    | `get`, `create`, `update`, `patch` | `ShootState` -> `Shoot` -> `Seed`             | Allow only `get`, `create`, `update`, `patch` requests for `ShootState`s belonging by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
+| Resource        | Verbs                                                         | Path                                          | Description |
+| --------------- | ------------------------------------------------------------- | ----------------------------------------------| ----------- |
+| `BackupBucket`  | `get`, `list`, `watch`, `create`, `update`, `patch`, `delete` | `BackupBucket` -> `Seed`                      | Allow `get`, `list`, `watch` requests for all `BackupBucket`s. Allow only `create`, `update`, `patch`, `delete` requests for `BackupBucket`s assigned to the `gardenlet`'s `Seed`. |
+| `CloudProfile`  | `get`                                                         | `CloudProfile` -> `Shoot` -> `Seed`           | Allow only `get` requests for `CloudProfile`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
+| `ConfigMap`     | `get`                                                         | `ConfigMap` -> `Shoot` -> `Seed`              | Allow only `get` requests for `ConfigMap`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
+| `Namespace`     | `get`                                                         | `Namespace` -> `Shoot` -> `Seed`              | Allow `get` requests for `Namespace`s of `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
+| `Project`       | `get`                                                         | `Project` -> `Namespace` -> `Shoot` -> `Seed` | Allow `get` requests for `Project`s referenced by the `Namespace` of `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
+| `SecretBinding` | `get`                                                         | `SecretBinding` -> `Shoot` -> `Seed`          | Allow only `get` requests for `SecretBinding`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
+| `ShootState`    | `get`, `create`, `update`, `patch`                            | `ShootState` -> `Shoot` -> `Seed`             | Allow only `get`, `create`, `update`, `patch` requests for `ShootState`s belonging by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
 
 ## `SeedAuthorizer` Authorization Webhook Enablement
 

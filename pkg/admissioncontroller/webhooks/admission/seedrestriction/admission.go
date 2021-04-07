@@ -42,7 +42,8 @@ const (
 var (
 	// Only take v1beta1 for the core.gardener.cloud API group because the Authorize function only checks the resource
 	// group and the resource (but it ignores the version).
-	shootStateResource = gardencorev1beta1.Resource("shootstates")
+	backupBucketResource = gardencorev1beta1.Resource("backupbuckets")
+	shootStateResource   = gardencorev1beta1.Resource("shootstates")
 )
 
 // New creates a new webhook handler restricting requests by gardenlets. It allows all requests.
@@ -62,9 +63,15 @@ func New(ctx context.Context, logger logr.Logger, cache cache.Cache) (*handler, 
 type handler struct {
 	logger      logr.Logger
 	cacheReader client.Reader
+	decoder     *admission.Decoder
 }
 
 var _ admission.Handler = &handler{}
+
+func (h *handler) InjectDecoder(d *admission.Decoder) error {
+	h.decoder = d
+	return nil
+}
 
 func (h *handler) Handle(ctx context.Context, request admission.Request) admission.Response {
 	seedName, isSeed := seedidentity.FromAuthenticationV1UserInfo(request.UserInfo)
@@ -74,11 +81,26 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 
 	requestResource := schema.GroupResource{Group: request.Resource.Group, Resource: request.Resource.Resource}
 	switch requestResource {
+	case backupBucketResource:
+		return h.admitBackupBucket(seedName, request)
 	case shootStateResource:
 		return h.admitShootState(ctx, seedName, request)
 	}
 
 	return acadmission.Allowed("")
+}
+
+func (h *handler) admitBackupBucket(seedName string, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	backupBucket := &gardencorev1beta1.BackupBucket{}
+	if err := h.decoder.Decode(request, backupBucket); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+
+	return h.admit(seedName, backupBucket.Spec.SeedName)
 }
 
 func (h *handler) admitShootState(ctx context.Context, seedName string, request admission.Request) admission.Response {
