@@ -21,15 +21,22 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
 	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/mock"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
+	"github.com/gardener/gardener/pkg/operation/common"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	"github.com/Masterminds/semver"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
@@ -58,6 +65,9 @@ var _ = Describe("operatingsystemconfig", func() {
 		caKubelet      = []byte("ca-kubelet")
 		caCloudProfile = "ca-cloud-profile"
 		sshPublicKey   = []byte("ssh-public-key")
+
+		kubeRBACProxyAuthToken = "supersecrettoken"
+		IngressDomain          = "seed-test.ingress.domain.com"
 	)
 
 	BeforeEach(func() {
@@ -68,12 +78,30 @@ var _ = Describe("operatingsystemconfig", func() {
 				"ca":          {Data: map[string][]byte{"ca.crt": ca}},
 				"ca-kubelet":  {Data: map[string][]byte{"ca.crt": caKubelet}},
 				"ssh-keypair": {Data: map[string][]byte{"id_rsa.pub": sshPublicKey}},
+				common.StaticTokenSecretName: {Data: map[string][]byte{
+					secrets.DataKeyStaticTokenCSV: []byte(fmt.Sprintf("%s,%s,%s", kubeRBACProxyAuthToken, logging.PromtailRBACName, logging.PromtailRBACName)),
+				}},
 			},
 			Shoot: &shootpkg.Shoot{
 				CloudProfile: &gardencorev1beta1.CloudProfile{},
 				Components: &shootpkg.Components{
 					Extensions: &shootpkg.Extensions{
 						OperatingSystemConfig: operatingSystemConfig,
+					},
+				},
+				Purpose: "development",
+				Info: &gardencorev1beta1.Shoot{
+					Status: gardencorev1beta1.ShootStatus{
+						TechnicalID: "shoot--garden-testing",
+					},
+				},
+			},
+			Seed: &seedpkg.Seed{
+				Info: &gardencorev1beta1.Seed{
+					Spec: gardencorev1beta1.SeedSpec{
+						DNS: gardencorev1beta1.SeedDNS{
+							IngressDomain: &IngressDomain,
+						},
 					},
 				},
 			},
@@ -111,6 +139,24 @@ var _ = Describe("operatingsystemconfig", func() {
 				botanist.Shoot.CloudProfile.Spec.CABundle = &caCloudProfile
 				botanist.Secrets["ca"].Data["ca.crt"] = nil
 				operatingSystemConfig.EXPECT().SetCABundle(&caCloudProfile)
+
+				operatingSystemConfig.EXPECT().Deploy(ctx)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
+			})
+
+			It("should deploy successfully shoot logging components with non testing purpose", func() {
+				botanist.Shoot.Purpose = "development"
+				botanist.Config = &config.GardenletConfiguration{
+					Logging: &config.Logging{
+						ShootNodeLogging: &config.ShootNodeLogging{
+							AllowAllExecptTesting: true,
+						},
+					},
+				}
+				Expect(gardenletfeatures.FeatureGate.SetFromMap(map[string]bool{string(features.Logging): true})).To(Succeed())
+				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr("\n" + string(ca)))
+				operatingSystemConfig.EXPECT().SetKubeRBACProxyAuthToken(kubeRBACProxyAuthToken)
+				operatingSystemConfig.EXPECT().SetLokiIngressHostName(botanist.ComputeLokiHost())
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
 				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())

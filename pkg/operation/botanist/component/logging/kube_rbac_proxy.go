@@ -29,11 +29,14 @@ import (
 )
 
 const (
-	// LokiKubeRBACProxyName is the name of managed resources associated with Loki's kube-rbac-proxy and Promtail's RBAC.
+	// ShootNodeLoggingManagedResourceName is the name of managed resources associated with Loki's kube-rbac-proxy and Promtail's RBAC.
 	ShootNodeLoggingManagedResourceName = "shoot-node-logging"
 	// KubeRBACProxyImageName is the name of the kube-rbac-proxy image.
 	KubeRBACProxyImageName = common.LokiKubeRBACProxyName
-	KubeRBACProxyUserName  = "gardener.cloud:logging:kube-rbac-proxy"
+	// KubeRBACProxyUserName is the name of the user used by Kube-RBAC-Proxy to make delegating authorization decisions.
+	KubeRBACProxyUserName = "gardener.cloud:logging:kube-rbac-proxy"
+	// PromtailRBACName is the name of the user used by promtail to auth gains Kube-RBAC-Proxy
+	PromtailRBACName = "gardener.cloud:logging:promtail"
 )
 
 // KubeRBACProxyOptions are the options for the kube-rbac-proxy.
@@ -85,12 +88,64 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 			}},
 		}
 
+		promtailClusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   PromtailRBACName,
+				Labels: getPromtailLabels(),
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     PromtailRBACName,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind: rbacv1.UserKind,
+				Name: PromtailRBACName,
+			}},
+		}
+
+		promtailClusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   PromtailRBACName,
+				Labels: getPromtailLabels(),
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{
+						"",
+					},
+					Resources: []string{
+						"nodes",
+						"nodes/proxy",
+						"services",
+						"endpoints",
+						"pods",
+					},
+					Verbs: []string{
+						"get",
+						"watch",
+						"list",
+					},
+				},
+				{
+					NonResourceURLs: []string{
+						"/loki/api/v1/push",
+					},
+					Verbs: []string{
+						"create",
+					},
+				},
+			},
+		}
+
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 	)
+
 	if !k.IsShootNodeLoggingActivated {
 		return common.DeleteManagedResourceForShoot(ctx, k.Client, ShootNodeLoggingManagedResourceName, k.Namespace)
 	}
-	resources, err := registry.AddAllAndSerialize(kubeRBACProxyClusterRolebinding)
+
+	resources, err := registry.AddAllAndSerialize(kubeRBACProxyClusterRolebinding, promtailClusterRole, promtailClusterRoleBinding)
 	if err != nil {
 		return err
 	}
@@ -113,5 +168,11 @@ func (k *kubeRBACProxy) WaitCleanup(ctx context.Context) error {
 func getLabels() map[string]string {
 	return map[string]string{
 		"app": common.LokiKubeRBACProxyName,
+	}
+}
+
+func getPromtailLabels() map[string]string {
+	return map[string]string{
+		"app": common.PromtailName,
 	}
 }

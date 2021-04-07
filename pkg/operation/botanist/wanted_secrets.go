@@ -115,6 +115,10 @@ func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig 
 			Username: logging.KubeRBACProxyUserName,
 			UserID:   logging.KubeRBACProxyUserName,
 		}
+		staticTokenConfig.Tokens[common.PromtailName] = secrets.TokenConfig{
+			Username: logging.PromtailRBACName,
+			UserID:   logging.PromtailRBACName,
+		}
 	}
 
 	return staticTokenConfig

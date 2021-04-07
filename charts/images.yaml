@@ -221,6 +221,10 @@ images:
   sourceRepository: https://github.com/brancz/kube-rbac-proxy
   repository: quay.io/brancz/kube-rbac-proxy
   tag: v0.8.0
+- name: promtail
+  sourceRepository: github.com/grafana/loki
+  repository: "docker.io/grafana/promtail"
+  tag: "2.1.0"
 
 # VPA
 - name: vpa-admission-controller

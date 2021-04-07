@@ -118,6 +118,18 @@ func (mr *MockInterfaceMockRecorder) SetCABundle(arg0 interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCABundle", reflect.TypeOf((*MockInterface)(nil).SetCABundle), arg0)
 }
 
+// SetKubeRBACProxyAuthToken mocks base method.
+func (m *MockInterface) SetKubeRBACProxyAuthToken(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetKubeRBACProxyAuthToken", arg0)
+}
+
+// SetKubeRBACProxyAuthToken indicates an expected call of SetKubeRBACProxyAuthToken.
+func (mr *MockInterfaceMockRecorder) SetKubeRBACProxyAuthToken(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetKubeRBACProxyAuthToken", reflect.TypeOf((*MockInterface)(nil).SetKubeRBACProxyAuthToken), arg0)
+}
+
 // SetKubeletCACertificate mocks base method.
 func (m *MockInterface) SetKubeletCACertificate(arg0 string) {
 	m.ctrl.T.Helper()
@@ -128,6 +140,18 @@ func (m *MockInterface) SetKubeletCACertificate(arg0 string) {
 func (mr *MockInterfaceMockRecorder) SetKubeletCACertificate(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetKubeletCACertificate", reflect.TypeOf((*MockInterface)(nil).SetKubeletCACertificate), arg0)
+}
+
+// SetLokiIngressHostName mocks base method.
+func (m *MockInterface) SetLokiIngressHostName(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetLokiIngressHostName", arg0)
+}
+
+// SetLokiIngressHostName indicates an expected call of SetLokiIngressHostName.
+func (mr *MockInterfaceMockRecorder) SetLokiIngressHostName(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLokiIngressHostName", reflect.TypeOf((*MockInterface)(nil).SetLokiIngressHostName), arg0)
 }
 
 // SetSSHPublicKey mocks base method.

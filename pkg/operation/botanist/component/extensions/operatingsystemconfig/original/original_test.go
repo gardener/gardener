@@ -113,6 +113,7 @@ var _ = Describe("Original", func() {
 			}
 
 			Expect(order).To(Equal([]string{
+				"promtail",
 				"var-lib-mount",
 				"root-certificates",
 				"docker",
@@ -130,6 +131,7 @@ var _ = Describe("Original", func() {
 			}
 
 			Expect(order).To(Equal([]string{
+				"promtail",
 				"var-lib-mount",
 				"root-certificates",
 				"containerd",
