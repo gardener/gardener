@@ -19,13 +19,13 @@ import (
 	"fmt"
 	"time"
 
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -253,7 +253,8 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 		clusterRole,
 	)).ToNot(HaveOccurred())
 	Expect(clusterRole.Labels).To(Equal(expectedClusterRole.Labels))
-	Expect(equality.Semantic.DeepEqual(clusterRole, expectedClusterRole)).To(BeTrue())
+	// Expect(equality.Semantic.DeepEqual(clusterRole.Rules, expectedClusterRole.Rules)).To(BeTrue())
+	Expect(clusterRole).To(DeepEqual(expectedClusterRole))
 
 	// RBAC - Cluster Role Binding
 	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
