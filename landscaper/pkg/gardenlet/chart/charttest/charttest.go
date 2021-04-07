@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -106,6 +105,13 @@ func getEmptyPriorityClass() *schedulingv1.PriorityClass {
 
 // ValidateGardenletChartRBAC validates the RBAC resources of the Gardenlet chart.
 func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLabels map[string]string, serviceAccountName string) {
+	// Extend the labels with gardener.cloud/role=gardenlet label
+	expectedLabelsCopy := map[string]string{}
+	for k, v := range expectedLabels {
+		expectedLabelsCopy[k] = v
+	}
+	expectedLabelsCopy[gardencorev1beta1constants.GardenRole] = "gardenlet"
+
 	// RBAC - Cluster Role
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
@@ -113,14 +119,7 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 		},
 	}
 	expectedClusterRole := *clusterRole
-	expectedClusterRole.Labels = map[string]string{
-		gardencorev1beta1constants.GardenRole: "gardenlet",
-		"app":                                 "gardener",
-		"role":                                "gardenlet",
-		"chart":                               "runtime-0.1.0",
-		"release":                             "gardenlet",
-		"heritage":                            "Tiller",
-	}
+	expectedClusterRole.Labels = expectedLabelsCopy
 	expectedClusterRole.Rules = []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{""},
@@ -128,7 +127,7 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 			Verbs:     []string{"list", "watch", "delete", "deletecollection"},
 		},
 		{
-			APIGroups: []string{"*"},
+			APIGroups: []string{""},
 			Resources: []string{"configmaps", "namespaces", "secrets", "serviceaccounts", "services"},
 			Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 		},
@@ -253,8 +252,7 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 		clusterRole,
 	)).ToNot(HaveOccurred())
 	Expect(clusterRole.Labels).To(Equal(expectedClusterRole.Labels))
-	// Expect(equality.Semantic.DeepEqual(clusterRole.Rules, expectedClusterRole.Rules)).To(BeTrue())
-	Expect(clusterRole).To(DeepEqual(expectedClusterRole))
+	Expect(clusterRole.Rules).To(Equal(expectedClusterRole.Rules))
 
 	// RBAC - Cluster Role Binding
 	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
@@ -263,7 +261,7 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 		},
 	}
 	expectedClusterRoleBinding := *clusterRoleBinding
-	expectedClusterRoleBinding.Labels = expectedLabels
+	expectedClusterRoleBinding.Labels = expectedLabelsCopy
 	expectedClusterRoleBinding.RoleRef = rbacv1.RoleRef{
 		APIGroup: rbacv1.SchemeGroupVersion.Group,
 		Kind:     "ClusterRole",
