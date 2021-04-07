@@ -35,6 +35,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
@@ -601,6 +602,30 @@ status: {}
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})).Return(fakeErr)
 
 				Expect(bootstrapper.Destroy(ctx)).To(MatchError(fakeErr))
+			})
+
+			It("should succeed when isNoMatch error is returned", func() {
+				noMatchError := &meta.NoKindMatchError{}
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})).Return(noMatchError)
+
+				c.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any())
+				c.EXPECT().Update(gomock.Any(), gomock.Any())
+				c.EXPECT().Delete(gomock.Any(), gomock.Any())
+				c.EXPECT().Delete(gomock.Any(), gomock.Any())
+
+				Expect(bootstrapper.Destroy(ctx)).To(Succeed())
+			})
+
+			It("should suceed when NotFoundError is returned", func() {
+				notFoundError := apierrors.NewNotFound(schema.GroupResource{}, "etcd")
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})).Return(notFoundError)
+
+				c.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any())
+				c.EXPECT().Update(gomock.Any(), gomock.Any())
+				c.EXPECT().Delete(gomock.Any(), gomock.Any())
+				c.EXPECT().Delete(gomock.Any(), gomock.Any())
+
+				Expect(bootstrapper.Destroy(ctx)).To(Succeed())
 			})
 
 			It("should fail when there are etcd resources left", func() {
