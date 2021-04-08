@@ -135,9 +135,9 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("timed out waiting for Kube caches to sync")
 	}
 
-	seeds := seedNames(f.cfg.SeedConfig, f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister(), f.cfg.SeedSelector)
-	if len(seeds) < 1 {
-		return fmt.Errorf("no seed selected by Gardenlet")
+	gardenSecretsNamespace := v1beta1constants.GardenNamespace
+	if seeds := seedNames(f.cfg.SeedConfig, f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister(), f.cfg.SeedSelector); len(seeds) > 0 {
+		gardenSecretsNamespace = gardenerutils.ComputeGardenNamespace(seeds[0])
 	}
 
 	// Register Seed object if desired
@@ -154,7 +154,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		ctx,
 		k8sGardenClient.Cache(),
 		f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister(),
-		gardenerutils.ComputeGardenNamespace(seeds[0]),
+		gardenSecretsNamespace,
 	)
 	runtime.Must(err)
 
