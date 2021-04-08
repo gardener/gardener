@@ -30,6 +30,7 @@ import (
 	netpol "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -436,7 +437,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		}
 	} else if b.Shoot.ReversedVPNEnabled {
 		var (
-			vpnTLSAuthSecret = b.Secrets["vpn-seed-server-tlsauth"]
+			vpnTLSAuthSecret = b.Secrets[vpnseedserver.VpnSeedServerTLSAuth]
 			vpnShootSecret   = b.Secrets["vpn-shoot-client"]
 			vpnShootConfig   = map[string]interface{}{
 				"endpoint":       b.outOfClusterAPIServerFQDN(),

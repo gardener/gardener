@@ -257,7 +257,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying vpn-seed-server",
-			Fn:           flow.TaskFn(botanist.DeployVPNServer).SkipIf(o.Shoot.HibernationEnabled || o.Shoot.KonnectivityTunnelEnabled).DoIf(o.Shoot.ReversedVPNEnabled).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeployVPNServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets),
 		})
 		deployControlPlaneExposure = g.Add(flow.Task{

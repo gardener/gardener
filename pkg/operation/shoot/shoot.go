@@ -16,7 +16,6 @@ package shoot
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -240,11 +239,9 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 
 	shoot.ReversedVPNEnabled = gardenletfeatures.FeatureGate.Enabled(features.ReversedVPN)
 	if reversedVPNEnabled, err := strconv.ParseBool(shoot.Info.Annotations[v1alpha1constants.AnnotationReversedVPN]); err == nil {
-		shoot.ReversedVPNEnabled = reversedVPNEnabled
-	}
-
-	if !gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) || !gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) || shoot.KonnectivityTunnelEnabled {
-		panic(errors.New("Inconsistent feature gate, APIServerSNI or ManagedIstio is required for ReversedVPN!"))
+		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) && !shoot.KonnectivityTunnelEnabled {
+			shoot.ReversedVPNEnabled = reversedVPNEnabled
+		}
 	}
 
 	needsClusterAutoscaler, err := gardencorev1beta1helper.ShootWantsClusterAutoscaler(shootObject)

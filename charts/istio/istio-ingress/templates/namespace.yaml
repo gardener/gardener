@@ -6,5 +6,4 @@ metadata:
   labels:
     istio-operator-managed: Reconcile
     istio-injection: disabled
-    namespace: {{ .Release.Namespace }}
 {{- end }}

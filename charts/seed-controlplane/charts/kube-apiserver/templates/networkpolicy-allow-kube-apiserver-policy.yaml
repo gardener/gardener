@@ -50,7 +50,7 @@ spec:
           app: vpn-seed-server
     ports:
     - protocol: TCP
-      port: 1194
+      port: 9443
   {{- end }}
   ingress:
     # Allow connection from everything which needs to talk to the API server
@@ -85,18 +85,6 @@ spec:
       port: {{ required ".blackboxExporterPort is required" .Values.blackboxExporterPort }}
     - protocol: TCP
       port: {{ required ".securePort is required" .Values.securePort }}
-  {{- if .Values.reversedVPN.enabled }}
-  - from:
-    - podSelector:
-        matchLabels:
-          gardener.cloud/role: controlplane
-          app: vpn-seed-server
-    ports:
-    - protocol: TCP
-      port: 1194
-  {{- end}}
   policyTypes:
   - Egress
   - Ingress
-
-

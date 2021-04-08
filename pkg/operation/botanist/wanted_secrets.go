@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -693,20 +694,26 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			&secrets.CertificateSecretConfig{
 				Name:       "vpn-seed-server",
 				CommonName: "vpn-seed-server",
-				CertType:   secrets.ServerCert,
-				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			},
-
-			// Secret definition for vpn-seed (OpenVPN client side)
-			&secrets.CertificateSecretConfig{
-				Name:       "vpn-seed-client",
-				CommonName: "vpn-seed-client",
-				CertType:   secrets.ClientCert,
-				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
+				DNSNames: []string{
+					"vpn-seed-server",
+					fmt.Sprintf("vpn-seed-server.%s", b.Shoot.SeedNamespace),
+					fmt.Sprintf("vpn-seed-server.%s.svc", b.Shoot.SeedNamespace),
+					fmt.Sprintf("vpn-seed-server.%s.svc.cluster.local", b.Shoot.SeedNamespace),
+				},
+				CertType:  secrets.ServerCert,
+				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 
 			&secrets.VPNTLSAuthConfig{
-				Name: "vpn-seed-server-tlsauth",
+				Name: vpnseedserver.VpnSeedServerTLSAuth,
+			},
+
+			// Secret definition for kube-apiserver http proxy client
+			&secrets.CertificateSecretConfig{
+				Name:       "kube-apiserver-http-proxy",
+				CommonName: "kube-apiserver-http-proxy",
+				CertType:   secrets.ClientCert,
+				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 		)
 	} else {
