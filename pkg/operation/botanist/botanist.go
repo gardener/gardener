@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
-	"github.com/gardener/gardener/pkg/operation/common"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -152,11 +151,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 
 	// Logging
 	o.Shoot.Components.Logging.ShootRBACProxy, err = logging.NewKubeRBACProxy(&logging.KubeRBACProxyOptions{
-		Client:                      b.K8sSeedClient.Client(),
-		Namespace:                   b.Shoot.SeedNamespace,
-		IsShootNodeLoggingActivated: b.isShootNodeLoggingActivated(),
+		Client:                    b.K8sSeedClient.Client(),
+		Namespace:                 b.Shoot.SeedNamespace,
+		IsShootNodeLoggingEnabled: b.isShootNodeLoggingEnabled(),
 	})
-
 	if err != nil {
 		return nil, err
 	}

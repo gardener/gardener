@@ -408,10 +408,9 @@ type GardenLoki struct {
 
 // ShootNodeLogging contains configuration for the shoot node logging.
 type ShootNodeLogging struct {
-	// ShootPurposes denote which shoots can have node loggin by they purpose
-	ShootPurposes []string `json:"shootPurposes,omitempty" yaml:"shootPurposes,omitempty"`
-	// AllowAllExecptTesting allows all shoot of all purpose, except testing to have shoot node logging
-	AllowAllExecptTesting bool `json:"allowAllExecptTesting,omitempty" yaml:"allowAllExecptTesting,omitempty"`
+	// ShootPurposes determines which shoots can have node logging by their purpose
+	// +optional
+	ShootPurposes []gardencorev1beta1.ShootPurpose `json:"shootPurposes,omitempty" yaml:"shootPurposes,omitempty"`
 }
 
 // Logging contains configuration for the logging stack.

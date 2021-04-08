@@ -1315,8 +1315,7 @@ func Convert_config_ShootControllerConfiguration_To_v1alpha1_ShootControllerConf
 }
 
 func autoConvert_v1alpha1_ShootNodeLogging_To_config_ShootNodeLogging(in *ShootNodeLogging, out *config.ShootNodeLogging, s conversion.Scope) error {
-	out.ShootPurposes = *(*[]string)(unsafe.Pointer(&in.ShootPurposes))
-	out.AllowAllExecptTesting = in.AllowAllExecptTesting
+	out.ShootPurposes = *(*[]core.ShootPurpose)(unsafe.Pointer(&in.ShootPurposes))
 	return nil
 }
 
@@ -1326,8 +1325,7 @@ func Convert_v1alpha1_ShootNodeLogging_To_config_ShootNodeLogging(in *ShootNodeL
 }
 
 func autoConvert_config_ShootNodeLogging_To_v1alpha1_ShootNodeLogging(in *config.ShootNodeLogging, out *ShootNodeLogging, s conversion.Scope) error {
-	out.ShootPurposes = *(*[]string)(unsafe.Pointer(&in.ShootPurposes))
-	out.AllowAllExecptTesting = in.AllowAllExecptTesting
+	out.ShootPurposes = *(*[]v1beta1.ShootPurpose)(unsafe.Pointer(&in.ShootPurposes))
 	return nil
 }
 

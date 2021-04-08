@@ -48,7 +48,17 @@ spec:
           component: controller
     ports:
     - protocol: TCP
-      port: {{ .Values.kubeProxy.port }}
+      port: {{ .Values.kubeRBACProxy.port }}
+  - from:
+    - podSelector:
+        matchLabels:
+{{ toYaml .Values.prometheus.labels | indent 10 }}
+      namespaceSelector:
+        matchLabels:
+          role: garden
+    ports:
+    - protocol: TCP
+      port: {{ .Values.telegraf.port }}
 {{- end }}
   policyTypes:
   - Ingress

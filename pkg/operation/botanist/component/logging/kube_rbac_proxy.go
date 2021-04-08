@@ -20,7 +20,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -31,12 +30,16 @@ import (
 const (
 	// ShootNodeLoggingManagedResourceName is the name of managed resources associated with Loki's kube-rbac-proxy and Promtail's RBAC.
 	ShootNodeLoggingManagedResourceName = "shoot-node-logging"
-	// KubeRBACProxyImageName is the name of the kube-rbac-proxy image.
-	KubeRBACProxyImageName = common.LokiKubeRBACProxyName
+	// LokiKubeRBACProxyName  is the name of the kube-rbac-proxy image.
+	LokiKubeRBACProxyName = "kube-rbac-proxy"
+	// SecretNameLokiKubeRBACProxyKubeconfig is the name of the Loki's kube-rbac-proxy kubeconfig secret.
+	SecretNameLokiKubeRBACProxyKubeconfig = LokiKubeRBACProxyName + "-kubeconfig"
 	// KubeRBACProxyUserName is the name of the user used by Kube-RBAC-Proxy to make delegating authorization decisions.
 	KubeRBACProxyUserName = "gardener.cloud:logging:kube-rbac-proxy"
 	// PromtailRBACName is the name of the user used by promtail to auth gains Kube-RBAC-Proxy
 	PromtailRBACName = "gardener.cloud:logging:promtail"
+	// PromtailName is the name used for labeling the Kubernetes resources associated with Promtail installed on the shoot nodes.
+	PromtailName = "gardener-promtail"
 )
 
 // KubeRBACProxyOptions are the options for the kube-rbac-proxy.
@@ -45,12 +48,12 @@ type KubeRBACProxyOptions struct {
 	Client client.Client
 	// Namespace in the seed cluster.
 	Namespace string
-	// IsShootNodeLoggingActivated flag enables or disables the shoot node logging
-	IsShootNodeLoggingActivated bool
+	// IsShootNodeLoggingEnabled flag enables or disables the shoot node logging
+	IsShootNodeLoggingEnabled bool
 }
 
 // NewKubeRBACProxy creates a new instance of kubeRBACProxy for the kube-rbac-proxy.
-func NewKubeRBACProxy(so *KubeRBACProxyOptions) (component.DeployWaiter, error) {
+func NewKubeRBACProxy(so *KubeRBACProxyOptions) (component.Deployer, error) {
 	if so == nil {
 		return nil, errors.New("options cannot be nil")
 	}
@@ -141,8 +144,9 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 	)
 
-	if !k.IsShootNodeLoggingActivated {
-		return common.DeleteManagedResourceForShoot(ctx, k.Client, ShootNodeLoggingManagedResourceName, k.Namespace)
+	if !k.IsShootNodeLoggingEnabled {
+		return managedresources.DeleteForShoot(ctx, k.Client, k.Namespace, ShootNodeLoggingManagedResourceName)
+
 	}
 
 	resources, err := registry.AddAllAndSerialize(kubeRBACProxyClusterRolebinding, promtailClusterRole, promtailClusterRoleBinding)
@@ -150,29 +154,21 @@ func (k *kubeRBACProxy) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return common.DeployManagedResourceForShoot(ctx, k.Client, ShootNodeLoggingManagedResourceName, k.Namespace, false, resources)
+	return managedresources.CreateForShoot(ctx, k.Client, k.Namespace, ShootNodeLoggingManagedResourceName, false, resources)
 }
 
 func (k *kubeRBACProxy) Destroy(ctx context.Context) error {
-	return common.DeleteManagedResourceForShoot(ctx, k.Client, ShootNodeLoggingManagedResourceName, k.Namespace)
-}
-
-func (k *kubeRBACProxy) Wait(ctx context.Context) error {
-	return nil
-}
-
-func (k *kubeRBACProxy) WaitCleanup(ctx context.Context) error {
-	return nil
+	return managedresources.DeleteForShoot(ctx, k.Client, k.Namespace, ShootNodeLoggingManagedResourceName)
 }
 
 func getLabels() map[string]string {
 	return map[string]string{
-		"app": common.LokiKubeRBACProxyName,
+		"app": LokiKubeRBACProxyName,
 	}
 }
 
 func getPromtailLabels() map[string]string {
 	return map[string]string{
-		"app": common.PromtailName,
+		"app": PromtailName,
 	}
 }

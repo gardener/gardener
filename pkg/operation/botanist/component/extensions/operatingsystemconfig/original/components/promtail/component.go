@@ -42,7 +42,9 @@ const (
 	// PromtailServerPort is the promtail listening port
 	PromtailServerPort = 3001
 	// PromtailPositionFile is the path for storing the scraped file offsets
-	PromtailPositionFile = "/run/promtail/positions.yaml"
+	PromtailPositionFile = "/var/log/positions.yaml"
+	// PathSetActiveJournalFileScript
+	PathSetActiveJournalFileScript = PathPromtailDirectory + "/scripts/set_active_journal_file.sh"
 )
 
 type component struct{}
@@ -66,6 +68,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 		return []extensionsv1alpha1.Unit{
 			*getPromtailUnit(
 				"/bin/systemctl disable "+UnitName,
+				"/bin/sh -c \"echo 'service does not have configuration'\"",
 				fmt.Sprintf("/bin/sh -c \"echo service %s is removed!; while true; do sleep 86400; done\"", UnitName),
 			)}, nil, nil
 	}
@@ -77,14 +80,18 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	promtailCAFile := getPromtailCAFile(ctx)
 
+	setActiveJournalFile := setActiveJournalFile(ctx)
+
 	return []extensionsv1alpha1.Unit{
 			*getPromtailUnit(
 				execStartPreCopyBinaryFromContainer("promtail", ctx.Images[charts.PromtailImageName]),
+				"/bin/sh "+PathSetActiveJournalFileScript,
 				PathPromtailBinary+`/promtail -config.file=`+PathPromtailConfig),
 		},
 		[]extensionsv1alpha1.File{
 			*promtailConfigFile,
 			*promtailAuthTokenFile,
 			*promtailCAFile,
+			*setActiveJournalFile,
 		}, nil
 }

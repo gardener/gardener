@@ -110,12 +110,12 @@ func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig 
 		}
 	}
 
-	if b.isShootNodeLoggingActivated() {
-		staticTokenConfig.Tokens[common.LokiKubeRBACProxyName] = secrets.TokenConfig{
+	if b.isShootNodeLoggingEnabled() {
+		staticTokenConfig.Tokens[logging.LokiKubeRBACProxyName] = secrets.TokenConfig{
 			Username: logging.KubeRBACProxyUserName,
 			UserID:   logging.KubeRBACProxyUserName,
 		}
-		staticTokenConfig.Tokens[common.PromtailName] = secrets.TokenConfig{
+		staticTokenConfig.Tokens[logging.PromtailName] = secrets.TokenConfig{
 			Username: logging.PromtailRBACName,
 			UserID:   logging.PromtailRBACName,
 		}
@@ -590,7 +590,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 	})
 
 	// Secret definition for lokiKubeRBACProxy
-	if b.isShootNodeLoggingActivated() {
+	if b.isShootNodeLoggingEnabled() {
 
 		var kubeRBACToken *secrets.Token
 		if staticToken != nil {
@@ -603,14 +603,16 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 		secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name:      common.SecretNameLokiKubeRBACProxyKubeconfig,
+				Name:      logging.SecretNameLokiKubeRBACProxyKubeconfig,
 				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 			Token: kubeRBACToken,
 
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(true),
+			KubeConfigRequests: []secrets.KubeConfigRequest{
+				{
+					ClusterName:   b.Shoot.SeedNamespace,
+					APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
+				},
 			}},
 			// Secret definition for loki (ingress)
 			&secrets.CertificateSecretConfig{

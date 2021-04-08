@@ -89,6 +89,8 @@ const (
 	ImageNameKubeRBACKProxy = "kube-rbac-proxy"
 	// PromtailImageName is the image of grafana/promtail image
 	PromtailImageName = "promtail"
+	// ImageNameTelegraf is a constant for an image in the image vector with name 'telegraf'.
+	ImageNameTelegraf = "telegraf"
 	// ImageNameMetricsServer is a constant for an image in the image vector with name 'metrics-server'.
 	ImageNameMetricsServer = "metrics-server"
 	// ImageNameNginxIngressController is a constant for an image in the image vector with name 'nginx-ingress-controller'.

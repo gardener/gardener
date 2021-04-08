@@ -944,7 +944,7 @@ func (in *ShootNodeLogging) DeepCopyInto(out *ShootNodeLogging) {
 	*out = *in
 	if in.ShootPurposes != nil {
 		in, out := &in.ShootPurposes, &out.ShootPurposes
-		*out = make([]string, len(*in))
+		*out = make([]v1beta1.ShootPurpose, len(*in))
 		copy(*out, *in)
 	}
 	return

@@ -70,8 +70,8 @@ type Interface interface {
 	SetKubeletCACertificate(string)
 	// SetSSHPublicKey sets the SSHPublicKey value.
 	SetSSHPublicKey(string)
-	// SetKubeRBACProxyAuthToken set the auth token to authenticate agains the loki sidecar proxy
-	SetKubeRBACProxyAuthToken(string)
+	// SetPromtailRBACAuthToken set the auth token used by Promtail to authenticate agains the loki sidecar proxy
+	SetPromtailRBACAuthToken(string)
 	// SetLokiIngressHostName sets the ingress host name of the shoot's Loki
 	SetLokiIngressHostName(string)
 	// WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
@@ -123,8 +123,8 @@ type OriginalValues struct {
 	MachineTypes []gardencorev1beta1.MachineType
 	// SSHPublicKey is a public SSH key.
 	SSHPublicKey string
-	// KubeRBACProxyAuthToken is the token needed to auth agains Loki sidecar proxy
-	KubeRBACProxyAuthToken string
+	// PromtailRBACAuthToken is the token needed by Promtial to auth agains Loki sidecar proxy
+	PromtailRBACAuthToken string
 	// LokiIngressHostName is the ingress host name of the shoot's Loki
 	LokiIngressHostName string
 }
@@ -386,9 +386,9 @@ func (o *operatingSystemConfig) SetSSHPublicKey(key string) {
 	o.values.SSHPublicKey = key
 }
 
-// SetKubeRBACProxyAuthToken set the auth token to authenticate agains the loki sidecar proxy
-func (o *operatingSystemConfig) SetKubeRBACProxyAuthToken(token string) {
-	o.values.KubeRBACProxyAuthToken = token
+// SetPromtailRBACAuthToken set the auth token used by Promtail to authenticate agains the loki sidecar proxy
+func (o *operatingSystemConfig) SetPromtailRBACAuthToken(token string) {
+	o.values.PromtailRBACAuthToken = token
 }
 
 // SetLokiIngressHostName sets the ingress host name of the shoot's Loki
@@ -426,25 +426,25 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 	setDefaultEvictionMemoryAvailable(kubeletConfigParameters.EvictionHard, kubeletConfigParameters.EvictionSoft, o.values.MachineTypes, worker.Machine.Type)
 
 	return deployer{
-		client:                     o.client,
-		osc:                        osc,
-		worker:                     worker,
-		purpose:                    purpose,
-		key:                        Key(worker.Name, o.values.KubernetesVersion),
-		apiServerURL:               o.values.APIServerURL,
-		caBundle:                   caBundle,
-		clusterDNSAddress:          o.values.ClusterDNSAddress,
-		clusterDomain:              o.values.ClusterDomain,
-		criName:                    criName,
-		images:                     o.values.Images,
-		kubeletCACertificate:       o.values.KubeletCACertificate,
-		kubeletConfigParameters:    kubeletConfigParameters,
-		kubeletCLIFlags:            kubeletCLIFlags,
-		kubeletDataVolumeName:      worker.KubeletDataVolumeName,
-		kubernetesVersion:          o.values.KubernetesVersion,
-		sshPublicKey:               o.values.SSHPublicKey,
-		lokiIngressHostName:        o.values.LokiIngressHostName,
-		lokiKubeRBACProxyAuthToken: o.values.KubeRBACProxyAuthToken,
+		client:                  o.client,
+		osc:                     osc,
+		worker:                  worker,
+		purpose:                 purpose,
+		key:                     Key(worker.Name, o.values.KubernetesVersion),
+		apiServerURL:            o.values.APIServerURL,
+		caBundle:                caBundle,
+		clusterDNSAddress:       o.values.ClusterDNSAddress,
+		clusterDomain:           o.values.ClusterDomain,
+		criName:                 criName,
+		images:                  o.values.Images,
+		kubeletCACertificate:    o.values.KubeletCACertificate,
+		kubeletConfigParameters: kubeletConfigParameters,
+		kubeletCLIFlags:         kubeletCLIFlags,
+		kubeletDataVolumeName:   worker.KubeletDataVolumeName,
+		kubernetesVersion:       o.values.KubernetesVersion,
+		sshPublicKey:            o.values.SSHPublicKey,
+		lokiIngressHostName:     o.values.LokiIngressHostName,
+		promtailRBACAuthToken:   o.values.PromtailRBACAuthToken,
 	}
 }
 
@@ -490,19 +490,19 @@ type deployer struct {
 	apiServerURL string
 
 	// original values
-	caBundle                   *string
-	clusterDNSAddress          string
-	clusterDomain              string
-	criName                    extensionsv1alpha1.CRIName
-	images                     map[string]*imagevector.Image
-	kubeletCACertificate       string
-	kubeletConfigParameters    components.ConfigurableKubeletConfigParameters
-	kubeletCLIFlags            components.ConfigurableKubeletCLIFlags
-	kubeletDataVolumeName      *string
-	kubernetesVersion          *semver.Version
-	sshPublicKey               string
-	lokiIngressHostName        string
-	lokiKubeRBACProxyAuthToken string
+	caBundle                *string
+	clusterDNSAddress       string
+	clusterDomain           string
+	criName                 extensionsv1alpha1.CRIName
+	images                  map[string]*imagevector.Image
+	kubeletCACertificate    string
+	kubeletConfigParameters components.ConfigurableKubeletConfigParameters
+	kubeletCLIFlags         components.ConfigurableKubeletCLIFlags
+	kubeletDataVolumeName   *string
+	kubernetesVersion       *semver.Version
+	sshPublicKey            string
+	lokiIngressHostName     string
+	promtailRBACAuthToken   string
 }
 
 // exposed for testing
@@ -548,7 +548,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			KubeletDataVolumeName:   d.kubeletDataVolumeName,
 			KubernetesVersion:       d.kubernetesVersion,
 			SSHPublicKey:            d.sshPublicKey,
-			LokiAuthToken:           d.lokiKubeRBACProxyAuthToken,
+			PromtailRBACAuthToken:   d.promtailRBACAuthToken,
 			LokiIngress:             d.lokiIngressHostName,
 		})
 		if err != nil {

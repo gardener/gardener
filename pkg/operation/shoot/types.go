@@ -141,8 +141,9 @@ type DNS struct {
 	NginxEntry          component.DeployWaiter
 }
 
+// Logging contains references to logging deployers
 type Logging struct {
-	ShootRBACProxy component.DeployWaiter
+	ShootRBACProxy component.Deployer
 }
 
 // Networks contains pre-calculated subnets and IP address for various components.

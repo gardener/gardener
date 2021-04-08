@@ -15,6 +15,7 @@
 package config
 
 import (
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 
 	corev1 "k8s.io/api/core/v1"
@@ -338,10 +339,8 @@ type GardenLoki struct {
 
 // ShootNodeLogging contains configuration for the shoot node logging.
 type ShootNodeLogging struct {
-	// ShootPurposes denote which shoots can have node loggin by they purpose
-	ShootPurposes []string
-	// AllowAllExecptTesting allows all shoot of all purpose, except testing to have shoot node logging
-	AllowAllExecptTesting bool
+	// ShootPurposes determines which shoots can have node logging by their purpose
+	ShootPurposes []core.ShootPurpose
 }
 
 // Logging contains configuration for the logging stack.

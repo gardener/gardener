@@ -225,6 +225,10 @@ images:
   sourceRepository: github.com/grafana/loki
   repository: "docker.io/grafana/promtail"
   tag: "2.1.0"
+- name: telegraf
+  sourceRepository: https://github.com/influxdata/telegraf
+  repository: eu.gcr.io/gardener-project/3rd/telegraf
+  tag: 1.18.0-alpine-iptables
 
 # VPA
 - name: vpa-admission-controller

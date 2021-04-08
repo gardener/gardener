@@ -390,6 +390,11 @@ func (s *Shoot) IPVSEnabled() bool {
 		*s.Info.Spec.Kubernetes.KubeProxy.Mode == gardencorev1beta1.ProxyModeIPVS
 }
 
+// IsLoggingEnabled return true if the Shoot controlplane logging is enabled
+func (s *Shoot) IsLoggingEnabled() bool {
+	return s.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenletfeatures.FeatureGate.Enabled(features.Logging)
+}
+
 // TechnicalIDPrefix is a prefix used for a shoot's technical id.
 const TechnicalIDPrefix = "shoot--"
 

@@ -17,7 +17,6 @@ package botanist
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/gardener/gardener/charts"
@@ -28,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -47,7 +45,7 @@ import (
 )
 
 // DefaultOperatingSystemConfig creates the default deployer for the OperatingSystemConfig custom resource.
-func (b *Botanist) DefaultOperatingSystemConfig(seedClient client.Client) (operatingsystemconfig.Interface, error) {
+func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interface, error) {
 	images, err := imagevector.FindImages(b.ImageVector, []string{charts.ImageNameHyperkube, charts.ImageNamePauseContainer, charts.PromtailImageName}, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
@@ -93,12 +91,8 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetKubeletCACertificate(string(b.Secrets[v1beta1constants.SecretNameCAKubelet].Data[secrets.DataKeyCertificateCA]))
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetSSHPublicKey(string(b.Secrets[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys]))
 
-	if b.isShootNodeLoggingActivated() {
-		token, err := b.getOperatingSystemConfigLokiKubeRBACProxyAuthToken(ctx)
-		if err != nil {
-			return err
-		}
-		b.Shoot.Components.Extensions.OperatingSystemConfig.SetKubeRBACProxyAuthToken(token)
+	if b.isShootNodeLoggingEnabled() {
+		b.Shoot.Components.Extensions.OperatingSystemConfig.SetPromtailRBACAuthToken(b.PromtailRBACAuthToken)
 		b.Shoot.Components.Extensions.OperatingSystemConfig.SetLokiIngressHostName(b.ComputeLokiHost())
 	}
 
@@ -124,29 +118,6 @@ func (b *Botanist) getOperatingSystemConfigCABundle() *string {
 		return nil
 	}
 	return &caBundle
-}
-
-func (b *Botanist) getOperatingSystemConfigLokiKubeRBACProxyAuthToken(ctx context.Context) (string, error) {
-	s := b.Secrets[common.StaticTokenSecretName]
-	if s == nil {
-		return "", fmt.Errorf("Missing %s secret", common.StaticTokenSecretName)
-	}
-	data := s.Data[secrets.DataKeyStaticTokenCSV]
-	if len(data) <= 0 {
-		return "", fmt.Errorf("Missing %s in %s secret", common.StaticTokenSecretName, secrets.DataKeyStaticTokenCSV)
-	}
-	tokenRows := strings.Split(string(data), "\n")
-	for _, tokenRow := range tokenRows {
-		splitTokenRow := strings.Split(tokenRow, ",")
-		if len(splitTokenRow) < 3 {
-			return "", fmt.Errorf("Invalid token %v", splitTokenRow)
-		}
-		if splitTokenRow[1] == logging.PromtailRBACName && splitTokenRow[2] == logging.PromtailRBACName {
-			return splitTokenRow[0], nil
-		}
-	}
-
-	return "", fmt.Errorf("Missing promtail auth token")
 }
 
 // CloudConfigExecutionManagedResourceName is a constant for the name of a ManagedResource in the seed cluster in the

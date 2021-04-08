@@ -24,14 +24,14 @@ spec:
       - backend:
           {{- if semverCompare ">= 1.19-0" $.Capabilities.KubeVersion.GitVersion }}
           service:
-            name: loki
+            name: {{ .serviceName }}
             port:
-              number: 8080
+              number: {{ .servicePort }}
           {{- else }}
-          serviceName: loki
-          servicePort: 8080
+          serviceName: {{ .serviceName }}
+          servicePort: {{ .servicePort }}
           {{- end }}
-        path: /
+        path: {{ .backendPath }}
         pathType: Prefix
   {{- end }}
 {{- end }}
