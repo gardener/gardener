@@ -375,6 +375,9 @@ const (
 	// should not be deleted if the corresponding `Project` gets deleted. Please note that all project related labels
 	// from the namespace will be removed when the project is being deleted.
 	NamespaceKeepAfterProjectDeletion = "namespace.gardener.cloud/keep-after-project-deletion"
+
+	// DefaultVpnRange is the default network range for the vpn between seed and shoot cluster.
+	DefaultVpnRange = "192.168.123.0/24"
 )
 
 // ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.

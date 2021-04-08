@@ -287,6 +287,85 @@ var _ = Describe("Seed Validation Tests", func() {
 			}))
 		})
 
+		It("should forbid Seed with overlap to default vpn range (subset)", func() {
+			shootDefaultPodCIDR := "192.168.123.128/28"     // 192.168.123.128 -> 192.168.123.143
+			shootDefaultServiceCIDR := "192.168.123.200/32" // 192.168.123.200 -> 192.168.123.200
+
+			nodesCIDR := "192.168.123.0/27" // 192.168.123.0 -> 192.168.123.31
+			// Nodes network overlaps with default vpn range
+			// Pods CIDR overlaps with default vpn range
+			// Services CIDR overlaps with default vpn range
+			// Shoot default pod CIDR overlaps with default vpn range
+			// Shoot default service CIDR overlaps with default vpn range
+			seed.Spec.Networks = core.SeedNetworks{
+				Nodes:    &nodesCIDR,          // 192.168.123.0  -> 192.168.123.31
+				Pods:     "192.168.123.32/30", // 192.168.123.32 -> 192.168.123.35
+				Services: "192.168.123.64/26", // 192.168.123.64 -> 192.168.123.127
+				ShootDefaults: &core.ShootNetworks{
+					Pods:     &shootDefaultPodCIDR,     // 192.168.123.128 -> 192.168.123.143
+					Services: &shootDefaultServiceCIDR, // 192.168.123.200 -> 192.168.123.200
+				},
+			}
+
+			errorList := ValidateSeed(seed)
+
+			Expect(errorList).To(ConsistOfFields(Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.pods"),
+				"Detail": Equal(`must not be a subset of "[]" ("192.168.123.0/24")`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.services"),
+				"Detail": Equal(`must not be a subset of "[]" ("192.168.123.0/24")`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.nodes"),
+				"Detail": Equal(`must not be a subset of "[]" ("192.168.123.0/24")`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.shootDefaults.pods"),
+				"Detail": Equal(`must not be a subset of "[]" ("192.168.123.0/24")`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.shootDefaults.services"),
+				"Detail": Equal(`must not be a subset of "[]" ("192.168.123.0/24")`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("[]"),
+				"Detail": Equal(`must not be a subset of "spec.networks.nodes" ("192.168.123.0/27")`),
+			}))
+		})
+
+		It("should forbid Seed with overlap to default vpn range (equality)", func() {
+			// Services CIDR overlaps with default vpn range
+			seed.Spec.Networks.Services = "192.168.123.0/24" // 192.168.123.0 -> 192.168.123.255
+
+			errorList := ValidateSeed(seed)
+
+			Expect(errorList).To(ConsistOfFields(Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.services"),
+				"Detail": Equal(`must not be a subset of "[]" ("192.168.123.0/24")`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("[]"),
+				"Detail": Equal(`must not be a subset of "spec.networks.services" ("192.168.123.0/24")`),
+			}))
+		})
+
+		It("should forbid Seed with overlap to default vpn range (superset)", func() {
+			// Pods CIDR overlaps with default vpn range
+			seed.Spec.Networks.Pods = "192.168.0.0/16" // 192.168.0.0 -> 192.168.255.255
+
+			errorList := ValidateSeed(seed)
+
+			Expect(errorList).To(ConsistOfFields(Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("[]"),
+				"Detail": Equal(`must not be a subset of "spec.networks.pods" ("192.168.0.0/16")`),
+			}))
+		})
+
 		Context("settings", func() {
 			It("should allow valid load balancer service annotations", func() {
 				seed.Spec.Settings = &core.SeedSettings{
