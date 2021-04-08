@@ -321,7 +321,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 		return nil, fmt.Errorf("can only accept at most one alerting secret, but found %d", numberOfAlertingSecrets)
 	}
 
-	logger.Logger.Infof("Found secrets: %s", strings.Join(logInfo, ", "))
+	logger.Logger.Infof("Found secrets in namespace %q: %s", namespace, strings.Join(logInfo, ", "))
 
 	return secretsMap, nil
 }
