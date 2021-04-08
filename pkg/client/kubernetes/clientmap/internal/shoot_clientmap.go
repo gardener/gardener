@@ -192,7 +192,7 @@ func (f *ShootClientSetFactory) getSeedNamespace(ctx context.Context, key ShootC
 	if len(shoot.Status.TechnicalID) > 0 {
 		namespace = shoot.Status.TechnicalID
 	} else {
-		project, err := ProjectForNamespaceWithClient(ctx, gardenClient.Client(), shoot.Namespace)
+		project, err := ProjectForNamespaceFromReader(ctx, gardenClient.Client(), shoot.Namespace)
 		if err != nil {
 			return "", seedClient, fmt.Errorf("failed to get Project for Shoot %q: %w", key.Key(), err)
 		}

@@ -22,7 +22,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/projectrbac"
-	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
@@ -76,8 +75,8 @@ var _ = Describe("ProjectRBAC", func() {
 		extensionRoleListOptions = []client.ListOption{
 			client.InNamespace(namespace),
 			client.MatchingLabels{
-				v1beta1constants.GardenRole: v1beta1constants.LabelExtensionProjectRole,
-				common.ProjectName:          projectName,
+				v1beta1constants.GardenRole:  v1beta1constants.LabelExtensionProjectRole,
+				v1beta1constants.ProjectName: projectName,
 			},
 		}
 

@@ -115,7 +115,7 @@ var defaultNewOperationFunc = func(
 		WithGardenClusterIdentity(gardenClusterIdentity).
 		WithSecrets(secrets).
 		WithImageVector(imageVector).
-		WithGardenFrom(k8sGardenCoreInformers, shoot.Namespace).
+		WithGardenFrom(gardenClient.Client(), shoot.Namespace).
 		WithSeedFrom(k8sGardenCoreInformers, *shoot.Spec.SeedName).
 		WithShootFromCluster(gardenClient, seedClient, shoot).
 		Build(ctx, clientMap)

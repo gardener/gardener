@@ -25,6 +25,7 @@ import (
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
+	"k8s.io/apiserver/pkg/storage"
 )
 
 // REST implements a RESTStorage for Project
@@ -62,7 +63,11 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 
 		TableConvertor: newTableConvertor(),
 	}
-	options := &generic.StoreOptions{RESTOptions: optsGetter}
+	options := &generic.StoreOptions{
+		RESTOptions: optsGetter,
+		AttrFunc:    project.GetAttrs,
+		TriggerFunc: map[string]storage.IndexerFunc{core.ProjectNamespace: project.NamespaceTriggerFunc},
+	}
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err)
 	}

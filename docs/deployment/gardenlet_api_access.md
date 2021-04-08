@@ -52,11 +52,13 @@ With the `Seed` name at hand, the authorizer checks for an **existing path** fro
 
 Today, the following rules are implemented:
 
-| Resource        | Verb  | Path                                 | Description            |
-| --------------- | ----- | ------------------------------------ | ---------------------- |
-| `CloudProfile`  | `get` | `CloudProfile` -> `Shoot` -> `Seed`  | Allow `get` requests for `CloudProfile`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `CloudProfile`s. |
-| `ConfigMap`     | `get` | `ConfigMap` -> `Shoot` -> `Seed`     | Allow `get` requests for `ConfigMap`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `ConfigMap`s. |
-| `SecretBinding` | `get` | `SecretBinding` -> `Shoot` -> `Seed` | Allow `get` requests for `SecretBinding`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `SecretBinding`s. |
+| Resource        | Verb  | Path                                          | Description            |
+| --------------- | ----- | --------------------------------------------- | ---------------------- |
+| `CloudProfile`  | `get` | `CloudProfile` -> `Shoot` -> `Seed`           | Allow `get` requests for `CloudProfile`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `CloudProfile`s. |
+| `ConfigMap`     | `get` | `ConfigMap` -> `Shoot` -> `Seed`              | Allow `get` requests for `ConfigMap`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `ConfigMap`s. |
+| `Namespace`     | `get` | `Namespace` -> `Shoot` -> `Seed`              | Allow `get` requests for `Namespace`s of `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `Namespace`s. |
+| `Project`       | `get` | `Project` -> `Namespace` -> `Shoot` -> `Seed` | Allow `get` requests for `Project`s referenced by the `Namespace` of `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `Project`s. |
+| `SecretBinding` | `get` | `SecretBinding` -> `Shoot` -> `Seed`          | Allow `get` requests for `SecretBinding`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `SecretBinding`s. |
 
 ### Implementation Details
 

@@ -20,20 +20,19 @@ import (
 	"fmt"
 	"io"
 
-	"k8s.io/apimachinery/pkg/util/validation/field"
-
 	"github.com/gardener/gardener/pkg/apis/core"
 	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction"
 	"github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction/validation"
-	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 )
 
@@ -155,7 +154,7 @@ func (t *TolerationRestriction) Admit(ctx context.Context, a admission.Attribute
 }
 
 func (t *TolerationRestriction) admitShoot(shoot *core.Shoot) error {
-	project, err := admissionutils.GetProject(shoot.Namespace, t.projectLister)
+	project, err := gutil.ProjectForNamespaceFromInternalLister(t.projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
 	}
@@ -216,7 +215,7 @@ func (t *TolerationRestriction) validateShoot(shoot, oldShoot *core.Shoot) error
 		tolerationsToValidate = getNewOrChangedTolerations(shoot, oldShoot)
 	}
 
-	project, err := admissionutils.GetProject(shoot.Namespace, t.projectLister)
+	project, err := gutil.ProjectForNamespaceFromInternalLister(t.projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
 	}

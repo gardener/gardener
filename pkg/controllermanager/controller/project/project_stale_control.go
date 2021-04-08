@@ -20,9 +20,9 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/operation/common"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	"github.com/sirupsen/logrus"
@@ -118,12 +118,12 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 	}
 
 	var skipStaleCheck bool
-	if value, ok := namespace.Annotations[common.ProjectSkipStaleCheck]; ok {
+	if value, ok := namespace.Annotations[v1beta1constants.ProjectSkipStaleCheck]; ok {
 		skipStaleCheck, _ = strconv.ParseBool(value)
 	}
 
 	if skipStaleCheck {
-		projectLogger.Infof("[STALE PROJECT RECONCILE] Namespace %q is annotated with %s, skipping the check and considering the project as 'not stale'", *project.Spec.Namespace, common.ProjectSkipStaleCheck)
+		projectLogger.Infof("[STALE PROJECT RECONCILE] Namespace %q is annotated with %s, skipping the check and considering the project as 'not stale'", *project.Spec.Namespace, v1beta1constants.ProjectSkipStaleCheck)
 		return r.markProjectAsNotStale(ctx, r.gardenClient, project)
 	}
 

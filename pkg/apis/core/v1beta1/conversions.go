@@ -67,6 +67,20 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 	}
 
 	if err := scheme.AddFieldLabelConversionFunc(
+		SchemeGroupVersion.WithKind("Project"),
+		func(label, value string) (string, string, error) {
+			switch label {
+			case "metadata.name", core.ProjectNamespace:
+				return label, value, nil
+			default:
+				return "", "", fmt.Errorf("field label not supported: %s", label)
+			}
+		},
+	); err != nil {
+		return err
+	}
+
+	if err := scheme.AddFieldLabelConversionFunc(
 		SchemeGroupVersion.WithKind("Shoot"),
 		func(label, value string) (string, string, error) {
 			switch label {

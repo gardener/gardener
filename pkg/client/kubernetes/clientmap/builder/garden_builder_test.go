@@ -15,24 +15,29 @@
 package builder
 
 import (
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("GardenClientMapBuilder", func() {
 
 	var (
-		fakeLogger logrus.FieldLogger
-		restConfig *rest.Config
+		fakeLogger      logrus.FieldLogger
+		restConfig      *rest.Config
+		uncachedObjects []client.Object
 	)
 
 	BeforeEach(func() {
 		fakeLogger = logger.NewNopLogger()
 		restConfig = &rest.Config{}
+		uncachedObjects = []client.Object{&corev1.ConfigMap{}, &gardencorev1beta1.Shoot{}}
 	})
 
 	Context("#logger", func() {
@@ -46,6 +51,13 @@ var _ = Describe("GardenClientMapBuilder", func() {
 		It("should be set correctly by WithRESTConfig", func() {
 			builder := NewGardenClientMapBuilder().WithRESTConfig(restConfig)
 			Expect(builder.restConfig).To(BeIdenticalTo(restConfig))
+		})
+	})
+
+	Context("#uncachedObjects", func() {
+		It("should be set correctly by WithUncached", func() {
+			builder := NewGardenClientMapBuilder().WithUncached(uncachedObjects...)
+			Expect(builder.uncachedObjects).To(Equal(uncachedObjects))
 		})
 	})
 

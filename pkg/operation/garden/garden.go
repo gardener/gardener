@@ -24,7 +24,6 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -42,21 +41,23 @@ import (
 // NewBuilder returns a new Builder.
 func NewBuilder() *Builder {
 	return &Builder{
-		projectFunc:        func() (*gardencorev1beta1.Project, error) { return nil, fmt.Errorf("project is required but not set") },
+		projectFunc: func(context.Context) (*gardencorev1beta1.Project, error) {
+			return nil, fmt.Errorf("project is required but not set")
+		},
 		internalDomainFunc: func() (*Domain, error) { return nil, fmt.Errorf("internal domain is required but not set") },
 	}
 }
 
 // WithProject sets the projectFunc attribute at the Builder.
 func (b *Builder) WithProject(project *gardencorev1beta1.Project) *Builder {
-	b.projectFunc = func() (*gardencorev1beta1.Project, error) { return project, nil }
+	b.projectFunc = func(context.Context) (*gardencorev1beta1.Project, error) { return project, nil }
 	return b
 }
 
-// WithProjectFromLister sets the projectFunc attribute after fetching it from the lister.
-func (b *Builder) WithProjectFromLister(projectLister gardencorelisters.ProjectLister, namespace string) *Builder {
-	b.projectFunc = func() (*gardencorev1beta1.Project, error) {
-		return common.ProjectForNamespace(projectLister, namespace)
+// WithProjectFromReader sets the projectFunc attribute after fetching it from the lister.
+func (b *Builder) WithProjectFromReader(reader client.Reader, namespace string) *Builder {
+	b.projectFunc = func(ctx context.Context) (*gardencorev1beta1.Project, error) {
+		return gutil.ProjectForNamespaceFromReader(ctx, reader, namespace)
 	}
 	return b
 }
@@ -86,10 +87,10 @@ func (b *Builder) WithDefaultDomainsFromSecrets(secrets map[string]*corev1.Secre
 }
 
 // Build initializes a new Garden object.
-func (b *Builder) Build() (*Garden, error) {
+func (b *Builder) Build(ctx context.Context) (*Garden, error) {
 	garden := &Garden{}
 
-	project, err := b.projectFunc()
+	project, err := b.projectFunc(ctx)
 	if err != nil {
 		return nil, err
 	}

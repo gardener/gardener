@@ -193,7 +193,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		}
 	}
 
-	project, err := admissionutils.GetProject(shoot.Namespace, v.projectLister)
+	project, err := gutil.ProjectForNamespaceFromInternalLister(v.projectLister, shoot.Namespace)
 	if err != nil {
 		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
 	}

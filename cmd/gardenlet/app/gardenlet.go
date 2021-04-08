@@ -294,10 +294,11 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	}
 
 	gardenClientMapBuilder := clientmapbuilder.NewGardenClientMapBuilder().
-		WithRESTConfig(restCfg)
+		WithRESTConfig(restCfg).
+		WithUncached(&gardencorev1beta1.Project{}) // gardenlet is not allowed to list/watch Project resources
 
 	if seedConfig := cfg.SeedConfig; seedConfig != nil {
-		gardenClientMapBuilder.ForSeed(seedConfig.Name)
+		gardenClientMapBuilder = gardenClientMapBuilder.ForSeed(seedConfig.Name)
 	}
 
 	seedClientMapBuilder := clientmapbuilder.NewSeedClientMapBuilder().

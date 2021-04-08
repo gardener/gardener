@@ -16,6 +16,7 @@ package project
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -23,8 +24,12 @@ import (
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/registry/generic"
+	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 )
 
@@ -150,4 +155,51 @@ func (projectStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runt
 
 func (projectStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateProjectStatusUpdate(obj.(*core.Project), old.(*core.Project))
+}
+
+// ToSelectableFields returns a field set that represents the object
+// TODO: fields are not labels, and the validation rules for them do not apply.
+func ToSelectableFields(project *core.Project) fields.Set {
+	// The purpose of allocation with a given number of elements is to reduce
+	// amount of allocations needed to create the fields.Set. If you add any
+	// field here or the number of object-meta related fields changes, this should
+	// be adjusted.
+	projectSpecificFieldsSet := make(fields.Set, 2)
+	projectSpecificFieldsSet[core.ProjectNamespace] = getNamespace(project)
+	return generic.AddObjectMetaFieldsSet(projectSpecificFieldsSet, &project.ObjectMeta, false)
+}
+
+// GetAttrs returns labels and fields of a given object for filtering purposes.
+func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
+	project, ok := obj.(*core.Project)
+	if !ok {
+		return nil, nil, fmt.Errorf("not a project")
+	}
+	return project.ObjectMeta.Labels, ToSelectableFields(project), nil
+}
+
+// MatchProject returns a generic matcher for a given label and field selector.
+func MatchProject(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
+	return storage.SelectionPredicate{
+		Label:       label,
+		Field:       field,
+		GetAttrs:    GetAttrs,
+		IndexFields: []string{core.ProjectNamespace},
+	}
+}
+
+// NamespaceTriggerFunc returns spec.namespace of given Project.
+func NamespaceTriggerFunc(obj runtime.Object) string {
+	project, ok := obj.(*core.Project)
+	if !ok {
+		return ""
+	}
+	return getNamespace(project)
+}
+
+func getNamespace(project *core.Project) string {
+	if project.Spec.Namespace == nil {
+		return ""
+	}
+	return *project.Spec.Namespace
 }

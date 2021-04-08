@@ -30,7 +30,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1beta1.Project, gardenClient client.Client, gardenAPIReader client.Reader) (reconcile.Result, error) {
@@ -98,14 +97,14 @@ func (r *projectReconciler) releaseNamespace(ctx context.Context, gardenClient c
 	// If the user wants to keep the namespace in the system even if the project gets deleted then we remove the related
 	// labels, annotations, and owner references and only delete the project.
 	var keepNamespace bool
-	if val, ok := namespace.Annotations[common.NamespaceKeepAfterProjectDeletion]; ok {
+	if val, ok := namespace.Annotations[v1beta1constants.NamespaceKeepAfterProjectDeletion]; ok {
 		keepNamespace, _ = strconv.ParseBool(val)
 	}
 
 	if keepNamespace {
-		delete(namespace.Annotations, common.NamespaceProject)
-		delete(namespace.Annotations, common.NamespaceKeepAfterProjectDeletion)
-		delete(namespace.Labels, common.ProjectName)
+		delete(namespace.Annotations, v1beta1constants.NamespaceProject)
+		delete(namespace.Annotations, v1beta1constants.NamespaceKeepAfterProjectDeletion)
+		delete(namespace.Labels, v1beta1constants.ProjectName)
 		delete(namespace.Labels, v1beta1constants.GardenRole)
 		for i := len(namespace.OwnerReferences) - 1; i >= 0; i-- {
 			if ownerRef := namespace.OwnerReferences[i]; ownerRef.APIVersion == gardencorev1beta1.SchemeGroupVersion.String() &&

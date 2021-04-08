@@ -20,11 +20,11 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/projectrbac"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
@@ -190,7 +190,7 @@ func (r *projectReconciler) reconcileNamespaceForProject(ctx context.Context, ga
 			return fmt.Errorf("namespace cannot be used as it needs the project labels %#v", projectLabels)
 		}
 
-		if metav1.HasAnnotation(namespace.ObjectMeta, common.NamespaceProject) && !apiequality.Semantic.DeepDerivative(projectAnnotations, namespace.Annotations) {
+		if metav1.HasAnnotation(namespace.ObjectMeta, v1beta1constants.NamespaceProject) && !apiequality.Semantic.DeepDerivative(projectAnnotations, namespace.Annotations) {
 			return fmt.Errorf("namespace is already in-use by another project")
 		}
 
@@ -201,7 +201,7 @@ func (r *projectReconciler) reconcileNamespaceForProject(ctx context.Context, ga
 		// If the project is reconciled for the first time then its observed generation is 0. Only in this case we want
 		// to add the "keep-after-project-deletion" annotation to the namespace when we adopt it.
 		if project.Status.ObservedGeneration == 0 {
-			namespace.Annotations[common.NamespaceKeepAfterProjectDeletion] = "true"
+			namespace.Annotations[v1beta1constants.NamespaceKeepAfterProjectDeletion] = "true"
 		}
 
 		return nil

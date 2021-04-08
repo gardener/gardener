@@ -362,6 +362,19 @@ const (
 	SeedUserNamePrefix = "gardener.cloud:system:seed:"
 	// SeedUserNameSuffixAmbiguous is the default seed name in case the gardenlet config.SeedConfig is not set
 	SeedUserNameSuffixAmbiguous = "<ambiguous>"
+
+	// ProjectName is the key of a label on namespaces whose value holds the project name.
+	ProjectName = "project.gardener.cloud/name"
+	// ProjectSkipStaleCheck is the key of an annotation on a project namespace that marks the associated Project to be
+	// skipped by the stale project controller. If the project has already configured stale timestamps in its status
+	// then they will be reset.
+	ProjectSkipStaleCheck = "project.gardener.cloud/skip-stale-check"
+	// NamespaceProject is the key of an annotation on namespace whose value holds the project uid.
+	NamespaceProject = "namespace.gardener.cloud/project"
+	// NamespaceKeepAfterProjectDeletion is a constant for an annotation on a `Namespace` resource that states that it
+	// should not be deleted if the corresponding `Project` gets deleted. Please note that all project related labels
+	// from the namespace will be removed when the project is being deleted.
+	NamespaceKeepAfterProjectDeletion = "namespace.gardener.cloud/keep-after-project-deletion"
 )
 
 // ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.
