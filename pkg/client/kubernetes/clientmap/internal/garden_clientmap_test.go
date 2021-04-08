@@ -35,11 +35,12 @@ import (
 
 var _ = Describe("GardenClientMap", func() {
 	var (
-		ctx        context.Context
-		cm         clientmap.ClientMap
-		key        clientmap.ClientSetKey
-		factory    *internal.GardenClientSetFactory
-		restConfig *rest.Config
+		ctx             context.Context
+		cm              clientmap.ClientMap
+		key             clientmap.ClientSetKey
+		factory         *internal.GardenClientSetFactory
+		restConfig      *rest.Config
+		uncachedObjects []client.Object
 	)
 
 	BeforeEach(func() {
@@ -47,8 +48,10 @@ var _ = Describe("GardenClientMap", func() {
 		key = keys.ForGarden()
 
 		restConfig = &rest.Config{}
+		uncachedObjects = []client.Object{&corev1.ConfigMap{}}
 		factory = &internal.GardenClientSetFactory{
-			RESTConfig: restConfig,
+			RESTConfig:      restConfig,
+			UncachedObjects: uncachedObjects,
 		}
 		cm = internal.NewGardenClientMap(factory, logger.NewNopLogger())
 	})
@@ -78,6 +81,7 @@ var _ = Describe("GardenClientMap", func() {
 				Expect(fns).To(ConsistOfConfigFuncs(
 					kubernetes.WithRESTConfig(restConfig),
 					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
+					kubernetes.WithUncached(&corev1.ConfigMap{}),
 					kubernetes.WithUncached(&corev1.Secret{}),
 				))
 				return fakeCS, nil

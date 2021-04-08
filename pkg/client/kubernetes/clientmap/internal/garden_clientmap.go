@@ -47,6 +47,8 @@ func NewGardenClientMap(factory *GardenClientSetFactory, logger logrus.FieldLogg
 type GardenClientSetFactory struct {
 	// RESTConfig is a rest.Config that will be used by the created ClientSets.
 	RESTConfig *rest.Config
+	// UncachedObjects is a list of objects that will not be cached.
+	UncachedObjects []client.Object
 	// SeedName is the name of the seed that will be used by the created ClientSets.
 	SeedName string
 }
@@ -57,7 +59,7 @@ func (f *GardenClientSetFactory) CalculateClientSetHash(context.Context, clientm
 }
 
 // NewClientSet creates a new ClientSet to the garden cluster.
-func (f *GardenClientSetFactory) NewClientSet(ctx context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, error) {
+func (f *GardenClientSetFactory) NewClientSet(_ context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, error) {
 	_, ok := k.(GardenClientSetKey)
 	if !ok {
 		return nil, fmt.Errorf("unsupported ClientSetKey: expected %T got %T", GardenClientSetKey{}, k)
@@ -65,9 +67,8 @@ func (f *GardenClientSetFactory) NewClientSet(ctx context.Context, k clientmap.C
 
 	configFns := []kubernetes.ConfigFunc{
 		kubernetes.WithRESTConfig(f.RESTConfig),
-		kubernetes.WithClientOptions(client.Options{
-			Scheme: kubernetes.GardenScheme,
-		}),
+		kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
+		kubernetes.WithUncached(f.UncachedObjects...),
 	}
 
 	// Use multi-namespaced caches for Secrets which only consider seed namespaces

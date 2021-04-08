@@ -22,6 +22,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GardenClientMapBuilder can build a ClientMap which can be used to construct a ClientMap for requesting and storing
@@ -29,9 +30,10 @@ import (
 // to retrieve a client to the garden cluster via the same mechanisms as the other types of ClientSets (e.g. through
 // a DelegatingClientMap).
 type GardenClientMapBuilder struct {
-	restConfig *rest.Config
-	logger     logrus.FieldLogger
-	seedName   string
+	restConfig      *rest.Config
+	uncachedObjects []client.Object
+	logger          logrus.FieldLogger
+	seedName        string
 }
 
 // NewGardenClientMapBuilder creates a new GardenClientMapBuilder.
@@ -52,6 +54,13 @@ func (b *GardenClientMapBuilder) WithRESTConfig(cfg *rest.Config) *GardenClientM
 	return b
 }
 
+// WithUncached takes a list of runtime objects (plain or lists) that users don't want to cache
+// for this client. This function can be called multiple times, it should append to an internal slice.
+func (b *GardenClientMapBuilder) WithUncached(objs ...client.Object) *GardenClientMapBuilder {
+	b.uncachedObjects = append(b.uncachedObjects, objs...)
+	return b
+}
+
 // ForSeed sets the seed that will be used to construct a new client to the garden cluster.
 func (b *GardenClientMapBuilder) ForSeed(name string) *GardenClientMapBuilder {
 	b.seedName = name
@@ -68,7 +77,8 @@ func (b *GardenClientMapBuilder) Build() (clientmap.ClientMap, error) {
 	}
 
 	return internal.NewGardenClientMap(&internal.GardenClientSetFactory{
-		RESTConfig: b.restConfig,
-		SeedName:   b.seedName,
+		RESTConfig:      b.restConfig,
+		UncachedObjects: b.uncachedObjects,
+		SeedName:        b.seedName,
 	}, b.logger), nil
 }
