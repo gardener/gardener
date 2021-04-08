@@ -88,14 +88,14 @@ func (r *configMapReconciler) Reconcile(ctx context.Context, request reconcile.R
 			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef != nil &&
 			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name == configMap.Name {
 
-			shootKey, err := cache.MetaNamespaceKeyFunc(shoot)
+			shootKey, err := cache.MetaNamespaceKeyFunc(&shoot)
 			if err != nil {
 				logger.Logger.Errorf("[SHOOT CONFIGMAP controller] failed to get key for shoot. err=%+v", err)
 				continue
 			}
 
 			if shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion != configMap.ResourceVersion {
-				logger.Logger.Infof("[SHOOT CONFIGMAP controller] schedule for reconciliation shoot %v ", shootKey)
+				logger.Logger.Infof("[SHOOT CONFIGMAP controller] schedule for reconciliation shoot %v", shootKey)
 				// send empty patch to let the admission webhook in GAC add or update the config map resource version
 				if err := kubernetes.SubmitEmptyPatch(ctx, r.gardenClient, &shoot); err != nil {
 					return reconcile.Result{}, err
