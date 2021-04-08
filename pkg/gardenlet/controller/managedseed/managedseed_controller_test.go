@@ -86,6 +86,18 @@ var _ = Describe("Controller", func() {
 
 			c.managedSeedAdd(managedSeed)
 		})
+	})
+
+	Describe("#managedSeedAddWithJitter", func() {
+		It("should do nothing because the object is not a ManagedSeed", func() {
+			c.managedSeedAddWithJitter(&gardencorev1beta1.Seed{})
+		})
+
+		It("should add the object to the queue", func() {
+			queue.EXPECT().Add(key)
+
+			c.managedSeedAddWithJitter(managedSeed)
+		})
 
 		It("should add the object to the queue (deletion)", func() {
 			now := metav1.Now()
@@ -93,7 +105,7 @@ var _ = Describe("Controller", func() {
 			managedSeed.Status.ObservedGeneration = 1
 			queue.EXPECT().Add(key)
 
-			c.managedSeedAdd(managedSeed)
+			c.managedSeedAddWithJitter(managedSeed)
 		})
 
 		It("should add the object to the queue with a jittered delay", func() {
@@ -104,7 +116,7 @@ var _ = Describe("Controller", func() {
 				},
 			)
 
-			c.managedSeedAdd(managedSeed)
+			c.managedSeedAddWithJitter(managedSeed)
 		})
 	})
 

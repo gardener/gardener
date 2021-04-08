@@ -1269,10 +1269,8 @@ func getIngressClass(seedIngressEnabled bool) string {
 	return v1beta1constants.ShootNginxIngressClass
 }
 
-const annotationSeedIngressClass = "seed.gardener.cloud/ingress-class"
-
 func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, seedClient client.Client, seed *Seed, newClass string) error {
-	if oldClass, ok := seed.Info.Annotations[annotationSeedIngressClass]; ok && oldClass == newClass {
+	if oldClass, ok := seed.Info.Annotations[v1beta1constants.AnnotationSeedIngressClass]; ok && oldClass == newClass {
 		return nil
 	}
 
@@ -1297,7 +1295,7 @@ func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, see
 	}
 
 	seedCopy := seed.Info.DeepCopy()
-	metav1.SetMetaDataAnnotation(&seed.Info.ObjectMeta, annotationSeedIngressClass, newClass)
+	metav1.SetMetaDataAnnotation(&seed.Info.ObjectMeta, v1beta1constants.AnnotationSeedIngressClass, newClass)
 
 	return gardenClient.Patch(ctx, seed.Info, client.MergeFrom(seedCopy))
 }

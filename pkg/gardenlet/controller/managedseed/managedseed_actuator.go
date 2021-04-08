@@ -147,14 +147,14 @@ func (a *actuator) Reconcile(ctx context.Context, ms *seedmanagementv1alpha1.Man
 
 	// Create or update seed secrets
 	a.reconcilingInfoEventf(ms, "Creating or updating seed %s secrets", ms.Name)
-	if err := a.createOrUpdateSeedSecrets(ctx, &seedTemplate.Spec, ms, shoot); err != nil {
+	if err := a.createOrUpdateSeedSecrets(ctx, seedTemplate, ms, shoot); err != nil {
 		return status, false, fmt.Errorf("could not create or update seed %s secrets: %w", ms.Name, err)
 	}
 
 	if ms.Spec.SeedTemplate != nil {
 		// Create or update seed
 		a.reconcilingInfoEventf(ms, "Creating or updating seed %s", ms.Name)
-		if err := a.createOrUpdateSeed(ctx, ms); err != nil {
+		if err := a.createOrUpdateSeed(ctx, seedTemplate, ms); err != nil {
 			return status, false, fmt.Errorf("could not create or update seed %s: %w", ms.Name, err)
 		}
 	} else if ms.Spec.Gardenlet != nil {
@@ -323,7 +323,7 @@ func (a *actuator) getGardenNamespace(ctx context.Context, shootClient kubernete
 	return ns, nil
 }
 
-func (a *actuator) createOrUpdateSeed(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
+func (a *actuator) createOrUpdateSeed(ctx context.Context, seedTemplate *gardencorev1beta1.SeedTemplate, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
 	seed := &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: managedSeed.Name,
@@ -333,11 +333,17 @@ func (a *actuator) createOrUpdateSeed(ctx context.Context, managedSeed *seedmana
 		seed.OwnerReferences = []metav1.OwnerReference{
 			*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
 		}
-		seed.Labels = utils.MergeStringMaps(managedSeed.Spec.SeedTemplate.Labels, map[string]string{
+		seed.Labels = utils.MergeStringMaps(seedTemplate.Labels, map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
 		})
-		seed.Annotations = managedSeed.Spec.SeedTemplate.Annotations
-		seed.Spec = managedSeed.Spec.SeedTemplate.Spec
+		seed.Annotations = seedTemplate.Annotations
+		seed.Spec = seedTemplate.Spec
+
+		model := gardencorev1beta1helper.GetSeedModel(seed)
+		gardencorev1beta1.SetObjectDefaults_Seed(model)
+		seed.Annotations = utils.MergeStringMaps(seed.Annotations, map[string]string{
+			v1beta1constants.AnnotationModelChecksum: utils.ComputeChecksum(model),
+		})
 		return nil
 	})
 	return err
@@ -458,7 +464,7 @@ func (a *actuator) checkSeedSpec(ctx context.Context, spec *gardencorev1beta1.Se
 	return nil
 }
 
-func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardencorev1beta1.SeedSpec, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
+func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, seedTemplate *gardencorev1beta1.SeedTemplate, managedSeed *seedmanagementv1alpha1.ManagedSeed, shoot *gardencorev1beta1.Shoot) error {
 	// Get shoot secret
 	shootSecret, err := a.getShootSecret(ctx, shoot)
 	if err != nil {
@@ -466,26 +472,37 @@ func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardenco
 	}
 
 	// If backup is specified, create or update the backup secret if it doesn't exist or is owned by the managed seed
-	if spec.Backup != nil {
+	if seedTemplate.Spec.Backup != nil {
 		// Get backup secret
-		backupSecret, err := kutil.GetSecretByReference(ctx, a.gardenClient.Client(), &spec.Backup.SecretRef)
+		backupSecret, err := kutil.GetSecretByReference(ctx, a.gardenClient.Client(), &seedTemplate.Spec.Backup.SecretRef)
 		if client.IgnoreNotFound(err) != nil {
 			return err
 		}
 
 		// Create or update backup secret if it doesn't exist or is owned by the managed seed
 		if apierrors.IsNotFound(err) || metav1.IsControlledBy(backupSecret, managedSeed) {
-			ownerRefs := []metav1.OwnerReference{
-				*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
-			}
-			if err := kutil.CreateOrUpdateSecretByReference(ctx, a.gardenClient.Client(), &spec.Backup.SecretRef, corev1.SecretTypeOpaque, shootSecret.Data, ownerRefs); err != nil {
+			if err := kutil.CreateOrUpdateSecretByReference(ctx, a.gardenClient.Client(), &seedTemplate.Spec.Backup.SecretRef, func(secret *corev1.Secret) error {
+				secret.Labels = nil
+				secret.Annotations = nil
+				secret.OwnerReferences = []metav1.OwnerReference{
+					*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
+				}
+				secret.Data = shootSecret.Data
+				secret.StringData = nil
+				secret.Type = corev1.SecretTypeOpaque
+
+				secret.Annotations = map[string]string{
+					v1beta1constants.AnnotationModelChecksum: utils.ComputeChecksum(kutil.GetSecretModel(secret)),
+				}
+				return nil
+			}); err != nil {
 				return err
 			}
 		}
 	}
 
 	// If secret reference is specified, create or update the corresponding secret
-	if spec.SecretRef != nil {
+	if seedTemplate.Spec.SecretRef != nil {
 		// Get shoot kubeconfig secret
 		shootKubeconfigSecret, err := a.getShootKubeconfigSecret(ctx, shoot)
 		if err != nil {
@@ -497,10 +514,21 @@ func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardenco
 		data[kubernetes.KubeConfig] = shootKubeconfigSecret.Data[kubernetes.KubeConfig]
 
 		// Create or update seed secret
-		ownerRefs := []metav1.OwnerReference{
-			*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
-		}
-		if err := kutil.CreateOrUpdateSecretByReference(ctx, a.gardenClient.Client(), spec.SecretRef, corev1.SecretTypeOpaque, data, ownerRefs); err != nil {
+		if err := kutil.CreateOrUpdateSecretByReference(ctx, a.gardenClient.Client(), seedTemplate.Spec.SecretRef, func(secret *corev1.Secret) error {
+			secret.Labels = nil
+			secret.Annotations = nil
+			secret.OwnerReferences = []metav1.OwnerReference{
+				*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
+			}
+			secret.Data = data
+			secret.StringData = nil
+			secret.Type = corev1.SecretTypeOpaque
+
+			secret.Annotations = map[string]string{
+				v1beta1constants.AnnotationModelChecksum: utils.ComputeChecksum(kutil.GetSecretModel(secret)),
+			}
+			return nil
+		}); err != nil {
 			return err
 		}
 	}

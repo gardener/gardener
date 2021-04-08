@@ -22,6 +22,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
@@ -1340,4 +1341,14 @@ func ShootSecretResourceReferencesEqual(oldResources, newResources []gardencorev
 	}
 
 	return oldNames.Equal(newNames)
+}
+
+// GetSeedModel returns the model of the given Seed.
+func GetSeedModel(seed *gardencorev1beta1.Seed) *gardencorev1beta1.Seed {
+	model := &gardencorev1beta1.Seed{
+		ObjectMeta: *kutil.GetObjectMetaModel(&seed.ObjectMeta),
+		Spec:       seed.Spec,
+	}
+	delete(model.Annotations, v1beta1constants.AnnotationSeedIngressClass)
+	return model
 }

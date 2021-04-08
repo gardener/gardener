@@ -338,6 +338,12 @@ const (
 	// `alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector` annotation that disables the pod injection.
 	AnnotationShootAPIServerSNIPodInjectorDisableValue = "disable"
 
+	// AnnotationSeedIngressClass is a constant for an annotation on a Seed to specify the ingress class.
+	AnnotationSeedIngressClass = "seed.gardener.cloud/ingress-class"
+
+	// AnnotationModelChecksum is a constant for an annotation on controlled objects to detect changes by external agents.
+	AnnotationModelChecksum = "gardener.cloud/model-checksum"
+
 	// OperatingSystemConfigUnitNameKubeletService is a constant for a unit in the operating system config that contains the kubelet service.
 	OperatingSystemConfigUnitNameKubeletService = "kubelet.service"
 	// OperatingSystemConfigUnitNameDockerService is a constant for a unit in the operating system config that contains the docker service.

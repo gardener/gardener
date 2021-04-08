@@ -22,6 +22,19 @@ import (
 )
 
 func (c *Controller) managedSeedAdd(obj interface{}) {
+	_, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
+	if !ok {
+		return
+	}
+	key, err := cache.MetaNamespaceKeyFunc(obj)
+	if err != nil {
+		return
+	}
+
+	c.managedSeedQueue.Add(key)
+}
+
+func (c *Controller) managedSeedAddWithJitter(obj interface{}) {
 	managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
 	if !ok {
 		return

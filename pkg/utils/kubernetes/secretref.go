@@ -33,8 +33,8 @@ func GetSecretByReference(ctx context.Context, c client.Client, ref *corev1.Secr
 }
 
 // CreateOrUpdateSecretByReference creates or updates the secret referenced by the given secret reference
-// with the given type, data, and owner references.
-func CreateOrUpdateSecretByReference(ctx context.Context, c client.Client, ref *corev1.SecretReference, secretType corev1.SecretType, data map[string][]byte, ownerRefs []metav1.OwnerReference) error {
+// with the given mutate function.
+func CreateOrUpdateSecretByReference(ctx context.Context, c client.Client, ref *corev1.SecretReference, f func(*corev1.Secret) error) error {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ref.Name,
@@ -42,10 +42,7 @@ func CreateOrUpdateSecretByReference(ctx context.Context, c client.Client, ref *
 		},
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, c, secret, func() error {
-		secret.ObjectMeta.OwnerReferences = ownerRefs
-		secret.Type = secretType
-		secret.Data = data
-		return nil
+		return f(secret)
 	}); err != nil {
 		return err
 	}

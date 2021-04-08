@@ -246,6 +246,9 @@ var _ = Describe("Actuator", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      backupSecretName,
 				Namespace: namespace,
+				Annotations: map[string]string{
+					v1beta1constants.AnnotationModelChecksum: "7c3c1bccfb922cfb41e1090817d10a333c40df24955da73d93313f32152b6530",
+				},
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
 				},
@@ -257,6 +260,9 @@ var _ = Describe("Actuator", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      seedSecretName,
 				Namespace: namespace,
+				Annotations: map[string]string{
+					v1beta1constants.AnnotationModelChecksum: "e2f703ce5a4548ea38b9b75deb48ead7fd856bfa581b55837c516c4855f768ac",
+				},
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
 				},
@@ -273,7 +279,9 @@ var _ = Describe("Actuator", func() {
 				Labels: utils.MergeStringMaps(seedTemplate.Labels, map[string]string{
 					v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
 				}),
-				Annotations: seedTemplate.Annotations,
+				Annotations: utils.MergeStringMaps(seedTemplate.Annotations, map[string]string{
+					v1beta1constants.AnnotationModelChecksum: "9ecec50843ed1cd9bc6108308cba18567ca8465dd08137e0437ceedd47d9ffdc",
+				}),
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
 				},

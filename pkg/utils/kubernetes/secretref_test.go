@@ -40,6 +40,8 @@ var _ = Describe("secretref", func() {
 
 		secretRef *corev1.SecretReference
 		secret    *corev1.Secret
+
+		f func(*corev1.Secret) func(*corev1.Secret) error
 	)
 
 	BeforeEach(func() {
@@ -71,6 +73,15 @@ var _ = Describe("secretref", func() {
 				"foo": []byte("bar"),
 			},
 			Type: corev1.SecretTypeOpaque,
+		}
+
+		f = func(secret *corev1.Secret) func(*corev1.Secret) error {
+			return func(s *corev1.Secret) error {
+				s.OwnerReferences = secret.OwnerReferences
+				s.Data = secret.Data
+				s.Type = secret.Type
+				return nil
+			}
 		}
 	})
 
@@ -104,7 +115,7 @@ var _ = Describe("secretref", func() {
 			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(corev1.Resource("secret"), name))
 			c.EXPECT().Create(ctx, secret).Return(nil)
 
-			err := kutil.CreateOrUpdateSecretByReference(ctx, c, secretRef, secret.Type, secret.Data, secret.OwnerReferences)
+			err := kutil.CreateOrUpdateSecretByReference(ctx, c, secretRef, f(secret))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -120,14 +131,14 @@ var _ = Describe("secretref", func() {
 			})
 			c.EXPECT().Update(ctx, newSecret).Return(nil)
 
-			err := kutil.CreateOrUpdateSecretByReference(ctx, c, secretRef, newSecret.Type, newSecret.Data, newSecret.OwnerReferences)
+			err := kutil.CreateOrUpdateSecretByReference(ctx, c, secretRef, f(newSecret))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should fail if getting the secret failed", func() {
 			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fmt.Errorf("error"))
 
-			err := kutil.CreateOrUpdateSecretByReference(ctx, c, secretRef, secret.Type, secret.Data, secret.OwnerReferences)
+			err := kutil.CreateOrUpdateSecretByReference(ctx, c, secretRef, f(secret))
 			Expect(err).To(HaveOccurred())
 		})
 	})

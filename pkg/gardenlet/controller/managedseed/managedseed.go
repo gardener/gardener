@@ -120,7 +120,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	c.managedSeedInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controllerutils.ManagedSeedFilterFunc(ctx, c.gardenClient.Client(), confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.config.SeedSelector),
 		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    c.managedSeedAdd,
+			AddFunc:    c.managedSeedAddWithJitter,
 			UpdateFunc: c.managedSeedUpdate,
 			DeleteFunc: c.managedSeedDelete,
 		},

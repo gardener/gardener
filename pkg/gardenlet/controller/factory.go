@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -231,9 +232,15 @@ func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenCli
 	if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient, seed, func() error {
 		seed.Labels = utils.MergeStringMaps(map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
-		}, f.cfg.SeedConfig.Labels)
-
+		}, cfg.SeedConfig.Labels)
+		seed.Annotations = cfg.SeedConfig.Annotations
 		seed.Spec = cfg.SeedConfig.Spec
+
+		model := gardencorev1beta1helper.GetSeedModel(seed)
+		gardencorev1beta1.SetObjectDefaults_Seed(model)
+		seed.Annotations = utils.MergeStringMaps(seed.Annotations, map[string]string{
+			v1beta1constants.AnnotationModelChecksum: utils.ComputeChecksum(model),
+		})
 		return nil
 	}); err != nil {
 		return fmt.Errorf("could not register seed %q: %+v", seed.Name, err)

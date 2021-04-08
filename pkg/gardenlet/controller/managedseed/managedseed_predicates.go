@@ -19,7 +19,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -28,15 +31,17 @@ func (c *Controller) filterSeed(obj, _, controller client.Object, deleted bool) 
 	if !ok {
 		return false
 	}
-	ms, ok := controller.(*seedmanagementv1alpha1.ManagedSeed)
+	_, ok = controller.(*seedmanagementv1alpha1.ManagedSeed)
 	if !ok {
 		return false
 	}
 
-	// TODO Return true if the seed was deleted or updated and metadata / spec don't match its checksum
-
-	if ms.DeletionTimestamp != nil && deleted {
-		c.logger.Debugf("Managed seed %s is deleting and seed %s no longer exists", kutil.ObjectName(ms), kutil.ObjectName(seed))
+	if checksum := seed.Annotations[v1beta1constants.AnnotationModelChecksum]; checksum != utils.ComputeChecksum(gardencorev1beta1helper.GetSeedModel(seed)) {
+		c.logger.Debugf("Model checksum of seed %s doesn't match model", kutil.ObjectName(seed))
+		return true
+	}
+	if deleted {
+		c.logger.Debugf("Seed %s no longer exists", kutil.ObjectName(seed))
 		return true
 	}
 	return false
@@ -47,15 +52,17 @@ func (c *Controller) filterSecret(obj, _, controller client.Object, deleted bool
 	if !ok {
 		return false
 	}
-	ms, ok := controller.(*seedmanagementv1alpha1.ManagedSeed)
+	_, ok = controller.(*seedmanagementv1alpha1.ManagedSeed)
 	if !ok {
 		return false
 	}
 
-	// TODO Return true if the secret was deleted or updated and metadata / data don't match its checksum
-
-	if ms.DeletionTimestamp != nil && deleted {
-		c.logger.Debugf("Managed seed %s is deleting and secret %s no longer exists", kutil.ObjectName(ms), kutil.ObjectName(secret))
+	if checksum := secret.Annotations[v1beta1constants.AnnotationModelChecksum]; checksum != utils.ComputeChecksum(kutil.GetSecretModel(secret)) {
+		c.logger.Debugf("Model checksum of secret %s doesn't match model", kutil.ObjectName(secret))
+		return true
+	}
+	if deleted {
+		c.logger.Debugf("Secret %s no longer exists", kutil.ObjectName(secret))
 		return true
 	}
 	return false
