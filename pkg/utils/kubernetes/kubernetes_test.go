@@ -1074,7 +1074,7 @@ var _ = Describe("kubernetes", func() {
 				msg, err := FetchEventMessages(ctx, scheme, reader, &corev1.Service{}, corev1.EventTypeWarning, len(events))
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("failed identify GVK for object"))
+				Expect(err.Error()).To(ContainSubstring("failed to identify GVK for object"))
 				Expect(msg).To(BeEmpty())
 			})
 		})
