@@ -85,7 +85,6 @@ message KubeAPIServerOpenIDConnect {
   optional string issuerURL = 5;
 
   // key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.
-  // Only applied when the Kubernetes version of the Shoot is >= 1.11
   // +optional
   map<string, string> requiredClaims = 6;
 

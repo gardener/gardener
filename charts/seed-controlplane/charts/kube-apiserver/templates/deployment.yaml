@@ -92,11 +92,7 @@ spec:
         command:
         {{- if semverCompare "< 1.17" .Values.kubernetesVersion }}
         - /hyperkube
-        {{- if semverCompare "< 1.15" .Values.kubernetesVersion }}
-        - apiserver
-        {{- else }}
         - kube-apiserver
-        {{- end }}
         {{- else }}
         - /usr/local/bin/kube-apiserver
         {{- end }}

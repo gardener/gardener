@@ -143,11 +143,6 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				attrs = admission.NewAttributesRecord(shoot, nil, core.Kind("Shoot").WithVersion("v1beta1"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("v1beta1"), "status", admission.Create, &metav1.CreateOptions{}, false, nil)
 			})
 
-			It("version is not correct", func() {
-				shoot.Spec.Kubernetes.Version = "something-not-valid"
-				expected = shoot.DeepCopy()
-			})
-
 			It("preset shoot label selector doesn't match", func() {
 				preset.Spec.ShootSelector.MatchLabels = map[string]string{"not": "existing"}
 				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset)).To(Succeed())
@@ -300,13 +295,6 @@ var _ = Describe("Cluster OpenIDConfig Preset", func() {
 				preset2.Spec.OpenIDConnectPresetSpec.Server.ClientID = "client-id-2"
 
 				Expect(settingsInformerFactory.Settings().V1alpha1().ClusterOpenIDConnectPresets().Informer().GetStore().Add(preset2)).To(Succeed())
-			})
-
-			It("remove required claims for K8S < 1.11", func() {
-				shoot.Spec.Kubernetes.Version = "1.10"
-
-				expected.Spec.Kubernetes.Version = "1.10"
-				expected.Spec.Kubernetes.KubeAPIServer.OIDCConfig.RequiredClaims = nil
 			})
 		})
 	})

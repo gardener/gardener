@@ -33,10 +33,6 @@ func CLIFlags(kubernetesVersion *semver.Version, criName extensionsv1alpha1.CRIN
 
 	var flags []string
 
-	if versionConstraintK8sLess115.Check(kubernetesVersion) {
-		flags = append(flags, "--allow-privileged=true")
-	}
-
 	flags = append(flags,
 		"--bootstrap-kubeconfig="+PathKubeconfigBootstrap,
 		"--config="+PathKubeletConfig,
@@ -45,26 +41,10 @@ func CLIFlags(kubernetesVersion *semver.Version, criName extensionsv1alpha1.CRIN
 		fmt.Sprintf("--image-pull-progress-deadline=%s", cliFlags.ImagePullProgressDeadline.Duration.String()),
 	)
 
-	if versionConstraintK8sLess112.Check(kubernetesVersion) {
-		flags = append(flags, "--cadvisor-port=0")
-	}
-
-	if versionConstraintK8sLess111.Check(kubernetesVersion) {
-		flags = append(flags, "--feature-gates=PodPriority=true")
-	}
-
-	if versionConstraintK8sLess114.Check(kubernetesVersion) {
-		flags = append(flags, "--feature-gates=SupportPodPidsLimit=true")
-	}
-
 	flags = append(flags,
 		"--kubeconfig="+PathKubeconfigReal,
 		"--network-plugin=cni",
 	)
-
-	if versionConstraintK8sLess111.Check(kubernetesVersion) {
-		flags = append(flags, "--rotate-certificates=true")
-	}
 
 	if versionConstraintK8sLess119.Check(kubernetesVersion) {
 		flags = append(flags, "--volume-plugin-dir="+pathVolumePluginDirectory)

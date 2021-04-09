@@ -57,8 +57,8 @@ const (
 	chartName               = "chartName"
 	renderedContent         = "renderedContent"
 
-	seedVersion  = "1.13.0"
-	shootVersion = "1.14.0"
+	seedVersion  = "1.15.0"
+	shootVersion = "1.16.0"
 )
 
 var (

@@ -10,9 +10,7 @@ spec:
     kind: Hvpa
     plural: hvpas
   scope: ""
-{{- if semverCompare ">= 1.15-0" .Capabilities.KubeVersion.GitVersion }}
   preserveUnknownFields: false
-{{- end }}
   subresources:
     scale:
       labelSelectorPath: .status.targetSelector
@@ -219,9 +217,7 @@ spec:
                     metadata:
                       description: Metadata of the pods created from this template.
                       type: object
-                      {{- if semverCompare ">= 1.15-0" .Capabilities.KubeVersion.GitVersion }}
                       x-kubernetes-preserve-unknown-fields: true # To be replaced by proper OpenAPI spec
-                      {{- end }}
                     spec:
                       description: Spec defines the behavior of a HPA.
                       properties:
@@ -804,9 +800,7 @@ spec:
                     metadata:
                       description: Metadata of the pods created from this template.
                       type: object
-                      {{- if semverCompare ">= 1.15-0" .Capabilities.KubeVersion.GitVersion }}
                       x-kubernetes-preserve-unknown-fields: true # To be replaced by proper OpenAPI spec
-                      {{- end }}
                     spec:
                       description: Spec defines the behavior of a VPA.
                       properties:
@@ -1199,9 +1193,7 @@ spec:
               format: int32
               type: integer
           type: object
-      {{- if semverCompare ">= 1.12-0" .Capabilities.KubeVersion.GitVersion }}
       type: object
-      {{- end }}
   versions:
   - name: v1alpha1
     served: true

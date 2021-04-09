@@ -33,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -310,6 +309,9 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 					}},
 					FailurePolicy:     &failurePolicy,
 					NamespaceSelector: &metav1.LabelSelector{},
+					ObjectSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{gutil.DeletionProtected: "true"},
+					},
 					ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
 						CABundle: []byte(TLSCACert),
 						Service: &admissionregistrationv1beta1.ServiceReference{
@@ -358,12 +360,6 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 		}
 	)
 
-	if versionConstraintK8sGreaterEqual115.Check(g.kubernetesVersion) {
-		validatingWebhookConfiguration.Webhooks[0].ObjectSelector = &metav1.LabelSelector{
-			MatchLabels: map[string]string{gutil.DeletionProtected: "true"},
-		}
-	}
-
 	resources, err := registry.AddAllAndSerialize(
 		serviceAccount,
 		clusterRole,
@@ -409,15 +405,6 @@ func (g *gardenerSeedAdmissionController) WaitCleanup(ctx context.Context) error
 	defer cancel()
 
 	return managedresources.WaitUntilDeleted(timeoutCtx, g.client, g.namespace, managedResourceName)
-}
-
-var versionConstraintK8sGreaterEqual115 *semver.Constraints
-
-func init() {
-	var err error
-
-	versionConstraintK8sGreaterEqual115, err = semver.NewConstraint(">= 1.15")
-	utilruntime.Must(err)
 }
 
 func (g *gardenerSeedAdmissionController) getReplicas(ctx context.Context) (int32, error) {

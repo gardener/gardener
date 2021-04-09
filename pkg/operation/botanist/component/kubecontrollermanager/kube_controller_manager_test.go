@@ -67,12 +67,10 @@ var _ = Describe("KubeControllerManager", func() {
 
 		hpaConfig = gardencorev1beta1.HorizontalPodAutoscalerConfig{
 			CPUInitializationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
-			DownscaleDelay:          &metav1.Duration{Duration: 15 * time.Minute},
 			DownscaleStabilization:  &metav1.Duration{Duration: 5 * time.Minute},
 			InitialReadinessDelay:   &metav1.Duration{Duration: 30 * time.Second},
 			SyncPeriod:              &metav1.Duration{Duration: 30 * time.Second},
 			Tolerance:               pointer.Float64Ptr(0.1),
-			UpscaleDelay:            &metav1.Duration{Duration: 1 * time.Minute},
 		}
 
 		nodeCIDRMask       int32 = 24
@@ -217,79 +215,6 @@ var _ = Describe("KubeControllerManager", func() {
 
 					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
 				})
-
-				It("should fail because the managed resource secret cannot be updated (k8s version 1.12)", func() {
-					semverVersion112, err := semver.NewVersion("1.12.4")
-					Expect(err).NotTo(HaveOccurred())
-
-					kubeControllerManager = New(
-						testLogger,
-						c,
-						namespace,
-						semverVersion112,
-						image,
-						&kcmConfig,
-						podCIDR,
-						serviceCIDR,
-					)
-
-					kubeControllerManager.SetSecrets(Secrets{
-						Kubeconfig:        component.Secret{Name: "kube-controller-manager", Checksum: secretChecksumKubeconfig},
-						Server:            component.Secret{Name: "kube-controller-manager-server", Checksum: secretChecksumServer},
-						CA:                component.Secret{Name: "ca", Checksum: secretChecksumCA},
-						ServiceAccountKey: component.Secret{Name: "service-account-key", Checksum: secretChecksumServiceAccountKey},
-					})
-
-					gomock.InOrder(
-						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, managedresources.SecretName(managedResourceName, true)), gomock.AssignableToTypeOf(&corev1.Secret{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
-					)
-
-					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
-				})
-
-				It("should fail because the managed resource cannot be updated (k8s version 1.13)", func() {
-					semverVersion113, err := semver.NewVersion("1.13.4")
-					Expect(err).NotTo(HaveOccurred())
-
-					kubeControllerManager = New(
-						testLogger,
-						c,
-						namespace,
-						semverVersion113,
-						image,
-						&kcmConfig,
-						podCIDR,
-						serviceCIDR,
-					)
-					kubeControllerManager.SetSecrets(Secrets{
-						Kubeconfig:        component.Secret{Name: "kube-controller-manager", Checksum: secretChecksumKubeconfig},
-						Server:            component.Secret{Name: "kube-controller-manager-server", Checksum: secretChecksumServer},
-						CA:                component.Secret{Name: "ca", Checksum: secretChecksumCA},
-						ServiceAccountKey: component.Secret{Name: "service-account-key", Checksum: secretChecksumServiceAccountKey},
-					})
-
-					gomock.InOrder(
-						c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, v1beta1constants.DeploymentNameKubeControllerManager), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, managedresources.SecretName(managedResourceName, true)), gomock.AssignableToTypeOf(&corev1.Secret{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
-					)
-
-					Expect(kubeControllerManager.Deploy(ctx)).To(MatchError(fakeErr))
-				})
 			})
 		})
 
@@ -340,7 +265,7 @@ var _ = Describe("KubeControllerManager", func() {
 								{
 									Name:     "metrics",
 									Protocol: corev1.ProtocolTCP,
-									Port:     portForKubernetesVersion(version),
+									Port:     10257,
 								},
 							},
 						},
@@ -393,13 +318,13 @@ var _ = Describe("KubeControllerManager", func() {
 											Name:            "kube-controller-manager",
 											Image:           image,
 											ImagePullPolicy: corev1.PullIfNotPresent,
-											Command:         commandForKubernetesVersion(version, portForKubernetesVersion(version), config.NodeCIDRMaskSize, config.PodEvictionTimeout, namespace, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kutil.FeatureGatesToCommandLineParameter(config.FeatureGates)),
+											Command:         commandForKubernetesVersion(version, 10257, config.NodeCIDRMaskSize, config.PodEvictionTimeout, namespace, serviceCIDR, podCIDR, getHorizontalPodAutoscalerConfig(config.HorizontalPodAutoscalerConfig), kutil.FeatureGatesToCommandLineParameter(config.FeatureGates)),
 											LivenessProbe: &corev1.Probe{
 												Handler: corev1.Handler{
 													HTTPGet: &corev1.HTTPGetAction{
 														Path:   "/healthz",
-														Scheme: probeSchemeForKubernetesVersion(version),
-														Port:   intstr.FromInt(int(portForKubernetesVersion(version))),
+														Scheme: corev1.URISchemeHTTPS,
+														Port:   intstr.FromInt(10257),
 													},
 												},
 												SuccessThreshold:    1,
@@ -411,7 +336,7 @@ var _ = Describe("KubeControllerManager", func() {
 											Ports: []corev1.ContainerPort{
 												{
 													Name:          "metrics",
-													ContainerPort: portForKubernetesVersion(version),
+													ContainerPort: 10257,
 													Protocol:      corev1.ProtocolTCP,
 												},
 											},
@@ -485,71 +410,15 @@ var _ = Describe("KubeControllerManager", func() {
 					}
 				}
 
-				clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  creationTimestamp: null
-  name: system:controller:kube-controller-manager
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:auth-delegator
-subjects:
-- kind: User
-  name: system:kube-controller-manager
-`
-				roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  creationTimestamp: null
-  name: system:controller:kube-controller-manager:auth-reader
-  namespace: kube-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: extension-apiserver-authentication-reader
-subjects:
-- kind: User
-  name: system:kube-controller-manager
-`
-
-				managedResourceSecret = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      managedresources.SecretName(managedResourceName, true),
-						Namespace: namespace,
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{
-						"clusterrolebinding____system_controller_kube-controller-manager.yaml":                 []byte(clusterRoleBindingYAML),
-						"rolebinding__kube-system__system_controller_kube-controller-manager_auth-reader.yaml": []byte(roleBindingYAML),
-					},
-				}
-				managedResource = &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      managedResourceName,
-						Namespace: namespace,
-						Labels:    map[string]string{"origin": "gardener"},
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						SecretRefs: []corev1.LocalObjectReference{
-							{Name: managedresources.SecretName(managedResourceName, true)},
-						},
-						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						KeepObjects:  pointer.BoolPtr(false),
-					},
-				}
-
 				emptyConfig                = &gardencorev1beta1.KubeControllerManagerConfig{}
 				configWithAutoscalerConfig = &gardencorev1beta1.KubeControllerManagerConfig{
 					// non default configuration
 					HorizontalPodAutoscalerConfig: &gardencorev1beta1.HorizontalPodAutoscalerConfig{
 						CPUInitializationPeriod: &metav1.Duration{Duration: 10 * time.Minute},
-						DownscaleDelay:          &metav1.Duration{Duration: 10 * time.Minute},
 						DownscaleStabilization:  &metav1.Duration{Duration: 10 * time.Minute},
 						InitialReadinessDelay:   &metav1.Duration{Duration: 20 * time.Second},
 						SyncPeriod:              &metav1.Duration{Duration: 20 * time.Second},
 						Tolerance:               pointer.Float64Ptr(0.3),
-						UpscaleDelay:            &metav1.Duration{Duration: 2 * time.Minute},
 					},
 					NodeCIDRMaskSize: nil,
 				}
@@ -598,26 +467,10 @@ subjects:
 						}),
 					)
 
-					is112Version, _ := versionutils.CompareVersions(version, "~", "1.12")
-					is113Version, _ := versionutils.CompareVersions(version, "~", "1.13")
-
-					if is112Version || is113Version {
-						gomock.InOrder(
-							c.EXPECT().Get(ctx, kutil.Key(namespace, managedresources.SecretName(managedResourceName, true)), gomock.AssignableToTypeOf(&corev1.Secret{})),
-							c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-								Expect(obj).To(DeepEqual(managedResourceSecret))
-							}),
-							c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-							c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-								Expect(obj).To(DeepEqual(managedResource))
-							}),
-						)
-					} else {
-						gomock.InOrder(
-							c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
-							c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(managedResourceName, true), Namespace: namespace}}),
-						)
-					}
+					gomock.InOrder(
+						c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
+						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(managedResourceName, true), Namespace: namespace}}),
+					)
 
 					Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 				},
@@ -650,30 +503,6 @@ subjects:
 				Entry("kubernetes 1.15 with feature flags", "1.15.0", configWithFeatureFlags),
 				Entry("kubernetes 1.15 with NodeCIDRMaskSize", "1.15.0", configWithNodeCIDRMaskSize),
 				Entry("kubernetes 1.15 with PodEvictionTimeout", "1.15.0", configWithPodEvictionTimeout),
-
-				Entry("kubernetes 1.14 w/o config", "1.14.0", emptyConfig),
-				Entry("kubernetes 1.14 with non-default autoscaler config", "1.14.0", configWithAutoscalerConfig),
-				Entry("kubernetes 1.14 with feature flags", "1.14.0", configWithFeatureFlags),
-				Entry("kubernetes 1.14 with NodeCIDRMaskSize", "1.14.0", configWithNodeCIDRMaskSize),
-				Entry("kubernetes 1.14 with PodEvictionTimeout", "1.14.0", configWithPodEvictionTimeout),
-
-				Entry("kubernetes 1.13 w/o config", "1.13.0", emptyConfig),
-				Entry("kubernetes 1.13 with non-default autoscaler config", "1.13.0", configWithAutoscalerConfig),
-				Entry("kubernetes 1.13 with feature flags", "1.13.0", configWithFeatureFlags),
-				Entry("kubernetes 1.13 with NodeCIDRMaskSize", "1.13.0", configWithNodeCIDRMaskSize),
-				Entry("kubernetes 1.13 with PodEvictionTimeout", "1.13.0", configWithPodEvictionTimeout),
-
-				Entry("kubernetes 1.12 w/o config", "1.12.0", emptyConfig),
-				Entry("kubernetes 1.12 with non-default autoscaler config", "1.12.0", configWithAutoscalerConfig),
-				Entry("kubernetes 1.12 with feature flags", "1.12.0", configWithFeatureFlags),
-				Entry("kubernetes 1.12 with NodeCIDRMaskSize", "1.12.0", configWithNodeCIDRMaskSize),
-				Entry("kubernetes 1.12 with PodEvictionTimeout", "1.12.0", configWithPodEvictionTimeout),
-
-				Entry("kubernetes 1.11 w/ config", "1.11.0", emptyConfig),
-				Entry("kubernetes 1.11 with non-default autoscaler config", "1.11.0", configWithAutoscalerConfig),
-				Entry("kubernetes 1.11 with feature flags", "1.11.0", configWithFeatureFlags),
-				Entry("kubernetes 1.11 with NodeCIDRMaskSize", "1.11.0", configWithNodeCIDRMaskSize),
-				Entry("kubernetes 1.11 with PodEvictionTimeout", "1.11.0", configWithPodEvictionTimeout),
 			)
 		})
 	})
@@ -699,20 +528,6 @@ subjects:
 
 // Utility functions
 
-func portForKubernetesVersion(version string) int32 {
-	if k8sVersionGreaterEqual113, _ := versionutils.CompareVersions(version, ">=", "1.13"); k8sVersionGreaterEqual113 {
-		return 10257
-	}
-	return 10252
-}
-
-func probeSchemeForKubernetesVersion(version string) corev1.URIScheme {
-	if k8sVersionGreaterEqual113, _ := versionutils.CompareVersions(version, ">=", "1.13"); k8sVersionGreaterEqual113 {
-		return corev1.URISchemeHTTPS
-	}
-	return corev1.URISchemeHTTP
-}
-
 func commandForKubernetesVersion(
 	version string,
 	port int32,
@@ -727,10 +542,8 @@ func commandForKubernetesVersion(
 
 	if k8sVersionGreaterEqual117, _ := versionutils.CompareVersions(version, ">=", "1.17"); k8sVersionGreaterEqual117 {
 		command = append(command, "/usr/local/bin/kube-controller-manager")
-	} else if k8sVersionGreaterEqual115, _ := versionutils.CompareVersions(version, ">=", "1.15"); k8sVersionGreaterEqual115 {
-		command = append(command, "/hyperkube", "kube-controller-manager")
 	} else {
-		command = append(command, "/hyperkube", "controller-manager")
+		command = append(command, "/hyperkube", "kube-controller-manager")
 	}
 
 	command = append(command,
@@ -769,13 +582,6 @@ func commandForKubernetesVersion(
 		command = append(command, featureGateFlags)
 	}
 
-	if k8sVersionSmaller117, _ := versionutils.CompareVersions(version, "<", "1.12"); k8sVersionSmaller117 {
-		command = append(command,
-			fmt.Sprintf("--horizontal-pod-autoscaler-downscale-delay=%s", horizontalPodAutoscalerConfig.DownscaleDelay.Duration.String()),
-			fmt.Sprintf("--horizontal-pod-autoscaler-upscale-delay=%s", horizontalPodAutoscalerConfig.UpscaleDelay.Duration.String()),
-		)
-	}
-
 	podEvictionTimeoutSetting := "2m0s"
 	if podEvictionTimeout != nil {
 		podEvictionTimeoutSetting = podEvictionTimeout.Duration.String()
@@ -791,32 +597,20 @@ func commandForKubernetesVersion(
 		"--root-ca-file=/srv/kubernetes/ca/ca.crt",
 		"--service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa",
 		fmt.Sprintf("--service-cluster-ip-range=%s", serviceNetwork.String()),
-	)
-
-	if k8sVersionGreaterEqual113, _ := versionutils.CompareVersions(version, ">=", "1.13"); k8sVersionGreaterEqual113 {
-		command = append(command,
-			fmt.Sprintf("--secure-port=%d", port),
-			"--port=0",
-		)
-	}
-
-	if k8sVersionGreaterEqual112, _ := versionutils.CompareVersions(version, ">=", "1.12"); k8sVersionGreaterEqual112 {
-		command = append(command,
-			fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", horizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
-			fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", horizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
-			fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", horizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),
-			"--authentication-kubeconfig=/var/lib/kube-controller-manager/kubeconfig",
-			"--authorization-kubeconfig=/var/lib/kube-controller-manager/kubeconfig",
-			"--tls-cert-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.crt",
-			"--tls-private-key-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.key",
-		)
-	}
-
-	command = append(command,
+		fmt.Sprintf("--secure-port=%d", port),
+		"--port=0",
+		fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", horizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
+		fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", horizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
+		fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", horizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),
+		"--authentication-kubeconfig=/var/lib/kube-controller-manager/kubeconfig",
+		"--authorization-kubeconfig=/var/lib/kube-controller-manager/kubeconfig",
+		"--tls-cert-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.crt",
+		"--tls-private-key-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.key",
 		"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
 		"--use-service-account-credentials=true",
 		"--v=2",
 	)
+
 	return command
 }
 
@@ -824,20 +618,15 @@ func getHorizontalPodAutoscalerConfig(config *gardencorev1beta1.HorizontalPodAut
 	defaultHPATolerance := gardencorev1beta1.DefaultHPATolerance
 	horizontalPodAutoscalerConfig := gardencorev1beta1.HorizontalPodAutoscalerConfig{
 		CPUInitializationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
-		DownscaleDelay:          &metav1.Duration{Duration: 15 * time.Minute},
 		DownscaleStabilization:  &metav1.Duration{Duration: 5 * time.Minute},
 		InitialReadinessDelay:   &metav1.Duration{Duration: 30 * time.Second},
 		SyncPeriod:              &metav1.Duration{Duration: 30 * time.Second},
 		Tolerance:               &defaultHPATolerance,
-		UpscaleDelay:            &metav1.Duration{Duration: 1 * time.Minute},
 	}
 
 	if config != nil {
 		if config.CPUInitializationPeriod != nil {
 			horizontalPodAutoscalerConfig.CPUInitializationPeriod = config.CPUInitializationPeriod
-		}
-		if config.DownscaleDelay != nil {
-			horizontalPodAutoscalerConfig.DownscaleDelay = config.DownscaleDelay
 		}
 		if config.DownscaleStabilization != nil {
 			horizontalPodAutoscalerConfig.DownscaleStabilization = config.DownscaleStabilization
@@ -850,9 +639,6 @@ func getHorizontalPodAutoscalerConfig(config *gardencorev1beta1.HorizontalPodAut
 		}
 		if config.Tolerance != nil {
 			horizontalPodAutoscalerConfig.Tolerance = config.Tolerance
-		}
-		if config.UpscaleDelay != nil {
-			horizontalPodAutoscalerConfig.UpscaleDelay = config.UpscaleDelay
 		}
 	}
 	return &horizontalPodAutoscalerConfig

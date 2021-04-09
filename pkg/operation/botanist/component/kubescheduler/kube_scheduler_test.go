@@ -118,7 +118,7 @@ var _ = Describe("KubeScheduler", func() {
 						{
 							Name:     "metrics",
 							Protocol: corev1.ProtocolTCP,
-							Port:     portForKubernetesVersion(version),
+							Port:     10259,
 						},
 					},
 				},
@@ -178,13 +178,13 @@ var _ = Describe("KubeScheduler", func() {
 									Name:            "kube-scheduler",
 									Image:           image,
 									ImagePullPolicy: corev1.PullIfNotPresent,
-									Command:         commandForKubernetesVersion(version, portForKubernetesVersion(version), featureGateFlagsForKubernetesVersion(version, config)...),
+									Command:         commandForKubernetesVersion(version, 10259, featureGateFlags(config)...),
 									LivenessProbe: &corev1.Probe{
 										Handler: corev1.Handler{
 											HTTPGet: &corev1.HTTPGetAction{
 												Path:   "/healthz",
-												Scheme: probeSchemeForKubernetesVersion(version),
-												Port:   intstr.FromInt(int(portForKubernetesVersion(version))),
+												Scheme: corev1.URISchemeHTTPS,
+												Port:   intstr.FromInt(10259),
 											},
 										},
 										SuccessThreshold:    1,
@@ -196,7 +196,7 @@ var _ = Describe("KubeScheduler", func() {
 									Ports: []corev1.ContainerPort{
 										{
 											Name:          "metrics",
-											ContainerPort: portForKubernetesVersion(version),
+											ContainerPort: 10259,
 											Protocol:      corev1.ProtocolTCP,
 										},
 									},
@@ -259,58 +259,6 @@ var _ = Describe("KubeScheduler", func() {
 					},
 				},
 			}
-		}
-		clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  creationTimestamp: null
-  name: system:controller:kube-scheduler
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:auth-delegator
-subjects:
-- kind: User
-  name: system:kube-scheduler
-`
-		roleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  creationTimestamp: null
-  name: system:controller:kube-scheduler:auth-reader
-  namespace: kube-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: extension-apiserver-authentication-reader
-subjects:
-- kind: User
-  name: system:kube-scheduler
-`
-		managedResourceSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      managedResourceSecretName,
-				Namespace: namespace,
-			},
-			Type: corev1.SecretTypeOpaque,
-			Data: map[string][]byte{
-				"clusterrolebinding____system_controller_kube-scheduler.yaml":                 []byte(clusterRoleBindingYAML),
-				"rolebinding__kube-system__system_controller_kube-scheduler_auth-reader.yaml": []byte(roleBindingYAML),
-			},
-		}
-		managedResource = &resourcesv1alpha1.ManagedResource{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      managedResourceName,
-				Namespace: namespace,
-				Labels:    map[string]string{"origin": "gardener"},
-			},
-			Spec: resourcesv1alpha1.ManagedResourceSpec{
-				SecretRefs: []corev1.LocalObjectReference{
-					{Name: managedResourceSecretName},
-				},
-				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  pointer.BoolPtr(false),
-			},
 		}
 	)
 
@@ -422,52 +370,6 @@ subjects:
 				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
 			})
 
-			Context("k8s 1.13 tests", func() {
-				BeforeEach(func() {
-					semverVersion, err := semver.NewVersion("1.13.4")
-					Expect(err).NotTo(HaveOccurred())
-
-					kubeScheduler = New(c, namespace, semverVersion, image, replicas, nil)
-					kubeScheduler.SetSecrets(secrets)
-				})
-
-				It("should fail because the managed resource secret cannot be updated (k8s 1.13 only)", func() {
-					gomock.InOrder(
-						c.EXPECT().Get(ctx, kutil.Key(namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
-					)
-
-					Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
-				})
-
-				It("should fail because the managed resource cannot be updated (k8s 1.13 only)", func() {
-					gomock.InOrder(
-						c.EXPECT().Get(ctx, kutil.Key(namespace, configMapName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
-					)
-
-					Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
-				})
-			})
-
 			DescribeTable("success tests for various kubernetes versions",
 				func(version string, config *gardencorev1beta1.KubeSchedulerConfig) {
 					semverVersion, err := semver.NewVersion(version)
@@ -495,37 +397,14 @@ subjects:
 						}),
 					)
 
-					if k8sVersionEqual113, _ := versionutils.CompareVersions(version, "~", "1.13"); k8sVersionEqual113 {
-						gomock.InOrder(
-							c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-							c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-								Expect(obj).To(DeepEqual(managedResourceSecret))
-							}),
-							c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-							c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-								Expect(obj).To(DeepEqual(managedResource))
-							}),
-						)
-					} else {
-						gomock.InOrder(
-							c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
-							c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretName, Namespace: namespace}}),
-						)
-					}
+					gomock.InOrder(
+						c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
+						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretName, Namespace: namespace}}),
+					)
 
 					Expect(kubeScheduler.Deploy(ctx)).To(Succeed())
 				},
 
-				Entry("kubernetes 1.10 w/o config", "1.10.0", configEmpty),
-				Entry("kubernetes 1.10 w/ full config", "1.10.0", configFull),
-				Entry("kubernetes 1.11 w/o config", "1.11.1", configEmpty),
-				Entry("kubernetes 1.11 w/ full config", "1.11.1", configFull),
-				Entry("kubernetes 1.12 w/o config", "1.12.2", configEmpty),
-				Entry("kubernetes 1.12 w/ full config", "1.12.2", configFull),
-				Entry("kubernetes 1.13 w/o config", "1.13.3", configEmpty),
-				Entry("kubernetes 1.13 w/ full config", "1.13.3", configFull),
-				Entry("kubernetes 1.14 w/o config", "1.14.4", configEmpty),
-				Entry("kubernetes 1.14 w/ full config", "1.14.4", configFull),
 				Entry("kubernetes 1.15 w/o config", "1.15.5", configEmpty),
 				Entry("kubernetes 1.15 w/ full config", "1.15.5", configFull),
 				Entry("kubernetes 1.16 w/o config", "1.16.6", configEmpty),
@@ -565,10 +444,8 @@ func componentConfigYAMLForKubernetesVersion(version string) (string, string) {
 		apiVersion, checksum = "kubescheduler.config.k8s.io/v1beta1", "9988c880500b124fb153fd6e8c34435386b1924dcd48a39385fdb6d2bef492a9"
 	} else if k8sVersionGreaterEqual118, _ := versionutils.CompareVersions(version, ">=", "1.18"); k8sVersionGreaterEqual118 {
 		apiVersion, checksum = "kubescheduler.config.k8s.io/v1alpha2", "a1916d3e007de7f094bb829768c16eef1c4ec2ba30087e3bb1e564ecd2990fc5"
-	} else if k8sVersionGreaterEqual112, _ := versionutils.CompareVersions(version, ">=", "1.12"); k8sVersionGreaterEqual112 {
-		apiVersion, checksum = "kubescheduler.config.k8s.io/v1alpha1", "b1821b1b8e76431815e36877e29eda9a50fbdd9adc2a9e579f378fe69a6f744c"
 	} else {
-		apiVersion, checksum = "componentconfig/v1alpha1", "a09f1f2d75393187666e68e29d3f405db81f8027d1111918ce40e4cb31c2e696"
+		apiVersion, checksum = "kubescheduler.config.k8s.io/v1alpha1", "b1821b1b8e76431815e36877e29eda9a50fbdd9adc2a9e579f378fe69a6f744c"
 	}
 
 	return `apiVersion: ` + apiVersion + `
@@ -579,26 +456,10 @@ leaderElection:
   leaderElect: true`, checksum
 }
 
-func portForKubernetesVersion(version string) int32 {
-	if k8sVersionGreaterEqual113, _ := versionutils.CompareVersions(version, ">=", "1.13"); k8sVersionGreaterEqual113 {
-		return 10259
-	}
-	return 10251
-}
-
-func probeSchemeForKubernetesVersion(version string) corev1.URIScheme {
-	if k8sVersionGreaterEqual113, _ := versionutils.CompareVersions(version, ">=", "1.13"); k8sVersionGreaterEqual113 {
-		return corev1.URISchemeHTTPS
-	}
-	return corev1.URISchemeHTTP
-}
-
 func commandForKubernetesVersion(version string, port int32, featureGateFlags ...string) []string {
 	var command []string
 
-	if k8sVersionLessThan115, _ := versionutils.CompareVersions(version, "<", "1.15"); k8sVersionLessThan115 {
-		command = append(command, "/hyperkube", "scheduler")
-	} else if k8sVersionLessThan117, _ := versionutils.CompareVersions(version, "<", "1.17"); k8sVersionLessThan117 {
+	if k8sVersionLessThan117, _ := versionutils.CompareVersions(version, "<", "1.17"); k8sVersionLessThan117 {
 		command = append(command, "/hyperkube", "kube-scheduler")
 	} else {
 		command = append(command, "/usr/local/bin/kube-scheduler")
@@ -606,18 +467,16 @@ func commandForKubernetesVersion(version string, port int32, featureGateFlags ..
 
 	command = append(command, "--config=/var/lib/kube-scheduler-config/config.yaml")
 
-	if k8sVersionGreaterEqual113, _ := versionutils.CompareVersions(version, ">=", "1.13"); k8sVersionGreaterEqual113 {
-		command = append(
-			command,
-			"--authentication-kubeconfig=/var/lib/kube-scheduler/kubeconfig",
-			"--authorization-kubeconfig=/var/lib/kube-scheduler/kubeconfig",
-			"--client-ca-file=/var/lib/kube-scheduler-server/ca.crt",
-			"--tls-cert-file=/var/lib/kube-scheduler-server/kube-scheduler-server.crt",
-			"--tls-private-key-file=/var/lib/kube-scheduler-server/kube-scheduler-server.key",
-			"--secure-port="+strconv.Itoa(int(port)),
-			"--port=0",
-		)
-	}
+	command = append(
+		command,
+		"--authentication-kubeconfig=/var/lib/kube-scheduler/kubeconfig",
+		"--authorization-kubeconfig=/var/lib/kube-scheduler/kubeconfig",
+		"--client-ca-file=/var/lib/kube-scheduler-server/ca.crt",
+		"--tls-cert-file=/var/lib/kube-scheduler-server/kube-scheduler-server.crt",
+		"--tls-private-key-file=/var/lib/kube-scheduler-server/kube-scheduler-server.key",
+		"--secure-port="+strconv.Itoa(int(port)),
+		"--port=0",
+	)
 
 	command = append(command, featureGateFlags...)
 	command = append(command, "--v=2")
@@ -625,14 +484,11 @@ func commandForKubernetesVersion(version string, port int32, featureGateFlags ..
 	return command
 }
 
-func featureGateFlagsForKubernetesVersion(version string, config *gardencorev1beta1.KubeSchedulerConfig) []string {
+func featureGateFlags(config *gardencorev1beta1.KubeSchedulerConfig) []string {
 	var out []string
 
 	if config != nil && config.FeatureGates != nil {
 		out = append(out, kutil.FeatureGatesToCommandLineParameter(config.FeatureGates))
-	}
-	if k8sVersionLessThan111, _ := versionutils.CompareVersions(version, "<", "1.11"); k8sVersionLessThan111 {
-		out = append(out, kutil.FeatureGatesToCommandLineParameter(map[string]bool{"PodPriority": true}))
 	}
 
 	return out

@@ -2594,12 +2594,6 @@ func schema_pkg_apis_core_v1alpha1_HorizontalPodAutoscalerConfig(ref common.Refe
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
-					"downscaleDelay": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The period since last downscale, before another downscale can be performed in horizontal pod autoscaler.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
-						},
-					},
 					"downscaleStabilization": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The configurable window at which the controller will choose the highest recommendation for autoscaling.",
@@ -2623,12 +2617,6 @@ func schema_pkg_apis_core_v1alpha1_HorizontalPodAutoscalerConfig(ref common.Refe
 							Description: "The minimum change (from 1.0) in the desired-to-actual metrics ratio for the horizontal pod autoscaler to consider scaling.",
 							Type:        []string{"number"},
 							Format:      "double",
-						},
-					},
-					"upscaleDelay": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},
@@ -3254,7 +3242,7 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfigReserved(ref common.ReferenceCal
 					},
 					"pid": {
 						SchemaProps: spec.SchemaProps{
-							Description: "PID is the reserved process-ids. To reserve PID, the SupportNodePidsLimit feature gate must be enabled in Kubernetes versions < 1.15.",
+							Description: "PID is the reserved process-ids.",
 							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
 						},
 					},
@@ -4145,7 +4133,7 @@ func schema_pkg_apis_core_v1alpha1_OIDCConfig(ref common.ReferenceCallback) comm
 					},
 					"requiredClaims": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ATTENTION: Only meaningful for Kubernetes >= 1.11 key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.",
+							Description: "key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -5563,7 +5551,7 @@ func schema_pkg_apis_core_v1alpha1_SeedSettingExcessCapacityReservation(ref comm
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed. When enabled then this is done via PodPriority and requires the Seed cluster to have Kubernetes version 1.11 or the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API group enabled.",
+				Description: "SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"enabled": {
@@ -8942,12 +8930,6 @@ func schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref common.Refer
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
-					"downscaleDelay": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The period since last downscale, before another downscale can be performed in horizontal pod autoscaler.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
-						},
-					},
 					"downscaleStabilization": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The configurable window at which the controller will choose the highest recommendation for autoscaling.",
@@ -8971,12 +8953,6 @@ func schema_pkg_apis_core_v1beta1_HorizontalPodAutoscalerConfig(ref common.Refer
 							Description: "The minimum change (from 1.0) in the desired-to-actual metrics ratio for the horizontal pod autoscaler to consider scaling.",
 							Type:        []string{"number"},
 							Format:      "double",
-						},
-					},
-					"upscaleDelay": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
 				},
@@ -9602,7 +9578,7 @@ func schema_pkg_apis_core_v1beta1_KubeletConfigReserved(ref common.ReferenceCall
 					},
 					"pid": {
 						SchemaProps: spec.SchemaProps{
-							Description: "PID is the reserved process-ids. To reserve PID, the SupportNodePidsLimit feature gate must be enabled in Kubernetes versions < 1.15.",
+							Description: "PID is the reserved process-ids.",
 							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
 						},
 					},
@@ -10493,7 +10469,7 @@ func schema_pkg_apis_core_v1beta1_OIDCConfig(ref common.ReferenceCallback) commo
 					},
 					"requiredClaims": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ATTENTION: Only meaningful for Kubernetes >= 1.11 key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.",
+							Description: "key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -11880,7 +11856,7 @@ func schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref commo
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed. When enabled then this is done via PodPriority and requires the Seed cluster to have Kubernetes version 1.11 or the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API group enabled.",
+				Description: "SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"enabled": {
@@ -14276,7 +14252,7 @@ func schema_pkg_apis_settings_v1alpha1_KubeAPIServerOpenIDConnect(ref common.Ref
 					},
 					"requiredClaims": {
 						SchemaProps: spec.SchemaProps{
-							Description: "key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value. Only applied when the Kubernetes version of the Shoot is >= 1.11",
+							Description: "key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,

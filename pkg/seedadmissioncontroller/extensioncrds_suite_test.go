@@ -38,10 +38,21 @@ import (
 
 var _ = Describe("Extension CRDs Webhook Handler", func() {
 	var (
-		c         client.Client
-		namespace = "shoot--foo--bar"
+		c                            client.Client
+		namespace                    = "shoot--foo--bar"
+		deletionConfirmedAnnotations = map[string]string{gutil.ConfirmationDeletion: "true"}
 
-		crdObjects = []client.Object{
+		objects = []client.Object{
+			&extensionsv1alpha1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: "foo"}},
+			&extensionsv1alpha1.BackupEntry{ObjectMeta: metav1.ObjectMeta{Name: namespace}},
+			&extensionsv1alpha1.ContainerRuntime{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
+			&extensionsv1alpha1.ControlPlane{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
+			&extensionsv1alpha1.Extension{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
+			&extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
+			&extensionsv1alpha1.Network{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
+			&extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
+			&extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
+
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "backupbuckets.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "backupentries.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "containerruntimes.extensions.gardener.cloud"}},
@@ -52,17 +63,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "operatingsystemconfigs.extensions.gardener.cloud"}},
 			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "workers.extensions.gardener.cloud"}},
 		}
-		extensionObjects = []client.Object{
-			&extensionsv1alpha1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: "foo"}},
-			&extensionsv1alpha1.BackupEntry{ObjectMeta: metav1.ObjectMeta{Name: namespace}},
-			&extensionsv1alpha1.ContainerRuntime{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
-			&extensionsv1alpha1.ControlPlane{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
-			&extensionsv1alpha1.Extension{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
-			&extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
-			&extensionsv1alpha1.Network{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
-			&extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
-			&extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
-		}
+
 		podObject = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: namespace},
 			Spec: corev1.PodSpec{
@@ -72,9 +73,6 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 				}},
 			},
 		}
-
-		deletionUnprotectedLabels    = map[string]string{gutil.DeletionProtected: "false"}
-		deletionConfirmedAnnotations = map[string]string{gutil.ConfirmationDeletion: "true"}
 	)
 
 	BeforeEach(func() {
@@ -94,7 +92,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		Expect(applier.Apply(ctx, filepath.Join(repoRoot, "charts", "seed-bootstrap", "charts", "extensions"), "extensions", "")).To(Succeed())
 
 		Eventually(func() bool {
-			for _, object := range extensionObjects {
+			for _, object := range objects {
 				err := c.Get(ctx, client.ObjectKeyFromObject(object), object)
 				if meta.IsNoMatchError(err) {
 					return false
@@ -125,51 +123,6 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		}, 1*time.Second, 50*time.Millisecond).Should(BeTrue(), objectID(obj))
 	}
 
-	Context("custom resource definitions", func() {
-		It("should admit the deletion because CRD has no protection label", func() {
-			for _, obj := range crdObjects {
-				// patch out default gardener.cloud/deletion-protected=true label
-				_, err := controllerutil.CreateOrPatch(ctx, c, obj, func() error {
-					obj.SetLabels(nil)
-					return nil
-				})
-				Expect(err).NotTo(HaveOccurred(), objectID(obj))
-				testDeletionConfirmed(ctx, obj)
-			}
-		})
-
-		It("should admit the deletion because CRD's protection label is not true", func() {
-			for _, obj := range crdObjects {
-				// override default gardener.cloud/deletion-protected=true label
-				_, err := controllerutil.CreateOrPatch(ctx, c, obj, func() error {
-					obj.SetLabels(deletionUnprotectedLabels)
-					return nil
-				})
-				Expect(err).NotTo(HaveOccurred(), objectID(obj))
-				testDeletionConfirmed(ctx, obj)
-			}
-		})
-
-		It("should prevent the deletion because CRD's protection label is true but deletion is not confirmed", func() {
-			// CRDs in seed-bootstrap chart should have gardener.cloud/deletion-protected=true label by default
-			for _, obj := range crdObjects {
-				testDeletionUnconfirmed(ctx, obj)
-			}
-		})
-
-		It("should admit the deletion because CRD's protection label is true and deletion is confirmed", func() {
-			// CRDs in seed-bootstrap chart should have gardener.cloud/deletion-protected=true label by default
-			for _, obj := range crdObjects {
-				_, err := controllerutil.CreateOrPatch(ctx, c, obj, func() error {
-					obj.SetAnnotations(deletionConfirmedAnnotations)
-					return nil
-				})
-				Expect(err).NotTo(HaveOccurred(), objectID(obj))
-				testDeletionConfirmed(ctx, obj)
-			}
-		})
-	})
-
 	Context("extension resources", func() {
 		BeforeEach(func() {
 			By("creating extension test objects")
@@ -178,13 +131,13 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		})
 
 		It("should prevent the deletion because deletion is not confirmed", func() {
-			for _, obj := range extensionObjects {
+			for _, obj := range objects {
 				testDeletionUnconfirmed(ctx, obj)
 			}
 		})
 
 		It("should admit the deletion because deletion is confirmed", func() {
-			for _, obj := range extensionObjects {
+			for _, obj := range objects {
 				_, err := controllerutil.CreateOrPatch(ctx, c, obj, func() error {
 					obj.SetAnnotations(deletionConfirmedAnnotations)
 					return nil

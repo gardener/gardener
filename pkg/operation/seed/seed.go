@@ -1181,10 +1181,10 @@ func (s *Seed) IngressDomain() string {
 
 // CheckMinimumK8SVersion checks whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
 func (s *Seed) CheckMinimumK8SVersion(seedClient kubernetes.Interface) (string, error) {
-	// We require CRD status subresources for the extension controllers that we install into the seeds.
-	minSeedVersion := "1.11"
-
-	version := seedClient.Version()
+	var (
+		minSeedVersion = "1.15"
+		version        = seedClient.Version()
+	)
 
 	seedVersionOK, err := versionutils.CompareVersions(version, ">=", minSeedVersion)
 	if err != nil {

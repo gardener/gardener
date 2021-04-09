@@ -55,13 +55,11 @@ var (
 
 	// TODO remove the hard-coded prometheus paths once the prometheus component is refactored
 	monitoringScrapeConfigTmpl = `job_name: ` + monitoringPrometheusJobName + `
-{{- if .k8sGreaterEqual113 }}
 scheme: https
 tls_config:
   insecure_skip_verify: true
   cert_file: /etc/prometheus/seed/prometheus.crt
   key_file: /etc/prometheus/seed/prometheus.key
-{{- end }}
 honor_labels: false
 scrape_timeout: 15s
 kubernetes_sd_configs:
@@ -98,10 +96,7 @@ func init() {
 func (k *kubeControllerManager) ScrapeConfigs() ([]string, error) {
 	var scrapeConfig bytes.Buffer
 
-	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{
-		"k8sGreaterEqual113": versionConstraintK8sGreaterEqual113.Check(k.version),
-		"namespace":          k.namespace,
-	}); err != nil {
+	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{"namespace": k.namespace}); err != nil {
 		return nil, err
 	}
 

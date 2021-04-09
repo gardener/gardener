@@ -188,7 +188,7 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 		c           = b.K8sShootClient.Client()
 		ensurer     = utilclient.GoneBeforeEnsurer(b.Shoot.Info.GetDeletionTimestamp().Time)
 		defaultOps  = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
-		crdCleanOps = utilclient.NewCleanOps(utilclient.NewCRDCleaner(), ensurer)
+		crdCleanOps = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
 	)
 
 	return flow.Parallel(

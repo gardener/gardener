@@ -95,13 +95,6 @@ data:
         target_label: pod
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubeAPIServer | indent 6 }}
-      {{- if semverCompare "< 1.14" .Values.kubernetesVersion }}
-      - source_labels: [ __name__ ]
-        regex: ^apiserver_request_count$
-        action: replace
-        replacement: apiserver_request_total
-        target_label: __name__
-      {{- end }}
 
     - job_name: kube-kubelet
       honor_labels: false

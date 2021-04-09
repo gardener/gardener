@@ -1,5 +1,5 @@
 replicas: 1
-kubernetesVersion: 1.11.2
+kubernetesVersion: 1.15.2
 priorityClassName: foo
 securePort: 443
 konnectivityTunnel:

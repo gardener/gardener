@@ -101,13 +101,11 @@ var (
 
 	// TODO: Replace below hard-coded paths to Prometheus certificates once its deployment has been refactored.
 	monitoringScrapeConfigTmpl = `job_name: ` + monitoringPrometheusJobName + `
-{{- if .k8sGreaterEqual113 }}
 scheme: https
 tls_config:
   insecure_skip_verify: true
   cert_file: /etc/prometheus/seed/prometheus.crt
   key_file: /etc/prometheus/seed/prometheus.key
-{{- end }}
 honor_labels: false
 kubernetes_sd_configs:
 - role: endpoints
@@ -126,7 +124,8 @@ relabel_configs:
 metric_relabel_configs:
 - source_labels: [ __name__ ]
   action: keep
-  regex: ^(` + strings.Join(monitoringAllowedMetrics, "|") + `)$`
+  regex: ^(` + strings.Join(monitoringAllowedMetrics, "|") + `)$
+`
 
 	monitoringScrapeConfigTemplate *template.Template
 )
@@ -142,10 +141,7 @@ func init() {
 func (k *kubeScheduler) ScrapeConfigs() ([]string, error) {
 	var scrapeConfig bytes.Buffer
 
-	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{
-		"k8sGreaterEqual113": versionConstraintK8sGreaterEqual113.Check(k.version),
-		"namespace":          k.namespace,
-	}); err != nil {
+	if err := monitoringScrapeConfigTemplate.Execute(&scrapeConfig, map[string]interface{}{"namespace": k.namespace}); err != nil {
 		return nil, err
 	}
 

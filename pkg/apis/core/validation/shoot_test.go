@@ -180,7 +180,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Domain: &domain,
 					},
 					Kubernetes: core.Kubernetes{
-						Version: "1.11.2",
+						Version: "1.15.2",
 						KubeAPIServer: &core.KubeAPIServerConfig{
 							OIDCConfig: &core.OIDCConfig{
 								CABundle:       pointer.StringPtr("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
@@ -190,6 +190,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 								IssuerURL:      pointer.StringPtr("https://some-endpoint.com"),
 								UsernameClaim:  pointer.StringPtr("user-claim"),
 								UsernamePrefix: pointer.StringPtr("user-prefix"),
+								RequiredClaims: map[string]string{"foo": "bar"},
 							},
 							AdmissionPlugins: []core.AdmissionPlugin{
 								{
@@ -214,10 +215,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 						KubeControllerManager: &core.KubeControllerManagerConfig{
 							NodeCIDRMaskSize: pointer.Int32Ptr(22),
 							HorizontalPodAutoscalerConfig: &core.HorizontalPodAutoscalerConfig{
-								DownscaleDelay: makeDurationPointer(15 * time.Minute),
-								SyncPeriod:     makeDurationPointer(30 * time.Second),
-								Tolerance:      pointer.Float64Ptr(0.1),
-								UpscaleDelay:   makeDurationPointer(1 * time.Minute),
+								SyncPeriod: makeDurationPointer(30 * time.Second),
+								Tolerance:  pointer.Float64Ptr(0.1),
 							},
 						},
 					},
@@ -1288,19 +1287,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should forbid unsupported OIDC configuration (for K8S >= v1.10)", func() {
-				shoot.Spec.Kubernetes.Version = "1.10.1"
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.RequiredClaims = map[string]string{}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(HaveLen(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.requiredClaims"),
-				}))
-			})
-
 			DescribeTable("should forbid issuerURL to be empty string or nil, if clientID exists ", func(errorListSize int, issuerURL *string) {
 				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("someClientID")
 				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = issuerURL
@@ -1352,25 +1338,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("should add error if issuerURL is set but clientID is nil", 1, nil),
 				Entry("should add error if issuerURL is set but clientID is empty string ", 2, pointer.StringPtr("")),
 			)
-
-			It("should allow supported OIDC configuration (for K8S >= v1.11)", func() {
-				shoot.Spec.Kubernetes.Version = "1.11.1"
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.RequiredClaims = map[string]string{
-					"some": "claim",
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(HaveLen(0))
-			})
 		})
 
 		Context("basic authentication", func() {
-			BeforeEach(func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleDelay = nil
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.UpscaleDelay = nil
-			})
-
 			It("should allow basic authentication when kubernetes <= 1.18", func() {
 				shoot.Spec.Kubernetes.Version = "1.18.1"
 				shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(true)
@@ -1564,58 +1534,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			}))))
 		})
 
-		Context("KubeControllerManager validation < 1.12", func() {
+		Context("KubeControllerManager validation", func() {
 			It("should forbid unsupported HPA configuration", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.SyncPeriod = makeDurationPointer(100 * time.Millisecond)
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.Tolerance = pointer.Float64Ptr(0)
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleDelay = makeDurationPointer(-1 * time.Second)
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.UpscaleDelay = makeDurationPointer(-1 * time.Second)
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeControllerManager.horizontalPodAutoscaler.syncPeriod"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeControllerManager.horizontalPodAutoscaler.tolerance"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeControllerManager.horizontalPodAutoscaler.downscaleDelay"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.kubernetes.kubeControllerManager.horizontalPodAutoscaler.upscaleDelay"),
-				}))))
-			})
-
-			It("should forbid unsupported HPA field configuration for versions < 1.12", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleStabilization = makeDurationPointer(5 * time.Minute)
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.InitialReadinessDelay = makeDurationPointer(1 * time.Second)
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.CPUInitializationPeriod = makeDurationPointer(5 * time.Minute)
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.kubeControllerManager.horizontalPodAutoscaler.downscaleStabilization"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.kubeControllerManager.horizontalPodAutoscaler.initialReadinessDelay"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.kubeControllerManager.horizontalPodAutoscaler.cpuInitializationPeriod"),
-				}))))
-			})
-		})
-
-		Context("KubeControllerManager validation in versions > 1.12", func() {
-			BeforeEach(func() {
-				shoot.Spec.Kubernetes.Version = "1.12.1"
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleDelay = nil
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.UpscaleDelay = nil
-			})
-
-			It("should forbid unsupported HPA configuration in versions > 1.12", func() {
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleStabilization = makeDurationPointer(-1 * time.Second)
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.InitialReadinessDelay = makeDurationPointer(-1 * time.Second)
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.CPUInitializationPeriod = makeDurationPointer(-1 * time.Second)
@@ -1634,22 +1554,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should fail when using configuration parameters from versions older than 1.12", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.UpscaleDelay = makeDurationPointer(1 * time.Minute)
-				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleDelay = makeDurationPointer(1 * time.Second)
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.kubeControllerManager.horizontalPodAutoscaler.upscaleDelay"),
-				})), PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.kubeControllerManager.horizontalPodAutoscaler.downscaleDelay"),
-				}))))
-			})
-
-			It("should succeed when using valid v1.12 configuration parameters", func() {
+			It("should succeed when using valid configuration parameters", func() {
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleStabilization = makeDurationPointer(5 * time.Minute)
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.InitialReadinessDelay = makeDurationPointer(30 * time.Second)
 				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.CPUInitializationPeriod = makeDurationPointer(5 * time.Minute)
@@ -1657,9 +1562,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(HaveLen(0))
 			})
-		})
 
-		Context("KubeControllerManager configuration validation", func() {
 			It("should fail updating immutable fields", func() {
 				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32Ptr(24)
 
@@ -1786,7 +1689,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))))
 			})
 
-			It("should fail when using kubernetes version 1.14.2 and proxy mode is changed", func() {
+			It("should fail when using kubernetes version 1.15 and proxy mode is changed", func() {
 				mode := core.ProxyMode("IPVS")
 				kubernetesConfig := core.KubernetesConfig{}
 				config := core.KubeProxyConfig{
@@ -1794,7 +1697,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					Mode:             &mode,
 				}
 				shoot.Spec.Kubernetes.KubeProxy = &config
-				shoot.Spec.Kubernetes.Version = "1.14.2"
+				shoot.Spec.Kubernetes.Version = "1.15.2"
 				oldMode := core.ProxyMode("IPTables")
 				oldConfig := core.KubeProxyConfig{
 					KubernetesConfig: kubernetesConfig,
@@ -1812,14 +1715,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field":  Equal("spec.kubernetes.kubeProxy.mode"),
 					"Detail": Equal(`field is immutable`),
 				}))
-			})
-
-			It("should be successful when using kubernetes version 1.14.1 and proxy mode stays the same", func() {
-				mode := core.ProxyMode("IPVS")
-				shoot.Spec.Kubernetes.Version = "1.14.1"
-				shoot.Spec.Kubernetes.KubeProxy.Mode = &mode
-				errorList := ValidateShoot(shoot)
-				Expect(errorList).To(HaveLen(2))
 			})
 
 			It("should be successful when using kubernetes version 1.16.1 and proxy mode is changed", func() {
@@ -1946,7 +1841,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		It("should forbid kubernetes version upgrades skipping a minor version", func() {
 			newShoot := prepareShootForUpdate(shoot)
-			newShoot.Spec.Kubernetes.Version = "1.10.1"
+			newShoot.Spec.Kubernetes.Version = "1.17.1"
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 

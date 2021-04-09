@@ -31,23 +31,6 @@ spec:
         app: kubernetes
         role: proxy
     spec:
-{{- if and .Values.enableIPVS (semverCompare "< 1.14" .Values.kubernetesVersion) }}
-      # Temporary fix until https://github.com/kubernetes/kubernetes/issues/70113
-      # is fixed in 1.13, 1.12 and 1.11
-      initContainers:
-      - name: disable-ipv6
-        image: {{ index .Values.images "alpine"}}
-        command:
-        - /bin/sh
-        - -c
-        args:
-        - >-
-          test -f /proc/net/if_inet6 &&
-          echo "IPv6 is enabled. Disabling..." &&
-          /sbin/sysctl -w net.ipv6.conf.all.disable_ipv6=1 || echo "IPv6 is already disabled. Doing nothing..."
-        securityContext:
-          privileged: true
-{{- end }}
 {{- if (semverCompare ">= 1.16" .Values.kubernetesVersion) }}
       initContainers:
       - name: cleanup
@@ -95,11 +78,7 @@ spec:
         command:
         {{- if semverCompare "< 1.17" .Values.kubernetesVersion }}
         - /hyperkube
-        {{- if semverCompare "< 1.15" .Values.kubernetesVersion }}
-        - proxy
-        {{- else }}
         - kube-proxy
-        {{- end }}
         {{- else }}
         - /usr/local/bin/kube-proxy
         {{- end }}

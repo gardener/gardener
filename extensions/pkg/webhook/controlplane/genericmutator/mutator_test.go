@@ -101,7 +101,7 @@ var _ = Describe("Mutator", func() {
 				},
 				Spec: gardencorevalpha1.ShootSpec{
 					Kubernetes: gardencorevalpha1.Kubernetes{
-						Version: "1.13.4",
+						Version: "1.15.4",
 					},
 				},
 			},

@@ -428,7 +428,6 @@ type OIDCConfig struct {
 	GroupsPrefix *string
 	// The URL of the OpenID issuer, only HTTPS scheme will be accepted. If set, it will be used to verify the OIDC JSON Web Token (JWT).
 	IssuerURL *string
-	// ATTENTION: Only meaningful for Kubernetes >= 1.11
 	// key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.
 	RequiredClaims map[string]string
 	// List of allowed JOSE asymmetric signing algorithms. JWTs with a 'alg' header value not in this list will be rejected. Values are defined by RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1
@@ -496,8 +495,6 @@ type KubeControllerManagerConfig struct {
 type HorizontalPodAutoscalerConfig struct {
 	// The period after which a ready pod transition is considered to be the first.
 	CPUInitializationPeriod *metav1.Duration
-	// The period since last downscale, before another downscale can be performed in horizontal pod autoscaler.
-	DownscaleDelay *metav1.Duration
 	// The configurable window at which the controller will choose the highest recommendation for autoscaling.
 	DownscaleStabilization *metav1.Duration
 	// The configurable period at which the horizontal pod autoscaler considers a Pod “not yet ready” given that it’s unready and it has  transitioned to unready during that time.
@@ -506,26 +503,7 @@ type HorizontalPodAutoscalerConfig struct {
 	SyncPeriod *metav1.Duration
 	// The minimum change (from 1.0) in the desired-to-actual metrics ratio for the horizontal pod autoscaler to consider scaling.
 	Tolerance *float64
-	// The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.
-	UpscaleDelay *metav1.Duration
 }
-
-const (
-	// DefaultHPADownscaleDelay is a constant for the default HPA downscale delay for a Shoot cluster.
-	DefaultHPADownscaleDelay = 15 * time.Minute
-	// DefaultHPASyncPeriod is a constant for the default HPA sync period for a Shoot cluster.
-	DefaultHPASyncPeriod = 30 * time.Second
-	// DefaultHPATolerance is a constant for the default HPA tolerance for a Shoot cluster.
-	DefaultHPATolerance = 0.1
-	// DefaultHPAUpscaleDelay is for the default HPA upscale delay for a Shoot cluster.
-	DefaultHPAUpscaleDelay = 1 * time.Minute
-	// DefaultDownscaleStabilization is the default HPA downscale stabilization window for a Shoot cluster
-	DefaultDownscaleStabilization = 5 * time.Minute
-	// DefaultInitialReadinessDelay is for the default HPA  ReadinessDelay value in the Shoot cluster
-	DefaultInitialReadinessDelay = 30 * time.Second
-	// DefaultCPUInitializationPeriod is the for the default value of the CPUInitializationPeriod in the Shoot cluster
-	DefaultCPUInitializationPeriod = 5 * time.Minute
-)
 
 // KubeSchedulerConfig contains configuration settings for the kube-scheduler.
 type KubeSchedulerConfig struct {
@@ -670,7 +648,6 @@ type KubeletConfigReserved struct {
 	// EphemeralStorage is the reserved ephemeral-storage.
 	EphemeralStorage *resource.Quantity
 	// PID is the reserved process-ids.
-	// To reserve PID, the SupportNodePidsLimit feature gate must be enabled in Kubernetes versions < 1.15.
 	PID *resource.Quantity
 }
 

@@ -15,10 +15,8 @@
 package etcd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"text/template"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -40,7 +38,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -88,14 +85,6 @@ type bootstrapper struct {
 }
 
 func (b *bootstrapper) Deploy(ctx context.Context) error {
-	var crdYAML bytes.Buffer
-	if err := crdTemplate.Execute(&crdYAML, map[string]bool{
-		"k8sGreaterEqual112": versionConstraintK8sGreaterEqual112.Check(b.kubernetesVersion),
-		"k8sGreaterEqual115": versionConstraintK8sGreaterEqual115.Check(b.kubernetesVersion),
-	}); err != nil {
-		return err
-	}
-
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 		labels   = func() map[string]string { return map[string]string{v1beta1constants.GardenRole: Druid} }
@@ -289,7 +278,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	resources["crd.yaml"] = crdYAML.Bytes()
+	resources["crd.yaml"] = []byte(crdYAML)
 
 	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
 }
@@ -330,27 +319,9 @@ func (b *bootstrapper) WaitCleanup(ctx context.Context) error {
 	return managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, managedResourceControlName)
 }
 
-var (
-	crdTemplate                         *template.Template
-	versionConstraintK8sGreaterEqual112 *semver.Constraints
-	versionConstraintK8sGreaterEqual115 *semver.Constraints
-)
-
-func init() {
-	var err error
-
-	crdTemplate, err = template.New("crd").Parse(crdTmpl)
-	utilruntime.Must(err)
-
-	versionConstraintK8sGreaterEqual112, err = semver.NewConstraint(">= 1.12")
-	utilruntime.Must(err)
-	versionConstraintK8sGreaterEqual115, err = semver.NewConstraint(">= 1.15")
-	utilruntime.Must(err)
-}
-
 const (
 	crdName = "etcds.druid.gardener.cloud"
-	crdTmpl = `apiVersion: apiextensions.k8s.io/v1beta1
+	crdYAML = `apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   name: ` + crdName + `
@@ -372,9 +343,7 @@ spec:
       specReplicasPath: .spec.replicas
       statusReplicasPath: .status.replicas
     status: {}
-{{- if .k8sGreaterEqual115 }}
   preserveUnknownFields: false
-{{- end }}
   validation:
     openAPIV3Schema:
       description: Etcd is the Schema for the etcds API
@@ -817,9 +786,7 @@ spec:
               format: int32
               type: integer
           type: object
-      {{- if .k8sGreaterEqual112 }}
       type: object
-      {{- end }}
   additionalPrinterColumns:
   - name: Ready
     type: string

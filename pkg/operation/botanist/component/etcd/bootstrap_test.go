@@ -304,19 +304,6 @@ spec:
 status: {}
 `
 
-			crdK8sGreaterEqual115YAML = crdHeader + `
-  preserveUnknownFields: false
-` + crdValidation + `
-      type: object
-` + crdFooter
-			crdK8sGreaterEqual112Less115YAML = crdHeader + `
-` + crdValidation + `
-      type: object
-` + crdFooter
-			crdK8sSmaller112YAML = crdHeader + `
-` + crdValidation + `
-` + crdFooter
-
 			managedResourceSecret *corev1.Secret
 			managedResource       *resourcesv1alpha1.ManagedResource
 		)
@@ -334,7 +321,7 @@ status: {}
 					"clusterrolebinding____gardener.cloud_system_etcd-druid.yaml": []byte(clusterRoleBindingYAML),
 					"verticalpodautoscaler__shoot--foo--bar__etcd-druid-vpa.yaml": []byte(vpaYAML),
 					"deployment__shoot--foo--bar__etcd-druid.yaml":                []byte(deploymentWithoutImageVectorOverwriteYAML),
-					"crd.yaml": []byte(crdK8sGreaterEqual115YAML),
+					"crd.yaml": []byte(crd),
 				},
 			}
 			managedResource = &resourcesv1alpha1.ManagedResource{
@@ -372,129 +359,39 @@ status: {}
 			Expect(bootstrapper.Deploy(ctx)).To(MatchError(fakeErr))
 		})
 
-		Context("k8s >= 1.15", func() {
-			It("should successfully deploy all the resources (w/o image vector overwrite)", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResourceSecret))
-					}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResource))
-					}),
-				)
+		It("should successfully deploy all the resources (w/o image vector overwrite)", func() {
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+					Expect(obj).To(DeepEqual(managedResourceSecret))
+				}),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+					Expect(obj).To(DeepEqual(managedResource))
+				}),
+			)
 
-				Expect(bootstrapper.Deploy(ctx)).To(Succeed())
-			})
-
-			It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
-				bootstrapper = NewBootstrapper(c, namespace, etcdDruidImage, seedVersion, imageVectorOverwriteFull)
-
-				managedResourceSecret.Data["configmap__shoot--foo--bar__etcd-druid-imagevector-overwrite.yaml"] = []byte(configMapImageVectorOverwriteYAML)
-				managedResourceSecret.Data["deployment__shoot--foo--bar__etcd-druid.yaml"] = []byte(deploymentWithImageVectorOverwriteYAML)
-
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResourceSecret))
-					}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResource))
-					}),
-				)
-
-				Expect(bootstrapper.Deploy(ctx)).To(Succeed())
-			})
+			Expect(bootstrapper.Deploy(ctx)).To(Succeed())
 		})
 
-		Context("k8s >= 1.12, k8s < 1.15", func() {
-			BeforeEach(func() {
-				seedVersion = semver.MustParse("1.12.2")
-				managedResourceSecret.Data["crd.yaml"] = []byte(crdK8sGreaterEqual112Less115YAML)
-			})
+		It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
+			bootstrapper = NewBootstrapper(c, namespace, etcdDruidImage, seedVersion, imageVectorOverwriteFull)
 
-			It("should successfully deploy all the resources (w/o image vector overwrite)", func() {
-				bootstrapper = NewBootstrapper(c, namespace, etcdDruidImage, seedVersion, imageVectorOverwriteEmpty)
+			managedResourceSecret.Data["configmap__shoot--foo--bar__etcd-druid-imagevector-overwrite.yaml"] = []byte(configMapImageVectorOverwriteYAML)
+			managedResourceSecret.Data["deployment__shoot--foo--bar__etcd-druid.yaml"] = []byte(deploymentWithImageVectorOverwriteYAML)
 
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResourceSecret))
-					}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResource))
-					}),
-				)
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+					Expect(obj).To(DeepEqual(managedResourceSecret))
+				}),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+					Expect(obj).To(DeepEqual(managedResource))
+				}),
+			)
 
-				Expect(bootstrapper.Deploy(ctx)).To(Succeed())
-			})
-
-			It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
-				bootstrapper = NewBootstrapper(c, namespace, etcdDruidImage, seedVersion, imageVectorOverwriteFull)
-
-				managedResourceSecret.Data["configmap__shoot--foo--bar__etcd-druid-imagevector-overwrite.yaml"] = []byte(configMapImageVectorOverwriteYAML)
-				managedResourceSecret.Data["deployment__shoot--foo--bar__etcd-druid.yaml"] = []byte(deploymentWithImageVectorOverwriteYAML)
-
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResourceSecret))
-					}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResource))
-					}),
-				)
-
-				Expect(bootstrapper.Deploy(ctx)).To(Succeed())
-			})
-		})
-
-		Context("k8s < 1.12", func() {
-			BeforeEach(func() {
-				seedVersion = semver.MustParse("1.11.2")
-				managedResourceSecret.Data["crd.yaml"] = []byte(crdK8sSmaller112YAML)
-			})
-
-			It("should successfully deploy all the resources (w/o image vector overwrite)", func() {
-				bootstrapper = NewBootstrapper(c, namespace, etcdDruidImage, seedVersion, imageVectorOverwriteEmpty)
-
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResourceSecret))
-					}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResource))
-					}),
-				)
-
-				Expect(bootstrapper.Deploy(ctx)).To(Succeed())
-			})
-
-			It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
-				bootstrapper = NewBootstrapper(c, namespace, etcdDruidImage, seedVersion, imageVectorOverwriteFull)
-
-				managedResourceSecret.Data["configmap__shoot--foo--bar__etcd-druid-imagevector-overwrite.yaml"] = []byte(configMapImageVectorOverwriteYAML)
-				managedResourceSecret.Data["deployment__shoot--foo--bar__etcd-druid.yaml"] = []byte(deploymentWithImageVectorOverwriteYAML)
-
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResourceSecret))
-					}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(managedResource))
-					}),
-				)
-
-				Expect(bootstrapper.Deploy(ctx)).To(Succeed())
-			})
+			Expect(bootstrapper.Deploy(ctx)).To(Succeed())
 		})
 	})
 
@@ -741,8 +638,7 @@ status: {}
 	})
 })
 
-const (
-	crdHeader = `apiVersion: apiextensions.k8s.io/v1beta1
+const crd = `apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   name: etcds.druid.gardener.cloud
@@ -763,8 +659,9 @@ spec:
       labelSelectorPath: .status.labelSelector
       specReplicasPath: .spec.replicas
       statusReplicasPath: .status.replicas
-    status: {}`
-	crdValidation = `  validation:
+    status: {}
+  preserveUnknownFields: false
+  validation:
     openAPIV3Schema:
       description: Etcd is the Schema for the etcds API
       properties:
@@ -1205,8 +1102,9 @@ spec:
             updatedReplicas:
               format: int32
               type: integer
-          type: object`
-	crdFooter = `  additionalPrinterColumns:
+          type: object
+      type: object
+  additionalPrinterColumns:
   - name: Ready
     type: string
     JSONPath: .status.ready
@@ -1219,4 +1117,3 @@ spec:
     served: true
     storage: true
 `
-)

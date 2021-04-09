@@ -38,9 +38,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
-	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
-	auditv1alpha1 "k8s.io/apiserver/pkg/apis/audit/v1alpha1"
-	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -127,20 +124,6 @@ rules:
     - group: ""
       resources: ["pods/log", "pods/status"]
 `
-		v1AuditPolicy = `
----
-apiVersion: audit.k8s.io/v1
-kind: Policy
-rules:
-  - level: RequestResponse
-    resources:
-    - group: ""
-      resources: ["pods"]
-  - level: Metadata
-    resources:
-    - group: ""
-      resources: ["pods/log"]
-`
 	)
 
 	BeforeEach(func() {
@@ -163,94 +146,6 @@ rules:
 
 	AfterEach(func() {
 		ctrl.Finish()
-	})
-
-	Describe("#ValidateAuditPolicyApiGroupVersionKind", func() {
-		var kind = "Policy"
-
-		It("should return false without error because of version incompatibility", func() {
-			incompatibilityMatrix := map[string][]schema.GroupVersionKind{
-				"1.10.0": {
-					auditv1.SchemeGroupVersion.WithKind(kind),
-				},
-				"1.11.0": {
-					auditv1.SchemeGroupVersion.WithKind(kind),
-				},
-			}
-
-			for shootVersion, gvks := range incompatibilityMatrix {
-				for _, gvk := range gvks {
-					ok, err := auditpolicy.IsValidAuditPolicyVersion(shootVersion, &gvk)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(ok).To(BeFalse())
-				}
-			}
-		})
-
-		It("should return true without error because of version compatibility", func() {
-			compatibilityMatrix := map[string][]schema.GroupVersionKind{
-				"1.10.0": {
-					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
-					auditv1beta1.SchemeGroupVersion.WithKind(kind),
-				},
-				"1.11.0": {
-					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
-					auditv1beta1.SchemeGroupVersion.WithKind(kind),
-				},
-				"1.12.0": {
-					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
-					auditv1beta1.SchemeGroupVersion.WithKind(kind),
-					auditv1.SchemeGroupVersion.WithKind(kind),
-				},
-				"1.13.0": {
-					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
-					auditv1beta1.SchemeGroupVersion.WithKind(kind),
-					auditv1.SchemeGroupVersion.WithKind(kind),
-				},
-				"1.14.0": {
-					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
-					auditv1beta1.SchemeGroupVersion.WithKind(kind),
-					auditv1.SchemeGroupVersion.WithKind(kind),
-				},
-				"1.15.0": {
-					auditv1alpha1.SchemeGroupVersion.WithKind(kind),
-					auditv1beta1.SchemeGroupVersion.WithKind(kind),
-					auditv1.SchemeGroupVersion.WithKind(kind),
-				},
-			}
-
-			for shootVersion, gvks := range compatibilityMatrix {
-				for _, gvk := range gvks {
-					ok, err := auditpolicy.IsValidAuditPolicyVersion(shootVersion, &gvk)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(ok).To(BeTrue())
-				}
-			}
-		})
-
-		It("should return true without error because of a valid semver version with dev tag", func() {
-			shootVersion := "1.12.3-dev"
-			gvks := []schema.GroupVersionKind{
-				auditv1alpha1.SchemeGroupVersion.WithKind(kind),
-				auditv1beta1.SchemeGroupVersion.WithKind(kind),
-				auditv1.SchemeGroupVersion.WithKind(kind),
-			}
-
-			for _, gvk := range gvks {
-				ok, err := auditpolicy.IsValidAuditPolicyVersion(shootVersion, &gvk)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(ok).To(BeTrue())
-			}
-		})
-
-		It("should return false with error because of not valid semver version", func() {
-			shootVersion := "1.ab.0"
-			gvk := auditv1.SchemeGroupVersion.WithKind(kind)
-
-			ok, err := auditpolicy.IsValidAuditPolicyVersion(shootVersion, &gvk)
-			Expect(err).To(HaveOccurred())
-			Expect(ok).To(BeFalse())
-		})
 	})
 
 	test := func(op admissionv1.Operation, oldObj runtime.Object, obj runtime.Object, expectedAllowed bool, expectedStatusCode int32, expectedMsg string, expectedReason string, expectedPatches ...jsonpatch.JsonPatchOperation) {
@@ -349,7 +244,6 @@ rules:
 		})
 
 		Context("Allow", func() {
-
 			It("has no KubeAPIServer config", func() {
 				shootv1beta1.Spec.Kubernetes.KubeAPIServer = nil
 				test(admissionv1.Create, nil, shootv1beta1, true, statusCodeAllowed, "shoot resource is not specifying any audit policy", "")
@@ -460,7 +354,6 @@ rules:
 		})
 
 		Context("Deny", func() {
-
 			It("references a configmap that does not exist", func() {
 				mockReader.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, cmName), &v1.ConfigMap{}).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *v1.ConfigMap) error {
 					return apierrors.NewNotFound(schema.GroupResource{Resource: "configmaps"}, cmName)
@@ -510,22 +403,6 @@ rules:
 				})
 				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "did not find expected key", "")
 			})
-
-			It("references audit policy with incompatible version", func() {
-				shootv1beta1.Spec.Kubernetes.Version = "1.10"
-				shootv1beta1.ObjectMeta.Name = "fakeName"
-
-				returnedCm := v1.ConfigMap{
-					TypeMeta:   metav1.TypeMeta{},
-					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
-					Data:       map[string]string{"policy": v1AuditPolicy},
-				}
-				mockReader.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&v1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *v1.ConfigMap) error {
-					*cm = returnedCm
-					return nil
-				})
-				test(admissionv1.Create, nil, shootv1beta1, false, statusCodeInvalid, "not compatible", "")
-			})
 		})
 	})
 
@@ -552,7 +429,6 @@ rules:
 		})
 
 		Context("ignored requests", func() {
-
 			It("should ignore other operations than UPDATE", func() {
 				test(admissionv1.Create, cm, cm, true, statusCodeAllowed, "operation is not update", "")
 				test(admissionv1.Connect, cm, cm, true, statusCodeAllowed, "operation is not update", "")
@@ -567,7 +443,6 @@ rules:
 		})
 
 		Context("Update", func() {
-
 			BeforeEach(func() {
 				request.Name = cmName
 				request.Namespace = cmNamespace
@@ -583,11 +458,11 @@ rules:
 			})
 
 			Context("Allow", func() {
-
 				It("does not have a finalizer from a Shoot", func() {
 					cm.ObjectMeta.Finalizers = nil
 					test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "configmap is not referenced by a Shoot", "")
 				})
+
 				It("did not change policy field", func() {
 					test(admissionv1.Update, cm, cm, true, statusCodeAllowed, "audit policy not changed", "")
 				})
@@ -597,19 +472,11 @@ rules:
 					newCm := cm.DeepCopy()
 					newCm.Data["policy"] = anotherValidAuditPolicy
 
-					mockReader.EXPECT().List(gomock.Any(), &gardencorev1beta1.ShootList{}, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-						*list = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{
-							*shootv1beta1,
-						}}
-						return nil
-					})
 					test(admissionv1.Update, cm, newCm, true, statusCodeAllowed, "configmap change is valid", "")
 				})
-
 			})
 
 			Context("Deny", func() {
-
 				It("has no data key", func() {
 					newCm := cm.DeepCopy()
 					newCm.Data = nil
@@ -620,32 +487,6 @@ rules:
 					newCm := cm.DeepCopy()
 					newCm.Data["policy"] = ""
 					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "empty audit policy. Provide non-empty audit policy", "")
-				})
-
-				It("fails listing shoots", func() {
-					newCm := cm.DeepCopy()
-					newCm.Data["policy"] = anotherValidAuditPolicy
-
-					mockReader.EXPECT().List(gomock.Any(), &gardencorev1beta1.ShootList{}, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-						return fmt.Errorf("fake")
-					})
-					test(admissionv1.Update, cm, newCm, false, statusCodeInternalError, "", "")
-				})
-
-				It("should fail if shoot cluster version is incompatible with the audit policy version", func() {
-					shootv1beta1.Spec.Kubernetes.Version = "1.10"
-					shootv1beta1.ObjectMeta.Name = "fakeName"
-					newCm := cm.DeepCopy()
-					newCm.Data["policy"] = v1AuditPolicy
-
-					mockReader.EXPECT().List(gomock.Any(), &gardencorev1beta1.ShootList{}, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-						*list = gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{
-							*shootv1beta1,
-						}}
-						return nil
-					})
-					errMsg := "shoot cluster with name \"fakeName\" and version \"1.10\" is not compatible with audit policy version \"audit.k8s.io/v1\""
-					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, errMsg, "")
 				})
 
 				It("holds audit policy which breaks validation rules", func() {
@@ -663,7 +504,6 @@ rules:
 
 					test(admissionv1.Update, cm, newCm, false, statusCodeInvalid, "did not find expected key", "")
 				})
-
 			})
 		})
 	})

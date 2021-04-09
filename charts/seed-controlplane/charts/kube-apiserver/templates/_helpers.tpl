@@ -2,26 +2,11 @@
 {{- if .Values.featureGates }}
 - --feature-gates={{ range $feature, $enabled := .Values.featureGates }}{{ $feature }}={{ $enabled }},{{ end }}
 {{- end }}
-{{- if semverCompare "< 1.11" .Values.kubernetesVersion }}
-- --feature-gates=PodPriority=true
-{{- end }}
-{{- if semverCompare "< 1.12" .Values.kubernetesVersion }}
-- --feature-gates=TokenRequest=true
-{{- end }}
-{{- if semverCompare "1.11" .Values.kubernetesVersion }}
-- --feature-gates=TokenRequestProjection=true
-{{- end }}
 {{- end -}}
 
 {{- define "kube-apiserver.runtimeConfig" }}
 {{- if .Values.runtimeConfig }}
 - --runtime-config={{ range $config, $enabled := .Values.runtimeConfig }}{{ $config }}={{ $enabled }},{{ end }}
-{{- end }}
-{{- if semverCompare "< 1.11" .Values.kubernetesVersion }}
-- --runtime-config=scheduling.k8s.io/v1alpha1=true
-{{- end }}
-{{- if semverCompare "< 1.14" .Values.kubernetesVersion }}
-- --runtime-config=admissionregistration.k8s.io/v1alpha1
 {{- end }}
 {{- end -}}
 
@@ -79,11 +64,7 @@
 {{- end -}}
 
 {{- define "kube-apiserver.auditversion" -}}
-{{- if semverCompare ">= 1.12" .Values.kubernetesVersion -}}
 audit.k8s.io/v1
-{{- else -}}
-audit.k8s.io/v1beta1
-{{- end -}}
 {{- end -}}
 
 {{- define "kube-apiserver.auditConfigAuditPolicy" -}}
@@ -113,11 +94,7 @@ rules:
 
 {{- define "kube-apiserver.apiAudiences" -}}
 {{- if .Values.apiAudiences }}
-{{- if semverCompare "< 1.13" .Values.kubernetesVersion }}
-- --service-account-api-audiences={{ .Values.apiAudiences | join "," }}
-{{- else }}
 - --api-audiences={{ .Values.apiAudiences | join "," }}
-{{- end }}
 {{- end -}}
 {{- end -}}
 

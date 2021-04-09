@@ -90,15 +90,12 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		RegistryBurst:                    10,
 		RegistryPullQPS:                  pointer.Int32Ptr(5),
 		ResolverConfig:                   "/etc/resolv.conf",
+		RotateCertificates:               true,
 		RuntimeRequestTimeout:            metav1.Duration{Duration: 2 * time.Minute},
 		SerializeImagePulls:              pointer.BoolPtr(true),
 		SyncFrequency:                    metav1.Duration{Duration: time.Minute},
 		SystemReserved:                   params.SystemReserved,
 		VolumeStatsAggPeriod:             metav1.Duration{Duration: time.Minute},
-	}
-
-	if versionConstraintK8sGreaterEqual111.Check(kubernetesVersion) {
-		config.RotateCertificates = true
 	}
 
 	if versionConstraintK8sGreaterEqual119.Check(kubernetesVersion) {
