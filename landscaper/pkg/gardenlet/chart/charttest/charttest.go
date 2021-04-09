@@ -130,8 +130,18 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 		{
 			{
 				APIGroups: []string{""},
+				Resources: []string{"nodes"},
+				Verbs:     []string{"list", "watch"},
+			},
+			{
+				APIGroups: []string{""},
 				Resources: []string{"pods"},
 				Verbs:     []string{"list", "watch", "delete", "deletecollection"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"pods/log"},
+				Verbs:     []string{"get"},
 			},
 			{
 				APIGroups: []string{""},
