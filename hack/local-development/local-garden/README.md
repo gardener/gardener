@@ -22,7 +22,7 @@ to get this setup to work:
 - A user-defined docker network called `gardener-dev` is created. This is to enable DNS between the containers (e.g., curl http://kube-apiserver)
 - A DNS mapping in the hosts `/etc/hosts` file. This is to enable connectivity from `kube-apiserver` to the `gardener-apiserver` which is applied to the container's DNS. hosts file.
 
-These steps are automated and can be executed simply by running `make dev-setup-local-garden`.
+These steps are automated and can be executed simply by running `make local-garden-up`.
 
 ## Certificate Generation
 
