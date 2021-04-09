@@ -229,12 +229,12 @@ func (s *careReconciler) care(ctx context.Context, shootObj *gardencorev1beta1.S
 		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace)
 	)
 
-	ctx, cancel := context.WithTimeout(ctx, s.config.Controllers.ShootCare.SyncPeriod.Duration)
+	careCtx, cancel := context.WithTimeout(ctx, s.config.Controllers.ShootCare.SyncPeriod.Duration)
 	defer cancel()
 
 	shootLogger.Debugf("[SHOOT CARE] %s/%s", shoot.Namespace, shoot.Name)
 
-	gardenClient, err := s.clientMap.GetClient(ctx, keys.ForGarden())
+	gardenClient, err := s.clientMap.GetClient(careCtx, keys.ForGarden())
 	if err != nil {
 		return fmt.Errorf("failed to get garden client: %w", err)
 	}
@@ -259,7 +259,7 @@ func (s *careReconciler) care(ctx context.Context, shootObj *gardencorev1beta1.S
 		constraints = append(constraints, gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Constraints, constr))
 	}
 
-	seedClient, err := s.clientMap.GetClient(ctx, keys.ForSeedWithName(*shoot.Spec.SeedName))
+	seedClient, err := s.clientMap.GetClient(careCtx, keys.ForSeedWithName(*shoot.Spec.SeedName))
 	if err != nil {
 		shootLogger.Errorf("seedClient cannot be constructed: %s", err.Error())
 
@@ -271,7 +271,7 @@ func (s *careReconciler) care(ctx context.Context, shootObj *gardencorev1beta1.S
 
 	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
 	if s.gardenSecrets == nil {
-		secrets, err := garden.ReadGardenSecrets(ctx, gardenClient.Cache(), s.k8sGardenCoreInformers.Seeds().Lister(), gardenerutils.ComputeGardenNamespace(*shoot.Spec.SeedName))
+		secrets, err := garden.ReadGardenSecrets(careCtx, gardenClient.Cache(), s.k8sGardenCoreInformers.Seeds().Lister(), gardenerutils.ComputeGardenNamespace(*shoot.Spec.SeedName))
 		if err != nil {
 			return fmt.Errorf("error reading Garden secrets: %w", err)
 		}
@@ -279,7 +279,7 @@ func (s *careReconciler) care(ctx context.Context, shootObj *gardencorev1beta1.S
 	}
 
 	operation, err := NewOperation(
-		ctx,
+		careCtx,
 		gardenClient,
 		seedClient,
 		s.config,
@@ -301,7 +301,7 @@ func (s *careReconciler) care(ctx context.Context, shootObj *gardencorev1beta1.S
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
-	if err := operation.InitializeSeedClients(ctx); err != nil {
+	if err := operation.InitializeSeedClients(careCtx); err != nil {
 		shootLogger.Errorf("Health checks cannot be performed: %s", err.Error())
 
 		if err := careSetupFailure(ctx, gardenClient, shoot, "Precondition failed: seed client cannot be constructed", conditions, constraints); err != nil {
@@ -311,7 +311,7 @@ func (s *careReconciler) care(ctx context.Context, shootObj *gardencorev1beta1.S
 	}
 
 	staleExtensionHealthCheckThreshold := confighelper.StaleExtensionHealthChecksThreshold(s.config.Controllers.ShootCare.StaleExtensionHealthChecks)
-	initializeShootClients := shootClientInitializer(ctx, operation)
+	initializeShootClients := shootClientInitializer(careCtx, operation)
 
 	var updatedConditions, updatedConstraints, seedConditions []gardencorev1beta1.Condition
 
@@ -354,7 +354,7 @@ func (s *careReconciler) care(ctx context.Context, shootObj *gardencorev1beta1.S
 			// errors during garbage collection are only being logged and do not cause the care operation to fail
 			return nil
 		},
-	)(ctx)
+	)(careCtx)
 
 	updatedConditions = append(updatedConditions, seedConditions...)
 
