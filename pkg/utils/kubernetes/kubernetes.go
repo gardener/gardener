@@ -305,7 +305,7 @@ func ReconcileServicePorts(existingPorts []corev1.ServicePort, desiredPorts []co
 func FetchEventMessages(ctx context.Context, scheme *runtime.Scheme, reader client.Reader, obj client.Object, eventType string, eventsLimit int) (string, error) {
 	gvk, err := apiutil.GVKForObject(obj, scheme)
 	if err != nil {
-		return "", fmt.Errorf("failed identify GVK for object: %w", err)
+		return "", fmt.Errorf("failed to identify GVK for object: %w", err)
 	}
 
 	apiVersion, kind := gvk.ToAPIVersionAndKind()
