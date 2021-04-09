@@ -22,7 +22,7 @@ import (
 
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
+	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/version"
 
@@ -114,9 +114,6 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 }
 
 func (h *handler) admitShoot(ctx context.Context, request admission.Request) admission.Response {
-	var (
-		shoot = &gardencorev1beta1.Shoot{}
-	)
 	if request.Operation != admissionv1.Create && request.Operation != admissionv1.Update {
 		return acadmission.Allowed("operation is not Create or Update")
 	}
@@ -125,8 +122,15 @@ func (h *handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return acadmission.Allowed("subresources are not handled")
 	}
 
+	shoot := &gardencorev1beta1.Shoot{}
 	if err := h.decoder.Decode(request, shoot); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	if shoot.DeletionTimestamp != nil {
+		// don't mutate shoot if it's already marked for deletion, otherwise gardener-apiserver will deny the user's/
+		// controller's request, because we changed the spec
+		return acadmission.Allowed("shoot is already marked for deletion")
 	}
 
 	if !hasAuditPolicy(shoot) {
@@ -142,13 +146,13 @@ func (h *handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("could not retrieve config map: %s", err))
 	}
 
-	if shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion == auditPolicyCm.ResourceVersion {
-		return acadmission.Allowed("no change detected in referenced configmap holding audit policy")
-	}
-
 	auditPolicy, err := getAuditPolicy(auditPolicyCm)
 	if err != nil {
 		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("error getting auditlog policy from ConfigMap %s/%s: %w", shoot.Namespace, cmRef.Name, err))
+	}
+
+	if shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion == auditPolicyCm.ResourceVersion {
+		return acadmission.Allowed("no change detected in referenced configmap holding audit policy")
 	}
 
 	schemaVersion, errCode, err := validateAuditPolicySemantics(auditPolicy)
@@ -184,7 +188,7 @@ func (h *handler) admitConfigMap(ctx context.Context, request admission.Request)
 	if err := h.decoder.Decode(request, cm); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
-	if !controllerutil.ContainsFinalizer(cm, shoot.FinalizerName) {
+	if !controllerutil.ContainsFinalizer(cm, shootcontroller.FinalizerName) {
 		return acadmission.Allowed("configmap is not referenced by a Shoot")
 	}
 
@@ -238,7 +242,7 @@ func validateAuditPolicySemantics(auditPolicy string) (schemaVersion *schema.Gro
 func IsValidAuditPolicyVersion(shootVersion string, schemaVersion *schema.GroupVersionKind) (bool, error) {
 	auditGroupVersion := schemaVersion.GroupVersion().String()
 
-	//TODO Update check once https://github.com/kubernetes/kubernetes/issues/98035 is resolved
+	// TODO Update check once https://github.com/kubernetes/kubernetes/issues/98035 is resolved
 	if auditGroupVersion == "audit.k8s.io/v1" {
 		return version.CheckVersionMeetsConstraint(shootVersion, ">= v1.12")
 	}
