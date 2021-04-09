@@ -328,7 +328,6 @@ rules:
 			It("has no KubeAPIServer config", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer = nil
 				test(admissionv1.Create, nil, shoot, true, statusCodeAllowed, "shoot resource is not specifying any audit policy", "")
-				test(admissionv1.Update, shoot, shoot, true, statusCodeAllowed, "shoot resource is not specifying any audit policy", "")
 			})
 
 			It("has no AuditConfig", func() {
@@ -356,16 +355,13 @@ rules:
 			})
 
 			It("referenced auditPolicy was not changed (UPDATE)", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion = "1"
 				returnedCm := v1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "1"},
 					Data:       map[string]string{"policy": validAuditPolicy},
 				}
 				newShoot := shoot.DeepCopy()
-				newShoot.Labels = map[string]string{
-					"foo": "bar",
-				}
+				newShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion = "1"
 				mockReader.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&v1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *v1.ConfigMap) error {
 					*cm = returnedCm
 					return nil
@@ -374,16 +370,13 @@ rules:
 			})
 
 			It("referenced auditPolicy was changed (UPDATE)", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion = "1"
 				returnedCm := v1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
 					Data:       map[string]string{"policy": validAuditPolicy},
 				}
 				newShoot := shoot.DeepCopy()
-				newShoot.Labels = map[string]string{
-					"foo": "bar",
-				}
+				newShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion = "1"
 				mockReader.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&v1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *v1.ConfigMap) error {
 					*cm = returnedCm
 					return nil
@@ -400,6 +393,14 @@ rules:
 					"foo": "bar",
 				}
 				test(admissionv1.Update, shoot, newShoot, true, statusCodeAllowed, "marked for deletion", "")
+			})
+
+			It("should not mutate shoot if spec wasn't changed (UPDATE)", func() {
+				newShoot := shoot.DeepCopy()
+				newShoot.Labels = map[string]string{
+					"foo": "bar",
+				}
+				test(admissionv1.Update, shoot, newShoot, true, statusCodeAllowed, "shoot spec was not changed", "")
 			})
 		})
 
