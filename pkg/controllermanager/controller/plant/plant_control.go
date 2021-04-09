@@ -53,7 +53,7 @@ func (c *Controller) reconcilePlantForMatchingSecret(ctx context.Context, obj in
 
 	for _, plant := range plantList.Items {
 		if isPlantSecret(plant, kutil.Key(secret.Namespace, secret.Name)) {
-			key, err := cache.MetaNamespaceKeyFunc(plant)
+			key, err := cache.MetaNamespaceKeyFunc(&plant)
 			if err != nil {
 				logger.Logger.Errorf("Couldn't get key for plant %+v: %v", plant, err)
 				return
