@@ -44,6 +44,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 // Health contains information needed to execute shoot health checks.
@@ -92,14 +93,51 @@ type ExtensionCondition struct {
 }
 
 func (h *Health) getAllExtensionConditions(ctx context.Context) ([]ExtensionCondition, []ExtensionCondition, []ExtensionCondition, error) {
+	objs, err := h.retrieveExtensions(ctx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	var (
 		conditionsControlPlaneHealthy     []ExtensionCondition
 		conditionsEveryNodeReady          []ExtensionCondition
 		conditionsSystemComponentsHealthy []ExtensionCondition
 	)
 
+	for _, obj := range objs {
+		acc, err := extensions.Accessor(obj)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		gvk, err := apiutil.GVKForObject(obj, kubernetes.SeedScheme)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to identify GVK for object: %w", err)
+		}
+
+		kind := gvk.Kind
+		name := acc.GetName()
+		namespace := acc.GetNamespace()
+
+		for _, condition := range acc.GetExtensionStatus().GetConditions() {
+			switch condition.Type {
+			case gardencorev1beta1.ShootControlPlaneHealthy:
+				conditionsControlPlaneHealthy = append(conditionsControlPlaneHealthy, ExtensionCondition{condition, kind, name, namespace})
+			case gardencorev1beta1.ShootEveryNodeReady:
+				conditionsEveryNodeReady = append(conditionsEveryNodeReady, ExtensionCondition{condition, kind, name, namespace})
+			case gardencorev1beta1.ShootSystemComponentsHealthy:
+				conditionsSystemComponentsHealthy = append(conditionsSystemComponentsHealthy, ExtensionCondition{condition, kind, name, namespace})
+			}
+		}
+	}
+
+	return conditionsControlPlaneHealthy, conditionsEveryNodeReady, conditionsSystemComponentsHealthy, nil
+}
+
+func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, error) {
+	extensions := []runtime.Object{}
+
 	for _, listObj := range []client.ObjectList{
-		&extensionsv1alpha1.BackupEntryList{},
 		&extensionsv1alpha1.ContainerRuntimeList{},
 		&extensionsv1alpha1.ControlPlaneList{},
 		&extensionsv1alpha1.ExtensionList{},
@@ -110,38 +148,28 @@ func (h *Health) getAllExtensionConditions(ctx context.Context) ([]ExtensionCond
 	} {
 		listKind := listObj.GetObjectKind().GroupVersionKind().Kind
 		if err := h.seedClient.Client().List(ctx, listObj, client.InNamespace(h.shoot.SeedNamespace)); err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		}
 
 		if err := meta.EachListItem(listObj, func(obj runtime.Object) error {
-			acc, err := extensions.Accessor(obj)
-			if err != nil {
-				return err
-			}
-
-			kind := obj.GetObjectKind().GroupVersionKind().Kind
-			name := acc.GetName()
-			namespace := acc.GetNamespace()
-
-			for _, condition := range acc.GetExtensionStatus().GetConditions() {
-				switch condition.Type {
-				case gardencorev1beta1.ShootControlPlaneHealthy:
-					conditionsControlPlaneHealthy = append(conditionsControlPlaneHealthy, ExtensionCondition{condition, kind, name, namespace})
-				case gardencorev1beta1.ShootEveryNodeReady:
-					conditionsEveryNodeReady = append(conditionsEveryNodeReady, ExtensionCondition{condition, kind, name, namespace})
-				case gardencorev1beta1.ShootSystemComponentsHealthy:
-					conditionsSystemComponentsHealthy = append(conditionsSystemComponentsHealthy, ExtensionCondition{condition, kind, name, namespace})
-				}
-			}
-
+			extensions = append(extensions, obj)
 			return nil
 		}); err != nil {
 			h.logger.Errorf("Error during evaluation of kind %q for extensions health check: %+v", listKind, err)
-			return nil, nil, nil, err
+			return nil, err
 		}
 	}
 
-	return conditionsControlPlaneHealthy, conditionsEveryNodeReady, conditionsSystemComponentsHealthy, nil
+	// Get BackupEntries separately as they are not namespaced i.e., they cannot be narrowed down
+	// to a shoot namespace like other extension resources above.
+	be := &extensionsv1alpha1.BackupEntry{}
+	beName := common.GenerateBackupEntryName(h.shoot.Info.Status.TechnicalID, h.shoot.Info.Status.UID)
+	if err := h.seedClient.Client().Get(ctx, kutil.Key(beName), be); client.IgnoreNotFound(err) != nil {
+		return nil, err
+	}
+	extensions = append(extensions, be)
+
+	return extensions, nil
 }
 
 func (h *Health) healthChecks(
