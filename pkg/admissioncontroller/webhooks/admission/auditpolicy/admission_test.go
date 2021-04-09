@@ -36,7 +36,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	jsonserializer "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
 	auditv1alpha1 "k8s.io/apiserver/pkg/apis/audit/v1alpha1"
 	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
@@ -142,7 +142,7 @@ rules:
 
 	BeforeEach(func() {
 		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
-		testEncoder = &json.Serializer{}
+		testEncoder = &jsonserializer.Serializer{}
 
 		ctrl = gomock.NewController(GinkgoT())
 		mockReader = mockclient.NewMockReader(ctrl)
@@ -250,7 +250,7 @@ rules:
 		})
 	})
 
-	test := func(op admissionv1.Operation, oldObj runtime.Object, obj runtime.Object, expectedAllowed bool, expectedStatusCode int32, expectedMsg string, expectedReason string) {
+	test := func(op admissionv1.Operation, oldObj runtime.Object, obj runtime.Object, expectedAllowed bool, expectedStatusCode int32, expectedMsg string, expectedReason string, expectedPatches ...jsonpatch.JsonPatchOperation) {
 		request.Operation = op
 
 		if oldObj != nil {
@@ -275,6 +275,11 @@ rules:
 		if expectedReason != "" {
 			Expect(string(response.Result.Reason)).To(ContainSubstring(expectedReason))
 		}
+		if len(expectedPatches) > 0 {
+			Expect(response.Patches).To(ConsistOf(expectedPatches))
+		} else {
+			Expect(response.Patches).To(BeEmpty())
+		}
 	}
 
 	Context("Shoots", func() {
@@ -295,8 +300,7 @@ rules:
 							AuditConfig: &gardencorev1beta1.AuditConfig{
 								AuditPolicy: &gardencorev1beta1.AuditPolicy{
 									ConfigMapRef: &v1.ObjectReference{
-										Name:            cmName,
-										ResourceVersion: "1",
+										Name: cmName,
 									},
 								},
 							},
@@ -329,7 +333,22 @@ rules:
 				test(admissionv1.Create, nil, shoot, true, statusCodeAllowed, "shoot resource is not specifying any audit policy", "")
 			})
 
-			It("cm Ref did not change", func() {
+			It("references a valid auditPolicy (CREATE)", func() {
+				returnedCm := v1.ConfigMap{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "1"},
+					Data:       map[string]string{"policy": validAuditPolicy},
+				}
+				mockReader.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&v1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *v1.ConfigMap) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Create, nil, shoot, true, statusCodeAllowed, "", "referenced audit policy is valid",
+					jsonpatch.NewOperation("replace", "/spec/kubernetes/kubeAPIServer/auditConfig/auditPolicy/configMapRef/resourceVersion", returnedCm.ResourceVersion))
+			})
+
+			It("referenced auditPolicy was not changed (UPDATE)", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion = "1"
 				returnedCm := v1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "1"},
@@ -346,41 +365,34 @@ rules:
 				test(admissionv1.Update, shoot, newShoot, true, statusCodeAllowed, "no change detected in referenced configmap holding audit policy", "")
 			})
 
-			It("references a valid auditPolicy", func() {
+			It("referenced auditPolicy was changed (UPDATE)", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion = "1"
 				returnedCm := v1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
 					Data:       map[string]string{"policy": validAuditPolicy},
 				}
-				mockReader.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&v1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *v1.ConfigMap) error {
-					*cm = returnedCm
-					return nil
-				})
-				test(admissionv1.Create, nil, shoot, true, statusCodeAllowed, "", "referenced audit policy is valid")
-			})
-
-			It("should update the resource Version of the ConfigMapRef", func() {
-				returnedCm := v1.ConfigMap{
-					TypeMeta:   metav1.TypeMeta{},
-					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "3"},
-					Data:       map[string]string{"policy": validAuditPolicy},
+				newShoot := shoot.DeepCopy()
+				newShoot.Labels = map[string]string{
+					"foo": "bar",
 				}
 				mockReader.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&v1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *v1.ConfigMap) error {
 					*cm = returnedCm
 					return nil
 				})
-				request.Operation = admissionv1.Create
-				objData, err := runtime.Encode(testEncoder, shoot)
-				Expect(err).NotTo(HaveOccurred())
-				request.Object.Raw = objData
-
-				response := handler.Handle(ctx, request)
-				Expect(response).To(Not(BeNil()))
-				jsonPatch := jsonpatch.NewOperation("replace", "/spec/kubernetes/kubeAPIServer/auditConfig/auditPolicy/configMapRef/resourceVersion", "3")
-				Expect(response.Patches[0]).To(Equal(jsonPatch))
-
+				test(admissionv1.Update, shoot, newShoot, true, statusCodeAllowed, "", "referenced audit policy is valid",
+					jsonpatch.NewOperation("replace", "/spec/kubernetes/kubeAPIServer/auditConfig/auditPolicy/configMapRef/resourceVersion", returnedCm.ResourceVersion))
 			})
 
+			It("should not mutate shoot if already marked for deletion (UPDATE)", func() {
+				now := metav1.Now()
+				shoot.DeletionTimestamp = &now
+				newShoot := shoot.DeepCopy()
+				newShoot.Labels = map[string]string{
+					"foo": "bar",
+				}
+				test(admissionv1.Update, shoot, newShoot, true, statusCodeAllowed, "marked for deletion", "")
+			})
 		})
 
 		Context("Deny", func() {
