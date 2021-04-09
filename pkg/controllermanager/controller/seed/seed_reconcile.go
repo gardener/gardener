@@ -88,7 +88,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		},
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient.Client(), namespace, func() error {
+	if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient.DirectClient(), namespace, func() error {
 		namespace.OwnerReferences = []metav1.OwnerReference{*metav1.NewControllerRef(seedObj, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))}
 		return nil
 	}); err != nil {
@@ -160,7 +160,7 @@ func (r *reconciler) syncGardenSecrets(ctx context.Context, gardenClient kuberne
 				},
 			}
 
-			if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient.Client(), seedSecret, func() error {
+			if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient.DirectClient(), seedSecret, func() error {
 				seedSecret.Annotations = secret.Annotations
 				seedSecret.Labels = secret.Labels
 				seedSecret.Data = secret.Data

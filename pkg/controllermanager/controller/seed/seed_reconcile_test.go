@@ -101,6 +101,7 @@ var _ = Describe("SeedReconciler", func() {
 			fakeGardenClientSet := fakeclientset.NewClientSetBuilder().
 				WithKubernetes(k).
 				WithClient(cl).
+				WithDirectClient(cl).
 				Build()
 			cm = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(), fakeGardenClientSet).Build()
 
