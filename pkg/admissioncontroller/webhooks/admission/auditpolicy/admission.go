@@ -21,6 +21,8 @@ import (
 	"time"
 
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -35,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/versioning"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	audit_internal "k8s.io/apiserver/pkg/apis/audit"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
@@ -56,7 +59,8 @@ const (
 )
 
 var (
-	policyDecoder runtime.Decoder
+	policyDecoder   runtime.Decoder
+	internalDecoder runtime.Decoder
 
 	shootGK     = schema.GroupKind{Group: "core.gardener.cloud", Kind: "Shoot"}
 	configmapGK = schema.GroupKind{Group: "", Kind: "ConfigMap"}
@@ -79,6 +83,13 @@ func init() {
 	)
 	utilruntime.Must(schemeBuilder.AddToScheme(auditPolicyScheme))
 	policyDecoder = serializer.NewCodecFactory(auditPolicyScheme).UniversalDecoder()
+
+	// create decoder that decodes Shoots from all known API versions to the internal version, but does not perform defaulting
+	gardencoreScheme := runtime.NewScheme()
+	gardencoreinstall.Install(gardencoreScheme)
+	codecFactory := serializer.NewCodecFactory(gardencoreScheme)
+	internalDecoder = versioning.NewCodec(nil, codecFactory.UniversalDeserializer(), runtime.UnsafeObjectConvertor(gardencoreScheme),
+		gardencoreScheme, gardencoreScheme, nil, runtime.DisabledGroupVersioner, runtime.InternalGroupVersioner, gardencoreScheme.Name())
 }
 
 type handler struct {
@@ -123,8 +134,8 @@ func (h *handler) admitShoot(ctx context.Context, request admission.Request) adm
 		return acadmission.Allowed("subresources are not handled")
 	}
 
-	shoot := &gardencorev1beta1.Shoot{}
-	if err := h.decoder.Decode(request, shoot); err != nil {
+	shoot := &gardencore.Shoot{}
+	if err := runtime.DecodeInto(internalDecoder, request.Object.Raw, shoot); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
@@ -135,8 +146,8 @@ func (h *handler) admitShoot(ctx context.Context, request admission.Request) adm
 	}
 
 	if request.Operation == admissionv1.Update {
-		oldShoot := &gardencorev1beta1.Shoot{}
-		if err := h.decoder.DecodeRaw(request.OldObject, oldShoot); err != nil {
+		oldShoot := &gardencore.Shoot{}
+		if err := runtime.DecodeInto(internalDecoder, request.OldObject.Raw, oldShoot); err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
@@ -147,7 +158,7 @@ func (h *handler) admitShoot(ctx context.Context, request admission.Request) adm
 		}
 	}
 
-	if !hasAuditPolicy(shoot) {
+	if !hasAuditPolicyInternal(shoot) {
 		return acadmission.Allowed("shoot resource is not specifying any audit policy")
 	}
 	cmRef := shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef
@@ -299,6 +310,15 @@ func validatePolicyAgainstShoots(request admission.Request, schemaVersion *schem
 }
 
 func hasAuditPolicy(shoot *gardencorev1beta1.Shoot) bool {
+	apiServerConfig := shoot.Spec.Kubernetes.KubeAPIServer
+	return apiServerConfig != nil &&
+		apiServerConfig.AuditConfig != nil &&
+		apiServerConfig.AuditConfig.AuditPolicy != nil &&
+		apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil &&
+		len(apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name) != 0
+}
+
+func hasAuditPolicyInternal(shoot *gardencore.Shoot) bool {
 	apiServerConfig := shoot.Spec.Kubernetes.KubeAPIServer
 	return apiServerConfig != nil &&
 		apiServerConfig.AuditConfig != nil &&
