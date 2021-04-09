@@ -40,6 +40,7 @@ import (
 	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
 	auditv1alpha1 "k8s.io/apiserver/pkg/apis/audit/v1alpha1"
 	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
@@ -310,6 +311,13 @@ rules:
 			}
 		})
 
+		It("should ignore subresources", func() {
+			newShoot := shoot.DeepCopy()
+			newShoot.Status.SeedName = pointer.StringPtr("foo")
+			request.SubResource = "status"
+			test(admissionv1.Update, shoot, nil, true, statusCodeAllowed, "subresource", "")
+		})
+
 		It("should ignore other operations than CREATE or UPDATE", func() {
 			test(admissionv1.Delete, shoot, nil, true, statusCodeAllowed, "operation is not Create or Update", "")
 			test(admissionv1.Connect, shoot, nil, true, statusCodeAllowed, "operation is not Create or Update", "")
@@ -445,6 +453,22 @@ rules:
 					return nil
 				})
 				test(admissionv1.Create, nil, shoot, false, statusCodeInvalid, "did not find expected key", "")
+			})
+
+			It("references audit policy with incompatible version", func() {
+				shoot.Spec.Kubernetes.Version = "1.10"
+				shoot.ObjectMeta.Name = "fakeName"
+
+				returnedCm := v1.ConfigMap{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{ResourceVersion: "2"},
+					Data:       map[string]string{"policy": v1AuditPolicy},
+				}
+				mockReader.EXPECT().Get(gomock.Any(), kutil.Key(shootNamespace, cmName), gomock.AssignableToTypeOf(&v1.ConfigMap{})).DoAndReturn(func(_ context.Context, key client.ObjectKey, cm *v1.ConfigMap) error {
+					*cm = returnedCm
+					return nil
+				})
+				test(admissionv1.Create, nil, shoot, false, statusCodeInvalid, "not compatible", "")
 			})
 		})
 	})
