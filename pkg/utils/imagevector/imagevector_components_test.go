@@ -28,10 +28,10 @@ var _ = Describe("imagevector", func() {
 	Describe("#ComponentImageVectors", func() {
 		var (
 			component1     = "foo"
-			componentData1 = "some-data"
+			componentData1 = "images: []"
 
 			component2     = "bar"
-			componentData2 = "some-other-data"
+			componentData2 = "images: []"
 
 			componentImageVectors = ComponentImageVectors{
 				component1: componentData1,
@@ -55,13 +55,13 @@ var _ = Describe("imagevector", func() {
 			componentImagesYAML = fmt.Sprintf(`
 components:
 - name: %s
-  imageVectorOverwrite: %s
+  imageVectorOverwrite: "%s"
 - name: %s
-  imageVectorOverwrite: %s
+  imageVectorOverwrite: "%s"
 `, component1, componentData1, component2, componentData2)
 		)
 
-		Describe("#Read", func() {
+		Describe("#ReadComponentOverwrite", func() {
 			It("should successfully read a JSON image vector", func() {
 				vector, err := ReadComponentOverwrite(strings.NewReader(componentImagesJSON))
 				Expect(err).NotTo(HaveOccurred())
@@ -75,7 +75,7 @@ components:
 			})
 		})
 
-		Describe("#ReadFile", func() {
+		Describe("#ReadComponentOverwriteFile", func() {
 			It("should successfully read the file and close it", func() {
 				tmpFile, cleanup := withTempFile("component imagevector", []byte(componentImagesJSON))
 				defer cleanup()

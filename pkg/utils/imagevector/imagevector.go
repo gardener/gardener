@@ -24,6 +24,7 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"gopkg.in/yaml.v2"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 const (
@@ -42,6 +43,11 @@ func Read(r io.Reader) (ImageVector, error) {
 	if err := yaml.NewDecoder(r).Decode(&vector); err != nil {
 		return nil, err
 	}
+
+	if errs := ValidateImageVector(vector.Images, field.NewPath("images")); len(errs) > 0 {
+		return nil, errs.ToAggregate()
+	}
+
 	return vector.Images, nil
 }
 
