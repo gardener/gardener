@@ -204,9 +204,9 @@ func LastErrorWithTaskID(description string, taskID string, codes ...gardencorev
 	}
 }
 
-// HasNonRetryableErrorCode returns true if at least one of given list of last errors has at least one error code that
+// LastErrorsHaveNonRetryableErrorCode returns true if at least one of given list of last errors has at least one error code that
 // indicates that an automatic retry would not help fixing the problem.
-func HasNonRetryableErrorCode(lastErrors ...gardencorev1beta1.LastError) bool {
+func LastErrorsHaveNonRetryableErrorCode(lastErrors ...gardencorev1beta1.LastError) bool {
 	for _, lastError := range lastErrors {
 		for _, code := range lastError.Codes {
 			if code == gardencorev1beta1.ErrorInfraUnauthorized ||
@@ -218,5 +218,28 @@ func HasNonRetryableErrorCode(lastErrors ...gardencorev1beta1.LastError) bool {
 			}
 		}
 	}
+	return false
+}
+
+// LastErrorsHaveErrorCode checks whether at least one LastError from the given slice of LastErrors <lastErrors>
+// contains the given ErrorCode <code>.
+func LastErrorsHaveErrorCode(lastErrors []gardencorev1beta1.LastError, code gardencorev1beta1.ErrorCode) bool {
+	for _, lastError := range lastErrors {
+		if HasErrorCode(lastError.Codes, code) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// HasErrorCode checks whether the given slice of ErrorCodes <codes> contains the given ErrorCode <code>.
+func HasErrorCode(codes []gardencorev1beta1.ErrorCode, code gardencorev1beta1.ErrorCode) bool {
+	for _, current := range codes {
+		if current == code {
+			return true
+		}
+	}
+
 	return false
 }

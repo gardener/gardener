@@ -17,6 +17,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -35,6 +36,8 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
+
+const backoffOnInfrastructureRequestThrottling = 10 * time.Minute
 
 type reconciler struct {
 	logger   logr.Logger
@@ -92,19 +95,30 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(worker.ObjectMeta, worker.Status.LastOperation)
 
+	var result reconcile.Result
 	switch {
 	case isWorkerMigrated(worker):
 		logger.Info("Stop reconciling Worker of migrated Shoot")
-		return reconcile.Result{}, nil
+		result, err = reconcile.Result{}, nil
 	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
-		return r.migrate(ctx, logger.WithValues("operation", "migrate"), worker, cluster)
+		result, err = r.migrate(ctx, logger.WithValues("operation", "migrate"), worker, cluster)
 	case worker.DeletionTimestamp != nil:
-		return r.delete(ctx, logger.WithValues("operation", "delete"), worker, cluster)
+		result, err = r.delete(ctx, logger.WithValues("operation", "delete"), worker, cluster)
 	case worker.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
-		return r.restore(ctx, logger.WithValues("operation", "restore"), worker, cluster)
+		result, err = r.restore(ctx, logger.WithValues("operation", "restore"), worker, cluster)
 	default:
-		return r.reconcile(ctx, logger.WithValues("operation", "reconcile"), worker, cluster, operationType)
+		result, err = r.reconcile(ctx, logger.WithValues("operation", "reconcile"), worker, cluster, operationType)
 	}
+
+	if err != nil {
+		errorCodes := gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, err.Error()))
+		if gardencorev1beta1helper.HasErrorCode(errorCodes, gardencorev1beta1.ErrorInfraRequestThrottling) {
+			logger.Info("Requeue due to cloud provider request throttling", "backoff", backoffOnInfrastructureRequestThrottling, "error", err)
+			return reconcile.Result{Requeue: true, RequeueAfter: backoffOnInfrastructureRequestThrottling}, nil
+		}
+	}
+
+	return result, err
 }
 
 func (r *reconciler) updateStatusProcessing(ctx context.Context, logger logr.Logger, worker *extensionsv1alpha1.Worker, lastOperationType gardencorev1beta1.LastOperationType, description string) error {

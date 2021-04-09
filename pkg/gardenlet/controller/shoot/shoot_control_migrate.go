@@ -73,6 +73,10 @@ func (c *Controller) prepareShootForMigration(ctx context.Context, logger *logru
 	if flowErr := c.runPrepareShootControlPlaneMigration(o); flowErr != nil {
 		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventMigrationPreparationFailed, flowErr.Description)
 		_, updateErr := c.updateShootStatusOperationError(ctx, gardenClient, o.Shoot.Info, flowErr.Description, gardencorev1beta1.LastOperationTypeMigrate, flowErr.LastErrors...)
+		if gardencorev1beta1helper.LastErrorsHaveErrorCode(flowErr.LastErrors, gardencorev1beta1.ErrorInfraRequestThrottling) {
+			logger.Infof("Requeue in %s due to cloud provider request throttling %+v", backoffOnInfrastructureRequestThrottling, errors.New(flowErr.Description))
+			return reconcile.Result{Requeue: true, RequeueAfter: backoffOnInfrastructureRequestThrottling}, nil
+		}
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(flowErr.Description), updateErr)
 	}
 

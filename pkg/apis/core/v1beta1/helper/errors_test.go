@@ -72,15 +72,16 @@ var _ = Describe("errors", func() {
 		configurationProblemError        = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorConfigurationProblem}}
 		infraInsufficientPrivilegesError = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraInsufficientPrivileges}}
 		infraQuotaExceededError          = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraQuotaExceeded}}
+		infraRequestThrottlingError      = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraRequestThrottling}}
 		infraDependenciesError           = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraDependencies}}
 		infraResourcesDepletedError      = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraResourcesDepleted}}
 		cleanupClusterResourcesError     = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorCleanupClusterResources}}
 		errorWithoutCodes                = gardencorev1beta1.LastError{}
 	)
 
-	DescribeTable("#HasNonRetryableErrorCode",
+	DescribeTable("#LastErrorsHaveNonRetryableErrorCode",
 		func(lastErrors []gardencorev1beta1.LastError, matcher GomegaMatcher) {
-			Expect(HasNonRetryableErrorCode(lastErrors...)).To(matcher)
+			Expect(LastErrorsHaveNonRetryableErrorCode(lastErrors...)).To(matcher)
 		},
 
 		Entry("no error given", nil, BeFalse()),
@@ -88,5 +89,25 @@ var _ = Describe("errors", func() {
 		Entry("only errors with retryable error codes", []gardencorev1beta1.LastError{infraResourcesDepletedError, cleanupClusterResourcesError}, BeFalse()),
 		Entry("errors with both retryable and not retryable error codes", []gardencorev1beta1.LastError{unauthorizedError, configurationProblemError, infraInsufficientPrivilegesError, infraQuotaExceededError, infraDependenciesError, infraResourcesDepletedError, cleanupClusterResourcesError}, BeTrue()),
 		Entry("errors without error codes", []gardencorev1beta1.LastError{errorWithoutCodes}, BeFalse()),
+	)
+
+	DescribeTable("#LastErrorsHaveErrorCode",
+		func(lastErrors []gardencorev1beta1.LastError, code gardencorev1beta1.ErrorCode, matcher GomegaMatcher) {
+			Expect(LastErrorsHaveErrorCode(lastErrors, code)).To(matcher)
+		},
+
+		Entry("should return false when no error given", nil, gardencorev1beta1.ErrorInfraRequestThrottling, BeFalse()),
+		Entry("should return false when error code is not present", []gardencorev1beta1.LastError{unauthorizedError, infraInsufficientPrivilegesError}, gardencorev1beta1.ErrorInfraRequestThrottling, BeFalse()),
+		Entry("should return true when error code is present", []gardencorev1beta1.LastError{unauthorizedError, infraInsufficientPrivilegesError, infraRequestThrottlingError}, gardencorev1beta1.ErrorInfraRequestThrottling, BeTrue()),
+	)
+
+	DescribeTable("#HasErrorCode",
+		func(codes []gardencorev1beta1.ErrorCode, code gardencorev1beta1.ErrorCode, matcher GomegaMatcher) {
+			Expect(HasErrorCode(codes, code)).To(matcher)
+		},
+
+		Entry("should return false when no codes given", nil, gardencorev1beta1.ErrorInfraRequestThrottling, BeFalse()),
+		Entry("should return false when error code is not present", []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraUnauthorized, gardencorev1beta1.ErrorInfraInsufficientPrivileges}, gardencorev1beta1.ErrorInfraRequestThrottling, BeFalse()),
+		Entry("should return true when error code is present", []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraUnauthorized, gardencorev1beta1.ErrorInfraInsufficientPrivileges, gardencorev1beta1.ErrorInfraRequestThrottling}, gardencorev1beta1.ErrorInfraRequestThrottling, BeTrue()),
 	)
 })

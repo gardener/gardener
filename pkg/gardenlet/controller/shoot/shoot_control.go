@@ -56,6 +56,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const backoffOnInfrastructureRequestThrottling = 10 * time.Minute
+
 func (c *Controller) shootAdd(obj interface{}, resetRateLimiting bool) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
@@ -364,6 +366,10 @@ func (c *Controller) deleteShoot(ctx context.Context, logger *logrus.Entry, gard
 	if flowErr := c.runDeleteShootFlow(ctx, o); flowErr != nil {
 		c.recorder.Event(o.Shoot.Info, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, flowErr.Description)
 		_, updateErr := c.updateShootStatusOperationError(ctx, gardenClient, o.Shoot.Info, flowErr.Description, operationType, flowErr.LastErrors...)
+		if gardencorev1beta1helper.LastErrorsHaveErrorCode(flowErr.LastErrors, gardencorev1beta1.ErrorInfraRequestThrottling) {
+			logger.Infof("Requeue in %s due to cloud provider request throttling %+v", backoffOnInfrastructureRequestThrottling, errors.New(flowErr.Description))
+			return reconcile.Result{Requeue: true, RequeueAfter: backoffOnInfrastructureRequestThrottling}, nil
+		}
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(flowErr.Description), updateErr)
 	}
 
@@ -488,6 +494,10 @@ func (c *Controller) reconcileShoot(ctx context.Context, logger *logrus.Entry, g
 	if flowErr := c.runReconcileShootFlow(ctx, o); flowErr != nil {
 		c.recorder.Event(o.Shoot.Info, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, flowErr.Description)
 		_, updateErr := c.updateShootStatusOperationError(ctx, gardenClient, o.Shoot.Info, flowErr.Description, operationType, flowErr.LastErrors...)
+		if gardencorev1beta1helper.LastErrorsHaveErrorCode(flowErr.LastErrors, gardencorev1beta1.ErrorInfraRequestThrottling) {
+			logger.Infof("Requeue in %s due to cloud provider request throttling %+v", backoffOnInfrastructureRequestThrottling, errors.New(flowErr.Description))
+			return reconcile.Result{Requeue: true, RequeueAfter: backoffOnInfrastructureRequestThrottling}, nil
+		}
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(flowErr.Description), updateErr)
 	}
 
@@ -682,7 +692,7 @@ func (c *Controller) updateShootStatusOperationError(ctx context.Context, garden
 	var (
 		now          = metav1.NewTime(time.Now().UTC())
 		state        = gardencorev1beta1.LastOperationStateError
-		willNotRetry = gardencorev1beta1helper.HasNonRetryableErrorCode(lastErrors...) || utils.TimeElapsed(shoot.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration)
+		willNotRetry = gardencorev1beta1helper.LastErrorsHaveNonRetryableErrorCode(lastErrors...) || utils.TimeElapsed(shoot.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration)
 	)
 
 	newShoot, err := kutil.TryUpdateShootStatus(ctx, gardenClient.GardenCore(), retry.DefaultRetry, shoot.ObjectMeta,

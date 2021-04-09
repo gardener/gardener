@@ -17,6 +17,7 @@ package infrastructure
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -48,6 +49,9 @@ const (
 	EventInfrastructureMigration string = "InfrastructureMigration"
 	// EventInfrastructureRestoration an event reason to describe infrastructure restoration.
 	EventInfrastructureRestoration string = "InfrastructureRestoration"
+	// backoffOnInfrastructureRequestThrottling is the backoff used by the infrastructure reconciler
+	// to retry infrastructure request throttling errors.
+	backoffOnInfrastructureRequestThrottling = 10 * time.Minute
 )
 
 type reconciler struct {
@@ -108,18 +112,29 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(infrastructure.ObjectMeta, infrastructure.Status.LastOperation)
 
+	var result reconcile.Result
 	switch {
 	case extensionscontroller.IsMigrated(infrastructure):
-		return reconcile.Result{}, nil
+		result, err = reconcile.Result{}, nil
 	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
-		return r.migrate(ctx, logger.WithValues("operation", "migrate"), infrastructure, cluster)
+		result, err = r.migrate(ctx, logger.WithValues("operation", "migrate"), infrastructure, cluster)
 	case infrastructure.DeletionTimestamp != nil:
-		return r.delete(ctx, logger.WithValues("operation", "delete"), infrastructure, cluster)
+		result, err = r.delete(ctx, logger.WithValues("operation", "delete"), infrastructure, cluster)
 	case infrastructure.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
-		return r.restore(ctx, logger.WithValues("operation", "restore"), infrastructure, cluster)
+		result, err = r.restore(ctx, logger.WithValues("operation", "restore"), infrastructure, cluster)
 	default:
-		return r.reconcile(ctx, logger.WithValues("operation", "reconcile"), infrastructure, cluster, operationType)
+		result, err = r.reconcile(ctx, logger.WithValues("operation", "reconcile"), infrastructure, cluster, operationType)
 	}
+
+	if err != nil {
+		errorCodes := gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, err.Error()))
+		if gardencorev1beta1helper.HasErrorCode(errorCodes, gardencorev1beta1.ErrorInfraRequestThrottling) {
+			logger.Info("Requeue due to cloud provider request throttling", "backoff", backoffOnInfrastructureRequestThrottling, "error", err)
+			return reconcile.Result{Requeue: true, RequeueAfter: backoffOnInfrastructureRequestThrottling}, nil
+		}
+	}
+
+	return result, err
 }
 
 func (r *reconciler) reconcile(ctx context.Context, logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster, operationType gardencorev1beta1.LastOperationType) (reconcile.Result, error) {
