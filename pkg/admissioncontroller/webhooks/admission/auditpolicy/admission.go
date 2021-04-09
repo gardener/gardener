@@ -30,6 +30,7 @@ import (
 	"gomodules.xyz/jsonpatch/v2"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -131,6 +132,19 @@ func (h *handler) admitShoot(ctx context.Context, request admission.Request) adm
 		// don't mutate shoot if it's already marked for deletion, otherwise gardener-apiserver will deny the user's/
 		// controller's request, because we changed the spec
 		return acadmission.Allowed("shoot is already marked for deletion")
+	}
+
+	if request.Operation == admissionv1.Update {
+		oldShoot := &gardencorev1beta1.Shoot{}
+		if err := h.decoder.DecodeRaw(request.OldObject, oldShoot); err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		// skip verification if spec wasn't changed
+		// this way we make sure, that users/gardenlet can always annotate/label the shoot if the spec doesn't change
+		if apiequality.Semantic.DeepEqual(oldShoot.Spec, shoot.Spec) {
+			return acadmission.Allowed("shoot spec was not changed")
+		}
 	}
 
 	if !hasAuditPolicy(shoot) {

@@ -17,10 +17,6 @@ package shoot
 import (
 	"context"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -28,6 +24,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 func (c *Controller) configMapAdd(obj interface{}) {
@@ -82,6 +81,11 @@ func (r *configMapReconciler) Reconcile(ctx context.Context, request reconcile.R
 	}
 
 	for _, shoot := range shootList.Items {
+		if shoot.DeletionTimestamp != nil {
+			// spec of shoot that is marked for deletion cannot be updated
+			continue
+		}
+
 		if shoot.Spec.Kubernetes.KubeAPIServer != nil &&
 			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig != nil &&
 			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy != nil &&
@@ -96,8 +100,10 @@ func (r *configMapReconciler) Reconcile(ctx context.Context, request reconcile.R
 
 			if shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion != configMap.ResourceVersion {
 				logger.Logger.Infof("[SHOOT CONFIGMAP controller] schedule for reconciliation shoot %v", shootKey)
-				// send empty patch to let the admission webhook in GAC add or update the config map resource version
-				if err := kubernetes.SubmitEmptyPatch(ctx, r.gardenClient, &shoot); err != nil {
+
+				patch := client.MergeFrom(shoot.DeepCopy())
+				shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion = configMap.ResourceVersion
+				if err := r.gardenClient.Patch(ctx, &shoot, patch); err != nil {
 					return reconcile.Result{}, err
 				}
 			}
