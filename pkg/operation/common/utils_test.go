@@ -215,12 +215,6 @@ var _ = Describe("common", func() {
 		Entry("with special characters", "foo", "P+*4", `P*$8uOkv6+4`),
 	)
 
-	Describe("#ExtensionID", func() {
-		It("should return the expected identifier", func() {
-			Expect(ExtensionID("foo", "bar")).To(Equal("foo/bar"))
-		})
-	})
-
 	Describe("#DeleteDeploymentsHavingDeprecatedRoleLabelKey", func() {
 		var (
 			ctrl *gomock.Controller

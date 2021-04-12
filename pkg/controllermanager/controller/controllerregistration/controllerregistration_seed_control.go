@@ -28,6 +28,7 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
@@ -208,7 +209,7 @@ func computeKindTypesForBackupBuckets(
 			continue
 		}
 
-		wantedKindTypeCombinations.Insert(common.ExtensionID(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type))
+		wantedKindTypeCombinations.Insert(extensions.Id(extensionsv1alpha1.BackupBucketResource, backupBucket.Spec.Provider.Type))
 	}
 
 	return wantedKindTypeCombinations, buckets
@@ -235,7 +236,7 @@ func computeKindTypesForBackupEntries(
 			continue
 		}
 
-		wantedKindTypeCombinations.Insert(common.ExtensionID(extensionsv1alpha1.BackupEntryResource, bucket.Spec.Provider.Type))
+		wantedKindTypeCombinations.Insert(extensions.Id(extensionsv1alpha1.BackupEntryResource, bucket.Spec.Provider.Type))
 	}
 
 	return wantedKindTypeCombinations
@@ -303,7 +304,7 @@ func computeKindTypesForSeed(
 	}
 
 	if seed.Spec.DNS.Provider != nil {
-		wantedKindTypeCombinations.Insert(common.ExtensionID(dnsv1alpha1.DNSProviderKind, seed.Spec.DNS.Provider.Type))
+		wantedKindTypeCombinations.Insert(extensions.Id(dnsv1alpha1.DNSProviderKind, seed.Spec.DNS.Provider.Type))
 	}
 
 	return wantedKindTypeCombinations
@@ -358,7 +359,7 @@ func computeWantedControllerRegistrationNames(
 		}
 
 		for _, resource := range controllerRegistration.obj.Spec.Resources {
-			id := common.ExtensionID(resource.Kind, resource.Type)
+			id := extensions.Id(resource.Kind, resource.Type)
 			kindTypeToControllerRegistrationNames[id] = append(kindTypeToControllerRegistrationNames[id], name)
 		}
 	}

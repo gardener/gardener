@@ -19,7 +19,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/extensions"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -71,7 +71,7 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 			allErrs = append(allErrs, field.Required(idxPath.Child("type"), "field is required"))
 		}
 		if t, ok := resources[resource.Kind]; ok && t == resource.Type {
-			allErrs = append(allErrs, field.Duplicate(idxPath, common.ExtensionID(resource.Kind, resource.Type)))
+			allErrs = append(allErrs, field.Duplicate(idxPath, extensions.Id(resource.Kind, resource.Type)))
 		}
 		if resource.Kind != extensionsv1alpha1.ExtensionResource {
 			if resource.GloballyEnabled != nil {

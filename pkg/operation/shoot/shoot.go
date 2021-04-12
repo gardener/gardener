@@ -497,22 +497,22 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 	requiredExtensions := sets.NewString()
 
 	if seed.Spec.Backup != nil {
-		requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.BackupBucketResource, seed.Spec.Backup.Provider))
-		requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.BackupEntryResource, seed.Spec.Backup.Provider))
+		requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.BackupBucketResource, seed.Spec.Backup.Provider))
+		requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.BackupEntryResource, seed.Spec.Backup.Provider))
 	}
 	// Hint: This is actually a temporary work-around to request the control plane extension of the seed provider type as
 	// it might come with webhooks that are configuring the exposure of shoot control planes. The ControllerRegistration resource
 	// does not reflect this today.
-	requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.ControlPlaneResource, seed.Spec.Provider.Type))
+	requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.ControlPlaneResource, seed.Spec.Provider.Type))
 
-	requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.ControlPlaneResource, shoot.Spec.Provider.Type))
-	requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.InfrastructureResource, shoot.Spec.Provider.Type))
-	requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.NetworkResource, shoot.Spec.Networking.Type))
-	requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type))
+	requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.ControlPlaneResource, shoot.Spec.Provider.Type))
+	requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.InfrastructureResource, shoot.Spec.Provider.Type))
+	requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.NetworkResource, shoot.Spec.Networking.Type))
+	requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type))
 
 	var disabledExtensions = sets.NewString()
 	for _, extension := range shoot.Spec.Extensions {
-		id := common.ExtensionID(extensionsv1alpha1.ExtensionResource, extension.Type)
+		id := gardenerextensions.Id(extensionsv1alpha1.ExtensionResource, extension.Type)
 
 		if utils.IsTrue(extension.Disabled) {
 			disabledExtensions.Insert(id)
@@ -523,11 +523,11 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 
 	for _, pool := range shoot.Spec.Provider.Workers {
 		if pool.Machine.Image != nil {
-			requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.OperatingSystemConfigResource, pool.Machine.Image.Name))
+			requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.OperatingSystemConfigResource, pool.Machine.Image.Name))
 		}
 		if pool.CRI != nil {
 			for _, cr := range pool.CRI.ContainerRuntimes {
-				requiredExtensions.Insert(common.ExtensionID(extensionsv1alpha1.ContainerRuntimeResource, cr.Type))
+				requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.ContainerRuntimeResource, cr.Type))
 			}
 		}
 	}
@@ -536,23 +536,23 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 		if shoot.Spec.DNS != nil {
 			for _, provider := range shoot.Spec.DNS.Providers {
 				if provider.Type != nil && *provider.Type != core.DNSUnmanaged {
-					requiredExtensions.Insert(common.ExtensionID(dnsv1alpha1.DNSProviderKind, *provider.Type))
+					requiredExtensions.Insert(gardenerextensions.Id(dnsv1alpha1.DNSProviderKind, *provider.Type))
 				}
 			}
 		}
 
 		if internalDomain != nil && internalDomain.Provider != core.DNSUnmanaged {
-			requiredExtensions.Insert(common.ExtensionID(dnsv1alpha1.DNSProviderKind, internalDomain.Provider))
+			requiredExtensions.Insert(gardenerextensions.Id(dnsv1alpha1.DNSProviderKind, internalDomain.Provider))
 		}
 
 		if externalDomain != nil && externalDomain.Provider != core.DNSUnmanaged {
-			requiredExtensions.Insert(common.ExtensionID(dnsv1alpha1.DNSProviderKind, externalDomain.Provider))
+			requiredExtensions.Insert(gardenerextensions.Id(dnsv1alpha1.DNSProviderKind, externalDomain.Provider))
 		}
 	}
 
 	for _, controllerRegistration := range controllerRegistrationList {
 		for _, resource := range controllerRegistration.Spec.Resources {
-			id := common.ExtensionID(extensionsv1alpha1.ExtensionResource, resource.Type)
+			id := gardenerextensions.Id(extensionsv1alpha1.ExtensionResource, resource.Type)
 			if resource.Kind == extensionsv1alpha1.ExtensionResource && resource.GloballyEnabled != nil && *resource.GloballyEnabled && !disabledExtensions.Has(id) {
 				requiredExtensions.Insert(id)
 			}
