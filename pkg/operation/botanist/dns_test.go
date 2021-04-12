@@ -123,6 +123,9 @@ var _ = Describe("dns", func() {
 					Name:            "external",
 					Namespace:       seedNS,
 					ResourceVersion: "1",
+					Annotations: map[string]string{
+						"dns.gardener.cloud/realms": "test-ns,",
+					},
 				},
 				Spec: dnsv1alpha1.DNSProviderSpec{
 					Type: "valid-provider",
@@ -189,6 +192,7 @@ var _ = Describe("dns", func() {
 				},
 			}
 			Expect(found).To(DeepDerivativeEqual(expected))
+			Expect(found.Annotations).To(BeNil())
 		})
 		It("should delete when calling Deploy and dns is disabled", func() {
 			b.Shoot.DisableDNS = true
@@ -270,6 +274,9 @@ var _ = Describe("dns", func() {
 					Namespace: seedNS,
 					Labels: map[string]string{
 						"gardener.cloud/role": "managed-dns-provider",
+					},
+					Annotations: map[string]string{
+						"dns.gardener.cloud/realms": "test-ns,",
 					},
 				},
 			}
