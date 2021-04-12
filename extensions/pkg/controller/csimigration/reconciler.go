@@ -53,18 +53,13 @@ type reconciler struct {
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // Cluster resources of Gardener's `extensions.gardener.cloud` API group.
-func NewReconciler(csiMigrationKubernetesVersion string, storageClassNameToLegacyProvisioner map[string]string) (reconcile.Reconciler, error) {
-	decoder, err := extensionscontroller.NewGardenDecoder()
-	if err != nil {
-		return nil, err
-	}
-
+func NewReconciler(csiMigrationKubernetesVersion string, storageClassNameToLegacyProvisioner map[string]string) reconcile.Reconciler {
 	return &reconciler{
 		logger:                              log.Log.WithName(ControllerName),
-		decoder:                             decoder,
+		decoder:                             extensionscontroller.NewGardenDecoder(),
 		csiMigrationKubernetesVersion:       csiMigrationKubernetesVersion,
 		storageClassNameToLegacyProvisioner: storageClassNameToLegacyProvisioner,
-	}, nil
+	}
 }
 
 func (r *reconciler) InjectClient(client client.Client) error {

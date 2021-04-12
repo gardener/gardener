@@ -27,10 +27,9 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/golang/mock/gomock"
 	v1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -91,9 +90,8 @@ var _ = Describe("ShootState Control", func() {
 		seedClient := fake.NewFakeClientWithScheme(seedScheme)
 		fakeSeedClient = fakeclientset.NewClientSetBuilder().WithClient(seedClient).Build()
 
-		shootRetriever := extensions.NewShootRetriever()
 		recorder := record.NewFakeRecorder(64)
-		shootStateControl = extensions.NewShootStateControl(fakeGardenClient, fakeSeedClient, log.WithField("seed", "test-seed"), recorder, shootRetriever)
+		shootStateControl = extensions.NewShootStateControl(fakeGardenClient, fakeSeedClient, log.WithField("seed", "test-seed"), recorder)
 
 		cluster = &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -101,13 +99,16 @@ var _ = Describe("ShootState Control", func() {
 			},
 			Spec: extensionsv1alpha1.ClusterSpec{
 				Shoot: runtime.RawExtension{
-					Object: &gardencorev1beta1.Shoot{
+					Raw: encode(&gardencorev1beta1.Shoot{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: gardencorev1beta1.SchemeGroupVersion.String(),
+							Kind:       "Shoot",
+						},
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: projectNamespace,
 							Name:      shootName,
 						},
-					},
-					Raw: []byte(fmt.Sprintf(`{"metadata":{"namespace":"%s","name":"%s"}}`, projectNamespace, shootName)),
+					}),
 				},
 			},
 		}
@@ -285,9 +286,8 @@ var _ = Describe("ShootState Control", func() {
 			ctrl := gomock.NewController(GinkgoT())
 			mc := mockclient.NewMockClient(ctrl)
 			fakeClientSet := fakeclientset.NewClientSetBuilder().WithDirectClient(mc).WithClient(mc).Build()
-			shootRetriever := extensions.NewShootRetriever()
 			recorder := record.NewFakeRecorder(64)
-			shootStateControl = extensions.NewShootStateControl(fakeClientSet, fakeClientSet, log.WithField("seed", "test-seed"), recorder, shootRetriever)
+			shootStateControl = extensions.NewShootStateControl(fakeClientSet, fakeClientSet, log.WithField("seed", "test-seed"), recorder)
 			gomock.InOrder(
 				mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(extension), gomock.AssignableToTypeOf(&extensionsv1alpha1.Extension{})),
 				mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(cluster), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).SetArg(2, *cluster),
@@ -309,3 +309,8 @@ var _ = Describe("ShootState Control", func() {
 		})
 	})
 })
+
+func encode(obj runtime.Object) []byte {
+	out, _ := json.Marshal(obj)
+	return out
+}
