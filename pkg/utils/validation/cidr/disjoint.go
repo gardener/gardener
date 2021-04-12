@@ -15,8 +15,10 @@
 package cidr
 
 import (
+	"fmt"
 	"net"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -33,6 +35,9 @@ func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, s
 	if shootNodes != nil && seedNodes != nil && NetworksIntersect(*shootNodes, *seedNodes) {
 		allErrs = append(allErrs, field.Invalid(pathNodes, *shootNodes, "shoot node network intersects with seed node network"))
 	}
+	if shootNodes != nil && NetworksIntersect(*shootNodes, v1beta1constants.DefaultVpnRange) {
+		allErrs = append(allErrs, field.Invalid(pathNodes, *shootNodes, fmt.Sprintf("shoot node network intersects with default vpn network (%s)", v1beta1constants.DefaultVpnRange)))
+	}
 
 	if shootServices != nil {
 		if NetworksIntersect(seedServices, *shootServices) {
@@ -40,6 +45,9 @@ func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, s
 		}
 		if NetworksIntersect(seedPods, *shootServices) {
 			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, "shoot service network intersects with seed pod network"))
+		}
+		if NetworksIntersect(v1beta1constants.DefaultVpnRange, *shootServices) {
+			allErrs = append(allErrs, field.Invalid(pathServices, *shootServices, fmt.Sprintf("shoot service network intersects with default vpn network (%s)", v1beta1constants.DefaultVpnRange)))
 		}
 	} else {
 		allErrs = append(allErrs, field.Required(pathServices, "services is required"))
@@ -51,6 +59,9 @@ func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, s
 		}
 		if NetworksIntersect(seedServices, *shootPods) {
 			allErrs = append(allErrs, field.Invalid(pathPods, *shootPods, "shoot pod network intersects with seed service network"))
+		}
+		if NetworksIntersect(v1beta1constants.DefaultVpnRange, *shootPods) {
+			allErrs = append(allErrs, field.Invalid(pathPods, *shootPods, fmt.Sprintf("shoot pod network intersects with default vpn network (%s)", v1beta1constants.DefaultVpnRange)))
 		}
 	} else {
 		allErrs = append(allErrs, field.Required(pathPods, "pods is required"))
