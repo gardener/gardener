@@ -137,7 +137,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"1.15.1",
 			extensionsv1alpha1.CRINameDocker,
 			execStartPreLess117,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, false, false, false, false, false, true),
+			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, true),
 			kubeletConfig(true, false),
 		),
 		Entry(
@@ -145,7 +145,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"1.15.1",
 			extensionsv1alpha1.CRINameContainerD,
 			execStartPreLess117,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, false, false, false, false, false, true),
+			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, true),
 			kubeletConfig(true, false),
 		),
 
@@ -154,7 +154,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"1.16.1",
 			extensionsv1alpha1.CRINameDocker,
 			execStartPreLess117,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, false, false, false, false, false, true),
+			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, true),
 			kubeletConfig(true, false),
 		),
 		Entry(
@@ -162,7 +162,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"1.16.1",
 			extensionsv1alpha1.CRINameContainerD,
 			execStartPreLess117,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, false, false, false, false, false, true),
+			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, true),
 			kubeletConfig(true, false),
 		),
 
@@ -171,7 +171,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"1.17.1",
 			extensionsv1alpha1.CRINameDocker,
 			execStartPreLess119,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, false, false, false, false, false, true),
+			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, true),
 			kubeletConfig(true, false),
 		),
 		Entry(
@@ -179,7 +179,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"1.17.1",
 			extensionsv1alpha1.CRINameContainerD,
 			execStartPreLess119,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, false, false, false, false, false, true),
+			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, true),
 			kubeletConfig(true, false),
 		),
 
@@ -188,7 +188,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"1.18.1",
 			extensionsv1alpha1.CRINameDocker,
 			execStartPreLess119,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, false, false, false, false, false, true),
+			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, true),
 			kubeletConfig(true, false),
 		),
 		Entry(
@@ -196,7 +196,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"1.18.1",
 			extensionsv1alpha1.CRINameContainerD,
 			execStartPreLess119,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, false, false, false, false, false, true),
+			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, true),
 			kubeletConfig(true, false),
 		),
 
@@ -205,7 +205,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"1.19.1",
 			extensionsv1alpha1.CRINameDocker,
 			execStartPreGreaterEqual119,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, false, false, false, false, false, false),
+			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, false),
 			kubeletConfig(true, true),
 		),
 		Entry(
@@ -213,7 +213,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"1.19.1",
 			extensionsv1alpha1.CRINameContainerD,
 			execStartPreGreaterEqual119,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, false, false, false, false, false, false),
+			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, false),
 			kubeletConfig(true, true),
 		),
 
@@ -222,7 +222,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"1.20.1",
 			extensionsv1alpha1.CRINameDocker,
 			execStartPreGreaterEqual119,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, false, false, false, false, false, false),
+			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, false),
 			kubeletConfig(true, true),
 		),
 		Entry(
@@ -230,7 +230,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"1.20.1",
 			extensionsv1alpha1.CRINameContainerD,
 			execStartPreGreaterEqual119,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, false, false, false, false, false, false),
+			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, false),
 			kubeletConfig(true, true),
 		),
 	)
@@ -385,21 +385,8 @@ func unitConfigAfterCRI(criName extensionsv1alpha1.CRIName) string {
 Wants=docker.socket rpc-statd.service`
 }
 
-func kubeletFlagsDocker(
-	criName extensionsv1alpha1.CRIName,
-	allowPrivileged bool,
-	rotateCertificates bool,
-	featureGatePodPriority bool,
-	featureGateSupportPodPidsLimit bool,
-	cadvisorPort bool,
-	volumePluginDir bool,
-) string {
+func kubeletFlagsDocker(criName extensionsv1alpha1.CRIName, volumePluginDir bool) string {
 	var out string
-
-	if allowPrivileged {
-		out += `
-    --allow-privileged=true \`
-	}
 
 	out += `
     --bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap \
@@ -408,29 +395,9 @@ func kubeletFlagsDocker(
     --cni-conf-dir=/etc/cni/net.d/ \
     --image-pull-progress-deadline=1m0s \`
 
-	if cadvisorPort {
-		out += `
-    --cadvisor-port=0 \`
-	}
-
-	if featureGatePodPriority {
-		out += `
-    --feature-gates=PodPriority=true \`
-	}
-
-	if featureGateSupportPodPidsLimit {
-		out += `
-    --feature-gates=SupportPodPidsLimit=true \`
-	}
-
 	out += `
     --kubeconfig=/var/lib/kubelet/kubeconfig-real \
     --network-plugin=cni \`
-
-	if rotateCertificates {
-		out += `
-    --rotate-certificates=true \`
-	}
 
 	if volumePluginDir {
 		out += `

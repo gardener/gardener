@@ -632,14 +632,10 @@ type HorizontalPodAutoscalerConfig struct {
 }
 
 const (
-	// DefaultHPADownscaleDelay is a constant for the default HPA downscale delay for a Shoot cluster.
-	DefaultHPADownscaleDelay = 15 * time.Minute
 	// DefaultHPASyncPeriod is a constant for the default HPA sync period for a Shoot cluster.
 	DefaultHPASyncPeriod = 30 * time.Second
 	// DefaultHPATolerance is a constant for the default HPA tolerance for a Shoot cluster.
 	DefaultHPATolerance = 0.1
-	// DefaultHPAUpscaleDelay is for the default HPA upscale delay for a Shoot cluster.
-	DefaultHPAUpscaleDelay = 1 * time.Minute
 	// DefaultDownscaleStabilization is the default HPA downscale stabilization window for a Shoot cluster
 	DefaultDownscaleStabilization = 5 * time.Minute
 	// DefaultInitialReadinessDelay is for the default HPA  ReadinessDelay value in the Shoot cluster

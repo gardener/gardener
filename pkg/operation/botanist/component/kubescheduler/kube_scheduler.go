@@ -22,7 +22,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -34,12 +33,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apiserver/pkg/authentication/user"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -387,47 +384,6 @@ func (k *kubeScheduler) computeCommand(port int32) []string {
 
 	command = append(command, "--v=2")
 	return command
-}
-
-func (k *kubeScheduler) computeShootResourcesData() (map[string][]byte, error) {
-	var (
-		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-
-		subjects = []rbacv1.Subject{{
-			Kind: rbacv1.UserKind,
-			Name: user.KubeScheduler,
-		}}
-
-		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "system:controller:kube-scheduler",
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     "system:auth-delegator",
-			},
-			Subjects: subjects,
-		}
-
-		roleBinding = &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "system:controller:kube-scheduler:auth-reader",
-				Namespace: metav1.NamespaceSystem,
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "Role",
-				Name:     "extension-apiserver-authentication-reader",
-			},
-			Subjects: subjects,
-		}
-	)
-
-	return registry.AddAllAndSerialize(
-		clusterRoleBinding,
-		roleBinding,
-	)
 }
 
 var (
