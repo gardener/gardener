@@ -34,13 +34,14 @@ import (
 
 // ProviderValues contains the values used to create a DNSProvider.
 type ProviderValues struct {
-	Name       string
-	Purpose    string
-	Provider   string
-	Labels     map[string]string
-	SecretData map[string][]byte
-	Domains    *IncludeExclude
-	Zones      *IncludeExclude
+	Name        string
+	Purpose     string
+	Provider    string
+	Labels      map[string]string
+	Annotations map[string]string
+	SecretData  map[string][]byte
+	Domains     *IncludeExclude
+	Zones       *IncludeExclude
 }
 
 // IncludeExclude contain slices of excluded and included domains/zones.
@@ -96,6 +97,7 @@ func (p *provider) Deploy(ctx context.Context) error {
 
 	_, err := controllerutil.CreateOrUpdate(ctx, p.client, dnsProvider, func() error {
 		dnsProvider.Labels = p.values.Labels
+		dnsProvider.Annotations = p.values.Annotations
 
 		dnsProvider.Spec = dnsv1alpha1.DNSProviderSpec{
 			Type:      p.values.Provider,
