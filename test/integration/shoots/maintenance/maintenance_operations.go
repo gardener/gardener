@@ -25,7 +25,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -168,7 +167,7 @@ func TryUpdateShootForMachineImageMaintenance(ctx context.Context, gardenClient 
 func StartShootMaintenance(ctx context.Context, gardenClient client.Client, shootToUpdate *gardencorev1beta1.Shoot) error {
 	shoot := &gardencorev1beta1.Shoot{ObjectMeta: shootToUpdate.ObjectMeta}
 	return kutil.TryUpdate(ctx, retry.DefaultBackoff, gardenClient, shoot, func() error {
-		shoot.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationMaintain
+		shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.ShootOperationMaintain
 		return nil
 	})
 }

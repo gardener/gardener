@@ -22,12 +22,11 @@ import (
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementhelper "github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1constants "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/constants"
-	"github.com/gardener/gardener/pkg/operation/common"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -285,7 +284,7 @@ func (r *replica) RetryShoot(ctx context.Context, c client.Client) error {
 	if r.shoot == nil {
 		return nil
 	}
-	if err := kutil.SetAnnotationAndUpdate(ctx, c, r.shoot, gardencorev1beta1constants.GardenerOperation, common.ShootOperationRetry); err != nil {
+	if err := kutil.SetAnnotationAndUpdate(ctx, c, r.shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry); err != nil {
 		return err
 	}
 	return nil
@@ -329,7 +328,7 @@ func seedReady(seed *gardencorev1beta1.Seed) bool {
 }
 
 func shootHealthStatus(shoot *gardencorev1beta1.Shoot) operationshoot.Status {
-	if value, ok := shoot.Labels[common.ShootStatus]; ok {
+	if value, ok := shoot.Labels[v1beta1constants.ShootStatus]; ok {
 		return operationshoot.Status(value)
 	}
 	return operationshoot.StatusProgressing

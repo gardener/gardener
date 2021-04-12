@@ -449,7 +449,7 @@ func (o *Operation) CleanShootTaskErrorAndUpdateStatusLabel(ctx context.Context,
 
 	if len(o.Shoot.Info.Status.LastErrors) == 0 {
 		oldObj := o.Shoot.Info.DeepCopy()
-		kutil.SetMetaDataLabel(&o.Shoot.Info.ObjectMeta, common.ShootStatus, string(shoot.ComputeStatus(
+		kutil.SetMetaDataLabel(&o.Shoot.Info.ObjectMeta, v1beta1constants.ShootStatus, string(shoot.ComputeStatus(
 			o.Shoot.Info.Status.LastOperation,
 			o.Shoot.Info.Status.LastErrors,
 			o.Shoot.Info.Status.Conditions...,

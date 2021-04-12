@@ -38,7 +38,6 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/care"
-	"github.com/gardener/gardener/pkg/operation/common"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -333,7 +332,7 @@ var _ = Describe("Shoot Care Control", func() {
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 					Expect(updatedShoot.Status.Conditions).To(BeEmpty())
 					Expect(updatedShoot.Status.Constraints).To(BeEmpty())
-					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusHealthy)))
+					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 				})
 				It("should remove conditions / constraints", func() {
 					apiServerCondition := gardencorev1beta1.Condition{
@@ -362,7 +361,7 @@ var _ = Describe("Shoot Care Control", func() {
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 					Expect(updatedShoot.Status.Conditions).To(BeEmpty())
 					Expect(updatedShoot.Status.Constraints).To(BeEmpty())
-					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusHealthy)))
+					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 				})
 			})
 
@@ -399,7 +398,7 @@ var _ = Describe("Shoot Care Control", func() {
 						})
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 					Expect(updatedShoot.Status.Conditions).To(BeEmpty())
-					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusHealthy)))
+					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 				})
 				It("should not amend existing conditions / constraints", func() {
 					apiServerCondition := gardencorev1beta1.Condition{
@@ -428,7 +427,7 @@ var _ = Describe("Shoot Care Control", func() {
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 					Expect(updatedShoot.Status.Conditions).To(ConsistOf(apiServerCondition))
 					Expect(updatedShoot.Status.Constraints).To(ConsistOf(hibernationConstraint))
-					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusHealthy)))
+					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 				})
 			})
 
@@ -548,7 +547,7 @@ var _ = Describe("Shoot Care Control", func() {
 						Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(append(conditions, seedConditions...)))
 						Expect(updatedShoot.Status.Constraints).To(ConsistOf(constraints))
-						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusHealthy)))
+						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 					})
 				})
 
@@ -580,7 +579,7 @@ var _ = Describe("Shoot Care Control", func() {
 						Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
 						Expect(updatedShoot.Status.Constraints).To(ConsistOf(constraints))
-						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusHealthy)))
+						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 					})
 				})
 
@@ -603,7 +602,7 @@ var _ = Describe("Shoot Care Control", func() {
 						Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
 						Expect(updatedShoot.Status.Constraints).To(ConsistOf(constraints))
-						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusUnhealthy)))
+						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusUnhealthy)))
 					})
 				})
 
@@ -691,7 +690,7 @@ var _ = Describe("Shoot Care Control", func() {
 							})
 						Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
-						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusHealthy)))
+						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 					})
 				})
 

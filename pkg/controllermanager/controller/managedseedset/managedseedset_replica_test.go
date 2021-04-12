@@ -27,13 +27,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1constants "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/constants"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation/common"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
@@ -119,7 +118,7 @@ var _ = Describe("Replica", func() {
 		) *gardencorev1beta1.Shoot {
 			labels := make(map[string]string)
 			if shs != "" {
-				labels[common.ShootStatus] = string(shs)
+				labels[v1beta1constants.ShootStatus] = string(shs)
 			}
 			annotations := make(map[string]string)
 			if protected {
@@ -423,7 +422,7 @@ var _ = Describe("Replica", func() {
 			shoot := shoot(nil, "", "", "", false)
 			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
 				func(_ context.Context, s *gardencorev1beta1.Shoot, _ client.Patch) error {
-					Expect(s.Annotations).To(HaveKeyWithValue(gardencorev1beta1constants.GardenerOperation, common.ShootOperationRetry))
+					Expect(s.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry))
 					return nil
 				},
 			)

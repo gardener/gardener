@@ -20,8 +20,8 @@ import (
 	"net/http"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 
 	. "github.com/onsi/ginkgo"
@@ -495,12 +495,12 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
-				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, user.Name))
+				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, user.Name))
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(shoot.Annotations).To(HaveKeyWithValue(common.GardenCreatedBy, user.Name))
+				Expect(shoot.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, user.Name))
 			})
 
 			It("should accept because all referenced objects have been found", func() {

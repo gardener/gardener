@@ -19,9 +19,9 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
 	mocktime "github.com/gardener/gardener/pkg/utils/time/mock"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 
@@ -387,7 +387,7 @@ var _ = Describe("quotavalidator", func() {
 			})
 
 			It("should pass as shoot expiration time can be extended", func() {
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.ShootExpirationTimestamp, "2018-01-02T00:00:00+00:00") // plus 1 day compared to time.Now()
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootExpirationTimestamp, "2018-01-02T00:00:00+00:00") // plus 1 day compared to time.Now()
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				now, err := time.Parse(time.RFC3339, "2018-01-01T00:00:00+00:00")
@@ -399,7 +399,7 @@ var _ = Describe("quotavalidator", func() {
 			})
 
 			It("should fail as shoots expiration time can’t be extended, because requested time higher then the minimum .spec.clusterLifetimeDays among the quotas", func() {
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.ShootExpirationTimestamp, "2018-01-05T00:00:00+00:00") // plus 4 days compared to time.Now()
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootExpirationTimestamp, "2018-01-05T00:00:00+00:00") // plus 4 days compared to time.Now()
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				now, err := time.Parse(time.RFC3339, "2018-01-01T00:00:00+00:00")
@@ -411,7 +411,7 @@ var _ = Describe("quotavalidator", func() {
 			})
 
 			It("should fail as shoots expiration time can’t be extended, because requested time higher then the maximum .spec.clusterLifetimeDays among the quotas", func() {
-				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.ShootExpirationTimestamp, "2018-01-09T00:00:00+00:00") // plus 8 days compared to time.Now()
+				metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootExpirationTimestamp, "2018-01-09T00:00:00+00:00") // plus 8 days compared to time.Now()
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				now, err := time.Parse(time.RFC3339, "2018-01-01T00:00:00+00:00")

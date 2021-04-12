@@ -46,7 +46,7 @@ import (
 func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 	gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(b.ShootState.Spec.Gardener).DeepCopy()
 
-	if val, ok := b.Shoot.Info.Annotations[v1beta1constants.GardenerOperation]; ok && val == common.ShootOperationRotateKubeconfigCredentials {
+	if val, ok := b.Shoot.Info.Annotations[v1beta1constants.GardenerOperation]; ok && val == v1beta1constants.ShootOperationRotateKubeconfigCredentials {
 		if err := b.rotateKubeconfigSecrets(ctx, &gardenerResourceDataList); err != nil {
 			return err
 		}

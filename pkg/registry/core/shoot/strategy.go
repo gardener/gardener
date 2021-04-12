@@ -18,13 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/api"
-	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/apis/core/helper"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/validation"
-	"github.com/gardener/gardener/pkg/operation/common"
-
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -34,6 +27,12 @@ import (
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
+
+	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/core/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/validation"
 )
 
 type shootStrategy struct {
@@ -85,16 +84,16 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 		switch lastOperation.State {
 		case core.LastOperationStateFailed:
 			// The shoot state is failed and the retry annotation is set.
-			if val, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok && val == common.ShootOperationRetry {
+			if val, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok && val == v1beta1constants.ShootOperationRetry {
 				mustIncrease = true
 			}
 		default:
 			// The shoot state is not failed and the reconcile or rotate-credentials annotation is set.
 			if val, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok {
-				if val == common.ShootOperationReconcile {
+				if val == v1beta1constants.GardenerOperationReconcile {
 					mustIncrease = true
 				}
-				if val == common.ShootOperationRotateKubeconfigCredentials {
+				if val == v1beta1constants.ShootOperationRotateKubeconfigCredentials {
 					// We don't want to remove the annotation so that the controller-manager can pick it up and rotate
 					// the credentials. It has to remove the annotation after it is done.
 					return true

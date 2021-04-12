@@ -525,7 +525,7 @@ func (b *Botanist) outOfClusterAPIServerFQDN() string {
 
 // getCoreDNSRestartTimestamp returns a timestamp that can potentially restart the CoreDNS deployment.
 func (b *Botanist) getCoreDNSRestartTimestamp(ctx context.Context) (string, error) {
-	if controllerutils.HasTask(b.Shoot.Info.Annotations, common.ShootTaskRestartCoreAddons) {
+	if controllerutils.HasTask(b.Shoot.Info.Annotations, v1beta1constants.ShootTaskRestartCoreAddons) {
 		return time.Now().UTC().Format(time.RFC3339), nil
 	}
 

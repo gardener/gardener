@@ -19,7 +19,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/operation/common"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,7 +30,7 @@ const separator = ","
 // GetTasks returns the list of tasks in the ShootTasks annotation.
 func GetTasks(annotations map[string]string) []string {
 	var tasks []string
-	if val := annotations[common.ShootTasks]; len(val) > 0 {
+	if val := annotations[v1beta1constants.ShootTasks]; len(val) > 0 {
 		tasks = strings.Split(val, separator)
 	}
 	return tasks
@@ -73,7 +73,7 @@ func RemoveTasks(annotations map[string]string, tasksToRemove ...string) {
 
 // RemoveAllTasks removes the ShootTasks annotation from the passed map.
 func RemoveAllTasks(annotations map[string]string) {
-	delete(annotations, common.ShootTasks)
+	delete(annotations, v1beta1constants.ShootTasks)
 }
 
 func setTaskAnnotations(annotations map[string]string, tasks []string) {
@@ -82,7 +82,7 @@ func setTaskAnnotations(annotations map[string]string, tasks []string) {
 		return
 	}
 
-	annotations[common.ShootTasks] = strings.Join(tasks, separator)
+	annotations[v1beta1constants.ShootTasks] = strings.Join(tasks, separator)
 }
 
 var (

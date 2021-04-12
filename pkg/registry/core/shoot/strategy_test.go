@@ -19,7 +19,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/common"
 	shootregistry "github.com/gardener/gardener/pkg/registry/core/shoot"
 
 	. "github.com/onsi/ginkgo"
@@ -293,7 +292,7 @@ var _ = Describe("Strategy", func() {
 					},
 				}
 				newShoot := oldShoot.DeepCopy()
-				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: common.ShootOperationRetry}
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRetry}
 
 				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
@@ -308,7 +307,7 @@ var _ = Describe("Strategy", func() {
 					},
 				}
 				newShoot := oldShoot.DeepCopy()
-				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: common.ShootOperationRetry}
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRetry}
 
 				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
@@ -317,7 +316,7 @@ var _ = Describe("Strategy", func() {
 			It("should increase when the reconcile annotation gets set but no last operation", func() {
 				oldShoot := &core.Shoot{}
 				newShoot := oldShoot.DeepCopy()
-				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: common.ShootOperationReconcile}
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile}
 
 				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 				Expect(newShoot.Generation).To(Equal(oldShoot.Generation))
@@ -330,7 +329,7 @@ var _ = Describe("Strategy", func() {
 					},
 				}
 				newShoot := oldShoot.DeepCopy()
-				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: common.ShootOperationReconcile}
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile}
 
 				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
@@ -343,7 +342,7 @@ var _ = Describe("Strategy", func() {
 					},
 				}
 				newShoot := oldShoot.DeepCopy()
-				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: common.ShootOperationRotateKubeconfigCredentials}
+				newShoot.Annotations = map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.ShootOperationRotateKubeconfigCredentials}
 
 				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))

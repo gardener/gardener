@@ -23,22 +23,20 @@ import (
 	"fmt"
 	"time"
 
-	certificatesv1 "k8s.io/api/certificates/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
-	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
-
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
+	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -64,7 +62,7 @@ func GetSeedName(seedConfig *config.SeedConfig) string {
 	if seedConfig != nil {
 		return seedConfig.Name
 	}
-	return gardencorev1beta1constants.SeedUserNameSuffixAmbiguous
+	return v1beta1constants.SeedUserNameSuffixAmbiguous
 }
 
 // GetTargetClusterName returns the target cluster of the gardenlet based on the SeedClientConnection.
@@ -231,7 +229,7 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceAccountName,
-			Namespace: gardencorev1beta1constants.GardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient, sa, func() error { return nil }); err != nil {
@@ -243,7 +241,7 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 		return nil, fmt.Errorf("service account token controller has not yet created a secret for the service account")
 	}
 	saSecret := &corev1.Secret{}
-	if err := gardenClient.Get(ctx, kutil.Key(gardencorev1beta1constants.GardenNamespace, sa.Secrets[0].Name), saSecret); err != nil {
+	if err := gardenClient.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, sa.Secrets[0].Name), saSecret); err != nil {
 		return nil, err
 	}
 
@@ -263,7 +261,7 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 			{
 				Kind:      rbacv1.ServiceAccountKind,
 				Name:      serviceAccountName,
-				Namespace: gardencorev1beta1constants.GardenNamespace,
+				Namespace: v1beta1constants.GardenNamespace,
 			},
 		}
 		return nil

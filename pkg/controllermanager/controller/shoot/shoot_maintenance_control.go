@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -165,26 +164,26 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 
 		// do not add reconcile annotation if shoot was once set to failed or if shoot is already in an ongoing reconciliation
 		if s.Status.LastOperation != nil && s.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
-			metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, common.ShootOperationReconcile)
+			metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		}
 
 		var needsRetry bool
-		if val, ok := s.Annotations[common.FailedShootNeedsRetryOperation]; ok {
+		if val, ok := s.Annotations[v1beta1constants.FailedShootNeedsRetryOperation]; ok {
 			needsRetry, _ = strconv.ParseBool(val)
 		}
-		delete(s.Annotations, common.FailedShootNeedsRetryOperation)
+		delete(s.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
 
 		if needsRetry {
-			metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, common.ShootOperationRetry)
+			metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
 		}
 
-		controllerutils.AddTasks(s.Annotations, common.ShootTaskDeployInfrastructure)
+		controllerutils.AddTasks(s.Annotations, v1beta1constants.ShootTaskDeployInfrastructure)
 		if utils.IsTrue(r.config.EnableShootControlPlaneRestarter) {
-			controllerutils.AddTasks(s.Annotations, common.ShootTaskRestartControlPlanePods)
+			controllerutils.AddTasks(s.Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
 		}
 
 		if utils.IsTrue(r.config.EnableShootCoreAddonRestarter) {
-			controllerutils.AddTasks(s.Annotations, common.ShootTaskRestartCoreAddons)
+			controllerutils.AddTasks(s.Annotations, v1beta1constants.ShootTaskRestartCoreAddons)
 		}
 
 		if updatedMachineImages != nil {
@@ -289,7 +288,7 @@ func mustMaintainNow(shoot *gardencorev1beta1.Shoot) bool {
 
 func hasMaintainNowAnnotation(shoot *gardencorev1beta1.Shoot) bool {
 	operation, ok := shoot.Annotations[v1beta1constants.GardenerOperation]
-	return ok && operation == common.ShootOperationMaintain
+	return ok && operation == v1beta1constants.ShootOperationMaintain
 }
 
 // MaintainMachineImages determines if a shoots machine images have to be maintained and in case returns the target images

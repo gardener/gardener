@@ -20,13 +20,13 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -86,7 +86,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		useSNI                         = botanist.APIServerSNIEnabled()
 		generation                     = o.Shoot.Info.Generation
 		sniPhase                       = botanist.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase
-		requestControlPlanePodsRestart = controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskRestartControlPlanePods)
+		requestControlPlanePodsRestart = controllerutils.HasTask(o.Shoot.Info.Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
 
 		g                      = flow.NewGraph("Shoot cluster reconciliation")
 		ensureShootStateExists = g.Add(flow.Task{
@@ -173,7 +173,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				if err := botanist.WaitForInfrastructure(ctx); err != nil {
 					return err
 				}
-				return removeTaskAnnotation(ctx, o, generation, common.ShootTaskDeployInfrastructure)
+				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskDeployInfrastructure)
 			},
 			Dependencies: flow.NewTaskIDs(deployInfrastructure),
 		})
@@ -355,8 +355,8 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				if err := botanist.DeployManagedResourceForAddons(ctx); err != nil {
 					return err
 				}
-				if controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskRestartCoreAddons) {
-					return removeTaskAnnotation(ctx, o, generation, common.ShootTaskRestartCoreAddons)
+				if controllerutils.HasTask(o.Shoot.Info.Annotations, v1beta1constants.ShootTaskRestartCoreAddons) {
+					return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskRestartCoreAddons)
 				}
 				return nil
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
@@ -501,7 +501,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				if err := botanist.RestartControlPlanePods(ctx); err != nil {
 					return err
 				}
-				return removeTaskAnnotation(ctx, o, generation, common.ShootTaskRestartControlPlanePods)
+				return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskRestartControlPlanePods)
 			}).DoIf(requestControlPlanePodsRestart),
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager, deployControlPlane, deployControlPlaneExposure),
 		})
