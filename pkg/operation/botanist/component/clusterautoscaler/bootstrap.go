@@ -20,7 +20,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -70,11 +69,11 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return common.DeployManagedResourceForSeed(ctx, b.client, managedResourceControlName, b.namespace, false, resources)
+	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
-	return common.DeleteManagedResourceForSeed(ctx, b.client, managedResourceControlName, b.namespace)
+	return managedresources.DeleteForSeed(ctx, b.client, b.namespace, managedResourceControlName)
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -85,12 +84,12 @@ func (b *bootstrapper) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilManagedResourceHealthy(timeoutCtx, b.client, b.namespace, managedResourceControlName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, b.client, b.namespace, managedResourceControlName)
 }
 
 func (b *bootstrapper) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilManagedResourceDeleted(timeoutCtx, b.client, b.namespace, managedResourceControlName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, b.client, b.namespace, managedResourceControlName)
 }

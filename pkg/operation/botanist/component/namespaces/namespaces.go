@@ -20,7 +20,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	corev1 "k8s.io/api/core/v1"
@@ -53,11 +52,11 @@ func (n *namespaces) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return common.DeployManagedResourceForShoot(ctx, n.client, ManagedResourceName, n.namespace, true, data)
+	return managedresources.CreateForShoot(ctx, n.client, n.namespace, ManagedResourceName, true, data)
 }
 
 func (n *namespaces) Destroy(ctx context.Context) error {
-	return common.DeleteManagedResourceForShoot(ctx, n.client, ManagedResourceName, n.namespace)
+	return managedresources.DeleteForShoot(ctx, n.client, n.namespace, ManagedResourceName)
 }
 
 func (n *namespaces) Wait(_ context.Context) error        { return nil }

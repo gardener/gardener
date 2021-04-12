@@ -118,10 +118,6 @@ const (
 	// of referenced quotas.
 	ShootExpirationTimestamp = "shoot.gardener.cloud/expiration-timestamp"
 
-	// ShootNoCleanup is a constant for a label on a resource indicating that the Gardener cleaner should not delete this
-	// resource when cleaning a shoot during the deletion flow.
-	ShootNoCleanup = "shoot.gardener.cloud/no-cleanup"
-
 	// ShootStatus is a constant for a label on a Shoot resource indicating that the Shoot's health.
 	ShootStatus = "shoot.gardener.cloud/status"
 

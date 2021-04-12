@@ -41,7 +41,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/configurator"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -419,7 +418,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return common.DeployManagedResourceForSeed(ctx, k.client, "gardener-kube-scheduler", k.namespace, false, resources)
+	return managedresources.CreateForSeed(ctx, k.client, k.namespace, "gardener-kube-scheduler", false, resources)
 }
 
 func getLabels() map[string]string {
@@ -437,7 +436,7 @@ func (k *kubeScheduler) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute*2)
 	defer cancel()
 
-	return managedresources.WaitUntilManagedResourceHealthy(timeoutCtx, k.client, k.namespace, "gardener-kube-scheduler")
+	return managedresources.WaitUntilHealthy(timeoutCtx, k.client, k.namespace, "gardener-kube-scheduler")
 }
 
 func (k *kubeScheduler) WaitCleanup(ctx context.Context) error {

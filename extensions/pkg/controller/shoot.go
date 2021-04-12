@@ -19,12 +19,6 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
-const (
-	// ShootNoCleanupLabel is a constant for a label on a resource indicating that the Gardener cleaner should not delete this
-	// resource when cleaning a shoot during the deletion flow.
-	ShootNoCleanupLabel = "shoot.gardener.cloud/no-cleanup"
-)
-
 // ChartRendererFactory creates chartrenderer.Interface to be used by this actuator.
 type ChartRendererFactory interface {
 	// NewChartRendererForShoot creates a new chartrenderer.Interface for the shoot cluster.

@@ -24,7 +24,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -326,7 +325,7 @@ func (k *kubeScheduler) emptyManagedResource() *resourcesv1alpha1.ManagedResourc
 }
 
 func (k *kubeScheduler) emptyManagedResourceSecret() *corev1.Secret {
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: common.ManagedResourceSecretName(managedResourceName), Namespace: k.namespace}}
+	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(managedResourceName, true), Namespace: k.namespace}}
 }
 
 func (k *kubeScheduler) reconcileShootResources(ctx context.Context) error {
@@ -335,7 +334,7 @@ func (k *kubeScheduler) reconcileShootResources(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		return common.DeployManagedResourceForShoot(ctx, k.client, managedResourceName, k.namespace, false, data)
+		return managedresources.CreateForShoot(ctx, k.client, k.namespace, managedResourceName, false, data)
 	}
 
 	return kutil.DeleteObjects(ctx, k.client, k.emptyManagedResource(), k.emptyManagedResourceSecret())

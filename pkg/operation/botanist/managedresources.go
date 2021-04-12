@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -33,13 +32,13 @@ func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
 		ctx,
 		&resourcesv1alpha1.ManagedResource{},
 		client.InNamespace(b.Shoot.SeedNamespace),
-		client.MatchingLabels{common.ManagedResourceLabelKeyOrigin: common.ManagedResourceLabelValueGardener},
+		client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener},
 	)
 }
 
 // WaitUntilManagedResourcesDeleted waits until all managed resources labeled with `origin=gardener` are gone or the context is cancelled.
 func (b *Botanist) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
-	return b.waitUntilManagedResourceAreDeleted(ctx, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{common.ManagedResourceLabelKeyOrigin: common.ManagedResourceLabelValueGardener})
+	return b.waitUntilManagedResourceAreDeleted(ctx, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener})
 }
 
 // WaitUntilAllManagedResourcesDeleted waits until all managed resources are gone or the context is cancelled.
@@ -78,7 +77,7 @@ func (b *Botanist) KeepObjectsForAllManagedResources(ctx context.Context) error 
 	}
 
 	for _, resource := range managedResources.Items {
-		if err := managedresources.KeepManagedResourceObjects(ctx, b.K8sSeedClient.DirectClient(), resource.Namespace, resource.Name, true); err != nil {
+		if err := managedresources.SetKeepObjects(ctx, b.K8sSeedClient.DirectClient(), resource.Namespace, resource.Name, true); err != nil {
 			return err
 		}
 	}

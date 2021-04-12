@@ -24,7 +24,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
@@ -97,10 +96,10 @@ type ServerOptions struct {
 	// IstioIngressLabels are the istio-ingressgateway's labels.
 	IstioIngressLabels map[string]string
 	// Healthy probes that konnectivity-server is healthy.
-	// Defaults to managedresources.WaitUntilManagedResourceHealthy.
+	// Defaults to managedresources.WaitUntilHealthy.
 	Healthy Prober
 	// Removed probes that konnectivity-server is removed.
-	// Defaults to managedresources.WaitUntilManagedResourceDeleted.
+	// Defaults to managedresources.WaitUntilDeleted.
 	Removed Prober
 }
 
@@ -119,11 +118,11 @@ func NewServer(so *ServerOptions) (KonnectivityServer, error) {
 	}
 
 	if so.Healthy == nil {
-		so.Healthy = managedresources.WaitUntilManagedResourceHealthy
+		so.Healthy = managedresources.WaitUntilHealthy
 	}
 
 	if so.Removed == nil {
-		so.Removed = managedresources.WaitUntilManagedResourceDeleted
+		so.Removed = managedresources.WaitUntilDeleted
 	}
 
 	return &konnectivityServer{ServerOptions: so}, nil
@@ -523,11 +522,11 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return common.DeployManagedResourceForSeed(ctx, k.Client, ServerName, k.Namespace, false, resources)
+	return managedresources.CreateForSeed(ctx, k.Client, k.Namespace, ServerName, false, resources)
 }
 
 func (k *konnectivityServer) Destroy(ctx context.Context) error {
-	return common.DeleteManagedResourceForSeed(ctx, k.Client, ServerName, k.Namespace)
+	return managedresources.DeleteForSeed(ctx, k.Client, k.Namespace, ServerName)
 }
 
 func (k *konnectivityServer) Wait(ctx context.Context) error {

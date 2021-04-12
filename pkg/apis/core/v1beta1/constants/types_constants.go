@@ -191,6 +191,9 @@ const (
 	// ignored completely. That means that the Shoot will never reach the reconciliation flow (independent of the operation (create/update/
 	// delete)).
 	ShootIgnore = "shoot.gardener.cloud/ignore"
+	// ShootNoCleanup is a constant for a label on a resource indicating that the Gardener cleaner should not delete this
+	// resource when cleaning a shoot during the deletion flow.
+	ShootNoCleanup = "shoot.gardener.cloud/no-cleanup"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.

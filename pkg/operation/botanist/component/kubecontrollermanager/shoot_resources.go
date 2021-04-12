@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
@@ -33,7 +32,7 @@ func (k *kubeControllerManager) deployShootManagedResource(ctx context.Context) 
 		if err != nil {
 			return err
 		}
-		return common.DeployManagedResourceForShoot(ctx, k.seedClient, managedResourceName, k.namespace, false, data)
+		return managedresources.CreateForShoot(ctx, k.seedClient, k.namespace, managedResourceName, false, data)
 	}
 
 	return kutil.DeleteObjects(

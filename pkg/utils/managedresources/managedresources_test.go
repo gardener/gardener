@@ -21,6 +21,7 @@ import (
 	"time"
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/managedresources"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
@@ -31,12 +32,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	namespace = "test"
-	name      = "managed-resource"
 )
 
 var _ = Describe("managedresources", func() {
@@ -46,6 +43,11 @@ var _ = Describe("managedresources", func() {
 
 		ctx     = context.TODO()
 		fakeErr = fmt.Errorf("fake")
+
+		namespace   = "test"
+		name        = "managed-resource"
+		keepObjects = true
+		data        = map[string][]byte{"some": []byte("data")}
 
 		managedResource = func(keepObjects bool) *resourcesv1alpha1.ManagedResource {
 			return &resourcesv1alpha1.ManagedResource{
@@ -71,13 +73,190 @@ var _ = Describe("managedresources", func() {
 		c = mockclient.NewMockClient(ctrl)
 	})
 
-	Describe("#KeepManagedResourceObjects", func() {
+	Describe("#CreateForShoot", func() {
+		It("should return the error of the secret reconciliation", func() {
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
+			)
+
+			Expect(CreateForShoot(ctx, c, namespace, name, keepObjects, data)).To(MatchError(fakeErr))
+		})
+
+		It("should return the error of the managed resource reconciliation", func() {
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
+			)
+
+			Expect(CreateForShoot(ctx, c, namespace, name, keepObjects, data)).To(MatchError(fakeErr))
+		})
+
+		It("should successfully create secret and managed resource", func() {
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "managedresource-" + name,
+						Namespace: namespace,
+					},
+					Type: corev1.SecretTypeOpaque,
+					Data: data,
+				}),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Update(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name,
+						Namespace: namespace,
+						Labels:    map[string]string{"origin": "gardener"},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						SecretRefs:   []corev1.LocalObjectReference{{Name: "managedresource-" + name}},
+						KeepObjects:  pointer.BoolPtr(keepObjects),
+						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+					},
+				}),
+			)
+
+			Expect(CreateForShoot(ctx, c, namespace, name, keepObjects, data)).To(Succeed())
+		})
+	})
+
+	Describe("#DeleteForShoot", func() {
+		var (
+			secret          = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "managedresource-" + name}}
+			managedResource = &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+			}
+		)
+
+		It("should fail when the managed resource cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, managedResource).Return(fakeErr),
+			)
+
+			Expect(DeleteForShoot(ctx, c, namespace, name)).To(MatchError(fakeErr))
+		})
+
+		It("should fail when the secret cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, managedResource),
+				c.EXPECT().Delete(ctx, secret).Return(fakeErr),
+			)
+
+			Expect(DeleteForShoot(ctx, c, namespace, name)).To(MatchError(fakeErr))
+		})
+
+		It("should successfully delete all related resources", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, managedResource),
+				c.EXPECT().Delete(ctx, secret),
+			)
+
+			Expect(DeleteForShoot(ctx, c, namespace, name)).To(Succeed())
+		})
+	})
+
+	Describe("#CreateForSeed", func() {
+		It("should return the error of the secret reconciliation", func() {
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
+			)
+
+			Expect(CreateForSeed(ctx, c, namespace, name, keepObjects, data)).To(MatchError(fakeErr))
+		})
+
+		It("should return the error of the managed resource reconciliation", func() {
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
+			)
+
+			Expect(CreateForSeed(ctx, c, namespace, name, keepObjects, data)).To(MatchError(fakeErr))
+		})
+
+		It("should successfully create secret and managed resource", func() {
+			gomock.InOrder(
+				c.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-"+name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+				c.EXPECT().Update(ctx, &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "managedresource-" + name,
+						Namespace: namespace,
+					},
+					Type: corev1.SecretTypeOpaque,
+					Data: data,
+				}),
+				c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+				c.EXPECT().Update(ctx, &resourcesv1alpha1.ManagedResource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name,
+						Namespace: namespace,
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						SecretRefs:  []corev1.LocalObjectReference{{Name: "managedresource-" + name}},
+						KeepObjects: pointer.BoolPtr(keepObjects),
+						Class:       pointer.StringPtr("seed"),
+					},
+				}),
+			)
+
+			Expect(CreateForSeed(ctx, c, namespace, name, keepObjects, data)).To(Succeed())
+		})
+	})
+
+	Describe("#DeleteForSeed", func() {
+		var (
+			secret          = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "managedresource-" + name}}
+			managedResource = &resourcesv1alpha1.ManagedResource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+			}
+		)
+
+		It("should fail when the managed resource cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, managedResource).Return(fakeErr),
+			)
+
+			Expect(DeleteForSeed(ctx, c, namespace, name)).To(MatchError(fakeErr))
+		})
+
+		It("should fail when the secret cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, managedResource),
+				c.EXPECT().Delete(ctx, secret).Return(fakeErr),
+			)
+
+			Expect(DeleteForSeed(ctx, c, namespace, name)).To(MatchError(fakeErr))
+		})
+
+		It("should successfully delete all related resources", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, managedResource),
+				c.EXPECT().Delete(ctx, secret),
+			)
+
+			Expect(DeleteForSeed(ctx, c, namespace, name)).To(Succeed())
+		})
+	})
+
+	Describe("#SetKeepObjects", func() {
 		It("should update the managed resource if the value of keepObjects is different", func() {
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
 				DoAndReturn(clientGet(managedResource(false)))
 			c.EXPECT().Update(ctx, managedResource(true)).Return(nil)
 
-			err := KeepManagedResourceObjects(ctx, c, namespace, name, true)
+			err := SetKeepObjects(ctx, c, namespace, name, true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -85,7 +264,7 @@ var _ = Describe("managedresources", func() {
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
 				DoAndReturn(clientGet(managedResource(true)))
 
-			err := KeepManagedResourceObjects(ctx, c, namespace, name, true)
+			err := SetKeepObjects(ctx, c, namespace, name, true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -93,7 +272,7 @@ var _ = Describe("managedresources", func() {
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
 				Return(apierrors.NewNotFound(schema.GroupResource{}, name))
 
-			err := KeepManagedResourceObjects(ctx, c, namespace, name, true)
+			err := SetKeepObjects(ctx, c, namespace, name, true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -102,16 +281,16 @@ var _ = Describe("managedresources", func() {
 				DoAndReturn(clientGet(managedResource(false)))
 			c.EXPECT().Update(ctx, managedResource(true)).Return(errors.New("error"))
 
-			err := KeepManagedResourceObjects(ctx, c, namespace, name, true)
+			err := SetKeepObjects(ctx, c, namespace, name, true)
 			Expect(err).To(HaveOccurred())
 		})
 	})
 
-	Describe("#WaitUntilManagedResourceHealthy", func() {
+	Describe("#WaitUntilHealthy", func() {
 		It("should fail when the managed resource cannot be read", func() {
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr)
 
-			Expect(WaitUntilManagedResourceHealthy(ctx, c, namespace, name)).To(MatchError(fakeErr))
+			Expect(WaitUntilHealthy(ctx, c, namespace, name)).To(MatchError(fakeErr))
 		})
 
 		It("should retry when the managed resource is not healthy yet", func() {
@@ -203,7 +382,7 @@ var _ = Describe("managedresources", func() {
 				})),
 			)
 
-			Expect(WaitUntilManagedResourceHealthy(ctx, c, namespace, name)).To(Succeed())
+			Expect(WaitUntilHealthy(ctx, c, namespace, name)).To(Succeed())
 		})
 	})
 })

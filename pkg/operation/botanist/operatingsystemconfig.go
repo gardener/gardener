@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -144,7 +143,7 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 	images := imagevector.ImageMapToValues(imagesMap)
 
 	var (
-		managedResource                  = common.NewManagedResourceForShoot(b.K8sSeedClient.Client(), CloudConfigExecutionManagedResourceName, b.Shoot.SeedNamespace, false)
+		managedResource                  = managedresources.NewForShoot(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, CloudConfigExecutionManagedResourceName, false)
 		managedResourceSecretsCount      = len(b.Shoot.Info.Spec.Provider.Workers) + 1
 		managedResourceSecretLabels      = map[string]string{SecretLabelKeyManagedResource: CloudConfigExecutionManagedResourceName}
 		managedResourceSecretNamesWanted = sets.NewString()
@@ -182,7 +181,7 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 	// Create Secrets for the ManagedResource containing all the executor scripts as well as the RBAC resources.
 	for secretName, data := range managedResourceSecretNameToData {
 		var (
-			managedResourceSecretName, managedResourceSecret = common.NewManagedResourceSecret(b.K8sSeedClient.Client(), secretName, b.Shoot.SeedNamespace)
+			managedResourceSecretName, managedResourceSecret = managedresources.NewSecret(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, secretName, nil, true)
 			keyValues                                        = data
 		)
 
