@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -103,7 +102,7 @@ func (r *reconciler) reconcileBackupBucket(ctx context.Context, gardenClient kub
 		return reconcile.Result{}, updateErr
 	}
 
-	secret, err := common.GetSecretFromSecretRef(ctx, gardenClient.Client(), &backupBucket.Spec.SecretRef)
+	secret, err := kutil.GetSecretByReference(ctx, gardenClient.Client(), &backupBucket.Spec.SecretRef)
 	if err != nil {
 		msg := fmt.Sprintf("Failed to get backup secret (%s/%s): %+v", backupBucket.Spec.SecretRef.Namespace, backupBucket.Spec.SecretRef.Name, err)
 		backupBucketLogger.Error(msg)
@@ -209,7 +208,7 @@ func (r *reconciler) deleteBackupBucket(ctx context.Context, gardenClient kubern
 
 	backupBucketLogger.Infof("Successfully deleted backup bucket %q", backupBucket.Name)
 
-	secret, err := common.GetSecretFromSecretRef(ctx, gardenClient.Client(), &backupBucket.Spec.SecretRef)
+	secret, err := kutil.GetSecretByReference(ctx, gardenClient.Client(), &backupBucket.Spec.SecretRef)
 	if err != nil {
 		backupBucketLogger.Errorf("Failed to get referred secret: %+v", err)
 		return reconcile.Result{}, err
