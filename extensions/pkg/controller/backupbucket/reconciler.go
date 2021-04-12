@@ -20,16 +20,13 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -40,18 +37,22 @@ type reconciler struct {
 	logger   logr.Logger
 	actuator Actuator
 
-	client client.Client
-	reader client.Reader
+	client        client.Client
+	reader        client.Reader
+	statusUpdater extensionscontroller.StatusUpdater
 }
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // BackupBucket resources of Gardener's `extensions.gardener.cloud` API group.
-func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler {
+func NewReconciler(actuator Actuator) reconcile.Reconciler {
+	logger := log.Log.WithName(ControllerName)
+
 	return extensionscontroller.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.BackupBucket{} },
 		&reconciler{
-			logger:   log.Log.WithName(ControllerName),
-			actuator: actuator,
+			logger:        logger,
+			actuator:      actuator,
+			statusUpdater: extensionscontroller.NewStatusUpdater(logger),
 		},
 	)
 }
@@ -62,6 +63,7 @@ func (r *reconciler) InjectFunc(f inject.Func) error {
 
 func (r *reconciler) InjectClient(client client.Client) error {
 	r.client = client
+	r.statusUpdater.InjectClient(client)
 	return nil
 }
 
@@ -92,7 +94,7 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation)
-	if err := r.updateStatusProcessing(ctx, bb, operationType, "Reconciling the backupbucket"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, bb, operationType, "Reconciling the backupbucket"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -106,14 +108,11 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 
 	r.logger.Info("Starting the reconciliation of backupbucket", "backupbucket", bb.Name)
 	if err := r.actuator.Reconcile(ctx, bb); err != nil {
-		msg := "Error reconciling backupbucket"
-		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), bb, operationType, msg)
+		_ = r.statusUpdater.Error(ctx, bb, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error reconciling backupbucket")
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	msg := "Successfully reconciled backupbucket"
-	r.logger.Info(msg, "backupbucket", bb.Name)
-	if err := r.updateStatusSuccess(ctx, bb, operationType, msg); err != nil {
+	if err := r.statusUpdater.Success(ctx, bb, operationType, "Successfully reconciled backupbucket"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -127,20 +126,17 @@ func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBu
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation)
-	if err := r.updateStatusProcessing(ctx, bb, operationType, "Deleting the backupbucket"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, bb, operationType, "Deleting the backupbucket"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	r.logger.Info("Starting the deletion of backupbucket", "backupbucket", bb.Name)
 	if err := r.actuator.Delete(ctx, bb); err != nil {
-		msg := "Error deleting backupbucket"
-		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), bb, operationType, msg)
+		_ = r.statusUpdater.Error(ctx, bb, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error deleting backupbucket")
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	msg := "Successfully deleted backupbucket"
-	r.logger.Info(msg, "backupbucket", bb.Name)
-	if err := r.updateStatusSuccess(ctx, bb, operationType, msg); err != nil {
+	if err := r.statusUpdater.Success(ctx, bb, operationType, "Successfully deleted backupbucket"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -158,27 +154,4 @@ func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBu
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func (r *reconciler) updateStatusProcessing(ctx context.Context, bb *extensionsv1alpha1.BackupBucket, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
-	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, bb, func() error {
-		bb.Status.LastOperation = extensionscontroller.LastOperation(lastOperationType, gardencorev1beta1.LastOperationStateProcessing, 1, description)
-		return nil
-	})
-}
-
-func (r *reconciler) updateStatusError(ctx context.Context, err error, bb *extensionsv1alpha1.BackupBucket, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
-	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, bb, func() error {
-		bb.Status.ObservedGeneration = bb.Generation
-		bb.Status.LastOperation, bb.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err)), 50, gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, err.Error()))...)
-		return nil
-	})
-}
-
-func (r *reconciler) updateStatusSuccess(ctx context.Context, bb *extensionsv1alpha1.BackupBucket, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
-	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, bb, func() error {
-		bb.Status.ObservedGeneration = bb.Generation
-		bb.Status.LastOperation, bb.Status.LastError = extensionscontroller.ReconcileSucceeded(lastOperationType, description)
-		return nil
-	})
 }

@@ -73,7 +73,7 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 // Add creates a new BackupEntry Controller and adds it to the Manager.
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
+	args.ControllerOptions.Reconciler = NewReconciler(args.Actuator)
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 	return add(mgr, args, predicates)
 }

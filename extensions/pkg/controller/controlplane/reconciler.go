@@ -21,11 +21,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
@@ -44,18 +42,22 @@ type reconciler struct {
 	logger   logr.Logger
 	actuator Actuator
 
-	client client.Client
-	reader client.Reader
+	client        client.Client
+	reader        client.Reader
+	statusUpdater extensionscontroller.StatusUpdater
 }
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // controlplane resources of Gardener's `extensions.gardener.cloud` API group.
-func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler {
+func NewReconciler(actuator Actuator) reconcile.Reconciler {
+	logger := log.Log.WithName(ControllerName)
+
 	return extensionscontroller.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.ControlPlane{} },
 		&reconciler{
-			logger:   log.Log.WithName(ControllerName),
-			actuator: actuator,
+			logger:        logger,
+			actuator:      actuator,
+			statusUpdater: extensionscontroller.NewStatusUpdater(logger),
 		},
 	)
 }
@@ -66,6 +68,7 @@ func (r *reconciler) InjectFunc(f inject.Func) error {
 
 func (r *reconciler) InjectClient(client client.Client) error {
 	r.client = client
+	r.statusUpdater.InjectClient(client)
 	return nil
 }
 
@@ -114,21 +117,18 @@ func (r *reconciler) reconcile(ctx context.Context, cp *extensionsv1alpha1.Contr
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatusProcessing(ctx, cp, operationType, "Reconciling the controlplane"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, cp, operationType, "Reconciling the controlplane"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	r.logger.Info("Starting the reconciliation of controlplane", "controlplane", cp.Name)
 	requeue, err := r.actuator.Reconcile(ctx, cp, cluster)
 	if err != nil {
-		msg := "Error reconciling controlplane"
-		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cp, operationType, msg)
+		_ = r.statusUpdater.Error(ctx, cp, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error reconciling controlplane")
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	msg := "Successfully reconciled controlplane"
-	r.logger.Info(msg, "controlplane", cp.Name)
-	if err := r.updateStatusSuccess(ctx, cp, operationType, msg); err != nil {
+	if err := r.statusUpdater.Success(ctx, cp, operationType, "Successfully reconciled controlplane"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -143,21 +143,18 @@ func (r *reconciler) restore(ctx context.Context, cp *extensionsv1alpha1.Control
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatusProcessing(ctx, cp, gardencorev1beta1.LastOperationTypeRestore, "Restoring the controlplane"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, cp, gardencorev1beta1.LastOperationTypeRestore, "Restoring the controlplane"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	r.logger.Info("Starting the restoration of controlplane", "controlplane", cp.Name)
 	requeue, err := r.actuator.Restore(ctx, cp, cluster)
 	if err != nil {
-		msg := "Error restoring controlplane"
-		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cp, gardencorev1beta1.LastOperationTypeRestore, msg)
+		_ = r.statusUpdater.Error(ctx, cp, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring controlplane")
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	msg := "Successfully restored controlplane"
-	r.logger.Info(msg, "controlplane", cp.Name)
-	if err := r.updateStatusSuccess(ctx, cp, gardencorev1beta1.LastOperationTypeRestore, msg); err != nil {
+	if err := r.statusUpdater.Success(ctx, cp, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored controlplane"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -165,30 +162,25 @@ func (r *reconciler) restore(ctx context.Context, cp *extensionsv1alpha1.Control
 		return reconcile.Result{RequeueAfter: RequeueAfter}, nil
 	}
 
-	// remove operation annotation 'restore'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, cp, v1beta1constants.GardenerOperation); err != nil {
-		msg := "Error removing annotation from ControlPlane"
-		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
+		return reconcile.Result{}, fmt.Errorf("error removing annotation from ControlPlane: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
 }
 
 func (r *reconciler) migrate(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := r.updateStatusProcessing(ctx, cp, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the controlplane"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, cp, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the controlplane"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	r.logger.Info("Starting the migration of controlplane", "controlplane", cp.Name)
 	if err := r.actuator.Migrate(ctx, cp, cluster); err != nil {
-		msg := "Error migrating controlplane"
-		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cp, gardencorev1beta1.LastOperationTypeMigrate, msg)
+		_ = r.statusUpdater.Error(ctx, cp, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating controlplane")
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	msg := "Successfully migrated controlplane"
-	r.logger.Info(msg, "controlplane", cp.Name)
-	if err := r.updateStatusSuccess(ctx, cp, gardencorev1beta1.LastOperationTypeMigrate, msg); err != nil {
+	if err := r.statusUpdater.Success(ctx, cp, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated controlplane"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -197,10 +189,8 @@ func (r *reconciler) migrate(ctx context.Context, cp *extensionsv1alpha1.Control
 		return reconcile.Result{}, fmt.Errorf("error removing finalizers from ControlPlane: %+v", err)
 	}
 
-	// remove operation annotation 'migrate'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, cp, v1beta1constants.GardenerOperation); err != nil {
-		msg := "Error removing annotation from ControlPlane"
-		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
+		return reconcile.Result{}, fmt.Errorf("error removing annotation from ControlPlane: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
@@ -213,20 +203,17 @@ func (r *reconciler) delete(ctx context.Context, cp *extensionsv1alpha1.ControlP
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(cp.ObjectMeta, cp.Status.LastOperation)
-	if err := r.updateStatusProcessing(ctx, cp, operationType, "Deleting the controlplane"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, cp, operationType, "Deleting the controlplane"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	r.logger.Info("Starting the deletion of controlplane", "controlplane", cp.Name)
 	if err := r.actuator.Delete(ctx, cp, cluster); err != nil {
-		msg := "Error deleting controlplane"
-		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cp, operationType, msg)
+		_ = r.statusUpdater.Error(ctx, cp, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error deleting controlplane")
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	msg := "Successfully deleted controlplane"
-	r.logger.Info(msg, "controlplane", cp.Name)
-	if err := r.updateStatusSuccess(ctx, cp, operationType, msg); err != nil {
+	if err := r.statusUpdater.Success(ctx, cp, operationType, "Successfully deleted controlplane"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -236,27 +223,4 @@ func (r *reconciler) delete(ctx context.Context, cp *extensionsv1alpha1.ControlP
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func (r *reconciler) updateStatusProcessing(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
-	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, cp, func() error {
-		cp.Status.LastOperation = extensionscontroller.LastOperation(lastOperationType, gardencorev1beta1.LastOperationStateProcessing, 1, description)
-		return nil
-	})
-}
-
-func (r *reconciler) updateStatusError(ctx context.Context, err error, cp *extensionsv1alpha1.ControlPlane, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
-	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, cp, func() error {
-		cp.Status.ObservedGeneration = cp.Generation
-		cp.Status.LastOperation, cp.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err)), 50, gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, err.Error()))...)
-		return nil
-	})
-}
-
-func (r *reconciler) updateStatusSuccess(ctx context.Context, cp *extensionsv1alpha1.ControlPlane, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
-	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, cp, func() error {
-		cp.Status.ObservedGeneration = cp.Generation
-		cp.Status.LastOperation, cp.Status.LastError = extensionscontroller.ReconcileSucceeded(lastOperationType, description)
-		return nil
-	})
 }
