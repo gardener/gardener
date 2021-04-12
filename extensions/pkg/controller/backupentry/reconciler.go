@@ -19,9 +19,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -39,24 +37,12 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-const (
-	// EventBackupEntryReconciliation an event reason to describe backup entry reconciliation.
-	EventBackupEntryReconciliation string = "BackupEntryReconciliation"
-	// EventBackupEntryDeletion an event reason to describe backup entry deletion.
-	EventBackupEntryDeletion string = "BackupEntryDeletion"
-	// EventBackupEntryMigration an event reason to describe backup entry migration.
-	EventBackupEntryMigration string = "BackupEntryMigration"
-	// EventBackupEntryRestoration an event reason to describe backup entry restoration.
-	EventBackupEntryRestoration string = "BackupEntryRestoration"
-)
-
 type reconciler struct {
 	logger   logr.Logger
 	actuator Actuator
 
-	client   client.Client
-	reader   client.Reader
-	recorder record.EventRecorder
+	client client.Client
+	reader client.Reader
 }
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
@@ -67,8 +53,8 @@ func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler 
 		&reconciler{
 			logger:   log.Log.WithName(ControllerName),
 			actuator: actuator,
-			recorder: mgr.GetEventRecorderFor(ControllerName),
-		})
+		},
+	)
 }
 
 func (r *reconciler) InjectFunc(f inject.Func) error {
@@ -141,7 +127,6 @@ func (r *reconciler) reconcile(ctx context.Context, be *extensionsv1alpha1.Backu
 	}
 
 	r.logger.Info("Starting the reconciliation of backupentry", "backupentry", be.Name)
-	r.recorder.Event(be, corev1.EventTypeNormal, EventBackupEntryReconciliation, "Reconciling the backupentry")
 	if err := r.actuator.Reconcile(ctx, be); err != nil {
 		msg := "Error reconciling backupentry"
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), be, operationType, msg)
@@ -150,7 +135,6 @@ func (r *reconciler) reconcile(ctx context.Context, be *extensionsv1alpha1.Backu
 
 	msg := "Successfully reconciled backupentry"
 	r.logger.Info(msg, "backupentry", be.Name)
-	r.recorder.Event(be, corev1.EventTypeNormal, EventBackupEntryReconciliation, msg)
 	if err := r.updateStatusSuccess(ctx, be, operationType, msg); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -176,7 +160,6 @@ func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupE
 	}
 
 	r.logger.Info("Starting the restoration of backupentry", "backupentry", be.Name)
-	r.recorder.Event(be, corev1.EventTypeNormal, EventBackupEntryRestoration, "Restoring the backupentry")
 	if err := r.actuator.Restore(ctx, be); err != nil {
 		msg := "Error restoring backupentry"
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), be, gardencorev1beta1.LastOperationTypeRestore, msg)
@@ -185,14 +168,12 @@ func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupE
 
 	msg := "Successfully restored backupentry"
 	r.logger.Info(msg, "backupentry", be.Name)
-	r.recorder.Event(be, corev1.EventTypeNormal, EventBackupEntryRestoration, msg)
 	if err := r.updateStatusSuccess(ctx, be, gardencorev1beta1.LastOperationTypeRestore, msg); err != nil {
 		return reconcile.Result{}, err
 	}
 	// remove operation annotation 'restore'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, be, v1beta1constants.GardenerOperation); err != nil {
 		msg := "Error removing annotation from BackupEntry"
-		r.recorder.Eventf(be, corev1.EventTypeWarning, EventBackupEntryMigration, "%s: %+v", msg, err)
 		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 	return reconcile.Result{}, nil
@@ -210,7 +191,6 @@ func (r *reconciler) delete(ctx context.Context, be *extensionsv1alpha1.BackupEn
 	}
 
 	r.logger.Info("Starting the deletion of backupentry", "backupentry", be.Name)
-	r.recorder.Event(be, corev1.EventTypeNormal, EventBackupEntryDeletion, "Deleting the backupentry")
 
 	secret, err := kutil.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
@@ -228,14 +208,12 @@ func (r *reconciler) delete(ctx context.Context, be *extensionsv1alpha1.BackupEn
 
 	if err := r.actuator.Delete(ctx, be); err != nil {
 		msg := "Error deleting backupentry"
-		r.recorder.Eventf(be, corev1.EventTypeWarning, EventBackupEntryDeletion, "%s: %+v", msg, err)
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), be, operationType, msg)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
 	msg := "Successfully deleted backupentry"
 	r.logger.Info(msg, "backupentry", be.Name)
-	r.recorder.Event(be, corev1.EventTypeNormal, EventBackupEntryDeletion, msg)
 	if err := r.updateStatusSuccess(ctx, be, operationType, msg); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -258,17 +236,14 @@ func (r *reconciler) migrate(ctx context.Context, be *extensionsv1alpha1.BackupE
 	}
 
 	r.logger.Info("Starting the migration of backupentry", "backupentry", be.Name)
-	r.recorder.Event(be, corev1.EventTypeNormal, EventBackupEntryMigration, "Migrating the backupentry")
 	if err := r.actuator.Migrate(ctx, be); err != nil {
 		msg := "Error migrating backupentry"
-		r.recorder.Eventf(be, corev1.EventTypeWarning, EventBackupEntryMigration, "%s: %+v", msg, err)
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), be, gardencorev1beta1.LastOperationTypeMigrate, msg)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
 	msg := "Successfully migrated backupentry"
 	r.logger.Info(msg, "backupentry", be.Name)
-	r.recorder.Event(be, corev1.EventTypeNormal, EventBackupEntryMigration, msg)
 	if err := r.updateStatusSuccess(ctx, be, gardencorev1beta1.LastOperationTypeMigrate, msg); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -289,7 +264,6 @@ func (r *reconciler) migrate(ctx context.Context, be *extensionsv1alpha1.BackupE
 	// remove operation annotation 'migrate'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, be, v1beta1constants.GardenerOperation); err != nil {
 		msg := "Error removing annotation from BackupEntry"
-		r.recorder.Eventf(be, corev1.EventTypeWarning, EventBackupEntryMigration, "%s: %+v", msg, err)
 		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 

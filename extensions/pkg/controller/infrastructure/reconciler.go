@@ -19,10 +19,8 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -39,24 +37,12 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
-const (
-	// EventInfrastructureReconciliation an event reason to describe infrastructure reconciliation.
-	EventInfrastructureReconciliation string = "InfrastructureReconciliation"
-	// EventInfrastructureDeletion an event reason to describe infrastructure deletion.
-	EventInfrastructureDeletion string = "InfrastructureDeletion"
-	// EventInfrastructureMigration an event reason to describe infrastructure migration.
-	EventInfrastructureMigration string = "InfrastructureMigration"
-	// EventInfrastructureRestoration an event reason to describe infrastructure restoration.
-	EventInfrastructureRestoration string = "InfrastructureRestoration"
-)
-
 type reconciler struct {
 	logger   logr.Logger
 	actuator Actuator
 
-	client   client.Client
-	reader   client.Reader
-	recorder record.EventRecorder
+	client client.Client
+	reader client.Reader
 }
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
@@ -67,7 +53,6 @@ func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler 
 		&reconciler{
 			logger:   log.Log.WithName(ControllerName),
 			actuator: actuator,
-			recorder: mgr.GetEventRecorderFor(ControllerName),
 		},
 	)
 }
@@ -128,16 +113,16 @@ func (r *reconciler) reconcile(ctx context.Context, logger logr.Logger, infrastr
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatusProcessing(ctx, logger, infrastructure, operationType, EventInfrastructureReconciliation, "Reconciling the infrastructure"); err != nil {
+	if err := r.updateStatusProcessing(ctx, logger, infrastructure, operationType, "Reconciling the infrastructure"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Reconcile(ctx, infrastructure, cluster); err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), infrastructure, operationType, EventInfrastructureReconciliation, "Error reconciling infrastructure"))
+		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), infrastructure, operationType, "Error reconciling infrastructure"))
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.updateStatusSuccess(ctx, logger, infrastructure, operationType, EventInfrastructureReconciliation, "Successfully reconciled infrastructure"); err != nil {
+	if err := r.updateStatusSuccess(ctx, logger, infrastructure, operationType, "Successfully reconciled infrastructure"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -150,16 +135,16 @@ func (r *reconciler) delete(ctx context.Context, logger logr.Logger, infrastruct
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.updateStatusProcessing(ctx, logger, infrastructure, gardencorev1beta1.LastOperationTypeDelete, EventInfrastructureDeletion, "Deleting the infrastructure"); err != nil {
+	if err := r.updateStatusProcessing(ctx, logger, infrastructure, gardencorev1beta1.LastOperationTypeDelete, "Deleting the infrastructure"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Delete(ctx, infrastructure, cluster); err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), infrastructure, gardencorev1beta1.LastOperationTypeDelete, EventInfrastructureDeletion, "Error deleting infrastructure"))
+		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), infrastructure, gardencorev1beta1.LastOperationTypeDelete, "Error deleting infrastructure"))
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.updateStatusSuccess(ctx, logger, infrastructure, gardencorev1beta1.LastOperationTypeDelete, EventInfrastructureDeletion, "Successfully deleted infrastructure"); err != nil {
+	if err := r.updateStatusSuccess(ctx, logger, infrastructure, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted infrastructure"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -168,16 +153,16 @@ func (r *reconciler) delete(ctx context.Context, logger logr.Logger, infrastruct
 }
 
 func (r *reconciler) migrate(ctx context.Context, logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := r.updateStatusProcessing(ctx, logger, infrastructure, gardencorev1beta1.LastOperationTypeMigrate, EventInfrastructureMigration, "Starting Migration of the Infrastructure"); err != nil {
+	if err := r.updateStatusProcessing(ctx, logger, infrastructure, gardencorev1beta1.LastOperationTypeMigrate, "Starting Migration of the Infrastructure"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Migrate(ctx, infrastructure, cluster); err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), infrastructure, gardencorev1beta1.LastOperationTypeMigrate, EventInfrastructureMigration, "Error migrating infrastructure"))
+		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), infrastructure, gardencorev1beta1.LastOperationTypeMigrate, "Error migrating infrastructure"))
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.updateStatusSuccess(ctx, logger, infrastructure, gardencorev1beta1.LastOperationTypeMigrate, EventInfrastructureMigration, "Successfully migrated Infrastructure"); err != nil {
+	if err := r.updateStatusSuccess(ctx, logger, infrastructure, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated Infrastructure"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -199,12 +184,12 @@ func (r *reconciler) restore(ctx context.Context, logger logr.Logger, infrastruc
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatusProcessing(ctx, logger, infrastructure, gardencorev1beta1.LastOperationTypeRestore, EventInfrastructureRestoration, "Restoring the infrastructure"); err != nil {
+	if err := r.updateStatusProcessing(ctx, logger, infrastructure, gardencorev1beta1.LastOperationTypeRestore, "Restoring the infrastructure"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Restore(ctx, infrastructure, cluster); err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), infrastructure, gardencorev1beta1.LastOperationTypeRestore, EventInfrastructureRestoration, "Error restoring infrastructure"))
+		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), infrastructure, gardencorev1beta1.LastOperationTypeRestore, "Error restoring infrastructure"))
 		return extensionscontroller.ReconcileErr(err)
 	}
 
@@ -213,21 +198,19 @@ func (r *reconciler) restore(ctx context.Context, logger logr.Logger, infrastruc
 		return reconcile.Result{}, err
 	}
 
-	err := r.updateStatusSuccess(ctx, logger, infrastructure, gardencorev1beta1.LastOperationTypeRestore, EventInfrastructureRestoration, "Successfully restored infrastructure")
+	err := r.updateStatusSuccess(ctx, logger, infrastructure, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored infrastructure")
 	return reconcile.Result{}, err
 }
 
-func (r *reconciler) updateStatusProcessing(ctx context.Context, logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, lastOperationType gardencorev1beta1.LastOperationType, event, description string) error {
+func (r *reconciler) updateStatusProcessing(ctx context.Context, logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
 	logger.Info(description)
-	r.recorder.Eventf(infrastructure, corev1.EventTypeNormal, event, description)
 	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, infrastructure, func() error {
 		infrastructure.Status.LastOperation = extensionscontroller.LastOperation(lastOperationType, gardencorev1beta1.LastOperationStateProcessing, 1, description)
 		return nil
 	})
 }
 
-func (r *reconciler) updateStatusError(ctx context.Context, err error, infrastructure *extensionsv1alpha1.Infrastructure, lastOperationType gardencorev1beta1.LastOperationType, event, description string) error {
-	r.recorder.Eventf(infrastructure, corev1.EventTypeWarning, event, fmt.Sprintf("%s: %+v", description, err))
+func (r *reconciler) updateStatusError(ctx context.Context, err error, infrastructure *extensionsv1alpha1.Infrastructure, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
 	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, infrastructure, func() error {
 		infrastructure.Status.ObservedGeneration = infrastructure.Generation
 		infrastructure.Status.LastOperation, infrastructure.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err)), 50, gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, err.Error()))...)
@@ -235,9 +218,8 @@ func (r *reconciler) updateStatusError(ctx context.Context, err error, infrastru
 	})
 }
 
-func (r *reconciler) updateStatusSuccess(ctx context.Context, logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, lastOperationType gardencorev1beta1.LastOperationType, event, description string) error {
+func (r *reconciler) updateStatusSuccess(ctx context.Context, logger logr.Logger, infrastructure *extensionsv1alpha1.Infrastructure, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
 	logger.Info(description)
-	r.recorder.Eventf(infrastructure, corev1.EventTypeNormal, event, description)
 	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, infrastructure, func() error {
 		infrastructure.Status.ObservedGeneration = infrastructure.Generation
 		infrastructure.Status.LastOperation, infrastructure.Status.LastError = extensionscontroller.ReconcileSucceeded(lastOperationType, description)
@@ -249,7 +231,6 @@ func (r *reconciler) removeFinalizerFromInfrastructure(ctx context.Context, logg
 	logger.Info("Removing finalizer")
 	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, infrastructure, FinalizerName); err != nil {
 		msg := fmt.Sprintf("error removing finalizer from Infrastructure: %+v", err)
-		r.recorder.Eventf(infrastructure, corev1.EventTypeWarning, EventInfrastructureMigration, msg)
 		return fmt.Errorf(msg)
 	}
 	return nil
@@ -259,7 +240,6 @@ func (r *reconciler) removeAnnotation(ctx context.Context, logger logr.Logger, i
 	logger.Info("Removing operation annotation")
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, infrastructure, v1beta1constants.GardenerOperation); err != nil {
 		msg := fmt.Sprintf("error removing annotation from Infrastructure: %+v", err)
-		r.recorder.Eventf(infrastructure, corev1.EventTypeWarning, EventInfrastructureMigration, msg)
 		return fmt.Errorf(msg)
 	}
 	return nil

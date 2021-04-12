@@ -19,10 +19,8 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -39,24 +37,12 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
-const (
-	// EventNetworkReconciliation an event reason to describe network reconciliation.
-	EventNetworkReconciliation string = "NetworkReconciliation"
-	// EventNetworkDeletion an event reason to describe network deletion.
-	EventNetworkDeletion string = "NetworkDeletion"
-	// EventNetworkRestoration an event reason to describe network restoration.
-	EventNetworkRestoration string = "NetworkRestoration"
-	// EventNetworkMigartion an event reason to describe network migration.
-	EventNetworkMigartion string = "NetworkMigration"
-)
-
 type reconciler struct {
 	logger   logr.Logger
 	actuator Actuator
 
-	client   client.Client
-	reader   client.Reader
-	recorder record.EventRecorder
+	client client.Client
+	reader client.Reader
 }
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
@@ -67,7 +53,6 @@ func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler 
 		&reconciler{
 			logger:   log.Log.WithName(ControllerName),
 			actuator: actuator,
-			recorder: mgr.GetEventRecorderFor(ControllerName),
 		},
 	)
 }
@@ -126,16 +111,16 @@ func (r *reconciler) reconcile(ctx context.Context, network *extensionsv1alpha1.
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatusProcessing(ctx, network, operationType, EventNetworkReconciliation, "Reconciling the network"); err != nil {
+	if err := r.updateStatusProcessing(ctx, network, operationType, "Reconciling the network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Reconcile(ctx, network, cluster); err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), network, operationType, EventNetworkReconciliation, "Error reconciling network"))
+		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), network, operationType, "Error reconciling network"))
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.updateStatusSuccess(ctx, network, operationType, EventNetworkReconciliation, "Successfully reconciled network"); err != nil {
+	if err := r.updateStatusSuccess(ctx, network, operationType, "Successfully reconciled network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -147,23 +132,22 @@ func (r *reconciler) restore(ctx context.Context, network *extensionsv1alpha1.Ne
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatusProcessing(ctx, network, gardencorev1beta1.LastOperationTypeRestore, EventNetworkRestoration, "Restoring the network"); err != nil {
+	if err := r.updateStatusProcessing(ctx, network, gardencorev1beta1.LastOperationTypeRestore, "Restoring the network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Restore(ctx, network, cluster); err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), network, gardencorev1beta1.LastOperationTypeRestore, EventNetworkRestoration, "Error restoring network"))
+		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), network, gardencorev1beta1.LastOperationTypeRestore, "Error restoring network"))
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.updateStatusSuccess(ctx, network, gardencorev1beta1.LastOperationTypeRestore, EventNetworkRestoration, "Successfully restored network"); err != nil {
+	if err := r.updateStatusSuccess(ctx, network, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	// remove operation annotation 'restore'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, network, v1beta1constants.GardenerOperation); err != nil {
 		msg := "Error removing annotation from Network"
-		r.recorder.Eventf(network, corev1.EventTypeWarning, EventNetworkRestoration, "%s: %+v", msg, err)
 		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 
@@ -176,18 +160,17 @@ func (r *reconciler) delete(ctx context.Context, network *extensionsv1alpha1.Net
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.updateStatusProcessing(ctx, network, gardencorev1beta1.LastOperationTypeDelete, EventNetworkDeletion, "Deleting the network"); err != nil {
+	if err := r.updateStatusProcessing(ctx, network, gardencorev1beta1.LastOperationTypeDelete, "Deleting the network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	r.logger.Info("Starting the deletion of network", "network", network.Name)
-	r.recorder.Event(network, corev1.EventTypeNormal, EventNetworkDeletion, "Deleting the network")
 	if err := r.actuator.Delete(ctx, network, cluster); err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), network, gardencorev1beta1.LastOperationTypeDelete, EventNetworkDeletion, "Error deleting network"))
+		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), network, gardencorev1beta1.LastOperationTypeDelete, "Error deleting network"))
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.updateStatusSuccess(ctx, network, gardencorev1beta1.LastOperationTypeDelete, EventNetworkDeletion, "Successfully deleted network"); err != nil {
+	if err := r.updateStatusSuccess(ctx, network, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -200,16 +183,16 @@ func (r *reconciler) delete(ctx context.Context, network *extensionsv1alpha1.Net
 }
 
 func (r *reconciler) migrate(ctx context.Context, network *extensionsv1alpha1.Network, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
-	if err := r.updateStatusProcessing(ctx, network, gardencorev1beta1.LastOperationTypeMigrate, EventNetworkMigartion, "Migrating the network"); err != nil {
+	if err := r.updateStatusProcessing(ctx, network, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Migrate(ctx, network, cluster); err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), network, gardencorev1beta1.LastOperationTypeMigrate, EventNetworkMigartion, "Error migrating network"))
+		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), network, gardencorev1beta1.LastOperationTypeMigrate, "Error migrating network"))
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.updateStatusSuccess(ctx, network, gardencorev1beta1.LastOperationTypeMigrate, EventNetworkMigartion, "Successfully migrated network"); err != nil {
+	if err := r.updateStatusSuccess(ctx, network, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated network"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -221,23 +204,20 @@ func (r *reconciler) migrate(ctx context.Context, network *extensionsv1alpha1.Ne
 	// remove operation annotation 'migrate'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, network, v1beta1constants.GardenerOperation); err != nil {
 		msg := "Error removing annotation from Network"
-		r.recorder.Eventf(network, corev1.EventTypeWarning, EventNetworkRestoration, "%s: %+v", msg, err)
 		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) updateStatusProcessing(ctx context.Context, network *extensionsv1alpha1.Network, lastOperationType gardencorev1beta1.LastOperationType, eventReason, description string) error {
+func (r *reconciler) updateStatusProcessing(ctx context.Context, network *extensionsv1alpha1.Network, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
 	r.logger.Info(description, "network", network.Name)
-	r.recorder.Event(network, corev1.EventTypeNormal, eventReason, description)
 	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, network, func() error {
 		network.Status.LastOperation = extensionscontroller.LastOperation(lastOperationType, gardencorev1beta1.LastOperationStateProcessing, 1, description)
 		return nil
 	})
 }
 
-func (r *reconciler) updateStatusError(ctx context.Context, err error, network *extensionsv1alpha1.Network, lastOperationType gardencorev1beta1.LastOperationType, eventReason, description string) error {
-	r.recorder.Eventf(network, corev1.EventTypeWarning, eventReason, "%s: %+v", description, err)
+func (r *reconciler) updateStatusError(ctx context.Context, err error, network *extensionsv1alpha1.Network, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
 	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, network, func() error {
 		network.Status.ObservedGeneration = network.Generation
 		network.Status.LastOperation, network.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err)), 50, gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, err.Error()))...)
@@ -245,9 +225,8 @@ func (r *reconciler) updateStatusError(ctx context.Context, err error, network *
 	})
 }
 
-func (r *reconciler) updateStatusSuccess(ctx context.Context, network *extensionsv1alpha1.Network, lastOperationType gardencorev1beta1.LastOperationType, eventReason, description string) error {
+func (r *reconciler) updateStatusSuccess(ctx context.Context, network *extensionsv1alpha1.Network, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
 	r.logger.Info(description, "network", network.Name)
-	r.recorder.Event(network, corev1.EventTypeNormal, eventReason, description)
 	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, network, func() error {
 		network.Status.ObservedGeneration = network.Generation
 		network.Status.LastOperation, network.Status.LastError = extensionscontroller.ReconcileSucceeded(lastOperationType, description)

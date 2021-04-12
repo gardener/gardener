@@ -118,14 +118,14 @@ func add(mgr manager.Manager, args AddArgs) error {
 // reconciler reconciles Extension resources of Gardener's
 // `extensions.gardener.cloud` API group.
 type reconciler struct {
-	logger        logr.Logger
-	actuator      Actuator
-	finalizerName string
+	logger   logr.Logger
+	actuator Actuator
 
 	client client.Client
 	reader client.Reader
 
-	resync time.Duration
+	resync        time.Duration
+	finalizerName string
 }
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles

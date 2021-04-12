@@ -20,9 +20,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -39,27 +37,15 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
-const (
-	// EventControlPlaneReconciliation an event reason to describe control plane reconciliation.
-	EventControlPlaneReconciliation string = "ControlPlaneReconciliation"
-	// EventControlPlaneRestoration an event reason to describe control plane restoration.
-	EventControlPlaneRestoration string = "ControlPlaneRestoration"
-	// EventControlPlaneDeletion an event reason to describe control plane deletion.
-	EventControlPlaneDeletion string = "ControlPlaneDeletion"
-	// EventControlPlaneMigration an event reason to describe control plane migration.
-	EventControlPlaneMigration string = "ControlPlaneMigration"
-
-	// RequeueAfter is the duration to requeue a controlplane reconciliation if indicated by the actuator.
-	RequeueAfter = 2 * time.Second
-)
+// RequeueAfter is the duration to requeue a controlplane reconciliation if indicated by the actuator.
+const RequeueAfter = 2 * time.Second
 
 type reconciler struct {
 	logger   logr.Logger
 	actuator Actuator
 
-	client   client.Client
-	reader   client.Reader
-	recorder record.EventRecorder
+	client client.Client
+	reader client.Reader
 }
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
@@ -70,8 +56,8 @@ func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler 
 		&reconciler{
 			logger:   log.Log.WithName(ControllerName),
 			actuator: actuator,
-			recorder: mgr.GetEventRecorderFor(ControllerName),
-		})
+		},
+	)
 }
 
 func (r *reconciler) InjectFunc(f inject.Func) error {
@@ -133,7 +119,6 @@ func (r *reconciler) reconcile(ctx context.Context, cp *extensionsv1alpha1.Contr
 	}
 
 	r.logger.Info("Starting the reconciliation of controlplane", "controlplane", cp.Name)
-	r.recorder.Event(cp, corev1.EventTypeNormal, EventControlPlaneReconciliation, "Reconciling the controlplane")
 	requeue, err := r.actuator.Reconcile(ctx, cp, cluster)
 	if err != nil {
 		msg := "Error reconciling controlplane"
@@ -143,7 +128,6 @@ func (r *reconciler) reconcile(ctx context.Context, cp *extensionsv1alpha1.Contr
 
 	msg := "Successfully reconciled controlplane"
 	r.logger.Info(msg, "controlplane", cp.Name)
-	r.recorder.Event(cp, corev1.EventTypeNormal, EventControlPlaneReconciliation, msg)
 	if err := r.updateStatusSuccess(ctx, cp, operationType, msg); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -164,7 +148,6 @@ func (r *reconciler) restore(ctx context.Context, cp *extensionsv1alpha1.Control
 	}
 
 	r.logger.Info("Starting the restoration of controlplane", "controlplane", cp.Name)
-	r.recorder.Event(cp, corev1.EventTypeNormal, EventControlPlaneRestoration, "Restoring the controlplane")
 	requeue, err := r.actuator.Restore(ctx, cp, cluster)
 	if err != nil {
 		msg := "Error restoring controlplane"
@@ -174,7 +157,6 @@ func (r *reconciler) restore(ctx context.Context, cp *extensionsv1alpha1.Control
 
 	msg := "Successfully restored controlplane"
 	r.logger.Info(msg, "controlplane", cp.Name)
-	r.recorder.Event(cp, corev1.EventTypeNormal, EventControlPlaneRestoration, msg)
 	if err := r.updateStatusSuccess(ctx, cp, gardencorev1beta1.LastOperationTypeRestore, msg); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -186,7 +168,6 @@ func (r *reconciler) restore(ctx context.Context, cp *extensionsv1alpha1.Control
 	// remove operation annotation 'restore'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, cp, v1beta1constants.GardenerOperation); err != nil {
 		msg := "Error removing annotation from ControlPlane"
-		r.recorder.Eventf(cp, corev1.EventTypeWarning, EventControlPlaneMigration, "%s: %+v", msg, err)
 		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 
@@ -199,17 +180,14 @@ func (r *reconciler) migrate(ctx context.Context, cp *extensionsv1alpha1.Control
 	}
 
 	r.logger.Info("Starting the migration of controlplane", "controlplane", cp.Name)
-	r.recorder.Event(cp, corev1.EventTypeNormal, EventControlPlaneMigration, "Migrating the cp")
 	if err := r.actuator.Migrate(ctx, cp, cluster); err != nil {
 		msg := "Error migrating controlplane"
-		r.recorder.Eventf(cp, corev1.EventTypeWarning, EventControlPlaneMigration, "%s: %+v", msg, err)
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cp, gardencorev1beta1.LastOperationTypeMigrate, msg)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
 	msg := "Successfully migrated controlplane"
 	r.logger.Info(msg, "controlplane", cp.Name)
-	r.recorder.Event(cp, corev1.EventTypeNormal, EventControlPlaneMigration, msg)
 	if err := r.updateStatusSuccess(ctx, cp, gardencorev1beta1.LastOperationTypeMigrate, msg); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -222,7 +200,6 @@ func (r *reconciler) migrate(ctx context.Context, cp *extensionsv1alpha1.Control
 	// remove operation annotation 'migrate'
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, cp, v1beta1constants.GardenerOperation); err != nil {
 		msg := "Error removing annotation from ControlPlane"
-		r.recorder.Eventf(cp, corev1.EventTypeWarning, EventControlPlaneMigration, "%s: %+v", msg, err)
 		return reconcile.Result{}, fmt.Errorf("%s: %+v", msg, err)
 	}
 
@@ -241,17 +218,14 @@ func (r *reconciler) delete(ctx context.Context, cp *extensionsv1alpha1.ControlP
 	}
 
 	r.logger.Info("Starting the deletion of controlplane", "controlplane", cp.Name)
-	r.recorder.Event(cp, corev1.EventTypeNormal, EventControlPlaneDeletion, "Deleting the cp")
 	if err := r.actuator.Delete(ctx, cp, cluster); err != nil {
 		msg := "Error deleting controlplane"
-		r.recorder.Eventf(cp, corev1.EventTypeWarning, EventControlPlaneDeletion, "%s: %+v", msg, err)
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), cp, operationType, msg)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
 	msg := "Successfully deleted controlplane"
 	r.logger.Info(msg, "controlplane", cp.Name)
-	r.recorder.Event(cp, corev1.EventTypeNormal, EventControlPlaneDeletion, msg)
 	if err := r.updateStatusSuccess(ctx, cp, operationType, msg); err != nil {
 		return reconcile.Result{}, err
 	}

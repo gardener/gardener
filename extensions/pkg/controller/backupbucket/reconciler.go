@@ -19,9 +19,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -38,20 +36,12 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
-const (
-	// EventBackupBucketReconciliation an event reason to describe backup entry reconciliation.
-	EventBackupBucketReconciliation string = "BackupBucketReconciliation"
-	// EventBackupBucketDeletion an event reason to describe backup entry deletion.
-	EventBackupBucketDeletion string = "BackupBucketDeletion"
-)
-
 type reconciler struct {
 	logger   logr.Logger
 	actuator Actuator
 
-	client   client.Client
-	reader   client.Reader
-	recorder record.EventRecorder
+	client client.Client
+	reader client.Reader
 }
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
@@ -62,8 +52,8 @@ func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler 
 		&reconciler{
 			logger:   log.Log.WithName(ControllerName),
 			actuator: actuator,
-			recorder: mgr.GetEventRecorderFor(ControllerName),
-		})
+		},
+	)
 }
 
 func (r *reconciler) InjectFunc(f inject.Func) error {
@@ -115,7 +105,6 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 	}
 
 	r.logger.Info("Starting the reconciliation of backupbucket", "backupbucket", bb.Name)
-	r.recorder.Event(bb, corev1.EventTypeNormal, EventBackupBucketReconciliation, "Reconciling the backupbucket")
 	if err := r.actuator.Reconcile(ctx, bb); err != nil {
 		msg := "Error reconciling backupbucket"
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), bb, operationType, msg)
@@ -124,7 +113,6 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 
 	msg := "Successfully reconciled backupbucket"
 	r.logger.Info(msg, "backupbucket", bb.Name)
-	r.recorder.Event(bb, corev1.EventTypeNormal, EventBackupBucketReconciliation, msg)
 	if err := r.updateStatusSuccess(ctx, bb, operationType, msg); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -144,17 +132,14 @@ func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBu
 	}
 
 	r.logger.Info("Starting the deletion of backupbucket", "backupbucket", bb.Name)
-	r.recorder.Event(bb, corev1.EventTypeNormal, EventBackupBucketDeletion, "Deleting the backupbucket")
 	if err := r.actuator.Delete(ctx, bb); err != nil {
 		msg := "Error deleting backupbucket"
-		r.recorder.Eventf(bb, corev1.EventTypeWarning, EventBackupBucketDeletion, "%s: %+v", msg, err)
 		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), bb, operationType, msg)
 		return extensionscontroller.ReconcileErr(err)
 	}
 
 	msg := "Successfully deleted backupbucket"
 	r.logger.Info(msg, "backupbucket", bb.Name)
-	r.recorder.Event(bb, corev1.EventTypeNormal, EventBackupBucketDeletion, msg)
 	if err := r.updateStatusSuccess(ctx, bb, operationType, msg); err != nil {
 		return reconcile.Result{}, err
 	}
