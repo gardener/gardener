@@ -222,8 +222,8 @@ func WaitUntilDeleted(ctx context.Context, client client.Client, namespace, name
 	return kutil.WaitUntilResourceDeleted(ctx, client, mr, IntervalWait)
 }
 
-// UpdateKeepObjects updates the keepObjects field of the managed resource with the given name in the given namespace.
-func UpdateKeepObjects(ctx context.Context, c client.Client, namespace, name string, keepObjects bool) error {
+// SetKeepObjects updates the keepObjects field of the managed resource with the given name in the given namespace.
+func SetKeepObjects(ctx context.Context, c client.Client, namespace, name string, keepObjects bool) error {
 	resource := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,

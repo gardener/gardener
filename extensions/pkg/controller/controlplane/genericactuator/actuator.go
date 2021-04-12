@@ -534,15 +534,15 @@ func (a *actuator) Migrate(
 	cluster *extensionscontroller.Cluster,
 ) error {
 	// Keep objects for shoot managed resources so that they are not deleted from the shoot during the migration
-	if err := managedresources.UpdateKeepObjects(ctx, a.client, cp.Namespace, ControlPlaneShootChartResourceName, true); err != nil {
+	if err := managedresources.SetKeepObjects(ctx, a.client, cp.Namespace, ControlPlaneShootChartResourceName, true); err != nil {
 		return errors.Wrapf(err, "could not keep objects of managed resource containing shoot chart for controlplane '%s'", kutil.ObjectName(cp))
 	}
 	if a.controlPlaneShootCRDsChart != nil {
-		if err := managedresources.UpdateKeepObjects(ctx, a.client, cp.Namespace, ControlPlaneShootCRDsChartResourceName, true); err != nil {
+		if err := managedresources.SetKeepObjects(ctx, a.client, cp.Namespace, ControlPlaneShootCRDsChartResourceName, true); err != nil {
 			return errors.Wrapf(err, "could not keep objects of managed resource containing shoot CRDs chart for controlplane '%s'", kutil.ObjectName(cp))
 		}
 	}
-	if err := managedresources.UpdateKeepObjects(ctx, a.client, cp.Namespace, StorageClassesChartResourceName, true); err != nil {
+	if err := managedresources.SetKeepObjects(ctx, a.client, cp.Namespace, StorageClassesChartResourceName, true); err != nil {
 		return errors.Wrapf(err, "could not keep objects of managed resource containing storage classes chart for controlplane '%s'", kutil.ObjectName(cp))
 	}
 
