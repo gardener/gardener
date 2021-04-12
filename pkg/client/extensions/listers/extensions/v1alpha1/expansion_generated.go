@@ -26,6 +26,14 @@ type BackupBucketListerExpansion interface{}
 // BackupEntryLister.
 type BackupEntryListerExpansion interface{}
 
+// BastionListerExpansion allows custom methods to be added to
+// BastionLister.
+type BastionListerExpansion interface{}
+
+// BastionNamespaceListerExpansion allows custom methods to be added to
+// BastionNamespaceLister.
+type BastionNamespaceListerExpansion interface{}
+
 // ClusterListerExpansion allows custom methods to be added to
 // ClusterLister.
 type ClusterListerExpansion interface{}

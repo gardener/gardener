@@ -28,6 +28,8 @@ type Interface interface {
 	BackupBuckets() BackupBucketInformer
 	// BackupEntries returns a BackupEntryInformer.
 	BackupEntries() BackupEntryInformer
+	// Bastions returns a BastionInformer.
+	Bastions() BastionInformer
 	// Clusters returns a ClusterInformer.
 	Clusters() ClusterInformer
 	// ContainerRuntimes returns a ContainerRuntimeInformer.
@@ -65,6 +67,11 @@ func (v *version) BackupBuckets() BackupBucketInformer {
 // BackupEntries returns a BackupEntryInformer.
 func (v *version) BackupEntries() BackupEntryInformer {
 	return &backupEntryInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// Bastions returns a BastionInformer.
+func (v *version) Bastions() BastionInformer {
+	return &bastionInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Clusters returns a ClusterInformer.

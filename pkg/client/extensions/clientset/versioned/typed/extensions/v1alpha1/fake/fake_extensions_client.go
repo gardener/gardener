@@ -36,6 +36,10 @@ func (c *FakeExtensionsV1alpha1) BackupEntries() v1alpha1.BackupEntryInterface {
 	return &FakeBackupEntries{c}
 }
 
+func (c *FakeExtensionsV1alpha1) Bastions(namespace string) v1alpha1.BastionInterface {
+	return &FakeBastions{c, namespace}
+}
+
 func (c *FakeExtensionsV1alpha1) Clusters() v1alpha1.ClusterInterface {
 	return &FakeClusters{c}
 }

@@ -28,6 +28,7 @@ type ExtensionsV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	BackupBucketsGetter
 	BackupEntriesGetter
+	BastionsGetter
 	ClustersGetter
 	ContainerRuntimesGetter
 	ControlPlanesGetter
@@ -49,6 +50,10 @@ func (c *ExtensionsV1alpha1Client) BackupBuckets() BackupBucketInterface {
 
 func (c *ExtensionsV1alpha1Client) BackupEntries() BackupEntryInterface {
 	return newBackupEntries(c)
+}
+
+func (c *ExtensionsV1alpha1Client) Bastions(namespace string) BastionInterface {
+	return newBastions(c, namespace)
 }
 
 func (c *ExtensionsV1alpha1Client) Clusters() ClusterInterface {
