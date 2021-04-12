@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	. "github.com/gardener/gardener/pkg/registry/seedmanagement/managedseed"
 
@@ -55,6 +56,16 @@ var _ = Describe("Strategy", func() {
 
 			strategy.PrepareForUpdate(ctx, newManagedSeed, oldManagedSeed)
 			Expect(newManagedSeed.Generation).To(Equal(oldManagedSeed.Generation + 1))
+		})
+
+		It("should increase the generation if the operation annotation with value reconcile was added", func() {
+			newManagedSeed.Annotations = map[string]string{
+				v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+			}
+
+			strategy.PrepareForUpdate(ctx, newManagedSeed, oldManagedSeed)
+			Expect(newManagedSeed.Generation).To(Equal(oldManagedSeed.Generation + 1))
+			Expect(newManagedSeed.Annotations).To(BeEmpty())
 		})
 
 		It("should not increase the generation if neither the spec has changed nor the deletion timestamp is set", func() {
