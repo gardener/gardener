@@ -147,6 +147,18 @@ func (u unstructuredStatusAccessor) GetLastOperation() *gardencorev1beta1.LastOp
 	return lastOperation
 }
 
+// SetLastOperation implements Status.
+func (u unstructuredStatusAccessor) SetLastOperation(lastOp *gardencorev1beta1.LastOperation) {
+	unstrc, err := runtime.DefaultUnstructuredConverter.ToUnstructured(lastOp)
+	if err != nil {
+		return
+	}
+
+	if err := unstructured.SetNestedField(u.UnstructuredContent(), unstrc, "status", "lastOperation"); err != nil {
+		return
+	}
+}
+
 // GetLastError implements Status.
 func (u unstructuredStatusAccessor) GetLastError() *gardencorev1beta1.LastError {
 	val, ok, err := unstructured.NestedFieldNoCopy(u.UnstructuredContent(), "status", "lastError")
@@ -161,9 +173,28 @@ func (u unstructuredStatusAccessor) GetLastError() *gardencorev1beta1.LastError 
 	return lastError
 }
 
+// SetLastError implements Status.
+func (u unstructuredStatusAccessor) SetLastError(lastErr *gardencorev1beta1.LastError) {
+	unstrc, err := runtime.DefaultUnstructuredConverter.ToUnstructured(lastErr)
+	if err != nil {
+		return
+	}
+
+	if err := unstructured.SetNestedField(u.UnstructuredContent(), unstrc, "status", "lastError"); err != nil {
+		return
+	}
+}
+
 // GetObservedGeneration implements Status.
 func (u unstructuredStatusAccessor) GetObservedGeneration() int64 {
 	return nestedInt64(u.Object, "status", "observedGeneration")
+}
+
+// SetObservedGeneration implements Status.
+func (u unstructuredStatusAccessor) SetObservedGeneration(generation int64) {
+	if err := unstructured.SetNestedField(u.UnstructuredContent(), generation, "status", "observedGeneration"); err != nil {
+		return
+	}
 }
 
 // GetState implements Status.

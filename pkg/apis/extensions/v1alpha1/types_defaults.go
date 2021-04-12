@@ -93,14 +93,29 @@ func (d *DefaultStatus) GetLastOperation() *gardencorev1beta1.LastOperation {
 	return d.LastOperation
 }
 
+// SetLastOperation implements Status.
+func (d *DefaultStatus) SetLastOperation(lastOp *gardencorev1beta1.LastOperation) {
+	d.LastOperation = lastOp
+}
+
 // GetLastError implements Status.
 func (d *DefaultStatus) GetLastError() *gardencorev1beta1.LastError {
 	return d.LastError
 }
 
+// SetLastError implements Status.
+func (d *DefaultStatus) SetLastError(lastErr *gardencorev1beta1.LastError) {
+	d.LastError = lastErr
+}
+
 // GetObservedGeneration implements Status.
 func (d *DefaultStatus) GetObservedGeneration() int64 {
 	return d.ObservedGeneration
+}
+
+// SetObservedGeneration implements Status.
+func (d *DefaultStatus) SetObservedGeneration(generation int64) {
+	d.ObservedGeneration = generation
 }
 
 // GetState implements Status.

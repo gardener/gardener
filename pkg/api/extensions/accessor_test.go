@@ -146,6 +146,15 @@ var _ = Describe("Accessor", func() {
 				})
 			})
 
+			Describe("#SetLastOperation()", func() {
+				It("should set the last operation", func() {
+					lastOp := &gardencorev1beta1.LastOperation{Description: "foo"}
+					acc := mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{})
+					acc.SetLastOperation(lastOp)
+					Expect(acc.GetLastOperation()).To(Equal(lastOp))
+				})
+			})
+
 			Describe("#GetLastError", func() {
 				It("should get the last error", func() {
 					var (
@@ -154,6 +163,15 @@ var _ = Describe("Accessor", func() {
 					)
 
 					Expect(acc.GetLastError()).To(Equal(&gardencorev1beta1.LastError{Description: desc}))
+				})
+			})
+
+			Describe("#SetLastError()", func() {
+				It("should set the last error", func() {
+					lastErr := &gardencorev1beta1.LastError{Description: "bar"}
+					acc := mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{})
+					acc.SetLastError(lastErr)
+					Expect(acc.GetLastError()).To(Equal(lastErr))
 				})
 			})
 
@@ -191,6 +209,23 @@ var _ = Describe("Accessor", func() {
 					acc.SetState(state)
 					actualState := acc.GetState()
 					Expect(actualState).To(Equal(state))
+				})
+			})
+
+			Describe("#GetObservedGeneration", func() {
+				It("should get the observed generation", func() {
+					var generation int64 = 1337
+					acc := mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{ObservedGeneration: generation})
+					Expect(acc.GetObservedGeneration()).To(Equal(generation))
+				})
+			})
+
+			Describe("#SetObservedGeneration", func() {
+				It("should set the observed generation", func() {
+					var generation int64 = 1337
+					acc := mkUnstructuredAccessorWithStatus(extensionsv1alpha1.DefaultStatus{})
+					acc.SetObservedGeneration(generation)
+					Expect(acc.GetObservedGeneration()).To(Equal(generation))
 				})
 			})
 
