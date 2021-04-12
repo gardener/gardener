@@ -41,6 +41,8 @@ const (
 	DNSExternalName = "external"
 	// DNSProviderRoleAdditional is a constant for additionally managed DNS providers.
 	DNSProviderRoleAdditional = "managed-dns-provider"
+	// DNSRealmAnnotation is the annotation key for restricting provider access for shoot DNS entries
+	DNSRealmAnnotation = "dns.gardener.cloud/realms"
 )
 
 // GenerateDNSProviderName creates a name for the dns provider out of the passed `secretName` and `providerType`.
@@ -107,6 +109,10 @@ func (b *Botanist) DeployInternalDNS(ctx context.Context) error {
 	).Deploy(ctx)
 }
 
+func (b *Botanist) enableDNSProviderForShootDNSEntries() map[string]string {
+	return map[string]string{DNSRealmAnnotation: fmt.Sprintf("%s,", b.Shoot.SeedNamespace)}
+}
+
 // DefaultExternalDNSProvider returns the external DNSProvider if external DNS is
 // enabled and if not DeployWaiter which removes the external DNSProvider.
 func (b *Botanist) DefaultExternalDNSProvider(seedClient client.Client) component.DeployWaiter {
@@ -128,6 +134,7 @@ func (b *Botanist) DefaultExternalDNSProvider(seedClient client.Client) componen
 					Include: b.Shoot.ExternalDomain.IncludeZones,
 					Exclude: b.Shoot.ExternalDomain.ExcludeZones,
 				},
+				Annotations: b.enableDNSProviderForShootDNSEntries(),
 			},
 			nil,
 		)
@@ -299,6 +306,7 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context, gardenClient, see
 						Include: includeZones,
 						Exclude: excludeZones,
 					},
+					Annotations: b.enableDNSProviderForShootDNSEntries(),
 				},
 				nil,
 			)

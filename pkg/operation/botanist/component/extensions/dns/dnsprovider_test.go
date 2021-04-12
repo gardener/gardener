@@ -156,6 +156,10 @@ var _ = Describe("#DNSProvider", func() {
 				vals.Labels = map[string]string{"foo": "bar"}
 				expectedDNS.ObjectMeta.Labels = map[string]string{"foo": "bar"}
 			}),
+			Entry("with custom annotations", func() {
+				vals.Annotations = map[string]string{"foo": "bar"}
+				expectedDNS.ObjectMeta.Annotations = map[string]string{"foo": "bar"}
+			}),
 			Entry("with no exclude zones", func() {
 				vals.Zones.Exclude = nil
 				expectedDNS.Spec.Zones.Exclude = nil
