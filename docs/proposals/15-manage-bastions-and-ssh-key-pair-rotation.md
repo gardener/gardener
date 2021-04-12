@@ -6,7 +6,7 @@ status: implementable
 authors:
 - "@petersutter"
 reviewers:
-- TODO
+- "@rfranzke"
 ---
 
 # GEP-15: Bastion Management and SSH Key Pair Rotation
