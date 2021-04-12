@@ -49,7 +49,7 @@ The proposal, as outlined below, suggests to implement the necessary changes in 
 ### Involved Components
 The following is a list of involved components, that either need to be newly introduced or extended if already existing
 - `gardenctlv2` (or any other client)
-  - Creates `Bastion` resource in the garden cluster, see `Resource
+  - Creates `Bastion` resource in the garden cluster, see [resource example](#resource-example) below
   - Establishes an SSH connection to a shoot node, using a bastion host as proxy
   - Heartbeats / keeps alive the `Bastion` resource during SSH connection
 - Gardener extension provider <infra>
