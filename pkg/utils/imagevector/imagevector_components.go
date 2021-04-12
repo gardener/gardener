@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"gopkg.in/yaml.v2"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 const (
@@ -37,12 +38,16 @@ func ReadComponentOverwrite(r io.Reader) (ComponentImageVectors, error) {
 		return nil, err
 	}
 
-	out := make(ComponentImageVectors, len(data.Components))
+	componentImageVectors := make(ComponentImageVectors, len(data.Components))
 	for _, component := range data.Components {
-		out[component.Name] = component.ImageVectorOverwrite
+		componentImageVectors[component.Name] = component.ImageVectorOverwrite
 	}
 
-	return out, nil
+	if errs := ValidateComponentImageVectors(componentImageVectors, field.NewPath("components")); len(errs) > 0 {
+		return nil, errs.ToAggregate()
+	}
+
+	return componentImageVectors, nil
 }
 
 // ReadComponentOverwriteFile reads an ComponentImageVector from the file with the given name.
