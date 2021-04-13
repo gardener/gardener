@@ -88,6 +88,7 @@ The following is a list of involved components, that either need to be newly int
 4. `GCM`:
     - During reconcile of the `Bastion` resource:
       - Creates SSH key pair in memory. Stores the secret key encrypted under `status.sshPrivateKey` using `spec.pgpPublicKey`. Stores the public key under `status.sshPublicKey`
+        - *Sidenote: We do not want to accept the users own SSH public key because then we cannot control how well they were picked, whether they are rotated and stored safely (the user hasn't leaked her private key), etc.*
       - according to `spec.shootRef`, sets the `status.seedName`
       - according to `spec.shootRef`, sets the `status.providerType`
 5. Gardener extension provider <infra> / Bastion Controller on Seed:
