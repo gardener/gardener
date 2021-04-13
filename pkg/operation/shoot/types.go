@@ -87,8 +87,9 @@ type Shoot struct {
 type Components struct {
 	BackupEntry      component.DeployMigrateWaiter
 	ClusterIdentity  component.Deployer
-	Extensions       *Extensions
 	ControlPlane     *ControlPlane
+	Extensions       *Extensions
+	NetworkPolicies  component.Deployer
 	SystemComponents *SystemComponents
 }
 

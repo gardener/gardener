@@ -151,6 +151,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	// other components
 	o.Shoot.Components.BackupEntry = b.DefaultCoreBackupEntry(b.K8sGardenClient.DirectClient())
 	o.Shoot.Components.ClusterIdentity = clusteridentity.New(o.Shoot.Info.Status.ClusterIdentity, o.GardenClusterIdentity, o.Shoot.Info.Name, o.Shoot.Info.Namespace, o.Shoot.SeedNamespace, string(o.Shoot.Info.Status.UID), b.K8sGardenClient.DirectClient(), b.K8sSeedClient.DirectClient(), b.Logger)
+	o.Shoot.Components.NetworkPolicies, err = b.DefaultNetworkPolicies(sniPhase)
+	if err != nil {
+		return nil, err
+	}
 
 	return b, nil
 }
