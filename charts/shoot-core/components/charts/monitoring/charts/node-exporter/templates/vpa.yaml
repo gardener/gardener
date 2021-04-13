@@ -5,6 +5,12 @@ metadata:
   name: node-exporter
   namespace: {{ .Release.Namespace }}
 spec:
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          cpu: 50m
+          memory: 50Mi
   targetRef:
     apiVersion: {{ include "daemonsetversion" . }}
     kind: DaemonSet
