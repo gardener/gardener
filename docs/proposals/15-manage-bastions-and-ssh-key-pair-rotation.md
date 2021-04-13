@@ -196,21 +196,19 @@ Currently, the SSH key pair for the shoot nodes are created once during shoot cl
 
 ### Rotation Proposal
 - `gardeneruser` original user data [component](https://github.com/gardener/gardener/tree/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser):
-    - The `gardeneruser` [create script](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser/templates/scripts/create.tpl.sh) should be changed into a reconcile script script, and renamed accordingly. It needs to be adapted so that the `authorized_keys` file will be updated / overwritten with the current SSH public key from the cloud-config user data.
+    - The `gardeneruser` [create script](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser/templates/scripts/create.tpl.sh) should be changed into a reconcile script script, and renamed accordingly. It needs to be adapted so that the `authorized_keys` file will be updated / overwritten with the current and old SSH public key from the cloud-config user data.
 - Rotation trigger:
     - once in the maintenance time window
     - On demand, by annotating the shoot with `gardener.cloud/operation: rotate-ssh-keypair`
 - On rotation trigger:
     - `gardenlet`
         - Prerequisite of SSH key pair rotation: all nodes of all the worker pools have successfully applied the desired version of their cloud-config user data
-        - Creates secret `ssh-keypair.old` with the content of `ssh-keypair` in the seed-shoot namespace. The old private key can be used by clients as fallback, in case the new SSH public key is not yet applied on the node
-        - Generates new `ssh-keypair`
-        - The `OperatingSystemConfig` needs to be re-generated and deployed
+        - Creates or updates the secret `ssh-keypair.old` with the content of `ssh-keypair` in the seed-shoot namespace. The old private key can be used by clients as fallback, in case the new SSH public key is not yet applied on the node
+        - Generates new `ssh-keypair` secret
+        - The `OperatingSystemConfig` needs to be re-generated and deployed with the new and old SSH public key
     - As usual (more details on https://github.com/gardener/gardener/blob/master/docs/extensions/operatingsystemconfig.md):
         - Once the `cloud-config-<X>` secret in the `kube-system` namespace of the shoot cluster is updated, it will be picked up by the [`downloader` script](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader/templates/scripts/download-cloud-config.tpl.sh) (checks every 30s for updates)
         - The `downloader` runs the ["execution" script](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor/templates/scripts/execute-cloud-config.tpl.sh) from the `cloud-config-<X>` secret
         - The "execution" script includes also the original user data script, which it writes to `PATH_CLOUDCONFIG`, compares it against the previous cloud config and runs the script in case it has changed
         - Running the [original user data](https://github.com/gardener/gardener/tree/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/original) script will also run the `gardeneruser` component, where the `authorized_keys` file will be updated
         - After the most recent cloud-config user data was applied, the "execution" script annotates the node with `checksum/cloud-config-data: <cloud-config-checksum>` to indicate the success
-- Shoot reconciliation:
-  - Once the cloud-config user data is applied to all nodes (as described below) the `ssh-keypair.old` secret can be deleted.
