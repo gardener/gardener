@@ -24,7 +24,7 @@ reviewers:
     - [Rotation Proposal](#rotation-proposal)
 
 ## Motivation
-`gardenctl` (v1) has the functionality to setup ssh sessions to the targeted shoot cluster. For this, infrastructure resources like vms, firewall rules etc. have to be created. `gardenctl` will clean up the resources after the SSH session. However, there were issues in the past where that infrastructure resources did not get cleaned up properly, for example due to some error and was not retried. Hence, the proposal is to have a dedicated controller (for each infrastructure) that manages the infrastructure resources. `gardenctl` also re-used the ssh node credentials for the bastion host. Instead, a new temporary SSH key pair should be created for the bastion host.
+`gardenctl` (v1) has the functionality to setup SSH sessions to the targeted shoot cluster. For this, infrastructure resources like vms, firewall rules etc. have to be created. `gardenctl` will clean up the resources after the SSH session. However, there were issues in the past where that infrastructure resources did not get cleaned up properly, for example due to some error and was not retried. Hence, the proposal is to have a dedicated controller (for each infrastructure) that manages the infrastructure resources. `gardenctl` also re-used the SSH node credentials for the bastion host. Instead, a new temporary SSH key pair should be created for the bastion host.
 The static shoot-specific SSH key pair should be rotated regularly, for example once in the maintenance time window.
 
 Changes to the `Bastion` resource should only be allowed for controllers on seeds that are responsible for it. This cannot be restricted when using custom resources.
@@ -41,7 +41,7 @@ The proposal, as outlined below, suggests to implement the necessary changes in 
 
 ### Non-Goals
 - Node-specific access
-- Auditability on operating system level (not only auditing the ssh login, but everything that is done on a node and other respective resources, e.g. by using dedicated operating system users)
+- Auditability on operating system level (not only auditing the SSH login, but everything that is done on a node and other respective resources, e.g. by using dedicated operating system users)
 - Reuse of temporarily created necessary infrastructure resources by different users
 
 ## Proposal
