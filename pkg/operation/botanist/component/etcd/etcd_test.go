@@ -183,8 +183,8 @@ var _ = Describe("Etcd", func() {
 					corev1.ResourceMemory: resource.MustParse("1G"),
 				},
 				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("900m"),
-					corev1.ResourceMemory: resource.MustParse("3G"),
+					corev1.ResourceCPU:    resource.MustParse("2300m"),
+					corev1.ResourceMemory: resource.MustParse("6G"),
 				},
 			}
 			if existingResourcesContainerEtcd != nil {
@@ -396,11 +396,11 @@ var _ = Describe("Etcd", func() {
 						},
 						LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 							CPU: hvpav1alpha1.ChangeParams{
-								Value:      pointer.StringPtr("1"),
+								Value:      pointer.StringPtr("2"),
 								Percentage: pointer.Int32Ptr(40),
 							},
 							Memory: hvpav1alpha1.ChangeParams{
-								Value:      pointer.StringPtr("1G"),
+								Value:      pointer.StringPtr("5G"),
 								Percentage: pointer.Int32Ptr(40),
 							},
 						},
