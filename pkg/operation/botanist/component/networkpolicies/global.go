@@ -283,10 +283,10 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTran
 								IPBlock: &networkingv1.IPBlock{
 									CIDR: "0.0.0.0/0",
 									Except: append([]string{
-										"10.0.0.0/8",
-										"172.16.0.0/12",
-										"192.168.0.0/16",
-										"100.64.0.0./10",
+										Private8BitBlock().String(),
+										Private12BitBlock().String(),
+										Private16BitBlock().String(),
+										CarrierGradeNATBlock().String(),
 									}, values.BlockedAddresses...),
 								},
 							}},
