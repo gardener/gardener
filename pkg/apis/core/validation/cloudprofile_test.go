@@ -22,8 +22,10 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -187,6 +189,42 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 				Expect(errorList).To(BeEmpty())
 			})
+
+			DescribeTable("CloudProfile metadata",
+				func(objectMeta metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
+					cloudProfile.ObjectMeta = objectMeta
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(matcher)
+				},
+
+				Entry("should forbid CloudProfile with empty metadata",
+					metav1.ObjectMeta{},
+					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("metadata.name"),
+					}))),
+				),
+				Entry("should forbid CloudProfile with empty name",
+					metav1.ObjectMeta{Name: ""},
+					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("metadata.name"),
+					}))),
+				),
+				Entry("should allow CloudProfile with '.' in the name",
+					metav1.ObjectMeta{Name: "profile.test"},
+					BeEmpty(),
+				),
+				Entry("should forbid CloudProfile with '_' in the name (not a DNS-1123 subdomain)",
+					metav1.ObjectMeta{Name: "profile_test"},
+					ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("metadata.name"),
+					}))),
+				),
+			)
 
 			It("should forbid not specifying a type", func() {
 				cloudProfile.Spec.Type = ""
