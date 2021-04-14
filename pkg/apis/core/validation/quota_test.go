@@ -19,8 +19,10 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,6 +57,48 @@ var _ = Describe("Quota Validation Tests ", func() {
 
 			Expect(errorList).To(HaveLen(0))
 		})
+
+		DescribeTable("Quota metadata",
+			func(objectMeta metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
+				quota.ObjectMeta = objectMeta
+
+				errorList := ValidateQuota(quota)
+
+				Expect(errorList).To(matcher)
+			},
+
+			Entry("should forbid Quota with empty metadata",
+				metav1.ObjectMeta{},
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("metadata.name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("metadata.namespace"),
+					})),
+				),
+			),
+			Entry("should forbid Quota with empty name",
+				metav1.ObjectMeta{Name: "", Namespace: "my-namespace"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should allow Quota with '.' in the name",
+				metav1.ObjectMeta{Name: "quota.test", Namespace: "my-namespace"},
+				BeEmpty(),
+			),
+			Entry("should forbid Quota with '_' in the name (not a DNS-1123 subdomain)",
+				metav1.ObjectMeta{Name: "quota_test", Namespace: "my-namespace"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+		)
 
 		It("should forbid Quota specification with empty or invalid keys", func() {
 			quota.ObjectMeta = metav1.ObjectMeta{}

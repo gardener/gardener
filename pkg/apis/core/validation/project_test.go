@@ -79,49 +79,62 @@ var _ = Describe("Project Validation Tests", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should forbid Project resources with empty metadata", func() {
-			project.ObjectMeta = metav1.ObjectMeta{}
+		DescribeTable("Project metadata",
+			func(objectMeta metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
+				project.ObjectMeta = objectMeta
 
-			errorList := ValidateProject(project)
+				errorList := ValidateProject(project)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.name"),
-			}))))
-		})
+				Expect(errorList).To(matcher)
+			},
 
-		It("should forbid Projects having too long names", func() {
-			project.ObjectMeta.Name = "project-name-too-long"
-
-			errorList := ValidateProject(project)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeTooLong),
-				"Field": Equal("metadata.name"),
-			}))))
-		})
-
-		It("should forbid Projects with namespace gardener-system-seed-lease", func() {
-			project.ObjectMeta.Namespace = "gardener-system-seed-lease"
-
-			errorList := ValidateProject(project)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("metadata.namespace"),
-			}))))
-		})
-
-		It("should forbid Projects having two consecutive hyphens", func() {
-			project.ObjectMeta.Name = "in--valid"
-
-			errorList := ValidateProject(project)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("metadata.name"),
-			}))))
-		})
+			Entry("should forbid Project with empty metadata",
+				metav1.ObjectMeta{},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should forbid Project with empty name",
+				metav1.ObjectMeta{Name: ""},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should allow Project with '.' in the name",
+				metav1.ObjectMeta{Name: "project.a"},
+				BeEmpty(),
+			),
+			Entry("should forbid Project with '_' in the name (not a DNS-1123 subdomain)",
+				metav1.ObjectMeta{Name: "project_a"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should forbid Project having too long names",
+				metav1.ObjectMeta{Name: "project-name-too-long"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeTooLong),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should forbid Project with namespace gardener-system-seed-lease",
+				metav1.ObjectMeta{Name: "project-1", Namespace: "gardener-system-seed-lease"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("metadata.namespace"),
+				}))),
+			),
+			Entry("should forbid Project with name containing two consecutive hyphens",
+				metav1.ObjectMeta{Name: "in--valid"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+		)
 
 		It("should forbid Project specification with empty or invalid key for description", func() {
 			project.Spec.Description = pointer.StringPtr("")

@@ -247,29 +247,57 @@ var _ = Describe("Shoot Validation Tests", func() {
 			}
 		})
 
-		It("should forbid shoots containing two consecutive hyphens", func() {
-			shoot.ObjectMeta.Name = "sho--ot"
+		DescribeTable("Shoot metadata",
+			func(objectMeta metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
+				shoot.ObjectMeta = objectMeta
 
-			errorList := ValidateShoot(shoot)
+				errorList := ValidateShoot(shoot)
 
-			Expect(errorList).To(HaveLen(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("metadata.name"),
-			}))
-		})
+				Expect(errorList).To(matcher)
+			},
 
-		It("should forbid shoots with a not DNS-1123 label compliant name", func() {
-			shoot.ObjectMeta.Name = "shoot.test"
-
-			errorList := ValidateShoot(shoot)
-
-			Expect(errorList).To(HaveLen(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("metadata.name"),
-			}))
-		})
+			Entry("should forbid Shoot with empty metadata",
+				metav1.ObjectMeta{},
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("metadata.name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("metadata.namespace"),
+					})),
+				),
+			),
+			Entry("should forbid Shoot with empty name",
+				metav1.ObjectMeta{Name: "", Namespace: "my-namespace"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should forbid Shoot with '.' in the name (not a DNS-1123 label compliant name)",
+				metav1.ObjectMeta{Name: "shoot.test", Namespace: "my-namespace"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should forbid Shoot with '_' in the name (not a DNS-1123 subdomain)",
+				metav1.ObjectMeta{Name: "shoot_test", Namespace: "my-namespace"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should forbid Shoot with name containing two consecutive hyphens",
+				metav1.ObjectMeta{Name: "sho--ot", Namespace: "my-namespace"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+		)
 
 		It("should forbid empty Shoot resources", func() {
 			shoot := &core.Shoot{
