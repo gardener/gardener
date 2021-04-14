@@ -34,6 +34,10 @@ type BackupEntryNamespaceListerExpansion interface{}
 // CloudProfileLister.
 type CloudProfileListerExpansion interface{}
 
+// ControllerDeploymentListerExpansion allows custom methods to be added to
+// ControllerDeploymentLister.
+type ControllerDeploymentListerExpansion interface{}
+
 // ControllerInstallationListerExpansion allows custom methods to be added to
 // ControllerInstallationLister.
 type ControllerInstallationListerExpansion interface{}

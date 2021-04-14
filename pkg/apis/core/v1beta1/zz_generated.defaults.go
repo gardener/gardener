@@ -67,7 +67,7 @@ func SetObjectDefaults_ControllerRegistration(in *ControllerRegistration) {
 		SetDefaults_ControllerResource(a)
 	}
 	if in.Spec.Deployment != nil {
-		SetDefaults_ControllerDeployment(in.Spec.Deployment)
+		SetDefaults_ControllerRegistrationDeployment(in.Spec.Deployment)
 	}
 }
 

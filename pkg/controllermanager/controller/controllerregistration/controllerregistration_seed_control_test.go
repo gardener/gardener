@@ -295,7 +295,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 						Type: type12,
 					},
 				},
-				Deployment: &gardencorev1beta1.ControllerDeployment{
+				Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
 					Policy: &onDemandPolicy,
 				},
 			},
@@ -319,7 +319,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 						Type: type3,
 					},
 				},
-				Deployment: &gardencorev1beta1.ControllerDeployment{
+				Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
 					Policy: &onDemandPolicy,
 				},
 			},
@@ -329,7 +329,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 				Name: "cr4",
 			},
 			Spec: gardencorev1beta1.ControllerRegistrationSpec{
-				Deployment: &gardencorev1beta1.ControllerDeployment{
+				Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
 					Policy: &alwaysPolicy,
 				},
 			},
@@ -339,7 +339,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 				Name: "cr5",
 			},
 			Spec: gardencorev1beta1.ControllerRegistrationSpec{
-				Deployment: &gardencorev1beta1.ControllerDeployment{
+				Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
 					Policy: &alwaysPolicy,
 					SeedSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -359,7 +359,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 				Name: "cr7",
 			},
 			Spec: gardencorev1beta1.ControllerRegistrationSpec{
-				Deployment: &gardencorev1beta1.ControllerDeployment{
+				Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
 					Policy: &onDemandPolicy,
 				},
 			},
@@ -369,7 +369,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 				Name: "cr8",
 			},
 			Spec: gardencorev1beta1.ControllerRegistrationSpec{
-				Deployment: &gardencorev1beta1.ControllerDeployment{
+				Deployment: &gardencorev1beta1.ControllerRegistrationDeployment{
 					Policy: &alwaysIfShootsPolicy,
 				},
 			},
@@ -802,13 +802,13 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 
 				installation2 := controllerInstallation2.DeepCopy()
 				installation2.Labels = map[string]string{
-					common.RegistrationSpecHash: "b24405c0d68a538e",
+					common.RegistrationSpecHash: "61ca93a1782c5fa3",
 					common.SeedSpecHash:         "a5e0943b25bc6cab",
 				}
 
 				installation3 := controllerInstallation3.DeepCopy()
 				installation3.Labels = map[string]string{
-					common.RegistrationSpecHash: "b24405c0d68a538e",
+					common.RegistrationSpecHash: "61ca93a1782c5fa3",
 					common.SeedSpecHash:         "a5e0943b25bc6cab",
 				}
 
@@ -842,7 +842,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 
 				installation2 := controllerInstallation2.DeepCopy()
 				installation2.Labels = map[string]string{
-					common.RegistrationSpecHash: "b24405c0d68a538e",
+					common.RegistrationSpecHash: "61ca93a1782c5fa3",
 					common.SeedSpecHash:         "a5e0943b25bc6cab",
 				}
 

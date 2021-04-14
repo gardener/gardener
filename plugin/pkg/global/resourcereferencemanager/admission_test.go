@@ -20,7 +20,9 @@ import (
 	"net/http"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	corefake "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	. "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 
@@ -60,6 +62,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			admissionHandler          *ReferenceManager
 			kubeInformerFactory       kubeinformers.SharedInformerFactory
 			kubeClient                *fake.Clientset
+			gardenCoreClient          *corefake.Clientset
 			gardenCoreInformerFactory coreinformers.SharedInformerFactory
 			fakeAuthorizer            fakeAuthorizerType
 			scheme                    *runtime.Scheme
@@ -67,18 +70,20 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			shoot core.Shoot
 
-			namespace        = "default"
-			cloudProfileName = "profile-1"
-			seedName         = "seed-1"
-			bindingName      = "binding-1"
-			quotaName        = "quota-1"
-			secretName       = "secret-1"
-			configMapName    = "config-map-1"
-			shootName        = "shoot-1"
-			projectName      = "project-1"
-			allowedUser      = "allowed-user"
-			resourceVersion  = "123456"
-			finalizers       = []string{core.GardenerName}
+			namespace                  = "default"
+			cloudProfileName           = "profile-1"
+			seedName                   = "seed-1"
+			bindingName                = "binding-1"
+			quotaName                  = "quota-1"
+			secretName                 = "secret-1"
+			configMapName              = "config-map-1"
+			controllerDeploymentName   = "controller-deployment-1"
+			controllerRegistrationName = "controller-reg-1"
+			shootName                  = "shoot-1"
+			projectName                = "project-1"
+			allowedUser                = "allowed-user"
+			resourceVersion            = "123456"
+			finalizers                 = []string{core.GardenerName}
 
 			defaultUserName = "test-user"
 			defaultUserInfo = &user.DefaultInfo{Name: defaultUserName}
@@ -100,9 +105,27 @@ var _ = Describe("resourcereferencemanager", func() {
 				},
 			}
 
+			controllerDeployment = gardencore.ControllerDeployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: controllerDeploymentName,
+				},
+			}
+
 			cloudProfile = core.CloudProfile{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: cloudProfileName,
+				},
+			}
+			controllerRegistration = core.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: controllerRegistrationName,
+				},
+				Spec: core.ControllerRegistrationSpec{
+					Deployment: &core.ControllerRegistrationDeployment{
+						DeploymentRefs: []core.DeploymentRef{
+							{Name: controllerDeploymentName},
+						},
+					},
 				},
 			}
 			project = core.Project{}
@@ -205,6 +228,21 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				},
 			}
+
+			discoveryGardenClientResources = []*metav1.APIResourceList{
+				{
+					GroupVersion: "",
+					APIResources: []metav1.APIResource{
+						{
+							Name:       "controllerdeployments",
+							Namespaced: false,
+							Group:      "core.gardener.cloud",
+							Version:    "",
+							Kind:       "ControllerDeployment",
+						},
+					},
+				},
+			}
 		)
 
 		BeforeEach(func() {
@@ -217,6 +255,10 @@ var _ = Describe("resourcereferencemanager", func() {
 			kubeClient = fake.NewSimpleClientset()
 			kubeClient.Fake = testing.Fake{Resources: discoveryClientResources}
 			admissionHandler.SetKubeClientset(kubeClient)
+
+			gardenCoreClient = corefake.NewSimpleClientset()
+			gardenCoreClient.Fake = testing.Fake{Resources: discoveryGardenClientResources}
+			admissionHandler.SetInternalCoreClientset(gardenCoreClient)
 
 			gardenCoreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalCoreInformerFactory(gardenCoreInformerFactory)
@@ -234,6 +276,45 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			project = projectBase
 			shoot = shootBase
+		})
+
+		Context("tests for ControllerRegistration objects", func() {
+			It("should accept because all referenced objects have been found (controller deployment found in cache)", func() {
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().ControllerDeployments().Informer().GetStore().Add(&controllerDeployment)).To(Succeed())
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should accept because all referenced objects have been found (controller deployment looked up live)", func() {
+				gardenCoreClient.AddReactor("get", "controllerdeployments", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &controllerDeployment, nil
+				})
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject because the referenced secret does not exist", func() {
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
+				gardenCoreClient.AddReactor("get", "controllerdeployments", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, nil, fmt.Errorf("nope, out of luck")
+				})
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("nope, out of luck"))
+			})
 		})
 
 		Context("tests for SecretBinding objects", func() {

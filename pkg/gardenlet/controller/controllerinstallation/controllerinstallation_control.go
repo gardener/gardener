@@ -360,7 +360,9 @@ func (c *defaultControllerInstallationControl) isResponsible(controllerInstallat
 	}
 
 	if deployment := controllerRegistration.Spec.Deployment; deployment != nil {
-		return deployment.Type == installationTypeHelm, nil
+		if deployment.Type != nil {
+			return *deployment.Type == installationTypeHelm, nil
+		}
 	}
 	return false, nil
 }

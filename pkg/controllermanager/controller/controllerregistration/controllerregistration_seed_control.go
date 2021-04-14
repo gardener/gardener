@@ -518,7 +518,7 @@ func convertObjToMap(in interface{}) (map[string]interface{}, error) {
 	return out, nil
 }
 
-func seedSelectorMatches(deployment *gardencorev1beta1.ControllerDeployment, seedLabels map[string]string) (bool, error) {
+func seedSelectorMatches(deployment *gardencorev1beta1.ControllerRegistrationDeployment, seedLabels map[string]string) (bool, error) {
 	selector := &metav1.LabelSelector{}
 	if deployment != nil && deployment.SeedSelector != nil {
 		selector = deployment.SeedSelector

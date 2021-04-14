@@ -8,6 +8,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,CloudProfileSpec,VolumeTypes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Condition,Codes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ControllerInstallationStatus,Conditions
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ControllerRegistrationDeployment,DeploymentRefs
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,ControllerRegistrationSpec,Resources
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,DNS,Providers
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,DNSIncludeExclude,Exclude
@@ -62,6 +63,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,CloudProfileSpec,VolumeTypes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,Condition,Codes
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ControllerInstallationStatus,Conditions
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ControllerRegistrationDeployment,DeploymentRefs
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,ControllerRegistrationSpec,Resources
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,DNS,Providers
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,DNSIncludeExclude,Exclude

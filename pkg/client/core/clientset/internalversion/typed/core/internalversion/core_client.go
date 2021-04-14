@@ -28,6 +28,7 @@ type CoreInterface interface {
 	BackupBucketsGetter
 	BackupEntriesGetter
 	CloudProfilesGetter
+	ControllerDeploymentsGetter
 	ControllerInstallationsGetter
 	ControllerRegistrationsGetter
 	PlantsGetter
@@ -55,6 +56,10 @@ func (c *CoreClient) BackupEntries(namespace string) BackupEntryInterface {
 
 func (c *CoreClient) CloudProfiles() CloudProfileInterface {
 	return newCloudProfiles(c)
+}
+
+func (c *CoreClient) ControllerDeployments() ControllerDeploymentInterface {
+	return newControllerDeployments(c)
 }
 
 func (c *CoreClient) ControllerInstallations() ControllerInstallationInterface {

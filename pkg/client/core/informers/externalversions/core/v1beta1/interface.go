@@ -30,6 +30,8 @@ type Interface interface {
 	BackupEntries() BackupEntryInformer
 	// CloudProfiles returns a CloudProfileInformer.
 	CloudProfiles() CloudProfileInformer
+	// ControllerDeployments returns a ControllerDeploymentInformer.
+	ControllerDeployments() ControllerDeploymentInformer
 	// ControllerInstallations returns a ControllerInstallationInformer.
 	ControllerInstallations() ControllerInstallationInformer
 	// ControllerRegistrations returns a ControllerRegistrationInformer.
@@ -72,6 +74,11 @@ func (v *version) BackupEntries() BackupEntryInformer {
 // CloudProfiles returns a CloudProfileInformer.
 func (v *version) CloudProfiles() CloudProfileInformer {
 	return &cloudProfileInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ControllerDeployments returns a ControllerDeploymentInformer.
+func (v *version) ControllerDeployments() ControllerDeploymentInformer {
+	return &controllerDeploymentInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // ControllerInstallations returns a ControllerInstallationInformer.
