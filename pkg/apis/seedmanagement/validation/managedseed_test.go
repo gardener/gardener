@@ -23,8 +23,10 @@ import (
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -106,39 +108,61 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 	})
 
 	Describe("#ValidateManagedSeed", func() {
-		It("should forbid empty metadata", func() {
-			managedSeed.ObjectMeta = metav1.ObjectMeta{}
+		DescribeTable("ManagedSeed metadata",
+			func(objectMeta metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
+				managedSeed.ObjectMeta = objectMeta
 
-			errorList := ValidateManagedSeed(managedSeed)
+				errorList := ValidateManagedSeed(managedSeed)
 
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
+				Expect(errorList).To(matcher)
+			},
+
+			Entry("should forbid ManagedSeed with empty metadata",
+				metav1.ObjectMeta{},
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("metadata.name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("metadata.namespace"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("metadata.namespace"),
+					})),
+				),
+			),
+			Entry("should forbid ManagedSeed with empty name",
+				metav1.ObjectMeta{Name: "", Namespace: namespace},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal("metadata.name"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("metadata.namespace"),
-				})),
-				PointTo(MatchFields(IgnoreExtras, Fields{
+				}))),
+			),
+			Entry("should forbid ManagedSeed with '.' in the name (not a DNS-1123 label compliant name)",
+				metav1.ObjectMeta{Name: "managedseed.test", Namespace: namespace},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should forbid ManagedSeed with '_' in the name (not a DNS-1123 subdomain)",
+				metav1.ObjectMeta{Name: "managedseed_test", Namespace: namespace},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should forbid ManagedSeed with namespace different from garden",
+				metav1.ObjectMeta{Name: name, Namespace: "foo"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("metadata.namespace"),
-				})),
-			))
-		})
-
-		It("should forbid namespace different from garden", func() {
-			managedSeed.Namespace = "foo"
-
-			errorList := ValidateManagedSeed(managedSeed)
-
-			Expect(errorList).To(ConsistOf(
-				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("metadata.namespace"),
-				})),
-			))
-		})
+				}))),
+			),
+		)
 
 		It("should forbid nil shoot", func() {
 			managedSeed.Spec.Shoot = nil

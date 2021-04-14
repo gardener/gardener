@@ -19,8 +19,10 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -48,6 +50,48 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 
 			Expect(errorList).To(HaveLen(0))
 		})
+
+		DescribeTable("SecretBinding metadata",
+			func(objectMeta metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
+				secretBinding.ObjectMeta = objectMeta
+
+				errorList := ValidateSecretBinding(secretBinding)
+
+				Expect(errorList).To(matcher)
+			},
+
+			Entry("should forbid SecretBinding with empty metadata",
+				metav1.ObjectMeta{},
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("metadata.name"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("metadata.namespace"),
+					})),
+				),
+			),
+			Entry("should forbid SecretBinding with empty name",
+				metav1.ObjectMeta{Name: "", Namespace: "garden"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should allow SecretBinding with '.' in the name",
+				metav1.ObjectMeta{Name: "binding.test", Namespace: "garden"},
+				BeEmpty(),
+			),
+			Entry("should forbid SecretBinding with '_' in the name (not a DNS-1123 subdomain)",
+				metav1.ObjectMeta{Name: "binding_test", Namespace: "garden"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+		)
 
 		It("should forbid empty SecretBinding resources", func() {
 			secretBinding.ObjectMeta = metav1.ObjectMeta{}
