@@ -81,7 +81,7 @@ The following is a list of involved components, that either need to be newly int
 2. GAPI Admission Control for the `Bastion` resource in the garden cluster
     - Mutating Webhook
         - on creation, sets `metadata.annotations["operations.gardener.cloud/created-by"]` according to the user that created the resource
-        - when `operations.gardener.cloud/operation: keepalive` is set, calculates new `status.expirationDate`
+        - when `operations.gardener.cloud/operation: keepalive` is set, calculates new `status.expirationTimestamp`
 3. `gardenlet`
     - Watches `Bastion` resource for own seed under api group `operations.gardener.cloud` in the garden cluster
     - Creates `Bastion` custom resource under api group `extensions.gardener.cloud/v1alpha1` in the seed cluster
@@ -111,7 +111,7 @@ The following is a list of involved components, that either need to be newly int
         - opens SSH connection to the bastion and from there to the respective shoot node
     - runs heartbeat in parallel as long as the SSH session is open by annotating the `Bastion` resource with `operations.gardener.cloud/operation: keepalive`
 8. `GCM`:
-    - Once `status.expirationDate` is reached, the `Bastion` will be marked for deletion
+    - Once `status.expirationTimestamp` is reached, the `Bastion` will be marked for deletion
 9. `gardenlet`:
     - Once the `Bastion` resource in the garden cluster is marked for deletion, it marks the `Bastion` resource in the seed for deletion
 10. Gardener extension provider <infra> / Bastion Controller on Seed:
@@ -133,7 +133,7 @@ metadata:
   annotations:
     operations.gardener.cloud/created-by: foo # set by the mutating webhook
     operations.gardener.cloud/last-heartbeat-at: "2021-03-19T11:58:00Z"
-    # operations.gardener.cloud/operation: keepalive # this annotation is removed by the mutating webhook and the last-heartbeat timestamp and/or the status.expirationDate will be updated accordingly
+    # operations.gardener.cloud/operation: keepalive # this annotation is removed by the mutating webhook and the last-heartbeat timestamp and/or the status.expirationTimestamp will be updated accordingly
 spec:
   shootRef: # namespace cannot be set / it's the same as .metadata.namespace
     name: my-cluster
@@ -163,7 +163,7 @@ status:
     message: Bastion for the cluster is ready.
 
   # the following fields are only set by the mutating webhook
-  expirationDate: "2021-03-19T12:58:00Z" # extended on each keepalive
+  expirationTimestamp: "2021-03-19T12:58:00Z" # extended on each keepalive
 ```
 
 `Bastion` custom resource in the seed cluster
