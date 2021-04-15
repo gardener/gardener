@@ -52,7 +52,7 @@ type BackupEntryList struct {
 type BackupEntrySpec struct {
 	// BucketName is the name of backup bucket for this Backup Entry.
 	BucketName string
-	// SeedName holds the name of the seed allocated to BackupBucket for running controller.
+	// SeedName holds the name of the seed to which this BackupEntry is scheduled
 	SeedName *string
 }
 
@@ -65,4 +65,7 @@ type BackupEntryStatus struct {
 	// ObservedGeneration is the most recent generation observed for this BackupEntry. It corresponds to the
 	// BackupEntry's generation, which is updated on mutation by the API Server.
 	ObservedGeneration int64
+	// SeedName is the name of the seed to which this BackupEntry is currently scheduled. This field is populated
+	// at the beginning of a create/reconcile operation. It is used when moving the BackupEntry between seeds.
+	SeedName *string
 }

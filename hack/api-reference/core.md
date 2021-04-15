@@ -241,7 +241,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedName holds the name of the seed allocated to BackupEntry for running controller.</p>
+<p>SeedName holds the name of the seed to which this BackupEntry is scheduled</p>
 </td>
 </tr>
 </table>
@@ -2129,7 +2129,7 @@ string
 </td>
 <td>
 <em>(Optional)</em>
-<p>SeedName holds the name of the seed allocated to BackupEntry for running controller.</p>
+<p>SeedName holds the name of the seed to which this BackupEntry is scheduled</p>
 </td>
 </tr>
 </tbody>
@@ -2190,6 +2190,19 @@ int64
 <em>(Optional)</em>
 <p>ObservedGeneration is the most recent generation observed for this BackupEntry. It corresponds to the
 BackupEntry&rsquo;s generation, which is updated on mutation by the API Server.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>seedName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SeedName is the name of the seed to which this BackupEntry is currently scheduled. This field is populated
+at the beginning of a create/reconcile operation. It is used when moving the BackupEntry between seeds.</p>
 </td>
 </tr>
 </tbody>
