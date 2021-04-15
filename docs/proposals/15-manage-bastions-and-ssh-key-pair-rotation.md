@@ -41,7 +41,7 @@ The proposal, as outlined below, suggests to implement the necessary changes in 
 - Necessary infrastructure resources for `ssh` access (such as VMs, public IPs, firewall rules, etc.) are automatically created and also terminated after usage, but at the latest after the above mentioned time span is up.
 ### Non-Goals
 - Node-specific access
-- Auditability on operating system level (not only auditing the SSH login, but everything that is done on a node and other respective resources, e.g. by using dedicated operating system users)
+- Auditability on operating system level (not only auditing the `ssh` login, but everything that is done on a node and other respective resources, e.g. by using dedicated operating system users)
 - Reuse of temporarily created necessary infrastructure resources by different users
 
 ## Proposal
@@ -58,8 +58,8 @@ The following is a list of involved components, that either need to be newly int
   - Similar to `BackupBucket`s or `BackupEntry`, the `gardenlet` watches the `Bastion` resource in the garden cluster and creates a seed-local `Bastion` resource, on which the provider specific bastion controller acts upon
 - `gardenctlv2` (or any other client)
   - Creates `Bastion` resource in the garden cluster
-  - Establishes an SSH connection to a shoot node, using a bastion host as proxy
-  - Heartbeats / keeps alive the `Bastion` resource during SSH connection
+  - Establishes an `ssh` connection to a shoot node, using a bastion host as proxy
+  - Heartbeats / keeps alive the `Bastion` resource during `ssh` connection
 - Gardener extension provider <infra>
   - Provider specific bastion controller
   - Should be added to gardener-extension-provider-<infra> repos, e.g. https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller
@@ -73,7 +73,7 @@ The following is a list of involved components, that either need to be newly int
   - The project `admin` role should be extended to allow CRUD operations on the `Bastion` resource. The `gardener.cloud:system:project-member-aggregation` `ClusterRole` needs to be updated accordingly (https://github.com/gardener/gardener/blob/master/charts/gardener/controlplane/charts/application/templates/rbac-user.yaml)
 
 ### SSH Flow
-0. Users should only get the RBAC permission to `create` / `update` `Bastion` resources for a namespace, if they should be allowed to SSH onto the shoot nodes in this namespace. A project member with `admin` role will have these permissions.
+0. Users should only get the RBAC permission to `create` / `update` `Bastion` resources for a namespace, if they should be allowed to `ssh` onto the shoot nodes in this namespace. A project member with `admin` role will have these permissions.
 1. User/`gardenctlv2` creates `Bastion` resource in garden cluster (see [resource example](#resource-example) below)
     - First, gardenctl would figure out the own public IP of the user's machine. Either by calling an external service (gardenctl (v1) uses https://github.com/gardener/gardenctl/blob/master/pkg/cmd/miscellaneous.go#L226) or by calling a binary that prints the public IP(s) to stdout. The binary should be configurable. The result is set under `spec.ingress[].from[].ipBlock.cidr`
     - the public `ssh` key of the user is set under `spec.sshPublicKey`. The key that should be used needs to be configured beforehand by the user
@@ -102,12 +102,12 @@ The following is a list of involved components, that either need to be newly int
 6. `gardenlet`
     - Syncs back the `status.ingress` and `status.conditions` of the `Bastion` resource in the seed to the garden cluster in case it changed
 7. `gardenctl`
-    - initiates SSH session once `status.operation['BastionReady']` is true of the `Bastion` resource in the garden cluster
+    - initiates `ssh` session once `status.operation['BastionReady']` is true of the `Bastion` resource in the garden cluster
         - locates private `ssh` key matching `spec["sshPublicKey"]` which was configured beforehand by the user
         - reads bastion IP (`status.ingress.ip`) or hostname (`status.ingress.hostname`)
-        - reads the private key from the SSH key pair for the shoot node
-        - opens SSH connection to the bastion and from there to the respective shoot node
-    - runs heartbeat in parallel as long as the SSH session is open by annotating the `Bastion` resource with `operations.gardener.cloud/operation: keepalive`
+        - reads the private key from the `ssh` key pair for the shoot node
+        - opens `ssh` connection to the bastion and from there to the respective shoot node
+    - runs heartbeat in parallel as long as the `ssh` session is open by annotating the `Bastion` resource with `operations.gardener.cloud/operation: keepalive`
 8. `GCM`:
     - Once `status.expirationTimestamp` is reached, the `Bastion` will be marked for deletion
 9. `gardenlet`:
@@ -136,7 +136,7 @@ spec:
   shootRef: # namespace cannot be set / it's the same as .metadata.namespace
     name: my-cluster
 
-  sshPublicKey: c3NoLXJzYSAuLi4K
+  sshPublicKey: c3NoLXJzYSAuLi4K # public `ssh` key of the user
 
   ingress:
   - ipBlock:
@@ -152,7 +152,7 @@ status:
     ip: 1.2.3.5
     # hostname: foo.bar
   conditions:
-  - type: BastionReady # when the `status` is true of condition type `BastionReady`, the client can initiate the SSH connection
+  - type: BastionReady # when the `status` is true of condition type `BastionReady`, the client can initiate the `ssh` connection
     status: 'True'
     lastTransitionTime: "2021-03-19T11:59:00Z"
     lastUpdateTime: "2021-03-19T11:59:00Z"
@@ -171,7 +171,7 @@ metadata:
   name: cli-abcdef
   namespace: shoot--myproject--mycluster
 spec:
-  sshPublicKey: c3NoLXJzYSAuLi4K # from spec["sshPublicKey"] of Bastion resource in garden cluster
+  sshPublicKey: c3NoLXJzYSAuLi4K
 
   ingress:
   - ipBlock:
@@ -191,20 +191,20 @@ status:
 ```
 
 ## SSH Key Pair Rotation
-Currently, the SSH key pair for the shoot nodes are created once during shoot cluster creation. These key pairs should be rotated on a regular basis.
+Currently, the `ssh` key pair for the shoot nodes are created once during shoot cluster creation. These key pairs should be rotated on a regular basis.
 
 ### Rotation Proposal
 - `gardeneruser` original user data [component](https://github.com/gardener/gardener/tree/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser):
-    - The `gardeneruser` [create script](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser/templates/scripts/create.tpl.sh) should be changed into a reconcile script script, and renamed accordingly. It needs to be adapted so that the `authorized_keys` file will be updated / overwritten with the current and old SSH public key from the cloud-config user data.
+    - The `gardeneruser` [create script](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser/templates/scripts/create.tpl.sh) should be changed into a reconcile script script, and renamed accordingly. It needs to be adapted so that the `authorized_keys` file will be updated / overwritten with the current and old `ssh` public key from the cloud-config user data.
 - Rotation trigger:
     - Once in the maintenance time window
     - On demand, by annotating the shoot with `gardener.cloud/operation: rotate-ssh-keypair`
 - On rotation trigger:
     - `gardenlet`
-        - Prerequisite of SSH key pair rotation: all nodes of all the worker pools have successfully applied the desired version of their cloud-config user data
-        - Creates or updates the secret `ssh-keypair.old` with the content of `ssh-keypair` in the seed-shoot namespace. The old private key can be used by clients as fallback, in case the new SSH public key is not yet applied on the node
+        - Prerequisite of `ssh` key pair rotation: all nodes of all the worker pools have successfully applied the desired version of their cloud-config user data
+        - Creates or updates the secret `ssh-keypair.old` with the content of `ssh-keypair` in the seed-shoot namespace. The old private key can be used by clients as fallback, in case the new `ssh` public key is not yet applied on the node
         - Generates new `ssh-keypair` secret
-        - The `OperatingSystemConfig` needs to be re-generated and deployed with the new and old SSH public key
+        - The `OperatingSystemConfig` needs to be re-generated and deployed with the new and old `ssh` public key
     - As usual (more details on https://github.com/gardener/gardener/blob/master/docs/extensions/operatingsystemconfig.md):
         - Once the `cloud-config-<X>` secret in the `kube-system` namespace of the shoot cluster is updated, it will be picked up by the [`downloader` script](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader/templates/scripts/download-cloud-config.tpl.sh) (checks every 30s for updates)
         - The `downloader` runs the ["execution" script](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/executor/templates/scripts/execute-cloud-config.tpl.sh) from the `cloud-config-<X>` secret
