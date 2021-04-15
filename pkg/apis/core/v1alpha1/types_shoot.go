@@ -153,6 +153,19 @@ type ShootStatus struct {
 	// ClusterIdentity is the identity of the Shoot cluster
 	// +optional
 	ClusterIdentity *string `json:"clusterIdentity,omitempty" protobuf:"bytes,13,opt,name=clusterIdentity"`
+	// List of addresses on which the Kube API server can be reached.
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	AdvertisedAddresses []ShootAdvertisedAddress `json:"advertisedAddresses,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,14,rep,name=advertisedAddresses"`
+}
+
+// ShootAdvertisedAddress contains information for the shoot's Kube API server.
+type ShootAdvertisedAddress struct {
+	// Name of the advertised address. e.g. external
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// The URL of the API Server. e.g. https://api.foo.bar or https://1.2.3.4
+	URL string `json:"url" protobuf:"bytes,2,opt,name=url"`
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

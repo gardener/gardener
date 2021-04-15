@@ -153,6 +153,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedVolumeProvider":                    schema_pkg_apis_core_v1alpha1_SeedVolumeProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountConfig":                  schema_pkg_apis_core_v1alpha1_ServiceAccountConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Shoot":                                 schema_pkg_apis_core_v1alpha1_Shoot(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootAdvertisedAddress":                schema_pkg_apis_core_v1alpha1_ShootAdvertisedAddress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootList":                             schema_pkg_apis_core_v1alpha1_ShootList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootMachineImage":                     schema_pkg_apis_core_v1alpha1_ShootMachineImage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootNetworks":                         schema_pkg_apis_core_v1alpha1_ShootNetworks(ref),
@@ -288,6 +289,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedVolumeProvider":                     schema_pkg_apis_core_v1beta1_SeedVolumeProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig":                   schema_pkg_apis_core_v1beta1_ServiceAccountConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Shoot":                                  schema_pkg_apis_core_v1beta1_Shoot(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress":                 schema_pkg_apis_core_v1beta1_ShootAdvertisedAddress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootList":                              schema_pkg_apis_core_v1beta1_ShootList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootMachineImage":                      schema_pkg_apis_core_v1beta1_ShootMachineImage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootNetworks":                          schema_pkg_apis_core_v1beta1_ShootNetworks(ref),
@@ -6044,6 +6046,36 @@ func schema_pkg_apis_core_v1alpha1_Shoot(ref common.ReferenceCallback) common.Op
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_ShootAdvertisedAddress(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootAdvertisedAddress contains information for the shoot's Kube API server.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the advertised address. e.g. external",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"url": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The URL of the API Server. e.g. https://api.foo.bar or https://1.2.3.4",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name", "url"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_ShootList(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6606,12 +6638,32 @@ func schema_pkg_apis_core_v1alpha1_ShootStatus(ref common.ReferenceCallback) com
 							Format:      "",
 						},
 					},
+					"advertisedAddresses": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "name",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "List of addresses on which the Kube API server can be reached.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootAdvertisedAddress"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"gardener", "hibernated", "technicalID", "uid"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootAdvertisedAddress", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -12393,6 +12445,36 @@ func schema_pkg_apis_core_v1beta1_Shoot(ref common.ReferenceCallback) common.Ope
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ShootAdvertisedAddress(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootAdvertisedAddress contains information for the shoot's Kube API server.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the advertised address. e.g. external",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"url": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The URL of the API Server. e.g. https://api.foo.bar or https://1.2.3.4",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name", "url"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_ShootList(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -12792,12 +12874,32 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"advertisedAddresses": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "name",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "List of addresses on which the Kube API server can be reached.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"gardener", "hibernated", "technicalID", "uid"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

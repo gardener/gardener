@@ -1179,9 +1179,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should having the a provider with invalid secretName", func() {
-				var (
-					invalidSecretName = "foo/bar"
-				)
+				invalidSecretName := "foo/bar"
 
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
@@ -1203,7 +1201,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should having the same provider multiple times", func() {
-
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
 						SecretName: &secretName,
@@ -1657,7 +1654,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(BeEmpty())
-
 			})
 
 			It("should succeed when using IPVS mode", func() {
@@ -1666,7 +1662,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(BeEmpty())
-
 			})
 
 			It("should fail when using nil proxy mode", func() {
@@ -1758,7 +1753,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)
 		})
 
-		var negativeDuration = metav1.Duration{Duration: -time.Second}
+		negativeDuration := metav1.Duration{Duration: -time.Second}
 
 		Context("VerticalPodAutoscaler validation", func() {
 			DescribeTable("verticalPod autoscaler values",
@@ -1955,7 +1950,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 	})
 
 	Describe("#ValidateShootStatus, #ValidateShootStatusUpdate", func() {
-		var shoot *core.Shoot
+		var (
+			shoot    *core.Shoot
+			newShoot *core.Shoot
+		)
 		BeforeEach(func() {
 			shoot = &core.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1965,11 +1963,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Spec:   core.ShootSpec{},
 				Status: core.ShootStatus{},
 			}
+
+			newShoot = prepareShootForUpdate(shoot)
 		})
 
 		Context("uid checks", func() {
 			It("should allow setting the uid", func() {
-				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Status.UID = types.UID("1234")
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
@@ -1978,7 +1977,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid changing the uid", func() {
-				newShoot := prepareShootForUpdate(shoot)
 				shoot.Status.UID = types.UID("1234")
 				newShoot.Status.UID = types.UID("1235")
 
@@ -1994,7 +1992,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("technical id checks", func() {
 			It("should allow setting the technical id", func() {
-				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Status.TechnicalID = "shoot--foo--bar"
 
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
@@ -2003,7 +2000,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid changing the technical id", func() {
-				newShoot := prepareShootForUpdate(shoot)
 				shoot.Status.TechnicalID = "shoot-foo-bar"
 				newShoot.Status.TechnicalID = "shoot--foo--bar"
 
@@ -2018,16 +2014,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Context("validate shoot cluster identity update", func() {
-			var clusterIdentity = "newClusterIdentity"
+			clusterIdentity := "newClusterIdentity"
 			It("should not fail to set the cluster identity if it is missing", func() {
-				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Status.ClusterIdentity = &clusterIdentity
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
 				Expect(errorList).To(HaveLen(0))
 			})
 
 			It("should fail to set the cluster identity if it is already set", func() {
-				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Status.ClusterIdentity = &clusterIdentity
 				shoot.Status.ClusterIdentity = pointer.StringPtr("oldClusterIdentity")
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
@@ -2037,6 +2031,135 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field":  Equal("status.clusterIdentity"),
 					"Detail": ContainSubstring(`field is immutable`),
 				}))
+			})
+		})
+
+		Context("validate shoot advertise address update", func() {
+			It("should fail for empty name", func() {
+				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+					{Name: ""},
+				}
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(HaveLen(1))
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("status.advertisedAddresses[0].name"),
+					"Detail": ContainSubstring(`field must not be empty`),
+				}))
+			})
+			It("should fail for duplicate name", func() {
+				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+					{Name: "a", URL: "https://foo.bar"},
+					{Name: "a", URL: "https://foo.bar"},
+				}
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(HaveLen(1))
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("status.advertisedAddresses[1].name"),
+				}))
+			})
+			It("should fail for invalid URL", func() {
+				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+					{Name: "a", URL: "://foo.bar"},
+				}
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(HaveLen(1))
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("status.advertisedAddresses[0].url"),
+					"Detail": ContainSubstring(`url must be a valid URL:`),
+				}))
+			})
+			It("should fail for http URL", func() {
+				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+					{Name: "a", URL: "http://foo.bar"},
+				}
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(HaveLen(1))
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.advertisedAddresses[0].url"),
+					"Detail": ContainSubstring(`'https' is the only allowed URL scheme`),
+				}))
+			})
+			It("should fail for URL without host", func() {
+				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+					{Name: "a", URL: "https://"},
+				}
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(HaveLen(1))
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.advertisedAddresses[0].url"),
+					"Detail": ContainSubstring(`host must be provided`),
+				}))
+			})
+			It("should fail for URL with path", func() {
+				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+					{Name: "a", URL: "https://foo.bar/baz"},
+				}
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(HaveLen(1))
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.advertisedAddresses[0].url"),
+					"Detail": ContainSubstring(`path is not permitted in the URL`),
+				}))
+			})
+			It("should fail for URL with user information", func() {
+				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+					{Name: "a", URL: "https://john:doe@foo.bar"},
+				}
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(HaveLen(1))
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.advertisedAddresses[0].url"),
+					"Detail": ContainSubstring(`user information is not permitted in the URL`),
+				}))
+			})
+			It("should fail for URL with fragment", func() {
+				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+					{Name: "a", URL: "https://foo.bar#some-fragment"},
+				}
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(HaveLen(1))
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.advertisedAddresses[0].url"),
+					"Detail": ContainSubstring(`fragments are not permitted in the URL`),
+				}))
+			})
+			It("should fail for URL with query parameters", func() {
+				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+					{Name: "a", URL: "https://foo.bar?some=query"},
+				}
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(HaveLen(1))
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("status.advertisedAddresses[0].url"),
+					"Detail": ContainSubstring(`query parameters are not permitted in the URL`),
+				}))
+			})
+			It("should succeed correct addresses", func() {
+				newShoot.Status.AdvertisedAddresses = []core.ShootAdvertisedAddress{
+					{Name: "a", URL: "https://foo.bar"},
+					{Name: "b", URL: "https://foo.bar:443"},
+				}
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+				Expect(errorList).To(BeEmpty())
 			})
 		})
 	})
@@ -2430,7 +2553,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			func(name core.CRIName, matcher gomegatypes.GomegaMatcher) {
 				worker := core.Worker{
 					Name: "worker",
-					CRI:  &core.CRI{Name: name}}
+					CRI:  &core.CRI{Name: name},
+				}
 
 				errList := ValidateCRI(worker.CRI, field.NewPath("cri"))
 
@@ -2447,8 +2571,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 		It("validate that container runtime has a type", func() {
 			worker := core.Worker{
 				Name: "worker",
-				CRI: &core.CRI{Name: core.CRINameContainerD,
-					ContainerRuntimes: []core.ContainerRuntime{{Type: "gVisor"}, {Type: ""}}},
+				CRI: &core.CRI{
+					Name:              core.CRINameContainerD,
+					ContainerRuntimes: []core.ContainerRuntime{{Type: "gVisor"}, {Type: ""}},
+				},
 			}
 
 			errList := ValidateCRI(worker.CRI, field.NewPath("cri"))
@@ -2463,8 +2589,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 		It("validate duplicate container runtime types", func() {
 			worker := core.Worker{
 				Name: "worker",
-				CRI: &core.CRI{Name: core.CRINameContainerD,
-					ContainerRuntimes: []core.ContainerRuntime{{Type: "gVisor"}, {Type: "gVisor"}}},
+				CRI: &core.CRI{
+					Name:              core.CRINameContainerD,
+					ContainerRuntimes: []core.ContainerRuntime{{Type: "gVisor"}, {Type: "gVisor"}},
+				},
 			}
 
 			errList := ValidateCRI(worker.CRI, field.NewPath("cri"))

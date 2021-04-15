@@ -42,7 +42,7 @@ import (
 )
 
 var _ = Describe("operation", func() {
-	var ctx = context.TODO()
+	ctx := context.TODO()
 
 	DescribeTable("#ComputeIngressHost", func(prefix, shootName, projectName, domain string, matcher gomegatypes.GomegaMatcher) {
 		var (
@@ -193,6 +193,75 @@ var _ = Describe("operation", func() {
 
 			Expect(o.SaveGardenerResourcesInShootState(ctx, gardenerResourceList)).To(Succeed())
 			Expect(o.ShootState.Spec.Gardener).To(BeEquivalentTo(gardenerResourceList))
+		})
+	})
+
+	Describe("#ToAdvertisedAddresses", func() {
+		var operation *Operation
+
+		BeforeEach(func() {
+			operation = &Operation{
+				Shoot: &operationshoot.Shoot{},
+			}
+		})
+
+		It("returns empty list when shoot is nil", func() {
+			operation.Shoot = nil
+
+			Expect(operation.ToAdvertisedAddresses()).To(BeNil())
+		})
+		It("returns external address", func() {
+			operation.Shoot.ExternalClusterDomain = pointer.StringPtr("foo.bar")
+
+			addresses := operation.ToAdvertisedAddresses()
+
+			Expect(addresses).To(HaveLen(1))
+			Expect(addresses).To(ConsistOf(gardencorev1beta1.ShootAdvertisedAddress{
+				Name: "external",
+				URL:  "https://api.foo.bar",
+			}))
+		})
+
+		It("returns internal address", func() {
+			operation.Shoot.InternalClusterDomain = "baz.foo"
+
+			addresses := operation.ToAdvertisedAddresses()
+
+			Expect(addresses).To(HaveLen(1))
+			Expect(addresses).To(ConsistOf(gardencorev1beta1.ShootAdvertisedAddress{
+				Name: "internal",
+				URL:  "https://api.baz.foo",
+			}))
+		})
+
+		It("returns unmanaged address", func() {
+			operation.APIServerAddress = "bar.foo"
+
+			addresses := operation.ToAdvertisedAddresses()
+
+			Expect(addresses).To(HaveLen(1))
+			Expect(addresses).To(ConsistOf(gardencorev1beta1.ShootAdvertisedAddress{
+				Name: "unmanaged",
+				URL:  "https://bar.foo",
+			}))
+		})
+
+		It("returns external and internal addresses in correct order", func() {
+			operation.Shoot.ExternalClusterDomain = pointer.StringPtr("foo.bar")
+			operation.Shoot.InternalClusterDomain = "baz.foo"
+			operation.APIServerAddress = "bar.foo"
+
+			addresses := operation.ToAdvertisedAddresses()
+
+			Expect(addresses).To(Equal([]gardencorev1beta1.ShootAdvertisedAddress{
+				{
+					Name: "external",
+					URL:  "https://api.foo.bar",
+				}, {
+					Name: "internal",
+					URL:  "https://api.baz.foo",
+				},
+			}))
 		})
 	})
 })

@@ -8062,6 +8062,47 @@ Only useful if service account tokens are also issued by another external system
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ShootAdvertisedAddress">ShootAdvertisedAddress
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootStatus">ShootStatus</a>)
+</p>
+<p>
+<p>ShootAdvertisedAddress contains information for the shoot&rsquo;s Kube API server.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name of the advertised address. e.g. external</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>url</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>The URL of the API Server. e.g. <a href="https://api.foo.bar">https://api.foo.bar</a> or <a href="https://1.2.3.4">https://1.2.3.4</a></p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ShootMachineImage">ShootMachineImage
 </h3>
 <p>
@@ -8592,6 +8633,20 @@ string
 <td>
 <em>(Optional)</em>
 <p>ClusterIdentity is the identity of the Shoot cluster</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>advertisedAddresses</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ShootAdvertisedAddress">
+[]ShootAdvertisedAddress
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>List of addresses on which the Kube API server can be reached.</p>
 </td>
 </tr>
 </tbody>
