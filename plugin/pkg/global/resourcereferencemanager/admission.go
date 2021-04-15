@@ -26,11 +26,11 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/plugin/pkg/utils"
 
 	"github.com/hashicorp/go-multierror"
@@ -266,7 +266,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 			if annotations == nil {
 				annotations = map[string]string{}
 			}
-			annotations[common.GardenCreatedBy] = a.GetUserInfo().GetName()
+			annotations[v1beta1constants.GardenCreatedBy] = a.GetUserInfo().GetName()
 			shoot.Annotations = annotations
 		case admission.Update:
 			// skip verification if spec wasn't changed

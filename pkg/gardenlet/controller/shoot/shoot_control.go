@@ -23,6 +23,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
@@ -32,7 +33,6 @@ import (
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
@@ -711,7 +711,7 @@ func (c *Controller) updateShootStatusOperationError(ctx context.Context, garden
 	}
 
 	oldObj := newShoot.DeepCopy()
-	kutil.SetMetaDataLabel(&newShoot.ObjectMeta, common.ShootStatus, string(shootpkg.StatusUnhealthy))
+	kutil.SetMetaDataLabel(&newShoot.ObjectMeta, v1beta1constants.ShootStatus, string(shootpkg.StatusUnhealthy))
 	if err := gardenClient.Client().Patch(ctx, newShoot, client.MergeFrom(oldObj)); err != nil {
 		return nil, err
 	}

@@ -83,3 +83,17 @@ func GetDomainInfoFromAnnotations(annotations map[string]string) (provider strin
 func GetAPIServerDomain(domain string) string {
 	return fmt.Sprintf("%s.%s", APIServerFQDNPrefix, domain)
 }
+
+// GenerateDNSProviderName creates a name for the dns provider out of the passed `secretName` and `providerType`.
+func GenerateDNSProviderName(secretName, providerType string) string {
+	switch {
+	case secretName != "" && providerType != "":
+		return fmt.Sprintf("%s-%s", providerType, secretName)
+	case secretName != "":
+		return secretName
+	case providerType != "":
+		return providerType
+	default:
+		return ""
+	}
+}

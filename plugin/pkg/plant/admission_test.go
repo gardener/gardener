@@ -18,8 +18,8 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/plugin/pkg/plant"
 
 	. "github.com/onsi/ginkgo"
@@ -81,12 +81,12 @@ var _ = Describe("Admission", func() {
 
 			attrs := admission.NewAttributesRecord(&plant, nil, core.Kind("Plant").WithVersion("version"), plant.Namespace, plant.Name, core.Resource("plants").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, defaultUserInfo)
 
-			Expect(plant.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
+			Expect(plant.Annotations).NotTo(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, defaultUserName))
 
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(plant.Annotations).To(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
+			Expect(plant.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenCreatedBy, defaultUserName))
 		})
 
 		It("should reject Plant resources referencing same kubeconfig secret", func() {

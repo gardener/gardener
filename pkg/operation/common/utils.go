@@ -415,20 +415,6 @@ func GetServiceAccountSigningKeySecret(ctx context.Context, c client.Client, sho
 	return ReadServiceAccountSigningKeySecret(secret)
 }
 
-// GetSecretFromSecretRef gets the Secret object from <secretRef>.
-func GetSecretFromSecretRef(ctx context.Context, c client.Client, secretRef *corev1.SecretReference) (*corev1.Secret, error) {
-	secret := &corev1.Secret{}
-	if err := c.Get(ctx, kutil.Key(secretRef.Namespace, secretRef.Name), secret); err != nil {
-		return nil, err
-	}
-	return secret, nil
-}
-
-// ExtensionID returns an identifier for the given extension kind/type.
-func ExtensionID(extensionKind, extensionType string) string {
-	return fmt.Sprintf("%s/%s", extensionKind, extensionType)
-}
-
 // DeleteDeploymentsHavingDeprecatedRoleLabelKey deletes the Deployments with the passed object keys if
 // the corresponding Deployment .spec.selector contains the deprecated "garden.sapcloud.io/role" label key.
 func DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx context.Context, c client.Client, keys []client.ObjectKey) error {

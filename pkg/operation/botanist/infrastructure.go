@@ -20,7 +20,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,7 +36,7 @@ func (b *Botanist) DefaultInfrastructure(seedClient client.Client) infrastructur
 			Type:              b.Shoot.Info.Spec.Provider.Type,
 			ProviderConfig:    b.Shoot.Info.Spec.Provider.InfrastructureConfig,
 			Region:            b.Shoot.Info.Spec.Region,
-			AnnotateOperation: controllerutils.HasTask(b.Shoot.Info.Annotations, common.ShootTaskDeployInfrastructure) || b.isRestorePhase(),
+			AnnotateOperation: controllerutils.HasTask(b.Shoot.Info.Annotations, v1beta1constants.ShootTaskDeployInfrastructure) || b.isRestorePhase(),
 		},
 		infrastructure.DefaultInterval,
 		infrastructure.DefaultSevereThreshold,

@@ -23,10 +23,10 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	"github.com/gardener/gardener/pkg/operation/common"
 	utiltime "github.com/gardener/gardener/pkg/utils/time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -220,7 +220,7 @@ func (q *QuotaValidator) Validate(ctx context.Context, a admission.Attributes, o
 	}
 
 	// Admit Shoot lifetime changes
-	if lifetime, exists := shoot.Annotations[common.ShootExpirationTimestamp]; checkLifetime && exists && maxShootLifetime != nil {
+	if lifetime, exists := shoot.Annotations[v1beta1constants.ShootExpirationTimestamp]; checkLifetime && exists && maxShootLifetime != nil {
 		var (
 			plannedExpirationTime     time.Time
 			maxPossibleExpirationTime time.Time
@@ -451,11 +451,11 @@ func getShootWorkerResources(shoot *core.Shoot, cloudProfile *core.CloudProfile)
 }
 
 func lifetimeVerificationNeeded(new, old core.Shoot) bool {
-	oldLifetime, ok := old.Annotations[common.ShootExpirationTimestamp]
+	oldLifetime, ok := old.Annotations[v1beta1constants.ShootExpirationTimestamp]
 	if !ok {
 		oldLifetime = old.CreationTimestamp.String()
 	}
-	newLifetime := new.Annotations[common.ShootExpirationTimestamp]
+	newLifetime := new.Annotations[v1beta1constants.ShootExpirationTimestamp]
 	return oldLifetime != newLifetime
 }
 

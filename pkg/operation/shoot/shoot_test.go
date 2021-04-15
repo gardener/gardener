@@ -21,8 +21,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/extensions"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	. "github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -481,20 +481,20 @@ var _ = Describe("shoot", func() {
 			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 
 			Expect(result).To(Equal(sets.NewString(
-				common.ExtensionID(extensionsv1alpha1.BackupBucketResource, backupProvider),
-				common.ExtensionID(extensionsv1alpha1.BackupEntryResource, backupProvider),
-				common.ExtensionID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
-				common.ExtensionID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
-				common.ExtensionID(extensionsv1alpha1.InfrastructureResource, shootProvider),
-				common.ExtensionID(extensionsv1alpha1.NetworkResource, networkingType),
-				common.ExtensionID(extensionsv1alpha1.WorkerResource, shootProvider),
-				common.ExtensionID(extensionsv1alpha1.ExtensionResource, extensionType1),
-				common.ExtensionID(extensionsv1alpha1.OperatingSystemConfigResource, oscType),
-				common.ExtensionID(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
-				common.ExtensionID(dnsv1alpha1.DNSProviderKind, dnsProviderType1),
-				common.ExtensionID(dnsv1alpha1.DNSProviderKind, dnsProviderType2),
-				common.ExtensionID(dnsv1alpha1.DNSProviderKind, dnsProviderType3),
-				common.ExtensionID(extensionsv1alpha1.ExtensionResource, extensionType2),
+				extensions.Id(extensionsv1alpha1.BackupBucketResource, backupProvider),
+				extensions.Id(extensionsv1alpha1.BackupEntryResource, backupProvider),
+				extensions.Id(extensionsv1alpha1.ControlPlaneResource, seedProvider),
+				extensions.Id(extensionsv1alpha1.ControlPlaneResource, shootProvider),
+				extensions.Id(extensionsv1alpha1.InfrastructureResource, shootProvider),
+				extensions.Id(extensionsv1alpha1.NetworkResource, networkingType),
+				extensions.Id(extensionsv1alpha1.WorkerResource, shootProvider),
+				extensions.Id(extensionsv1alpha1.ExtensionResource, extensionType1),
+				extensions.Id(extensionsv1alpha1.OperatingSystemConfigResource, oscType),
+				extensions.Id(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
+				extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType1),
+				extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType2),
+				extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType3),
+				extensions.Id(extensionsv1alpha1.ExtensionResource, extensionType2),
 			)))
 		})
 
@@ -504,18 +504,18 @@ var _ = Describe("shoot", func() {
 			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 
 			Expect(result).To(Equal(sets.NewString(
-				common.ExtensionID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
-				common.ExtensionID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
-				common.ExtensionID(extensionsv1alpha1.InfrastructureResource, shootProvider),
-				common.ExtensionID(extensionsv1alpha1.NetworkResource, networkingType),
-				common.ExtensionID(extensionsv1alpha1.WorkerResource, shootProvider),
-				common.ExtensionID(extensionsv1alpha1.ExtensionResource, extensionType1),
-				common.ExtensionID(extensionsv1alpha1.OperatingSystemConfigResource, oscType),
-				common.ExtensionID(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
-				common.ExtensionID(dnsv1alpha1.DNSProviderKind, dnsProviderType1),
-				common.ExtensionID(dnsv1alpha1.DNSProviderKind, dnsProviderType2),
-				common.ExtensionID(dnsv1alpha1.DNSProviderKind, dnsProviderType3),
-				common.ExtensionID(extensionsv1alpha1.ExtensionResource, extensionType2),
+				extensions.Id(extensionsv1alpha1.ControlPlaneResource, seedProvider),
+				extensions.Id(extensionsv1alpha1.ControlPlaneResource, shootProvider),
+				extensions.Id(extensionsv1alpha1.InfrastructureResource, shootProvider),
+				extensions.Id(extensionsv1alpha1.NetworkResource, networkingType),
+				extensions.Id(extensionsv1alpha1.WorkerResource, shootProvider),
+				extensions.Id(extensionsv1alpha1.ExtensionResource, extensionType1),
+				extensions.Id(extensionsv1alpha1.OperatingSystemConfigResource, oscType),
+				extensions.Id(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
+				extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType1),
+				extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType2),
+				extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType3),
+				extensions.Id(extensionsv1alpha1.ExtensionResource, extensionType2),
 			)))
 		})
 
@@ -525,17 +525,17 @@ var _ = Describe("shoot", func() {
 			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 
 			Expect(result).To(Equal(sets.NewString(
-				common.ExtensionID(extensionsv1alpha1.BackupBucketResource, backupProvider),
-				common.ExtensionID(extensionsv1alpha1.BackupEntryResource, backupProvider),
-				common.ExtensionID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
-				common.ExtensionID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
-				common.ExtensionID(extensionsv1alpha1.InfrastructureResource, shootProvider),
-				common.ExtensionID(extensionsv1alpha1.NetworkResource, networkingType),
-				common.ExtensionID(extensionsv1alpha1.WorkerResource, shootProvider),
-				common.ExtensionID(extensionsv1alpha1.ExtensionResource, extensionType1),
-				common.ExtensionID(extensionsv1alpha1.OperatingSystemConfigResource, oscType),
-				common.ExtensionID(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
-				common.ExtensionID(extensionsv1alpha1.ExtensionResource, extensionType2),
+				extensions.Id(extensionsv1alpha1.BackupBucketResource, backupProvider),
+				extensions.Id(extensionsv1alpha1.BackupEntryResource, backupProvider),
+				extensions.Id(extensionsv1alpha1.ControlPlaneResource, seedProvider),
+				extensions.Id(extensionsv1alpha1.ControlPlaneResource, shootProvider),
+				extensions.Id(extensionsv1alpha1.InfrastructureResource, shootProvider),
+				extensions.Id(extensionsv1alpha1.NetworkResource, networkingType),
+				extensions.Id(extensionsv1alpha1.WorkerResource, shootProvider),
+				extensions.Id(extensionsv1alpha1.ExtensionResource, extensionType1),
+				extensions.Id(extensionsv1alpha1.OperatingSystemConfigResource, oscType),
+				extensions.Id(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
+				extensions.Id(extensionsv1alpha1.ExtensionResource, extensionType2),
 			)))
 		})
 
@@ -548,19 +548,19 @@ var _ = Describe("shoot", func() {
 			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
 
 			Expect(result).To(Equal(sets.NewString(
-				common.ExtensionID(extensionsv1alpha1.BackupBucketResource, backupProvider),
-				common.ExtensionID(extensionsv1alpha1.BackupEntryResource, backupProvider),
-				common.ExtensionID(extensionsv1alpha1.ControlPlaneResource, seedProvider),
-				common.ExtensionID(extensionsv1alpha1.ControlPlaneResource, shootProvider),
-				common.ExtensionID(extensionsv1alpha1.InfrastructureResource, shootProvider),
-				common.ExtensionID(extensionsv1alpha1.NetworkResource, networkingType),
-				common.ExtensionID(extensionsv1alpha1.WorkerResource, shootProvider),
-				common.ExtensionID(extensionsv1alpha1.ExtensionResource, extensionType1),
-				common.ExtensionID(extensionsv1alpha1.OperatingSystemConfigResource, oscType),
-				common.ExtensionID(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
-				common.ExtensionID(dnsv1alpha1.DNSProviderKind, dnsProviderType1),
-				common.ExtensionID(dnsv1alpha1.DNSProviderKind, dnsProviderType2),
-				common.ExtensionID(dnsv1alpha1.DNSProviderKind, dnsProviderType3),
+				extensions.Id(extensionsv1alpha1.BackupBucketResource, backupProvider),
+				extensions.Id(extensionsv1alpha1.BackupEntryResource, backupProvider),
+				extensions.Id(extensionsv1alpha1.ControlPlaneResource, seedProvider),
+				extensions.Id(extensionsv1alpha1.ControlPlaneResource, shootProvider),
+				extensions.Id(extensionsv1alpha1.InfrastructureResource, shootProvider),
+				extensions.Id(extensionsv1alpha1.NetworkResource, networkingType),
+				extensions.Id(extensionsv1alpha1.WorkerResource, shootProvider),
+				extensions.Id(extensionsv1alpha1.ExtensionResource, extensionType1),
+				extensions.Id(extensionsv1alpha1.OperatingSystemConfigResource, oscType),
+				extensions.Id(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
+				extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType1),
+				extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType2),
+				extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType3),
 			)))
 		})
 	})

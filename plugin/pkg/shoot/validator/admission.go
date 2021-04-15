@@ -30,7 +30,6 @@ import (
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
@@ -347,7 +346,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	if shoot.Spec.Maintenance != nil && utils.IsTrue(shoot.Spec.Maintenance.ConfineSpecUpdateRollout) &&
 		!apiequality.Semantic.DeepEqual(oldShoot.Spec, shoot.Spec) &&
 		shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == core.LastOperationStateFailed {
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.FailedShootNeedsRetryOperation, "true")
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.FailedShootNeedsRetryOperation, "true")
 	}
 
 	if shoot.DeletionTimestamp == nil {
@@ -945,5 +944,5 @@ func addInfrastructureDeploymentTask(shoot *core.Shoot) {
 	if shoot.ObjectMeta.Annotations == nil {
 		shoot.ObjectMeta.Annotations = make(map[string]string)
 	}
-	controllerutils.AddTasks(shoot.ObjectMeta.Annotations, common.ShootTaskDeployInfrastructure)
+	controllerutils.AddTasks(shoot.ObjectMeta.Annotations, v1beta1constants.ShootTaskDeployInfrastructure)
 }

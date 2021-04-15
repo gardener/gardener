@@ -26,6 +26,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
@@ -44,20 +45,6 @@ const (
 	// DNSRealmAnnotation is the annotation key for restricting provider access for shoot DNS entries
 	DNSRealmAnnotation = "dns.gardener.cloud/realms"
 )
-
-// GenerateDNSProviderName creates a name for the dns provider out of the passed `secretName` and `providerType`.
-func GenerateDNSProviderName(secretName, providerType string) string {
-	switch {
-	case secretName != "" && providerType != "":
-		return fmt.Sprintf("%s-%s", providerType, secretName)
-	case secretName != "":
-		return secretName
-	case providerType != "":
-		return providerType
-	default:
-		return ""
-	}
-}
 
 // DeployExternalDNS deploys the external DNSOwner, DNSProvider, and DNSEntry resources.
 func (b *Botanist) DeployExternalDNS(ctx context.Context) error {
@@ -286,7 +273,7 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context, gardenClient, see
 			); err != nil {
 				return nil, fmt.Errorf("could not get dns provider secret %q: %+v", *secretName, err)
 			}
-			providerName := GenerateDNSProviderName(*secretName, *providerType)
+			providerName := gutil.GenerateDNSProviderName(*secretName, *providerType)
 
 			additionalProviders[providerName] = dns.NewProvider(
 				b.Logger,

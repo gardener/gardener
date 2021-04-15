@@ -50,7 +50,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/applications"
 
@@ -95,14 +94,14 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 	f.Default().Serial().CIt("should fully maintain and reconcile a shoot cluster", func(ctx context.Context) {
 		ginkgo.By("maintain shoot")
 		err := f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
-			shoot.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationMaintain
+			shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.ShootOperationMaintain
 			return nil
 		})
 		framework.ExpectNoError(err)
 
 		ginkgo.By("reconcile shoot")
 		err = f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
-			shoot.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationReconcile
+			shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationReconcile
 			return nil
 		})
 		framework.ExpectNoError(err)
@@ -123,7 +122,7 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 		framework.ExpectNoError(err)
 
 		err = f.UpdateShoot(ctx, func(shoot *gardencorev1beta1.Shoot) error {
-			shoot.Annotations[v1beta1constants.GardenerOperation] = common.ShootOperationRotateKubeconfigCredentials
+			shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.ShootOperationRotateKubeconfigCredentials
 			return nil
 		})
 		framework.ExpectNoError(err)

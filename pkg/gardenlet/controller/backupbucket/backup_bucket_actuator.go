@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -170,7 +169,7 @@ func (a *actuator) emptyExtensionSecret() *corev1.Secret {
 }
 
 func (a *actuator) deployBackupBucketExtensionSecret(ctx context.Context) error {
-	coreSecret, err := common.GetSecretFromSecretRef(ctx, a.gardenClient.Client(), &a.backupBucket.Spec.SecretRef)
+	coreSecret, err := kutil.GetSecretByReference(ctx, a.gardenClient.Client(), &a.backupBucket.Spec.SecretRef)
 	if err != nil {
 		return err
 	}
@@ -238,7 +237,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 			var generatedSecretRef *corev1.SecretReference
 
 			if backupBucket.Status.GeneratedSecretRef != nil {
-				generatedSecret, err := common.GetSecretFromSecretRef(ctx, a.seedClient.Client(), backupBucket.Status.GeneratedSecretRef)
+				generatedSecret, err := kutil.GetSecretByReference(ctx, a.seedClient.Client(), backupBucket.Status.GeneratedSecretRef)
 				if err != nil {
 					return err
 				}

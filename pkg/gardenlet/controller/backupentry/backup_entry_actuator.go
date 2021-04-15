@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -230,7 +229,7 @@ func (a *actuator) deployBackupEntryExtensionSecret(ctx context.Context) error {
 		coreSecretRef = a.backupBucket.Status.GeneratedSecretRef
 	}
 
-	coreSecret, err := common.GetSecretFromSecretRef(ctx, a.gardenClient.Client(), coreSecretRef)
+	coreSecret, err := kutil.GetSecretByReference(ctx, a.gardenClient.Client(), coreSecretRef)
 	if err != nil {
 		return errors.Wrapf(err, "could not get secret referred in core backup bucket")
 	}

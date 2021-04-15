@@ -113,6 +113,9 @@ const (
 	// GardenerDescription is a constant for a key in an annotation describing what the resource is used for.
 	GardenerDescription = "gardener.cloud/description"
 
+	// GardenCreatedBy is the key for an annotation of a Shoot cluster whose value indicates contains the username
+	// of the user that created the resource.
+	GardenCreatedBy = "gardener.cloud/created-by"
 	// GardenerOperation is a constant for an annotation on a resource that describes a desired operation.
 	GardenerOperation = "gardener.cloud/operation"
 	// GardenerOperationReconcile is a constant for the value of the operation annotation describing a reconcile
@@ -194,6 +197,38 @@ const (
 	// ShootNoCleanup is a constant for a label on a resource indicating that the Gardener cleaner should not delete this
 	// resource when cleaning a shoot during the deletion flow.
 	ShootNoCleanup = "shoot.gardener.cloud/no-cleanup"
+	// ShootAlphaScalingAPIServerClass is a constant for an annotation on the shoot stating the initial API server class.
+	// It influences the size of the initial resource requests/limits.
+	// Possible values are [small, medium, large, xlarge, 2xlarge].
+	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
+	// what you do.
+	ShootAlphaScalingAPIServerClass = "alpha.kube-apiserver.scaling.shoot.gardener.cloud/class"
+	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
+	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
+	// of referenced quotas.
+	ShootExpirationTimestamp = "shoot.gardener.cloud/expiration-timestamp"
+	// ShootStatus is a constant for a label on a Shoot resource indicating that the Shoot's health.
+	ShootStatus = "shoot.gardener.cloud/status"
+	// FailedShootNeedsRetryOperation is a constant for an annotation on a Shoot in a failed state indicating that a retry operation should be triggered during the next maintenance time window.
+	FailedShootNeedsRetryOperation = "maintenance.shoot.gardener.cloud/needs-retry-operation"
+	// ShootTasks is a constant for an annotation on a Shoot which states that certain tasks should be done.
+	ShootTasks = "shoot.gardener.cloud/tasks"
+	// ShootTaskDeployInfrastructure is a name for a Shoot's infrastructure deployment task. It indicates that the
+	// Infrastructure extension resource shall be reconciled.
+	ShootTaskDeployInfrastructure = "deployInfrastructure"
+	// ShootTaskRestartControlPlanePods is a name for a Shoot task which is dedicated to restart related control plane pods.
+	ShootTaskRestartControlPlanePods = "restartControlPlanePods"
+	// ShootTaskRestartCoreAddons is a name for a Shoot task which is dedicated to restart some core addons.
+	ShootTaskRestartCoreAddons = "restartCoreAddons"
+	// ShootOperationMaintain is a constant for an annotation on a Shoot indicating that the Shoot maintenance shall be
+	// executed as soon as possible.
+	ShootOperationMaintain = "maintain"
+	// ShootOperationRetry is a constant for an annotation on a Shoot indicating that a failed Shoot reconciliation shall be
+	// retried.
+	ShootOperationRetry = "retry"
+	// ShootOperationRotateKubeconfigCredentials is a constant for an annotation on a Shoot indicating that the credentials
+	// contained in the kubeconfig that is handed out to the user shall be rotated.
+	ShootOperationRotateKubeconfigCredentials = "rotate-kubeconfig-credentials"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.

@@ -32,10 +32,10 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/common"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
@@ -748,27 +748,27 @@ var _ = Describe("validator", func() {
 				Entry(
 					"should add annotation for failed shoot",
 					specUpdate, confineEnabled, confineEnabled, operationFaild, operationFaild,
-					HaveKeyWithValue(common.FailedShootNeedsRetryOperation, "true"),
+					HaveKeyWithValue(v1beta1constants.FailedShootNeedsRetryOperation, "true"),
 				),
 				Entry(
 					"should not add annotation for failed shoot because of missing spec change",
 					!specUpdate, confineEnabled, confineEnabled, operationFaild, operationFaild,
-					Not(HaveKey(common.FailedShootNeedsRetryOperation)),
+					Not(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation)),
 				),
 				Entry(
 					"should not add annotation for succeeded shoot",
 					specUpdate, confineEnabled, confineEnabled, operationFaild, operationSucceeded,
-					Not(HaveKey(common.FailedShootNeedsRetryOperation)),
+					Not(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation)),
 				),
 				Entry(
 					"should not add annotation for shoot w/o confine spec roll-out enabled",
 					specUpdate, confineEnabled, !confineEnabled, operationFaild, operationFaild,
-					Not(HaveKey(common.FailedShootNeedsRetryOperation)),
+					Not(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation)),
 				),
 				Entry(
 					"should not add annotation for shoot w/o last operation",
 					specUpdate, confineEnabled, confineEnabled, nil, nil,
-					Not(HaveKey(common.FailedShootNeedsRetryOperation)),
+					Not(HaveKey(v1beta1constants.FailedShootNeedsRetryOperation)),
 				),
 			)
 		})
@@ -917,7 +917,7 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, common.ShootTaskDeployInfrastructure)).To(BeTrue())
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, v1beta1constants.ShootTaskDeployInfrastructure)).To(BeTrue())
 			})
 
 			It("should add deploy infrastructure task because shoot is waking up from hibernation", func() {
@@ -932,7 +932,7 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, common.ShootTaskDeployInfrastructure)).To(BeTrue())
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, v1beta1constants.ShootTaskDeployInfrastructure)).To(BeTrue())
 			})
 
 			It("should add deploy infrastructure task because spec has changed", func() {
@@ -944,7 +944,7 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, common.ShootTaskDeployInfrastructure)).To(BeTrue())
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, v1beta1constants.ShootTaskDeployInfrastructure)).To(BeTrue())
 			})
 
 			It("should not add deploy infrastructure task because spec has not changed", func() {
@@ -952,7 +952,7 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).To(Not(HaveOccurred()))
-				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, common.ShootTaskDeployInfrastructure)).ToNot(BeTrue())
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, v1beta1constants.ShootTaskDeployInfrastructure)).ToNot(BeTrue())
 			})
 		})
 

@@ -31,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -336,7 +335,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	// Add the Gardener finalizer to the referenced Seed secret to protect it from deletion as long as the Seed resource
 	// does exist.
 	if seed.Spec.SecretRef != nil {
-		secret, err := common.GetSecretFromSecretRef(ctx, gardenClient.Client(), seed.Spec.SecretRef)
+		secret, err := kutil.GetSecretByReference(ctx, gardenClient.Client(), seed.Spec.SecretRef)
 		if err != nil {
 			seedLogger.Error(err.Error())
 			return err

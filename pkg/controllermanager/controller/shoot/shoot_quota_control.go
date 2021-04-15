@@ -19,9 +19,9 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/operation/common"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	"github.com/sirupsen/logrus"
@@ -108,10 +108,10 @@ func (r *shootQuotaReconciler) Reconcile(ctx context.Context, request reconcile.
 		return reconcile.Result{RequeueAfter: r.cfg.SyncPeriod.Duration}, nil
 	}
 
-	expirationTime, exits := shoot.Annotations[common.ShootExpirationTimestamp]
+	expirationTime, exits := shoot.Annotations[v1beta1constants.ShootExpirationTimestamp]
 	if !exits {
 		expirationTime = shoot.CreationTimestamp.Add(time.Duration(*clusterLifeTime*24) * time.Hour).Format(time.RFC3339)
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, common.ShootExpirationTimestamp, expirationTime)
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.ShootExpirationTimestamp, expirationTime)
 
 		if err := r.gardenClient.Update(ctx, shoot); err != nil {
 			return reconcile.Result{}, err
