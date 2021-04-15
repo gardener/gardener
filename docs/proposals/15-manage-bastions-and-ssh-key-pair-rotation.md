@@ -80,7 +80,7 @@ The following is a list of involved components, that either need to be newly int
     - The targeted shoot is set under `spec.shootRef`
 2. GAPI Admission Plugin for the `Bastion` resource in the garden cluster
         - on creation, sets `metadata.annotations["operations.gardener.cloud/created-by"]` according to the user that created the resource
-        - when `operations.gardener.cloud/operation: keepalive` is set, calculates new `status.expirationTimestamp`
+        - when `operations.gardener.cloud/operation: keepalive` is set it will be removed by GAPI from the annotations and `status.lastHeartbeatTimestamp` will be set with the current timestamp. The `status.expirationTimestamp` will be calculated by taking the last heartbeat timestamp and adding x minutes (configurable, default `60` Minutes).
 3. `gardenlet`
     - Watches `Bastion` resource for own seed under api group `operations.gardener.cloud` in the garden cluster
     - Creates `Bastion` custom resource under api group `extensions.gardener.cloud/v1alpha1` in the seed cluster
@@ -129,8 +129,7 @@ metadata:
   namespace: garden-myproject
   annotations:
     operations.gardener.cloud/created-by: foo # set by the mutating webhook
-    operations.gardener.cloud/last-heartbeat-at: "2021-03-19T11:58:00Z"
-    # operations.gardener.cloud/operation: keepalive # this annotation is removed by the mutating webhook and the last-heartbeat timestamp and/or the status.expirationTimestamp will be updated accordingly
+    # operations.gardener.cloud/operation: keepalive # this annotation is removed by the GAPI and the last-heartbeat timestamp and the status.expirationTimestamp will be updated accordingly
 spec:
   shootRef: # namespace cannot be set / it's the same as .metadata.namespace
     name: my-cluster
@@ -158,7 +157,8 @@ status:
     reason: BastionReady
     message: Bastion for the cluster is ready.
 
-  # the following fields are only set by the mutating webhook
+  # the following fields are only set by the GAPI
+  lastHeartbeatTimestamp: "2021-03-19T11:58:00Z" # will be set when setting the annotation operations.gardener.cloud/operation: keepalive
   expirationTimestamp: "2021-03-19T12:58:00Z" # extended on each keepalive
 ```
 
