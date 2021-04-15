@@ -81,14 +81,13 @@ var _ = Describe("ShootState Control", func() {
 		gardenScheme := runtime.NewScheme()
 		Expect(gardencorev1alpha1.AddToScheme(gardenScheme)).NotTo(HaveOccurred())
 		Expect(gardencorev1beta1.AddToScheme(gardenScheme)).NotTo(HaveOccurred())
-
-		gardenClient := fake.NewClientBuilder().WithScheme(gardenScheme).Build()
-		fakeGardenClient = fakeclientset.NewClientSetBuilder().WithAPIReader(gardenClient).WithClient(gardenClient).Build()
+		gardenClient := fake.NewFakeClientWithScheme(gardenScheme)
+		fakeGardenClient = fakeclientset.NewClientSetBuilder().WithClient(gardenClient).Build()
 
 		seedScheme := runtime.NewScheme()
 		Expect(corev1.AddToScheme(seedScheme)).NotTo(HaveOccurred())
 		Expect(extensionsv1alpha1.AddToScheme(seedScheme)).NotTo(HaveOccurred())
-		seedClient := fake.NewClientBuilder().WithScheme(seedScheme).Build()
+		seedClient := fake.NewFakeClientWithScheme(seedScheme)
 		fakeSeedClient = fakeclientset.NewClientSetBuilder().WithClient(seedClient).Build()
 
 		recorder := record.NewFakeRecorder(64)
@@ -286,7 +285,7 @@ var _ = Describe("ShootState Control", func() {
 		It("should not try to patch the ShootState if there are no changes to the extension state", func() {
 			ctrl := gomock.NewController(GinkgoT())
 			mc := mockclient.NewMockClient(ctrl)
-			fakeClientSet := fakeclientset.NewClientSetBuilder().WithAPIReader(mc).WithClient(mc).Build()
+			fakeClientSet := fakeclientset.NewClientSetBuilder().WithDirectClient(mc).WithClient(mc).Build()
 			recorder := record.NewFakeRecorder(64)
 			shootStateControl = extensions.NewShootStateControl(fakeClientSet, fakeClientSet, log.WithField("seed", "test-seed"), recorder)
 			gomock.InOrder(

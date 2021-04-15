@@ -125,7 +125,7 @@ var _ = Describe("handler", func() {
 				}
 			})
 
-			DescribeTable("should have no opinion because no allowed verb",
+			DescribeTable("should forbid because no allowed verb",
 				func(operation admissionv1.Operation) {
 					request.Operation = operation
 
