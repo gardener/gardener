@@ -24,21 +24,21 @@ reviewers:
     - [Rotation Proposal](#rotation-proposal)
 
 ## Motivation
-`gardenctl` (v1) has the functionality to setup SSH sessions to the targeted shoot cluster. For this, infrastructure resources like vms, firewall rules etc. have to be created. `gardenctl` will clean up the resources after the SSH session. However, there were issues in the past where that infrastructure resources did not get cleaned up properly, for example due to some error and was not retried. Hence, the proposal is to have a dedicated controller (for each infrastructure) that manages the infrastructure resources. `gardenctl` also re-used the SSH node credentials for the bastion host. Instead, a new temporary SSH key pair should be created for the bastion host.
-The static shoot-specific SSH key pair should be rotated regularly, for example once in the maintenance time window.
+`gardenctl` (v1) has the functionality to setup `ssh` sessions to the targeted shoot cluster (nodes). To this end, infrastructure resources like VMs, public IPs, firewall rules, etc. have to be created. `gardenctl` will clean up the resources after termination of the `ssh` session (or rather when the operator is done with her work). However, there were issues in the past where these infrastructure resources were not properly cleaned up afterwards, e.g. due to some error (no retries either). Hence, the proposal is to have a dedicated controller (for each infrastructure) that manages the infrastructure resources and their cleanup. The current `gardenctl` also re-used the `ssh` node credentials for the bastion host. While that's possible, it would be safer to rather use personal or generated `ssh` key pairs to access the bastion host.
+The static shoot-specific `ssh` key pair should be rotated regularly, e.g. once in the maintenance time window. This also means that we cannot create the node VMs anymore with infrastructure public keys as these cannot be revoked or rotated (e.g. in AWS) without terminating the VM itself.
 
 Changes to the `Bastion` resource should only be allowed for controllers on seeds that are responsible for it. This cannot be restricted when using custom resources.
 The proposal, as outlined below, suggests to implement the necessary changes in the gardener core components and to adapt the [SeedAuthorizer](https://github.com/gardener/gardener/issues/1723) to consider `Bastion` resources that the Gardener API Server serves.
 
 
 ### Goals
-- Operators can request and will be granted **one-time**, **personal** , and **time-limited** `ssh` access to cluster nodes:
-  - **one-time**: Credentials are under Gardener control and can be used only for the extent of this request (of course multiple `ssh` sessions are possible, in parallel or repeatedly, but after "the time is up", see time-limited property, they will be revoked and can never be used ever again; this, btw., prohibits use of private credentials that Gardener cannot permanently revoke/rotate)
-  - **personal**: Credentials are bound to the requestor and logins and logs can be properly audited and traced back to the requestor
-  - **time-limited** Credentials are valid only for a specific time span and cannot be used beyond that time span
-- The respective generated **personal `ssh` credentials will be made available to the requestor** and nobody else can use (a.k.a. impersonate) them (not even other operators).
-- Necessary infrastructure resources for `ssh` access (such as VMs, firewall rules, etc.) are automatically created and also terminated after usage, but at the latest after the above mentioned max time span.
-
+- Operators can request and will be granted time-limited `ssh` access to shoot cluster nodes via bastion hosts.
+- To that end, requestors must present their public `ssh` key and only this will be installed into `sshd` on the bastion hosts.
+- The bastion hosts will be firewalled and ingress traffic will be permitted only from the client IP of the requestor.
+- The actual node `ssh` private key (resp. key pair) will be rotated by Gardener and access to the nodes is only possible with this constantly rotated key pair and not with the personal one that is used only for the bastion host.
+- Bastion host and access is granted only for the extent of this operator request (of course multiple `ssh` sessions are possible, in parallel or repeatedly, but after "the time is up", access is no longer possible).
+- By these means (personal public key and allow-listed client IP) nobody else can use (a.k.a. impersonate) the requestor (not even other operators).
+- Necessary infrastructure resources for `ssh` access (such as VMs, public IPs, firewall rules, etc.) are automatically created and also terminated after usage, but at the latest after the above mentioned time span is up.
 ### Non-Goals
 - Node-specific access
 - Auditability on operating system level (not only auditing the SSH login, but everything that is done on a node and other respective resources, e.g. by using dedicated operating system users)
@@ -76,7 +76,7 @@ The following is a list of involved components, that either need to be newly int
 0. Users should only get the RBAC permission to `create` / `update` `Bastion` resources for a namespace, if they should be allowed to SSH onto the shoot nodes in this namespace. A project member with `admin` role will have these permissions.
 1. User/`gardenctlv2` creates `Bastion` resource in garden cluster (see [resource example](#resource-example) below)
     - First, gardenctl would figure out the own public IP of the user's machine. Either by calling an external service (gardenctl (v1) uses https://github.com/gardener/gardenctl/blob/master/pkg/cmd/miscellaneous.go#L226) or by calling a binary that prints the public IP(s) to stdout. The binary should be configurable. The result is set under `spec.ingress[].from[].ipBlock.cidr`
-    - the public PGP key of the user is set under `spec.pgpPublicKey`. The key that should be used needs to be configured beforehand by the user
+    - the public `ssh` key of the user is set under `spec.sshPublicKey`. The key that should be used needs to be configured beforehand by the user
     - The targeted shoot is set under `spec.shootRef`
 2. GAPI Admission Control for the `Bastion` resource in the garden cluster
     - Mutating Webhook
@@ -87,8 +87,6 @@ The following is a list of involved components, that either need to be newly int
     - Creates `Bastion` custom resource under api group `extensions.gardener.cloud/v1alpha1` in the seed cluster
 4. `GCM`:
     - During reconcile of the `Bastion` resource:
-      - Creates SSH key pair in memory. Stores the secret key encrypted under `status.sshPrivateKey` using `spec.pgpPublicKey`. Stores the public key under `status.sshPublicKey`
-        - *Sidenote: We do not want to accept the users own SSH public key because then we cannot control how well they were picked, whether they are rotated and stored safely (the user hasn't leaked her private key), etc.*
       - according to `spec.shootRef`, sets the `status.seedName`
       - according to `spec.shootRef`, sets the `status.providerType`
 5. Gardener extension provider <infra> / Bastion Controller on Seed:
@@ -96,8 +94,8 @@ The following is a list of involved components, that either need to be newly int
     - Watches `Bastion` custom resources that are created by the `gardenlet` in the seed
     - Controller reads `cloudprovider` credentials from seed-shoot namespace
     - Deploy infrastructure resources
-        - Bastion VM. User data similar to https://github.com/gardener/gardenctl/blob/1e3e5fa1d5603e2161f45046ba7c6b5b4107369e/pkg/cmd/ssh.go#L160-L171. Writes `status.sshPublicKey` into `authorized_keys` file.
-        - create security groups / firewall rules etc.
+        - Bastion VM. User data similar to https://github.com/gardener/gardenctl/blob/1e3e5fa1d5603e2161f45046ba7c6b5b4107369e/pkg/cmd/ssh.go#L160-L171. Writes `spec.sshPublicKey` into `authorized_keys` file.
+        - attaches public IP, creates security group, firewall rules, etc.
     - Updates status of `Bastion` resource:
         - With bastion IP under `status.ingress.ip` or hostname under `status.ingress.hostname`
         - Updates the `status.lastOperation` with the status of the last reconcile operation
@@ -105,7 +103,7 @@ The following is a list of involved components, that either need to be newly int
     - Syncs back the `status.ingress` and `status.conditions` of the `Bastion` resource in the seed to the garden cluster in case it changed
 7. `gardenctl`
     - initiates SSH session once `status.operation['BastionReady']` is true of the `Bastion` resource in the garden cluster
-        - reads `status["sshPrivateKey"]`, decrypts it with users private PGP key
+        - locates private `ssh` key matching `spec["sshPublicKey"]` which was configured beforehand by the user
         - reads bastion IP (`status.ingress.ip`) or hostname (`status.ingress.hostname`)
         - reads the private key from the SSH key pair for the shoot node
         - opens SSH connection to the bastion and from there to the respective shoot node
@@ -138,7 +136,7 @@ spec:
   shootRef: # namespace cannot be set / it's the same as .metadata.namespace
     name: my-cluster
 
-  pgpPublicKey: LS0tLS1CRUdJTiBQR1AgUFVCTElDIEtFWSBCTE9DSy0tLS0tCi4uLgotLS0tLUVORCBQR1AgUFVCTElDIEtFWSBCTE9DSy0tLS0tCg== # user's PGP public key, immutable
+  sshPublicKey: c3NoLXJzYSAuLi4K
 
   ingress:
   - ipBlock:
@@ -148,8 +146,6 @@ status:
   # the following fields are set by the GCM
   seedName: aws-eu2
   providerType: aws
-  sshPrivateKey: LS0tLS1CRUdJTiBQR1AgTUVTU0FHRS0tLS0tCi4uLgotLS0tLUVORCBQR1AgTUVTU0FHRS0tLS0tCg== # SSH private key, enrypted with spec.pgpPublicKey
-  sshPublicKey: c3NoLXJzYSAuLi4K
 
   # the following fields are managed by the controller in the seed and synced by gardenlet
   ingress: # IP or hostname of the bastion
@@ -175,7 +171,7 @@ metadata:
   name: cli-abcdef
   namespace: shoot--myproject--mycluster
 spec:
-  sshPublicKey: c3NoLXJzYSAuLi4K # from status["sshPublicKey"] of Bastion resource in garden cluster
+  sshPublicKey: c3NoLXJzYSAuLi4K # from spec["sshPublicKey"] of Bastion resource in garden cluster
 
   ingress:
   - ipBlock:
