@@ -99,14 +99,14 @@ The following is a list of involved components, that either need to be newly int
         - Bastion VM. User data similar to https://github.com/gardener/gardenctl/blob/1e3e5fa1d5603e2161f45046ba7c6b5b4107369e/pkg/cmd/ssh.go#L160-L171. Writes `status.sshPublicKey` into `authorized_keys` file.
         - create security groups / firewall rules etc.
     - Updates status of `Bastion` resource:
-        - With bastion IP under `status.ipAddress`
+        - With bastion IP under `status.ingress.ip` or hostname under `status.ingress.hostname`
         - Updates the `status.lastOperation` with the status of the last reconcile operation
 6. `gardenlet`
-    - Syncs back the `status.ipAddress` and `status.conditions` of the `Bastion` resource in the seed to the garden cluster in case it changed
+    - Syncs back the `status.ingress` and `status.conditions` of the `Bastion` resource in the seed to the garden cluster in case it changed
 7. `gardenctl`
     - initiates SSH session once `status.operation['BastionReady']` is true of the `Bastion` resource in the garden cluster
         - reads `status["sshPrivateKey"]`, decrypts it with users private PGP key
-        - reads bastion IP from `status.ipAddress`
+        - reads bastion IP (`status.ingress.ip`) or hostname (`status.ingress.hostname`)
         - reads the private key from the SSH key pair for the shoot node
         - opens SSH connection to the bastion and from there to the respective shoot node
     - runs heartbeat in parallel as long as the SSH session is open by annotating the `Bastion` resource with `operations.gardener.cloud/operation: keepalive`
@@ -143,7 +143,7 @@ spec:
   ingress:
   - from:
     - ipBlock:
-        cidr: 1.2.3.4/32 # public ip of the user. CIDR is a string representing the IP Block. Valid examples are "192.168.1.1/24" or "2001:db9::/64"
+        cidr: 1.2.3.4/32 # public IP of the user. CIDR is a string representing the IP Block. Valid examples are "192.168.1.1/24" or "2001:db9::/64"
 
 status:
   # the following fields are set by the GCM
@@ -153,7 +153,9 @@ status:
   sshPublicKey: c3NoLXJzYSAuLi4K
 
   # the following fields are managed by the controller in the seed and synced by gardenlet
-  ipAddress: 1.2.3.5 # IP of the bastion host
+  ingress: # IP or hostname of the bastion
+    ip: 1.2.3.5
+    # hostname: foo.bar
   conditions:
   - type: BastionReady # when the `status` is true of condition type `BastionReady`, the client can initiate the SSH connection
     status: 'True'
@@ -182,7 +184,9 @@ spec:
         cidr: 1.2.3.4/32
 
 status:
-  ipAddress: 1.2.3.5
+  ingress:
+    ip: 1.2.3.5
+    # hostname: foo.bar
   conditions:
   - type: BastionReady
     status: 'True'
@@ -199,7 +203,7 @@ Currently, the SSH key pair for the shoot nodes are created once during shoot cl
 - `gardeneruser` original user data [component](https://github.com/gardener/gardener/tree/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser):
     - The `gardeneruser` [create script](https://github.com/gardener/gardener/blob/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser/templates/scripts/create.tpl.sh) should be changed into a reconcile script script, and renamed accordingly. It needs to be adapted so that the `authorized_keys` file will be updated / overwritten with the current and old SSH public key from the cloud-config user data.
 - Rotation trigger:
-    - once in the maintenance time window
+    - Once in the maintenance time window
     - On demand, by annotating the shoot with `gardener.cloud/operation: rotate-ssh-keypair`
 - On rotation trigger:
     - `gardenlet`
