@@ -15,6 +15,8 @@
 package botanist
 
 import (
+	"context"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	corebackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/backupentry"
@@ -27,7 +29,7 @@ import (
 )
 
 // DefaultCoreBackupEntry creates the default deployer for the core.gardener.cloud/v1beta1.BackupEntry resource.
-func (b *Botanist) DefaultCoreBackupEntry(gardenClient client.Client) component.DeployWaiter {
+func (b *Botanist) DefaultCoreBackupEntry(gardenClient client.Client) component.DeployMigrateWaiter {
 	ownerRef := metav1.NewControllerRef(b.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
 	ownerRef.BlockOwnerDeletion = pointer.BoolPtr(false)
 
@@ -35,13 +37,12 @@ func (b *Botanist) DefaultCoreBackupEntry(gardenClient client.Client) component.
 		b.Logger,
 		gardenClient,
 		&corebackupentry.Values{
-			Namespace:         b.Shoot.Info.Namespace,
-			Name:              common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID),
-			ShootPurpose:      b.Shoot.Info.Spec.Purpose,
-			OwnerReference:    ownerRef,
-			SeedName:          pointer.StringPtr(b.Seed.Info.Name),
-			OverwriteSeedName: b.isRestorePhase(),
-			BucketName:        string(b.Seed.Info.UID),
+			Namespace:      b.Shoot.Info.Namespace,
+			Name:           common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID),
+			ShootPurpose:   b.Shoot.Info.Spec.Purpose,
+			OwnerReference: ownerRef,
+			SeedName:       b.Shoot.Info.Spec.SeedName,
+			BucketName:     string(b.Seed.Info.UID),
 		},
 		corebackupentry.DefaultInterval,
 		corebackupentry.DefaultTimeout,
@@ -61,4 +62,11 @@ func (b *Botanist) DefaultExtensionsBackupEntry(seedClient client.Client) extens
 		extensionsbackupentry.DefaultSevereThreshold,
 		extensionsbackupentry.DefaultTimeout,
 	)
+}
+
+func (b *Botanist) DeployBackupEntry(ctx context.Context) error {
+	if b.isRestorePhase() {
+		return b.Shoot.Components.BackupEntry.Restore(ctx, b.ShootState)
+	}
+	return b.Shoot.Components.BackupEntry.Deploy(ctx)
 }

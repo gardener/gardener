@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -56,10 +57,6 @@ type Values struct {
 	OwnerReference *metav1.OwnerReference
 	// SeedName is the name of the seed to which the BackupEntry shall be scheduled.
 	SeedName *string
-	// OverwriteSeedName indicates whether the provided SeedName in the values shall be used even if the BackupEntry
-	// already exists (if this is false then the existing `.spec.seedName` will be kept even if the SeedName in these
-	// values differs.
-	OverwriteSeedName bool
 	// BucketName is the name of the bucket in which the BackupEntry shall be reconciled. This value is only used if the
 	// BackupEntry does not exist yet. Otherwise, the existing `.spec.bucketName` will be kept even if the BucketName in
 	// these values differs.
@@ -73,7 +70,7 @@ func New(
 	values *Values,
 	waitInterval time.Duration,
 	waitTimeout time.Duration,
-) component.DeployWaiter {
+) component.DeployMigrateWaiter {
 	return &backupEntry{
 		client:       client,
 		logger:       logger,
@@ -111,32 +108,7 @@ func (b *backupEntry) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if b.values.OverwriteSeedName {
-		seedName = b.values.SeedName
-	}
-
-	_, err := controllerutil.CreateOrUpdate(ctx, b.client, backupEntry, func() error {
-		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
-		if b.values.ShootPurpose != nil {
-			metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.ShootPurpose, string(*b.values.ShootPurpose))
-		}
-
-		finalizers := sets.NewString(backupEntry.GetFinalizers()...)
-		finalizers.Insert(gardencorev1beta1.GardenerName)
-		backupEntry.SetFinalizers(finalizers.UnsortedList())
-
-		if b.values.OwnerReference != nil {
-			backupEntry.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*b.values.OwnerReference}
-		}
-
-		backupEntry.Spec.BucketName = bucketName
-		backupEntry.Spec.SeedName = seedName
-
-		return nil
-	})
-
-	return err
+	return b.createOrUpdate(ctx, backupEntry, seedName, bucketName, v1beta1constants.GardenerOperationReconcile)
 }
 
 // Wait waits until the BackupEntry resource is ready.
@@ -161,6 +133,77 @@ func (b *backupEntry) Wait(ctx context.Context) error {
 		b.logger.Info("Waiting until the backup entry has been reconciled in the Garden cluster...")
 		return retry.MinorError(fmt.Errorf("backup entry %q has not yet been reconciled", be.Name))
 	})
+}
+
+// Migrate uses the garden client to deschedule the BackupEntry from its current seed.
+func (b *backupEntry) Migrate(ctx context.Context) error {
+	backupEntry := &gardencorev1beta1.BackupEntry{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      b.values.Name,
+			Namespace: b.values.Namespace,
+		},
+	}
+
+	if err := b.client.Get(ctx, kutil.Key(b.values.Namespace, b.values.Name), backupEntry); err != nil {
+		return client.IgnoreNotFound(err)
+	}
+
+	metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate)
+	metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+	backupEntry.Spec.SeedName = b.values.SeedName
+
+	return b.client.Update(ctx, backupEntry)
+}
+
+// WaitMigrate waits until the BackupEntry is migrated
+func (b *backupEntry) WaitMigrate(ctx context.Context) error {
+	return b.Wait(ctx)
+}
+
+// Restore uses the garden client to update the BackupEntry and set the name of the new seed to which it shall be scheduled.
+// If the BackupEntry was deleted it will be recreated.
+func (b *backupEntry) Restore(ctx context.Context, _ *gardencorev1alpha1.ShootState) error {
+	var (
+		backupEntry = &gardencorev1beta1.BackupEntry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      b.values.Name,
+				Namespace: b.values.Namespace,
+			},
+		}
+		bucketName = b.values.BucketName
+	)
+
+	if err := b.client.Get(ctx, kutil.Key(b.values.Namespace, b.values.Name), backupEntry); err == nil {
+		bucketName = backupEntry.Spec.BucketName
+	} else if client.IgnoreNotFound(err) != nil {
+		return err
+	}
+	return b.createOrUpdate(ctx, backupEntry, b.values.SeedName, bucketName, v1beta1constants.GardenerOperationRestore)
+}
+
+func (b *backupEntry) createOrUpdate(ctx context.Context, backupEntry *gardencorev1beta1.BackupEntry, seedName *string, bucketName string, operation string) error {
+	_, err := controllerutil.CreateOrUpdate(ctx, b.client, backupEntry, func() error {
+		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+		if b.values.ShootPurpose != nil {
+			metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.ShootPurpose, string(*b.values.ShootPurpose))
+		}
+
+		finalizers := sets.NewString(backupEntry.GetFinalizers()...)
+		finalizers.Insert(gardencorev1beta1.GardenerName)
+		backupEntry.SetFinalizers(finalizers.UnsortedList())
+
+		if b.values.OwnerReference != nil {
+			backupEntry.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*b.values.OwnerReference}
+		}
+
+		backupEntry.Spec.BucketName = bucketName
+		backupEntry.Spec.SeedName = seedName
+
+		return nil
+	})
+
+	return err
 }
 
 // Destroy is not implemented yet.

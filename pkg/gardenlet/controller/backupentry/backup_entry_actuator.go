@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -51,6 +52,8 @@ type Actuator interface {
 	Reconcile(context.Context) error
 	// Delete deletes the BackupEntry.
 	Delete(context.Context) error
+	// Migrate migrates the BackupEntry.
+	Migrate(context.Context) error
 }
 
 type actuator struct {
@@ -140,6 +143,45 @@ func (a *actuator) Delete(ctx context.Context) error {
 			Name:         "Destroying backup entry extension",
 			Fn:           a.component.Destroy,
 			Dependencies: flow.NewTaskIDs(deployBackupEntryExtensionSecret),
+		})
+		waitUntilBackupEntryExtensionDeleted = g.Add(flow.Task{
+			Name:         "Waiting until extension backup entry is deleted",
+			Fn:           a.component.WaitCleanup,
+			Dependencies: flow.NewTaskIDs(deleteBackupEntry),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deleting backup entry secret in seed",
+			Fn:           flow.TaskFn(a.deleteBackupEntryExtensionSecret).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(waitUntilBackupEntryExtensionDeleted),
+		})
+
+		f = g.Compile()
+	)
+
+	return f.Run(flow.Opts{
+		Logger:           a.logger,
+		ProgressReporter: flow.NewImmediateProgressReporter(a.reportBackupEntryProgress),
+		Context:          ctx,
+	})
+}
+
+func (a *actuator) Migrate(ctx context.Context) error {
+	var (
+		g = flow.NewGraph("Backup Entry migration")
+
+		migrateBackupEntry = g.Add(flow.Task{
+			Name: "Migrating backup entry extension",
+			Fn:   a.component.Migrate,
+		})
+		waitUntilBackupEntryMigrated = g.Add(flow.Task{
+			Name:         "Waiting until extension backup entry is migrated",
+			Fn:           a.component.WaitMigrate,
+			Dependencies: flow.NewTaskIDs(migrateBackupEntry),
+		})
+		deleteBackupEntry = g.Add(flow.Task{
+			Name:         "Destroying backup entry extension",
+			Fn:           a.component.Destroy,
+			Dependencies: flow.NewTaskIDs(waitUntilBackupEntryMigrated),
 		})
 		waitUntilBackupEntryExtensionDeleted = g.Add(flow.Task{
 			Name:         "Waiting until extension backup entry is deleted",
@@ -258,5 +300,24 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 	a.component.SetRegion(a.backupBucket.Spec.Provider.Region)
 	a.component.SetBackupBucketProviderStatus(a.backupBucket.Status.ProviderStatus)
 
-	return a.component.Deploy(ctx)
+	if !a.isRestorePhase() {
+		return a.component.Deploy(ctx)
+	}
+
+	shootName := common.GetShootNameFromOwnerReferences(a.backupEntry.OwnerReferences)
+	shootState := &gardencorev1alpha1.ShootState{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      shootName,
+			Namespace: a.backupEntry.Namespace,
+		},
+	}
+	if err := a.gardenClient.Client().Get(ctx, kutil.Key(shootState.Namespace, shootState.Name), shootState); err != nil {
+		return err
+	}
+	return a.component.Restore(ctx, shootState)
+}
+
+// isRestorePhase checks to see if the BackupEntry's LastOperation is Restore
+func (a *actuator) isRestorePhase() bool {
+	return a.backupEntry.Status.LastOperation != nil && a.backupEntry.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore
 }

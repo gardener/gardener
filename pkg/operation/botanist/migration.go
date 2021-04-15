@@ -45,7 +45,7 @@ func (b *Botanist) DestroyAllExtensionResources(ctx context.Context) error {
 
 func (b *Botanist) runParallelTaskForEachExtensionComponent(ctx context.Context, fn func(component.DeployMigrateWaiter) func(context.Context) error) error {
 	var fns []flow.TaskFn
-	for _, component := range b.Shoot.GetExtensionComponents() {
+	for _, component := range b.Shoot.GetExtensionComponentsToMigrate() {
 		fns = append(fns, fn(component))
 	}
 	return flow.Parallel(fns...)(ctx)

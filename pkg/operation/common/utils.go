@@ -121,6 +121,16 @@ func ExtractShootDetailsFromBackupEntryName(backupEntryName string) (shootTechni
 	return shootTechnicalID, shootUID
 }
 
+// GetShootNameFromOwnerReferences
+func GetShootNameFromOwnerReferences(ownerReferences []metav1.OwnerReference) string {
+	for _, ownerRef := range ownerReferences {
+		if ownerRef.Kind == "Shoot" {
+			return ownerRef.Name
+		}
+	}
+	return ""
+}
+
 // ReplaceCloudProviderConfigKey replaces a key with the new value in the given cloud provider config.
 func ReplaceCloudProviderConfigKey(cloudProviderConfig, separator, key, value string) string {
 	keyValueRegexp := regexp.MustCompile(fmt.Sprintf(`(\Q%s\E%s)([^\n]*)`, key, separator))

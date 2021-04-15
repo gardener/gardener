@@ -254,10 +254,10 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	return shoot, nil
 }
 
-// GetExtensionComponents returns a list of component.DeployMigrateWaiters of all extension components.
-func (s *Shoot) GetExtensionComponents() []component.DeployMigrateWaiter {
+// GetExtensionComponentsToMigrate returns a list of component.DeployMigrateWaiters of extension components that
+// should be migrated by the shoot controller.
+func (s *Shoot) GetExtensionComponentsToMigrate() []component.DeployMigrateWaiter {
 	return []component.DeployMigrateWaiter{
-		s.Components.Extensions.BackupEntry,
 		s.Components.Extensions.ContainerRuntime,
 		s.Components.Extensions.ControlPlane,
 		s.Components.Extensions.ControlPlaneExposure,

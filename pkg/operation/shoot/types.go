@@ -83,7 +83,7 @@ type Shoot struct {
 
 // Components contains different components deployed in the Shoot cluster.
 type Components struct {
-	BackupEntry      component.DeployWaiter
+	BackupEntry      component.DeployMigrateWaiter
 	ClusterIdentity  component.Deployer
 	Extensions       *Extensions
 	ControlPlane     *ControlPlane

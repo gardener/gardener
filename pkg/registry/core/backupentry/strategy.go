@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/fields"
@@ -81,8 +80,12 @@ func mustIncreaseGeneration(oldBackupEntry, newBackupEntry *core.BackupEntry) bo
 		return true
 	}
 
-	if kutil.HasMetaDataAnnotation(&newBackupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile) {
-		return true
+	if val, ok := newBackupEntry.ObjectMeta.Annotations[v1beta1constants.GardenerOperation]; ok {
+		if val == v1beta1constants.GardenerOperationReconcile ||
+			val == v1beta1constants.GardenerOperationMigrate ||
+			val == v1beta1constants.GardenerOperationRestore {
+			return true
+		}
 	}
 
 	return false
