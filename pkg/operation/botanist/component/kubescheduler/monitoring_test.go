@@ -36,16 +36,11 @@ var _ = Describe("Monitoring", func() {
 			test.ScrapeConfigs(kubeScheduler, expectedScrapeConfig)
 		},
 
-		Entry("kubernetes 1.10", "1.10.0", expectedScrapeConfigK8sLess113),
-		Entry("kubernetes 1.11", "1.11.1", expectedScrapeConfigK8sLess113),
-		Entry("kubernetes 1.12", "1.12.2", expectedScrapeConfigK8sLess113),
-		Entry("kubernetes 1.13", "1.13.3", expectedScrapeConfigK8sGreaterEqual113),
-		Entry("kubernetes 1.14", "1.14.4", expectedScrapeConfigK8sGreaterEqual113),
-		Entry("kubernetes 1.15", "1.15.5", expectedScrapeConfigK8sGreaterEqual113),
-		Entry("kubernetes 1.16", "1.16.6", expectedScrapeConfigK8sGreaterEqual113),
-		Entry("kubernetes 1.17", "1.17.7", expectedScrapeConfigK8sGreaterEqual113),
-		Entry("kubernetes 1.18", "1.18.8", expectedScrapeConfigK8sGreaterEqual113),
-		Entry("kubernetes 1.19", "1.19.9", expectedScrapeConfigK8sGreaterEqual113),
+		Entry("kubernetes 1.15", "1.15.5", expectedScrapeConfig),
+		Entry("kubernetes 1.16", "1.16.6", expectedScrapeConfig),
+		Entry("kubernetes 1.17", "1.17.7", expectedScrapeConfig),
+		Entry("kubernetes 1.18", "1.18.8", expectedScrapeConfig),
+		Entry("kubernetes 1.19", "1.19.9", expectedScrapeConfig),
 	)
 
 	It("should successfully test the alerting rules", func() {
@@ -62,7 +57,13 @@ var _ = Describe("Monitoring", func() {
 })
 
 const (
-	expectedScrapeConfig = `honor_labels: false
+	expectedScrapeConfig = `job_name: kube-scheduler
+scheme: https
+tls_config:
+  insecure_skip_verify: true
+  cert_file: /etc/prometheus/seed/prometheus.crt
+  key_file: /etc/prometheus/seed/prometheus.key
+honor_labels: false
 kubernetes_sd_configs:
 - role: endpoints
   namespaces:
@@ -80,18 +81,8 @@ relabel_configs:
 metric_relabel_configs:
 - source_labels: [ __name__ ]
   action: keep
-  regex: ^(scheduler_binding_latency_microseconds_bucket|scheduler_e2e_scheduling_latency_microseconds_bucket|scheduler_scheduling_algorithm_latency_microseconds_bucket|rest_client_requests_total|process_max_fds|process_open_fds)$`
-
-	expectedScrapeConfigK8sLess113 = `job_name: kube-scheduler
-` + expectedScrapeConfig
-
-	expectedScrapeConfigK8sGreaterEqual113 = `job_name: kube-scheduler
-scheme: https
-tls_config:
-  insecure_skip_verify: true
-  cert_file: /etc/prometheus/seed/prometheus.crt
-  key_file: /etc/prometheus/seed/prometheus.key
-` + expectedScrapeConfig
+  regex: ^(scheduler_binding_latency_microseconds_bucket|scheduler_e2e_scheduling_latency_microseconds_bucket|scheduler_scheduling_algorithm_latency_microseconds_bucket|rest_client_requests_total|process_max_fds|process_open_fds)$
+`
 
 	expectedAlertingRule = `groups:
 - name: kube-scheduler.rules

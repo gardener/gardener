@@ -199,11 +199,6 @@ Wants=docker.socket rpc-statd.service`
 }
 
 var (
-	versionConstraintK8sLess111         *semver.Constraints
-	versionConstraintK8sGreaterEqual111 *semver.Constraints
-	versionConstraintK8sLess112         *semver.Constraints
-	versionConstraintK8sLess114         *semver.Constraints
-	versionConstraintK8sLess115         *semver.Constraints
 	versionConstraintK8sLess117         *semver.Constraints
 	versionConstraintK8sLess119         *semver.Constraints
 	versionConstraintK8sGreaterEqual119 *semver.Constraints
@@ -212,16 +207,6 @@ var (
 func init() {
 	var err error
 
-	versionConstraintK8sLess111, err = semver.NewConstraint("< 1.11")
-	utilruntime.Must(err)
-	versionConstraintK8sGreaterEqual111, err = semver.NewConstraint(">= 1.11")
-	utilruntime.Must(err)
-	versionConstraintK8sLess112, err = semver.NewConstraint("< 1.12")
-	utilruntime.Must(err)
-	versionConstraintK8sLess114, err = semver.NewConstraint("< 1.14")
-	utilruntime.Must(err)
-	versionConstraintK8sLess115, err = semver.NewConstraint("< 1.15")
-	utilruntime.Must(err)
 	versionConstraintK8sLess117, err = semver.NewConstraint("< 1.17")
 	utilruntime.Must(err)
 	versionConstraintK8sLess119, err = semver.NewConstraint("< 1.19")

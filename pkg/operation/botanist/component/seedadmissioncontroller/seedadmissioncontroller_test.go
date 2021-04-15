@@ -49,7 +49,7 @@ var _ = Describe("SeedAdmission", func() {
 		fakeErr           = fmt.Errorf("fake error")
 		namespace         = "shoot--foo--bar"
 		image             = "gsac:v1.2.3"
-		kubernetesVersion = semver.MustParse("v1.14.2")
+		kubernetesVersion = semver.MustParse("v1.15.2")
 
 		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -233,7 +233,7 @@ metadata:
   name: gardener-seed-admission-controller
   namespace: shoot--foo--bar
 `
-		validatingWebhookConfigurationTop = `apiVersion: admissionregistration.k8s.io/v1beta1
+		validatingWebhookConfigurationYAML = `apiVersion: admissionregistration.k8s.io/v1beta1
 kind: ValidatingWebhookConfiguration
 metadata:
   creationTimestamp: null
@@ -254,8 +254,10 @@ webhooks:
   failurePolicy: Fail
   name: crds.seed.admission.core.gardener.cloud
   namespaceSelector: {}
-`
-		validatingWebhookConfigurationBottom = `  rules:
+  objectSelector:
+    matchLabels:
+      gardener.cloud/deletion-protected: "true"
+  rules:
   - apiGroups:
     - apiextensions.k8s.io
     apiVersions:
@@ -297,11 +299,6 @@ webhooks:
     - workers
   timeoutSeconds: 10
 `
-		validatingWebhookConfigurationYAMLK8sLess115         = validatingWebhookConfigurationTop + validatingWebhookConfigurationBottom
-		validatingWebhookConfigurationYAMLK8sGreaterEqual115 = validatingWebhookConfigurationTop + `  objectSelector:
-    matchLabels:
-      gardener.cloud/deletion-protected: "true"
-` + validatingWebhookConfigurationBottom
 		vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
@@ -348,7 +345,7 @@ status: {}
 				"secret__shoot--foo--bar__gardener-seed-admission-controller-tls.yaml":                []byte(secretYAML),
 				"service__shoot--foo--bar__gardener-seed-admission-controller.yaml":                   []byte(serviceYAML),
 				"serviceaccount__shoot--foo--bar__gardener-seed-admission-controller.yaml":            []byte(serviceAccountYAML),
-				"validatingwebhookconfiguration____gardener-seed-admission-controller.yaml":           []byte(validatingWebhookConfigurationYAMLK8sLess115),
+				"validatingwebhookconfiguration____gardener-seed-admission-controller.yaml":           []byte(validatingWebhookConfigurationYAML),
 				"verticalpodautoscaler__shoot--foo--bar__gardener-seed-admission-controller-vpa.yaml": []byte(vpaYAML),
 			},
 		}
@@ -404,31 +401,7 @@ status: {}
 			Expect(seedAdmission.Deploy(ctx)).To(MatchError(fakeErr))
 		})
 
-		It("should successfully deploy all resources (k8s < 1.15)", func() {
-			gomock.InOrder(
-				c.EXPECT().List(ctx, gomock.Any()).DoAndReturn(
-					func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-						Expect(list).To(BeAssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
-						list.(*metav1.PartialObjectMetadataList).Items = make([]metav1.PartialObjectMetadata, 3)
-						return nil
-					}),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-					Expect(obj).To(DeepEqual(managedResourceSecret))
-				}),
-				c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-					Expect(obj).To(DeepEqual(managedResource))
-				}),
-			)
-
-			Expect(seedAdmission.Deploy(ctx)).To(Succeed())
-		})
-
-		It("should successfully deploy all resources (k8s >= 1.15)", func() {
-			seedAdmission = New(c, namespace, image, semver.MustParse("1.15.5"))
-			managedResourceSecret.Data["validatingwebhookconfiguration____gardener-seed-admission-controller.yaml"] = []byte(validatingWebhookConfigurationYAMLK8sGreaterEqual115)
-
+		It("should successfully deploy all resources", func() {
 			gomock.InOrder(
 				c.EXPECT().List(ctx, gomock.Any()).DoAndReturn(
 					func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {

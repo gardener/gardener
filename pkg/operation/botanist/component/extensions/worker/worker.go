@@ -34,7 +34,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -160,14 +159,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 		if labels == nil {
 			labels = map[string]string{}
 		}
-
-		// k8s node role labels
-		if versionConstraintK8sSmaller115.Check(w.values.KubernetesVersion) {
-			labels["kubernetes.io/role"] = "node"
-			labels["node-role.kubernetes.io/node"] = ""
-		} else {
-			labels["node.kubernetes.io/role"] = "node"
-		}
+		labels["node.kubernetes.io/role"] = "node"
 
 		if gardencorev1beta1helper.SystemComponentsAllowed(&workerPool) {
 			labels[v1beta1constants.LabelWorkerPoolSystemComponents] = "true"
@@ -353,13 +345,4 @@ func (w *worker) SetWorkerNameToOperatingSystemConfigsMap(maps map[string]*opera
 // MachineDeployments returns the generated machine deployments of the Worker.
 func (w *worker) MachineDeployments() []extensionsv1alpha1.MachineDeployment {
 	return w.machineDeployments
-}
-
-var versionConstraintK8sSmaller115 *semver.Constraints
-
-func init() {
-	var err error
-
-	versionConstraintK8sSmaller115, err = semver.NewConstraint("< 1.15")
-	utilruntime.Must(err)
 }

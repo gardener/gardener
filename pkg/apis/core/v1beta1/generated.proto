@@ -651,10 +651,6 @@ message HorizontalPodAutoscalerConfig {
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration cpuInitializationPeriod = 1;
 
-  // The period since last downscale, before another downscale can be performed in horizontal pod autoscaler.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration downscaleDelay = 2;
-
   // The configurable window at which the controller will choose the highest recommendation for autoscaling.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration downscaleStabilization = 3;
@@ -670,10 +666,6 @@ message HorizontalPodAutoscalerConfig {
   // The minimum change (from 1.0) in the desired-to-actual metrics ratio for the horizontal pod autoscaler to consider scaling.
   // +optional
   optional double tolerance = 6;
-
-  // The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration upscaleDelay = 7;
 }
 
 // Ingress configures the Ingress specific settings of the Seed cluster
@@ -972,7 +964,6 @@ message KubeletConfigReserved {
   optional k8s.io.apimachinery.pkg.api.resource.Quantity ephemeralStorage = 3;
 
   // PID is the reserved process-ids.
-  // To reserve PID, the SupportNodePidsLimit feature gate must be enabled in Kubernetes versions < 1.15.
   // +optional
   optional k8s.io.apimachinery.pkg.api.resource.Quantity pid = 4;
 }
@@ -1294,7 +1285,6 @@ message OIDCConfig {
   // +optional
   optional string issuerURL = 6;
 
-  // ATTENTION: Only meaningful for Kubernetes >= 1.11
   // key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.
   // +optional
   map<string, string> requiredClaims = 7;
@@ -1720,9 +1710,7 @@ message SeedSelector {
   repeated string providerTypes = 2;
 }
 
-// SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
-// seed. When enabled then this is done via PodPriority and requires the Seed cluster to have Kubernetes version 1.11
-// or the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API group enabled.
+// SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.
 message SeedSettingExcessCapacityReservation {
   // Enabled controls whether the excess capacity reservation should be enabled.
   optional bool enabled = 1;
@@ -1774,8 +1762,7 @@ message SeedSettings {
   // +optional
   optional SeedSettingShootDNS shootDNS = 3;
 
-  // LoadBalancerServices controls certain settings for services of type load balancer that are created in the
-  // seed.
+  // LoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.
   // +optional
   optional SeedSettingLoadBalancerServices loadBalancerServices = 4;
 

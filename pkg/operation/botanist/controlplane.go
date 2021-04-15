@@ -41,12 +41,10 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	"github.com/gardener/gardener/pkg/utils/version"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -518,6 +516,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"checksum/secret-service-account-key":    b.CheckSums["service-account-key"],
 			"checksum/secret-etcd-ca":                b.CheckSums[etcd.SecretNameCA],
 			"checksum/secret-etcd-client-tls":        b.CheckSums[etcd.SecretNameClient],
+			"checksum/secret-etcd-encryption":        b.CheckSums[common.EtcdEncryptionSecretName],
 			"networkpolicy/konnectivity-enabled":     strconv.FormatBool(b.Shoot.KonnectivityTunnelEnabled),
 		}
 		defaultValues = map[string]interface{}{
@@ -527,6 +526,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"enableBasicAuthentication": gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info),
 			"probeCredentials":          b.APIServerHealthCheckToken,
 			"securePort":                443,
+			"enableEtcdEncryption":      true,
 			"podAnnotations":            podAnnotations,
 			"konnectivityTunnel": map[string]interface{}{
 				"enabled":    b.Shoot.KonnectivityTunnelEnabled,
@@ -572,15 +572,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"apiserverFQDN":     b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
 			"podMutatorEnabled": b.APIServerSNIPodMutatorEnabled(),
 		}
-	}
-
-	enableEtcdEncryption, err := version.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
-	if err != nil {
-		return err
-	}
-	if enableEtcdEncryption {
-		defaultValues["enableEtcdEncryption"] = true
-		defaultValues["podAnnotations"].(map[string]interface{})["checksum/secret-etcd-encryption"] = b.CheckSums[common.EtcdEncryptionSecretName]
 	}
 
 	if gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info) {
@@ -779,21 +770,9 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 					Name:      v1beta1constants.DeploymentNameKubeAPIServer + "-vpa",
 				},
 			},
-		}
-
-		seedVersionGE112, err := version.CompareVersions(b.K8sSeedClient.Version(), ">=", "1.12")
-		if err != nil {
-			return err
-		}
-
-		hpaObjectMeta := kutil.ObjectMeta(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer)
-
-		// autoscaling/v2beta1 is deprecated in favor of autoscaling/v2beta2 beginning with v1.19
-		// ref https://github.com/kubernetes/kubernetes/pull/90463
-		if seedVersionGE112 {
-			objects = append(objects, &autoscalingv2beta2.HorizontalPodAutoscaler{ObjectMeta: hpaObjectMeta})
-		} else {
-			objects = append(objects, &autoscalingv2beta1.HorizontalPodAutoscaler{ObjectMeta: hpaObjectMeta})
+			&autoscalingv2beta2.HorizontalPodAutoscaler{
+				ObjectMeta: kutil.ObjectMeta(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer),
+			},
 		}
 
 		if err := kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(), objects...); err != nil {

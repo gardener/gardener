@@ -98,12 +98,8 @@ var _ = Describe("handler", func() {
 				{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "operatingsystemconfigs"},
 				{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "workers"},
 			}
-			crdResources   = resources[0:2]
-			otherResources = resources[2:]
-			fooResource    = metav1.GroupVersionResource{Group: "foo", Version: "bar", Resource: "baz"}
+			fooResource = metav1.GroupVersionResource{Group: "foo", Version: "bar", Resource: "baz"}
 
-			deletionUnprotectedLabels    = map[string]string{gutil.DeletionProtected: "false"}
-			deletionProtectedLabels      = map[string]string{gutil.DeletionProtected: "true"}
 			deletionConfirmedAnnotations = map[string]string{gutil.ConfirmationDeletion: "true"}
 		)
 
@@ -190,60 +186,20 @@ var _ = Describe("handler", func() {
 				}
 			})
 
-			Context("custom resource definitions", func() {
-				BeforeEach(func() {
-					request.Kind = metav1.GroupVersionKind{Kind: "CustomResourceDefinition"}
-				})
-
-				It("should admit the deletion because CRD has no protection label", func() {
-					for _, resource := range crdResources {
-						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, nil)
-						request.OldObject = runtime.RawExtension{Raw: objJSON}
-						testDeletionConfirmed(ctx, request, resource)
-					}
-				})
-
-				It("should admit the deletion because CRD's protection label is not true", func() {
-					for _, resource := range crdResources {
-						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, deletionUnprotectedLabels, nil)
-						request.OldObject = runtime.RawExtension{Raw: objJSON}
-						testDeletionConfirmed(ctx, request, resource)
-					}
-				})
-
-				It("should prevent the deletion because CRD's protection label is true but deletion is not confirmed", func() {
-					for _, resource := range crdResources {
-						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, deletionProtectedLabels, nil)
-						request.OldObject = runtime.RawExtension{Raw: objJSON}
-						testDeletionUnconfirmed(ctx, request, resource)
-					}
-				})
-
-				It("should admit the deletion because CRD's protection label is true and deletion is confirmed", func() {
-					for _, resource := range crdResources {
-						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, deletionProtectedLabels, deletionConfirmedAnnotations)
-						request.OldObject = runtime.RawExtension{Raw: objJSON}
-						testDeletionConfirmed(ctx, request, resource)
-					}
-				})
+			It("should prevent the deletion because deletion is not confirmed", func() {
+				for _, resource := range resources {
+					objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, nil)
+					request.OldObject = runtime.RawExtension{Raw: objJSON}
+					testDeletionUnconfirmed(ctx, request, resource)
+				}
 			})
 
-			Context("other resources", func() {
-				It("should prevent the deletion because deletion is not confirmed", func() {
-					for _, resource := range otherResources {
-						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, nil)
-						request.OldObject = runtime.RawExtension{Raw: objJSON}
-						testDeletionUnconfirmed(ctx, request, resource)
-					}
-				})
-
-				It("should admit the deletion because deletion is confirmed", func() {
-					for _, resource := range otherResources {
-						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, deletionConfirmedAnnotations)
-						request.OldObject = runtime.RawExtension{Raw: objJSON}
-						testDeletionConfirmed(ctx, request, resource)
-					}
-				})
+			It("should admit the deletion because deletion is confirmed", func() {
+				for _, resource := range resources {
+					objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, deletionConfirmedAnnotations)
+					request.OldObject = runtime.RawExtension{Raw: objJSON}
+					testDeletionConfirmed(ctx, request, resource)
+				}
 			})
 		})
 
@@ -263,60 +219,20 @@ var _ = Describe("handler", func() {
 				}
 			})
 
-			Context("custom resource definitions", func() {
-				BeforeEach(func() {
-					request.Kind = metav1.GroupVersionKind{Kind: "CustomResourceDefinition"}
-				})
-
-				It("should admit the deletion because CRD has no protection label", func() {
-					for _, resource := range crdResources {
-						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, nil)
-						request.Object = runtime.RawExtension{Raw: objJSON}
-						testDeletionConfirmed(ctx, request, resource)
-					}
-				})
-
-				It("should admit the deletion because CRD's protection label is not true", func() {
-					for _, resource := range crdResources {
-						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, deletionUnprotectedLabels, nil)
-						request.Object = runtime.RawExtension{Raw: objJSON}
-						testDeletionConfirmed(ctx, request, resource)
-					}
-				})
-
-				It("should prevent the deletion because CRD's protection label is true but deletion is not confirmed", func() {
-					for _, resource := range crdResources {
-						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, deletionProtectedLabels, nil)
-						request.Object = runtime.RawExtension{Raw: objJSON}
-						testDeletionUnconfirmed(ctx, request, resource)
-					}
-				})
-
-				It("should admit the deletion because CRD's protection label is true and deletion is confirmed", func() {
-					for _, resource := range crdResources {
-						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, deletionProtectedLabels, deletionConfirmedAnnotations)
-						request.Object = runtime.RawExtension{Raw: objJSON}
-						testDeletionConfirmed(ctx, request, resource)
-					}
-				})
+			It("should prevent the deletion because deletion is not confirmed", func() {
+				for _, resource := range resources {
+					objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, nil)
+					request.Object = runtime.RawExtension{Raw: objJSON}
+					testDeletionUnconfirmed(ctx, request, resource)
+				}
 			})
 
-			Context("other resources", func() {
-				It("should prevent the deletion because deletion is not confirmed", func() {
-					for _, resource := range otherResources {
-						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, nil)
-						request.Object = runtime.RawExtension{Raw: objJSON}
-						testDeletionUnconfirmed(ctx, request, resource)
-					}
-				})
-
-				It("should admit the deletion because deletion is confirmed", func() {
-					for _, resource := range otherResources {
-						objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, deletionConfirmedAnnotations)
-						request.Object = runtime.RawExtension{Raw: objJSON}
-						testDeletionConfirmed(ctx, request, resource)
-					}
-				})
+			It("should admit the deletion because deletion is confirmed", func() {
+				for _, resource := range resources {
+					objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, deletionConfirmedAnnotations)
+					request.Object = runtime.RawExtension{Raw: objJSON}
+					testDeletionConfirmed(ctx, request, resource)
+				}
 			})
 		})
 
@@ -325,6 +241,8 @@ var _ = Describe("handler", func() {
 
 			BeforeEach(func() {
 				obj = &unstructured.Unstructured{}
+				request.Name = "foo"
+				request.Namespace = "bar"
 			})
 
 			It("should return an error because the GET call failed", func() {
@@ -352,96 +270,30 @@ var _ = Describe("handler", func() {
 				}
 			})
 
-			Context("custom resource definitions", func() {
-				BeforeEach(func() {
-					request.Kind = metav1.GroupVersionKind{Kind: "CustomResourceDefinition"}
-					request.Name = "foo-crd"
-				})
+			It("should prevent the deletion because deletion is not confirmed", func() {
+				for _, resource := range resources {
+					prepareRequestAndObjectWithResource(&request, obj, resource)
 
-				It("should admit the deletion because CRD has no protection label", func() {
-					for _, resource := range crdResources {
-						prepareRequestAndObjectWithResource(&request, obj, resource)
+					c.EXPECT().Get(gomock.Any(), kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
+						prepareObjectWithLabelsAnnotations(obj, resource, nil, nil)
+						return nil
+					})
 
-						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
-							prepareObjectWithLabelsAnnotations(obj, resource, nil, nil)
-							return nil
-						})
-
-						testDeletionConfirmed(ctx, request, resource)
-					}
-				})
-
-				It("should admit the deletion because CRD's protection label is not true", func() {
-					for _, resource := range crdResources {
-						prepareRequestAndObjectWithResource(&request, obj, resource)
-
-						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
-							prepareObjectWithLabelsAnnotations(obj, resource, deletionUnprotectedLabels, nil)
-							return nil
-						})
-
-						testDeletionConfirmed(ctx, request, resource)
-					}
-				})
-
-				It("should prevent the deletion because CRD's protection label is true but deletion is not confirmed", func() {
-					for _, resource := range crdResources {
-						prepareRequestAndObjectWithResource(&request, obj, resource)
-
-						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
-							prepareObjectWithLabelsAnnotations(obj, resource, deletionProtectedLabels, nil)
-							return nil
-						})
-
-						testDeletionUnconfirmed(ctx, request, resource)
-					}
-				})
-
-				It("should admit the deletion because CRD's protection label is true and deletion is confirmed", func() {
-					for _, resource := range crdResources {
-						prepareRequestAndObjectWithResource(&request, obj, resource)
-
-						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
-							prepareObjectWithLabelsAnnotations(obj, resource, deletionProtectedLabels, deletionConfirmedAnnotations)
-							return nil
-						})
-
-						testDeletionConfirmed(ctx, request, resource)
-					}
-				})
+					testDeletionUnconfirmed(ctx, request, resource)
+				}
 			})
 
-			Context("other resources", func() {
-				BeforeEach(func() {
-					request.Name = "foo"
-					request.Namespace = "bar"
-				})
+			It("should admit the deletion because deletion is confirmed", func() {
+				for _, resource := range resources {
+					prepareRequestAndObjectWithResource(&request, obj, resource)
 
-				It("should prevent the deletion because deletion is not confirmed", func() {
-					for _, resource := range otherResources {
-						prepareRequestAndObjectWithResource(&request, obj, resource)
+					c.EXPECT().Get(gomock.Any(), kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
+						prepareObjectWithLabelsAnnotations(obj, resource, nil, deletionConfirmedAnnotations)
+						return nil
+					})
 
-						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
-							prepareObjectWithLabelsAnnotations(obj, resource, nil, nil)
-							return nil
-						})
-
-						testDeletionUnconfirmed(ctx, request, resource)
-					}
-				})
-
-				It("should admit the deletion because deletion is confirmed", func() {
-					for _, resource := range otherResources {
-						prepareRequestAndObjectWithResource(&request, obj, resource)
-
-						c.EXPECT().Get(gomock.Any(), kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
-							prepareObjectWithLabelsAnnotations(obj, resource, nil, deletionConfirmedAnnotations)
-							return nil
-						})
-
-						testDeletionConfirmed(ctx, request, resource)
-					}
-				})
+					testDeletionConfirmed(ctx, request, resource)
+				}
 			})
 		})
 
@@ -451,6 +303,7 @@ var _ = Describe("handler", func() {
 			BeforeEach(func() {
 				obj = &unstructured.UnstructuredList{}
 				obj.SetKind("List")
+				request.Namespace = "bar"
 			})
 
 			It("should return an error because the LIST call failed", func() {
@@ -478,100 +331,32 @@ var _ = Describe("handler", func() {
 				}
 			})
 
-			Context("custom resource definitions", func() {
-				BeforeEach(func() {
-					request.Kind = metav1.GroupVersionKind{Kind: "CustomResourceDefinition"}
-				})
+			It("should prevent the deletion because deletion is not confirmed", func() {
+				for _, resource := range resources {
+					prepareRequestAndObjectWithResource(&request, obj, resource)
+					obj.SetKind(obj.GetKind() + "List")
 
-				It("should admit the deletion because CRD has no protection label", func() {
-					for _, resource := range crdResources {
-						prepareRequestAndObjectWithResource(&request, obj, resource)
-						obj.SetKind(obj.GetKind() + "List")
+					c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+						prepareObjectWithLabelsAnnotations(list, resource, nil, nil)
+						return nil
+					})
 
-						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
-							prepareObjectWithLabelsAnnotations(list, resource, nil, nil)
-							return nil
-						})
-
-						testDeletionConfirmed(ctx, request, resource)
-					}
-				})
-
-				It("should admit the deletion because CRD's protection label is not true", func() {
-					for _, resource := range crdResources {
-						prepareRequestAndObjectWithResource(&request, obj, resource)
-						obj.SetKind(obj.GetKind() + "List")
-
-						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
-							prepareObjectWithLabelsAnnotations(list, resource, deletionUnprotectedLabels, nil)
-							return nil
-						})
-
-						testDeletionConfirmed(ctx, request, resource)
-					}
-				})
-
-				It("should prevent the deletion because CRD's protection label is true but deletion is not confirmed", func() {
-					for _, resource := range crdResources {
-						prepareRequestAndObjectWithResource(&request, obj, resource)
-						obj.SetKind(obj.GetKind() + "List")
-
-						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
-							prepareObjectWithLabelsAnnotations(list, resource, deletionProtectedLabels, nil)
-							return nil
-						})
-
-						testDeletionUnconfirmed(ctx, request, resource)
-					}
-				})
-
-				It("should admit the deletion because CRD's protection label is true and deletion is confirmed", func() {
-					for _, resource := range crdResources {
-						prepareRequestAndObjectWithResource(&request, obj, resource)
-						obj.SetKind(obj.GetKind() + "List")
-
-						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
-							prepareObjectWithLabelsAnnotations(list, resource, deletionProtectedLabels, deletionConfirmedAnnotations)
-							return nil
-						})
-
-						testDeletionConfirmed(ctx, request, resource)
-					}
-				})
+					testDeletionUnconfirmed(ctx, request, resource)
+				}
 			})
 
-			Context("other resources", func() {
-				BeforeEach(func() {
-					request.Namespace = "bar"
-				})
+			It("should admit the deletion because deletion is confirmed", func() {
+				for _, resource := range resources {
+					prepareRequestAndObjectWithResource(&request, obj, resource)
+					obj.SetKind(obj.GetKind() + "List")
 
-				It("should prevent the deletion because deletion is not confirmed", func() {
-					for _, resource := range otherResources {
-						prepareRequestAndObjectWithResource(&request, obj, resource)
-						obj.SetKind(obj.GetKind() + "List")
+					c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+						prepareObjectWithLabelsAnnotations(list, resource, nil, deletionConfirmedAnnotations)
+						return nil
+					})
 
-						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
-							prepareObjectWithLabelsAnnotations(list, resource, nil, nil)
-							return nil
-						})
-
-						testDeletionUnconfirmed(ctx, request, resource)
-					}
-				})
-
-				It("should admit the deletion because deletion is confirmed", func() {
-					for _, resource := range otherResources {
-						prepareRequestAndObjectWithResource(&request, obj, resource)
-						obj.SetKind(obj.GetKind() + "List")
-
-						c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
-							prepareObjectWithLabelsAnnotations(list, resource, nil, deletionConfirmedAnnotations)
-							return nil
-						})
-
-						testDeletionConfirmed(ctx, request, resource)
-					}
-				})
+					testDeletionConfirmed(ctx, request, resource)
+				}
 			})
 		})
 	})

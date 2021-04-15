@@ -380,8 +380,7 @@ map[string]string
 </td>
 <td>
 <em>(Optional)</em>
-<p>key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.
-Only applied when the Kubernetes version of the Shoot is &gt;= 1.11</p>
+<p>key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.</p>
 </td>
 </tr>
 <tr>

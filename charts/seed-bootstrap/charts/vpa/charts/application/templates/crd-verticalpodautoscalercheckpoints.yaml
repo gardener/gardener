@@ -12,9 +12,7 @@ metadata:
 spec:
   group: autoscaling.k8s.io
   scope: Namespaced
-{{- if semverCompare ">= 1.15-0" .Capabilities.KubeVersion.GitVersion }}
   preserveUnknownFields: true
-{{- end }}
   names:
     plural: verticalpodautoscalercheckpoints
     singular: verticalpodautoscalercheckpoint

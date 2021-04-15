@@ -55,28 +55,7 @@ func (a *Agnostic) KubeControllerManagerSecured() *SourcePod {
 			v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
 			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
 			v1beta1constants.LabelRole:            kubecontrollermanager.LabelRole,
-		}, ">= 1.13"),
-		ExpectedPolicies: sets.NewString(
-			"allow-to-public-networks",
-			"allow-to-private-networks",
-			"allow-from-prometheus",
-			"allow-to-dns",
-			"allow-to-blocked-cidrs",
-			"allow-to-shoot-apiserver",
-			"deny-all",
-		),
-	}
-}
-
-// KubeControllerManagerNotSecured points to cloud-agnostic kube-controller-manager running on HTTP port.
-func (a *Agnostic) KubeControllerManagerNotSecured() *SourcePod {
-	return &SourcePod{
-		Ports: NewSinglePort(10252),
-		Pod: NewPod("kube-controller-manager-http", labels.Set{
-			v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
-			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
-			v1beta1constants.LabelRole:            kubecontrollermanager.LabelRole,
-		}, "< 1.13"),
+		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-to-public-networks",
 			"allow-to-private-networks",
@@ -97,25 +76,7 @@ func (a *Agnostic) KubeSchedulerSecured() *SourcePod {
 			v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
 			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
 			v1beta1constants.LabelRole:            kubescheduler.LabelRole,
-		}, ">= 1.13"),
-		ExpectedPolicies: sets.NewString(
-			"allow-from-prometheus",
-			"allow-to-shoot-apiserver",
-			"allow-to-dns",
-			"deny-all",
-		),
-	}
-}
-
-// KubeSchedulerNotSecured points to cloud-agnostic kube-scheduler running on HTTP port.
-func (a *Agnostic) KubeSchedulerNotSecured() *SourcePod {
-	return &SourcePod{
-		Ports: NewSinglePort(10251),
-		Pod: NewPod("kube-scheduler-http", labels.Set{
-			v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
-			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
-			v1beta1constants.LabelRole:            kubescheduler.LabelRole,
-		}, "< 1.13"),
+		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
 			"allow-to-shoot-apiserver",
@@ -163,24 +124,6 @@ func (a *Agnostic) EtcdEvents() *SourcePod {
 	}
 }
 
-// CloudControllerManagerNotSecured points to cloud-agnostic cloud-controller-manager running on HTTP port.
-func (a *Agnostic) CloudControllerManagerNotSecured() *SourcePod {
-	return &SourcePod{
-		Ports: NewSinglePort(10253),
-		Pod: NewPod("cloud-controller-manager-http", labels.Set{
-			v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
-			v1beta1constants.LabelRole: "cloud-controller-manager",
-		}, "< 1.13"),
-		ExpectedPolicies: sets.NewString(
-			"allow-from-prometheus",
-			"allow-to-shoot-apiserver",
-			"allow-to-dns",
-			"allow-to-public-networks",
-			"deny-all",
-		),
-	}
-}
-
 // CloudControllerManagerSecured points to cloud-agnostic cloud-controller-manager running on HTTPS port.
 func (a *Agnostic) CloudControllerManagerSecured() *SourcePod {
 	return &SourcePod{
@@ -188,7 +131,7 @@ func (a *Agnostic) CloudControllerManagerSecured() *SourcePod {
 		Pod: NewPod("cloud-controller-manager-https", labels.Set{
 			v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 			v1beta1constants.LabelRole: "cloud-controller-manager",
-		}, ">= 1.13"),
+		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
 			"allow-to-shoot-apiserver",

@@ -22,7 +22,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -34,12 +33,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apiserver/pkg/authentication/user"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -128,10 +125,10 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 
 		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 
-		port           = k.computeServerPort()
-		probeURIScheme = k.computeServerURIScheme()
-		env            = k.computeEnvironmentVariables()
-		command        = k.computeCommand(port)
+		port           int32 = 10259
+		probeURIScheme       = corev1.URISchemeHTTPS
+		env                  = k.computeEnvironmentVariables()
+		command              = k.computeCommand(port)
 	)
 
 	componentConfigYAML, componentConfigChecksum, err := k.computeComponentConfig()
@@ -329,29 +326,7 @@ func (k *kubeScheduler) emptyManagedResourceSecret() *corev1.Secret {
 }
 
 func (k *kubeScheduler) reconcileShootResources(ctx context.Context) error {
-	if versionConstraintK8sEqual113.Check(k.version) {
-		data, err := k.computeShootResourcesData()
-		if err != nil {
-			return err
-		}
-		return managedresources.CreateForShoot(ctx, k.client, k.namespace, managedResourceName, false, data)
-	}
-
 	return kutil.DeleteObjects(ctx, k.client, k.emptyManagedResource(), k.emptyManagedResourceSecret())
-}
-
-func (k *kubeScheduler) computeServerPort() int32 {
-	if versionConstraintK8sGreaterEqual113.Check(k.version) {
-		return 10259
-	}
-	return 10251
-}
-
-func (k *kubeScheduler) computeServerURIScheme() corev1.URIScheme {
-	if versionConstraintK8sGreaterEqual113.Check(k.version) {
-		return corev1.URISchemeHTTPS
-	}
-	return corev1.URISchemeHTTP
 }
 
 func (k *kubeScheduler) computeEnvironmentVariables() []corev1.EnvVar {
@@ -370,10 +345,8 @@ func (k *kubeScheduler) computeComponentConfig() (string, string, error) {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta1"
 	} else if versionConstraintK8sGreaterEqual118.Check(k.version) {
 		apiVersion = "kubescheduler.config.k8s.io/v1alpha2"
-	} else if versionConstraintK8sGreaterEqual112.Check(k.version) {
+	} else {
 		apiVersion = "kubescheduler.config.k8s.io/v1alpha1"
-	} else if versionConstraintK8sGreaterEqual110.Check(k.version) {
-		apiVersion = "componentconfig/v1alpha1"
 	}
 
 	var componentConfigYAML bytes.Buffer
@@ -389,87 +362,33 @@ func (k *kubeScheduler) computeCommand(port int32) []string {
 
 	if versionConstraintK8sGreaterEqual117.Check(k.version) {
 		command = append(command, "/usr/local/bin/kube-scheduler")
-	} else if versionConstraintK8sGreaterEqual115.Check(k.version) {
-		command = append(command, "/hyperkube", "kube-scheduler")
 	} else {
-		command = append(command, "/hyperkube", "scheduler")
+		command = append(command, "/hyperkube", "kube-scheduler")
 	}
 
 	command = append(command, fmt.Sprintf("--config=%s/%s", volumeMountPathConfig, dataKeyComponentConfig))
 
-	if versionConstraintK8sGreaterEqual113.Check(k.version) {
-		command = append(command,
-			fmt.Sprintf("--authentication-kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig),
-			fmt.Sprintf("--authorization-kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig),
-			fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificateCA),
-			fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer)),
-			fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer)),
-			fmt.Sprintf("--secure-port=%d", port),
-			"--port=0",
-		)
-	}
+	command = append(command,
+		fmt.Sprintf("--authentication-kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig),
+		fmt.Sprintf("--authorization-kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig),
+		fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificateCA),
+		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer)),
+		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer)),
+		fmt.Sprintf("--secure-port=%d", port),
+		"--port=0",
+	)
 
 	if k.config != nil {
 		command = append(command, kutil.FeatureGatesToCommandLineParameter(k.config.FeatureGates))
-	}
-	if versionConstraintK8sEqual110.Check(k.version) {
-		command = append(command, kutil.FeatureGatesToCommandLineParameter(map[string]bool{"PodPriority": true}))
 	}
 
 	command = append(command, "--v=2")
 	return command
 }
 
-func (k *kubeScheduler) computeShootResourcesData() (map[string][]byte, error) {
-	var (
-		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-
-		subjects = []rbacv1.Subject{{
-			Kind: rbacv1.UserKind,
-			Name: user.KubeScheduler,
-		}}
-
-		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "system:controller:kube-scheduler",
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     "system:auth-delegator",
-			},
-			Subjects: subjects,
-		}
-
-		roleBinding = &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "system:controller:kube-scheduler:auth-reader",
-				Namespace: metav1.NamespaceSystem,
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "Role",
-				Name:     "extension-apiserver-authentication-reader",
-			},
-			Subjects: subjects,
-		}
-	)
-
-	return registry.AddAllAndSerialize(
-		clusterRoleBinding,
-		roleBinding,
-	)
-}
-
 var (
 	componentConfigTemplate *template.Template
 
-	versionConstraintK8sEqual110        *semver.Constraints
-	versionConstraintK8sEqual113        *semver.Constraints
-	versionConstraintK8sGreaterEqual110 *semver.Constraints
-	versionConstraintK8sGreaterEqual112 *semver.Constraints
-	versionConstraintK8sGreaterEqual113 *semver.Constraints
-	versionConstraintK8sGreaterEqual115 *semver.Constraints
 	versionConstraintK8sGreaterEqual117 *semver.Constraints
 	versionConstraintK8sGreaterEqual118 *semver.Constraints
 	versionConstraintK8sGreaterEqual119 *semver.Constraints
@@ -481,18 +400,6 @@ func init() {
 	componentConfigTemplate, err = template.New("config").Parse(componentConfigTmpl)
 	utilruntime.Must(err)
 
-	versionConstraintK8sEqual110, err = semver.NewConstraint("~ 1.10")
-	utilruntime.Must(err)
-	versionConstraintK8sEqual113, err = semver.NewConstraint("~ 1.13")
-	utilruntime.Must(err)
-	versionConstraintK8sGreaterEqual110, err = semver.NewConstraint(">= 1.10")
-	utilruntime.Must(err)
-	versionConstraintK8sGreaterEqual112, err = semver.NewConstraint(">= 1.12")
-	utilruntime.Must(err)
-	versionConstraintK8sGreaterEqual113, err = semver.NewConstraint(">= 1.13")
-	utilruntime.Must(err)
-	versionConstraintK8sGreaterEqual115, err = semver.NewConstraint(">= 1.15")
-	utilruntime.Must(err)
 	versionConstraintK8sGreaterEqual117, err = semver.NewConstraint(">= 1.17")
 	utilruntime.Must(err)
 	versionConstraintK8sGreaterEqual118, err = semver.NewConstraint(">= 1.18")

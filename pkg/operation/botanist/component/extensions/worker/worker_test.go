@@ -63,7 +63,7 @@ var _ = Describe("Worker", func() {
 		extensionType                = "some-type"
 		region                       = "local"
 		sshPublicKey                 = []byte("very-public")
-		kubernetesVersionLess115     = semver.MustParse("1.14.5")
+		kubernetesVersion            = semver.MustParse("1.15.5")
 		infrastructureProviderStatus = &runtime.RawExtension{Raw: []byte(`{"baz":"foo"}`)}
 
 		worker1Name                           = "worker1"
@@ -129,7 +129,7 @@ var _ = Describe("Worker", func() {
 			Namespace:                    namespace,
 			Type:                         extensionType,
 			Region:                       region,
-			KubernetesVersion:            kubernetesVersionLess115,
+			KubernetesVersion:            kubernetesVersion,
 			SSHPublicKey:                 sshPublicKey,
 			InfrastructureProviderStatus: infrastructureProviderStatus,
 			WorkerNameToOperatingSystemConfigsMap: map[string]*operatingsystemconfig.OperatingSystemConfigs{
@@ -222,8 +222,7 @@ var _ = Describe("Worker", func() {
 					MaxUnavailable: worker1MaxUnavailable,
 					Annotations:    worker1Annotations,
 					Labels: utils.MergeStringMaps(worker1Labels, map[string]string{
-						"kubernetes.io/role":              "node",
-						"node-role.kubernetes.io/node":    "",
+						"node.kubernetes.io/role":         "node",
 						"worker.gardener.cloud/pool":      worker1Name,
 						"worker.garden.sapcloud.io/group": worker1Name,
 						"worker.gardener.cloud/cri-name":  string(worker1CRIName),
@@ -262,8 +261,7 @@ var _ = Describe("Worker", func() {
 					MaxSurge:       worker2MaxSurge,
 					MaxUnavailable: worker2MaxUnavailable,
 					Labels: map[string]string{
-						"kubernetes.io/role":                      "node",
-						"node-role.kubernetes.io/node":            "",
+						"node.kubernetes.io/role":                 "node",
 						"worker.gardener.cloud/system-components": "true",
 						"worker.gardener.cloud/pool":              worker2Name,
 						"worker.garden.sapcloud.io/group":         worker2Name,
@@ -286,46 +284,9 @@ var _ = Describe("Worker", func() {
 	})
 
 	Describe("#Deploy", func() {
-		It("should successfully deploy the Worker resource (k8s < 1.15)", func() {
+		It("should successfully deploy the Worker resource", func() {
 			defer test.WithVars(&worker.TimeNow, mockNow.Do)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-
-			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-			obj := &extensionsv1alpha1.Worker{}
-			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(obj).To(DeepEqual(&extensionsv1alpha1.Worker{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-					Kind:       extensionsv1alpha1.WorkerResource,
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
-					Annotations: map[string]string{
-						"gardener.cloud/operation": "reconcile",
-						"gardener.cloud/timestamp": now.UTC().String(),
-					},
-					ResourceVersion: "1",
-				},
-				Spec: wSpec,
-			}))
-		})
-
-		It("should successfully deploy the Worker resource (k8s >= 1.15)", func() {
-			defer test.WithVars(&worker.TimeNow, mockNow.Do)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-
-			values.KubernetesVersion = semver.MustParse("1.19.9")
-			for i := range wSpec.Pools {
-				delete(wSpec.Pools[i].Labels, "kubernetes.io/role")
-				delete(wSpec.Pools[i].Labels, "node-role.kubernetes.io/node")
-				wSpec.Pools[i].Labels = utils.MergeStringMaps(wSpec.Pools[i].Labels, map[string]string{
-					"node.kubernetes.io/role": "node",
-				})
-			}
 
 			defaultDepWaiter = worker.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())

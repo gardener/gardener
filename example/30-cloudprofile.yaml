@@ -16,10 +16,10 @@ spec:
 #     foo: bar
   kubernetes:
     versions:
-    - version: 1.12.1
-    - version: 1.11.0
-    - version: 1.10.6
-    - version: 1.10.5
+    - version: 1.20.1
+    - version: 1.19.0
+    - version: 1.18.6
+    - version: 1.18.5
       expirationDate: 2020-04-05T01:02:03Z # optional
   machineImages:
   - name: coreos

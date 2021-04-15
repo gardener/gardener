@@ -145,9 +145,9 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		deployment    = k.emptyDeployment()
 		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 
-		port           = k.computeServerPort()
-		probeURIScheme = k.computeServerURIScheme()
-		command        = k.computeCommand(port)
+		port           int32 = 10257
+		probeURIScheme       = corev1.URISchemeHTTPS
+		command              = k.computeCommand(port)
 	)
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, k.seedClient, service, func() error {
@@ -344,20 +344,6 @@ func (k *kubeControllerManager) emptyManagedResourceSecret() *corev1.Secret {
 	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(managedResourceName, true), Namespace: k.namespace}}
 }
 
-func (k *kubeControllerManager) computeServerPort() int32 {
-	if versionConstraintK8sGreaterEqual113.Check(k.version) {
-		return 10257
-	}
-	return 10252
-}
-
-func (k *kubeControllerManager) computeServerURIScheme() corev1.URIScheme {
-	if versionConstraintK8sGreaterEqual113.Check(k.version) {
-		return corev1.URISchemeHTTPS
-	}
-	return corev1.URISchemeHTTP
-}
-
 func getLabels() map[string]string {
 	return map[string]string{
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
@@ -373,10 +359,8 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 
 	if versionConstraintK8sGreaterEqual117.Check(k.version) {
 		command = append(command, "/usr/local/bin/kube-controller-manager")
-	} else if versionConstraintK8sGreaterEqual115.Check(k.version) {
-		command = append(command, "/hyperkube", "kube-controller-manager")
 	} else {
-		command = append(command, "/hyperkube", "controller-manager")
+		command = append(command, "/hyperkube", "kube-controller-manager")
 	}
 
 	command = append(command,
@@ -415,13 +399,6 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		command = append(command, kutil.FeatureGatesToCommandLineParameter(k.config.FeatureGates))
 	}
 
-	if versionConstraintK8sSmaller112.Check(k.version) {
-		command = append(command,
-			fmt.Sprintf("--horizontal-pod-autoscaler-downscale-delay=%s", defaultHorizontalPodAutoscalerConfig.DownscaleDelay.Duration.String()),
-			fmt.Sprintf("--horizontal-pod-autoscaler-upscale-delay=%s", defaultHorizontalPodAutoscalerConfig.UpscaleDelay.Duration.String()),
-		)
-	}
-
 	podEvictionTimeout := metav1.Duration{Duration: 2 * time.Minute}
 	if v := k.config.PodEvictionTimeout; v != nil {
 		podEvictionTimeout = *v
@@ -437,28 +414,15 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--root-ca-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateCA),
 		fmt.Sprintf("--service-account-private-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey),
 		fmt.Sprintf("--service-cluster-ip-range=%s", k.serviceNetwork.String()),
-	)
-
-	if versionConstraintK8sGreaterEqual113.Check(k.version) {
-		command = append(command,
-			fmt.Sprintf("--secure-port=%d", port),
-			"--port=0",
-		)
-	}
-
-	if versionConstraintK8sGreaterEqual112.Check(k.version) {
-		command = append(command,
-			fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", defaultHorizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
-			fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", defaultHorizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
-			fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", defaultHorizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),
-			fmt.Sprintf("--authentication-kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig),
-			fmt.Sprintf("--authorization-kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig),
-			fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer)),
-			fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer)),
-		)
-	}
-
-	command = append(command,
+		fmt.Sprintf("--secure-port=%d", port),
+		"--port=0",
+		fmt.Sprintf("--horizontal-pod-autoscaler-downscale-stabilization=%s", defaultHorizontalPodAutoscalerConfig.DownscaleStabilization.Duration.String()),
+		fmt.Sprintf("--horizontal-pod-autoscaler-initial-readiness-delay=%s", defaultHorizontalPodAutoscalerConfig.InitialReadinessDelay.Duration.String()),
+		fmt.Sprintf("--horizontal-pod-autoscaler-cpu-initialization-period=%s", defaultHorizontalPodAutoscalerConfig.CPUInitializationPeriod.Duration.String()),
+		fmt.Sprintf("--authentication-kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig),
+		fmt.Sprintf("--authorization-kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig),
+		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer)),
+		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer)),
 		"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
 		"--use-service-account-credentials=true",
 		"--v=2",
@@ -470,20 +434,15 @@ func (k *kubeControllerManager) getHorizontalPodAutoscalerConfig() gardencorev1b
 	defaultHPATolerance := gardencorev1beta1.DefaultHPATolerance
 	horizontalPodAutoscalerConfig := gardencorev1beta1.HorizontalPodAutoscalerConfig{
 		CPUInitializationPeriod: &metav1.Duration{Duration: gardencorev1beta1.DefaultCPUInitializationPeriod},
-		DownscaleDelay:          &metav1.Duration{Duration: gardencorev1beta1.DefaultHPADownscaleDelay},
 		DownscaleStabilization:  &metav1.Duration{Duration: gardencorev1beta1.DefaultDownscaleStabilization},
 		InitialReadinessDelay:   &metav1.Duration{Duration: gardencorev1beta1.DefaultInitialReadinessDelay},
 		SyncPeriod:              &metav1.Duration{Duration: gardencorev1beta1.DefaultHPASyncPeriod},
 		Tolerance:               &defaultHPATolerance,
-		UpscaleDelay:            &metav1.Duration{Duration: gardencorev1beta1.DefaultHPAUpscaleDelay},
 	}
 
 	if k.config.HorizontalPodAutoscalerConfig != nil {
 		if v := k.config.HorizontalPodAutoscalerConfig.CPUInitializationPeriod; v != nil {
 			horizontalPodAutoscalerConfig.CPUInitializationPeriod = v
-		}
-		if v := k.config.HorizontalPodAutoscalerConfig.DownscaleDelay; v != nil {
-			horizontalPodAutoscalerConfig.DownscaleDelay = v
 		}
 		if v := k.config.HorizontalPodAutoscalerConfig.DownscaleStabilization; v != nil {
 			horizontalPodAutoscalerConfig.DownscaleStabilization = v
@@ -497,19 +456,11 @@ func (k *kubeControllerManager) getHorizontalPodAutoscalerConfig() gardencorev1b
 		if v := k.config.HorizontalPodAutoscalerConfig.Tolerance; v != nil {
 			horizontalPodAutoscalerConfig.Tolerance = v
 		}
-		if v := k.config.HorizontalPodAutoscalerConfig.UpscaleDelay; v != nil {
-			horizontalPodAutoscalerConfig.UpscaleDelay = v
-		}
 	}
 	return horizontalPodAutoscalerConfig
 }
 
 var (
-	versionConstraintK8sGreaterEqual112 *semver.Constraints
-	versionConstraintK8sSmaller112      *semver.Constraints
-	versionConstraintK8sGreaterEqual113 *semver.Constraints
-	versionConstraintK8sSmaller114      *semver.Constraints
-	versionConstraintK8sGreaterEqual115 *semver.Constraints
 	versionConstraintK8sGreaterEqual116 *semver.Constraints
 	versionConstraintK8sGreaterEqual117 *semver.Constraints
 	versionConstraintK8sGreaterEqual120 *semver.Constraints
@@ -518,16 +469,6 @@ var (
 func init() {
 	var err error
 
-	versionConstraintK8sSmaller112, err = semver.NewConstraint("< 1.12")
-	utilruntime.Must(err)
-	versionConstraintK8sGreaterEqual112, err = semver.NewConstraint(">= 1.12")
-	utilruntime.Must(err)
-	versionConstraintK8sGreaterEqual113, err = semver.NewConstraint(">= 1.13")
-	utilruntime.Must(err)
-	versionConstraintK8sSmaller114, err = semver.NewConstraint("< 1.14")
-	utilruntime.Must(err)
-	versionConstraintK8sGreaterEqual115, err = semver.NewConstraint(">= 1.15")
-	utilruntime.Must(err)
 	versionConstraintK8sGreaterEqual116, err = semver.NewConstraint(">= 1.16")
 	utilruntime.Must(err)
 	versionConstraintK8sGreaterEqual117, err = semver.NewConstraint(">= 1.17")

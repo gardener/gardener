@@ -35,16 +35,11 @@ var _ = Describe("Monitoring", func() {
 			test.ScrapeConfigs(kubeControllerManager, expectedScrapeConfig)
 		},
 
-		Entry("kubernetes 1.10", "1.10.0", expectedScrapeConfigK8sLess113),
-		Entry("kubernetes 1.11", "1.11.1", expectedScrapeConfigK8sLess113),
-		Entry("kubernetes 1.12", "1.12.2", expectedScrapeConfigK8sLess113),
-		Entry("kubernetes 1.13", "1.13.3", expectedScrapeConfigK8sGreaterEqual113),
-		Entry("kubernetes 1.14", "1.14.4", expectedScrapeConfigK8sGreaterEqual113),
-		Entry("kubernetes 1.15", "1.15.5", expectedScrapeConfigK8sGreaterEqual113),
-		Entry("kubernetes 1.16", "1.16.6", expectedScrapeConfigK8sGreaterEqual113),
-		Entry("kubernetes 1.17", "1.17.7", expectedScrapeConfigK8sGreaterEqual113),
-		Entry("kubernetes 1.18", "1.18.8", expectedScrapeConfigK8sGreaterEqual113),
-		Entry("kubernetes 1.19", "1.19.9", expectedScrapeConfigK8sGreaterEqual113),
+		Entry("kubernetes 1.15", "1.15.5", expectedScrapeConfig),
+		Entry("kubernetes 1.16", "1.16.6", expectedScrapeConfig),
+		Entry("kubernetes 1.17", "1.17.7", expectedScrapeConfig),
+		Entry("kubernetes 1.18", "1.18.8", expectedScrapeConfig),
+		Entry("kubernetes 1.19", "1.19.9", expectedScrapeConfig),
 	)
 
 	It("should successfully test the alerting rules", func() {
@@ -61,7 +56,13 @@ var _ = Describe("Monitoring", func() {
 })
 
 const (
-	expectedScrapeConfig = `honor_labels: false
+	expectedScrapeConfig = `job_name: kube-controller-manager
+scheme: https
+tls_config:
+  insecure_skip_verify: true
+  cert_file: /etc/prometheus/seed/prometheus.crt
+  key_file: /etc/prometheus/seed/prometheus.key
+honor_labels: false
 scrape_timeout: 15s
 kubernetes_sd_configs:
 - role: endpoints
@@ -82,17 +83,6 @@ metric_relabel_configs:
   regex: ^(rest_client_requests_total|process_max_fds|process_open_fds)$
   action: keep
 `
-
-	expectedScrapeConfigK8sLess113 = `job_name: kube-controller-manager
-` + expectedScrapeConfig
-
-	expectedScrapeConfigK8sGreaterEqual113 = `job_name: kube-controller-manager
-scheme: https
-tls_config:
-  insecure_skip_verify: true
-  cert_file: /etc/prometheus/seed/prometheus.crt
-  key_file: /etc/prometheus/seed/prometheus.key
-` + expectedScrapeConfig
 
 	expectedAlertingRule = `groups:
 - name: kube-controller-manager.rules

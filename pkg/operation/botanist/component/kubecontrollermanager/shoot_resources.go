@@ -17,69 +17,14 @@ package kubecontrollermanager
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
-
-	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apiserver/pkg/authentication/user"
 )
 
 func (k *kubeControllerManager) deployShootManagedResource(ctx context.Context) error {
-	if versionConstraintK8sGreaterEqual112.Check(k.version) && versionConstraintK8sSmaller114.Check(k.version) {
-		data, err := k.computeShootResourcesData()
-		if err != nil {
-			return err
-		}
-		return managedresources.CreateForShoot(ctx, k.seedClient, k.namespace, managedResourceName, false, data)
-	}
-
 	return kutil.DeleteObjects(
 		ctx,
 		k.seedClient,
 		k.emptyManagedResource(),
 		k.emptyManagedResourceSecret(),
-	)
-}
-
-func (k *kubeControllerManager) computeShootResourcesData() (map[string][]byte, error) {
-	var (
-		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-
-		subjects = []rbacv1.Subject{{
-			Kind: "User",
-			Name: user.KubeControllerManager,
-		}}
-
-		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "system:controller:kube-controller-manager",
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     "system:auth-delegator",
-			},
-			Subjects: subjects,
-		}
-
-		roleBinding = &rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "system:controller:kube-controller-manager:auth-reader",
-				Namespace: metav1.NamespaceSystem,
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "Role",
-				Name:     "extension-apiserver-authentication-reader",
-			},
-			Subjects: subjects,
-		}
-	)
-
-	return registry.AddAllAndSerialize(
-		clusterRoleBinding,
-		roleBinding,
 	)
 }

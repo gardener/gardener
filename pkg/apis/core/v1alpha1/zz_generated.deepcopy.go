@@ -1278,11 +1278,6 @@ func (in *HorizontalPodAutoscalerConfig) DeepCopyInto(out *HorizontalPodAutoscal
 		*out = new(metav1.Duration)
 		**out = **in
 	}
-	if in.DownscaleDelay != nil {
-		in, out := &in.DownscaleDelay, &out.DownscaleDelay
-		*out = new(metav1.Duration)
-		**out = **in
-	}
 	if in.DownscaleStabilization != nil {
 		in, out := &in.DownscaleStabilization, &out.DownscaleStabilization
 		*out = new(metav1.Duration)
@@ -1301,11 +1296,6 @@ func (in *HorizontalPodAutoscalerConfig) DeepCopyInto(out *HorizontalPodAutoscal
 	if in.Tolerance != nil {
 		in, out := &in.Tolerance, &out.Tolerance
 		*out = new(float64)
-		**out = **in
-	}
-	if in.UpscaleDelay != nil {
-		in, out := &in.UpscaleDelay, &out.UpscaleDelay
-		*out = new(metav1.Duration)
 		**out = **in
 	}
 	return

@@ -32,9 +32,7 @@ spec:
       JSONPath: .metadata.creationTimestamp
   subresources:
     status: {}
-{{- if semverCompare ">= 1.15-0" .Capabilities.KubeVersion.GitVersion }}
   preserveUnknownFields: false
-{{- end }}
   validation:
     openAPIV3Schema:
       description: ContainerRuntime is a specification for a container runtime resource.

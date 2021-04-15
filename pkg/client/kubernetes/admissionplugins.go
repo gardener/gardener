@@ -37,17 +37,12 @@ var (
 		{Name: "MutatingAdmissionWebhook"},
 		{Name: "ValidatingAdmissionWebhook"},
 	}
-	defaultPluginsWithInitializers = append(defaultPlugins, gardencorev1beta1.AdmissionPlugin{Name: "Initializers"})
 
-	lowestSupportedKubernetesVersionMajorMinor = "1.10"
+	lowestSupportedKubernetesVersionMajorMinor = "1.15"
 	lowestSupportedKubernetesVersion, _        = semver.NewVersion(lowestSupportedKubernetesVersionMajorMinor)
 
 	admissionPlugins = map[string][]gardencorev1beta1.AdmissionPlugin{
-		"1.10": defaultPluginsWithInitializers,
-		"1.11": defaultPluginsWithInitializers,
-		"1.12": defaultPluginsWithInitializers,
-		"1.13": defaultPluginsWithInitializers,
-		"1.14": defaultPlugins,
+		"1.15": defaultPlugins,
 	}
 )
 

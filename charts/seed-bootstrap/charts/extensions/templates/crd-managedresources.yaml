@@ -37,9 +37,7 @@ spec:
     JSONPath: .metadata.creationTimestamp
   subresources:
     status: {}
-{{- if semverCompare ">= 1.15-0" .Capabilities.KubeVersion.GitVersion }}
   preserveUnknownFields: false
-{{- end }}
   validation:
     openAPIV3Schema:
       description: ManagedResource describes a list of managed resources.

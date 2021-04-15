@@ -76,7 +76,6 @@ type KubeAPIServerOpenIDConnect struct {
 	// Required.
 	IssuerURL string `json:"issuerURL" protobuf:"bytes,5,opt,name=issuerURL"`
 	// key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.
-	// Only applied when the Kubernetes version of the Shoot is >= 1.11
 	// +optional
 	RequiredClaims map[string]string `json:"requiredClaims,omitempty" protobuf:"bytes,6,rep,name=requiredClaims"`
 	// List of allowed JOSE asymmetric signing algorithms. JWTs with a 'alg' header value not in this list will be rejected. Values are defined by RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1

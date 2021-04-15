@@ -24,7 +24,6 @@ spec:
     # usernamePrefix: username-prefix
     # signingAlgs:
     # - RS256
-    # only usable with Kubernetes >= 1.11
     # requiredClaims:
     #   key: value
   client:

@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -119,7 +118,7 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 
 	log.Info("Handling request")
 
-	if err := admitObjectDeletion(log, obj, request.Kind.Kind); err != nil {
+	if err := admitObjectDeletion(log, obj); err != nil {
 		return admission.Denied(err.Error())
 	}
 	return admission.Allowed("")
@@ -127,28 +126,24 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 
 // admitObjectDeletion checks if the object deletion is confirmed. If the given object is a list of objects then it
 // performs the check for every single object.
-func admitObjectDeletion(log logr.Logger, obj runtime.Object, kind string) error {
+func admitObjectDeletion(log logr.Logger, obj runtime.Object) error {
 	if strings.HasSuffix(obj.GetObjectKind().GroupVersionKind().Kind, "List") {
 		return meta.EachListItem(obj, func(o runtime.Object) error {
-			return checkIfObjectDeletionIsConfirmed(log, o, kind)
+			return checkIfObjectDeletionIsConfirmed(log, o)
 		})
 	}
-	return checkIfObjectDeletionIsConfirmed(log, obj, kind)
+	return checkIfObjectDeletionIsConfirmed(log, obj)
 }
 
 // checkIfObjectDeletionIsConfirmed checks if the object was annotated with the deletion confirmation. If it is a custom
 // resource definition then it is only considered if the CRD has the deletion protection label.
-func checkIfObjectDeletionIsConfirmed(log logr.Logger, object runtime.Object, kind string) error {
+func checkIfObjectDeletionIsConfirmed(log logr.Logger, object runtime.Object) error {
 	obj, ok := object.(client.Object)
 	if !ok {
 		return fmt.Errorf("%T does not implement client.Object", object)
 	}
 
 	log = log.WithValues("name", obj.GetName())
-
-	if kind == "CustomResourceDefinition" && !crdMustBeConsidered(log, obj.GetLabels()) {
-		return nil
-	}
 
 	if err := gutil.CheckIfDeletionIsConfirmed(obj); err != nil {
 		log.Info("Deletion is not confirmed - preventing deletion")
@@ -157,21 +152,4 @@ func checkIfObjectDeletionIsConfirmed(log logr.Logger, object runtime.Object, ki
 
 	log.Info("Deletion is confirmed - allowing deletion")
 	return nil
-}
-
-// TODO: This function can be removed once the minimum seed Kubernetes version is bumped to >= 1.15. In 1.15, webhook
-// configurations may use object selectors, i.e., we can get rid of this custom filtering.
-func crdMustBeConsidered(log logr.Logger, labels map[string]string) bool {
-	val, ok := labels[gutil.DeletionProtected]
-	if !ok {
-		log.Info("Ignoring CRD because it has no " + gutil.DeletionProtected + " label - allowing deletion")
-		return false
-	}
-
-	if ok, _ := strconv.ParseBool(val); !ok {
-		log.Info("Admitting CRD deletion because " + gutil.DeletionProtected + " label value is not true - allowing deletion")
-		return false
-	}
-
-	return true
 }

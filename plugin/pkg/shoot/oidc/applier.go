@@ -17,18 +17,11 @@ package oidc
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 // ApplyOIDCConfiguration applies preset OpenID Connect configuration to the shoot.
 func ApplyOIDCConfiguration(shoot *core.Shoot, preset *settingsv1alpha1.OpenIDConnectPresetSpec) {
 	if shoot == nil || preset == nil {
-		return
-	}
-	useRequiredClaims, err := version.CheckVersionMeetsConstraint(shoot.Spec.Kubernetes.Version, ">= 1.11")
-	if err != nil {
-		// Don't mutate the resource anymore, because the version is invalid
-		// and it'll be caught by validation.
 		return
 	}
 
@@ -48,11 +41,8 @@ func ApplyOIDCConfiguration(shoot *core.Shoot, preset *settingsv1alpha1.OpenIDCo
 		SigningAlgs:          preset.Server.SigningAlgs,
 		UsernameClaim:        preset.Server.UsernameClaim,
 		UsernamePrefix:       preset.Server.UsernamePrefix,
+		RequiredClaims:       preset.Server.RequiredClaims,
 		ClientAuthentication: client,
-	}
-
-	if useRequiredClaims {
-		oidc.RequiredClaims = preset.Server.RequiredClaims
 	}
 
 	if shoot.Spec.Kubernetes.KubeAPIServer == nil {

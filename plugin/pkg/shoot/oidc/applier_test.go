@@ -53,17 +53,6 @@ var _ = Describe("Applier", func() {
 		Expect(shoot).To(Equal(shootCpy))
 	})
 
-	It("invalid kubernetes version, no modifications", func() {
-		shoot.Spec.Kubernetes.Version = "something"
-		shootCpy := shoot.DeepCopy()
-		specCpy := spec.DeepCopy()
-
-		oidc.ApplyOIDCConfiguration(shoot, spec)
-
-		Expect(shoot).To(Equal(shootCpy))
-		Expect(spec).To(Equal(specCpy))
-	})
-
 	It("full preset, empty shoot", func() {
 		spec.Server = v1alpha1.KubeAPIServerOpenIDConnect{
 			CABundle:     pointer.StringPtr("cert"),
@@ -84,7 +73,7 @@ var _ = Describe("Applier", func() {
 			ExtraConfig: map[string]string{"foo": "bar", "baz": "dap"},
 		}
 
-		shoot.Spec.Kubernetes.Version = "v1.13"
+		shoot.Spec.Kubernetes.Version = "v1.15"
 
 		expectedShoot := shoot.DeepCopy()
 		expectedShoot.Spec.Kubernetes.KubeAPIServer = &core.KubeAPIServerConfig{

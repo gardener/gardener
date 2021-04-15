@@ -24,8 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
@@ -38,7 +36,6 @@ import (
 type GarbageCollection struct {
 	initializeShootClients ShootClientInit
 	shoot                  *shoot.Shoot
-	shootClient            client.Client
 	seedClient             client.Client
 	logger                 logrus.FieldLogger
 }
@@ -101,11 +98,6 @@ func (g *GarbageCollection) performGarbageCollectionSeed(ctx context.Context) er
 // PerformGarbageCollectionShoot performs garbage collection in the kube-system namespace in the Shoot
 // cluster, i.e., it deletes evicted pods (mitigation for https://github.com/kubernetes/kubernetes/issues/55051).
 func (g *GarbageCollection) performGarbageCollectionShoot(ctx context.Context, shootClient client.Client) error {
-	// Workaround for https://github.com/kubernetes/kubernetes/pull/72507.
-	if err := g.removeStaleOutOfDiskNodeCondition(ctx); err != nil {
-		return err
-	}
-
 	namespace := metav1.NamespaceSystem
 	if g.shoot.Info.DeletionTimestamp != nil {
 		namespace = metav1.NamespaceAll
@@ -157,44 +149,4 @@ func shouldObjectBeRemoved(obj metav1.Object, gracePeriod time.Duration) bool {
 	}
 
 	return deletionTimestamp.Time.Before(time.Now().Add(-gracePeriod))
-}
-
-func (g *GarbageCollection) removeStaleOutOfDiskNodeCondition(ctx context.Context) error {
-	// This code is limited to 1.13.0-1.13.3 (1.13.4 contains the Kubernetes fix).
-	// For more details see https://github.com/kubernetes/kubernetes/pull/73394.
-	needsRemovalOfStaleCondition, err := version.CheckVersionMeetsConstraint(g.shoot.Info.Spec.Kubernetes.Version, ">= 1.13.0, <= 1.13.3")
-	if err != nil {
-		return err
-	}
-	if !needsRemovalOfStaleCondition {
-		return nil
-	}
-
-	nodeList := &corev1.NodeList{}
-	if err := g.shootClient.List(ctx, nodeList); err != nil {
-		return err
-	}
-
-	var result error
-	for _, node := range nodeList.Items {
-		var conditions []corev1.NodeCondition
-
-		for _, condition := range node.Status.Conditions {
-			if condition.Type != health.NodeOutOfDisk {
-				conditions = append(conditions, condition)
-			}
-		}
-
-		if len(conditions) == len(node.Status.Conditions) {
-			continue
-		}
-
-		node.Status.Conditions = conditions
-
-		if err := g.shootClient.Status().Update(ctx, &node); err != nil {
-			result = multierror.Append(result, err)
-		}
-	}
-
-	return result
 }

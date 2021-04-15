@@ -3663,20 +3663,6 @@ Kubernetes meta/v1.Duration
 </tr>
 <tr>
 <td>
-<code>downscaleDelay</code></br>
-<em>
-<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
-Kubernetes meta/v1.Duration
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>The period since last downscale, before another downscale can be performed in horizontal pod autoscaler.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>downscaleStabilization</code></br>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
@@ -3727,20 +3713,6 @@ float64
 <td>
 <em>(Optional)</em>
 <p>The minimum change (from 1.0) in the desired-to-actual metrics ratio for the horizontal pod autoscaler to consider scaling.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>upscaleDelay</code></br>
-<em>
-<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
-Kubernetes meta/v1.Duration
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.</p>
 </td>
 </tr>
 </tbody>
@@ -4786,8 +4758,7 @@ k8s.io/apimachinery/pkg/api/resource.Quantity
 </td>
 <td>
 <em>(Optional)</em>
-<p>PID is the reserved process-ids.
-To reserve PID, the SupportNodePidsLimit feature gate must be enabled in Kubernetes versions &lt; 1.15.</p>
+<p>PID is the reserved process-ids.</p>
 </td>
 </tr>
 </tbody>
@@ -6096,8 +6067,7 @@ map[string]string
 </td>
 <td>
 <em>(Optional)</em>
-<p>ATTENTION: Only meaningful for Kubernetes &gt;= 1.11
-key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.</p>
+<p>key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.</p>
 </td>
 </tr>
 <tr>
@@ -7237,9 +7207,7 @@ Kubernetes meta/v1.LabelSelector
 <a href="#core.gardener.cloud/v1beta1.SeedSettings">SeedSettings</a>)
 </p>
 <p>
-<p>SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
-seed. When enabled then this is done via PodPriority and requires the Seed cluster to have Kubernetes version 1.11
-or the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API group enabled.</p>
+<p>SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.</p>
 </p>
 <table>
 <thead>
@@ -7460,8 +7428,7 @@ SeedSettingLoadBalancerServices
 </td>
 <td>
 <em>(Optional)</em>
-<p>LoadBalancerServices controls certain settings for services of type load balancer that are created in the
-seed.</p>
+<p>LoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.</p>
 </td>
 </tr>
 <tr>

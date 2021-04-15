@@ -193,11 +193,6 @@ func CheckDaemonSet(daemonSet *appsv1.DaemonSet) error {
 	return nil
 }
 
-// NodeOutOfDisk is deprecated NodeConditionType.
-// It is no longer reported by kubelet >= 1.13. See https://github.com/kubernetes/kubernetes/pull/70111.
-// +deprecated
-const NodeOutOfDisk = "OutOfDisk"
-
 var (
 	trueNodeConditionTypes = []corev1.NodeConditionType{
 		corev1.NodeReady,
@@ -208,7 +203,6 @@ var (
 		corev1.NodeMemoryPressure,
 		corev1.NodeNetworkUnavailable,
 		corev1.NodePIDPressure,
-		NodeOutOfDisk,
 	}
 )
 
