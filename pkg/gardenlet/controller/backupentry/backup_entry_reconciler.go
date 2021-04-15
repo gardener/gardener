@@ -41,6 +41,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -98,9 +99,12 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 func (r *reconciler) reconcileBackupEntry(ctx context.Context, gardenClient kubernetes.Interface, backupEntry *gardencorev1beta1.BackupEntry) (reconcile.Result, error) {
 	backupEntryLogger := logger.NewFieldLogger(logger.Logger, "backupentry", backupEntry.Name)
 
-	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.GardenerName); err != nil {
-		backupEntryLogger.Errorf("Failed to ensure gardener finalizer on backupentry: %+v", err)
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(backupEntry, gardencorev1beta1.GardenerName) {
+		if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.GardenerName); err != nil {
+			backupEntryLogger.Errorf("Failed to ensure gardener finalizer on backupentry: %+v", err)
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{}, nil
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
@@ -274,6 +278,8 @@ func (r *reconciler) updateBackupEntryStatusOperationStart(ctx context.Context, 
 			LastUpdateTime: metav1.Now(),
 		}
 
+		be.Status.ObservedGeneration = be.Generation
+
 		if be.Status.SeedName == nil {
 			be.Status.SeedName = be.Spec.SeedName
 		}
@@ -325,7 +331,6 @@ func updateBackupEntryStatusSucceeded(ctx context.Context, c client.Client, be *
 			Description:    description,
 			LastUpdateTime: metav1.Now(),
 		}
-		be.Status.ObservedGeneration = be.Generation
 
 		if operationType == gardencorev1beta1.LastOperationTypeMigrate {
 			be.Status.SeedName = nil
