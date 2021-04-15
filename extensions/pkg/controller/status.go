@@ -89,6 +89,10 @@ func (s *statusUpdater) InjectClient(c client.Client) {
 }
 
 func (s *statusUpdater) Processing(ctx context.Context, obj extensionsv1alpha1.Object, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
+	if s.client == nil {
+		return fmt.Errorf("client is not set. Call InjectClient() first")
+	}
+
 	s.logger.Info(description, s.logKeysAndValues(obj)...)
 
 	return TryUpdateStatus(ctx, retry.DefaultBackoff, s.client, obj, func() error {
@@ -100,6 +104,10 @@ func (s *statusUpdater) Processing(ctx context.Context, obj extensionsv1alpha1.O
 }
 
 func (s *statusUpdater) Error(ctx context.Context, obj extensionsv1alpha1.Object, err error, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
+	if s.client == nil {
+		return fmt.Errorf("client is not set. Call InjectClient() first")
+	}
+
 	errDescription := gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err))
 	s.logger.Error(fmt.Errorf(errDescription), "error", s.logKeysAndValues(obj)...)
 
@@ -114,6 +122,10 @@ func (s *statusUpdater) Error(ctx context.Context, obj extensionsv1alpha1.Object
 }
 
 func (s *statusUpdater) Success(ctx context.Context, obj extensionsv1alpha1.Object, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
+	if s.client == nil {
+		return fmt.Errorf("client is not set. Call InjectClient() first")
+	}
+
 	s.logger.Info(description, s.logKeysAndValues(obj)...)
 
 	return TryUpdateStatus(ctx, retry.DefaultBackoff, s.client, obj, func() error {
