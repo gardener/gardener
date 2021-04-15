@@ -27,6 +27,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -280,7 +281,7 @@ var _ = Describe("#Network", func() {
 					return mc
 				}),
 				mc.EXPECT().Update(ctx, expectedWithState).Return(nil),
-				test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState),
+				test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType),
 			)
 
 			defaultDepWaiter = network.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
@@ -304,7 +305,7 @@ var _ = Describe("#Network", func() {
 			mc := mockclient.NewMockClient(ctrl)
 
 			mc.EXPECT().Get(ctx, kutil.Key(networkNs, networkName), gomock.AssignableToTypeOf(&extensionsv1alpha1.Network{})).SetArg(2, *expected)
-			test.EXPECTPatch(ctx, mc, expectedCopy, expected)
+			test.EXPECTPatch(ctx, mc, expectedCopy, expected, types.MergePatchType)
 
 			defaultDepWaiter = network.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())

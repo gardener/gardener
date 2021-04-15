@@ -12,21 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seed_test
+package seedidentity_test
 
 import (
-	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed"
+	. "github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 )
 
 var _ = Describe("identity", func() {
-	DescribeTable("#Identity",
+	DescribeTable("#FromUserInfoInterface",
 		func(u user.Info, expectedSeedName string, expectedIsSeedValue bool) {
-			seedName, isSeed := Identity(u)
+			seedName, isSeed := FromUserInfoInterface(u)
 
 			Expect(seedName).To(Equal(expectedSeedName))
 			Expect(isSeed).To(Equal(expectedIsSeedValue))
@@ -38,5 +39,20 @@ var _ = Describe("identity", func() {
 		Entry("user name prefix but seed group not present", &user.DefaultInfo{Name: "gardener.cloud:system:seed:foo", Groups: []string{"bar"}}, "", false),
 		Entry("user name prefix and seed group", &user.DefaultInfo{Name: "gardener.cloud:system:seed:foo", Groups: []string{"gardener.cloud:system:seeds"}}, "foo", true),
 		Entry("user name prefix and seed group (ambiguous)", &user.DefaultInfo{Name: "gardener.cloud:system:seed:<ambiguous>", Groups: []string{"gardener.cloud:system:seeds"}}, "", true),
+	)
+
+	DescribeTable("#FromAuthenticationV1UserInfo",
+		func(u authenticationv1.UserInfo, expectedSeedName string, expectedIsSeedValue bool) {
+			seedName, isSeed := FromAuthenticationV1UserInfo(u)
+
+			Expect(seedName).To(Equal(expectedSeedName))
+			Expect(isSeed).To(Equal(expectedIsSeedValue))
+		},
+
+		Entry("no user name prefix", authenticationv1.UserInfo{Username: "foo"}, "", false),
+		Entry("user name prefix but no groups", authenticationv1.UserInfo{Username: "gardener.cloud:system:seed:foo"}, "", false),
+		Entry("user name prefix but seed group not present", authenticationv1.UserInfo{Username: "gardener.cloud:system:seed:foo", Groups: []string{"bar"}}, "", false),
+		Entry("user name prefix and seed group", authenticationv1.UserInfo{Username: "gardener.cloud:system:seed:foo", Groups: []string{"gardener.cloud:system:seeds"}}, "foo", true),
+		Entry("user name prefix and seed group (ambiguous)", authenticationv1.UserInfo{Username: "gardener.cloud:system:seed:<ambiguous>", Groups: []string{"gardener.cloud:system:seeds"}}, "", true),
 	)
 })

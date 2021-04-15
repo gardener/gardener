@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seed
+package seedidentity
 
 import (
 	"strings"
@@ -20,12 +20,13 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 
+	authenticationv1 "k8s.io/api/authentication/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 )
 
-// Identity returns the seed name and a boolean indicating whether the provided user has the
-// gardener.cloud:system:seeds group. If the seed name is ambigious then an empty string will be returned.
-func Identity(u user.Info) (string, bool) {
+// FromUserInfoInterface returns the seed name and a boolean indicating whether the provided user has the
+// gardener.cloud:system:seeds group. If the seed name is ambiguous then an empty string will be returned.
+func FromUserInfoInterface(u user.Info) (string, bool) {
 	if u == nil {
 		return "", false
 	}
@@ -45,4 +46,26 @@ func Identity(u user.Info) (string, bool) {
 	}
 
 	return seedName, true
+}
+
+// FromAuthenticationV1UserInfo converts a authenticationv1.UserInfo structure to the user.Info interface.
+func FromAuthenticationV1UserInfo(userInfo authenticationv1.UserInfo) (string, bool) {
+	return FromUserInfoInterface(&user.DefaultInfo{
+		Name:   userInfo.Username,
+		UID:    userInfo.UID,
+		Groups: userInfo.Groups,
+		Extra:  convertAuthenticationV1ExtraValueToUserInfoExtra(userInfo.Extra),
+	})
+}
+
+func convertAuthenticationV1ExtraValueToUserInfoExtra(extra map[string]authenticationv1.ExtraValue) map[string][]string {
+	if extra == nil {
+		return nil
+	}
+	ret := map[string][]string{}
+	for k, v := range extra {
+		ret[k] = v
+	}
+
+	return ret
 }

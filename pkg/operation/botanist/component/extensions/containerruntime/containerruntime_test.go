@@ -24,6 +24,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -333,7 +334,7 @@ var _ = Describe("#ContainerRuntimee", func() {
 				return mc
 			})
 			mc.EXPECT().Update(ctx, expectedWithState).Return(nil)
-			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState)
+			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 
 			defaultDepWaiter = containerruntime.New(
 				log,

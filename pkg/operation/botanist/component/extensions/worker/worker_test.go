@@ -42,6 +42,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -427,7 +428,7 @@ var _ = Describe("Worker", func() {
 			mc.EXPECT().Create(ctx, obj)
 			mc.EXPECT().Status().Return(mc)
 			mc.EXPECT().Update(ctx, expectedWithState)
-			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState)
+			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 
 			Expect(worker.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
 		})

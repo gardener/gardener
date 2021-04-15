@@ -16,10 +16,19 @@ package seedrestriction
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 
+	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/go-logr/logr"
+	admissionv1 "k8s.io/api/admission/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -30,17 +39,71 @@ const (
 	WebhookPath = "/webhooks/admission/seedrestriction"
 )
 
+var (
+	// Only take v1beta1 for the core.gardener.cloud API group because the Authorize function only checks the resource
+	// group and the resource (but it ignores the version).
+	shootStateResource = gardencorev1beta1.Resource("shootstates")
+)
+
 // New creates a new webhook handler restricting requests by gardenlets. It allows all requests.
-func New(logger logr.Logger) *handler {
-	return &handler{logger: logger}
+func New(ctx context.Context, logger logr.Logger, cache cache.Cache) (*handler, error) {
+	// Initialize caches here to ensure the readyz informer check will only succeed once informers required for this
+	// handler have synced so that http requests can be served quicker with pre-syncronized caches.
+	if _, err := cache.GetInformer(ctx, &gardencorev1beta1.Shoot{}); err != nil {
+		return nil, err
+	}
+
+	return &handler{
+		logger:      logger,
+		cacheReader: cache,
+	}, nil
 }
 
 type handler struct {
-	logger logr.Logger
+	logger      logr.Logger
+	cacheReader client.Reader
 }
 
 var _ admission.Handler = &handler{}
 
-func (p *handler) Handle(_ context.Context, _ admission.Request) admission.Response {
+func (h *handler) Handle(ctx context.Context, request admission.Request) admission.Response {
+	seedName, isSeed := seedidentity.FromAuthenticationV1UserInfo(request.UserInfo)
+	if !isSeed {
+		return acadmission.Allowed("")
+	}
+
+	requestResource := schema.GroupResource{Group: request.Resource.Group, Resource: request.Resource.Resource}
+	switch requestResource {
+	case shootStateResource:
+		return h.admitShootState(ctx, seedName, request)
+	}
+
 	return acadmission.Allowed("")
+}
+
+func (h *handler) admitShootState(ctx context.Context, seedName string, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := h.cacheReader.Get(ctx, kutil.Key(request.Namespace, request.Name), shoot); err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	return h.admit(seedName, shoot.Spec.SeedName)
+}
+
+func (h *handler) admit(seedName string, seedNameForObject *string) admission.Response {
+	// Allow request if seed name is not known (ambiguous case).
+	if seedName == "" {
+		return admission.Allowed("")
+	}
+
+	// Allow request if seed name of object matches the seed name of the requesting user.
+	if seedNameForObject != nil && *seedNameForObject == seedName {
+		return admission.Allowed("")
+	}
+
+	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
 }

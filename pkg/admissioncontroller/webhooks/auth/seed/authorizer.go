@@ -18,8 +18,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -53,15 +56,15 @@ var (
 	namespaceResource     = corev1.Resource("namespaces")
 	projectResource       = gardencorev1beta1.Resource("projects")
 	secretBindingResource = gardencorev1beta1.Resource("secretbindings")
+	shootStateResource    = gardencorev1alpha1.Resource("shootstates")
 )
 
 // TODO: Revisit all `DecisionNoOpinion` later. Today we cannot deny the request for backwards compatibility
 // because older Gardenlet versions might not be compatible at the time this authorization plugin is enabled.
 // With `DecisionNoOpinion`, RBAC will be respected in the authorization chain afterwards.
 func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.Decision, string, error) {
-	seedName, isSeed := Identity(attrs.GetUser())
+	seedName, isSeed := seedidentity.FromUserInfoInterface(attrs.GetUser())
 	if !isSeed {
-		// reject requests from non-seeds
 		return auth.DecisionNoOpinion, "", nil
 	}
 
@@ -78,23 +81,42 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeGet(seedName, graph.VertexTypeProject, attrs)
 		case secretBindingResource:
 			return a.authorizeGet(seedName, graph.VertexTypeSecretBinding, attrs)
+		case shootStateResource:
+			return a.authorizeShootState(seedName, attrs)
 		}
 	}
 
 	return auth.DecisionNoOpinion, "", nil
 }
 
-// authorizeGet authorizes "get" requests to objects of the specified type if they are related to the specified seed
 func (a *authorizer) authorizeGet(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
-	if attrs.GetVerb() != "get" {
-		a.logger.Info(fmt.Sprintf("SEED DENY: '%s' %#v", seedName, attrs))
-		return auth.DecisionNoOpinion, "can only get individual resources of this type", nil
+	if ok, reason := a.checkVerb(seedName, attrs, "get"); !ok {
+		return auth.DecisionNoOpinion, reason, nil
 	}
-	if len(attrs.GetSubresource()) > 0 {
-		a.logger.Info(fmt.Sprintf("SEED DENY: '%s' %#v", seedName, attrs))
-		return auth.DecisionNoOpinion, "cannot get subresource", nil
+
+	if ok, reason := a.checkSubresource(seedName, attrs); !ok {
+		return auth.DecisionNoOpinion, reason, nil
 	}
+
 	return a.authorize(seedName, fromType, attrs)
+}
+
+func (a *authorizer) authorizeShootState(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	if ok, reason := a.checkVerb(seedName, attrs, "get", "create", "update", "patch"); !ok {
+		return auth.DecisionNoOpinion, reason, nil
+	}
+
+	if ok, reason := a.checkSubresource(seedName, attrs); !ok {
+		return auth.DecisionNoOpinion, reason, nil
+	}
+
+	// When a new ShootState is created then it doesn't yet exist in the graph, so we only handle update operations
+	// here. The create case is handled in the SeedRestriction admission handler.
+	if attrs.GetVerb() == "create" {
+		return auth.DecisionAllow, "", nil
+	}
+
+	return a.authorize(seedName, graph.VertexTypeShootState, attrs)
 }
 
 func (a *authorizer) authorize(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
@@ -114,4 +136,22 @@ func (a *authorizer) authorize(seedName string, fromType graph.VertexType, attrs
 	}
 
 	return auth.DecisionAllow, "", nil
+}
+
+func (a *authorizer) checkVerb(seedName string, attrs auth.Attributes, allowedVerbs ...string) (bool, string) {
+	if !utils.ValueExists(attrs.GetVerb(), allowedVerbs) {
+		a.logger.Info(fmt.Sprintf("SEED DENY: '%s' %#v", seedName, attrs))
+		return false, fmt.Sprintf("only the following verbs are allowed for this resource type: %+v", allowedVerbs)
+	}
+
+	return true, ""
+}
+
+func (a *authorizer) checkSubresource(seedName string, attrs auth.Attributes, allowedSubresources ...string) (bool, string) {
+	if subresource := attrs.GetSubresource(); len(subresource) > 0 && !utils.ValueExists(attrs.GetSubresource(), allowedSubresources) {
+		a.logger.Info(fmt.Sprintf("SEED DENY: '%s' %#v", seedName, attrs))
+		return false, fmt.Sprintf("only the following subresources are allowed for this resource type: %+v", allowedSubresources)
+	}
+
+	return true, ""
 }

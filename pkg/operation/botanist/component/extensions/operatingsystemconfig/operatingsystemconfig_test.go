@@ -47,6 +47,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -360,7 +361,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					mc.EXPECT().Create(ctx, expected[i])
 					mc.EXPECT().Status().Return(mc)
 					mc.EXPECT().Update(ctx, expectedWithState)
-					test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState)
+					test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 				}
 
 				defaultDepWaiter = New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)

@@ -170,7 +170,7 @@ var _ = Describe("Utils", func() {
 			delete(expectedWorker.Annotations, annotation)
 
 			ctx := context.TODO()
-			test.EXPECTPatch(ctx, c, expectedWorker, workerWithAnnotation)
+			test.EXPECTPatch(ctx, c, expectedWorker, workerWithAnnotation, types.MergePatchType)
 
 			Expect(controller.RemoveAnnotation(ctx, c, worker, annotation)).To(Succeed())
 			Expect(len(worker.Annotations)).To(Equal(1))

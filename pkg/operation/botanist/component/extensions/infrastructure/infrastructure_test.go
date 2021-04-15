@@ -44,6 +44,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -462,7 +463,7 @@ var _ = Describe("#Interface", func() {
 			mc.EXPECT().Create(ctx, obj)
 			mc.EXPECT().Status().Return(mc)
 			mc.EXPECT().Update(ctx, expectedWithState)
-			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState)
+			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 
 			Expect(infrastructure.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
 		})
@@ -490,7 +491,7 @@ var _ = Describe("#Interface", func() {
 						return nil
 					}),
 				test.
-					EXPECTPatch(ctx, c, obj, infra),
+					EXPECTPatch(ctx, c, obj, infra, types.MergePatchType),
 			)
 
 			Expect(deployWaiter.Migrate(ctx)).To(Succeed())

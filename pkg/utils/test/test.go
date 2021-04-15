@@ -25,6 +25,7 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/component-base/featuregate"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -182,16 +183,32 @@ func WithTempFile(dir, pattern string, content []byte, fileName *string) func() 
 }
 
 // EXPECTPatch is a helper function for a GoMock call expecting a patch with the mock client.
-func EXPECTPatch(ctx context.Context, c *mockclient.MockClient, obj, mergeFrom runtime.Object) *gomock.Call {
-	expectedPatch := client.MergeFrom(mergeFrom)
+func EXPECTPatch(ctx context.Context, c *mockclient.MockClient, obj, mergeFrom runtime.Object, patchType types.PatchType, rets ...interface{}) *gomock.Call {
+	var expectedPatch client.Patch
+
+	switch patchType {
+	case types.MergePatchType:
+		expectedPatch = client.MergeFrom(mergeFrom)
+	case types.StrategicMergePatchType:
+		expectedPatch = client.StrategicMergeFrom(mergeFrom.DeepCopyObject().(client.Object))
+	}
+
 	expectedData, expectedErr := expectedPatch.Data(obj)
 	Expect(expectedErr).To(BeNil())
 
-	return c.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, _ client.Object, patch client.Patch, _ ...client.PatchOption) error {
-		data, err := patch.Data(obj)
-		Expect(err).To(BeNil())
-		Expect(patch.Type()).To(Equal(expectedPatch.Type()))
-		Expect(data).To(Equal(expectedData))
-		return nil
-	})
+	if rets == nil {
+		rets = []interface{}{nil}
+	}
+
+	return c.
+		EXPECT().
+		Patch(ctx, obj, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ client.Object, patch client.Patch, _ ...client.PatchOption) error {
+			data, err := patch.Data(obj)
+			Expect(err).To(BeNil())
+			Expect(patch.Type()).To(Equal(expectedPatch.Type()))
+			Expect(data).To(Equal(expectedData))
+			return nil
+		}).
+		Return(rets...)
 }

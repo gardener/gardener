@@ -26,22 +26,25 @@ import (
 	. "github.com/gardener/gardener/pkg/operation"
 	operationseed "github.com/gardener/gardener/pkg/operation/seed"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
+	gomegatypes "github.com/onsi/gomega/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("operation", func() {
-	DescribeTable("#ComputeIngressHost", func(prefix, shootName, projectName, domain string, matcher types.GomegaMatcher) {
+	var ctx = context.TODO()
+
+	DescribeTable("#ComputeIngressHost", func(prefix, shootName, projectName, domain string, matcher gomegatypes.GomegaMatcher) {
 		var (
 			seed = &gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
@@ -82,11 +85,12 @@ var _ = Describe("operation", func() {
 
 	Describe("#EnsureShootStateExists", func() {
 		var (
-			shoot                  *gardencorev1beta1.Shoot
-			ctrl                   *gomock.Controller
-			gardenClient           *mock.MockInterface
-			k8sGardenRuntimeClient *mockclient.MockClient
-			o                      *Operation
+			shootState, shootStatePatched *gardencorev1alpha1.ShootState
+			shoot                         *gardencorev1beta1.Shoot
+			ctrl                          *gomock.Controller
+			gardenClient                  *mock.MockInterface
+			k8sGardenRuntimeClient        *mockclient.MockClient
+			o                             *Operation
 		)
 
 		BeforeEach(func() {
@@ -96,6 +100,21 @@ var _ = Describe("operation", func() {
 					Namespace: "bar",
 				},
 			}
+			shootState = &gardencorev1alpha1.ShootState{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      shoot.Name,
+					Namespace: shoot.Namespace,
+				},
+			}
+
+			shootStatePatched = shootState.DeepCopy()
+			shootStatePatched.OwnerReferences = []metav1.OwnerReference{{
+				APIVersion:         "core.gardener.cloud/v1beta1",
+				Kind:               "Shoot",
+				Name:               shoot.Name,
+				BlockOwnerDeletion: pointer.BoolPtr(false),
+				Controller:         pointer.BoolPtr(true),
+			}}
 
 			ctrl = gomock.NewController(GinkgoT())
 			gardenClient = mock.NewMockInterface(ctrl)
@@ -109,29 +128,24 @@ var _ = Describe("operation", func() {
 			}
 		})
 
-		It("should retrieve ShouldState and add it to the Operation struct", func() {
+		It("should patch the ShootState's owner reference and add it to the Operation struct", func() {
 			gomock.InOrder(
-				gardenClient.EXPECT().DirectClient().Return(k8sGardenRuntimeClient),
-				k8sGardenRuntimeClient.EXPECT().Get(context.TODO(), kutil.Key("bar", "foo"), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).Return(nil),
-				k8sGardenRuntimeClient.EXPECT().Update(context.TODO(), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).Return(nil),
+				gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
+				test.EXPECTPatch(ctx, k8sGardenRuntimeClient, shootStatePatched, shootState, types.StrategicMergePatchType),
 			)
 
-			Expect(o.EnsureShootStateExists(context.TODO())).To(Succeed())
-
+			Expect(o.EnsureShootStateExists(ctx)).To(Succeed())
 			Expect(o.ShootState).ToNot(BeNil())
 		})
 
 		It("should create ShootState with correct ownerReferences and add it to the Operation struct", func() {
 			gomock.InOrder(
-				gardenClient.EXPECT().DirectClient().Return(k8sGardenRuntimeClient),
-				k8sGardenRuntimeClient.EXPECT().Get(context.TODO(), kutil.Key("bar", "foo"), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).DoAndReturn(
-					func(_ context.Context, _ client.ObjectKey, csr *gardencorev1alpha1.ShootState) error {
-						return apierrors.NewNotFound(gardencorev1alpha1.Resource("shootstate"), "foo")
-					}),
-				k8sGardenRuntimeClient.EXPECT().Create(context.TODO(), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).Return(nil),
+				gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
+				test.EXPECTPatch(ctx, k8sGardenRuntimeClient, shootStatePatched, shootState, types.StrategicMergePatchType, apierrors.NewNotFound(schema.GroupResource{}, "")),
+				k8sGardenRuntimeClient.EXPECT().Create(ctx, shootStatePatched),
 			)
 
-			Expect(o.EnsureShootStateExists(context.TODO())).To(Succeed())
+			Expect(o.EnsureShootStateExists(ctx)).To(Succeed())
 
 			Expect(o.ShootState).ToNot(BeNil())
 			Expect(len(o.ShootState.OwnerReferences)).To(Equal(1))
@@ -175,9 +189,9 @@ var _ = Describe("operation", func() {
 
 			shootState := o.ShootState.DeepCopy()
 			shootState.Spec.Gardener = gardenerResourceList
-			test.EXPECTPatch(context.TODO(), k8sGardenRuntimeClient, shootState, o.ShootState)
+			test.EXPECTPatch(ctx, k8sGardenRuntimeClient, shootState, o.ShootState, types.MergePatchType)
 
-			Expect(o.SaveGardenerResourcesInShootState(context.TODO(), gardenerResourceList)).To(Succeed())
+			Expect(o.SaveGardenerResourcesInShootState(ctx, gardenerResourceList)).To(Succeed())
 			Expect(o.ShootState.Spec.Gardener).To(BeEquivalentTo(gardenerResourceList))
 		})
 	})
