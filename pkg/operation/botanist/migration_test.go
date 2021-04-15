@@ -20,7 +20,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	mockbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry/mock"
 	mockcontainerruntime "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime/mock"
 	mockcontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane/mock"
 	mockextension "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension/mock"
@@ -40,7 +39,6 @@ var _ = Describe("migration", func() {
 	var (
 		ctrl *gomock.Controller
 
-		backupEntry           *mockbackupentry.MockInterface
 		containerRuntime      *mockcontainerruntime.MockInterface
 		controlPlane          *mockcontrolplane.MockInterface
 		controlPlaneExposure  *mockcontrolplane.MockInterface
@@ -59,7 +57,6 @@ var _ = Describe("migration", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
-		backupEntry = mockbackupentry.NewMockInterface(ctrl)
 		containerRuntime = mockcontainerruntime.NewMockInterface(ctrl)
 		controlPlane = mockcontrolplane.NewMockInterface(ctrl)
 		controlPlaneExposure = mockcontrolplane.NewMockInterface(ctrl)
@@ -73,7 +70,6 @@ var _ = Describe("migration", func() {
 			Shoot: &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					Extensions: &shootpkg.Extensions{
-						BackupEntry:           backupEntry,
 						ContainerRuntime:      containerRuntime,
 						ControlPlane:          controlPlane,
 						ControlPlaneExposure:  controlPlaneExposure,
@@ -94,7 +90,6 @@ var _ = Describe("migration", func() {
 
 	Describe("#MigrateAllExtensionResources", func() {
 		It("should call the Migrate() func of all extension components", func() {
-			backupEntry.EXPECT().Migrate(ctx)
 			containerRuntime.EXPECT().Migrate(ctx)
 			controlPlane.EXPECT().Migrate(ctx)
 			controlPlaneExposure.EXPECT().Migrate(ctx)
@@ -108,7 +103,6 @@ var _ = Describe("migration", func() {
 		})
 
 		It("should return an error if not all the Migrate() func of all extension components succeed", func() {
-			backupEntry.EXPECT().Migrate(ctx)
 			containerRuntime.EXPECT().Migrate(ctx)
 			controlPlane.EXPECT().Migrate(ctx).Return(fakeErr)
 			controlPlaneExposure.EXPECT().Migrate(ctx)
@@ -126,7 +120,6 @@ var _ = Describe("migration", func() {
 
 	Describe("#WaitUntilAllExtensionResourcesMigrated", func() {
 		It("should call the Migrate() func of all extension components", func() {
-			backupEntry.EXPECT().WaitMigrate(ctx)
 			containerRuntime.EXPECT().WaitMigrate(ctx)
 			controlPlane.EXPECT().WaitMigrate(ctx)
 			controlPlaneExposure.EXPECT().WaitMigrate(ctx)
@@ -140,7 +133,6 @@ var _ = Describe("migration", func() {
 		})
 
 		It("should return an error if not all the WaitMigrate() func of all extension components succeed", func() {
-			backupEntry.EXPECT().WaitMigrate(ctx)
 			containerRuntime.EXPECT().WaitMigrate(ctx)
 			controlPlane.EXPECT().WaitMigrate(ctx)
 			controlPlaneExposure.EXPECT().WaitMigrate(ctx)
@@ -157,8 +149,7 @@ var _ = Describe("migration", func() {
 	})
 
 	Describe("#DestroyAllExtensionResources", func() {
-		It("should call the Migrate() func of all extension components", func() {
-			backupEntry.EXPECT().Destroy(ctx)
+		It("should call the Destroy() func of all extension components", func() {
 			containerRuntime.EXPECT().Destroy(ctx)
 			controlPlane.EXPECT().Destroy(ctx)
 			controlPlaneExposure.EXPECT().Destroy(ctx)
@@ -172,10 +163,9 @@ var _ = Describe("migration", func() {
 		})
 
 		It("should return an error if not all the Destroy() func of all extension components succeed", func() {
-			backupEntry.EXPECT().Destroy(ctx).Return(fakeErr)
 			containerRuntime.EXPECT().Destroy(ctx).Return(fakeErr)
 			controlPlane.EXPECT().Destroy(ctx)
-			controlPlaneExposure.EXPECT().Destroy(ctx)
+			controlPlaneExposure.EXPECT().Destroy(ctx).Return(fakeErr)
 			extension.EXPECT().Destroy(ctx)
 			infrastructure.EXPECT().Destroy(ctx)
 			network.EXPECT().Destroy(ctx)

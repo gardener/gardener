@@ -24,6 +24,7 @@ import (
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/backupentry"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -47,7 +48,7 @@ var _ = Describe("BackupEntry", func() {
 		expected         *gardencorev1beta1.BackupEntry
 		values           *Values
 		log              logrus.FieldLogger
-		defaultDepWaiter component.DeployWaiter
+		defaultDepWaiter component.DeployMigrateWaiter
 
 		mockNow *mocktime.MockNow
 		now     time.Time
@@ -119,77 +120,36 @@ var _ = Describe("BackupEntry", func() {
 			expected.ResourceVersion = "1"
 		})
 
-		Context("do not overwrite seed name", func() {
-			It("should create correct BackupEntry (newly created)", func() {
-				defer test.WithVars(&TimeNow, mockNow.Do)()
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+		It("should create correct BackupEntry (newly created)", func() {
+			defer test.WithVars(&TimeNow, mockNow.Do)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-				actual := &gardencorev1beta1.BackupEntry{}
-				Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
+			actual := &gardencorev1beta1.BackupEntry{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
 
-				Expect(actual).To(DeepEqual(expected))
-			})
-
-			It("should create correct BackupEntry (reconciling/updating)", func() {
-				defer test.WithVars(&TimeNow, mockNow.Do)()
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-
-				existing := expected.DeepCopy()
-				existing.ResourceVersion = ""
-				existing.Spec.BucketName = differentBucketName
-				existing.Spec.SeedName = &differentSeedName
-				Expect(c.Create(ctx, existing)).To(Succeed(), "creating BackupEntry succeeds")
-
-				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-				actual := &gardencorev1beta1.BackupEntry{}
-				Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
-
-				expected.Spec.BucketName = differentBucketName
-				expected.Spec.SeedName = &differentSeedName
-				Expect(actual).To(DeepEqual(expected))
-			})
+			Expect(actual).To(DeepEqual(expected))
 		})
 
-		Context("overwrite seed name", func() {
-			BeforeEach(func() {
-				values.OverwriteSeedName = true
-				defaultDepWaiter = New(log, c, values, time.Millisecond, 500*time.Millisecond)
-			})
+		It("should create correct BackupEntry (reconciling/updating)", func() {
+			defer test.WithVars(&TimeNow, mockNow.Do)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			It("should create correct BackupEntry (newly created)", func() {
-				defer test.WithVars(&TimeNow, mockNow.Do)()
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			existing := expected.DeepCopy()
+			existing.ResourceVersion = ""
+			existing.Spec.BucketName = differentBucketName
+			existing.Spec.SeedName = &differentSeedName
+			Expect(c.Create(ctx, existing)).To(Succeed(), "creating BackupEntry succeeds")
 
-				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-				actual := &gardencorev1beta1.BackupEntry{}
-				Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
+			actual := &gardencorev1beta1.BackupEntry{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
 
-				Expect(actual).To(DeepEqual(expected))
-			})
-
-			It("should create correct BackupEntry (reconciling/updating)", func() {
-				defer test.WithVars(&TimeNow, mockNow.Do)()
-				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-
-				existing := expected.DeepCopy()
-				existing.ResourceVersion = ""
-				existing.Spec.BucketName = differentBucketName
-				existing.Spec.SeedName = &differentSeedName
-				Expect(c.Create(ctx, existing)).To(Succeed(), "creating BackupEntry succeeds")
-
-				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-				actual := &gardencorev1beta1.BackupEntry{}
-				Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
-
-				expected.ResourceVersion = "2"
-				expected.Spec.BucketName = differentBucketName
-				Expect(actual).To(DeepEqual(expected))
-			})
+			expected.Spec.BucketName = differentBucketName
+			expected.Spec.SeedName = &differentSeedName
+			Expect(actual).To(DeepEqual(expected))
 		})
 	})
 
@@ -216,6 +176,92 @@ var _ = Describe("BackupEntry", func() {
 
 			Expect(c.Create(ctx, expected)).To(Succeed(), "creating BackupEntry succeeds")
 			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "BackupEntry is ready, should not return an error")
+		})
+	})
+
+	Describe("#Restore", func() {
+		BeforeEach(func() {
+			defaultDepWaiter = New(log, c, values, time.Millisecond, 500*time.Millisecond)
+		})
+
+		It("should correctly restore BackupEntry", func() {
+			defer test.WithVars(&TimeNow, mockNow.Do)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			existing := expected.DeepCopy()
+			existing.ResourceVersion = ""
+			existing.Spec.BucketName = differentBucketName
+			existing.Spec.SeedName = &differentSeedName
+			Expect(c.Create(ctx, existing)).To(Succeed(), "restoring BackupEntry succeeds")
+
+			Expect(defaultDepWaiter.Restore(ctx, nil)).To(Succeed())
+
+			actual := &gardencorev1beta1.BackupEntry{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
+
+			expected.ResourceVersion = "2"
+			expected.Spec.BucketName = differentBucketName
+			expected.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationRestore
+			Expect(actual).To(DeepEqual(expected))
+		})
+	})
+
+	Describe("#Migrate", func() {
+		It("should return error when it's not found", func() {
+			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())
+		})
+
+		It("should correctly migrate the BackupEntry", func() {
+			defer test.WithVars(&TimeNow, mockNow.Do)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			existing := expected.DeepCopy()
+			existing.ResourceVersion = ""
+			existing.Spec.SeedName = nil
+			Expect(c.Create(ctx, existing)).To(Succeed(), "creating BackupEntry succeeds")
+
+			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())
+
+			actual := &gardencorev1beta1.BackupEntry{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
+
+			expected.ResourceVersion = "2"
+			expected.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationMigrate
+			Expect(actual).To(DeepEqual(expected))
+		})
+	})
+
+	Describe("#WaitMigrate", func() {
+		It("should return error when it's not found", func() {
+			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(HaveOccurred())
+		})
+
+		It("should return error when it's not ready", func() {
+			migrated := expected.DeepCopy()
+
+			expected.Status.LastError = &gardencorev1beta1.LastError{
+				Description: "Some error",
+			}
+			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateError,
+				Type:  gardencorev1beta1.LastOperationTypeMigrate,
+			}
+
+			Expect(c.Create(ctx, expected)).To(Succeed(), "migrating BackupEntry succeeds")
+			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(HaveOccurred())
+			Expect(c.Get(ctx, kutil.Key(expected.Namespace, expected.Name), migrated)).To(Succeed())
+			Expect(migrated.Status.LastOperation).To(Equal(expected.Status.LastOperation))
+		})
+
+		It("should not return error when migrated successfully", func() {
+			expected.Status.LastError = nil
+			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateSucceeded,
+				Type:  gardencorev1beta1.LastOperationTypeMigrate,
+			}
+
+			Expect(c.Create(ctx, expected)).To(Succeed(), "migrating BackupEntry succeeds")
+			Expect(defaultDepWaiter.WaitMigrate(ctx)).To(Succeed(), "BackupEntry is ready, should not return an error")
 		})
 	})
 
