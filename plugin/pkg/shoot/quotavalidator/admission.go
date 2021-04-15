@@ -23,7 +23,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
@@ -452,11 +451,11 @@ func getShootWorkerResources(shoot *core.Shoot, cloudProfile *core.CloudProfile)
 }
 
 func lifetimeVerificationNeeded(new, old core.Shoot) bool {
-	oldLifetime, ok := old.Annotations[constants.ShootExpirationTimestamp]
+	oldLifetime, ok := old.Annotations[v1beta1constants.ShootExpirationTimestamp]
 	if !ok {
 		oldLifetime = old.CreationTimestamp.String()
 	}
-	newLifetime := new.Annotations[constants.ShootExpirationTimestamp]
+	newLifetime := new.Annotations[v1beta1constants.ShootExpirationTimestamp]
 	return oldLifetime != newLifetime
 }
 
