@@ -127,13 +127,13 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - namespaces
   - configmaps
   verbs:
   - get
 - apiGroups:
   - ""
   resources:
+  - namespaces
   - secrets
   verbs:
   - get
