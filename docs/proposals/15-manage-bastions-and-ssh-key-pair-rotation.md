@@ -75,11 +75,10 @@ The following is a list of involved components, that either need to be newly int
 ### SSH Flow
 0. Users should only get the RBAC permission to `create` / `update` `Bastion` resources for a namespace, if they should be allowed to `ssh` onto the shoot nodes in this namespace. A project member with `admin` role will have these permissions.
 1. User/`gardenctlv2` creates `Bastion` resource in garden cluster (see [resource example](#resource-example) below)
-    - First, gardenctl would figure out the own public IP of the user's machine. Either by calling an external service (gardenctl (v1) uses https://github.com/gardener/gardenctl/blob/master/pkg/cmd/miscellaneous.go#L226) or by calling a binary that prints the public IP(s) to stdout. The binary should be configurable. The result is set under `spec.ingress[].from[].ipBlock.cidr`
-    - the public `ssh` key of the user is set under `spec.sshPublicKey`. The key that should be used needs to be configured beforehand by the user
+    - First, gardenctl would figure out the own public IP of the user's machine. Either by calling an external service (gardenctl (v1) uses https://github.com/gardener/gardenctl/blob/master/pkg/cmd/miscellaneous.go#L226) or by calling a binary that prints the public IP(s) to stdout. The binary should be configurable. The result is set under `spec.ingress[].ipBlock.cidr`
+    - the public `ssh` key of the user is set under `spec.sshPublicKey`. The key needs to be configured beforehand by the user
     - The targeted shoot is set under `spec.shootRef`
-2. GAPI Admission Control for the `Bastion` resource in the garden cluster
-    - Mutating Webhook
+2. GAPI Admission Plugin for the `Bastion` resource in the garden cluster
         - on creation, sets `metadata.annotations["operations.gardener.cloud/created-by"]` according to the user that created the resource
         - when `operations.gardener.cloud/operation: keepalive` is set, calculates new `status.expirationTimestamp`
 3. `gardenlet`
@@ -102,7 +101,7 @@ The following is a list of involved components, that either need to be newly int
 6. `gardenlet`
     - Syncs back the `status.ingress` and `status.conditions` of the `Bastion` resource in the seed to the garden cluster in case it changed
 7. `gardenctl`
-    - initiates `ssh` session once `status.operation['BastionReady']` is true of the `Bastion` resource in the garden cluster
+    - initiates `ssh` session once `status.conditions['BastionReady']` is true of the `Bastion` resource in the garden cluster
         - locates private `ssh` key matching `spec["sshPublicKey"]` which was configured beforehand by the user
         - reads bastion IP (`status.ingress.ip`) or hostname (`status.ingress.hostname`)
         - reads the private key from the `ssh` key pair for the shoot node
