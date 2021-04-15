@@ -141,9 +141,8 @@ spec:
   pgpPublicKey: LS0tLS1CRUdJTiBQR1AgUFVCTElDIEtFWSBCTE9DSy0tLS0tCi4uLgotLS0tLUVORCBQR1AgUFVCTElDIEtFWSBCTE9DSy0tLS0tCg== # user's PGP public key, immutable
 
   ingress:
-  - from:
-    - ipBlock:
-        cidr: 1.2.3.4/32 # public IP of the user. CIDR is a string representing the IP Block. Valid examples are "192.168.1.1/24" or "2001:db9::/64"
+  - ipBlock:
+      cidr: 1.2.3.4/32 # public IP of the user. CIDR is a string representing the IP Block. Valid examples are "192.168.1.1/24" or "2001:db9::/64"
 
 status:
   # the following fields are set by the GCM
@@ -179,9 +178,8 @@ spec:
   sshPublicKey: c3NoLXJzYSAuLi4K # from status["sshPublicKey"] of Bastion resource in garden cluster
 
   ingress:
-  - from:
-    - ipBlock:
-        cidr: 1.2.3.4/32
+  - ipBlock:
+      cidr: 1.2.3.4/32
 
 status:
   ingress:
