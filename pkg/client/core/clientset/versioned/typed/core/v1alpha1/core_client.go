@@ -32,6 +32,7 @@ type CoreV1alpha1Interface interface {
 	ControllerDeploymentsGetter
 	ControllerInstallationsGetter
 	ControllerRegistrationsGetter
+	ExposureClassesGetter
 	PlantsGetter
 	ProjectsGetter
 	QuotasGetter
@@ -69,6 +70,10 @@ func (c *CoreV1alpha1Client) ControllerInstallations() ControllerInstallationInt
 
 func (c *CoreV1alpha1Client) ControllerRegistrations() ControllerRegistrationInterface {
 	return newControllerRegistrations(c)
+}
+
+func (c *CoreV1alpha1Client) ExposureClasses() ExposureClassInterface {
+	return newExposureClasses(c)
 }
 
 func (c *CoreV1alpha1Client) Plants(namespace string) PlantInterface {

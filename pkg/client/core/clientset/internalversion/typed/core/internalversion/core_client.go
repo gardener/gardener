@@ -31,6 +31,7 @@ type CoreInterface interface {
 	ControllerDeploymentsGetter
 	ControllerInstallationsGetter
 	ControllerRegistrationsGetter
+	ExposureClassesGetter
 	PlantsGetter
 	ProjectsGetter
 	QuotasGetter
@@ -68,6 +69,10 @@ func (c *CoreClient) ControllerInstallations() ControllerInstallationInterface {
 
 func (c *CoreClient) ControllerRegistrations() ControllerRegistrationInterface {
 	return newControllerRegistrations(c)
+}
+
+func (c *CoreClient) ExposureClasses() ExposureClassInterface {
+	return newExposureClasses(c)
 }
 
 func (c *CoreClient) Plants(namespace string) PlantInterface {

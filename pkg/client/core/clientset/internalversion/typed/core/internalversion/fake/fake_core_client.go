@@ -52,6 +52,10 @@ func (c *FakeCore) ControllerRegistrations() internalversion.ControllerRegistrat
 	return &FakeControllerRegistrations{c}
 }
 
+func (c *FakeCore) ExposureClasses() internalversion.ExposureClassInterface {
+	return &FakeExposureClasses{c}
+}
+
 func (c *FakeCore) Plants(namespace string) internalversion.PlantInterface {
 	return &FakePlants{c, namespace}
 }

@@ -52,6 +52,10 @@ func (c *FakeCoreV1alpha1) ControllerRegistrations() v1alpha1.ControllerRegistra
 	return &FakeControllerRegistrations{c}
 }
 
+func (c *FakeCoreV1alpha1) ExposureClasses() v1alpha1.ExposureClassInterface {
+	return &FakeExposureClasses{c}
+}
+
 func (c *FakeCoreV1alpha1) Plants(namespace string) v1alpha1.PlantInterface {
 	return &FakePlants{c, namespace}
 }

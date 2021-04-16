@@ -46,6 +46,10 @@ type ControllerInstallationListerExpansion interface{}
 // ControllerRegistrationLister.
 type ControllerRegistrationListerExpansion interface{}
 
+// ExposureClassListerExpansion allows custom methods to be added to
+// ExposureClassLister.
+type ExposureClassListerExpansion interface{}
+
 // PlantListerExpansion allows custom methods to be added to
 // PlantLister.
 type PlantListerExpansion interface{}

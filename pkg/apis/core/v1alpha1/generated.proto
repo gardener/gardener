@@ -634,6 +634,43 @@ message ExpirableVersion {
   optional string classification = 3;
 }
 
+// ExposureClass represents a control plane endpoint exposure strategy.
+message ExposureClass {
+  // Standard object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Handler is the name of the handler which applies the control plane endpoint exposure strategy.
+  optional string handler = 2;
+
+  // Scheduling holds information how to select applicable Seed's for ExposureClass usage.
+  // +optional
+  optional ExposureClassScheduling scheduling = 3;
+}
+
+// ExposureClassList is a collection of ExposureClass.
+message ExposureClassList {
+  // Standard list object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  // Items is the list of ExposureClasses.
+  repeated ExposureClass items = 2;
+}
+
+// ExposureClassScheduling holds information to select applicable Seed's for ExposureClass usage.
+message ExposureClassScheduling {
+  // SeedSelector is an optional label selector for Seed's which are suitable to use the ExposureClass.
+  // +optional
+  optional SeedSelector seedSelector = 1;
+
+  // Tolerations contains the tolerations for taints on Seed clusters.
+  // +patchMergeKey=key
+  // +patchStrategy=merge
+  // +optional
+  repeated Toleration tolerations = 2;
+}
+
 // Extension contains type and provider information for Shoot extensions.
 message Extension {
   // Type is the type of the extension resource.
