@@ -2085,6 +2085,10 @@ message ShootSpec {
   // +patchStrategy=merge
   // +optional
   repeated Toleration tolerations = 17;
+
+  // ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
+  // +optional
+  optional string exposureClassName = 18;
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.

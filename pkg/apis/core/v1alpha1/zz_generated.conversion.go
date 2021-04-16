@@ -5057,6 +5057,7 @@ func autoConvert_v1alpha1_ShootSpec_To_core_ShootSpec(in *ShootSpec, out *core.S
 	out.SeedSelector = (*core.SeedSelector)(unsafe.Pointer(in.SeedSelector))
 	out.Resources = *(*[]core.NamedResourceReference)(unsafe.Pointer(&in.Resources))
 	out.Tolerations = *(*[]core.Toleration)(unsafe.Pointer(&in.Tolerations))
+	out.ExposureClassName = (*string)(unsafe.Pointer(in.ExposureClassName))
 	return nil
 }
 
@@ -5089,6 +5090,7 @@ func autoConvert_core_ShootSpec_To_v1alpha1_ShootSpec(in *core.ShootSpec, out *S
 	out.SeedSelector = (*SeedSelector)(unsafe.Pointer(in.SeedSelector))
 	out.Resources = *(*[]NamedResourceReference)(unsafe.Pointer(&in.Resources))
 	out.Tolerations = *(*[]Toleration)(unsafe.Pointer(&in.Tolerations))
+	out.ExposureClassName = (*string)(unsafe.Pointer(in.ExposureClassName))
 	return nil
 }
 

@@ -3943,6 +3943,11 @@ func (in *ShootSpec) DeepCopyInto(out *ShootSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.ExposureClassName != nil {
+		in, out := &in.ExposureClassName, &out.ExposureClassName
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
