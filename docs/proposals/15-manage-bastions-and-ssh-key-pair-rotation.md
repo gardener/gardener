@@ -79,8 +79,9 @@ The following is a list of involved components, that either need to be newly int
     - the public `ssh` key of the user is set under `spec.sshPublicKey`. The key needs to be configured beforehand by the user
     - The targeted shoot is set under `spec.shootRef`
 2. GAPI Admission Plugin for the `Bastion` resource in the garden cluster
-        - on creation, sets `metadata.annotations["operations.gardener.cloud/created-by"]` according to the user that created the resource
-        - when `operations.gardener.cloud/operation: keepalive` is set it will be removed by GAPI from the annotations and `status.lastHeartbeatTimestamp` will be set with the current timestamp. The `status.expirationTimestamp` will be calculated by taking the last heartbeat timestamp and adding x minutes (configurable, default `60` Minutes).
+    - on creation, sets `metadata.annotations["gardener.cloud/created-by"]` according to the user that created the resource
+    - when `gardener.cloud/operation: keepalive` is set it will be removed by GAPI from the annotations and `status.lastHeartbeatTimestamp` will be set with the current timestamp. The `status.expirationTimestamp` will be calculated by taking the last heartbeat timestamp and adding `x` minutes (configurable, default `60` Minutes).
+    - validates that only the creator of the bastion (see `gardener.cloud/created-by` annotation) can update `spec.ingress`
 3. `gardenlet`
     - Watches `Bastion` resource for own seed under api group `operations.gardener.cloud` in the garden cluster
     - Creates `Bastion` custom resource under api group `extensions.gardener.cloud/v1alpha1` in the seed cluster
@@ -106,7 +107,7 @@ The following is a list of involved components, that either need to be newly int
         - reads bastion IP (`status.ingress.ip`) or hostname (`status.ingress.hostname`)
         - reads the private key from the `ssh` key pair for the shoot node
         - opens `ssh` connection to the bastion and from there to the respective shoot node
-    - runs heartbeat in parallel as long as the `ssh` session is open by annotating the `Bastion` resource with `operations.gardener.cloud/operation: keepalive`
+    - runs heartbeat in parallel as long as the `ssh` session is open by annotating the `Bastion` resource with `gardener.cloud/operation: keepalive`
 8. `GCM`:
     - Once `status.expirationTimestamp` is reached, the `Bastion` will be marked for deletion
 9. `gardenlet`:
@@ -128,15 +129,15 @@ metadata:
   name: cli-abcdef
   namespace: garden-myproject
   annotations:
-    operations.gardener.cloud/created-by: foo # set by the mutating webhook
-    # operations.gardener.cloud/operation: keepalive # this annotation is removed by the GAPI and the last-heartbeat timestamp and the status.expirationTimestamp will be updated accordingly
+    gardener.cloud/created-by: foo # immutable, set by the mutating webhook
+    # gardener.cloud/operation: keepalive # this annotation is removed by the GAPI and the status.lastHeartbeatTimestamp and status.expirationTimestamp will be updated accordingly
 spec:
   shootRef: # namespace cannot be set / it's the same as .metadata.namespace
-    name: my-cluster
+    name: my-cluster # immutable
 
-  sshPublicKey: c3NoLXJzYSAuLi4K # public `ssh` key of the user
+  sshPublicKey: c3NoLXJzYSAuLi4K # immutable, public `ssh` key of the user
 
-  ingress:
+  ingress: # can only be updated by the creator of the bastion
   - ipBlock:
       cidr: 1.2.3.4/32 # public IP of the user. CIDR is a string representing the IP Block. Valid examples are "192.168.1.1/24" or "2001:db9::/64"
 
@@ -158,7 +159,7 @@ status:
     message: Bastion for the cluster is ready.
 
   # the following fields are only set by the GAPI
-  lastHeartbeatTimestamp: "2021-03-19T11:58:00Z" # will be set when setting the annotation operations.gardener.cloud/operation: keepalive
+  lastHeartbeatTimestamp: "2021-03-19T11:58:00Z" # will be set when setting the annotation gardener.cloud/operation: keepalive
   expirationTimestamp: "2021-03-19T12:58:00Z" # extended on each keepalive
 ```
 
