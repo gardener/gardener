@@ -85,6 +85,7 @@ The following is a list of involved components, that either need to be newly int
 3. `gardenlet`
     - Watches `Bastion` resource for own seed under api group `operations.gardener.cloud` in the garden cluster
     - Creates `Bastion` custom resource under api group `extensions.gardener.cloud/v1alpha1` in the seed cluster
+      - Populates bastion user data under field under `spec.userData` similar to https://github.com/gardener/gardenctl/blob/1e3e5fa1d5603e2161f45046ba7c6b5b4107369e/pkg/cmd/ssh.go#L160-L171. By this means the `spec.sshPublicKey` from the `Bastion` resource in the garden cluster will end up in the `authorized_keys` file on the bastion host.
 4. `GCM`:
     - During reconcile of the `Bastion` resource:
       - according to `spec.shootRef`, sets the `status.seedName`
@@ -94,7 +95,7 @@ The following is a list of involved components, that either need to be newly int
     - Watches `Bastion` custom resources that are created by the `gardenlet` in the seed
     - Controller reads `cloudprovider` credentials from seed-shoot namespace
     - Deploy infrastructure resources
-        - Bastion VM. User data similar to https://github.com/gardener/gardenctl/blob/1e3e5fa1d5603e2161f45046ba7c6b5b4107369e/pkg/cmd/ssh.go#L160-L171. Writes `spec.sshPublicKey` into `authorized_keys` file.
+        - Bastion VM. Uses user data from `spec.userData`
         - attaches public IP, creates security group, firewall rules, etc.
     - Updates status of `Bastion` resource:
         - With bastion IP under `status.ingress.ip` or hostname under `status.ingress.hostname`
@@ -171,7 +172,11 @@ metadata:
   name: cli-abcdef
   namespace: shoot--myproject--mycluster
 spec:
-  sshPublicKey: c3NoLXJzYSAuLi4K
+  userData: |- # this is normally base64-encoded, but decoded for the example. Contains spec.sshPublicKey from Bastion resource in garden cluster
+    #!/bin/bash
+    # create user
+    # add ssh public key to authorized_keys
+    # ...
 
   ingress:
   - ipBlock:
