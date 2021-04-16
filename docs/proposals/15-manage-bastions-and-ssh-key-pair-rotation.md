@@ -177,6 +177,8 @@ spec:
   - ipBlock:
       cidr: 1.2.3.4/32
 
+  type: aws # from extensionsv1alpha1.DefaultSpec
+
 status:
   ingress:
     ip: 1.2.3.5
