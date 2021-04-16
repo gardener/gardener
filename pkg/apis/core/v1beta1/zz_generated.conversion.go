@@ -2203,6 +2203,7 @@ func Convert_core_ControllerInstallationList_To_v1beta1_ControllerInstallationLi
 }
 
 func autoConvert_v1beta1_ControllerInstallationSpec_To_core_ControllerInstallationSpec(in *ControllerInstallationSpec, out *core.ControllerInstallationSpec, s conversion.Scope) error {
+	out.DeploymentRef = (*v1.ObjectReference)(unsafe.Pointer(in.DeploymentRef))
 	out.RegistrationRef = in.RegistrationRef
 	out.SeedRef = in.SeedRef
 	return nil
@@ -2214,6 +2215,7 @@ func Convert_v1beta1_ControllerInstallationSpec_To_core_ControllerInstallationSp
 }
 
 func autoConvert_core_ControllerInstallationSpec_To_v1beta1_ControllerInstallationSpec(in *core.ControllerInstallationSpec, out *ControllerInstallationSpec, s conversion.Scope) error {
+	out.DeploymentRef = (*v1.ObjectReference)(unsafe.Pointer(in.DeploymentRef))
 	out.RegistrationRef = in.RegistrationRef
 	out.SeedRef = in.SeedRef
 	return nil

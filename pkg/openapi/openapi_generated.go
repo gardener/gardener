@@ -1945,16 +1945,22 @@ func schema_pkg_apis_core_v1alpha1_ControllerInstallationSpec(ref common.Referen
 				Description: "ControllerInstallationSpec is the specification of a ControllerInstallation.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"deploymentRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DeploymentRef is used to reference a ControllerDeployment resource.",
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
 					"registrationRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "RegistrationRef is used to reference a ControllerRegistration resources.",
+							Description: "RegistrationRef is used to reference a ControllerRegistration resource.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
 					"seedRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedRef is used to reference a Seed resources.",
+							Description: "SeedRef is used to reference a Seed resource.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
@@ -8757,16 +8763,22 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallationSpec(ref common.Referenc
 				Description: "ControllerInstallationSpec is the specification of a ControllerInstallation.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"deploymentRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DeploymentRef is used to reference a ControllerDeployment resource.",
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
 					"registrationRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "RegistrationRef is used to reference a ControllerRegistration resources.",
+							Description: "RegistrationRef is used to reference a ControllerRegistration resource.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
 					"seedRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedRef is used to reference a Seed resources.",
+							Description: "SeedRef is used to reference a Seed resource.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},

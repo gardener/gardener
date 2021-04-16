@@ -433,11 +433,15 @@ message ControllerInstallationList {
 
 // ControllerInstallationSpec is the specification of a ControllerInstallation.
 message ControllerInstallationSpec {
-  // RegistrationRef is used to reference a ControllerRegistration resources.
-  optional k8s.io.api.core.v1.ObjectReference registrationRef = 1;
+  // DeploymentRef is used to reference a ControllerDeployment resource.
+  // +optional
+  optional k8s.io.api.core.v1.ObjectReference deploymentRef = 1;
 
-  // SeedRef is used to reference a Seed resources.
-  optional k8s.io.api.core.v1.ObjectReference seedRef = 2;
+  // RegistrationRef is used to reference a ControllerRegistration resource.
+  optional k8s.io.api.core.v1.ObjectReference registrationRef = 2;
+
+  // SeedRef is used to reference a Seed resource.
+  optional k8s.io.api.core.v1.ObjectReference seedRef = 3;
 }
 
 // ControllerInstallationStatus is the status of a ControllerInstallation.

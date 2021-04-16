@@ -48,9 +48,11 @@ type ControllerInstallationList struct {
 
 // ControllerInstallationSpec is the specification of a ControllerInstallation.
 type ControllerInstallationSpec struct {
-	// RegistrationRef is used to reference a ControllerRegistration resources.
+	// DeploymentRef is used to reference a ControllerDeployment resource.
+	DeploymentRef *corev1.ObjectReference
+	// RegistrationRef is used to reference a ControllerRegistration resource.
 	RegistrationRef corev1.ObjectReference
-	// SeedRef is used to reference a Seed resources.
+	// SeedRef is used to reference a Seed resource.
 	SeedRef corev1.ObjectReference
 }
 

@@ -601,6 +601,20 @@ ControllerInstallationSpec
 <table>
 <tr>
 <td>
+<code>deploymentRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DeploymentRef is used to reference a ControllerDeployment resource.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>registrationRef</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectreference-v1-core">
@@ -609,7 +623,7 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>RegistrationRef is used to reference a ControllerRegistration resources.</p>
+<p>RegistrationRef is used to reference a ControllerRegistration resource.</p>
 </td>
 </tr>
 <tr>
@@ -622,7 +636,7 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>SeedRef is used to reference a Seed resources.</p>
+<p>SeedRef is used to reference a Seed resource.</p>
 </td>
 </tr>
 </table>
@@ -2924,6 +2938,20 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <tbody>
 <tr>
 <td>
+<code>deploymentRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DeploymentRef is used to reference a ControllerDeployment resource.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>registrationRef</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectreference-v1-core">
@@ -2932,7 +2960,7 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>RegistrationRef is used to reference a ControllerRegistration resources.</p>
+<p>RegistrationRef is used to reference a ControllerRegistration resource.</p>
 </td>
 </tr>
 <tr>
@@ -2945,7 +2973,7 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>SeedRef is used to reference a Seed resources.</p>
+<p>SeedRef is used to reference a Seed resource.</p>
 </td>
 </tr>
 </tbody>
