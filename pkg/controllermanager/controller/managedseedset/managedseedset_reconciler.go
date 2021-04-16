@@ -27,9 +27,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -40,7 +38,6 @@ type reconciler struct {
 	gardenClient kubernetes.Interface
 	actuator     Actuator
 	cfg          *config.ManagedSeedSetControllerConfiguration
-	recorder     record.EventRecorder
 	logger       *logrus.Logger
 }
 
@@ -49,14 +46,12 @@ func NewReconciler(
 	gardenClient kubernetes.Interface,
 	actuator Actuator,
 	cfg *config.ManagedSeedSetControllerConfiguration,
-	recorder record.EventRecorder,
 	logger *logrus.Logger,
 ) reconcile.Reconciler {
 	return &reconciler{
 		gardenClient: gardenClient,
 		actuator:     actuator,
 		cfg:          cfg,
-		recorder:     recorder,
 		logger:       logger,
 	}
 }
@@ -79,7 +74,6 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *reconciler) reconcile(ctx context.Context, set *seedmanagementv1alpha1.ManagedSeedSet) (result reconcile.Result, err error) {
-
 	// Ensure gardener finalizer
 	r.getLogger(set).Debug("Ensuring finalizer")
 	if err := controllerutils.PatchAddFinalizers(ctx, r.gardenClient.Client(), set, gardencorev1beta1.GardenerName); err != nil {
@@ -96,8 +90,7 @@ func (r *reconciler) reconcile(ctx context.Context, set *seedmanagementv1alpha1.
 
 	// Reconcile creation or update
 	r.getLogger(set).Debug("Reconciling creation or update")
-	if status, err = r.actuator.Reconcile(ctx, set); err != nil {
-		r.errorEventf(set, "Could not reconcile creation or update: %+v", err)
+	if status, _, err = r.actuator.Reconcile(ctx, set); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeedSet %s creation or update: %w", kutil.ObjectName(set), err)
 	}
 	r.getLogger(set).Debug("Creation or update reconciled")
@@ -123,14 +116,14 @@ func (r *reconciler) delete(ctx context.Context, set *seedmanagementv1alpha1.Man
 
 	// Reconcile deletion
 	r.getLogger(set).Debug("Reconciling deletion")
-	if status, err = r.actuator.Reconcile(ctx, set); err != nil {
-		r.errorEventf(set, "Could not reconcile deletion: %+v", err)
+	var removeFinalizer bool
+	if status, removeFinalizer, err = r.actuator.Reconcile(ctx, set); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeedSet %s deletion: %w", kutil.ObjectName(set), err)
 	}
 	r.getLogger(set).Debug("Deletion reconciled")
 
-	// If there is no pending replica, remove gardener finalizer
-	if status.PendingReplica == nil {
+	// Remove gardener finalizer if requested by the actuator
+	if removeFinalizer {
 		r.getLogger(set).Debug("Removing finalizer")
 		if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient.Client(), set, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not remove gardener finalizer: %w", err)
@@ -140,11 +133,6 @@ func (r *reconciler) delete(ctx context.Context, set *seedmanagementv1alpha1.Man
 
 	// Return success result
 	return reconcile.Result{RequeueAfter: r.cfg.SyncPeriod.Duration}, nil
-}
-
-func (r *reconciler) errorEventf(set *seedmanagementv1alpha1.ManagedSeedSet, fmt string, args ...interface{}) {
-	r.recorder.Eventf(set, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, fmt, args...)
-	r.getLogger(set).Errorf(fmt, args...)
 }
 
 func (r *reconciler) getLogger(set *seedmanagementv1alpha1.ManagedSeedSet) *logrus.Entry {

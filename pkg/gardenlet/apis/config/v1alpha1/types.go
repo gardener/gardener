@@ -323,6 +323,12 @@ type ManagedSeedControllerConfiguration struct {
 	// events.
 	// +optional
 	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
+	// SyncPeriod is the duration how often the existing resources are reconciled.
+	// +optional
+	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+	// WaitSyncPeriod is the duration how often an existing resource is reconciled when the controller is waiting for an event.
+	// +optional
+	WaitSyncPeriod *metav1.Duration `json:"waitSyncPeriod,omitempty"`
 	// SyncJitterPeriod is a jitter duration for the reconciler sync that can be used to distribute the syncs randomly.
 	// If its value is greater than 0 then the managed seeds will not be enqueued immediately but only after a random
 	// duration between 0 and the configured value. It is defaulted to 5m.

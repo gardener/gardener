@@ -20,7 +20,10 @@ import (
 	"sync"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -28,12 +31,15 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/pointer"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -50,12 +56,16 @@ const (
 
 // Controller controls ManagedSeeds.
 type Controller struct {
-	gardenClient client.Client
+	gardenClient kubernetes.Interface
+	clientMap    clientmap.ClientMap
 	config       *config.GardenletConfiguration
 	reconciler   reconcile.Reconciler
 
 	managedSeedInformer runtimecache.Informer
-	managedSeedQueue    workqueue.RateLimitingInterface
+	seedInformer        runtimecache.Informer
+	secretInformer      runtimecache.Informer
+
+	managedSeedQueue workqueue.RateLimitingInterface
 
 	numberOfRunningWorkers int
 	workerCh               chan int
@@ -75,11 +85,28 @@ func NewManagedSeedController(ctx context.Context, clientMap clientmap.ClientMap
 		return nil, fmt.Errorf("could not get ManagedSeed informer: %w", err)
 	}
 
+	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
+	if err != nil {
+		return nil, fmt.Errorf("could not get Seed informer: %w", err)
+	}
+
+	secretInformer, err := gardenClient.Cache().GetInformer(ctx, &corev1.Secret{})
+	if err != nil {
+		return nil, fmt.Errorf("could not get Secret informer: %w", err)
+	}
+
+	valuesHelper := NewValuesHelper(config, imageVector)
+	actuator := newActuator(gardenClient, clientMap, valuesHelper, recorder, logger)
+	reconciler := newReconciler(gardenClient, actuator, config.Controllers.ManagedSeed, logger)
+
 	return &Controller{
-		gardenClient:        gardenClient.Client(),
+		gardenClient:        gardenClient,
+		clientMap:           clientMap,
 		config:              config,
-		reconciler:          newReconciler(gardenClient, newActuator(gardenClient, clientMap, NewValuesHelper(config, imageVector), logger), recorder, logger),
+		reconciler:          reconciler,
 		managedSeedInformer: managedSeedInformer,
+		seedInformer:        seedInformer,
+		secretInformer:      secretInformer,
 		managedSeedQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ManagedSeed"),
 		workerCh:            make(chan int),
 		logger:              logger,
@@ -91,7 +118,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
 	c.managedSeedInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.ManagedSeedFilterFunc(ctx, c.gardenClient, confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.config.SeedSelector),
+		FilterFunc: controllerutils.ManagedSeedFilterFunc(ctx, c.gardenClient.Client(), confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.config.SeedSelector),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    c.managedSeedAdd,
 			UpdateFunc: c.managedSeedUpdate,
@@ -99,7 +126,39 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		},
 	})
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.managedSeedInformer.HasSynced) {
+	// Add event handler for controlled seeds
+	c.seedInformer.AddEventHandler(&kutils.ControlledResourceEventHandler{
+		ControllerTypes: []kutils.ControllerType{
+			{
+				Type:      &seedmanagementv1alpha1.ManagedSeed{},
+				Namespace: pointer.StringPtr(gardencorev1beta1constants.GardenNamespace),
+				NameFunc:  func(obj client.Object) string { return obj.GetName() },
+			},
+		},
+		Ctx:                        ctx,
+		Reader:                     c.gardenClient.Cache(),
+		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterSeed),
+		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedAdd(obj) }),
+		Scheme:                     kubernetes.GardenScheme,
+		Logger:                     c.logger,
+	})
+
+	// Add event handler for controlled seed secrets
+	c.secretInformer.AddEventHandler(&kutils.ControlledResourceEventHandler{
+		ControllerTypes: []kutils.ControllerType{
+			{
+				Type: &seedmanagementv1alpha1.ManagedSeed{},
+			},
+		},
+		Ctx:                        ctx,
+		Reader:                     c.gardenClient.Cache(),
+		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterSecret),
+		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedAdd(obj) }),
+		Scheme:                     kubernetes.GardenScheme,
+		Logger:                     c.logger,
+	})
+
+	if !cache.WaitForCacheSync(ctx.Done(), c.managedSeedInformer.HasSynced, c.seedInformer.HasSynced, c.secretInformer.HasSynced) {
 		c.logger.Error("Timed out waiting for caches to sync")
 		return
 	}

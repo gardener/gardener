@@ -266,6 +266,10 @@ type ManagedSeedControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs *int
+	// SyncPeriod is the duration how often the existing resources are reconciled.
+	SyncPeriod *metav1.Duration
+	// WaitSyncPeriod is the duration how often an existing resource is reconciled when the controller is waiting for an event.
+	WaitSyncPeriod *metav1.Duration
 	// SyncJitterPeriod is a jitter duration for the reconciler sync that can be used to distribute the syncs randomly.
 	// If its value is greater than 0 then the managed seeds will not be enqueued immediately but only after a random
 	// duration between 0 and the configured value. It is defaulted to 5m.

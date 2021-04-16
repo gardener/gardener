@@ -224,7 +224,9 @@ func (h *ControlledResourceEventHandler) getControllerOf(obj client.Object, inde
 	if controllerRef != nil {
 		return h.getControllerByRef(obj.GetNamespace(), controllerRef, index)
 	} else if ct.NameFunc != nil {
-		return h.getControllerByName(obj.GetNamespace(), ct.NameFunc(obj), index)
+		if name := ct.NameFunc(obj); name != "" {
+			return h.getControllerByName(obj.GetNamespace(), name, index)
+		}
 	}
 	return nil
 }

@@ -55,6 +55,8 @@ var _ = Describe("GardenletConfiguration", func() {
 				},
 				ManagedSeed: &config.ManagedSeedControllerConfiguration{
 					ConcurrentSyncs:  &concurrentSyncs,
+					SyncPeriod:       &metav1.Duration{Duration: 1 * time.Hour},
+					WaitSyncPeriod:   &metav1.Duration{Duration: 15 * time.Second},
 					SyncJitterPeriod: &metav1.Duration{Duration: 5 * time.Minute},
 				},
 			},
@@ -158,6 +160,8 @@ var _ = Describe("GardenletConfiguration", func() {
 				invalidConcurrentSyncs := -1
 
 				cfg.Controllers.ManagedSeed.ConcurrentSyncs = &invalidConcurrentSyncs
+				cfg.Controllers.ManagedSeed.SyncPeriod = &metav1.Duration{Duration: -1}
+				cfg.Controllers.ManagedSeed.WaitSyncPeriod = &metav1.Duration{Duration: -1}
 				cfg.Controllers.ManagedSeed.SyncJitterPeriod = &metav1.Duration{Duration: -1}
 
 				errorList := ValidateGardenletConfiguration(cfg, nil, false)
@@ -166,6 +170,14 @@ var _ = Describe("GardenletConfiguration", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal("controllers.managedSeed.concurrentSyncs"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.managedSeed.syncPeriod"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.managedSeed.waitSyncPeriod"),
 					})),
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),

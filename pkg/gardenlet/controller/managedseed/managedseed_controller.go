@@ -26,7 +26,6 @@ func (c *Controller) managedSeedAdd(obj interface{}) {
 	if !ok {
 		return
 	}
-
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		return
@@ -53,16 +52,22 @@ func (c *Controller) managedSeedUpdate(_, newObj interface{}) {
 	if managedSeed.Generation == managedSeed.Status.ObservedGeneration {
 		return
 	}
-
-	c.managedSeedAdd(newObj)
-}
-
-func (c *Controller) managedSeedDelete(obj interface{}) {
-	_, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
-	if !ok {
+	key, err := cache.MetaNamespaceKeyFunc(newObj)
+	if err != nil {
 		return
 	}
 
+	c.managedSeedQueue.Add(key)
+}
+
+func (c *Controller) managedSeedDelete(obj interface{}) {
+	if _, ok := obj.(*seedmanagementv1alpha1.ManagedSeed); !ok {
+		if tombstone, ok := obj.(cache.DeletedFinalStateUnknown); !ok {
+			return
+		} else if _, ok := tombstone.Obj.(*seedmanagementv1alpha1.ManagedSeed); !ok {
+			return
+		}
+	}
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
 		return

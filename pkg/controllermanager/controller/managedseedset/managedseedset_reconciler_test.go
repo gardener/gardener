@@ -25,7 +25,6 @@ import (
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	mockmanagedseedset "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset/mock"
 	gardenerlogger "github.com/gardener/gardener/pkg/logger"
-	mockrecord "github.com/gardener/gardener/pkg/mock/client-go/tools/record"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -47,7 +46,6 @@ var _ = Describe("Reconciler", func() {
 
 		gardenClient *mockkubernetes.MockInterface
 		actuator     *mockmanagedseedset.MockActuator
-		recorder     *mockrecord.MockEventRecorder
 		c            *mockclient.MockClient
 		sw           *mockclient.MockStatusWriter
 
@@ -67,7 +65,6 @@ var _ = Describe("Reconciler", func() {
 
 		gardenClient = mockkubernetes.NewMockInterface(ctrl)
 		actuator = mockmanagedseedset.NewMockActuator(ctrl)
-		recorder = mockrecord.NewMockEventRecorder(ctrl)
 		c = mockclient.NewMockClient(ctrl)
 		sw = mockclient.NewMockStatusWriter(ctrl)
 
@@ -78,7 +75,7 @@ var _ = Describe("Reconciler", func() {
 			SyncPeriod: metav1.Duration{Duration: syncPeriod},
 		}
 
-		reconciler = NewReconciler(gardenClient, actuator, cfg, recorder, gardenerlogger.NewNopLogger())
+		reconciler = NewReconciler(gardenClient, actuator, cfg, gardenerlogger.NewNopLogger())
 
 		ctx = context.TODO()
 		request = reconcile.Request{NamespacedName: kutil.Key(namespace, name)}
@@ -92,14 +89,6 @@ var _ = Describe("Reconciler", func() {
 		}
 		status = &seedmanagementv1alpha1.ManagedSeedSetStatus{
 			ObservedGeneration: 1,
-			Replicas:           2,
-			ReadyReplicas:      1,
-			NextReplicaNumber:  3,
-			PendingReplica: &seedmanagementv1alpha1.PendingReplica{
-				Name:   name + "-0",
-				Reason: seedmanagementv1alpha1.ShootDeletingReason,
-				Since:  metav1.Now(),
-			},
 		}
 	})
 
@@ -143,7 +132,7 @@ var _ = Describe("Reconciler", func() {
 				expectPatchManagedSeedSet(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(mss.Finalizers).To(Equal([]string{gardencorev1beta1.GardenerName}))
 				})
-				actuator.EXPECT().Reconcile(ctx, set).Return(status, nil)
+				actuator.EXPECT().Reconcile(ctx, set).Return(status, false, nil)
 				expectPatchManagedSeedSetStatus(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(&mss.Status).To(Equal(status))
 				})
@@ -163,7 +152,7 @@ var _ = Describe("Reconciler", func() {
 
 			It("should reconcile the ManagedSeedSet deletion and update the status", func() {
 				expectGetManagedSeedSet()
-				actuator.EXPECT().Reconcile(ctx, set).Return(status, nil)
+				actuator.EXPECT().Reconcile(ctx, set).Return(status, false, nil)
 				expectPatchManagedSeedSetStatus(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(&mss.Status).To(Equal(status))
 				})
@@ -174,9 +163,8 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			It("should reconcile the ManagedSeedSet deletion, remove the finalizer, and update the status", func() {
-				status.PendingReplica = nil
 				expectGetManagedSeedSet()
-				actuator.EXPECT().Reconcile(ctx, set).Return(status, nil)
+				actuator.EXPECT().Reconcile(ctx, set).Return(status, true, nil)
 				expectPatchManagedSeedSet(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(mss.Finalizers).To(BeEmpty())
 				})

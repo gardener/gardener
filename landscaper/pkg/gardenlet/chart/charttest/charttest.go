@@ -267,6 +267,12 @@ func ComputeExpectedGardenletConfiguration(componentConfigUsesTlsServerConfig, h
 			},
 			ManagedSeed: &gardenletconfigv1alpha1.ManagedSeedControllerConfiguration{
 				ConcurrentSyncs: &five,
+				SyncPeriod: &metav1.Duration{
+					Duration: 1 * time.Hour,
+				},
+				WaitSyncPeriod: &metav1.Duration{
+					Duration: 15 * time.Second,
+				},
 				SyncJitterPeriod: &metav1.Duration{
 					Duration: 300000000000,
 				},

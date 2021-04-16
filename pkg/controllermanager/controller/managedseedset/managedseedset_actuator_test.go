@@ -174,9 +174,10 @@ var _ = Describe("Actuator", func() {
 					recorder.EXPECT().Eventf(set, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, fmt, args)
 				}
 
-				result, err := actuator.Reconcile(ctx, set)
+				s, rf, err := actuator.Reconcile(ctx, set)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result).To(Equal(status))
+				Expect(s).To(Equal(status))
+				Expect(rf).To(Equal(s.ReadyReplicas == s.Replicas))
 			},
 
 			Entry("should retry the shoot and return correct status if a replica has status ShootReconcileFailed and max retries not yet reached",
@@ -288,9 +289,10 @@ var _ = Describe("Actuator", func() {
 				rg.EXPECT().GetReplicas(ctx, set).Return([]Replica{r0}, nil)
 				recorder.EXPECT().Eventf(set, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, fmt, args)
 
-				result, err := actuator.Reconcile(ctx, set)
+				s, rf, err := actuator.Reconcile(ctx, set)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result).To(Equal(status))
+				Expect(s).To(Equal(status))
+				Expect(rf).To(BeFalse())
 			},
 
 			Entry("should retry the shoot and return correct status if a replica has status ShootReconcileFailed and max retries not yet reached",
@@ -418,15 +420,18 @@ var _ = Describe("Actuator", func() {
 				rg.EXPECT().GetReplicas(ctx, set).Return([]Replica{r0}, nil)
 				if success {
 					recorder.EXPECT().Eventf(set, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, fmt, args)
+				} else {
+					recorder.EXPECT().Eventf(set, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, fmt, args)
 				}
 
-				result, err := actuator.Reconcile(ctx, set)
+				s, rf, err := actuator.Reconcile(ctx, set)
 				if success {
 					Expect(err).ToNot(HaveOccurred())
 				} else {
 					Expect(err).To(HaveOccurred())
 				}
-				Expect(result).To(Equal(status))
+				Expect(s).To(Equal(status))
+				Expect(rf).To(BeFalse())
 			},
 
 			Entry("should delete the shoot and return correct status if a replica has status ShootReconcileFailed",
@@ -531,7 +536,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusManagedSeedRegistered, true, operationshoot.StatusHealthy, false)
 				},
 				status(1, 1, 1, "", "", now, nil), false,
-				"", getReplicaFullName(0),
+				"no deletable replicas found",
 			),
 		)
 	})
