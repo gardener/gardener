@@ -59,6 +59,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ControllerDeploymentList{},
 		&ControllerInstallation{},
 		&ControllerInstallationList{},
+		&ExposureClass{},
+		&ExposureClassList{},
 		&Plant{},
 		&PlantList{},
 		&Project{},
