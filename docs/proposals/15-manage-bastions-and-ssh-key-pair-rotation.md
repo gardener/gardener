@@ -129,7 +129,7 @@ metadata:
   name: cli-abcdef
   namespace: garden-myproject
   annotations:
-    gardener.cloud/created-by: foo # immutable, set by the mutating webhook
+    gardener.cloud/created-by: foo # immutable, set by the GAPI Admission Plugin
     # gardener.cloud/operation: keepalive # this annotation is removed by the GAPI and the status.lastHeartbeatTimestamp and status.expirationTimestamp will be updated accordingly
 spec:
   shootRef: # namespace cannot be set / it's the same as .metadata.namespace
