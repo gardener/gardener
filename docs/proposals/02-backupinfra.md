@@ -224,7 +224,7 @@ controllers:
 - Scale down etcd-main with old config. :warning: Cluster down time
 - Copy remaining objects
 - Scale up etcd-main with new config.
-- Destroy Old bucket and old backup namespace. It can be immediate or preferrably __lazy__ deletion.
+- Destroy Old bucket and old backup namespace. It can be immediate or preferably __lazy__ deletion.
 
 ![backup-migration-sequence-diagram](./02-backupinfra-migration.svg)
 

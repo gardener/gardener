@@ -106,7 +106,7 @@ push "route 10.242.0.0 255.255.0.0"
 
 It is a TCP TLS server and configured to automatically assign IP addresses for OpenVPN clients (`server` directive). In addition, it pushes the shoot cluster node-, pod-, and service ranges to the clients running in the seed cluster (`push` directive). 
 
-**Note:** The network mesh spanned by OpenVPN uses the network range `192.168.123.0 - 192.168.123.255`. This network range cannot be used in either shoot-, or seed clusters. If it is used this might cause subtle problem due to network range overlaps. Unfortunately, this appears not to be well documented but this restriction exists since the very beginning. We should clean up this technical debt as part of the excercise.
+**Note:** The network mesh spanned by OpenVPN uses the network range `192.168.123.0 - 192.168.123.255`. This network range cannot be used in either shoot-, or seed clusters. If it is used this might cause subtle problem due to network range overlaps. Unfortunately, this appears not to be well documented but this restriction exists since the very beginning. We should clean up this technical debt as part of the exercise.
 
 ### Goals
 
@@ -142,7 +142,7 @@ The restriction regarding the `192.168.123.0/24` network range in the current VP
 
 We do expect performance and throughput to be slightly lower compared to the existing solution. This is because the OpenVPN server acts as an additional hop and must decrypt and re-encrypt traffic that passes through. As there are no low latency, or high thoughput requirements for this connection we do not assume this to be an issue.
 
-### Availablity and Failure Scenarios
+### Availability and Failure Scenarios
 
 This solution re-uses multiple instances of the envoy component used for the kube-apiserver endpoints. We assume that the availability for kube-apiservers is good enough for the cluster VPN as well. 
 
@@ -162,7 +162,7 @@ The change in the VPN solution will potentially open up new attack vectors. We w
 
 ### WireGuard and Kubelink based Cluster VPN
 
-We have done a detailed investigation and implementation of a reversed VPN based on WireGuard. While we belive that it is technically feasible and superior to the approach presented above there are some concerns with regards to scalability, and high availability. As the WireGuard scenario based on kubelink is relevant for other use cases we continue to improve this implementation and address the concerns but we concede that this might not be on time for the cluster VPN. We nevertheless keep the implementation and provide an outline as part of this proposal.
+We have done a detailed investigation and implementation of a reversed VPN based on WireGuard. While we believe that it is technically feasible and superior to the approach presented above there are some concerns with regards to scalability, and high availability. As the WireGuard scenario based on kubelink is relevant for other use cases we continue to improve this implementation and address the concerns but we concede that this might not be on time for the cluster VPN. We nevertheless keep the implementation and provide an outline as part of this proposal.
 
 The general idea of the proposal is to keep the existing cluster VPN solution more or less as is, but change the underlying network used for the `vpn seed => vpn shoot` connection. The underlying network should be established in the reversed direction, i.e. the shoot cluster should initiate the network connection, but it nevertheless should work in both directions.
 
@@ -176,7 +176,7 @@ The WireGuard network needs a separate network range/CIDR. It has to be unique f
 
 There is another restriction: in case shoot clusters are configured to be seed clusters this network range must not overlap with the "parent" seed cluster. If the parent seed cluster uses `192.168.128.0/22` the child seed cluster can for example use `192.168.132.0/22`. Grandchildren can however use grandparent IP address ranges. Also 2 children seed clusters can use identical ranges.
 
-This slightly adds to the restrictions described in the current solution outline. In that the arbitrary chosen `192.168.123.0/24` range is resticted. For the purpose of this implementation we propose to extend that restriction to `192.168.128.0/17` range. Most of it would be reserved for "future use" however. We are well aware that this adds to the burden of correctly configuring Gardener landscapes.
+This slightly adds to the restrictions described in the current solution outline. In that the arbitrary chosen `192.168.123.0/24` range is restricted. For the purpose of this implementation we propose to extend that restriction to `192.168.128.0/17` range. Most of it would be reserved for "future use" however. We are well aware that this adds to the burden of correctly configuring Gardener landscapes.
 
 We do consider this to be a challenge that needs to be addressed by careful configuration of the Gardener seed cluster infrastructure. Together with the `192.168.123.0/24` address range these ranges should be automatically blocked for usage by shoots.
 
