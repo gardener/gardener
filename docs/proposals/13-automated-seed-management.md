@@ -296,7 +296,7 @@ There is an important difference between seeds and pods or nodes in that seeds a
 
 A StatefulSet manages the deployment and scaling of a set of Pods, and provides guarantees about the ordering and uniqueness of these Pods. It maintains a *stable identity* (including network identity) for each of their Pods. These pods are created from the same spec, but are not interchangeable: each has a persistent identifier that it maintains across any rescheduling.
 
-A StatefulSet achieves the above by associating each replica with an *ordinal number*. With n replicas, these ordinal numbers range from 0 to n-1. When scaling out, newly added replicas always have ordinal numbers larger than those of previously existing replicas. When scaling in, it is the replicas with the largest orginal numbers that are removed.
+A StatefulSet achieves the above by associating each replica with an *ordinal number*. With n replicas, these ordinal numbers range from 0 to n-1. When scaling out, newly added replicas always have ordinal numbers larger than those of previously existing replicas. When scaling in, it is the replicas with the largest original numbers that are removed.
 
 Besides stable identity and persistent storage, these ordinal numbers are also used to implement the following StatefulSet features: 
 
