@@ -39,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -598,4 +599,36 @@ func (o *Operation) ComputePrometheusHost() string {
 func (o *Operation) ComputeIngressHost(prefix string) string {
 	shortID := strings.Replace(o.Shoot.Info.Status.TechnicalID, shoot.TechnicalIDPrefix, "", 1)
 	return fmt.Sprintf("%s-%s.%s", prefix, shortID, o.Seed.IngressDomain())
+}
+
+// ToAdvertisedAddresses returns list of advertised addresses on a Shoot cluster.
+func (o *Operation) ToAdvertisedAddresses() []gardencorev1beta1.ShootAdvertisedAddress {
+	var addresses []gardencorev1beta1.ShootAdvertisedAddress
+
+	if o.Shoot == nil {
+		return addresses
+	}
+
+	if o.Shoot.ExternalClusterDomain != nil && len(*o.Shoot.ExternalClusterDomain) > 0 {
+		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
+			Name: "external",
+			URL:  "https://" + gutil.GetAPIServerDomain(*o.Shoot.ExternalClusterDomain),
+		})
+	}
+
+	if len(o.Shoot.InternalClusterDomain) > 0 {
+		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
+			Name: "internal",
+			URL:  "https://" + gutil.GetAPIServerDomain(o.Shoot.InternalClusterDomain),
+		})
+	}
+
+	if len(o.APIServerAddress) > 0 && len(addresses) == 0 {
+		addresses = append(addresses, gardencorev1beta1.ShootAdvertisedAddress{
+			Name: "unmanaged",
+			URL:  "https://" + o.APIServerAddress,
+		})
+	}
+
+	return addresses
 }

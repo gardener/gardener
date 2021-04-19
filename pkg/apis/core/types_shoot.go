@@ -133,6 +133,16 @@ type ShootStatus struct {
 	UID types.UID
 	// ClusterIdentity is the identity of the Shoot cluster
 	ClusterIdentity *string
+	// List of addresses on which the Kube API server can be reached.
+	AdvertisedAddresses []ShootAdvertisedAddress
+}
+
+// ShootAdvertisedAddress contains information for the shoot's Kube API server.
+type ShootAdvertisedAddress struct {
+	// Name of the advertised address. e.g. external
+	Name string
+	// The URL of the API Server. e.g. https://api.foo.bar or https://1.2.3.4
+	URL string
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

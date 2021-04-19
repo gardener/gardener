@@ -258,7 +258,57 @@ func ValidateShootStatusUpdate(newStatus, oldStatus core.ShootStatus) field.Erro
 	if oldStatus.ClusterIdentity != nil && !apiequality.Semantic.DeepEqual(oldStatus.ClusterIdentity, newStatus.ClusterIdentity) {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newStatus.ClusterIdentity, oldStatus.ClusterIdentity, fldPath.Child("clusterIdentity"))...)
 	}
+	if len(newStatus.AdvertisedAddresses) > 0 {
+		allErrs = append(allErrs, validateAdvertiseAddresses(newStatus.AdvertisedAddresses, fldPath.Child("advertisedAddresses"))...)
+	}
+
 	return allErrs
+}
+
+// validateAdvertiseAddresses validates kube-apiserver addresses.
+func validateAdvertiseAddresses(addresses []core.ShootAdvertisedAddress, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	names := sets.NewString()
+	for i, address := range addresses {
+		if address.Name == "" {
+			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("name"), "field must not be empty"))
+		} else if names.Has(address.Name) {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("name"), address.Name))
+		} else {
+			names.Insert(address.Name)
+			allErrs = append(allErrs, validateAdvertisedURL(address.URL, fldPath.Index(i).Child("url"))...)
+		}
+	}
+	return allErrs
+}
+
+// validateAdvertisedURL validates kube-apiserver's URL.
+func validateAdvertisedURL(URL string, fldPath *field.Path) field.ErrorList {
+	var allErrors field.ErrorList
+	const form = "; desired format: https://host[:port]"
+	if u, err := url.Parse(URL); err != nil {
+		allErrors = append(allErrors, field.Required(fldPath, "url must be a valid URL: "+err.Error()+form))
+	} else {
+		if u.Scheme != "https" {
+			allErrors = append(allErrors, field.Invalid(fldPath, u.Scheme, "'https' is the only allowed URL scheme"+form))
+		}
+		if len(u.Host) == 0 {
+			allErrors = append(allErrors, field.Invalid(fldPath, u.Host, "host must be provided"+form))
+		}
+		if len(u.Path) > 0 {
+			allErrors = append(allErrors, field.Invalid(fldPath, u.Path, "path is not permitted in the URL"+form))
+		}
+		if u.User != nil {
+			allErrors = append(allErrors, field.Invalid(fldPath, u.User.String(), "user information is not permitted in the URL"+form))
+		}
+		if len(u.Fragment) != 0 {
+			allErrors = append(allErrors, field.Invalid(fldPath, u.Fragment, "fragments are not permitted in the URL"+form))
+		}
+		if len(u.RawQuery) != 0 {
+			allErrors = append(allErrors, field.Invalid(fldPath, u.RawQuery, "query parameters are not permitted in the URL"+form))
+		}
+	}
+	return allErrors
 }
 
 func validateAddons(addons *core.Addons, kubeAPIServerConfig *core.KubeAPIServerConfig, fldPath *field.Path) field.ErrorList {
@@ -929,7 +979,7 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 	}
 
 	if worker.DataVolumes != nil {
-		var volumeNames = make(map[string]int)
+		volumeNames := make(map[string]int)
 		if len(worker.DataVolumes) > 0 && worker.Volume == nil {
 			allErrs = append(allErrs, field.Required(fldPath.Child("volume"), "a worker volume must be defined if data volumes are defined"))
 		}

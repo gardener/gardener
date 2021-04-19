@@ -1942,6 +1942,15 @@ message Shoot {
   optional ShootStatus status = 3;
 }
 
+// ShootAdvertisedAddress contains information for the shoot's Kube API server.
+message ShootAdvertisedAddress {
+  // Name of the advertised address. e.g. external
+  optional string name = 1;
+
+  // The URL of the API Server. e.g. https://api.foo.bar or https://1.2.3.4
+  optional string url = 2;
+}
+
 // ShootList is a list of Shoot objects.
 message ShootList {
   // Standard list object metadata.
@@ -2144,6 +2153,12 @@ message ShootStatus {
   // ClusterIdentity is the identity of the Shoot cluster
   // +optional
   optional string clusterIdentity = 13;
+
+  // List of addresses on which the Kube API server can be reached.
+  // +optional
+  // +patchMergeKey=name
+  // +patchStrategy=merge
+  repeated ShootAdvertisedAddress advertisedAddresses = 14;
 }
 
 // Toleration is a toleration for a seed taint.

@@ -510,7 +510,7 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 	requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.NetworkResource, shoot.Spec.Networking.Type))
 	requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.WorkerResource, shoot.Spec.Provider.Type))
 
-	var disabledExtensions = sets.NewString()
+	disabledExtensions := sets.NewString()
 	for _, extension := range shoot.Spec.Extensions {
 		id := gardenerextensions.Id(extensionsv1alpha1.ExtensionResource, extension.Type)
 
