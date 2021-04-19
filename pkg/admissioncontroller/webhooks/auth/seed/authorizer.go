@@ -73,75 +73,68 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		requestResource := schema.GroupResource{Group: attrs.GetAPIGroup(), Resource: attrs.GetResource()}
 		switch requestResource {
 		case backupBucketResource:
-			return a.authorizeBackupBucket(seedName, attrs)
+			return a.authorize(seedName, graph.VertexTypeBackupBucket, attrs,
+				[]string{"get", "list", "watch", "create", "update", "patch", "delete"},
+				[]string{"create", "get", "list", "watch"},
+				[]string{"status"},
+			)
 		case cloudProfileResource:
-			return a.authorizeGet(seedName, graph.VertexTypeCloudProfile, attrs)
+			return a.authorizeRead(seedName, graph.VertexTypeCloudProfile, attrs)
 		case configMapResource:
-			return a.authorizeGet(seedName, graph.VertexTypeConfigMap, attrs)
+			return a.authorizeRead(seedName, graph.VertexTypeConfigMap, attrs)
 		case namespaceResource:
-			return a.authorizeGet(seedName, graph.VertexTypeNamespace, attrs)
+			return a.authorizeRead(seedName, graph.VertexTypeNamespace, attrs)
 		case projectResource:
-			return a.authorizeGet(seedName, graph.VertexTypeProject, attrs)
+			return a.authorizeRead(seedName, graph.VertexTypeProject, attrs)
 		case secretBindingResource:
-			return a.authorizeGet(seedName, graph.VertexTypeSecretBinding, attrs)
+			return a.authorizeRead(seedName, graph.VertexTypeSecretBinding, attrs)
 		case shootStateResource:
-			return a.authorizeShootState(seedName, attrs)
+			return a.authorize(seedName, graph.VertexTypeShootState, attrs,
+				[]string{"get", "create", "update", "patch"},
+				[]string{"create"},
+				nil,
+			)
 		}
 	}
 
 	return auth.DecisionNoOpinion, "", nil
 }
 
-func (a *authorizer) authorizeGet(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
-	if ok, reason := a.checkVerb(seedName, attrs, "get"); !ok {
-		return auth.DecisionNoOpinion, reason, nil
-	}
-
-	if ok, reason := a.checkSubresource(seedName, attrs); !ok {
-		return auth.DecisionNoOpinion, reason, nil
-	}
-
-	return a.authorize(seedName, fromType, attrs)
+func (a *authorizer) authorizeRead(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
+	return a.authorize(seedName, fromType, attrs, []string{"get"}, nil, nil)
 }
 
-func (a *authorizer) authorizeBackupBucket(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
-	if ok, reason := a.checkVerb(seedName, attrs, "get", "list", "watch", "create", "update", "patch", "delete"); !ok {
+func (a *authorizer) authorize(
+	seedName string,
+	fromType graph.VertexType,
+	attrs auth.Attributes,
+	allowedVerbs []string,
+	alwaysAllowedVerbs []string,
+	allowedSubresources []string,
+) (
+	auth.Decision,
+	string,
+	error,
+) {
+	if ok, reason := a.checkVerb(seedName, attrs, allowedVerbs...); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
-	if ok, reason := a.checkSubresource(seedName, attrs, "status"); !ok {
+	if ok, reason := a.checkSubresource(seedName, attrs, allowedSubresources...); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
-	// When a new BackupBucket is created then it doesn't yet exist in the graph, so we only handle update operations
-	// here. The create case is handled in the SeedRestriction admission handler.
-	switch attrs.GetVerb() {
-	case "create", "list", "get", "watch":
-		return auth.DecisionAllow, "", nil
-	default:
-		return a.authorize(seedName, graph.VertexTypeBackupBucket, attrs)
-	}
-}
-
-func (a *authorizer) authorizeShootState(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
-	if ok, reason := a.checkVerb(seedName, attrs, "get", "create", "update", "patch"); !ok {
-		return auth.DecisionNoOpinion, reason, nil
-	}
-
-	if ok, reason := a.checkSubresource(seedName, attrs); !ok {
-		return auth.DecisionNoOpinion, reason, nil
-	}
-
-	// When a new ShootState is created then it doesn't yet exist in the graph, so we only handle update operations
-	// here. The create case is handled in the SeedRestriction admission handler.
-	if attrs.GetVerb() == "create" {
+	// When a new object is created then it doesn't yet exist in the graph, so usually such requests are always allowed
+	// as the 'create case' is typically handled in the SeedRestriction admission handler. Similarly, resources for
+	// which the gardenlet has a controller need to be listed/watched, so those verbs would also be allowed here.
+	if utils.ValueExists(attrs.GetVerb(), alwaysAllowedVerbs) {
 		return auth.DecisionAllow, "", nil
 	}
 
-	return a.authorize(seedName, graph.VertexTypeShootState, attrs)
+	return a.hasPathFrom(seedName, fromType, attrs)
 }
 
-func (a *authorizer) authorize(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *authorizer) hasPathFrom(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
 	if len(attrs.GetName()) == 0 {
 		a.logger.Info(fmt.Sprintf("SEED DENY: '%s' %#v", seedName, attrs))
 		return auth.DecisionNoOpinion, "No Object name found", nil
