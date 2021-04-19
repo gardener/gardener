@@ -52,6 +52,7 @@ var (
 	// Only take v1beta1 for the core.gardener.cloud API group because the Authorize function only checks the resource
 	// group and the resource (but it ignores the version).
 	backupBucketResource  = gardencorev1beta1.Resource("backupbuckets")
+	backupEntryResource   = gardencorev1beta1.Resource("backupentries")
 	cloudProfileResource  = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource     = corev1.Resource("configmaps")
 	namespaceResource     = corev1.Resource("namespaces")
@@ -75,6 +76,12 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		case backupBucketResource:
 			return a.authorize(seedName, graph.VertexTypeBackupBucket, attrs,
 				[]string{"get", "list", "watch", "create", "update", "patch", "delete"},
+				[]string{"create", "get", "list", "watch"},
+				[]string{"status"},
+			)
+		case backupEntryResource:
+			return a.authorize(seedName, graph.VertexTypeBackupEntry, attrs,
+				[]string{"get", "list", "watch", "create", "update", "patch"},
 				[]string{"create", "get", "list", "watch"},
 				[]string{"status"},
 			)

@@ -355,6 +355,7 @@ $ADMISSION_CONTROLLER_PORT_STRING
     - CREATE
     resources:
     - backupbuckets
+    - backupentries
     - shootstates
   failurePolicy: Fail
   clientConfig:
