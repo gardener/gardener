@@ -157,7 +157,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootAdvertisedAddress":                schema_pkg_apis_core_v1alpha1_ShootAdvertisedAddress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootExtensionStatus":                  schema_pkg_apis_core_v1alpha1_ShootExtensionStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootExtensionStatusList":              schema_pkg_apis_core_v1alpha1_ShootExtensionStatusList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootExtensionStatusSpec":              schema_pkg_apis_core_v1alpha1_ShootExtensionStatusSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootList":                             schema_pkg_apis_core_v1alpha1_ShootList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootMachineImage":                     schema_pkg_apis_core_v1alpha1_ShootMachineImage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootNetworks":                         schema_pkg_apis_core_v1alpha1_ShootNetworks(ref),
@@ -6172,18 +6171,25 @@ func schema_pkg_apis_core_v1alpha1_ShootExtensionStatus(ref common.ReferenceCall
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
-					"spec": {
+					"statuses": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the ShootExtensionStatus.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootExtensionStatusSpec"),
+							Description: "Statuses holds a list of statuses of extension controllers.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExtensionStatus"),
+									},
+								},
+							},
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootExtensionStatusSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExtensionStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -6234,35 +6240,6 @@ func schema_pkg_apis_core_v1alpha1_ShootExtensionStatusList(ref common.Reference
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootExtensionStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_pkg_apis_core_v1alpha1_ShootExtensionStatusSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ShootExtensionStatusSpec is the specification of the ShootExtensionStatus.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"statuses": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Statuses holds a list of statuses of extension controllers.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExtensionStatus"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExtensionStatus"},
 	}
 }
 

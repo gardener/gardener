@@ -28,8 +28,8 @@ type ShootExtensionStatus struct {
 	// Standard object metadata.
 	// Designed to have an owner reference to the associated Shoot resource
 	metav1.ObjectMeta
-	// Specification of the ShootExtensionStatus.
-	Spec ShootExtensionStatusSpec
+	// Statuses holds a list of statuses of extension controllers.
+	Statuses []ExtensionStatus
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -41,12 +41,6 @@ type ShootExtensionStatusList struct {
 	metav1.ListMeta
 	// Items is a list of ShootExtensionStatus.
 	Items []ShootExtensionStatus
-}
-
-// ShootExtensionStatusSpec is the specification of the ShootExtensionStatus.
-type ShootExtensionStatusSpec struct {
-	// Statuses holds a list of statuses of extension controllers.
-	Statuses []ExtensionStatus
 }
 
 // ExtensionStatus contains the kind, the type, the optional purpose and the last observed status

@@ -42,7 +42,7 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should forbid empty kind field in ExtensionStatus", func() {
-			ShootExtensionStatus.Spec.Statuses = []core.ExtensionStatus{
+			ShootExtensionStatus.Statuses = []core.ExtensionStatus{
 				{
 					Kind: "",
 					Type: "xy",
@@ -53,12 +53,12 @@ var _ = Describe("validation", func() {
 			Expect(errorList).To(HaveLen(1))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.statuses[0].kind"),
+				"Field": Equal("statuses[0].kind"),
 			}))
 		})
 
 		It("should forbid empty type field in ExtensionStatus", func() {
-			ShootExtensionStatus.Spec.Statuses = []core.ExtensionStatus{
+			ShootExtensionStatus.Statuses = []core.ExtensionStatus{
 				{
 					Type: "",
 					Kind: "dd",
@@ -69,22 +69,22 @@ var _ = Describe("validation", func() {
 			Expect(errorList).To(HaveLen(1))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.statuses[0].type"),
+				"Field": Equal("statuses[0].type"),
 			}))
 		})
 
-		Context("#ValidateShootExtensionStatusSpecUpdate", func() {
+		Context("#ValidateShootExtensionStatusExtensionsUpdate", func() {
 
 			It("should forbid updating the type field in ExtensionStatus", func() {
 				new := *ShootExtensionStatus
-				ShootExtensionStatus.Spec.Statuses = []core.ExtensionStatus{
+				ShootExtensionStatus.Statuses = []core.ExtensionStatus{
 					{
 						Kind: "a",
 						Type: "xy",
 					},
 				}
 
-				new.Spec.Statuses = []core.ExtensionStatus{
+				new.Statuses = []core.ExtensionStatus{
 					{
 						Kind: "a",
 						Type: "bc",
@@ -96,7 +96,7 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
 					"BadValue": Equal("bc"),
-					"Field":    Equal("spec.statuses[0].type"),
+					"Field":    Equal("statuses[0].type"),
 				}))
 			})
 		})

@@ -25,7 +25,7 @@ func ValidateShootExtensionStatus(ShootExtensionStatus *core.ShootExtensionStatu
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&ShootExtensionStatus.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateShootExtensionStatusSpec(&ShootExtensionStatus.Spec, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateShootExtensionStatuses(ShootExtensionStatus.Statuses, field.NewPath("statuses"))...)
 
 	return allErrs
 }
@@ -35,18 +35,18 @@ func ValidateShootExtensionStatusUpdate(newShootExtensionStatus, oldShootExtensi
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newShootExtensionStatus.ObjectMeta, &oldShootExtensionStatus.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateShootExtensionStatusSpecUpdate(&newShootExtensionStatus.Spec, &oldShootExtensionStatus.Spec)...)
+	allErrs = append(allErrs, ValidateShootExtensionStatusExtensionsUpdate(newShootExtensionStatus.Statuses, oldShootExtensionStatus.Statuses)...)
 	allErrs = append(allErrs, ValidateShootExtensionStatus(newShootExtensionStatus)...)
 
 	return allErrs
 }
 
-// ValidateShootExtensionStatusSpec validates the spec field of a ShootExtensionStatus object.
-func ValidateShootExtensionStatusSpec(ShootExtensionStatusSpec *core.ShootExtensionStatusSpec, fldPath *field.Path) field.ErrorList {
+// ValidateShootExtensionStatuses validates ExtensionStatuses.
+func ValidateShootExtensionStatuses(statuses []core.ExtensionStatus, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	for i, data := range ShootExtensionStatusSpec.Statuses {
-		idxPath := fldPath.Child("statuses").Index(i)
+	for i, data := range statuses {
+		idxPath := fldPath.Index(i)
 
 		if len(data.Kind) == 0 {
 			kindPath := idxPath.Child("kind")
@@ -62,18 +62,18 @@ func ValidateShootExtensionStatusSpec(ShootExtensionStatusSpec *core.ShootExtens
 	return allErrs
 }
 
-// ValidateShootExtensionStatusSpecUpdate validates the update to the specification of a ShootExtensionStatus
-func ValidateShootExtensionStatusSpecUpdate(new, old *core.ShootExtensionStatusSpec) field.ErrorList {
+// ValidateShootExtensionStatusExtensionsUpdate validates the update of ExtensionStatuses.
+func ValidateShootExtensionStatusExtensionsUpdate(new, old []core.ExtensionStatus) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
-		fldPath = field.NewPath("spec")
+		fldPath = field.NewPath("statuses")
 	)
 
 	// this is an O(n square) operation.
 	// But it does not matter as we only have a very small amount of extensions  (< 20)
-	for i, dataOld := range old.Statuses {
-		idxPath := fldPath.Child("statuses").Index(i)
-		for _, dataNew := range new.Statuses {
+	for i, dataOld := range old {
+		idxPath := fldPath.Index(i)
+		for _, dataNew := range new {
 			if dataOld.Kind == dataNew.Kind && dataOld.Type != dataNew.Type {
 				allErrs = append(allErrs, apivalidation.ValidateImmutableField(dataNew.Type, dataOld.Type, idxPath.Child("type"))...)
 			}

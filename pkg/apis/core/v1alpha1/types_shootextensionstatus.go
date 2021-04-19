@@ -29,9 +29,9 @@ type ShootExtensionStatus struct {
 	// Designed to have an owner reference to the associated Shoot resource
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	// Specification of the ShootExtensionStatus.
+	// Statuses holds a list of statuses of extension controllers.
 	// +optional
-	Spec ShootExtensionStatusSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	Statuses []ExtensionStatus `json:"statuses,omitempty" protobuf:"bytes,2,rep,name=statuses"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -47,13 +47,6 @@ type ShootExtensionStatusList struct {
 	Items []ShootExtensionStatus `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
-// ShootExtensionStatusSpec is the specification of the ShootExtensionStatus.
-type ShootExtensionStatusSpec struct {
-	// Statuses holds a list of statuses of extension controllers.
-	// +optional
-	Statuses []ExtensionStatus `json:"statuses,omitempty" protobuf:"bytes,1,rep,name=statuses"`
-}
-
 // ExtensionStatus contains the kind, the type, the optional purpose and the last observed status
 // of an extension controller.
 type ExtensionStatus struct {
@@ -63,7 +56,7 @@ type ExtensionStatus struct {
 	Type string `json:"type" protobuf:"bytes,2,opt,name=type"`
 	// Purpose of the extension resource
 	// +optional
-	Purpose *string `json:"purpose" protobuf:"bytes,3,opt,name=purpose"`
+	Purpose *string `json:"purpose,omitempty" protobuf:"bytes,3,opt,name=purpose"`
 	// Status contains the status of the extension resource
 	Status runtime.RawExtension `json:"status" protobuf:"bytes,4,opt,name=status"`
 }

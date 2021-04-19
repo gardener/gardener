@@ -376,6 +376,8 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	resourceEncodingConfig := serverstorage.NewDefaultResourceEncodingConfig(api.Scheme)
 	// TODO: `ShootState` is not yet promoted to `core.gardener.cloud/v1beta1` - this can be removed once `ShootState` got promoted.
 	resourceEncodingConfig.SetResourceEncoding(gardencore.Resource("shootstates"), gardencorev1alpha1.SchemeGroupVersion, gardencore.SchemeGroupVersion)
+	// TODO: `ShootExtensionStatus` is not yet promoted to `core.gardener.cloud/v1beta1` - this can be removed once `ShootExtensionStatus` got promoted.
+	resourceEncodingConfig.SetResourceEncoding(gardencore.Resource("shootextensionstatuses"), gardencorev1alpha1.SchemeGroupVersion, gardencore.SchemeGroupVersion)
 
 	storageFactory := &storage.GardenerStorageFactory{
 		DefaultStorageFactory: serverstorage.NewDefaultStorageFactory(

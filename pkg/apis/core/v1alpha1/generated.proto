@@ -1990,9 +1990,9 @@ message ShootExtensionStatus {
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
-  // Specification of the ShootExtensionStatus.
+  // Statuses holds a list of statuses of extension controllers.
   // +optional
-  optional ShootExtensionStatusSpec spec = 2;
+  repeated ExtensionStatus statuses = 2;
 }
 
 // ShootExtensionStatusList is a list of ShootExtensionStatus objects.
@@ -2004,13 +2004,6 @@ message ShootExtensionStatusList {
   // Items is a list of ShootExtensionStatus.
   // +optional
   repeated ShootExtensionStatus items = 2;
-}
-
-// ShootExtensionStatusSpec is the specification of the ShootExtensionStatus.
-message ShootExtensionStatusSpec {
-  // Statuses holds a list of statuses of extension controllers.
-  // +optional
-  repeated ExtensionStatus statuses = 1;
 }
 
 // ShootList is a list of Shoot objects.
