@@ -22,7 +22,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -43,20 +42,23 @@ type reconciler struct {
 	logger   logr.Logger
 	actuator Actuator
 
-	client client.Client
-	reader client.Reader
-	scheme *runtime.Scheme
+	client        client.Client
+	reader        client.Reader
+	scheme        *runtime.Scheme
+	statusUpdater extensionscontroller.StatusUpdater
 }
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // OperatingSystemConfig resources of Gardener's `extensions.gardener.cloud` API group.
 func NewReconciler(actuator Actuator) reconcile.Reconciler {
-	logger := log.Log.WithName(name)
+	logger := log.Log.WithName(ControllerName)
+
 	return extensionscontroller.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.OperatingSystemConfig{} },
 		&reconciler{
-			logger:   logger,
-			actuator: actuator,
+			logger:        logger,
+			actuator:      actuator,
+			statusUpdater: extensionscontroller.NewStatusUpdater(logger),
 		},
 	)
 }
@@ -69,6 +71,7 @@ func (r *reconciler) InjectFunc(f inject.Func) error {
 // InjectClient injects the controller runtime client into the reconciler.
 func (r *reconciler) InjectClient(client client.Client) error {
 	r.client = client
+	r.statusUpdater.InjectClient(client)
 	return nil
 }
 
@@ -124,25 +127,25 @@ func (r *reconciler) reconcile(ctx context.Context, osc *extensionsv1alpha1.Oper
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatusProcessing(ctx, osc, operationType, "Reconciling the operating system config"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, osc, operationType, "Reconciling the operating system config"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	userData, command, units, err := r.actuator.Reconcile(ctx, osc)
 	if err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), osc, operationType, "Error reconciling operating system config"))
+		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error reconciling operating system config")
 		return extensionscontroller.ReconcileErr(err)
 	}
 
 	secret, err := r.createOrUpdateOSCResultSecret(ctx, osc, userData)
 	if err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), osc, operationType, "Could not apply secret for generated cloud config"))
+		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Could not apply secret for generated cloud config")
 		return extensionscontroller.ReconcileErr(err)
 	}
 
 	setOSCStatus(osc, secret, command, units)
 
-	if err := r.updateStatusSuccess(ctx, osc, operationType, "Successfully reconciled operating system config"); err != nil {
+	if err := r.statusUpdater.Success(ctx, osc, operationType, "Successfully reconciled operating system config"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -154,25 +157,25 @@ func (r *reconciler) restore(ctx context.Context, osc *extensionsv1alpha1.Operat
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatusProcessing(ctx, osc, gardencorev1beta1.LastOperationTypeRestore, "Restoring the operating system config"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, osc, gardencorev1beta1.LastOperationTypeRestore, "Restoring the operating system config"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	userData, command, units, err := r.actuator.Restore(ctx, osc)
 	if err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), osc, gardencorev1beta1.LastOperationTypeRestore, "Error restoring operating system config"))
+		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring operating system config")
 		return extensionscontroller.ReconcileErr(err)
 	}
 
 	secret, err := r.createOrUpdateOSCResultSecret(ctx, osc, userData)
 	if err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), osc, gardencorev1beta1.LastOperationTypeRestore, "Could not apply secret for generated cloud config"))
+		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not apply secret for generated cloud config")
 		return extensionscontroller.ReconcileErr(err)
 	}
 
 	setOSCStatus(osc, secret, command, units)
 
-	if err := r.updateStatusSuccess(ctx, osc, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored operating system config"); err != nil {
+	if err := r.statusUpdater.Success(ctx, osc, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored operating system config"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -189,16 +192,16 @@ func (r *reconciler) delete(ctx context.Context, osc *extensionsv1alpha1.Operati
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.updateStatusProcessing(ctx, osc, gardencorev1beta1.LastOperationTypeDelete, "Deleting the operating system config"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, osc, gardencorev1beta1.LastOperationTypeDelete, "Deleting the operating system config"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Delete(ctx, osc); err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), osc, gardencorev1beta1.LastOperationTypeDelete, "Error deleting operating system config"))
+		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting operating system config")
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.updateStatusSuccess(ctx, osc, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted operating system config"); err != nil {
+	if err := r.statusUpdater.Success(ctx, osc, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted operating system config"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -216,16 +219,16 @@ func (r *reconciler) migrate(ctx context.Context, osc *extensionsv1alpha1.Operat
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.updateStatusProcessing(ctx, osc, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the operating system config"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, osc, gardencorev1beta1.LastOperationTypeMigrate, "Migrating the operating system config"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if err := r.actuator.Migrate(ctx, osc); err != nil {
-		utilruntime.HandleError(r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), osc, gardencorev1beta1.LastOperationTypeMigrate, "Error migrating operating system config"))
+		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating operating system config")
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.updateStatusSuccess(ctx, osc, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated operating system config"); err != nil {
+	if err := r.statusUpdater.Success(ctx, osc, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated operating system config"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -239,25 +242,6 @@ func (r *reconciler) migrate(ctx context.Context, osc *extensionsv1alpha1.Operat
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func (r *reconciler) updateStatusProcessing(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
-	r.logger.Info(description, "osc", osc.Name)
-	osc.Status.LastOperation = extensionscontroller.LastOperation(lastOperationType, gardencorev1beta1.LastOperationStateProcessing, 1, description)
-	return r.client.Status().Update(ctx, osc)
-}
-
-func (r *reconciler) updateStatusError(ctx context.Context, err error, osc *extensionsv1alpha1.OperatingSystemConfig, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
-	osc.Status.ObservedGeneration = osc.Generation
-	osc.Status.LastOperation, osc.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err)), 50, gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, err.Error()))...)
-	return r.client.Status().Update(ctx, osc)
-}
-
-func (r *reconciler) updateStatusSuccess(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
-	r.logger.Info(description, "osc", osc.Name)
-	osc.Status.ObservedGeneration = osc.Generation
-	osc.Status.LastOperation, osc.Status.LastError = extensionscontroller.ReconcileSucceeded(lastOperationType, description)
-	return r.client.Status().Update(ctx, osc)
 }
 
 func (r *reconciler) createOrUpdateOSCResultSecret(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, userData []byte) (*corev1.Secret, error) {

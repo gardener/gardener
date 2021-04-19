@@ -31,8 +31,6 @@ const (
 
 	// ControllerName is the name of the operating system configuration controller.
 	ControllerName = "operatingsystemconfig_controller"
-
-	name = "operatingsystemconfig-controller"
 )
 
 // AddArgs are arguments for adding an operatingsystemconfig controller to a manager.

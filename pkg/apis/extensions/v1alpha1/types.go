@@ -35,11 +35,17 @@ type Status interface {
 	// GetLastOperation retrieves the LastOperation of a status.
 	// LastOperation may be nil.
 	GetLastOperation() *gardencorev1beta1.LastOperation
+	// SetLastOperation sets the LastOperation of a status.
+	SetLastOperation(*gardencorev1beta1.LastOperation)
 	// GetObservedGeneration retrieves the last generation observed by the extension controller.
 	GetObservedGeneration() int64
+	// SetObservedGeneration sets the ObservedGeneration of a status.
+	SetObservedGeneration(int64)
 	// GetLastError retrieves the LastError of a status.
 	// LastError may be nil.
 	GetLastError() *gardencorev1beta1.LastError
+	// SetLastError sets the LastError of a status.
+	SetLastError(*gardencorev1beta1.LastError)
 	// GetState retrieves the State of the extension
 	GetState() *runtime.RawExtension
 	// SetState sets the State of the extension
