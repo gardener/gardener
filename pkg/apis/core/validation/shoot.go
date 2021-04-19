@@ -155,6 +155,11 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	}
 	allErrs = append(allErrs, ValidateTolerations(spec.Tolerations, fldPath.Child("tolerations"))...)
 
+	// TODO(dkister) This can be removed once the exposureclass implementation has been completed.
+	if spec.ExposureClassName != nil {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("exposureClassName"), "exposure class can currently not be referenced"))
+	}
+
 	return allErrs
 }
 

@@ -357,7 +357,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(errorList).To(HaveLen(0))
+				// TODO(dkistner) The test condition can be removed once the exposureclass implementation has been completed.
+				// The errorList should then have len() == 0
+				Expect(errorList).To(HaveLen(1))
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.exposureClassName"),
+				}))))
 			})
 
 			It("should forbid to change the exposure class", func() {
@@ -367,8 +373,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.exposureClassName"),
+					})),
+					// TODO(dkistner) This test condition can be removed once the exposureclass implementation has been completed.
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.exposureClassName"),
+					})),
+				))
+			})
+
+			// TODO(dkistner) This can be removed once the exposureclass implementation has been completed.
+			It("should forbid referencing an exposure class", func() {
+				shoot.Spec.ExposureClassName = pointer.StringPtr("some-exposure-class")
+
+				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
+					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.exposureClassName"),
 				}))))
 			})
