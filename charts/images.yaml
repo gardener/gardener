@@ -115,7 +115,7 @@ images:
 - name: grafana
   sourceRepository: github.com/grafana/grafana
   repository: grafana/grafana
-  tag: "7.2.1"
+  tag: "7.5.4"
 - name: blackbox-exporter
   sourceRepository: github.com/prometheus/blackbox_exporter
   repository: quay.io/prometheus/blackbox-exporter
@@ -204,7 +204,7 @@ images:
 - name: fluent-bit
   sourceRepository: github.com/fluent/fluent-bit
   repository: fluent/fluent-bit
-  tag: "1.6.4"
+  tag: "1.7.3"
 - name: fluent-bit-plugin-installer
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluent-bit-to-loki
@@ -212,7 +212,7 @@ images:
 - name: loki
   sourceRepository: github.com/grafana/loki
   repository: grafana/loki
-  tag: "1.6.0"
+  tag: "2.2.1"
 - name: loki-curator
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/loki-curator
