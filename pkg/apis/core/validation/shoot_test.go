@@ -350,6 +350,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 			))
 		})
 
+		Context("exposure class", func() {
+			It("should pass as exposure class is not changed", func() {
+				shoot.Spec.ExposureClassName = pointer.StringPtr("exposure-class-1")
+				newShoot := prepareShootForUpdate(shoot)
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(HaveLen(0))
+			})
+
+			It("should forbid to change the exposure class", func() {
+				shoot.Spec.ExposureClassName = pointer.StringPtr("exposure-class-1")
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.ExposureClassName = pointer.StringPtr("exposure-class-2")
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.exposureClassName"),
+				}))))
+			})
+		})
+
 		DescribeTable("purpose validation",
 			func(purpose core.ShootPurpose, namespace string, matcher gomegatypes.GomegaMatcher) {
 				shootCopy := shoot.DeepCopy()

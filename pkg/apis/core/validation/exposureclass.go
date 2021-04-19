@@ -17,17 +17,34 @@ package validation
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
 
+	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // ValidateExposureClass validates a ExposureClass object.
 func ValidateExposureClass(exposureClass *core.ExposureClass) field.ErrorList {
-	allErrs := field.ErrorList{}
+	var allErrs = field.ErrorList{}
+
+	if len(exposureClass.Handler) == 0 {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("handler"), exposureClass.Name, "exposure class handler cannot be empty"))
+	}
+
+	if exposureClass.Scheduling != nil {
+		if exposureClass.Scheduling.SeedSelector != nil && exposureClass.Scheduling.SeedSelector.LabelSelector != nil {
+			allErrs = append(allErrs, metav1validation.ValidateLabelSelector(exposureClass.Scheduling.SeedSelector.LabelSelector, field.NewPath("scheduling", "seedSelector"))...)
+		}
+		allErrs = append(allErrs, ValidateTolerations(exposureClass.Scheduling.Tolerations, field.NewPath("scheduling", "tolerations"))...)
+	}
+
 	return allErrs
 }
 
 // ValidateExposureClassUpdate validates a ExposureClass object before an update.
 func ValidateExposureClassUpdate(new, old *core.ExposureClass) field.ErrorList {
-	allErrs := field.ErrorList{}
+	var allErrs = field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(old.Handler, new.Handler, field.NewPath("handler"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(old.Scheduling, new.Scheduling, field.NewPath("scheduling"))...)
 	return allErrs
 }

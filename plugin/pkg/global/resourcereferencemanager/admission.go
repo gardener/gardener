@@ -29,8 +29,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
+	corev1alphalisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/plugin/pkg/utils"
 
@@ -79,6 +81,7 @@ type ReferenceManager struct {
 	projectLister              corelisters.ProjectLister
 	quotaLister                corelisters.QuotaLister
 	controllerDeploymentLister corelisters.ControllerDeploymentLister
+	exposureClassLister        corev1alphalisters.ExposureClassLister
 	readyFunc                  admission.ReadyFunc
 }
 
@@ -89,6 +92,7 @@ var (
 	_ = admissioninitializer.WantsKubeClientset(&ReferenceManager{})
 	_ = admissioninitializer.WantsDynamicClient(&ReferenceManager{})
 	_ = admissioninitializer.WantsAuthorizer(&ReferenceManager{})
+	_ = admissioninitializer.WantsExternalCoreInformerFactory(&ReferenceManager{})
 
 	readyFuncs = []admission.ReadyFunc{}
 
@@ -139,6 +143,14 @@ func (r *ReferenceManager) SetInternalCoreInformerFactory(f coreinformers.Shared
 	r.controllerDeploymentLister = controllerDeploymentInformer.Lister()
 
 	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced, projectInformer.Informer().HasSynced, controllerDeploymentInformer.Informer().HasSynced)
+}
+
+// SetExternalCoreInformerFactory sets the external garden core informer factory.
+func (r *ReferenceManager) SetExternalCoreInformerFactory(f externalcoreinformers.SharedInformerFactory) {
+	exposureClassInformer := f.Core().V1alpha1().ExposureClasses()
+	r.exposureClassLister = exposureClassInformer.Lister()
+
+	readyFuncs = append(readyFuncs, exposureClassInformer.Informer().HasSynced)
 }
 
 // SetKubeInformerFactory gets Lister from SharedInformerFactory.
@@ -195,6 +207,9 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	}
 	if r.projectLister == nil {
 		return errors.New("missing project lister")
+	}
+	if r.exposureClassLister == nil {
+		return errors.New("missing exposure class lister")
 	}
 	return nil
 }
@@ -589,6 +604,12 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 
 	if !equality.Semantic.DeepEqual(oldShoot.Spec.SecretBindingName, shoot.Spec.SecretBindingName) {
 		if _, err := r.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.SecretBindingName); err != nil {
+			return err
+		}
+	}
+
+	if !equality.Semantic.DeepEqual(oldShoot.Spec.ExposureClassName, shoot.Spec.ExposureClassName) && shoot.Spec.ExposureClassName != nil {
+		if _, err := r.exposureClassLister.Get(*shoot.Spec.ExposureClassName); err != nil {
 			return err
 		}
 	}
