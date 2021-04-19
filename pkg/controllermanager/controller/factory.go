@@ -41,6 +41,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -105,6 +106,12 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		})
 		return secretInformer
 	})
+
+	// Delete legacy (and meanwhile unused) ConfigMap after https://github.com/gardener/gardener/pull/3756.
+	// TODO: This code can be removed in a future release.
+	if err := kutil.DeleteObject(ctx, k8sGardenClient.Client(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardener-controller-manager-internal-config", Namespace: v1beta1constants.GardenNamespace}}); err != nil {
+		return err
+	}
 
 	var (
 		// Garden core informers
