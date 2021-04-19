@@ -36,6 +36,7 @@ type CoreInterface interface {
 	SecretBindingsGetter
 	SeedsGetter
 	ShootsGetter
+	ShootExtensionStatusesGetter
 	ShootStatesGetter
 }
 
@@ -86,6 +87,10 @@ func (c *CoreClient) Seeds() SeedInterface {
 
 func (c *CoreClient) Shoots(namespace string) ShootInterface {
 	return newShoots(c, namespace)
+}
+
+func (c *CoreClient) ShootExtensionStatuses(namespace string) ShootExtensionStatusInterface {
+	return newShootExtensionStatuses(c, namespace)
 }
 
 func (c *CoreClient) ShootStates(namespace string) ShootStateInterface {

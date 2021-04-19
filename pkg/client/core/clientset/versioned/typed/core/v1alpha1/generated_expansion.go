@@ -40,4 +40,6 @@ type SeedExpansion interface{}
 
 type ShootExpansion interface{}
 
+type ShootExtensionStatusExpansion interface{}
+
 type ShootStateExpansion interface{}
