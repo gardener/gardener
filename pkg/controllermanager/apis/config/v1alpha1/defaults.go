@@ -70,6 +70,12 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		}
 	}
 
+	if obj.Controllers.ExposureClass == nil {
+		obj.Controllers.ExposureClass = &ExposureClassControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
+
 	if obj.Controllers.Project == nil {
 		obj.Controllers.Project = &ProjectControllerConfiguration{
 			ConcurrentSyncs: 5,

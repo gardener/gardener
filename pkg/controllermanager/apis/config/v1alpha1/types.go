@@ -66,6 +66,9 @@ type ControllerManagerControllerConfiguration struct {
 	// Event defines the configuration of the Event controller.  If unset, the event controller will be disabled.
 	// +optional
 	Event *EventControllerConfiguration `json:"event,omitempty"`
+	// ExposureClass defines the configuration of the ExposureClass controller.
+	// +optional
+	ExposureClass *ExposureClassControllerConfiguration `json:"exposureClass,omitempty"`
 	// Plant defines the configuration of the Plant controller.
 	// +optional
 	Plant *PlantControllerConfiguration `json:"plant,omitempty"`
@@ -142,6 +145,14 @@ type EventControllerConfiguration struct {
 	// TTLNonShootEvents is the time-to-live for all non-shoot related events (defaults to `1h`).
 	// +optional
 	TTLNonShootEvents *metav1.Duration `json:"ttlNonShootEvents,omitempty"`
+}
+
+// ExposureClassControllerConfiguration defines the configuration of the
+// ExposureClass controller.
+type ExposureClassControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
 }
 
 // PlantControllerConfiguration defines the configuration of the
