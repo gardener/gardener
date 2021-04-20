@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -93,16 +94,22 @@ func (healthChecker *DaemonSetHealthChecker) Check(ctx context.Context, request 
 		err = healthChecker.shootClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, daemonSet)
 	}
 	if err != nil {
-		err := fmt.Errorf("failed to retrieve DaemonSet '%s' in namespace '%s': %v", healthChecker.name, request.Namespace, err)
+		if apierrors.IsNotFound(err) {
+			return &healthcheck.SingleCheckResult{
+				Status: gardencorev1beta1.ConditionFalse,
+				Detail: fmt.Sprintf("DaemonSet %q in namespace %q not found", healthChecker.name, request.Namespace),
+			}, nil
+		}
+
+		err := fmt.Errorf("failed to retrieve DaemonSet %q in namespace %q: %v", healthChecker.name, request.Namespace, err)
 		healthChecker.logger.Error(err, "Health check failed")
 		return nil, err
 	}
-	if isHealthy, reason, err := DaemonSetIsHealthy(daemonSet); !isHealthy {
+	if isHealthy, err := DaemonSetIsHealthy(daemonSet); !isHealthy {
 		healthChecker.logger.Error(err, "Health check failed")
 		return &healthcheck.SingleCheckResult{
 			Status: gardencorev1beta1.ConditionFalse,
 			Detail: err.Error(),
-			Reason: *reason,
 		}, nil
 	}
 
@@ -111,11 +118,12 @@ func (healthChecker *DaemonSetHealthChecker) Check(ctx context.Context, request 
 	}, nil
 }
 
-func DaemonSetIsHealthy(daemonSet *appsv1.DaemonSet) (bool, *string, error) {
+// DaemonSetIsHealthy takes a daemon set resource and returns
+// if it is healthy or not or an error
+func DaemonSetIsHealthy(daemonSet *appsv1.DaemonSet) (bool, error) {
 	if err := health.CheckDaemonSet(daemonSet); err != nil {
-		reason := "DaemonSetUnhealthy"
-		err := fmt.Errorf("daemonSet %s in namespace %s is unhealthy: %v", daemonSet.Name, daemonSet.Namespace, err)
-		return false, &reason, err
+		err := fmt.Errorf("daemonSet %q in namespace %q is unhealthy: %v", daemonSet.Name, daemonSet.Namespace, err)
+		return false, err
 	}
-	return true, nil, nil
+	return true, nil
 }

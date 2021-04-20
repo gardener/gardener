@@ -584,7 +584,7 @@ var _ = Describe("health check", func() {
 					},
 				},
 				cloudConfigSecretChecksums,
-				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "NodeUnhealthy", fmt.Sprintf("Node '%s' in worker group '%s' is unhealthy", nodeName, workerPoolName1)))),
+				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "NodeUnhealthy", fmt.Sprintf("Node %q in worker group %q is unhealthy", nodeName, workerPoolName1)))),
 			Entry("node not healthy with error codes",
 				[]corev1.Node{
 					{
@@ -633,7 +633,7 @@ var _ = Describe("health check", func() {
 					},
 				},
 				cloudConfigSecretChecksums,
-				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool '%s' to meet minimum desired machine count. (%d/%d).", workerPoolName2, 0, 1)))),
+				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool %q to meet minimum desired machine count. (%d/%d).", workerPoolName2, 0, 1)))),
 			Entry("not enough nodes in worker pool",
 				[]corev1.Node{
 					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, kubernetesVersion.Original()),
@@ -651,7 +651,7 @@ var _ = Describe("health check", func() {
 					},
 				},
 				cloudConfigSecretChecksums,
-				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool '%s' to meet minimum desired machine count. (%d/%d).", workerPoolName2, 0, 1)))),
+				PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool %q to meet minimum desired machine count. (%d/%d).", workerPoolName2, 0, 1)))),
 			Entry("too old Kubernetes patch version",
 				[]corev1.Node{
 					newNode(nodeName, true, labels.Set{"worker.gardener.cloud/pool": workerPoolName1}, nil, "v1.19.2"),

@@ -95,14 +95,14 @@ func (h *DefaultHealthChecker) DeepCopy() healthcheck.HealthCheck {
 func (h *DefaultHealthChecker) Check(ctx context.Context, request types.NamespacedName) (*healthcheck.SingleCheckResult, error) {
 	machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
 	if err := h.seedClient.List(ctx, machineDeploymentList, client.InNamespace(request.Namespace)); err != nil {
-		err := fmt.Errorf("nodes check failed. Failed to list machine deployments in namespace %s: %v", request.Namespace, err)
+		err := fmt.Errorf("unable to check nodes. Failed to list machine deployments in namespace %q: %v", request.Namespace, err)
 		h.logger.Error(err, "Health check failed")
 		return nil, err
 	}
 
 	nodeList := &corev1.NodeList{}
 	if err := h.shootClient.List(ctx, nodeList); err != nil {
-		err := fmt.Errorf("nodes check failed. Failed to list shoot nodes: %v", err)
+		err := fmt.Errorf("unable to check nodes. Failed to list shoot nodes: %v", err)
 		h.logger.Error(err, "Health check failed")
 		return nil, err
 	}
@@ -127,14 +127,14 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 	machineList := &machinev1alpha1.MachineList{}
 	if registeredNodes != desiredMachines || readyNodes != desiredMachines {
 		if err := h.seedClient.List(ctx, machineList, client.InNamespace(request.Namespace)); err != nil {
-			err := fmt.Errorf("nodes check failed. Failed to list machines in namespace %s: %v", request.Namespace, err)
+			err := fmt.Errorf("unable to check nodes. Failed to list machines in namespace %q: %v", request.Namespace, err)
 			h.logger.Error(err, "Health check failed")
 			return nil, err
 		}
 	}
 
 	// First check if the MachineDeployments report failed machines. If false then check if the MachineDeployments are
-	// "available". If false then check if there is a regular scale-up happening or if there are machines with an erroneuos
+	// "available". If false then check if there is a regular scale-up happening or if there are machines with an erroneous
 	// phase. Only then check the other MachineDeployment conditions. As last check, check if there is a scale-down happening
 	// (e.g., in case of an rolling-update).
 
@@ -142,12 +142,11 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 
 	for _, deployment := range machineDeploymentList.Items {
 		for _, failedMachine := range deployment.Status.FailedMachines {
-			err := fmt.Errorf("machine %s failed: %s", failedMachine.Name, failedMachine.LastOperation.Description)
+			err := fmt.Errorf("machine %q failed: %s", failedMachine.Name, failedMachine.LastOperation.Description)
 			h.logger.Error(err, "Health check failed")
 			return &healthcheck.SingleCheckResult{
 				Status: gardencorev1beta1.ConditionFalse,
 				Detail: err.Error(),
-				Reason: "MachineDeploymentHasFailedMachines",
 				Codes:  gardencorev1beta1helper.DetermineErrorCodes(err),
 			}, nil
 		}
@@ -161,37 +160,31 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 	}
 
 	if checkScaleUp {
-		if status, reason, err := checkNodesScalingUp(machineList, readyNodes, desiredMachines); status != gardencorev1beta1.ConditionTrue {
-			err := fmt.Errorf("scale up check returned status %s: %v", status, err)
+		if status, err := checkNodesScalingUp(machineList, readyNodes, desiredMachines); status != gardencorev1beta1.ConditionTrue {
 			h.logger.Error(err, "Health check failed")
 			return &healthcheck.SingleCheckResult{
 				Status:               status,
 				Detail:               err.Error(),
-				Reason:               reason,
 				Codes:                gardencorev1beta1helper.DetermineErrorCodes(err),
 				ProgressingThreshold: h.scaleUpProgressingThreshold,
 			}, nil
 		}
 	}
 
-	if isHealthy, reason, err := checkMachineDeploymentsHealthy(machineDeploymentList.Items); !isHealthy {
-		err := fmt.Errorf("machine deployments check failed: %v'", err)
+	if isHealthy, err := checkMachineDeploymentsHealthy(machineDeploymentList.Items); !isHealthy {
 		h.logger.Error(err, "Health check failed")
 		return &healthcheck.SingleCheckResult{
 			Status: gardencorev1beta1.ConditionFalse,
 			Detail: err.Error(),
-			Reason: reason,
 			Codes:  gardencorev1beta1helper.DetermineErrorCodes(err),
 		}, nil
 	}
 
-	if status, reason, err := checkNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines); status != gardencorev1beta1.ConditionTrue {
-		err := fmt.Errorf("scale down check returned status %s: %v'", status, err)
+	if status, err := checkNodesScalingDown(machineList, nodeList, registeredNodes, desiredMachines); status != gardencorev1beta1.ConditionTrue {
 		h.logger.Error(err, "Health check failed")
 		return &healthcheck.SingleCheckResult{
 			Status:               status,
 			Detail:               err.Error(),
-			Reason:               reason,
 			Codes:                gardencorev1beta1helper.DetermineErrorCodes(err),
 			ProgressingThreshold: h.scaleDownProgressingThreshold,
 		}, nil

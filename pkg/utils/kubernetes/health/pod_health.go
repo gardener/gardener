@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Coppied from https://github.com/kubernetes/kubernetes/blob/a93f803f8e400f1d42dc812bc51932ff3b31798a/pkg/api/pod/util.go#L181-L211
+// Copied from https://github.com/kubernetes/kubernetes/blob/a93f803f8e400f1d42dc812bc51932ff3b31798a/pkg/api/pod/util.go#L181-L211
 
 package health
 

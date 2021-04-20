@@ -24,6 +24,7 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -64,16 +65,22 @@ func (healthChecker *ManagedResourceHealthChecker) Check(ctx context.Context, re
 	mcmDeployment := &resourcesv1alpha1.ManagedResource{}
 
 	if err := healthChecker.seedClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.managedResourceName}, mcmDeployment); err != nil {
-		err := fmt.Errorf("check Managed Resource failed. Unable to retrieve managed resource '%s' in namespace '%s': %v", healthChecker.managedResourceName, request.Namespace, err)
+		if apierrors.IsNotFound(err) {
+			return &healthcheck.SingleCheckResult{
+				Status: gardencorev1beta1.ConditionFalse,
+				Detail: fmt.Sprintf("Managed Resource %q in namespace %q not found", healthChecker.managedResourceName, request.Namespace),
+			}, nil
+		}
+
+		err := fmt.Errorf("check Managed Resource failed. Unable to retrieve managed resource %q in namespace %q: %v", healthChecker.managedResourceName, request.Namespace, err)
 		healthChecker.logger.Error(err, "Health check failed")
 		return nil, err
 	}
-	if isHealthy, reason, err := managedResourceIsHealthy(mcmDeployment); !isHealthy {
+	if isHealthy, err := managedResourceIsHealthy(mcmDeployment); !isHealthy {
 		healthChecker.logger.Error(err, "Health check failed")
 		return &healthcheck.SingleCheckResult{
 			Status: gardencorev1beta1.ConditionFalse,
 			Detail: err.Error(),
-			Reason: *reason,
 		}, nil
 	}
 
@@ -82,11 +89,10 @@ func (healthChecker *ManagedResourceHealthChecker) Check(ctx context.Context, re
 	}, nil
 }
 
-func managedResourceIsHealthy(managedResource *resourcesv1alpha1.ManagedResource) (bool, *string, error) {
+func managedResourceIsHealthy(managedResource *resourcesv1alpha1.ManagedResource) (bool, error) {
 	if err := health.CheckManagedResource(managedResource); err != nil {
-		reason := "ManagedResourceUnhealthy"
-		err := fmt.Errorf("managed resource %s in namespace %s is unhealthy: %v", managedResource.Name, managedResource.Namespace, err)
-		return false, &reason, err
+		err := fmt.Errorf("managed resource %q in namespace %q is unhealthy: %w", managedResource.Name, managedResource.Namespace, err)
+		return false, err
 	}
-	return true, nil, nil
+	return true, nil
 }

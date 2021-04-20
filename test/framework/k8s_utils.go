@@ -50,11 +50,11 @@ func (f *CommonFramework) WaitUntilDaemonSetIsRunning(ctx context.Context, k8sCl
 		}
 
 		if err := health.CheckDaemonSet(daemonSet); err != nil {
-			f.Logger.Infof("Waiting for %s to be ready!!", daemonSetName)
-			return retry.MinorError(fmt.Errorf("daemon set %s is not healthy: %v", daemonSetName, err))
+			f.Logger.Infof("Waiting for %q to be ready!", daemonSetName)
+			return retry.MinorError(fmt.Errorf("daemon set %q is not healthy: %v", daemonSetName, err))
 		}
 
-		f.Logger.Infof("%s is now ready!!", daemonSetName)
+		f.Logger.Infof("Daemon set %q is now ready!", daemonSetName)
 		return retry.Ok()
 	})
 }
@@ -68,8 +68,8 @@ func (f *CommonFramework) WaitUntilStatefulSetIsRunning(ctx context.Context, sta
 		}
 
 		if err := health.CheckStatefulSet(statefulSet); err != nil {
-			f.Logger.Infof("Waiting for %s to be ready!!", statefulSetName)
-			return retry.MinorError(fmt.Errorf("stateful set %s is not healthy: %v", statefulSetName, err))
+			f.Logger.Infof("Waiting for %q to be ready!", statefulSetName)
+			return retry.MinorError(fmt.Errorf("stateful set %q is not healthy: %v", statefulSetName, err))
 		}
 
 		f.Logger.Infof("%s is now ready!!", statefulSetName)
@@ -83,7 +83,7 @@ func (f *CommonFramework) WaitUntilDeploymentIsReady(ctx context.Context, name s
 		deployment := &appsv1.Deployment{}
 		if err := k8sClient.Client().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, deployment); err != nil {
 			if apierrors.IsNotFound(err) {
-				f.Logger.Infof("Waiting for deployment %s/%s to be ready!", namespace, name)
+				f.Logger.Infof("Waiting for deployment '%s/%s' to be ready!", namespace, name)
 				return retry.MinorError(fmt.Errorf("deployment %q in namespace %q does not exist", name, namespace))
 			}
 			return retry.SevereError(err)
@@ -91,7 +91,7 @@ func (f *CommonFramework) WaitUntilDeploymentIsReady(ctx context.Context, name s
 
 		err = health.CheckDeployment(deployment)
 		if err != nil {
-			f.Logger.Infof("Waiting for deployment %s/%s to be ready!", namespace, name)
+			f.Logger.Infof("Waiting for deployment '%s/%s' to be ready!", namespace, name)
 			return retry.MinorError(fmt.Errorf("deployment %q in namespace %q is not healthy", name, namespace))
 		}
 		return retry.Ok()
@@ -105,7 +105,7 @@ func (f *CommonFramework) WaitUntilDeploymentsWithLabelsIsReady(ctx context.Cont
 		if err := k8sClient.Client().List(ctx, deployments, client.MatchingLabelsSelector{Selector: deploymentLabels}, client.InNamespace(namespace)); err != nil {
 			if apierrors.IsNotFound(err) {
 				f.Logger.Infof("Waiting for deployments with labels: %v to be ready!!", deploymentLabels.String())
-				return retry.MinorError(fmt.Errorf("no deployments with labels %s exist", deploymentLabels.String()))
+				return retry.MinorError(fmt.Errorf("no deployments with labels '%s' exist", deploymentLabels.String()))
 			}
 			return retry.SevereError(err)
 		}
@@ -113,8 +113,8 @@ func (f *CommonFramework) WaitUntilDeploymentsWithLabelsIsReady(ctx context.Cont
 		for _, deployment := range deployments.Items {
 			err = health.CheckDeployment(&deployment)
 			if err != nil {
-				f.Logger.Infof("Waiting for deployments with labels: %v to be ready!!", deploymentLabels)
-				return retry.MinorError(fmt.Errorf("deployment %s is not healthy: %v", deployment.Name, err))
+				f.Logger.Infof("Waiting for deployments with labels: %v to be ready!", deploymentLabels)
+				return retry.MinorError(fmt.Errorf("deployment %q is not healthy: %v", deployment.Name, err))
 			}
 		}
 		return retry.Ok()
@@ -130,7 +130,7 @@ func (f *CommonFramework) WaitUntilNamespaceIsDeleted(ctx context.Context, k8sCl
 			}
 			return retry.MinorError(err)
 		}
-		return retry.MinorError(errors.Errorf("Namespace %s is not deleted yet", ns))
+		return retry.MinorError(errors.Errorf("Namespace %q is not deleted yet", ns))
 	})
 }
 
@@ -149,12 +149,12 @@ func WaitForNNodesToBeHealthyInWorkerPool(ctx context.Context, k8sClient kuberne
 
 		nodeCount := len(nodeList.Items)
 		if nodeCount != n {
-			return retry.MinorError(fmt.Errorf("waiting for exactly %d nodes to be ready: only %d nodes registered in the cluster", n, nodeCount))
+			return retry.MinorError(fmt.Errorf("waiting for %d nodes to be ready: only %d nodes registered in the cluster", n, nodeCount))
 		}
 
 		for _, node := range nodeList.Items {
 			if err := health.CheckNode(&node); err != nil {
-				return retry.MinorError(fmt.Errorf("waiting for exactly %d nodes to be ready: node %q is not healthy: %v", n, node.Name, err))
+				return retry.MinorError(fmt.Errorf("waiting for %d nodes to be ready: node %q is not healthy: %v", n, node.Name, err))
 			}
 		}
 
@@ -256,7 +256,7 @@ func ScaleDeployment(timeout time.Duration, client client.Client, desiredReplica
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve the replica count of the %s deployment: '%v'", name, err)
+		return nil, fmt.Errorf("failed to retrieve the replica count of deployment %q: '%v'", name, err)
 	}
 	if replicas == nil || *replicas == *desiredReplicas {
 		return replicas, nil
@@ -264,12 +264,12 @@ func ScaleDeployment(timeout time.Duration, client client.Client, desiredReplica
 
 	// scale the deployment
 	if err := kubernetes.ScaleDeployment(ctxSetup, client, kutil.Key(namespace, name), *desiredReplicas); err != nil {
-		return nil, fmt.Errorf("failed to scale the replica count of the %s deployment: '%v'", name, err)
+		return nil, fmt.Errorf("failed to scale the replica count of deployment %q: '%v'", name, err)
 	}
 
 	// wait until scaled
 	if err := WaitUntilDeploymentScaled(ctxSetup, client, namespace, name, *desiredReplicas); err != nil {
-		return nil, fmt.Errorf("failed to wait until the %s deployment is scaled: '%v'", name, err)
+		return nil, fmt.Errorf("failed to wait until deployment %q is scaled: '%v'", name, err)
 	}
 	return replicas, nil
 }

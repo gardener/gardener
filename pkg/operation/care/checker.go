@@ -130,7 +130,7 @@ func (b *HealthChecker) checkRequiredDeployments(condition gardencorev1beta1.Con
 func (b *HealthChecker) checkDeployments(condition gardencorev1beta1.Condition, objects []*appsv1.Deployment) *gardencorev1beta1.Condition {
 	for _, object := range objects {
 		if err := health.CheckDeployment(object); err != nil {
-			c := b.FailedCondition(condition, "DeploymentUnhealthy", fmt.Sprintf("Deployment %s is unhealthy: %v", object.Name, err.Error()))
+			c := b.FailedCondition(condition, "DeploymentUnhealthy", fmt.Sprintf("Deployment %q is unhealthy: %v", object.Name, err.Error()))
 			return &c
 		}
 	}
@@ -151,7 +151,7 @@ func (b *HealthChecker) checkEtcds(condition gardencorev1beta1.Condition, object
 	for _, object := range objects {
 		if err := health.CheckEtcd(object); err != nil {
 			var (
-				message = fmt.Sprintf("Etcd %s is unhealthy: %v", object.Name, err.Error())
+				message = fmt.Sprintf("Etcd extension resource %q is unhealthy: %v", object.Name, err.Error())
 				codes   []gardencorev1beta1.ErrorCode
 			)
 
@@ -180,7 +180,7 @@ func (b *HealthChecker) checkRequiredStatefulSets(condition gardencorev1beta1.Co
 func (b *HealthChecker) checkStatefulSets(condition gardencorev1beta1.Condition, objects []*appsv1.StatefulSet) *gardencorev1beta1.Condition {
 	for _, object := range objects {
 		if err := health.CheckStatefulSet(object); err != nil {
-			c := b.FailedCondition(condition, "StatefulSetUnhealthy", fmt.Sprintf("Stateful set %s is unhealthy: %v", object.Name, err.Error()))
+			c := b.FailedCondition(condition, "StatefulSetUnhealthy", fmt.Sprintf("Stateful set %q is unhealthy: %v", object.Name, err.Error()))
 			return &c
 		}
 	}
@@ -192,7 +192,7 @@ func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodes 
 	for _, object := range nodes {
 		if err := health.CheckNode(&object); err != nil {
 			var (
-				message = fmt.Sprintf("Node '%s' in worker group '%s' is unhealthy: %v", object.Name, workerGroupName, err)
+				message = fmt.Sprintf("Node %q in worker group %q is unhealthy: %v", object.Name, workerGroupName, err)
 				codes   = gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, ""))
 			)
 
@@ -226,7 +226,7 @@ func (b *HealthChecker) checkNodes(condition gardencorev1beta1.Condition, nodes 
 // CheckManagedResource checks the conditions of the given managed resource and reflects the state in the returned condition.
 func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Condition, mr *resourcesv1alpha1.ManagedResource) *gardencorev1beta1.Condition {
 	if mr.Generation != mr.Status.ObservedGeneration {
-		c := b.FailedCondition(condition, gardencorev1beta1.OutdatedStatusError, fmt.Sprintf("observed generation of managed resource %s/%s outdated (%d/%d)", mr.Namespace, mr.Name, mr.Status.ObservedGeneration, mr.Generation))
+		c := b.FailedCondition(condition, gardencorev1beta1.OutdatedStatusError, fmt.Sprintf("observed generation of managed resource '%s/%s' outdated (%d/%d)", mr.Namespace, mr.Name, mr.Status.ObservedGeneration, mr.Generation))
 		return &c
 	}
 
@@ -433,7 +433,7 @@ func (b *HealthChecker) CheckClusterNodes(
 		}
 
 		if len(nodes) < int(worker.Minimum) {
-			c := b.FailedCondition(condition, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool '%s' to meet minimum desired machine count. (%d/%d).", worker.Name, len(nodes), worker.Minimum))
+			c := b.FailedCondition(condition, "MissingNodes", fmt.Sprintf("Not enough worker nodes registered in worker pool %q to meet minimum desired machine count. (%d/%d).", worker.Name, len(nodes), worker.Minimum))
 			return &c, nil
 		}
 	}
@@ -514,7 +514,7 @@ func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Cond
 	for _, cond := range extensionsConditions {
 		// check if the health check condition.lastUpdateTime is older than the configured staleExtensionHealthCheckThreshold
 		if b.staleExtensionHealthCheckThreshold != nil && Now().UTC().Sub(cond.Condition.LastUpdateTime.UTC()) > b.staleExtensionHealthCheckThreshold.Duration {
-			c := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionUnknown, fmt.Sprintf("%sOutdatedHealthCheckReport", cond.ExtensionType), fmt.Sprintf("%q CRD (%s/%s) reports an outdated health status (last updated: %s ago at %s).", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, time.Now().UTC().Sub(cond.Condition.LastUpdateTime.UTC()).Round(time.Minute).String(), cond.Condition.LastUpdateTime.UTC().Round(time.Minute).String()))
+			c := gardencorev1beta1helper.UpdatedCondition(condition, gardencorev1beta1.ConditionUnknown, fmt.Sprintf("%sOutdatedHealthCheckReport", cond.ExtensionType), fmt.Sprintf("%s extension (%s/%s) reports an outdated health status (last updated: %s ago at %s).", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, time.Now().UTC().Sub(cond.Condition.LastUpdateTime.UTC()).Round(time.Minute).String(), cond.Condition.LastUpdateTime.UTC().Round(time.Minute).String()))
 			return &c
 		}
 
@@ -524,7 +524,7 @@ func (b *HealthChecker) CheckExtensionCondition(condition gardencorev1beta1.Cond
 		}
 
 		if cond.Condition.Status == gardencorev1beta1.ConditionFalse || cond.Condition.Status == gardencorev1beta1.ConditionUnknown {
-			c := b.FailedCondition(condition, fmt.Sprintf("%sUnhealthyReport", cond.ExtensionType), fmt.Sprintf("%q CRD (%s/%s) reports failing health check: %s", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, cond.Condition.Message), cond.Condition.Codes...)
+			c := b.FailedCondition(condition, fmt.Sprintf("%sUnhealthyReport", cond.ExtensionType), fmt.Sprintf("%s extension (%s/%s) reports failing health check: %s", cond.ExtensionType, cond.ExtensionNamespace, cond.ExtensionName, cond.Condition.Message), cond.Condition.Codes...)
 			return &c
 		}
 	}

@@ -70,9 +70,9 @@ type DefaultAddArgs struct {
 }
 
 // RegisteredExtension is a registered extensions that the HealthCheck Controller watches.
-// The field extension  contains any extension object
+// The field extension contains any extension object
 // The field healthConditionTypes contains all distinct healthCondition types (extracted from the healthCheck).
-// They are being used as the .type field of the Condition that the HealthCheck controller writes to the extension Resource.
+// They are used as the .type field of the Condition that the HealthCheck controller writes to the extension resource.
 // The field groupVersionKind stores the GroupVersionKind of the extension resource
 type RegisteredExtension struct {
 	extension            extensionsv1alpha1.Object

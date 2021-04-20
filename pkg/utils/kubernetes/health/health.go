@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -46,10 +47,9 @@ func requiredConditionMissing(conditionType string) error {
 	return fmt.Errorf("condition %q is missing", conditionType)
 }
 
-func checkConditionState(conditionType string, expected, actual, reason, message string) error {
+func checkConditionState(expected, actual, reason, message string) error {
 	if expected != actual {
-		return fmt.Errorf("condition %q has invalid status %s (expected %s) due to %s: %s",
-			conditionType, actual, expected, reason, message)
+		return fmt.Errorf("%s (%s)", strings.Trim(message, "."), reason)
 	}
 	return nil
 }
@@ -100,29 +100,27 @@ func CheckDeployment(deployment *appsv1.Deployment) error {
 		if condition == nil {
 			return requiredConditionMissing(conditionType)
 		}
-		if err := checkConditionState(conditionType, string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionState(string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
 			return err
 		}
 	}
 
 	for _, trueOptionalConditionType := range trueOptionalDeploymentConditionTypes {
-		conditionType := string(trueOptionalConditionType)
 		condition := getDeploymentCondition(deployment.Status.Conditions, trueOptionalConditionType)
 		if condition == nil {
 			continue
 		}
-		if err := checkConditionState(conditionType, string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionState(string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
 			return err
 		}
 	}
 
 	for _, falseOptionalConditionType := range falseOptionalDeploymentConditionTypes {
-		conditionType := string(falseOptionalConditionType)
 		condition := getDeploymentCondition(deployment.Status.Conditions, falseOptionalConditionType)
 		if condition == nil {
 			continue
 		}
-		if err := checkConditionState(conditionType, string(corev1.ConditionFalse), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionState(string(corev1.ConditionFalse), string(condition.Status), condition.Reason, condition.Message); err != nil {
 			return err
 		}
 	}
@@ -154,7 +152,7 @@ func CheckStatefulSet(statefulSet *appsv1.StatefulSet) error {
 // A Etcd is considered healthy if its ready field in status is true.
 func CheckEtcd(etcd *druidv1alpha1.Etcd) error {
 	if !utils.IsTrue(etcd.Status.Ready) {
-		return fmt.Errorf("etcd %s is not ready yet", etcd.Name)
+		return fmt.Errorf("etcd %q is not ready yet", etcd.Name)
 	}
 	return nil
 }
@@ -216,18 +214,17 @@ func CheckNode(node *corev1.Node) error {
 		if condition == nil {
 			return requiredConditionMissing(conditionType)
 		}
-		if err := checkConditionState(conditionType, string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionState(string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
 			return err
 		}
 	}
 
 	for _, falseConditionType := range falseNodeConditionTypes {
-		conditionType := string(falseConditionType)
 		condition := getNodeCondition(node.Status.Conditions, falseConditionType)
 		if condition == nil {
 			continue
 		}
-		if err := checkConditionState(conditionType, string(corev1.ConditionFalse), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionState(string(corev1.ConditionFalse), string(condition.Status), condition.Reason, condition.Message); err != nil {
 			return err
 		}
 	}
@@ -246,8 +243,10 @@ func CheckAPIService(apiService *apiregistrationv1.APIService) error {
 	for _, condition := range apiService.Status.Conditions {
 		if condition.Type == requiredCondition {
 			return checkConditionState(
-				string(requiredCondition), string(requiredConditionStatus), string(condition.Status),
-				condition.Reason, condition.Message,
+				string(requiredConditionStatus),
+				string(condition.Status),
+				condition.Reason,
+				condition.Message,
 			)
 		}
 	}
@@ -291,7 +290,7 @@ func checkSeed(seed *gardencorev1beta1.Seed, identity *gardencorev1beta1.Gardene
 		if condition == nil {
 			return requiredConditionMissing(conditionType)
 		}
-		if err := checkConditionState(conditionType, string(gardencorev1beta1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionState(string(gardencorev1beta1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
 			return err
 		}
 	}
@@ -317,7 +316,7 @@ func CheckManagedSeed(managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
 		if condition == nil {
 			return requiredConditionMissing(string(conditionType))
 		}
-		if err := checkConditionState(string(conditionType), string(gardencorev1beta1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionState(string(gardencorev1beta1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
 			return err
 		}
 	}
@@ -450,7 +449,7 @@ func CheckManagedResource(managedResource *resourcesv1alpha1.ManagedResource) er
 		if condition == nil {
 			return requiredConditionMissing(conditionType)
 		}
-		if err := checkConditionState(conditionType, string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionState(string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
 			return err
 		}
 	}
