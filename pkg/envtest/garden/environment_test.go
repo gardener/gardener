@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package envtest_test
+package envtest_garden_test
 
 import (
 	. "github.com/onsi/ginkgo"

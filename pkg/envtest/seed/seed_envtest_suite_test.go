@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package envtest_test
+package envtestseed_test
 
 import (
 	"context"
@@ -26,34 +26,34 @@ import (
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/envtest"
+	seedenvtest "github.com/gardener/gardener/pkg/envtest/seed"
 	"github.com/gardener/gardener/test/framework"
 )
 
 func TestEnvtest(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardener Envtest Suite")
+	RunSpecs(t, "Seed Envtest Suite")
 }
 
 var (
 	ctx        = context.Background()
 	err        error
-	testEnv    *envtest.GardenerTestEnvironment
+	testEnv    *seedenvtest.SeedTestEnvironment
 	restConfig *rest.Config
 
 	testClient client.Client
 )
 
-var _ = Describe("Envtest experiment", func() {
+var _ = Describe("Seed Envtest experiment", func() {
 	BeforeSuite(func() {
 		logf.SetLogger(logzap.New(logzap.UseDevMode(true), logzap.WriteTo(GinkgoWriter)))
 
 		By("starting test environment")
-		testEnv = &envtest.GardenerTestEnvironment{}
+		testEnv = &seedenvtest.SeedTestEnvironment{}
 		restConfig, err = testEnv.Start()
 		Expect(err).ToNot(HaveOccurred())
 
-		testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
+		testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.SeedScheme})
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -61,7 +61,7 @@ var _ = Describe("Envtest experiment", func() {
 		By("running cleanup actions")
 		framework.RunCleanupActions()
 
-		By("stopping test environment")
+		By("stopping Seed test environment")
 		Expect(testEnv.Stop()).To(Succeed())
 	})
 })
