@@ -75,7 +75,7 @@ images:
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
-  tag: "v0.14.0"
+  tag: "v0.15.0"
   targetVersion: ">= 1.16"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
