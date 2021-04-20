@@ -24,7 +24,7 @@ const (
 	// // MyFeature enable Foo.
 	// // owner: @username
 	// // alpha: v5.X
-	// MyFeature utilfeature.Feature = "MyFeature"
+	// MyFeature featuregate.Feature = "MyFeature"
 
 	// Logging enables logging stack for clusters.
 	// owner @mvladev
@@ -95,4 +95,9 @@ const (
 	// owner: @scheererj @docktofuture
 	// alpha: v1.22.0
 	ReversedVPN featuregate.Feature = "ReversedVPN"
+
+	// BootstrapTokenForVMs
+	// owner: @beckermax
+	// alpha: v1.21.0
+	BootstrapTokenForVMs featuregate.Feature = "BootstrapTokenForVMs"
 )

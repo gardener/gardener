@@ -29,6 +29,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | SeedChange | `false` | `Alpha` | `1.12.0` | |
 | SeedKubeScheduler | `false` | `Alpha` | `1.15.0` | |
 | ReversedVPN | `false` | `Alpha` | `1.22.0` | |
+| BootstrapTokenForVMs | `false` | `Alpha` | `1.21.0` | |
 
 ## Using a feature
 
@@ -74,4 +75,5 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 * `MountHostCADirectories` enables mounting common CA certificate directories in the Shoot API server pod that might be required for webhooks or OIDC.
 * `SeedChange` enables updating the `spec.seedName` field during shoot validation from a non-empty value in order to trigger shoot control plane migration.
 * `SeedKubeScheduler` adds custom `kube-scheduler` in `gardener-kube-scheduler` namespace. It schedules [pods with scheduler name](../concepts/seed-admission-controller.md#mutating-webhooks) `gardener-kube-scheduler` on Nodes with higher resource utilization. It requires Seed cluster with kubernetes version `1.18` or higher.
-* `ReversedVPN` reverses the connection setup of the vpn tunnel between the Seed and the Shoot cluster(s). It allows Seed and Shoot clusters to be in different networks with only direct access in one direction (Shoot -> Seed). In addition to that, it reduces the amount of load balancers required, i.e. no load balancers are required for the vpn tunnel anymore. It requires `APIServerSNI` and kubernetes version `1.18` or higher to work. Details can be found in [GEP-14](../proposals/14-reversed-cluster-vpn.md).
+* `ReversedVPN` reverses the connection setup of the vpn tunnel between the Seed and the Shoot cluster(s). It allows Seed and Shoot clusters to be in different networks with only direct access in one direction (Shoot -> Seed). In addition to that, it reduces the amount of load balancers required, i.e. no load balancers are required for the vpn tunnel anymore. It requires `APIServerSNI` to work. Details can be found in [GEP-14](../proposals/14-reversed-cluster-vpn.md).
+* `BootstrapTokenForVMs` enables a security enhancement for the bootstrap flow of the kubelet. The bootstrap-token is now uniquely generated for each VM and invalidated after successful creation. This requires support in the worker controller (i.e. machine-controller-manager >`v0.26.0`) and in the os-extension (i.e. gardener-extension-os-gardenlinux >`v.0.9.0`) 
