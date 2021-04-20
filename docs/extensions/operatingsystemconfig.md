@@ -42,6 +42,18 @@ The high-level flow is as follows:
 
 1. After the VM has been provisioned the `downloader` script starts and fetches the appropriate `Secret` for its worker pool (containing the "original" user-data) and applies it.
 
+### Detailed bootstrap flow with the feature gate `BootstrapTokenForVMs` enabled
+
+If the featureFlag `BootstrapTokenForVMs` is enabled a file with the content "<<BOOTSTRAP_TOKEN>>" is added to the operatingsystem-config.
+It is passed to the worker controller (here MCM).
+
+The worker controller generates a temporary token for every new worker instance(node).
+It replaces the "<<BOOTSTRAP_TOKEN>>" string with the created token and adds it to the user-data placed on the vm on startup.
+
+The cloud-config-downloader(original user-data) will then refer to the new temporary bootstrap-token in the kubelet-bootstrap script.
+
+![Bootstrap flow with shortlived bootstrapTokens](./images/bootstrap_token.png)
+
 ## How does Gardener update the user-data on already existing machines?
 
 With ongoing development and new releases of Gardener some new components could be required to get installed onto every shoot worker VM, or existing components need to be changed.
