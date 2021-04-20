@@ -3,19 +3,6 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
-  name: gardener.cloud:admin
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: gardener.cloud:admin
-subjects:
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: system:kube-aggregator
----
-apiVersion: {{ include "rbacversion" . }}
-kind: ClusterRoleBinding
-metadata:
   name: gardener.cloud:apiserver:auth-delegator
 roleRef:
   apiGroup: rbac.authorization.k8s.io
