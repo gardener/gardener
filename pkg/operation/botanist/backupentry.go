@@ -64,6 +64,8 @@ func (b *Botanist) DefaultExtensionsBackupEntry(seedClient client.Client) extens
 	)
 }
 
+// DeployBackupEntry deploys the BackupEntry resource in the Garden cluster and triggers the restore operation in case
+// the Shoot is in the restore phase of the control plane migration.
 func (b *Botanist) DeployBackupEntry(ctx context.Context) error {
 	if b.isRestorePhase() {
 		return b.Shoot.Components.BackupEntry.Restore(ctx, b.ShootState)

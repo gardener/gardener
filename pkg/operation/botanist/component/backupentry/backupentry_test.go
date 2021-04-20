@@ -95,7 +95,6 @@ var _ = Describe("BackupEntry", func() {
 				Name:      name,
 				Namespace: namespace,
 				Annotations: map[string]string{
-					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 					v1beta1constants.GardenerTimestamp: now.UTC().String(),
 					v1beta1constants.ShootPurpose:      string(shootPurpose),
 				},
@@ -128,6 +127,7 @@ var _ = Describe("BackupEntry", func() {
 
 			actual := &gardencorev1beta1.BackupEntry{}
 			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
+			expected.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationReconcile
 
 			Expect(actual).To(DeepEqual(expected))
 		})
@@ -149,6 +149,9 @@ var _ = Describe("BackupEntry", func() {
 
 			expected.Spec.BucketName = differentBucketName
 			expected.Spec.SeedName = &differentSeedName
+			expected.ResourceVersion = "2"
+			expected.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationReconcile
+
 			Expect(actual).To(DeepEqual(expected))
 		})
 	})
@@ -202,6 +205,7 @@ var _ = Describe("BackupEntry", func() {
 			expected.ResourceVersion = "2"
 			expected.Spec.BucketName = differentBucketName
 			expected.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationRestore
+
 			Expect(actual).To(DeepEqual(expected))
 		})
 	})
@@ -226,7 +230,6 @@ var _ = Describe("BackupEntry", func() {
 			Expect(c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, actual)).To(Succeed())
 
 			expected.ResourceVersion = "2"
-			expected.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationMigrate
 			Expect(actual).To(DeepEqual(expected))
 		})
 	})

@@ -259,7 +259,7 @@ var _ = Describe("#BackupEntry", func() {
 			mc.EXPECT().Create(ctx, obj)
 			mc.EXPECT().Status().Return(mc)
 			mc.EXPECT().Update(ctx, expectedWithState)
-			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState)
+			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 
 			Expect(backupentry.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
 		})

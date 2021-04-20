@@ -80,12 +80,12 @@ func mustIncreaseGeneration(oldBackupEntry, newBackupEntry *core.BackupEntry) bo
 		return true
 	}
 
-	if val, ok := newBackupEntry.ObjectMeta.Annotations[v1beta1constants.GardenerOperation]; ok {
-		if val == v1beta1constants.GardenerOperationReconcile ||
-			val == v1beta1constants.GardenerOperationMigrate ||
-			val == v1beta1constants.GardenerOperationRestore {
-			return true
-		}
+	oldOperationAnnotation := oldBackupEntry.ObjectMeta.Annotations[v1beta1constants.GardenerOperation]
+	newOperationAnnotation := newBackupEntry.ObjectMeta.Annotations[v1beta1constants.GardenerOperation]
+	if (newOperationAnnotation == v1beta1constants.GardenerOperationRestore ||
+		newOperationAnnotation == v1beta1constants.GardenerOperationReconcile) &&
+		newOperationAnnotation != oldOperationAnnotation {
+		return true
 	}
 
 	return false

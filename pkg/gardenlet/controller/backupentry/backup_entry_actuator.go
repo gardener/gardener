@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
@@ -304,7 +305,7 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 		return a.component.Deploy(ctx)
 	}
 
-	shootName := common.GetShootNameFromOwnerReferences(a.backupEntry.OwnerReferences)
+	shootName := gutil.GetShootNameFromOwnerReferences(a.backupEntry)
 	shootState := &gardencorev1alpha1.ShootState{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      shootName,

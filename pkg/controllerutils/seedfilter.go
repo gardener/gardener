@@ -166,7 +166,7 @@ func BackupEntryFilterFunc(ctx context.Context, c client.Client, seedName string
 func BackupEntryIsManagedByThisGardenlet(ctx context.Context, c client.Client, backupEntry *gardencorev1beta1.BackupEntry, gc *config.GardenletConfiguration) bool {
 	seedName := confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
 	if len(seedName) > 0 {
-		return *backupEntry.Spec.SeedName == seedName
+		return backupEntry.Spec.SeedName != nil && *backupEntry.Spec.SeedName == seedName
 	}
 	return seedLabelsMatchWithClient(ctx, c, *backupEntry.Spec.SeedName, gc.SeedSelector)
 }

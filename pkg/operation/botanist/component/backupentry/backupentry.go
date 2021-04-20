@@ -147,11 +147,7 @@ func (b *backupEntry) Migrate(ctx context.Context) error {
 	if err := b.client.Get(ctx, kutil.Key(b.values.Namespace, b.values.Name), backupEntry); err != nil {
 		return client.IgnoreNotFound(err)
 	}
-
-	metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate)
-	metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 	backupEntry.Spec.SeedName = b.values.SeedName
-
 	return b.client.Update(ctx, backupEntry)
 }
 
