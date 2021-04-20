@@ -22,6 +22,8 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -94,6 +96,10 @@ const (
 	// PathCredentialsClientKey is a constant for a path containing the 'client private key' credentials part for the
 	// download.
 	PathCredentialsClientKey = PathCredentialsDirectory + "/client.key"
+	// PathBootstrapToken Path to machine bootstraptoken
+	PathBootstrapToken = PathCredentialsDirectory + "/bootstrap-token"
+	// BootstrapTokenString is the token that is expected to be replaced by the worker controller with the actual token
+	BootstrapTokenString = "<<BOOTSTRAP_TOKEN>>"
 	// PathDownloadedCloudConfig is the path on the shoot worker nodes at which the downloaded cloud-config user-data
 	// will be stored.
 	PathDownloadedCloudConfig = PathDownloadsDirectory + "/cloud_config"
@@ -195,6 +201,21 @@ WantedBy=multi-user.target`),
 				},
 			},
 		},
+	}
+
+	if gardenletfeatures.FeatureGate.Enabled(features.BootstrapTokenForVMs) {
+		files = append(files,
+			extensionsv1alpha1.File{
+				Path:        PathBootstrapToken,
+				Permissions: pointer.Int32Ptr(0644),
+				Content: extensionsv1alpha1.FileContent{
+					Inline: &extensionsv1alpha1.FileContentInline{
+						Encoding: "b64",
+						Data:     utils.EncodeBase64([]byte(BootstrapTokenString)),
+					},
+					TransmitUnencoded: pointer.BoolPtr(true),
+				},
+			})
 	}
 
 	return units, files, nil
