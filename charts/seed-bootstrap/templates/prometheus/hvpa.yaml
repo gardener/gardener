@@ -1,0 +1,82 @@
+{{ if .Values.hvpa.enabled }}
+apiVersion: autoscaling.k8s.io/v1alpha1
+kind: Hvpa
+metadata:
+  name: prometheus
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ toYaml .Values.prometheus.labels | indent 4 }}
+spec:
+  replicas: 1
+{{- if .Values.prometheus.hvpa.maintenanceTimeWindow }}
+  maintenanceTimeWindow:
+{{ toYaml .Values.prometheus.hvpa.maintenanceTimeWindow | indent 4 }}
+{{- end }}
+  hpa:
+    selector:
+      matchLabels:
+        role: prometheus-hpa
+    deploy: false
+    template:
+      metadata:
+        labels:
+          role: prometheus-hpa
+      spec:
+        maxReplicas: 1
+        minReplicas: 1
+        metrics:
+        - resource:
+            name: memory
+            targetAverageUtilization: {{ .Values.prometheus.hvpa.targetAverageUtilizationMemory }}
+          type: Resource
+        - resource:
+            name: cpu
+            targetAverageUtilization: {{ .Values.prometheus.hvpa.targetAverageUtilizationCpu }}
+          type: Resource
+  vpa:
+    selector:
+      matchLabels:
+        role: prometheus-vpa
+    deploy: true
+    scaleUp:
+      updatePolicy:
+        updateMode: "Auto"
+{{- if .Values.prometheus.hvpa.scaleUpStabilization }}
+{{ toYaml .Values.prometheus.hvpa.scaleUpStabilization | indent 6 }}
+{{- end }}
+    scaleDown:
+      updatePolicy:
+{{- if .Values.prometheus.hvpa.maintenanceTimeWindow }}
+        updateMode: "MaintenanceWindow"
+{{- else }}
+        updateMode: "Auto"
+{{- end }}
+{{- if .Values.prometheus.hvpa.scaleDownStabilization }}
+{{ toYaml .Values.prometheus.hvpa.scaleDownStabilization | indent 6 }}
+{{- end }}
+{{- if .Values.prometheus.hvpa.limitsRequestsGapScaleParams }}
+    limitsRequestsGapScaleParams:
+{{ toYaml .Values.prometheus.hvpa.limitsRequestsGapScaleParams | indent 6 }}
+{{- end }}
+    template:
+      metadata:
+        labels:
+          role: prometheus-vpa
+      spec:
+        resourcePolicy:
+          containerPolicies:
+            - containerName: prometheus
+              minAllowed:
+                memory: {{ .Values.prometheus.hvpa.minAllowed.memory }}
+                cpu: "{{ .Values.prometheus.hvpa.minAllowed.cpu }}"
+            - containerName: prometheus-config-reloader
+              mode: "Off"
+  weightBasedScalingIntervals:
+    - vpaWeight: 100
+      startReplicaCount: 1
+      lastReplicaCount: 1
+  targetRef:
+    apiVersion:  {{ include "statefulsetversion" . }}
+    kind: StatefulSet
+    name: prometheus
+{{ end }}
