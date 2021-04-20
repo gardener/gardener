@@ -74,6 +74,14 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 		}
 	}
 
+	exposureClassHandlersPath := fldPath.Child("exposureClassHandlers")
+	for i, handler := range cfg.ExposureClassHandlers {
+		handlerPath := exposureClassHandlersPath.Index(i)
+		if len(handler.Name) == 0 {
+			allErrs = append(allErrs, field.Invalid(handlerPath.Child("name"), handler.Name, "handler name cannot be empty"))
+		}
+	}
+
 	return allErrs
 }
 

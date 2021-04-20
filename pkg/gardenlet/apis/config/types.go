@@ -67,6 +67,8 @@ type GardenletConfiguration struct {
 	// SNI contains an optional configuration for the APIServerSNI feature used
 	// by the Gardenlet in the seed clusters.
 	SNI *SNI
+	// ExposureClassHandlers is a list of optional of exposure class handlers.
+	ExposureClassHandlers []ExposureClassHandler
 }
 
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
@@ -382,4 +384,23 @@ type SNIIngress struct {
 	// Labels of the ingressgateway
 	// Defaults to "istio: ingressgateway".
 	Labels map[string]string
+}
+
+// ExposureClassHandler contains configuration for an exposure class handler.
+type ExposureClassHandler struct {
+	// Name is the name of the exposure class handler.
+	Name string
+	// LoadBalancerService contains configuration which is used to configure the underlying
+	// load balancer to apply the control plane endpoint exposure strategy.
+	LoadBalancerService LoadBalancerServiceConfig
+	// SNI contains optional configuration for a dedicated ingressgateway belonging to
+	// an exposure class handler. This is only required in context of the APIServerSNI feature of the gardenlet.
+	SNI *SNI
+}
+
+// LoadBalancerService contains configuration which is used to configure the underlying
+// load balancer to apply the control plane endpoint exposure strategy.
+type LoadBalancerServiceConfig struct {
+	// Annotations is a key value map to annotate the underlying load balancer services.
+	Annotations map[string]string
 }
