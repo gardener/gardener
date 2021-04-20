@@ -55,7 +55,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 
 	if b.Shoot.Info.DeletionTimestamp == nil {
 		if b.Shoot.KonnectivityTunnelEnabled {
-			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, "vpn-seed", "vpn-seed-tlsauth", "vpn-shoot", vpnseedserver.DeploymentName, "vpn-shoot-client", vpnseedserver.VpnSeedServerTLSAuth); err != nil {
+			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, "vpn-seed", "vpn-seed-tlsauth", "vpn-shoot", vpnseedserver.DeploymentName, vpnseedserver.VpnShootSecretName, vpnseedserver.VpnSeedServerTLSAuth); err != nil {
 				return err
 			}
 		} else {
@@ -68,7 +68,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 				return err
 			}
 		} else {
-			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, vpnseedserver.DeploymentName, "vpn-shoot-client", vpnseedserver.VpnSeedServerTLSAuth); err != nil {
+			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, vpnseedserver.DeploymentName, vpnseedserver.VpnShootSecretName, vpnseedserver.VpnSeedServerTLSAuth); err != nil {
 				return err
 			}
 		}

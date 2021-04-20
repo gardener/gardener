@@ -21,10 +21,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	"github.com/gogo/protobuf/types"
 	"istio.io/api/networking/v1beta1"
@@ -70,9 +68,9 @@ var _ = Describe("VpnSeedServer", func() {
 		secretChecksumDH      = "9012"
 		secretDataDH          = map[string][]byte{"dh2048.pem": []byte("baz")}
 		secrets               = Secrets{
-			TLSAuth: component.Secret{Name: secretNameTLSAuth, Checksum: secretChecksumTLSAuth, Data: secretDataTLSAuth},
-			Server:  component.Secret{Name: secretNameServer, Checksum: secretChecksumServer, Data: secretDataServer},
-			DH:      component.Secret{Name: secretNameDH, Checksum: secretChecksumDH, Data: secretDataDH},
+			TLSAuth:          component.Secret{Name: secretNameTLSAuth, Checksum: secretChecksumTLSAuth, Data: secretDataTLSAuth},
+			Server:           component.Secret{Name: secretNameServer, Checksum: secretChecksumServer, Data: secretDataServer},
+			DiffieHellmanKey: component.Secret{Name: secretNameDH, Checksum: secretChecksumDH, Data: secretDataDH},
 		}
 
 		configMap = func() *corev1.ConfigMap {
@@ -80,10 +78,6 @@ var _ = Describe("VpnSeedServer", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      EnvoyConfig,
 					Namespace: namespace,
-					Labels: map[string]string{
-						v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
-						managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
-					},
 				},
 				Data: map[string]string{
 					"envoy.yaml": `static_resources:
@@ -163,17 +157,16 @@ var _ = Describe("VpnSeedServer", func() {
 					Name:      DeploymentName,
 					Namespace: namespace,
 					Labels: map[string]string{
-						v1beta1constants.GardenRole: "controlplane",
-						"app":                       DeploymentName,
+						v1beta1constants.GardenRole:                      v1beta1constants.GardenRoleControlPlane,
+						v1beta1constants.LabelApp:                        DeploymentName,
 						"networking.gardener.cloud/from-shoot-apiserver": "allowed",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					MinReadySeconds:      30,
 					Replicas:             pointer.Int32Ptr(replicas),
 					RevisionHistoryLimit: pointer.Int32Ptr(1),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
-						"app": DeploymentName,
+						v1beta1constants.LabelApp: DeploymentName,
 					}},
 					Strategy: appsv1.DeploymentStrategy{
 						RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -185,17 +178,16 @@ var _ = Describe("VpnSeedServer", func() {
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								v1beta1constants.GardenRole: "controlplane",
-								"garden.sapcloud.io/role":   "controlplane",
-								"app":                       DeploymentName,
-								"networking.gardener.cloud/to-shoot-networks":        v1beta1constants.LabelNetworkPolicyAllowed,
+								v1beta1constants.GardenRole:                          v1beta1constants.GardenRoleControlPlane,
+								v1beta1constants.LabelApp:                            DeploymentName,
+								v1beta1constants.LabelNetworkPolicyToShootNetworks:   v1beta1constants.LabelNetworkPolicyAllowed,
 								v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
 								v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
 								v1beta1constants.LabelNetworkPolicyFromPrometheus:    v1beta1constants.LabelNetworkPolicyAllowed,
 							},
 							Annotations: map[string]string{
 								"checksum/secret-" + secretNameTLSAuth: secrets.TLSAuth.Checksum,
-								"checksum/secret-" + secretNameDH:      secrets.DH.Checksum,
+								"checksum/secret-" + secretNameDH:      secrets.DiffieHellmanKey.Checksum,
 							},
 						},
 						Spec: corev1.PodSpec{
@@ -247,7 +239,7 @@ var _ = Describe("VpnSeedServer", func() {
 											MountPath: MountPathVpnSeedServer,
 										},
 										{
-											Name:      vpnseedserver.VpnSeedServerTLSAuth,
+											Name:      VpnSeedServerTLSAuth,
 											MountPath: MountPathTLSAuth,
 										},
 										{
@@ -307,10 +299,10 @@ var _ = Describe("VpnSeedServer", func() {
 									},
 								},
 								{
-									Name: vpnseedserver.VpnSeedServerTLSAuth,
+									Name: VpnSeedServerTLSAuth,
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
-											SecretName: vpnseedserver.VpnSeedServerTLSAuth,
+											SecretName: VpnSeedServerTLSAuth,
 										},
 									},
 								},
@@ -398,14 +390,14 @@ var _ = Describe("VpnSeedServer", func() {
 					Name:      "allow-to-vpn-seed-server",
 					Namespace: namespace,
 					Annotations: map[string]string{
-						"gardener.cloud/description": "Allows Egress from pods labeled with 'networking.gardener.cloud/to-vpn-seed-server=allowed' to talk to's Kubernetes API Server.",
+						"gardener.cloud/description": "Allows only Ingress/Egress between the kube-apiserver of the same control plane and the corresponding vpn-seed-server and Ingress from the istio ingress gateway to the vpn-seed-server.",
 					},
 				},
 				Spec: networkingv1.NetworkPolicySpec{
 					PodSelector: metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"gardener.cloud/role": "controlplane",
-							"app":                 "vpn-seed-server",
+							v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+							v1beta1constants.LabelApp:   DeploymentName,
 						},
 					},
 					Ingress: []networkingv1.NetworkPolicyIngressRule{
@@ -414,9 +406,9 @@ var _ = Describe("VpnSeedServer", func() {
 								{
 									PodSelector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
-											"gardener.cloud/role": "controlplane",
-											"app":                 "kubernetes",
-											"role":                "apiserver",
+											v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+											v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
+											v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
 										},
 									},
 								},
@@ -429,7 +421,7 @@ var _ = Describe("VpnSeedServer", func() {
 									NamespaceSelector: &metav1.LabelSelector{},
 									PodSelector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
-											"app": "istio-ingressgateway",
+											v1beta1constants.LabelApp: "istio-ingressgateway",
 										},
 									},
 								},
@@ -442,9 +434,9 @@ var _ = Describe("VpnSeedServer", func() {
 								{
 									PodSelector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
-											"gardener.cloud/role": "controlplane",
-											"app":                 "kubernetes",
-											"role":                "apiserver",
+											v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+											v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
+											v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
 										},
 									},
 								},
@@ -486,7 +478,7 @@ var _ = Describe("VpnSeedServer", func() {
 		service = func() *corev1.Service {
 			return &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      DeploymentName,
+					Name:      ServiceName,
 					Namespace: namespace,
 					Annotations: map[string]string{
 						"networking.istio.io/exportTo": "*",
@@ -507,7 +499,7 @@ var _ = Describe("VpnSeedServer", func() {
 						},
 					},
 					Selector: map[string]string{
-						"app": DeploymentName,
+						v1beta1constants.LabelApp: DeploymentName,
 					},
 				},
 			}
@@ -563,8 +555,8 @@ var _ = Describe("VpnSeedServer", func() {
 
 			It("should return an error because the Server secret information is not provided", func() {
 				vpnSeedServer.SetSecrets(Secrets{
-					TLSAuth: component.Secret{Name: secretNameTLSAuth, Checksum: secretChecksumTLSAuth},
-					DH:      component.Secret{Name: secretNameDH, Checksum: secretChecksumDH},
+					TLSAuth:          component.Secret{Name: secretNameTLSAuth, Checksum: secretChecksumTLSAuth},
+					DiffieHellmanKey: component.Secret{Name: secretNameDH, Checksum: secretChecksumDH},
 				})
 				Expect(vpnSeedServer.Deploy(ctx)).To(MatchError(ContainSubstring("missing server secret information")))
 			})
@@ -748,7 +740,7 @@ var _ = Describe("VpnSeedServer", func() {
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.VirtualService{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.VirtualService{})),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})).Return(fakeErr),
 				)
 
@@ -793,7 +785,7 @@ var _ = Describe("VpnSeedServer", func() {
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.VirtualService{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(virtualService()))
 					}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(service()))
 					}),
@@ -842,7 +834,7 @@ var _ = Describe("VpnSeedServer", func() {
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.VirtualService{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(virtualService()))
 					}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(service()))
 					}),
@@ -974,7 +966,7 @@ var _ = Describe("VpnSeedServer", func() {
 				c.EXPECT().Delete(ctx, &networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}).Return(fakeErr),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName}}).Return(fakeErr),
 			)
 
 			Expect(vpnSeedServer.Destroy(ctx)).To(MatchError(fakeErr))
@@ -991,7 +983,7 @@ var _ = Describe("VpnSeedServer", func() {
 				c.EXPECT().Delete(ctx, &networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName}}),
 			)
 			Expect(vpnSeedServer.Destroy(ctx)).To(Succeed())
 		})

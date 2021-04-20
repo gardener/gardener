@@ -141,9 +141,9 @@ var _ = Describe("VPNSeedServer", func() {
 
 		BeforeEach(func() {
 			vpnSeedServer.EXPECT().SetSecrets(vpnseedserver.Secrets{
-				TLSAuth: component.Secret{Name: secretNameTLSAuth, Checksum: secretChecksumTLSAuth},
-				Server:  component.Secret{Name: vpnseedserver.DeploymentName, Checksum: secretChecksumServer},
-				DH:      component.Secret{Name: secretNameDH, Checksum: secretChecksumDH},
+				TLSAuth:          component.Secret{Name: secretNameTLSAuth, Checksum: secretChecksumTLSAuth},
+				Server:           component.Secret{Name: vpnseedserver.DeploymentName, Checksum: secretChecksumServer},
+				DiffieHellmanKey: component.Secret{Name: secretNameDH, Checksum: secretChecksumDH},
 			})
 		})
 

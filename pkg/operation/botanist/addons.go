@@ -438,7 +438,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	} else if b.Shoot.ReversedVPNEnabled {
 		var (
 			vpnTLSAuthSecret = b.Secrets[vpnseedserver.VpnSeedServerTLSAuth]
-			vpnShootSecret   = b.Secrets["vpn-shoot-client"]
+			vpnShootSecret   = b.Secrets[vpnseedserver.VpnShootSecretName]
 			vpnShootConfig   = map[string]interface{}{
 				"endpoint":       b.outOfClusterAPIServerFQDN(),
 				"port":           "8132",
@@ -454,7 +454,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 					"enabled": true,
 				},
 				"podAnnotations": map[string]interface{}{
-					"checksum/secret-vpn-shoot-client": b.CheckSums["vpn-shoot-client"],
+					"checksum/secret-vpn-shoot-client": b.CheckSums[vpnseedserver.VpnShootSecretName],
 				},
 			}
 		)

@@ -684,7 +684,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		secretList = append(secretList,
 			// Secret definition for vpn-shoot (OpenVPN client side)
 			&secrets.CertificateSecretConfig{
-				Name:       "vpn-shoot-client",
+				Name:       vpnseedserver.VpnShootSecretName,
 				CommonName: "vpn-shoot-client",
 				CertType:   secrets.ClientCert,
 				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
@@ -694,14 +694,9 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			&secrets.CertificateSecretConfig{
 				Name:       "vpn-seed-server",
 				CommonName: "vpn-seed-server",
-				DNSNames: []string{
-					"vpn-seed-server",
-					fmt.Sprintf("vpn-seed-server.%s", b.Shoot.SeedNamespace),
-					fmt.Sprintf("vpn-seed-server.%s.svc", b.Shoot.SeedNamespace),
-					fmt.Sprintf("vpn-seed-server.%s.svc.cluster.local", b.Shoot.SeedNamespace),
-				},
-				CertType:  secrets.ServerCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
+				DNSNames:   kubernetes.DNSNamesForService(vpnseedserver.ServiceName, b.Shoot.SeedNamespace),
+				CertType:   secrets.ServerCert,
+				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 
 			&secrets.VPNTLSAuthConfig{

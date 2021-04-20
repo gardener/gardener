@@ -39,6 +39,13 @@ Vc3t7XP5q7afeaKmM3FhSXdeHKCTqQzQuwIBAg==
 `
 )
 
+var diffieHellmanKeyChecksum string
+
+// init calculates the checksum of the default diffie hellman key
+func init() {
+	diffieHellmanKeyChecksum = utils.ComputeChecksum(map[string][]byte{"dh2048.pem": []byte(diffieHellmanKey)})
+}
+
 // DefaultVPNSeedServer returns a deployer for the vpn-seed-server.
 func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.VPNSeedServer, error) {
 	imageAPIServerProxy, err := b.ImageVector.FindImage(charts.ImageNameApiserverProxy, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
@@ -75,19 +82,17 @@ func (b *Botanist) DeployVPNServer(ctx context.Context) error {
 		return b.Shoot.Components.ControlPlane.VPNSeedServer.Destroy(ctx)
 	}
 
-	var checkSumDH string
+	checkSumDH := diffieHellmanKeyChecksum
 	openvpnDiffieHellmanSecret := map[string][]byte{"dh2048.pem": []byte(diffieHellmanKey)}
 	if dh, ok := b.Secrets[v1beta1constants.GardenRoleOpenVPNDiffieHellman]; ok {
 		openvpnDiffieHellmanSecret = dh.Data
 		checkSumDH = b.CheckSums[v1beta1constants.GardenRoleOpenVPNDiffieHellman]
-	} else {
-		checkSumDH = utils.ComputeChecksum(openvpnDiffieHellmanSecret)
 	}
 
 	b.Shoot.Components.ControlPlane.VPNSeedServer.SetSecrets(vpnseedserver.Secrets{
-		TLSAuth: component.Secret{Name: vpnseedserver.VpnSeedServerTLSAuth, Checksum: b.CheckSums[vpnseedserver.VpnSeedServerTLSAuth], Data: b.Secrets[vpnseedserver.VpnSeedServerTLSAuth].Data},
-		Server:  component.Secret{Name: vpnseedserver.DeploymentName, Checksum: b.CheckSums[vpnseedserver.DeploymentName], Data: b.Secrets[vpnseedserver.DeploymentName].Data},
-		DH:      component.Secret{Name: v1beta1constants.GardenRoleOpenVPNDiffieHellman, Checksum: checkSumDH, Data: openvpnDiffieHellmanSecret},
+		TLSAuth:          component.Secret{Name: vpnseedserver.VpnSeedServerTLSAuth, Checksum: b.CheckSums[vpnseedserver.VpnSeedServerTLSAuth], Data: b.Secrets[vpnseedserver.VpnSeedServerTLSAuth].Data},
+		Server:           component.Secret{Name: vpnseedserver.DeploymentName, Checksum: b.CheckSums[vpnseedserver.DeploymentName], Data: b.Secrets[vpnseedserver.DeploymentName].Data},
+		DiffieHellmanKey: component.Secret{Name: v1beta1constants.GardenRoleOpenVPNDiffieHellman, Checksum: checkSumDH, Data: openvpnDiffieHellmanSecret},
 	})
 
 	return b.Shoot.Components.ControlPlane.VPNSeedServer.Deploy(ctx)
