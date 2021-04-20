@@ -1,7 +1,3 @@
-
-###
-# RBAC roles for bootstrapping gardenlets
-###
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
