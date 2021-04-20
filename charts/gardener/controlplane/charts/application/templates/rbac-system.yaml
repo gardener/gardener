@@ -1,25 +1,3 @@
-{{- if .Values.global.controller.enabled }}
----
-apiVersion: {{ include "rbacversion" . }}
-kind: ClusterRoleBinding
-metadata:
-  name: gardener.cloud:controller-manager:admin
-  labels:
-    app: gardener
-    role: apiserver
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-    release: "{{ .Release.Name }}"
-    heritage: "{{ .Release.Service }}"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-- kind: ServiceAccount
-  name: "{{ required ".Values.global.controller.serviceAccountName is required" .Values.global.controller.serviceAccountName }}"
-  namespace: garden
-{{- end }}
-
 {{- if .Values.global.admission.enabled }}
 ---
 apiVersion: {{ include "rbacversion" . }}
