@@ -150,6 +150,10 @@ type FileContent struct {
 	// Inline is a struct that contains information about the inlined data.
 	// +optional
 	Inline *FileContentInline `json:"inline,omitempty"`
+	// TransmitUnencoded set to true will ensure that the os-extension does not encode the file content when sent to the node.
+	// This for example can be used to manipulate the clear-text content before it reaches the node.
+	// +optional
+	TransmitUnencoded *bool `json:"transmitUnencoded,omitempty"`
 }
 
 // FileContentSecretRef contains keys for referencing a file content's data from a secret in the same namespace.

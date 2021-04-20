@@ -27,9 +27,10 @@ type Generator interface {
 
 // File is a file to be stored during the cloud init script.
 type File struct {
-	Path        string
-	Content     []byte
-	Permissions *int32
+	Path              string
+	Content           []byte
+	Permissions       *int32
+	TransmitUnencoded *bool
 }
 
 // Unit is a unit to be created during the cloud init script.

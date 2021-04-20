@@ -54,7 +54,7 @@ Please find more information regarding the extensibility concepts and a detailed
 
 ## How to use oscommon in a new operating system configuration controller
 
-When implemening a controller for a specific operating system, it is necessary to provide:
+When implementing a controller for a specific operating system, it is necessary to provide:
 * A command line application for launching the controller
 * A template for translating the `cloud-config` to the format requried by the operating system.
 * Alternatively, a new generator can also be provided, in case the transformations required by

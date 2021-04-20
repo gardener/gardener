@@ -95,6 +95,9 @@ spec:
                           - dataKey
                           - name
                         type: object
+                      transmitUnencoded:
+                        description: transmitUnencoded set to true will lead to the file content being transmitted unencoded to the host system. This can be used to manipulate the content on the way. Defaults to false.
+                        type: boolean
                     type: object
                   path:
                     description: Path is the path of the file system where the file should get written to.

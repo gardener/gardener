@@ -36,7 +36,7 @@ func CloudConfigFromOperatingSystemConfig(ctx context.Context, c client.Client, 
 			return nil, nil, err
 		}
 
-		files = append(files, &commonosgenerator.File{Path: file.Path, Content: data, Permissions: file.Permissions})
+		files = append(files, &commonosgenerator.File{Path: file.Path, Content: data, Permissions: file.Permissions, TransmitUnencoded: file.Content.TransmitUnencoded})
 	}
 
 	units := make([]*commonosgenerator.Unit, 0, len(config.Spec.Units))

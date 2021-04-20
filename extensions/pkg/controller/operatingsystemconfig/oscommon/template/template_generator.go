@@ -29,10 +29,11 @@ import (
 const DefaultUnitsPath = "/etc/systemd/system"
 
 type fileData struct {
-	Path        string
-	Content     string
-	Dirname     string
-	Permissions *string
+	Path              string
+	Content           string
+	Dirname           string
+	Permissions       *string
+	TransmitUnencoded *bool
 }
 
 type unitData struct {
@@ -75,9 +76,14 @@ func (t *CloudInitGenerator) Generate(data *generator.OperatingSystemConfig) ([]
 	var tFiles []*fileData
 	for _, file := range data.Files {
 		tFile := &fileData{
-			Path:    file.Path,
-			Content: utils.EncodeBase64(file.Content),
-			Dirname: path.Dir(file.Path),
+			Path:              file.Path,
+			Dirname:           path.Dir(file.Path),
+			TransmitUnencoded: file.TransmitUnencoded,
+		}
+		if file.TransmitUnencoded != nil && *file.TransmitUnencoded {
+			tFile.Content = string(file.Content)
+		} else {
+			tFile.Content = utils.EncodeBase64(file.Content)
 		}
 		if file.Permissions != nil {
 			permissions := fmt.Sprintf("%04o", *file.Permissions)
