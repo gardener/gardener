@@ -137,3 +137,14 @@ cleanup_controller_manager_webhook() {
     kubectl delete validatingwebhookconfiguration "gardener-controller-manager"
   fi
 }
+
+is_seedauthorizer_enabled() {
+  if [[ $kube_apiserver="$(docker inspect kube-apiserver)" ]]; then
+    auth_mode="$(docker inspect kube-apiserver | jq -r '.[].Args | map(select(startswith("--authorization-mode"))) | .[] | contains("Webhook")')"
+    if [[ "$auth_mode" == "true" ]]; then
+      return 0
+    fi
+    return 1
+  fi
+  return 1
+}

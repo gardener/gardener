@@ -16,9 +16,13 @@
 
 source $(dirname "${0}")/common/helpers
 
-mktemp_kubeconfig
-kubeconfig="$__tmp_kubeconfig"
-trap cleanup_kubeconfig EXIT
+if [[ $(k8s_env) == "$NODELESS" ]]; then
+  kubeconfig="$(dirname $0)/local-garden/kubeconfigs/gardener-admission-controller.conf"
+else
+  mktemp_kubeconfig
+  kubeconfig="$__tmp_kubeconfig"
+  trap cleanup_kubeconfig EXIT
+fi
 
 KUBECONFIG="${KUBECONFIG:-$kubeconfig}" GO111MODULE=on \
     go run \

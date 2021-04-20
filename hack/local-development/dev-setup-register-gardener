@@ -51,9 +51,6 @@ if [[ $(k8s_env) == "$NODELESS" ]]; then
 fi
 ADMISSION_CONTROLLER_PORT_STRING="      port: $ADMISSION_CONTROLLER_SERVICE_PORT"
 
-# TODO: Remove in a future version
-cleanup_controller_manager_webhook
-
 if kubectl get apiservice "$CORE_V1ALPHA1_APISERVICE_NAME" &> /dev/null; then
   kubectl delete apiservice $CORE_V1ALPHA1_APISERVICE_NAME --wait=false
   kubectl patch  apiservice $CORE_V1ALPHA1_APISERVICE_NAME -p '{"metadata":{"finalizers":null}}' 2> /dev/null || true

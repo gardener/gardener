@@ -16,12 +16,16 @@
 
 source $(dirname "${0}")/common/helpers
 
-mktemp_kubeconfig
-kubeconfig="$__tmp_kubeconfig"
+if [[ $(k8s_env) == "$NODELESS" ]]; then
+  kubeconfig="$(dirname $0)/local-garden/kubeconfigs/gardener-apiserver.conf"
+else
+  mktemp_kubeconfig
+  kubeconfig="$__tmp_kubeconfig"
+  trap cleanup_kubeconfig EXIT
+fi
+
 mktemp_tls_dir
 tls_dir="$__tmp_tls_dir"
-
-trap cleanup_kubeconfig EXIT
 trap cleanup_tls_dir EXIT
 
 case $(k8s_env) in
