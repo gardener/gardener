@@ -281,6 +281,7 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 		WithCloudProfileObject(cloudProfile).
 		WithShootSecretFromReader(gardenClient.APIReader()).
 		WithProjectName(project.Name).
+		WithExposureClassFromReader(gardenClient.APIReader()).
 		WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
 		WithInternalDomain(gardenObj.InternalDomain).
 		WithDefaultDomains(gardenObj.DefaultDomains).
@@ -295,6 +296,7 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 		WithConfig(c.config).
 		WithGardenerInfo(c.identity).
 		WithGardenClusterIdentity(c.gardenClusterIdentity).
+		WithExposureClassHandlerFromConfig(c.config).
 		WithSecrets(gardenSecrets).
 		WithImageVector(c.imageVector).
 		WithGarden(gardenObj).

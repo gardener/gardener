@@ -759,10 +759,17 @@ func (b *Botanist) DefaultKubeAPIServerService(sniPhase component.Phase) compone
 	return b.kubeAPIServiceService(sniPhase)
 }
 
+func (b *Botanist) getKubeApiServerServiceAnnotations(sniPhase component.Phase) map[string]string {
+	if b.ExposureClassHandler != nil && sniPhase != component.PhaseEnabled {
+		return utils.MergeStringMaps(b.Seed.LoadBalancerServiceAnnotations, b.ExposureClassHandler.LoadBalancerService.Annotations)
+	}
+	return b.Seed.LoadBalancerServiceAnnotations
+}
+
 func (b *Botanist) kubeAPIServiceService(sniPhase component.Phase) component.DeployWaiter {
 	return controlplane.NewKubeAPIService(
 		&controlplane.KubeAPIServiceValues{
-			Annotations:               b.Seed.LoadBalancerServiceAnnotations,
+			Annotations:               b.getKubeApiServerServiceAnnotations(sniPhase),
 			KonnectivityTunnelEnabled: b.Shoot.KonnectivityTunnelEnabled,
 			SNIPhase:                  sniPhase,
 		},

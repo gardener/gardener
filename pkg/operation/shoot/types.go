@@ -18,6 +18,7 @@ import (
 	"context"
 	"net"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
@@ -44,13 +45,14 @@ import (
 
 // Builder is an object that builds Shoot objects.
 type Builder struct {
-	shootObjectFunc  func(context.Context) (*gardencorev1beta1.Shoot, error)
-	cloudProfileFunc func(context.Context, string) (*gardencorev1beta1.CloudProfile, error)
-	shootSecretFunc  func(context.Context, string, string) (*corev1.Secret, error)
-	projectName      string
-	internalDomain   *garden.Domain
-	defaultDomains   []*garden.Domain
-	disableDNS       bool
+	shootObjectFunc   func(context.Context) (*gardencorev1beta1.Shoot, error)
+	cloudProfileFunc  func(context.Context, string) (*gardencorev1beta1.CloudProfile, error)
+	exposureClassFunc func(context.Context, string) (*gardencorev1alpha1.ExposureClass, error)
+	shootSecretFunc   func(context.Context, string, string) (*corev1.Secret, error)
+	projectName       string
+	internalDomain    *garden.Domain
+	defaultDomains    []*garden.Domain
+	disableDNS        bool
 }
 
 // Shoot is an object containing information about a Shoot cluster.
@@ -78,6 +80,7 @@ type Shoot struct {
 	ReversedVPNEnabled         bool
 	NodeLocalDNSEnabled        bool
 	Networks                   *Networks
+	ExposureClass              *gardencorev1alpha1.ExposureClass
 
 	Components     *Components
 	ETCDEncryption *etcdencryption.EncryptionConfig

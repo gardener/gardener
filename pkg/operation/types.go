@@ -42,6 +42,7 @@ type Builder struct {
 	gardenerInfoFunc          func() (*gardencorev1beta1.Gardener, error)
 	gardenClusterIdentityFunc func() (string, error)
 	imageVectorFunc           func() (imagevector.ImageVector, error)
+	exposureClassFunc         func(string) (*config.ExposureClassHandler, error)
 	loggerFunc                func() (*logrus.Entry, error)
 	secretsFunc               func() (map[string]*corev1.Secret, error)
 	seedFunc                  func(context.Context) (*seed.Seed, error)
@@ -74,6 +75,7 @@ type Operation struct {
 	APIServerHealthCheckToken string
 	SeedNamespaceObject       *corev1.Namespace
 	MonitoringClient          prometheusclient.API
+	ExposureClassHandler      *config.ExposureClassHandler
 
 	// ControlPlaneWildcardCert is a wildcard tls certificate which is issued for the seed's ingress domain.
 	ControlPlaneWildcardCert *corev1.Secret
