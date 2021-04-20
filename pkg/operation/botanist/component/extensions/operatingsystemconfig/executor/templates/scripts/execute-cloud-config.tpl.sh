@@ -68,6 +68,12 @@ fi
 
 md5sum ${PATH_CCD_SCRIPT} > ${PATH_CCD_SCRIPT_CHECKSUM}
 
+BOOTSTRAP_TOKEN="{{ .bootstrapToken }}"
+# If a worker controller created bootstrapToken exists then use it
+if [[ -f "{{ .pathBootstrapToken }}" ]]; then
+  BOOTSTRAP_TOKEN=$(cat "{{ .pathBootstrapToken }}")
+fi
+
 if [[ ! -f "{{ .pathKubeletKubeconfigReal }}" ]] || [[ ! -f "{{ .pathKubeletDirectory }}/pki/kubelet-client-current.pem" ]]; then
   cat <<EOF > "{{ .pathKubeletKubeconfigBootstrap }}"
 ---
@@ -88,11 +94,14 @@ users:
 - name: kubelet-bootstrap
   user:
     as-user-extra: {}
-    token: {{ .bootstrapToken }}
+    token: "$BOOTSTRAP_TOKEN"
 EOF
 
 else
   rm -f "{{ .pathKubeletKubeconfigBootstrap }}"
+  if [[ -f "{{ .pathBootstrapToken }}" ]]; then
+    rm -f "{{ .pathBootstrapToken }}"
+  fi
 fi
 
 NODENAME=
