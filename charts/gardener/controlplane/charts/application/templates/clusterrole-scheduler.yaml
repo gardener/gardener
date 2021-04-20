@@ -1,0 +1,71 @@
+{{- if .Values.global.scheduler.enabled }}
+# ClusterRole defines the required permissions for the gardener-scheduler
+# Configmap: GET on gardener-scheduler-configmap to read the scheduler configuration & DELETE, GET, PATCH, UPDATE on gardener-scheduler-leader-election
+# Events: CREATE, PATCH, UPDATE to send scheduling events
+# Seeds: GET, LIST, WATCH
+# Shoots: GET, LIST, WATCH, no modification rights needed
+# Shoots/binding CREATE on binding subresource of shoots - actual scheduling request that leads to setting shoot.Spec.Cloud.Seed
+# Shoots/status PATCH, UPDATE on status subresource of shoots
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: gardener.cloud:system:gardener-scheduler
+  labels:
+    app: gardener
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - patch
+  - update
+- apiGroups:
+  - core.gardener.cloud
+  resources:
+  - seeds
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - core.gardener.cloud
+  resources:
+  - shoots
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  resourceNames:
+  - gardener-scheduler-leader-election
+  verbs:
+  - get
+  - watch
+  - update
+{{- end }}
