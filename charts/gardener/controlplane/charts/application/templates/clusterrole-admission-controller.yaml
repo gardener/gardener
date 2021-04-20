@@ -18,7 +18,7 @@ rules:
   - backupentries
   - controllerinstallations
   - secretbindings
-  - seed
+  - seeds
   - shoots
   - shootstates
   - projects
