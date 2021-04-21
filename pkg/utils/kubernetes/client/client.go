@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/onsi/ginkgo"
-
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	utiltime "github.com/gardener/gardener/pkg/utils/time"
@@ -88,7 +86,6 @@ var defaultFinalizer = NewFinalizer()
 
 // Finalize removes the finalizers (.meta.finalizers) of given resource.
 func (f *finalizer) Finalize(ctx context.Context, c client.Client, obj client.Object) error {
-	defer ginkgo.GinkgoRecover()
 	withFinalizers := obj.DeepCopyObject()
 	obj.SetFinalizers(nil)
 	return c.Patch(ctx, obj, client.MergeFrom(withFinalizers))
