@@ -26,11 +26,13 @@ import (
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	networkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -63,6 +65,8 @@ const (
 	envoyTLSConfigDir = "/etc/tls"
 	// envoyPort is the port exposed by the envoy proxy on which it receives http proxy/connect requests.
 	envoyPort = 9443
+	// envoyProxyContainerName is the name of the envoy proxy container.
+	envoyProxyContainerName = "envoy-proxy"
 )
 
 // VPNSeedServer contains functions for a vpn-seed-server deployer.
@@ -144,6 +148,9 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		gateway         = v.emptyGateway()
 		virtualService  = v.emptyVirtualService()
 		destinationRule = v.emptyDestinationRule()
+		vpa             = v.emptyVPA()
+
+		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 	)
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, v.client, serverSecret, func() error {
@@ -329,7 +336,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							},
 						},
 						{
-							Name:            "envoy-proxy",
+							Name:            envoyProxyContainerName,
 							Image:           v.imageAPIServerProxy,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							SecurityContext: &corev1.SecurityContext{
@@ -526,6 +533,38 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if _, err := controllerutil.CreateOrUpdate(ctx, v.client, vpa, func() error {
+		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
+			APIVersion: appsv1.SchemeGroupVersion.String(),
+			Kind:       "Deployment",
+			Name:       DeploymentName,
+		}
+		vpa.Spec.UpdatePolicy = &autoscalingv1beta2.PodUpdatePolicy{
+			UpdateMode: &vpaUpdateMode,
+		}
+		vpa.Spec.ResourcePolicy = &autoscalingv1beta2.PodResourcePolicy{
+			ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+				{
+					ContainerName: DeploymentName,
+					MinAllowed: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("100m"),
+						corev1.ResourceMemory: resource.MustParse("100Mi"),
+					},
+				},
+				{
+					ContainerName: envoyProxyContainerName,
+					MinAllowed: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("20m"),
+						corev1.ResourceMemory: resource.MustParse("20Mi"),
+					},
+				},
+			},
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -543,6 +582,7 @@ func (v *vpnSeedServer) Destroy(ctx context.Context) error {
 		v.emptyDestinationRule(),
 		v.emptyVirtualService(),
 		v.emptyService(),
+		v.emptyVPA(),
 	)
 }
 
@@ -581,6 +621,10 @@ func (v *vpnSeedServer) emptyVirtualService() *networkingv1beta1.VirtualService 
 
 func (v *vpnSeedServer) emptyDestinationRule() *networkingv1beta1.DestinationRule {
 	return &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: v.namespace}}
+}
+
+func (v *vpnSeedServer) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
+	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName + "-vpa", Namespace: v.namespace}}
 }
 
 var envoyConfig = `static_resources:
