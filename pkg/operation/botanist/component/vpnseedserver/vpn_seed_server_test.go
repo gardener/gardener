@@ -64,7 +64,7 @@ var _ = Describe("VpnSeedServer", func() {
 		secretNameServer      = DeploymentName
 		secretChecksumServer  = "5678"
 		secretDataServer      = map[string][]byte{"ca.crt": []byte("baz"), "tls.crt": []byte("baz"), "tls.key": []byte("baz")}
-		secretNameDH          = VpnSeedServerDH
+		secretNameDH          = "vpn-seed-server-dh"
 		secretChecksumDH      = "9012"
 		secretDataDH          = map[string][]byte{"dh2048.pem": []byte("baz")}
 		secrets               = Secrets{
@@ -76,7 +76,7 @@ var _ = Describe("VpnSeedServer", func() {
 		configMap = func() *corev1.ConfigMap {
 			return &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      EnvoyConfig,
+					Name:      "vpn-seed-server-envoy-config",
 					Namespace: namespace,
 				},
 				Data: map[string]string{
@@ -236,15 +236,15 @@ var _ = Describe("VpnSeedServer", func() {
 									VolumeMounts: []corev1.VolumeMount{
 										{
 											Name:      DeploymentName,
-											MountPath: MountPathVpnSeedServer,
+											MountPath: "/srv/secrets/vpn-server",
 										},
 										{
 											Name:      VpnSeedServerTLSAuth,
-											MountPath: MountPathTLSAuth,
+											MountPath: "/srv/secrets/tlsauth",
 										},
 										{
-											Name:      VpnSeedServerDH,
-											MountPath: MountPathDH,
+											Name:      "vpn-seed-server-dh",
+											MountPath: "/srv/secrets/dh",
 										},
 									},
 								},
@@ -307,10 +307,10 @@ var _ = Describe("VpnSeedServer", func() {
 									},
 								},
 								{
-									Name: VpnSeedServerDH,
+									Name: "vpn-seed-server-dh",
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
-											SecretName: VpnSeedServerDH,
+											SecretName: "vpn-seed-server-dh",
 										},
 									},
 								},
@@ -319,7 +319,7 @@ var _ = Describe("VpnSeedServer", func() {
 									VolumeSource: corev1.VolumeSource{
 										ConfigMap: &corev1.ConfigMapVolumeSource{
 											LocalObjectReference: corev1.LocalObjectReference{
-												Name: EnvoyConfig,
+												Name: "vpn-seed-server-envoy-config",
 											},
 										},
 									},
@@ -453,7 +453,7 @@ var _ = Describe("VpnSeedServer", func() {
 
 		secretDH = func() *corev1.Secret {
 			return &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: VpnSeedServerDH, Namespace: namespace},
+				ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-server-dh", Namespace: namespace},
 				Type:       corev1.SecretTypeOpaque,
 				Data:       secretDataDH,
 			}

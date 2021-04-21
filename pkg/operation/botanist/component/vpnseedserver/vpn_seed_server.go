@@ -39,26 +39,26 @@ import (
 const (
 	// VpnSeedServerTLSAuth is the name of seed server tlsauth Secret.
 	VpnSeedServerTLSAuth = "vpn-seed-server-tlsauth"
-	// VpnSeedServerDH is the name of seed server DH Secret.
-	VpnSeedServerDH = "vpn-seed-server-dh"
+	// vpnSeedServerDH is the name of seed server DH Secret.
+	vpnSeedServerDH = "vpn-seed-server-dh"
 	// VpnShootSecretName is the name of the shoot secret.
 	VpnShootSecretName = "vpn-shoot-client"
 	// DeploymentName is the name of vpn seed server deployment.
 	DeploymentName = v1beta1constants.DeploymentNameVPNSeedServer
 	// ServiceName is the name of the vpn seed server service running internally on the control plane in seed.
 	ServiceName = DeploymentName
-	// EnvoyConfig is the name of the vpn seed server envoy configuration.
-	EnvoyConfig = "vpn-seed-server-envoy-config"
-	// MountPathVpnSeedServer contains the mount path for the vpn seed server secret.
-	MountPathVpnSeedServer = "/srv/secrets/vpn-server"
-	// MountPathTLSAuth contains the mount path for the tlsauth secret.
-	MountPathTLSAuth = "/srv/secrets/tlsauth"
-	// MountPathDH contains the mount path for the dh secret.
-	MountPathDH = "/srv/secrets/dh"
+	// mountPathVpnSeedServer contains the mount path for the vpn seed server secret.
+	mountPathVpnSeedServer = "/srv/secrets/vpn-server"
+	// mountPathTLSAuth contains the mount path for the tlsauth secret.
+	mountPathTLSAuth = "/srv/secrets/tlsauth"
+	// mountPathDH contains the mount path for the dh secret.
+	mountPathDH = "/srv/secrets/dh"
+	// envoyConfigName is the name of the vpn seed server envoy configuration.
+	envoyConfigName = "vpn-seed-server-envoy-config"
 	// envoyConfigDir contains the envoy configuration file.
 	envoyConfigDir = "/etc/envoy"
-	// envoyConfigName is the name of the envoy configuration file.
-	envoyConfigName = "envoy.yaml"
+	// envoyConfigFileName is the name of the envoy configuration file.
+	envoyConfigFileName = "envoy.yaml"
 	// envoyTLSConfigDir contains the envoy TLS certificates.
 	envoyTLSConfigDir = "/etc/tls"
 	// envoyPort is the port exposed by the envoy proxy on which it receives http proxy/connect requests.
@@ -137,7 +137,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		configMap       = v.emptyConfigMap()
 		serverSecret    = v.emptySecret(DeploymentName)
 		tlsAuthSecret   = v.emptySecret(VpnSeedServerTLSAuth)
-		dhSecret        = v.emptySecret(VpnSeedServerDH)
+		dhSecret        = v.emptySecret(vpnSeedServerDH)
 		service         = v.emptyService()
 		deployment      = v.emptyDeployment()
 		networkPolicy   = v.emptyNetworkPolicy()
@@ -316,15 +316,15 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      DeploymentName,
-									MountPath: MountPathVpnSeedServer,
+									MountPath: mountPathVpnSeedServer,
 								},
 								{
 									Name:      VpnSeedServerTLSAuth,
-									MountPath: MountPathTLSAuth,
+									MountPath: mountPathTLSAuth,
 								},
 								{
-									Name:      VpnSeedServerDH,
-									MountPath: MountPathDH,
+									Name:      vpnSeedServerDH,
+									MountPath: mountPathDH,
 								},
 							},
 						},
@@ -344,7 +344,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 								"--concurrency",
 								"2",
 								"-c",
-								fmt.Sprintf("%s/%s", envoyConfigDir, envoyConfigName),
+								fmt.Sprintf("%s/%s", envoyConfigDir, envoyConfigFileName),
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
@@ -387,10 +387,10 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							},
 						},
 						{
-							Name: VpnSeedServerDH,
+							Name: vpnSeedServerDH,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: VpnSeedServerDH,
+									SecretName: vpnSeedServerDH,
 								},
 							},
 						},
@@ -399,7 +399,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: EnvoyConfig,
+										Name: envoyConfigName,
 									},
 								},
 							},
@@ -421,7 +421,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, v.client, configMap, func() error {
 		configMap.Data = map[string]string{
-			envoyConfigName: envoyConfig,
+			envoyConfigFileName: envoyConfig,
 		}
 		return nil
 	}); err != nil {
@@ -535,7 +535,7 @@ func (v *vpnSeedServer) Destroy(ctx context.Context) error {
 		v.client,
 		v.emptySecret(DeploymentName),
 		v.emptySecret(VpnSeedServerTLSAuth),
-		v.emptySecret(VpnSeedServerDH),
+		v.emptySecret(vpnSeedServerDH),
 		v.emptyNetworkPolicy(),
 		v.emptyDeployment(),
 		v.emptyConfigMap(),
@@ -552,7 +552,7 @@ func (v *vpnSeedServer) WaitCleanup(_ context.Context) error { return nil }
 func (v *vpnSeedServer) SetSecrets(secrets Secrets) { v.secrets = secrets }
 
 func (v *vpnSeedServer) emptyConfigMap() *corev1.ConfigMap {
-	return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: EnvoyConfig, Namespace: v.namespace}}
+	return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: envoyConfigName, Namespace: v.namespace}}
 }
 
 func (v *vpnSeedServer) emptyService() *corev1.Service {
