@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -238,7 +237,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	}
 
 	shoot.ReversedVPNEnabled = gardenletfeatures.FeatureGate.Enabled(features.ReversedVPN)
-	if reversedVPNEnabled, err := strconv.ParseBool(shoot.Info.Annotations[v1alpha1constants.AnnotationReversedVPN]); err == nil {
+	if reversedVPNEnabled, err := strconv.ParseBool(shoot.Info.Annotations[v1beta1constants.AnnotationReversedVPN]); err == nil {
 		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) && !shoot.KonnectivityTunnelEnabled {
 			shoot.ReversedVPNEnabled = reversedVPNEnabled
 		}
