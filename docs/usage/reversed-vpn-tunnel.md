@@ -45,5 +45,6 @@ To disable the feature-gate the shoot must be annotated with `"alpha.featuregate
 Once the feature-gate is enabled, a `vpn-seed-server` deployment will be added to the controlplane. The `kube-apiserver` will be configured to connect to resources in the dataplane such as pods, services and nodes though the `vpn-seed-service` via http proxy/connect protocol.
 In the dataplane of the cluster, the `vpn-shoot` will establish the connection to the `vpn-seed-server` indirectly using the SNI API Server endpoint as a http proxy. After the connection has been established requests from the `kube-apiserver` will be handled by the tunnel.
 
-> Please note that this feature is still in Alpha, so you might see instabilities every now and then. 
+> Please note this feature is available ONLY for >= 1.16 kubernetes clusters. For clusters with Kubernetes version < 1.16, the default OpenVPN setup will be used by default even if the featuregate is enabled.
+> Furthermore, this feature is still in Alpha, so you might see instabilities every now and then. 
 

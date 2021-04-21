@@ -46,11 +46,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var versionConstraintK8sGreaterEqual118 *semver.Constraints
+var (
+	versionConstraintK8sGreaterEqual116 *semver.Constraints
+	versionConstraintK8sGreaterEqual118 *semver.Constraints
+)
 
 func init() {
 	var err error
 
+	versionConstraintK8sGreaterEqual116, err = semver.NewConstraint(">= 1.16")
+	utilruntime.Must(err)
 	versionConstraintK8sGreaterEqual118, err = semver.NewConstraint(">= 1.18")
 	utilruntime.Must(err)
 }
@@ -236,8 +241,9 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 		shoot.KonnectivityTunnelEnabled = konnectivityTunnelEnabled
 	}
 
-	shoot.ReversedVPNEnabled = gardenletfeatures.FeatureGate.Enabled(features.ReversedVPN)
-	if reversedVPNEnabled, err := strconv.ParseBool(shoot.Info.Annotations[v1beta1constants.AnnotationReversedVPN]); err == nil {
+	kubernetesVersionGeq116 := versionConstraintK8sGreaterEqual116.Check(kubernetesVersion)
+	shoot.ReversedVPNEnabled = gardenletfeatures.FeatureGate.Enabled(features.ReversedVPN) && kubernetesVersionGeq116
+	if reversedVPNEnabled, err := strconv.ParseBool(shoot.Info.Annotations[v1beta1constants.AnnotationReversedVPN]); err == nil && kubernetesVersionGeq116 {
 		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) && !shoot.KonnectivityTunnelEnabled {
 			shoot.ReversedVPNEnabled = reversedVPNEnabled
 		}
