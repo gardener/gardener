@@ -209,6 +209,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							NamespaceSelector: &metav1.LabelSelector{},
 							PodSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
+									// TODO (mvladev): use configurable labels
 									v1beta1constants.LabelApp: "istio-ingressgateway",
 								},
 							},
