@@ -240,16 +240,15 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 			return err
 		}
 
-		// TODO: remove this mitigation once there is a garbage collection for VolumeAttachments (ref https://github.com/kubernetes/kubernetes/issues/77324)
+		// TODO: check if we can remove this mitigation once there is a garbage collection for VolumeAttachments (ref https://github.com/kubernetes/kubernetes/issues/77324)
 		// Currently on hibernation Machines are forecefully deleted and machine-controller-manager does not wait volumes to be detached.
 		// In this case kube-controller-manager cannot delete the corresponding VolumeAttachment objects and they are orphaned.
 		// Such orphaned VolumeAttachments then prevent/block PV deletion. For more details see https://github.com/gardener/gardener-extension-provider-gcp/issues/172.
 		// As the Nodes are already deleted, we can delete all VolumeAttachments.
-		if err := DeleteVolumeAttachments(ctxWithTimeOut, b.K8sShootClient.Client()); err != nil {
-			return err
-		}
-
-		if err := WaitUntilVolumeAttachmentsDeleted(ctxWithTimeOut, b.K8sShootClient.Client(), b.Logger); err != nil {
+		// Note: if custom csi-drivers are installed in the cluster (controllers running on the shoot itself), the VolumeAttachments will
+		// probably not be finalized, because the controller pods are drained like all the other pods, so we still need to cleanup
+		// VolumeAttachments of those csi-drivers.
+		if err := CleanVolumeAttachments(ctxWithTimeOut, b.K8sShootClient.Client()); err != nil {
 			return err
 		}
 	}
