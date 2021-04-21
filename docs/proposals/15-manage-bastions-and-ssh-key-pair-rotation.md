@@ -76,7 +76,8 @@ The following is a list of involved components, that either need to be newly int
 0. Users should only get the RBAC permission to `create` / `update` `Bastion` resources for a namespace, if they should be allowed to `ssh` onto the shoot nodes in this namespace. A project member with `admin` role will have these permissions.
 1. User/`gardenctlv2` creates `Bastion` resource in garden cluster (see [resource example](#resource-example) below)
     - First, gardenctl would figure out the own public IP of the user's machine. Either by calling an external service (gardenctl (v1) uses https://github.com/gardener/gardenctl/blob/master/pkg/cmd/miscellaneous.go#L226) or by calling a binary that prints the public IP(s) to stdout. The binary should be configurable. The result is set under `spec.ingress[].ipBlock.cidr`
-    - the public `ssh` key of the user is set under `spec.sshPublicKey`. The key needs to be configured beforehand by the user
+    - Creates new `ssh` key pair. The newly created key pair is used only once for each bastion host, so it has a 1:1 relationship to it. It is cleaned up after it is not used anymore, e.g. if the `Bastion` resource was deleted.
+    - The public `ssh` key is set under `spec.sshPublicKey`
     - The targeted shoot is set under `spec.shootRef`
 2. GAPI Admission Plugin for the `Bastion` resource in the garden cluster
     - on creation, sets `metadata.annotations["gardener.cloud/created-by"]` according to the user that created the resource
