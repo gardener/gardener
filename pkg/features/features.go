@@ -93,6 +93,6 @@ const (
 
 	// ReversedVPN moves the openvpn server to the seed.
 	// owner: @scheererj @docktofuture
-	// alpha: v1.20.0
+	// alpha: v1.22.0
 	ReversedVPN featuregate.Feature = "ReversedVPN"
 )
