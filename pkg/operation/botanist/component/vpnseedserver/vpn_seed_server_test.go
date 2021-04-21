@@ -76,14 +76,13 @@ var _ = Describe("VpnSeedServer", func() {
 			DiffieHellmanKey: component.Secret{Name: secretNameDH, Checksum: secretChecksumDH, Data: secretDataDH},
 		}
 
-		configMap = func() *corev1.ConfigMap {
-			return &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "vpn-seed-server-envoy-config",
-					Namespace: namespace,
-				},
-				Data: map[string]string{
-					"envoy.yaml": `static_resources:
+		configMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpn-seed-server-envoy-config",
+				Namespace: namespace,
+			},
+			Data: map[string]string{
+				"envoy.yaml": `static_resources:
   listeners:
   - name: listener_0
     address:
@@ -148,8 +147,7 @@ var _ = Describe("VpnSeedServer", func() {
         dns_cache_config:
           name: dynamic_forward_proxy_cache_config
           dns_lookup_family: V4_ONLY`,
-				},
-			}
+			},
 		}
 
 		deployment = func(nodeNetwork *string) *appsv1.Deployment {
@@ -338,233 +336,215 @@ var _ = Describe("VpnSeedServer", func() {
 			return deploy
 		}
 
-		destinationRule = func() *networkingv1beta1.DestinationRule {
-			return &networkingv1beta1.DestinationRule{
-				ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace},
-				Spec: v1beta1.DestinationRule{
-					ExportTo: []string{"*"},
-					Host:     fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName, namespace),
-					TrafficPolicy: &v1beta1.TrafficPolicy{
-						ConnectionPool: &v1beta1.ConnectionPoolSettings{
-							Tcp: &v1beta1.ConnectionPoolSettings_TCPSettings{
-								MaxConnections: 5000,
-								TcpKeepalive: &v1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
-									Interval: &types.Duration{
-										Seconds: 75,
-									},
-									Time: &types.Duration{
-										Seconds: 7200,
-									},
+		destinationRule = &networkingv1beta1.DestinationRule{
+			ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace},
+			Spec: v1beta1.DestinationRule{
+				ExportTo: []string{"*"},
+				Host:     fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName, namespace),
+				TrafficPolicy: &v1beta1.TrafficPolicy{
+					ConnectionPool: &v1beta1.ConnectionPoolSettings{
+						Tcp: &v1beta1.ConnectionPoolSettings_TCPSettings{
+							MaxConnections: 5000,
+							TcpKeepalive: &v1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
+								Interval: &types.Duration{
+									Seconds: 75,
+								},
+								Time: &types.Duration{
+									Seconds: 7200,
 								},
 							},
 						},
-						Tls: &v1beta1.ClientTLSSettings{
-							Mode: v1beta1.ClientTLSSettings_DISABLE,
-						},
+					},
+					Tls: &v1beta1.ClientTLSSettings{
+						Mode: v1beta1.ClientTLSSettings_DISABLE,
 					},
 				},
-			}
+			},
 		}
 
-		gateway = func() *networkingv1beta1.Gateway {
-			return &networkingv1beta1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace},
-				Spec: v1beta1.Gateway{
-					Selector: map[string]string{
-						"istio": "ingressgateway",
-					},
-					Servers: []*v1beta1.Server{
-						{
-							Hosts: []string{kubeAPIServerHost},
-							Port: &v1beta1.Port{
-								Name:     "tls-tunnel",
-								Number:   8132,
-								Protocol: "HTTP",
-							},
+		gateway = &networkingv1beta1.Gateway{
+			ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace},
+			Spec: v1beta1.Gateway{
+				Selector: map[string]string{
+					"istio": "ingressgateway",
+				},
+				Servers: []*v1beta1.Server{
+					{
+						Hosts: []string{kubeAPIServerHost},
+						Port: &v1beta1.Port{
+							Name:     "tls-tunnel",
+							Number:   8132,
+							Protocol: "HTTP",
 						},
 					},
 				},
-			}
+			},
 		}
 
-		networkPolicy = func() *networkingv1.NetworkPolicy {
-			return &networkingv1.NetworkPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "allow-to-vpn-seed-server",
-					Namespace: namespace,
-					Annotations: map[string]string{
-						"gardener.cloud/description": "Allows only Ingress/Egress between the kube-apiserver of the same control plane and the corresponding vpn-seed-server and Ingress from the istio ingress gateway to the vpn-seed-server.",
+		networkPolicy = &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "allow-to-vpn-seed-server",
+				Namespace: namespace,
+				Annotations: map[string]string{
+					"gardener.cloud/description": "Allows only Ingress/Egress between the kube-apiserver of the same control plane and the corresponding vpn-seed-server and Ingress from the istio ingress gateway to the vpn-seed-server.",
+				},
+			},
+			Spec: networkingv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+						v1beta1constants.LabelApp:   DeploymentName,
 					},
 				},
-				Spec: networkingv1.NetworkPolicySpec{
-					PodSelector: metav1.LabelSelector{
-						MatchLabels: map[string]string{
-							v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-							v1beta1constants.LabelApp:   DeploymentName,
-						},
-					},
-					Ingress: []networkingv1.NetworkPolicyIngressRule{
-						{
-							From: []networkingv1.NetworkPolicyPeer{
-								{
-									PodSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-											v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-											v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-										},
-									},
-								},
-							},
-						},
-						{
-							From: []networkingv1.NetworkPolicyPeer{
-								{
-									// we don't want to modify existing labels on the istio namespace
-									NamespaceSelector: &metav1.LabelSelector{},
-									PodSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											v1beta1constants.LabelApp: "istio-ingressgateway",
-										},
+				Ingress: []networkingv1.NetworkPolicyIngressRule{
+					{
+						From: []networkingv1.NetworkPolicyPeer{
+							{
+								PodSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+										v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
+										v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
 									},
 								},
 							},
 						},
 					},
-					Egress: []networkingv1.NetworkPolicyEgressRule{
-						{
-							To: []networkingv1.NetworkPolicyPeer{
-								{
-									PodSelector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-											v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
-											v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
-										},
-									},
-								},
-							},
-						},
-					},
-					PolicyTypes: []networkingv1.PolicyType{
-						networkingv1.PolicyTypeIngress,
-						networkingv1.PolicyTypeEgress,
-					},
-				},
-			}
-		}
-
-		secretDH = func() *corev1.Secret {
-			return &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-server-dh", Namespace: namespace},
-				Type:       corev1.SecretTypeOpaque,
-				Data:       secretDataDH,
-			}
-		}
-
-		secretTLSAuth = func() *corev1.Secret {
-			return &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: VpnSeedServerTLSAuth, Namespace: namespace},
-				Type:       corev1.SecretTypeOpaque,
-				Data:       secretDataTLSAuth,
-			}
-		}
-
-		secretServer = func() *corev1.Secret {
-			return &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace},
-				Type:       corev1.SecretTypeTLS,
-				Data:       secretDataServer,
-			}
-		}
-
-		service = func() *corev1.Service {
-			return &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      ServiceName,
-					Namespace: namespace,
-					Annotations: map[string]string{
-						"networking.istio.io/exportTo": "*",
-					},
-				},
-				Spec: corev1.ServiceSpec{
-					Type: corev1.ServiceTypeClusterIP,
-					Ports: []corev1.ServicePort{
-						{
-							Name:       DeploymentName,
-							Port:       1194,
-							TargetPort: intstr.FromInt(1194),
-						},
-						{
-							Name:       "http-proxy",
-							Port:       9443,
-							TargetPort: intstr.FromInt(9443),
-						},
-					},
-					Selector: map[string]string{
-						v1beta1constants.LabelApp: DeploymentName,
-					},
-				},
-			}
-		}
-
-		virtualService = func() *networkingv1beta1.VirtualService {
-			return &networkingv1beta1.VirtualService{
-				ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace},
-				Spec: v1beta1.VirtualService{
-					ExportTo: []string{"*"},
-					Hosts:    []string{kubeAPIServerHost},
-					Gateways: []string{DeploymentName},
-					Http: []*v1beta1.HTTPRoute{
-						{
-							Route: []*v1beta1.HTTPRouteDestination{
-								{
-									Destination: &v1beta1.Destination{
-										Port: &v1beta1.PortSelector{
-											Number: 1194,
-										},
-										Host: DeploymentName,
+					{
+						From: []networkingv1.NetworkPolicyPeer{
+							{
+								// we don't want to modify existing labels on the istio namespace
+								NamespaceSelector: &metav1.LabelSelector{},
+								PodSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										v1beta1constants.LabelApp: "istio-ingressgateway",
 									},
 								},
 							},
 						},
 					},
 				},
-			}
+				Egress: []networkingv1.NetworkPolicyEgressRule{
+					{
+						To: []networkingv1.NetworkPolicyPeer{
+							{
+								PodSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+										v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
+										v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
+									},
+								},
+							},
+						},
+					},
+				},
+				PolicyTypes: []networkingv1.PolicyType{
+					networkingv1.PolicyTypeIngress,
+					networkingv1.PolicyTypeEgress,
+				},
+			},
 		}
 
-		vpa = func() *autoscalingv1beta2.VerticalPodAutoscaler {
-			return &autoscalingv1beta2.VerticalPodAutoscaler{
-				ObjectMeta: metav1.ObjectMeta{Name: DeploymentName + "-vpa", Namespace: namespace},
-				Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
-					TargetRef: &autoscalingv1.CrossVersionObjectReference{
-						APIVersion: appsv1.SchemeGroupVersion.String(),
-						Kind:       "Deployment",
+		secretDH = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-server-dh", Namespace: namespace},
+			Type:       corev1.SecretTypeOpaque,
+			Data:       secretDataDH,
+		}
+
+		secretTLSAuth = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: VpnSeedServerTLSAuth, Namespace: namespace},
+			Type:       corev1.SecretTypeOpaque,
+			Data:       secretDataTLSAuth,
+		}
+
+		secretServer = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace},
+			Type:       corev1.SecretTypeTLS,
+			Data:       secretDataServer,
+		}
+
+		service = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      ServiceName,
+				Namespace: namespace,
+				Annotations: map[string]string{
+					"networking.istio.io/exportTo": "*",
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Type: corev1.ServiceTypeClusterIP,
+				Ports: []corev1.ServicePort{
+					{
 						Name:       DeploymentName,
+						Port:       1194,
+						TargetPort: intstr.FromInt(1194),
 					},
-					UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
-						UpdateMode: &vpaUpdateMode,
+					{
+						Name:       "http-proxy",
+						Port:       9443,
+						TargetPort: intstr.FromInt(9443),
 					},
-					ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
-						ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+				},
+				Selector: map[string]string{
+					v1beta1constants.LabelApp: DeploymentName,
+				},
+			},
+		}
+
+		virtualService = &networkingv1beta1.VirtualService{
+			ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace},
+			Spec: v1beta1.VirtualService{
+				ExportTo: []string{"*"},
+				Hosts:    []string{kubeAPIServerHost},
+				Gateways: []string{DeploymentName},
+				Http: []*v1beta1.HTTPRoute{
+					{
+						Route: []*v1beta1.HTTPRouteDestination{
 							{
-								ContainerName: DeploymentName,
-								MinAllowed: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
-									corev1.ResourceMemory: resource.MustParse("100Mi"),
-								},
-							},
-							{
-								ContainerName: "envoy-proxy",
-								MinAllowed: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("20m"),
-									corev1.ResourceMemory: resource.MustParse("20Mi"),
+								Destination: &v1beta1.Destination{
+									Port: &v1beta1.PortSelector{
+										Number: 1194,
+									},
+									Host: DeploymentName,
 								},
 							},
 						},
 					},
 				},
-			}
+			},
+		}
+
+		vpa = &autoscalingv1beta2.VerticalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{Name: DeploymentName + "-vpa", Namespace: namespace},
+			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
+				TargetRef: &autoscalingv1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       DeploymentName,
+				},
+				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+					UpdateMode: &vpaUpdateMode,
+				},
+				ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
+					ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
+						{
+							ContainerName: DeploymentName,
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("100m"),
+								corev1.ResourceMemory: resource.MustParse("100Mi"),
+							},
+						},
+						{
+							ContainerName: "envoy-proxy",
+							MinAllowed: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("20m"),
+								corev1.ResourceMemory: resource.MustParse("20Mi"),
+							},
+						},
+					},
+				},
+			},
 		}
 	)
 
@@ -817,19 +797,19 @@ var _ = Describe("VpnSeedServer", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(secretServer()))
+						Expect(obj).To(DeepEqual(secretServer))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-tlsauth"), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(secretTLSAuth()))
+						Expect(obj).To(DeepEqual(secretTLSAuth))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-dh"), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(secretDH()))
+						Expect(obj).To(DeepEqual(secretDH))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(networkPolicy()))
+						Expect(obj).To(DeepEqual(networkPolicy))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
@@ -837,27 +817,27 @@ var _ = Describe("VpnSeedServer", func() {
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-envoy-config"), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(configMap()))
+						Expect(obj).To(DeepEqual(configMap))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(gateway()))
+						Expect(obj).To(DeepEqual(gateway))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(destinationRule()))
+						Expect(obj).To(DeepEqual(destinationRule))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.VirtualService{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.VirtualService{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(virtualService()))
+						Expect(obj).To(DeepEqual(virtualService))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(service()))
+						Expect(obj).To(DeepEqual(service))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(vpa()))
+						Expect(obj).To(DeepEqual(vpa))
 					}),
 				)
 				Expect(vpnSeedServer.Deploy(ctx)).To(Succeed())
@@ -870,19 +850,19 @@ var _ = Describe("VpnSeedServer", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(secretServer()))
+						Expect(obj).To(DeepEqual(secretServer))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-tlsauth"), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(secretTLSAuth()))
+						Expect(obj).To(DeepEqual(secretTLSAuth))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-dh"), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(secretDH()))
+						Expect(obj).To(DeepEqual(secretDH))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(networkPolicy()))
+						Expect(obj).To(DeepEqual(networkPolicy))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
@@ -890,27 +870,27 @@ var _ = Describe("VpnSeedServer", func() {
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-envoy-config"), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(configMap()))
+						Expect(obj).To(DeepEqual(configMap))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(gateway()))
+						Expect(obj).To(DeepEqual(gateway))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(destinationRule()))
+						Expect(obj).To(DeepEqual(destinationRule))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.VirtualService{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.VirtualService{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(virtualService()))
+						Expect(obj).To(DeepEqual(virtualService))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, ServiceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Service{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(service()))
+						Expect(obj).To(DeepEqual(service))
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(vpa()))
+						Expect(obj).To(DeepEqual(vpa))
 					}),
 				)
 
