@@ -192,8 +192,9 @@ var _ = Describe("VpnSeedServer", func() {
 							},
 						},
 						Spec: corev1.PodSpec{
-							PriorityClassName: "system-cluster-critical",
-							DNSPolicy:         corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
+							AutomountServiceAccountToken: pointer.BoolPtr(false),
+							PriorityClassName:            "system-cluster-critical",
+							DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 							Containers: []corev1.Container{
 								{
 									Name:            DeploymentName,
