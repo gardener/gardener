@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/go-logr/logr"
@@ -55,6 +56,7 @@ var (
 	backupEntryResource   = gardencorev1beta1.Resource("backupentries")
 	cloudProfileResource  = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource     = corev1.Resource("configmaps")
+	managedSeedResource   = seedmanagementv1alpha1.Resource("managedseeds")
 	namespaceResource     = corev1.Resource("namespaces")
 	projectResource       = gardencorev1beta1.Resource("projects")
 	secretBindingResource = gardencorev1beta1.Resource("secretbindings")
@@ -89,6 +91,12 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeRead(seedName, graph.VertexTypeCloudProfile, attrs)
 		case configMapResource:
 			return a.authorizeRead(seedName, graph.VertexTypeConfigMap, attrs)
+		case managedSeedResource:
+			return a.authorize(seedName, graph.VertexTypeManagedSeed, attrs,
+				[]string{"get", "list", "watch", "update", "patch"},
+				[]string{"get", "list", "watch"},
+				[]string{"status"},
+			)
 		case namespaceResource:
 			return a.authorizeRead(seedName, graph.VertexTypeNamespace, attrs)
 		case projectResource:
