@@ -58,11 +58,20 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.ResourceManager, er
 		RetryPeriod:   utils.DurationPtr(time.Second * 10),
 	}
 
+	// ensure grm is present during hibernation (if the cluster is not hibernated yet) to reconcile any changes to
+	// MRs (e.g. caused by extension upgrades) that are necessary for completing the hibernation flow.
+	// grm is scaled down later on as part of the HibernateControlPlane step, so we only specify replicas=0 if
+	// the shoot is already hibernated.
+	replicas := int32(1)
+	if b.Shoot.HibernationEnabled && b.Shoot.Info.Status.IsHibernated {
+		replicas = 0
+	}
+
 	return resourcemanager.New(
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		image.String(),
-		b.Shoot.GetReplicas(1),
+		replicas,
 		cfg,
 	), nil
 }
