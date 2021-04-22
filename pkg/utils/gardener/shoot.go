@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/component-base/version"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -139,4 +140,15 @@ func EffectiveShootMaintenanceTimeWindow(shoot *v1beta1.Shoot) *utils.Maintenanc
 // GardenEtcdEncryptionSecretName returns the name to the 'backup' of the etcd encryption secret in the Garden cluster.
 func GardenEtcdEncryptionSecretName(shootName string) string {
 	return fmt.Sprintf("%s.%s", shootName, common.EtcdEncryptionSecretName)
+}
+
+// GetShootNameFromOwnerReferences attempts to get the name of the Shoot object which owns the passed in object.
+// If it is not owned by a Shoot, an empty string is returned.
+func GetShootNameFromOwnerReferences(objectMeta metav1.Object) string {
+	for _, ownerRef := range objectMeta.GetOwnerReferences() {
+		if ownerRef.Kind == "Shoot" {
+			return ownerRef.Name
+		}
+	}
+	return ""
 }

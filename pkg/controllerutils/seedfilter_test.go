@@ -17,15 +17,19 @@ package controllerutils_test
 import (
 	"context"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -36,9 +40,10 @@ const (
 	name      = "test"
 	namespace = "garden"
 	seedName  = "test-seed"
+	otherSeed = "new-test-seed"
 )
 
-var _ = Describe("secretref", func() {
+var _ = Describe("seedfilter", func() {
 	var (
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
@@ -191,6 +196,101 @@ var _ = Describe("secretref", func() {
 				},
 			})
 			Expect(f(managedSeed)).To(BeFalse())
+		})
+	})
+
+	Describe("BackupEntry", func() {
+		var (
+			backupEntry       *gardencorev1beta1.BackupEntry
+			seedLabelSelector = &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"test-label": "test",
+				},
+			}
+			otherSeedLabelSelector = &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"test-label": "new-test",
+				},
+			}
+		)
+
+		BeforeEach(func() {
+			backupEntry = &gardencorev1beta1.BackupEntry{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+			}
+		})
+
+		Describe("#BackupEntryFilterFunc", func() {
+			It("should return false if the specified object is not a BackupEntry", func() {
+				f := controllerutils.BackupEntryFilterFunc(ctx, c, seedName, nil)
+				Expect(f(shoot)).To(BeFalse())
+			})
+
+			DescribeTable("filter BackupEntry by seedName",
+				func(specSeedName, statusSeedName *string, filterSeedName string, match gomegatypes.GomegaMatcher) {
+					f := controllerutils.BackupEntryFilterFunc(ctx, c, filterSeedName, nil)
+					backupEntry.Spec.SeedName = specSeedName
+					backupEntry.Status.SeedName = statusSeedName
+					Expect(f(backupEntry)).To(match)
+				},
+
+				Entry("BackupEntry.Spec.SeedName and BackupEntry.Status.SeedName are nil", nil, nil, seedName, BeFalse()),
+				Entry("BackupEntry.Spec.SeedName does not match and BackupEntry.Status.SeedName is nil", pointer.StringPtr(otherSeed), nil, seedName, BeFalse()),
+				Entry("BackupEntry.Spec.SeedName and BackupEntry.Status.SeedName do not match", pointer.StringPtr(otherSeed), pointer.StringPtr(otherSeed), seedName, BeFalse()),
+				Entry("BackupEntry.Spec.SeedName is nil but BackupEntry.Status.SeedName matches", nil, pointer.StringPtr(seedName), seedName, BeFalse()),
+				Entry("BackupEntry.Spec.SeedName matches and BackupEntry.Status.SeedName is nil", pointer.StringPtr(seedName), nil, seedName, BeTrue()),
+				Entry("BackupEntry.Spec.SeedName does not match but BackupEntry.Status.SeedName matches", pointer.StringPtr(otherSeed), pointer.StringPtr(seedName), seedName, BeTrue()),
+			)
+
+			DescribeTable("filter BackupEntry by Seed label selector",
+				func(specSeedName, statusSeedName *string, labelSelector *metav1.LabelSelector, match gomegatypes.GomegaMatcher) {
+					expectGetSeed()
+					f := controllerutils.BackupEntryFilterFunc(ctx, c, "", labelSelector)
+					backupEntry.Spec.SeedName = specSeedName
+					backupEntry.Status.SeedName = statusSeedName
+					Expect(f(backupEntry)).To(match)
+				},
+				Entry("BackupEntry.Spec.SeedName does not match and BackupEntry.Status.SeedName is nil", pointer.StringPtr(seedName), nil, otherSeedLabelSelector, BeFalse()),
+				Entry("BackupEntry.Spec.SeedName and BackupEntry.Status.SeedName do not match", pointer.StringPtr(seedName), pointer.StringPtr(seedName), otherSeedLabelSelector, BeFalse()),
+				Entry("BackupEntry.Spec.SeedName matches and BackupEntry.Status.SeedName is nil", pointer.StringPtr(seedName), nil, seedLabelSelector, BeTrue()),
+				Entry("BackupEntry.Spec.SeedName does not match but BackupEntry.Status.SeedName matches", pointer.StringPtr(otherSeed), pointer.StringPtr(seedName), seedLabelSelector, BeTrue()),
+			)
+		})
+
+		Describe("#BackupEntryIsManagedByThisGardenlet", func() {
+			DescribeTable("check BackupEntry by seedName",
+				func(bucketSeedName string, match gomegatypes.GomegaMatcher) {
+					backupEntry.Spec.SeedName = pointer.StringPtr(bucketSeedName)
+					gc := &config.GardenletConfiguration{
+						SeedConfig: &config.SeedConfig{
+							SeedTemplate: gardencore.SeedTemplate{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: seedName,
+								},
+							},
+						},
+					}
+					Expect(controllerutils.BackupEntryIsManagedByThisGardenlet(ctx, c, backupEntry, gc)).To(match)
+				},
+				Entry("BackupEntry is not managed by this seed", otherSeed, BeFalse()),
+				Entry("BackupEntry is managed by this seed", seedName, BeTrue()),
+			)
+
+			DescribeTable("check BackupEntry by seed label selector",
+				func(labelSelector *metav1.LabelSelector, match gomegatypes.GomegaMatcher) {
+					backupEntry.Spec.SeedName = pointer.StringPtr(seedName)
+					gc := &config.GardenletConfiguration{
+						SeedSelector: labelSelector,
+					}
+					expectGetSeed()
+					Expect(controllerutils.BackupEntryIsManagedByThisGardenlet(ctx, c, backupEntry, gc)).To(match)
+				},
+				Entry("BackupEntry is not managed by this seed", otherSeedLabelSelector, BeFalse()),
+				Entry("BackupEntry is managed by this seed", seedLabelSelector, BeTrue()),
+			)
 		})
 	})
 })

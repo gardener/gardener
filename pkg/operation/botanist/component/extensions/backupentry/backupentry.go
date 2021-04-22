@@ -102,6 +102,11 @@ type backupEntry struct {
 
 // Deploy uses the seed client to create or update the BackupEntry custom resource in the Seed.
 func (b *backupEntry) Deploy(ctx context.Context) error {
+	_, err := b.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
+	return err
+}
+
+func (b *backupEntry) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
 	backupEntry := &extensionsv1alpha1.BackupEntry{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: b.values.Name,
@@ -109,7 +114,7 @@ func (b *backupEntry) Deploy(ctx context.Context) error {
 	}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, b.client, backupEntry, func() error {
-		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 
 		backupEntry.Spec = extensionsv1alpha1.BackupEntrySpec{
@@ -126,13 +131,20 @@ func (b *backupEntry) Deploy(ctx context.Context) error {
 		return nil
 	})
 
-	return err
+	return backupEntry, err
 }
 
 // Restore uses the seed client and the ShootState to create the BackupEntry custom resource in the Seed and restore its
 // state.
-func (b *backupEntry) Restore(ctx context.Context, _ *gardencorev1alpha1.ShootState) error {
-	return b.Deploy(ctx)
+func (b *backupEntry) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
+	return extensions.RestoreExtensionWithDeployFunction(
+		ctx,
+		b.client,
+		shootState,
+		extensionsv1alpha1.BackupEntryResource,
+		"",
+		b.deploy,
+	)
 }
 
 // Migrate migrates the BackupEntry custom resource

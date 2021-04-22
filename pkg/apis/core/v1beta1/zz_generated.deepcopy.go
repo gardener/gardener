@@ -416,6 +416,11 @@ func (in *BackupEntryStatus) DeepCopyInto(out *BackupEntryStatus) {
 		*out = new(LastError)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.SeedName != nil {
+		in, out := &in.SeedName, &out.SeedName
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

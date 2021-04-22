@@ -1167,7 +1167,7 @@ func schema_pkg_apis_core_v1alpha1_BackupEntrySpec(ref common.ReferenceCallback)
 					},
 					"seed": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Seed holds the name of the seed allocated to BackupEntry for running controller.",
+							Description: "SeedName holds the name of the seed to which this BackupEntry is scheduled",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -1203,6 +1203,13 @@ func schema_pkg_apis_core_v1alpha1_BackupEntryStatus(ref common.ReferenceCallbac
 							Description: "ObservedGeneration is the most recent generation observed for this BackupEntry. It corresponds to the BackupEntry's generation, which is updated on mutation by the API Server.",
 							Type:        []string{"integer"},
 							Format:      "int64",
+						},
+					},
+					"seedName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SeedName is the name of the seed to which this BackupEntry is currently scheduled. This field is populated at the beginning of a create/reconcile operation. It is used when moving the BackupEntry between seeds.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},
@@ -7650,7 +7657,7 @@ func schema_pkg_apis_core_v1beta1_BackupEntrySpec(ref common.ReferenceCallback) 
 					},
 					"seedName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedName holds the name of the seed allocated to BackupEntry for running controller.",
+							Description: "SeedName holds the name of the seed to which this BackupEntry is scheduled",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -7686,6 +7693,13 @@ func schema_pkg_apis_core_v1beta1_BackupEntryStatus(ref common.ReferenceCallback
 							Description: "ObservedGeneration is the most recent generation observed for this BackupEntry. It corresponds to the BackupEntry's generation, which is updated on mutation by the API Server.",
 							Type:        []string{"integer"},
 							Format:      "int64",
+						},
+					},
+					"seedName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SeedName is the name of the seed to which this BackupEntry is currently scheduled. This field is populated at the beginning of a create/reconcile operation. It is used when moving the BackupEntry between seeds.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},

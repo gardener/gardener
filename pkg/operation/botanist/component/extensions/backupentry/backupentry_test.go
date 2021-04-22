@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -218,20 +219,49 @@ var _ = Describe("#BackupEntry", func() {
 	})
 
 	Describe("#Restore", func() {
+		var (
+			state      = &runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)}
+			shootState *gardencorev1alpha1.ShootState
+		)
+
 		BeforeEach(func() {
-			expected.ResourceVersion = "1"
+			shootState = &gardencorev1alpha1.ShootState{
+				Spec: gardencorev1alpha1.ShootStateSpec{
+					Extensions: []gardencorev1alpha1.ExtensionResourceState{
+						{
+							Name:  &expected.Name,
+							Kind:  extensionsv1alpha1.BackupEntryResource,
+							State: state,
+						},
+					},
+				},
+			}
 		})
 
-		It("should perform a normal deployment", func() {
-			defer test.WithVars(&backupentry.TimeNow, mockNow.Do)()
+		It("should properly restore the BackupEntry state if it exists", func() {
+			defer test.WithVars(
+				&backupentry.TimeNow, mockNow.Do,
+				&extensions.TimeNow, mockNow.Do,
+			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			Expect(defaultDepWaiter.Restore(ctx, nil)).To(Succeed())
+			obj := expected.DeepCopy()
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().String())
+			obj.TypeMeta = metav1.TypeMeta{}
+			expectedWithState := obj.DeepCopy()
+			expectedWithState.Status.State = state
+			expectedWithRestore := expectedWithState.DeepCopy()
+			expectedWithRestore.Annotations["gardener.cloud/operation"] = "restore"
 
-			actual := &extensionsv1alpha1.BackupEntry{}
-			Expect(c.Get(ctx, client.ObjectKey{Name: name}, actual)).To(Succeed())
+			mc := mockclient.NewMockClient(ctrl)
+			mc.EXPECT().Get(ctx, kutil.Key(expected.Namespace, expected.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.BackupEntry{})).Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("BackupEntry"), expected.Name))
+			mc.EXPECT().Create(ctx, obj)
+			mc.EXPECT().Status().Return(mc)
+			mc.EXPECT().Update(ctx, expectedWithState)
+			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 
-			Expect(actual).To(DeepEqual(expected))
+			Expect(backupentry.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
 		})
 	})
 

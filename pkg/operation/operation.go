@@ -535,24 +535,6 @@ func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
 	return client.IgnoreNotFound(o.K8sSeedClient.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}))
 }
 
-// SwitchBackupEntryToTargetSeed changes the BackupEntry in the Garden cluster to the Target Seed and removes it from the Source Seed
-func (o *Operation) SwitchBackupEntryToTargetSeed(ctx context.Context) error {
-	var (
-		name              = common.GenerateBackupEntryName(o.Shoot.Info.Status.TechnicalID, o.Shoot.Info.Status.UID)
-		gardenBackupEntry = &gardencorev1beta1.BackupEntry{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: o.Shoot.Info.Namespace,
-			},
-		}
-	)
-
-	return kutil.TryUpdate(ctx, retry.DefaultBackoff, o.K8sGardenClient.DirectClient(), gardenBackupEntry, func() error {
-		gardenBackupEntry.Spec.SeedName = o.Shoot.Info.Spec.SeedName
-		return nil
-	})
-}
-
 // ComputeGrafanaHosts computes the host for both grafanas.
 func (o *Operation) ComputeGrafanaHosts() []string {
 	return []string{

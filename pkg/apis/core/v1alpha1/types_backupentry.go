@@ -55,7 +55,7 @@ type BackupEntryList struct {
 type BackupEntrySpec struct {
 	// BucketName is the name of backup bucket for this Backup Entry.
 	BucketName string `json:"bucketName" protobuf:"bytes,1,opt,name=bucketName"`
-	// Seed holds the name of the seed allocated to BackupEntry for running controller.
+	// SeedName holds the name of the seed to which this BackupEntry is scheduled
 	// +optional
 	Seed *string `json:"seed,omitempty" protobuf:"bytes,2,opt,name=seed"`
 }
@@ -72,4 +72,8 @@ type BackupEntryStatus struct {
 	// BackupEntry's generation, which is updated on mutation by the API Server.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,3,opt,name=observedGeneration"`
+	// SeedName is the name of the seed to which this BackupEntry is currently scheduled. This field is populated
+	// at the beginning of a create/reconcile operation. It is used when moving the BackupEntry between seeds.
+	// +optional
+	SeedName *string `json:"seedName,omitempty" protobuf:"bytes,4,opt,name=seedName"`
 }

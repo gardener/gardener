@@ -251,4 +251,19 @@ var _ = Describe("Shoot", func() {
 				utils.NewMaintenanceTime(1, 0, 0),
 				utils.NewMaintenanceTime(1, 45, 0))),
 	)
+
+	DescribeTable("#GetShootNameFromOwnerReferences",
+		func(ownerRefs []metav1.OwnerReference, expectedName string) {
+			obj := &gardencorev1beta1.BackupEntry{
+				ObjectMeta: metav1.ObjectMeta{
+					OwnerReferences: ownerRefs,
+				},
+			}
+			name := GetShootNameFromOwnerReferences(obj)
+			Expect(name).To(Equal(expectedName))
+		},
+		Entry("object is owned by shoot", []metav1.OwnerReference{{Kind: "Shoot", Name: "foo"}}, "foo"),
+		Entry("object has no OwnerReferences", nil, ""),
+		Entry("object is not owned by shoot", []metav1.OwnerReference{{Kind: "Foo", Name: "foo"}}, ""),
+	)
 })

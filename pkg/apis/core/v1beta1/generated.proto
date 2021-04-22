@@ -197,7 +197,7 @@ message BackupEntrySpec {
   // BucketName is the name of backup bucket for this Backup Entry.
   optional string bucketName = 1;
 
-  // SeedName holds the name of the seed allocated to BackupEntry for running controller.
+  // SeedName holds the name of the seed to which this BackupEntry is scheduled
   // +optional
   optional string seedName = 2;
 }
@@ -216,6 +216,11 @@ message BackupEntryStatus {
   // BackupEntry's generation, which is updated on mutation by the API Server.
   // +optional
   optional int64 observedGeneration = 3;
+
+  // SeedName is the name of the seed to which this BackupEntry is currently scheduled. This field is populated
+  // at the beginning of a create/reconcile operation. It is used when moving the BackupEntry between seeds.
+  // +optional
+  optional string seedName = 4;
 }
 
 // CRI contains information about the Container Runtimes.
