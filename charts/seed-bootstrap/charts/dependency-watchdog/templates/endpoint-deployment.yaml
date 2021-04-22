@@ -57,6 +57,12 @@ metadata:
   name: dependency-watchdog-endpoint-vpa
   namespace: {{ .Release.Namespace }}
 spec:
+  resourcePolicy:
+    containerPolicies:
+      - containerName: '*'
+        minAllowed:
+          cpu: 25m
+          memory: 25Mi
   targetRef:
     apiVersion: {{ include "deploymentversion" . }}
     kind: Deployment
