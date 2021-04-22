@@ -1,0 +1,11 @@
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: Bastion
+metadata:
+  name: foo
+  namespace: shoot--foo--bar
+spec:
+  type: aws
+  userData: IyEvYmluL2Jhc2ggLWV1CgojIFRoaXMgaXMgYW4gZXhhbXBsZSBzbmlwcGV0IHRvIHByb3Zpc2lvbiBhbiBTU0gga2V5IG9udG8gYSBEZWJpYW4vVWJ1bnR1IG1hY2hpbmUuCgppZCBnYXJkZW5lciB8fCB1c2VyYWRkIGdhcmRlbmVyIC1tVQpta2RpciAtcCAvaG9tZS9nYXJkZW5lci8uc3NoCmVjaG8gIjxzc2gga2V5IGhlcmU+IiA+IC9ob21lL2dhcmRlbmVyLy5zc2gvYXV0aG9yaXplZF9rZXlzCmNob3duIGdhcmRlbmVyOmdhcmRlbmVyIC9ob21lL2dhcmRlbmVyLy5zc2gvYXV0aG9yaXplZF9rZXlzCmVjaG8gImdhcmRlbmVyIEFMTD0oQUxMKSBOT1BBU1NXRDpBTEwiID4vZXRjL3N1ZG9lcnMuZC85OS1nYXJkZW5lci11c2VyCg==
+  ingress:
+    - ipBlock:
+        cidr: 1.2.3.4/32

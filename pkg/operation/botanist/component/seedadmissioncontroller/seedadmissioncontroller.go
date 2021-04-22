@@ -118,6 +118,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 					Resources: []string{
 						"backupbuckets",
 						"backupentries",
+						"bastions",
 						"containerruntimes",
 						"controlplanes",
 						"extensions",
@@ -332,6 +333,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 							Resources: []string{
 								"backupbuckets",
 								"backupentries",
+								"bastions",
 								"containerruntimes",
 								"controlplanes",
 								"extensions",
