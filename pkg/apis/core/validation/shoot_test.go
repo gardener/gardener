@@ -2175,7 +2175,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
 				}
-				errList := ValidateWorker(worker, nil)
+				errList := ValidateWorker(worker, nil, false)
 
 				Expect(errList).To(matcher)
 			},
@@ -2235,7 +2235,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
 				}
-				errList := ValidateWorker(worker, nil)
+				errList := ValidateWorker(worker, nil, false)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -2273,7 +2273,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxUnavailable: &maxUnavailable,
 					Labels:         labels,
 				}
-				errList := ValidateWorker(worker, nil)
+				errList := ValidateWorker(worker, nil, false)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -2308,7 +2308,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxUnavailable: &maxUnavailable,
 					Annotations:    annotations,
 				}
-				errList := ValidateWorker(worker, nil)
+				errList := ValidateWorker(worker, nil, false)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -2342,7 +2342,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxUnavailable: &maxUnavailable,
 					Taints:         taints,
 				}
-				errList := ValidateWorker(worker, nil)
+				errList := ValidateWorker(worker, nil, false)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -2385,7 +2385,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				MaxUnavailable: &maxUnavailable,
 				DataVolumes:    dataVolumes,
 			}
-			errList := ValidateWorker(worker, nil)
+			errList := ValidateWorker(worker, nil, false)
 			Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("volume"),
@@ -2412,7 +2412,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Volume:         &vol,
 				DataVolumes:    dataVolumes,
 			}
-			errList := ValidateWorker(worker, nil)
+			errList := ValidateWorker(worker, nil, false)
 			Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":     Equal(field.ErrorTypeInvalid),
 				"Field":    Equal("dataVolumes[1].size"),
@@ -2441,7 +2441,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Volume:         &vol,
 				DataVolumes:    dataVolumes,
 			}
-			errList := ValidateWorker(worker, nil)
+			errList := ValidateWorker(worker, nil, false)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -2479,7 +2479,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				DataVolumes:           dataVolumes,
 				KubeletDataVolumeName: &name,
 			}
-			errList := ValidateWorker(worker, nil)
+			errList := ValidateWorker(worker, nil, false)
 			Expect(errList).To(ConsistOf())
 		})
 
@@ -2506,7 +2506,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				DataVolumes:           dataVolumes,
 				KubeletDataVolumeName: &name3,
 			}
-			errList := ValidateWorker(worker, nil)
+			errList := ValidateWorker(worker, nil, false)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -2536,7 +2536,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Volume:         &vol,
 				DataVolumes:    dataVolumes,
 			}
-			errList := ValidateWorker(worker, nil)
+			errList := ValidateWorker(worker, nil, false)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),

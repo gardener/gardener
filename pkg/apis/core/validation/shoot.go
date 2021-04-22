@@ -77,7 +77,7 @@ func ValidateShoot(shoot *core.Shoot) field.ErrorList {
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
-	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateShootSpec(shoot.ObjectMeta, &shoot.Spec, field.NewPath("spec"), false)...)
 
 	return allErrs
 }
@@ -99,7 +99,7 @@ func ValidateShootTemplate(shootTemplate *core.ShootTemplate, fldPath *field.Pat
 
 	allErrs = append(allErrs, metav1validation.ValidateLabels(shootTemplate.Labels, fldPath.Child("metadata", "labels"))...)
 	allErrs = append(allErrs, apivalidation.ValidateAnnotations(shootTemplate.Annotations, fldPath.Child("metadata", "annotations"))...)
-	allErrs = append(allErrs, ValidateShootSpec(shootTemplate.ObjectMeta, &shootTemplate.Spec, fldPath.Child("spec"))...)
+	allErrs = append(allErrs, ValidateShootSpec(shootTemplate.ObjectMeta, &shootTemplate.Spec, fldPath.Child("spec"), true)...)
 
 	return allErrs
 }
@@ -114,7 +114,7 @@ func ValidateShootTemplateUpdate(newShootTemplate, oldShootTemplate *core.ShootT
 }
 
 // ValidateShootSpec validates the specification of a Shoot object.
-func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *field.Path) field.ErrorList {
+func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateAddons(spec.Addons, spec.Kubernetes.KubeAPIServer, fldPath.Child("addons"))...)
@@ -126,7 +126,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
 	allErrs = append(allErrs, validateMonitoring(spec.Monitoring, fldPath.Child("monitoring"))...)
 	allErrs = append(allErrs, ValidateHibernation(spec.Hibernation, fldPath.Child("hibernation"))...)
-	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, fldPath.Child("provider"))...)
+	allErrs = append(allErrs, validateProvider(spec.Provider, spec.Kubernetes, fldPath.Child("provider"), inTemplate)...)
 
 	if len(spec.Region) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "must specify a region"))
@@ -145,7 +145,7 @@ func ValidateShootSpec(meta metav1.ObjectMeta, spec *core.ShootSpec, fldPath *fi
 	}
 	if purpose := spec.Purpose; purpose != nil {
 		allowedShootPurposes := availableShootPurposes
-		if meta.Namespace == v1beta1constants.GardenNamespace {
+		if meta.Namespace == v1beta1constants.GardenNamespace || inTemplate {
 			allowedShootPurposes = sets.NewString(append(availableShootPurposes.List(), string(core.ShootPurposeInfrastructure))...)
 		}
 
@@ -876,7 +876,7 @@ func validateMaintenance(maintenance *core.Maintenance, fldPath *field.Path) fie
 	return allErrs
 }
 
-func validateProvider(provider core.Provider, kubernetes core.Kubernetes, fldPath *field.Path) field.ErrorList {
+func validateProvider(provider core.Provider, kubernetes core.Kubernetes, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(provider.Type) == 0 {
@@ -889,7 +889,7 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, fldPat
 	}
 
 	for i, worker := range provider.Workers {
-		allErrs = append(allErrs, ValidateWorker(worker, fldPath.Child("workers").Index(i))...)
+		allErrs = append(allErrs, ValidateWorker(worker, fldPath.Child("workers").Index(i), inTemplate)...)
 
 		if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPod {
 			maxPod = *worker.Kubernetes.Kubelet.MaxPods
@@ -918,7 +918,7 @@ const (
 )
 
 // ValidateWorker validates the worker object.
-func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
+func ValidateWorker(worker core.Worker, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateDNS1123Label(worker.Name, fldPath.Child("name"))...)
@@ -932,7 +932,7 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path) field.ErrorList {
 		if len(worker.Machine.Image.Name) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("machine", "image", "name"), "must specify a machine image name"))
 		}
-		if len(worker.Machine.Image.Version) == 0 {
+		if !inTemplate && len(worker.Machine.Image.Version) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("machine", "image", "version"), "must specify a machine image version"))
 		}
 	}
