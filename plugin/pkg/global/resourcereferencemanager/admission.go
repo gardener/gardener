@@ -603,7 +603,7 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 
 	}
 
-	if !equality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS) && shoot.Spec.DNS != nil {
+	if !equality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS) && shoot.Spec.DNS != nil && shoot.DeletionTimestamp == nil {
 		for _, dnsProvider := range shoot.Spec.DNS.Providers {
 			if dnsProvider.SecretName == nil {
 				continue
