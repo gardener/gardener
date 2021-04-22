@@ -167,11 +167,11 @@ var _ = Describe("Actuator", func() {
 
 	Context("not scaling in or out", func() {
 		DescribeTable("#Reconcile",
-			func(set *seedmanagementv1alpha1.ManagedSeedSet, setupReplicas func(), status *seedmanagementv1alpha1.ManagedSeedSetStatus, fmt string, args ...interface{}) {
+			func(set *seedmanagementv1alpha1.ManagedSeedSet, setupReplicas func(), status *seedmanagementv1alpha1.ManagedSeedSetStatus, reason, fmt string, args ...interface{}) {
 				setupReplicas()
 				rg.EXPECT().GetReplicas(ctx, set).Return([]Replica{r0}, nil)
 				if fmt != "" {
-					recorder.EXPECT().Eventf(set, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, fmt, args)
+					recorder.EXPECT().Eventf(set, corev1.EventTypeNormal, reason, fmt, args)
 				}
 
 				s, rf, err := actuator.Reconcile(ctx, set)
@@ -187,7 +187,7 @@ var _ = Describe("Actuator", func() {
 					r0.EXPECT().RetryShoot(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, now, pointer.Int32Ptr(1)),
-				"Retrying shoot %s reconciliation", getReplicaFullName(0),
+				EventRetryingShootReconciliation, "Retrying shoot %s reconciliation", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootReconcileFailed and max retries reached",
 				set(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, pointer.Int32Ptr(maxShootRetries)),
@@ -195,7 +195,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusShootReconcileFailed, false, operationshoot.StatusUnhealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcileFailedReason, now, pointer.Int32Ptr(maxShootRetries)),
-				"Not retrying shoot %s reconciliation since max retries has been reached", getReplicaFullName(0),
+				EventNotRetryingShootReconciliation, "Not retrying shoot %s reconciliation since max retries has been reached", getReplicaFullName(0),
 			),
 			Entry("should retry the shoot and return correct status if a replica has status ShootDeleteFailed and max retries not yet reached",
 				set(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, nil),
@@ -204,7 +204,7 @@ var _ = Describe("Actuator", func() {
 					r0.EXPECT().RetryShoot(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, pointer.Int32Ptr(1)),
-				"Retrying shoot %s deletion", getReplicaFullName(0),
+				EventRetryingShootDeletion, "Retrying shoot %s deletion", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootReconcileFailed and max retries reached",
 				set(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, pointer.Int32Ptr(maxShootRetries)),
@@ -212,7 +212,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusShootDeleteFailed, false, operationshoot.StatusUnhealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeleteFailedReason, now, pointer.Int32Ptr(maxShootRetries)),
-				"Not retrying shoot %s deletion since max retries has been reached", getReplicaFullName(0),
+				EventNotRetryingShootDeletion, "Not retrying shoot %s deletion since max retries has been reached", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootReconciling",
 				set(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, nil),
@@ -220,7 +220,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusShootReconciling, false, operationshoot.StatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, before, nil),
-				"Waiting for shoot %s to be reconciled", getReplicaFullName(0),
+				EventWaitingForShootReconciled, "Waiting for shoot %s to be reconciled", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootDeleting",
 				set(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, nil),
@@ -228,7 +228,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusShootDeleting, false, operationshoot.StatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, before, nil),
-				"Waiting for shoot %s to be deleted", getReplicaFullName(0),
+				EventWaitingForShootDeleted, "Waiting for shoot %s to be deleted", getReplicaFullName(0),
 			),
 			Entry("should create the managed seed and return correct status if a replica has status ShootReconciled",
 				set(1, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, nil),
@@ -237,7 +237,7 @@ var _ = Describe("Actuator", func() {
 					r0.EXPECT().CreateManagedSeed(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, now, nil),
-				"Creating managed seed %s", getReplicaFullName(0),
+				EventCreatingManagedSeed, "Creating managed seed %s", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ManagedSeedPreparing",
 				set(1, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil),
@@ -245,7 +245,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusManagedSeedPreparing, false, operationshoot.StatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, before, nil),
-				"Waiting for managed seed %s to be registered", getReplicaFullName(0),
+				EventWaitingForManagedSeedRegistered, "Waiting for managed seed %s to be registered", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ManagedSeedDeleting",
 				set(1, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, nil),
@@ -253,7 +253,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusManagedSeedDeleting, false, operationshoot.StatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, before, nil),
-				"Waiting for managed seed %s to be deleted", getReplicaFullName(0),
+				EventWaitingForManagedSeedDeleted, "Waiting for managed seed %s to be deleted", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica seed is not ready",
 				set(1, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil),
@@ -261,7 +261,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusManagedSeedRegistered, false, operationshoot.StatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.SeedNotReadyReason, now, nil),
-				"Waiting for seed %s to be ready", getReplicaName(0),
+				EventWaitingForSeedReady, "Waiting for seed %s to be ready", getReplicaName(0),
 			),
 			Entry("should return correct status if a replica shoot is not healthy",
 				set(1, 1, getReplicaName(0), seedmanagementv1alpha1.SeedNotReadyReason, nil),
@@ -269,7 +269,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusManagedSeedRegistered, true, operationshoot.StatusUnhealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootNotHealthyReason, now, nil),
-				"Waiting for shoot %s to be healthy", getReplicaFullName(0),
+				EventWaitingForShootHealthy, "Waiting for shoot %s to be healthy", getReplicaFullName(0),
 			),
 			Entry("should return correct status if all replicas are ready",
 				set(1, 1, "", "", nil),
@@ -277,17 +277,17 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusManagedSeedRegistered, true, operationshoot.StatusHealthy, true)
 				},
 				status(1, 1, 1, "", "", now, nil),
-				"",
+				"", "",
 			),
 		)
 	})
 
 	Context("scaling out", func() {
 		DescribeTable("#Reconcile",
-			func(set *seedmanagementv1alpha1.ManagedSeedSet, setupReplicas func(), status *seedmanagementv1alpha1.ManagedSeedSetStatus, fmt string, args ...interface{}) {
+			func(set *seedmanagementv1alpha1.ManagedSeedSet, setupReplicas func(), status *seedmanagementv1alpha1.ManagedSeedSetStatus, reason, fmt string, args ...interface{}) {
 				setupReplicas()
 				rg.EXPECT().GetReplicas(ctx, set).Return([]Replica{r0}, nil)
-				recorder.EXPECT().Eventf(set, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, fmt, args)
+				recorder.EXPECT().Eventf(set, corev1.EventTypeNormal, reason, fmt, args)
 
 				s, rf, err := actuator.Reconcile(ctx, set)
 				Expect(err).ToNot(HaveOccurred())
@@ -302,7 +302,7 @@ var _ = Describe("Actuator", func() {
 					r0.EXPECT().RetryShoot(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, now, pointer.Int32Ptr(1)),
-				"Retrying shoot %s reconciliation", getReplicaFullName(0),
+				EventRetryingShootReconciliation, "Retrying shoot %s reconciliation", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootReconcileFailed and max retries reached",
 				set(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, pointer.Int32Ptr(maxShootRetries)),
@@ -310,7 +310,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusShootReconcileFailed, false, operationshoot.StatusUnhealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcileFailedReason, now, pointer.Int32Ptr(maxShootRetries)),
-				"Not retrying shoot %s reconciliation since max retries has been reached", getReplicaFullName(0),
+				EventNotRetryingShootReconciliation, "Not retrying shoot %s reconciliation since max retries has been reached", getReplicaFullName(0),
 			),
 			Entry("should retry the shoot and return correct status if a replica has status ShootDeleteFailed and max retries not yet reached",
 				set(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, nil),
@@ -319,7 +319,7 @@ var _ = Describe("Actuator", func() {
 					r0.EXPECT().RetryShoot(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, pointer.Int32Ptr(1)),
-				"Retrying shoot %s deletion", getReplicaFullName(0),
+				EventRetryingShootDeletion, "Retrying shoot %s deletion", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootReconcileFailed and max retries reached",
 				set(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, pointer.Int32Ptr(maxShootRetries)),
@@ -327,7 +327,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusShootDeleteFailed, false, operationshoot.StatusUnhealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeleteFailedReason, now, pointer.Int32Ptr(maxShootRetries)),
-				"Not retrying shoot %s deletion since max retries has been reached", getReplicaFullName(0),
+				EventNotRetryingShootDeletion, "Not retrying shoot %s deletion since max retries has been reached", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootReconciling",
 				set(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, nil),
@@ -335,7 +335,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusShootReconciling, false, operationshoot.StatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, before, nil),
-				"Waiting for shoot %s to be reconciled", getReplicaFullName(0),
+				EventWaitingForShootReconciled, "Waiting for shoot %s to be reconciled", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootDeleting",
 				set(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, nil),
@@ -343,7 +343,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusShootDeleting, false, operationshoot.StatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, before, nil),
-				"Waiting for shoot %s to be deleted", getReplicaFullName(0),
+				EventWaitingForShootDeleted, "Waiting for shoot %s to be deleted", getReplicaFullName(0),
 			),
 			Entry("should create the managed seed and return correct status if a replica has status ShootReconciled",
 				set(2, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, nil),
@@ -352,7 +352,7 @@ var _ = Describe("Actuator", func() {
 					r0.EXPECT().CreateManagedSeed(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, now, nil),
-				"Creating managed seed %s", getReplicaFullName(0),
+				EventCreatingManagedSeed, "Creating managed seed %s", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ManagedSeedPreparing",
 				set(2, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil),
@@ -360,7 +360,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusManagedSeedPreparing, false, operationshoot.StatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, before, nil),
-				"Waiting for managed seed %s to be registered", getReplicaFullName(0),
+				EventWaitingForManagedSeedRegistered, "Waiting for managed seed %s to be registered", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ManagedSeedDeleting",
 				set(2, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, nil),
@@ -368,7 +368,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusManagedSeedDeleting, false, operationshoot.StatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, before, nil),
-				"Waiting for managed seed %s to be deleted", getReplicaFullName(0),
+				EventWaitingForManagedSeedDeleted, "Waiting for managed seed %s to be deleted", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica seed is not ready",
 				set(2, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil),
@@ -376,7 +376,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusManagedSeedRegistered, false, operationshoot.StatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.SeedNotReadyReason, now, nil),
-				"Waiting for seed %s to be ready", getReplicaName(0),
+				EventWaitingForSeedReady, "Waiting for seed %s to be ready", getReplicaName(0),
 			),
 			Entry("should return correct status if a replica shoot is not healthy",
 				set(2, 1, getReplicaName(0), seedmanagementv1alpha1.SeedNotReadyReason, nil),
@@ -384,7 +384,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusManagedSeedRegistered, true, operationshoot.StatusUnhealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootNotHealthyReason, now, nil),
-				"Waiting for shoot %s to be healthy", getReplicaFullName(0),
+				EventWaitingForShootHealthy, "Waiting for shoot %s to be healthy", getReplicaFullName(0),
 			),
 			Entry("should create the shoot of a new replica and return correct status if all replicas are ready",
 				set(2, 1, "", "", nil),
@@ -396,7 +396,7 @@ var _ = Describe("Actuator", func() {
 					r1.EXPECT().GetName().Return(getReplicaName(1))
 				},
 				status(2, 1, 2, getReplicaName(1), seedmanagementv1alpha1.ShootReconcilingReason, now, nil),
-				"Creating shoot %s", getReplicaFullName(1),
+				EventCreatingShoot, "Creating shoot %s", getReplicaFullName(1),
 			),
 			Entry("should create the shoot of a new replica and return correct status if all replicas are ready and nextReplicaNumber is invalid",
 				set(2, 0, "", "", nil),
@@ -408,20 +408,20 @@ var _ = Describe("Actuator", func() {
 					r1.EXPECT().GetName().Return(getReplicaName(1))
 				},
 				status(2, 1, 2, getReplicaName(1), seedmanagementv1alpha1.ShootReconcilingReason, now, nil),
-				"Creating shoot %s", getReplicaFullName(1),
+				EventCreatingShoot, "Creating shoot %s", getReplicaFullName(1),
 			),
 		)
 	})
 
 	Context("scaling in", func() {
 		DescribeTable("#Reconcile",
-			func(set *seedmanagementv1alpha1.ManagedSeedSet, setupReplicas func(), status *seedmanagementv1alpha1.ManagedSeedSetStatus, success bool, fmt string, args ...interface{}) {
+			func(set *seedmanagementv1alpha1.ManagedSeedSet, setupReplicas func(), status *seedmanagementv1alpha1.ManagedSeedSetStatus, success bool, reason, fmt string, args ...interface{}) {
 				setupReplicas()
 				rg.EXPECT().GetReplicas(ctx, set).Return([]Replica{r0}, nil)
 				if success {
-					recorder.EXPECT().Eventf(set, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, fmt, args)
+					recorder.EXPECT().Eventf(set, corev1.EventTypeNormal, reason, fmt, args)
 				} else {
-					recorder.EXPECT().Eventf(set, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, fmt, args)
+					recorder.EXPECT().Eventf(set, corev1.EventTypeWarning, reason, fmt, args)
 				}
 
 				s, rf, err := actuator.Reconcile(ctx, set)
@@ -441,7 +441,7 @@ var _ = Describe("Actuator", func() {
 					r0.EXPECT().DeleteShoot(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, nil), true,
-				"Deleting shoot %s", getReplicaFullName(0),
+				EventDeletingShoot, "Deleting shoot %s", getReplicaFullName(0),
 			),
 			Entry("should retry the shoot and return correct status if a replica has status ShootDeleteFailed and max retries not yet reached",
 				set(0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, nil),
@@ -450,7 +450,7 @@ var _ = Describe("Actuator", func() {
 					r0.EXPECT().RetryShoot(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, pointer.Int32Ptr(1)), true,
-				"Retrying shoot %s deletion", getReplicaFullName(0),
+				EventRetryingShootDeletion, "Retrying shoot %s deletion", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootReconcileFailed and max retries reached",
 				set(0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, pointer.Int32Ptr(maxShootRetries)),
@@ -458,7 +458,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusShootDeleteFailed, false, operationshoot.StatusUnhealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeleteFailedReason, now, pointer.Int32Ptr(maxShootRetries)), true,
-				"Not retrying shoot %s deletion since max retries has been reached", getReplicaFullName(0),
+				EventNotRetryingShootDeletion, "Not retrying shoot %s deletion since max retries has been reached", getReplicaFullName(0),
 			),
 			Entry("should delete the shoot and return correct status if a replica has status ShootReconciling",
 				set(0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, nil),
@@ -467,7 +467,7 @@ var _ = Describe("Actuator", func() {
 					r0.EXPECT().DeleteShoot(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, nil), true,
-				"Deleting shoot %s", getReplicaFullName(0),
+				EventDeletingShoot, "Deleting shoot %s", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ShootDeleting",
 				set(0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, nil),
@@ -475,7 +475,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusShootDeleting, false, operationshoot.StatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, before, nil), true,
-				"Waiting for shoot %s to be deleted", getReplicaFullName(0),
+				EventWaitingForShootDeleted, "Waiting for shoot %s to be deleted", getReplicaFullName(0),
 			),
 			Entry("should delete the shoot and return correct status if a replica has status ShootReconciled",
 				set(0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootReconcilingReason, nil),
@@ -484,7 +484,7 @@ var _ = Describe("Actuator", func() {
 					r0.EXPECT().DeleteShoot(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ShootDeletingReason, now, nil), true,
-				"Deleting shoot %s", getReplicaFullName(0),
+				EventDeletingShoot, "Deleting shoot %s", getReplicaFullName(0),
 			),
 			Entry("should delete the managed seed and return correct status if a replica has status ManagedSeedPreparing",
 				set(0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil),
@@ -493,7 +493,7 @@ var _ = Describe("Actuator", func() {
 					r0.EXPECT().DeleteManagedSeed(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, now, nil), true,
-				"Deleting managed seed %s", getReplicaFullName(0),
+				EventDeletingManagedSeed, "Deleting managed seed %s", getReplicaFullName(0),
 			),
 			Entry("should return correct status if a replica has status ManagedSeedDeleting",
 				set(0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, nil),
@@ -501,7 +501,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusManagedSeedDeleting, false, operationshoot.StatusHealthy, true)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, before, nil), true,
-				"Waiting for managed seed %s to be deleted", getReplicaFullName(0),
+				EventWaitingForManagedSeedDeleted, "Waiting for managed seed %s to be deleted", getReplicaFullName(0),
 			),
 			Entry("should delete the managed seed and return correct status if a replica seed is not ready",
 				set(0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil),
@@ -510,7 +510,7 @@ var _ = Describe("Actuator", func() {
 					r0.EXPECT().DeleteManagedSeed(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, now, nil), true,
-				"Deleting managed seed %s", getReplicaFullName(0),
+				EventDeletingManagedSeed, "Deleting managed seed %s", getReplicaFullName(0),
 			),
 			Entry("should delete the managed seed and return correct status if a replica shoot is not healthy",
 				set(0, 1, getReplicaName(0), seedmanagementv1alpha1.SeedNotReadyReason, nil),
@@ -519,7 +519,7 @@ var _ = Describe("Actuator", func() {
 					r0.EXPECT().DeleteManagedSeed(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, now, nil), true,
-				"Deleting managed seed %s", getReplicaFullName(0),
+				EventDeletingManagedSeed, "Deleting managed seed %s", getReplicaFullName(0),
 			),
 			Entry("should delete the managed seed of a deletable replica and return correct status if all replicas are ready",
 				set(0, 1, "", "", nil),
@@ -528,7 +528,7 @@ var _ = Describe("Actuator", func() {
 					r0.EXPECT().DeleteManagedSeed(ctx, gc).Return(nil)
 				},
 				status(1, 0, 1, getReplicaName(0), seedmanagementv1alpha1.ManagedSeedDeletingReason, now, nil), true,
-				"Deleting managed seed %s", getReplicaFullName(0),
+				EventDeletingManagedSeed, "Deleting managed seed %s", getReplicaFullName(0),
 			),
 			Entry("should fail if all replicas are ready and there are no deletable replicas",
 				set(0, 1, "", "", nil),
@@ -536,7 +536,7 @@ var _ = Describe("Actuator", func() {
 					expectReplica(r0, 0, StatusManagedSeedRegistered, true, operationshoot.StatusHealthy, false)
 				},
 				status(1, 1, 1, "", "", now, nil), false,
-				"no deletable replicas found",
+				gardencorev1beta1.EventReconcileError, "no deletable replicas found",
 			),
 		)
 	})

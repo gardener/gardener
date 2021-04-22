@@ -81,7 +81,7 @@ func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.Ma
 
 	defer func() {
 		if err != nil {
-			a.errorEventf(set, err.Error())
+			a.errorEventf(set, gardencorev1beta1.EventReconcileError, err.Error())
 		}
 	}()
 
@@ -182,6 +182,24 @@ func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.Ma
 	return status, true, nil
 }
 
+// Event reason constants.
+const (
+	EventCreatingShoot                   = "CreatingShoot"
+	EventDeletingShoot                   = "DeletingShoot"
+	EventRetryingShootReconciliation     = "RetryingShootReconciliation"
+	EventNotRetryingShootReconciliation  = "NotRetryingShootReconciliation"
+	EventRetryingShootDeletion           = "RetryingShootDeletion"
+	EventNotRetryingShootDeletion        = "NotRetryingShootDeletion"
+	EventWaitingForShootReconciled       = "WaitingForShootReconciled"
+	EventWaitingForShootDeleted          = "WaitingForShootDeleted"
+	EventWaitingForShootHealthy          = "WaitingForShootHealthy"
+	EventCreatingManagedSeed             = "CreatingManagedSeed"
+	EventDeletingManagedSeed             = "DeletingManagedSeed"
+	EventWaitingForManagedSeedRegistered = "WaitingForManagedSeedRegistered"
+	EventWaitingForManagedSeedDeleted    = "WaitingForManagedSeedDeleted"
+	EventWaitingForSeedReady             = "WaitingForSeedReady"
+)
+
 func (a *actuator) reconcileReplica(
 	ctx context.Context,
 	set *seedmanagementv1alpha1.ManagedSeedSet,
@@ -196,13 +214,13 @@ func (a *actuator) reconcileReplica(
 		// This replica's shoot reconciliation has failed, retry it if max retries is not yet reached
 		retries := getPendingReplicaRetries(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason)
 		if int(retries) < *a.cfg.MaxShootRetries {
-			a.infoEventf(set, "Retrying shoot %s reconciliation", r.GetFullName())
+			a.infoEventf(set, EventRetryingShootReconciliation, "Retrying shoot %s reconciliation", r.GetFullName())
 			if err := r.RetryShoot(ctx, a.gardenClient.Client()); err != nil {
 				return false, err
 			}
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason, pointer.Int32Ptr(retries+1))
 		} else {
-			a.infoEventf(set, "Not retrying shoot %s reconciliation since max retries has been reached", r.GetFullName())
+			a.infoEventf(set, EventNotRetryingShootReconciliation, "Not retrying shoot %s reconciliation since max retries has been reached", r.GetFullName())
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcileFailedReason, &retries)
 		}
 		return true, nil
@@ -211,26 +229,26 @@ func (a *actuator) reconcileReplica(
 		// This replica's shoot deletion has failed, retry it if max retries is not yet reached
 		retries := getPendingReplicaRetries(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason)
 		if int(retries) < *a.cfg.MaxShootRetries {
-			a.infoEventf(set, "Retrying shoot %s deletion", r.GetFullName())
+			a.infoEventf(set, EventRetryingShootDeletion, "Retrying shoot %s deletion", r.GetFullName())
 			if err := r.RetryShoot(ctx, a.gardenClient.Client()); err != nil {
 				return false, err
 			}
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason, pointer.Int32Ptr(retries+1))
 		} else {
-			a.infoEventf(set, "Not retrying shoot %s deletion since max retries has been reached", r.GetFullName())
+			a.infoEventf(set, EventNotRetryingShootDeletion, "Not retrying shoot %s deletion since max retries has been reached", r.GetFullName())
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeleteFailedReason, &retries)
 		}
 		return true, nil
 
 	case replicaStatus == StatusShootReconciling && !scalingIn:
 		// This replica's shoot is reconciling, wait for it to be reconciled before moving to the next replica
-		a.infoEventf(set, "Waiting for shoot %s to be reconciled", r.GetFullName())
+		a.infoEventf(set, EventWaitingForShootReconciled, "Waiting for shoot %s to be reconciled", r.GetFullName())
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason, nil)
 		return true, nil
 
 	case replicaStatus == StatusShootDeleting:
 		// This replica's shoot is deleting, wait for it to be deleted before moving to the next replica
-		a.infoEventf(set, "Waiting for shoot %s to be deleted", r.GetFullName())
+		a.infoEventf(set, EventWaitingForShootDeleted, "Waiting for shoot %s to be deleted", r.GetFullName())
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason, nil)
 		return true, nil
 
@@ -238,13 +256,13 @@ func (a *actuator) reconcileReplica(
 		// This replica's shoot is fully reconciled and its managed seed doesn't exist
 		// If not scaling in, create its managed seed, otherwise delete its shoot
 		if !scalingIn {
-			a.infoEventf(set, "Creating managed seed %s", r.GetFullName())
+			a.infoEventf(set, EventCreatingManagedSeed, "Creating managed seed %s", r.GetFullName())
 			if err := r.CreateManagedSeed(ctx, a.gardenClient.Client()); err != nil {
 				return false, err
 			}
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil)
 		} else {
-			a.infoEventf(set, "Deleting shoot %s", r.GetFullName())
+			a.infoEventf(set, EventDeletingShoot, "Deleting shoot %s", r.GetFullName())
 			if err := r.DeleteShoot(ctx, a.gardenClient.Client()); err != nil {
 				return false, err
 			}
@@ -254,25 +272,25 @@ func (a *actuator) reconcileReplica(
 
 	case replicaStatus == StatusManagedSeedPreparing && !scalingIn:
 		// This replica's managed seed is preparing, wait for the it to be registered before moving to the next replica
-		a.infoEventf(set, "Waiting for managed seed %s to be registered", r.GetFullName())
+		a.infoEventf(set, EventWaitingForManagedSeedRegistered, "Waiting for managed seed %s to be registered", r.GetFullName())
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil)
 		return true, nil
 
 	case replicaStatus == StatusManagedSeedDeleting:
 		// This replica's managed seed is deleting, wait for it to be deleted before moving to the next replica
-		a.infoEventf(set, "Waiting for managed seed %s to be deleted", r.GetFullName())
+		a.infoEventf(set, EventWaitingForManagedSeedDeleted, "Waiting for managed seed %s to be deleted", r.GetFullName())
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ManagedSeedDeletingReason, nil)
 		return true, nil
 
 	case !r.IsSeedReady() && !scalingIn:
 		// This replica's seed is not ready, wait for it to be ready before moving to the next replica
-		a.infoEventf(set, "Waiting for seed %s to be ready", r.GetName())
+		a.infoEventf(set, EventWaitingForSeedReady, "Waiting for seed %s to be ready", r.GetName())
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.SeedNotReadyReason, nil)
 		return true, nil
 
 	case r.GetShootHealthStatus() != operationshoot.StatusHealthy && !scalingIn:
 		// This replica's shoot is not healthy, wait for it to be healthy before moving to the next replica
-		a.infoEventf(set, "Waiting for shoot %s to be healthy", r.GetFullName())
+		a.infoEventf(set, EventWaitingForShootHealthy, "Waiting for shoot %s to be healthy", r.GetFullName())
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootNotHealthyReason, nil)
 		return true, nil
 	}
@@ -287,7 +305,7 @@ func (a *actuator) createReplica(
 	ordinal int,
 ) error {
 	r := a.replicaFactory.NewReplica(set, nil, nil, nil, false)
-	a.infoEventf(set, "Creating shoot %s", getFullName(set, ordinal))
+	a.infoEventf(set, EventCreatingShoot, "Creating shoot %s", getFullName(set, ordinal))
 	if err := r.CreateShoot(ctx, a.gardenClient.Client(), ordinal); err != nil {
 		return err
 	}
@@ -302,13 +320,13 @@ func (a *actuator) deleteReplica(
 	r Replica,
 ) error {
 	if replicaManagedSeedExists(r.GetStatus()) {
-		a.infoEventf(set, "Deleting managed seed %s", r.GetFullName())
+		a.infoEventf(set, EventDeletingManagedSeed, "Deleting managed seed %s", r.GetFullName())
 		if err := r.DeleteManagedSeed(ctx, a.gardenClient.Client()); err != nil {
 			return err
 		}
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ManagedSeedDeletingReason, nil)
 	} else {
-		a.infoEventf(set, "Deleting shoot %s", r.GetFullName())
+		a.infoEventf(set, EventDeletingShoot, "Deleting shoot %s", r.GetFullName())
 		if err := r.DeleteShoot(ctx, a.gardenClient.Client()); err != nil {
 			return err
 		}
@@ -317,13 +335,13 @@ func (a *actuator) deleteReplica(
 	return nil
 }
 
-func (a *actuator) infoEventf(set *seedmanagementv1alpha1.ManagedSeedSet, fmt string, args ...interface{}) {
-	a.recorder.Eventf(set, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, fmt, args...)
+func (a *actuator) infoEventf(set *seedmanagementv1alpha1.ManagedSeedSet, reason, fmt string, args ...interface{}) {
+	a.recorder.Eventf(set, corev1.EventTypeNormal, reason, fmt, args...)
 	a.getLogger(set).Infof(fmt, args...)
 }
 
-func (a *actuator) errorEventf(set *seedmanagementv1alpha1.ManagedSeedSet, fmt string, args ...interface{}) {
-	a.recorder.Eventf(set, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, fmt, args...)
+func (a *actuator) errorEventf(set *seedmanagementv1alpha1.ManagedSeedSet, reason, fmt string, args ...interface{}) {
+	a.recorder.Eventf(set, corev1.EventTypeWarning, reason, fmt, args...)
 	a.getLogger(set).Errorf(fmt, args...)
 }
 
