@@ -35,6 +35,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -251,7 +252,12 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 		}
 
 	case core.Kind("Shoot"):
-		shoot, ok := a.GetObject().(*core.Shoot)
+		var (
+			oldShoot, shoot *core.Shoot
+			ok              bool
+		)
+
+		shoot, ok = a.GetObject().(*core.Shoot)
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Shoot object")
 		}
@@ -268,10 +274,12 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 			}
 			annotations[common.GardenCreatedBy] = a.GetUserInfo().GetName()
 			shoot.Annotations = annotations
+
+			oldShoot = &core.Shoot{}
 		case admission.Update:
 			// skip verification if spec wasn't changed
 			// this way we make sure, that users can always annotate/label the shoot if the spec doesn't change
-			oldShoot, ok := a.GetOldObject().(*core.Shoot)
+			oldShoot, ok = a.GetOldObject().(*core.Shoot)
 			if !ok {
 				return apierrors.NewBadRequest("could not convert old resource into Shoot object")
 			}
@@ -279,7 +287,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				return nil
 			}
 		}
-		err = r.ensureShootReferences(ctx, a, shoot)
+		err = r.ensureShootReferences(ctx, a, oldShoot, shoot)
 
 	case core.Kind("Project"):
 		project, ok := a.GetObject().(*core.Project)
@@ -529,64 +537,73 @@ func (r *ReferenceManager) ensureSeedReferences(ctx context.Context, seed *core.
 	return r.lookupSecret(ctx, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)
 }
 
-func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes admission.Attributes, shoot *core.Shoot) error {
-	if _, err := r.cloudProfileLister.Get(shoot.Spec.CloudProfileName); err != nil {
-		return err
-	}
-
-	if shoot.Spec.SeedName != nil {
-		if _, err := r.seedLister.Get(*shoot.Spec.SeedName); err != nil {
+func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes admission.Attributes, oldShoot, shoot *core.Shoot) error {
+	if !equality.Semantic.DeepEqual(oldShoot.Spec.CloudProfileName, shoot.Spec.CloudProfileName) {
+		if _, err := r.cloudProfileLister.Get(shoot.Spec.CloudProfileName); err != nil {
 			return err
 		}
 	}
 
-	if _, err := r.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.SecretBindingName); err != nil {
-		return err
-	}
-
-	for _, resource := range shoot.Spec.Resources {
-		// Get the APIResource for the current resource
-		apiResource, err := r.getAPIResource(resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
-		if err != nil {
-			return err
-		}
-		if apiResource == nil {
-			return fmt.Errorf("shoot resource reference %q could not be resolved for API resource with version %q and kind %q", resource.Name, resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
-		}
-
-		// Parse APIVersion to GroupVersion
-		gv, err := schema.ParseGroupVersion(resource.ResourceRef.APIVersion)
-		if err != nil {
-			return err
-		}
-
-		// Check if the resource is namespaced
-		if !apiResource.Namespaced {
-			return fmt.Errorf("failed to resolve shoot resource reference %q. Cannot reference a resource that is not namespaced", resource.Name)
-		}
-
-		// Check if the user is allowed to read the resource
-		readAttributes := authorizer.AttributesRecord{
-			User:            attributes.GetUserInfo(),
-			Verb:            "get",
-			APIGroup:        gv.Group,
-			APIVersion:      gv.Version,
-			Resource:        apiResource.Name,
-			Namespace:       shoot.Namespace,
-			Name:            resource.ResourceRef.Name,
-			ResourceRequest: true,
-		}
-		if decision, _, _ := r.authorizer.Authorize(ctx, readAttributes); decision != authorizer.DecisionAllow {
-			return errors.New("shoot cannot reference a resource you are not allowed to read")
-		}
-
-		// Check if the resource actually exists
-		if err := r.lookupResource(ctx, gv.WithResource(apiResource.Name), shoot.Namespace, resource.ResourceRef.Name); err != nil {
-			return fmt.Errorf("failed to resolve shoot resource reference %q: %v", resource.Name, err)
+	if !equality.Semantic.DeepEqual(oldShoot.Spec.SeedName, shoot.Spec.SeedName) {
+		if shoot.Spec.SeedName != nil {
+			if _, err := r.seedLister.Get(*shoot.Spec.SeedName); err != nil {
+				return err
+			}
 		}
 	}
 
-	if shoot.Spec.DNS != nil && shoot.DeletionTimestamp == nil {
+	if !equality.Semantic.DeepEqual(oldShoot.Spec.SecretBindingName, shoot.Spec.SecretBindingName) {
+		if _, err := r.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.SecretBindingName); err != nil {
+			return err
+		}
+	}
+
+	if !equality.Semantic.DeepEqual(oldShoot.Spec.Resources, shoot.Spec.Resources) {
+		for _, resource := range shoot.Spec.Resources {
+			// Get the APIResource for the current resource
+			apiResource, err := r.getAPIResource(resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
+			if err != nil {
+				return err
+			}
+			if apiResource == nil {
+				return fmt.Errorf("shoot resource reference %q could not be resolved for API resource with version %q and kind %q", resource.Name, resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
+			}
+
+			// Parse APIVersion to GroupVersion
+			gv, err := schema.ParseGroupVersion(resource.ResourceRef.APIVersion)
+			if err != nil {
+				return err
+			}
+
+			// Check if the resource is namespaced
+			if !apiResource.Namespaced {
+				return fmt.Errorf("failed to resolve shoot resource reference %q. Cannot reference a resource that is not namespaced", resource.Name)
+			}
+
+			// Check if the user is allowed to read the resource
+			readAttributes := authorizer.AttributesRecord{
+				User:            attributes.GetUserInfo(),
+				Verb:            "get",
+				APIGroup:        gv.Group,
+				APIVersion:      gv.Version,
+				Resource:        apiResource.Name,
+				Namespace:       shoot.Namespace,
+				Name:            resource.ResourceRef.Name,
+				ResourceRequest: true,
+			}
+			if decision, _, _ := r.authorizer.Authorize(ctx, readAttributes); decision != authorizer.DecisionAllow {
+				return errors.New("shoot cannot reference a resource you are not allowed to read")
+			}
+
+			// Check if the resource actually exists
+			if err := r.lookupResource(ctx, gv.WithResource(apiResource.Name), shoot.Namespace, resource.ResourceRef.Name); err != nil {
+				return fmt.Errorf("failed to resolve shoot resource reference %q: %v", resource.Name, err)
+			}
+		}
+
+	}
+
+	if !equality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS) && shoot.Spec.DNS != nil && shoot.DeletionTimestamp == nil {
 		for _, dnsProvider := range shoot.Spec.DNS.Providers {
 			if dnsProvider.SecretName == nil {
 				continue
