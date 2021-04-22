@@ -51,7 +51,7 @@ type Controller struct {
 	config                        *config.GardenletConfiguration
 	gardenClusterIdentity         string
 	identity                      *gardencorev1beta1.Gardener
-	careControl                   CareControlInterface
+	careReconciler                reconcile.Reconciler
 	controllerInstallationControl ControllerInstallationControlInterface
 	seedRegistrationControl       SeedRegistrationControlInterface
 	recorder                      record.EventRecorder
@@ -99,7 +99,7 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 		config:                        config,
 		identity:                      identity,
 		gardenClusterIdentity:         gardenClusterIdentity,
-		careControl:                   NewDefaultCareControl(clientMap, gardenCoreV1beta1Informer, imageVector, identity, gardenClusterIdentity, config),
+		careReconciler:                NewCareReconciler(clientMap, gardenCoreV1beta1Informer, imageVector, identity, gardenClusterIdentity, config),
 		controllerInstallationControl: NewDefaultControllerInstallationControl(clientMap, gardenCoreV1beta1Informer, recorder),
 		seedRegistrationControl:       NewDefaultSeedRegistrationControl(clientMap, recorder, logger.Logger),
 		recorder:                      recorder,
@@ -213,7 +213,7 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers int
 		controllerutils.CreateWorker(ctx, c.shootQueue, "Shoot", reconcile.Func(c.reconcileShootRequest), &waitGroup, c.workerCh)
 	}
 	for i := 0; i < shootCareWorkers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.shootCareQueue, "Shoot Care", c.reconcileShootCareKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootCareQueue, "Shoot Care", c.careReconciler, &waitGroup, c.workerCh)
 	}
 	for i := 0; i < shootWorkers/2+1; i++ {
 		controllerutils.CreateWorker(ctx, c.shootSeedQueue, "Shooted Seeds Reconciliation", reconcile.Func(c.reconcileShootRequest), &waitGroup, c.workerCh)

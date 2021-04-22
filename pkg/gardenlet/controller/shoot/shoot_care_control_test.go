@@ -19,6 +19,7 @@ import (
 	"errors"
 	"time"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -55,11 +56,12 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 var _ = Describe("Shoot Care Control", func() {
 	var (
-		careControl   CareControlInterface
+		careControl   reconcile.Reconciler
 		gardenletConf *config.GardenletConfiguration
 	)
 
@@ -73,21 +75,28 @@ var _ = Describe("Shoot Care Control", func() {
 
 	Describe("#Care", func() {
 		var (
+			ctx context.Context
+
 			ctrl                      *gomock.Controller
 			gardenCoreCache           *mockcache.MockCache
 			gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
+			careSyncPeriod            time.Duration
 
-			gardenSecrets                            []corev1.Secret
-			seed                                     *gardencorev1beta1.Seed
-			seedName, shootName, shootNamespace, key string
-			shoot                                    *gardencorev1beta1.Shoot
+			gardenSecrets                       []corev1.Secret
+			seed                                *gardencorev1beta1.Seed
+			seedName, shootName, shootNamespace string
+			req                                 reconcile.Request
+			shoot                               *gardencorev1beta1.Shoot
 
 			gardenRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
 		)
 
 		BeforeEach(func() {
+			ctx = context.Background()
+
 			ctrl = gomock.NewController(GinkgoT())
 			gardenCoreCache = mockcache.NewMockCache(ctrl)
+			careSyncPeriod = 1 * time.Minute
 
 			gardenSecrets = []corev1.Secret{
 				{
@@ -115,7 +124,7 @@ var _ = Describe("Shoot Care Control", func() {
 
 			shootName = "shoot"
 			shootNamespace = "project"
-			key = kutil.Key(shootNamespace, shootName).String()
+			req = reconcile.Request{NamespacedName: kutil.Key(shootNamespace, shootName)}
 
 			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
@@ -128,15 +137,23 @@ var _ = Describe("Shoot Care Control", func() {
 			}
 
 			gardenletConf = &config.GardenletConfiguration{
+				SeedConfig: &config.SeedConfig{
+					SeedTemplate: gardencore.SeedTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: seedName,
+						},
+					},
+				},
 				Controllers: &config.GardenletControllerConfiguration{
 					ShootCare: &config.ShootCareControllerConfiguration{
-						SyncPeriod: &metav1.Duration{Duration: 60 * time.Second},
+						SyncPeriod: &metav1.Duration{Duration: careSyncPeriod},
 					},
 				},
 			}
 
 			gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
 			Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
+			Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 		})
 
 		AfterEach(func() {
@@ -183,9 +200,9 @@ var _ = Describe("Shoot Care Control", func() {
 				It("should report a setup failure", func() {
 					operationFunc := opFunc(nil, errors.New("foo"))
 					defer test.WithVars(&NewOperation, operationFunc)()
-					careControl = NewDefaultCareControl(clientMapBuilder.Build(), gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
+					careControl = NewCareReconciler(clientMapBuilder.Build(), gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
 
-					Expect(careControl.Care(shoot, key)).To(Succeed())
+					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 					updatedShoot, err := gardenCoreClient.CoreV1beta1().Shoots(shootNamespace).Get(context.Background(), shootName, metav1.GetOptions{})
 					Expect(err).To(Not(HaveOccurred()))
 					Expect(updatedShoot.Status.Conditions).To(consistOfConditionsInUnknownStatus("Precondition failed: operation could not be initialized"))
@@ -201,9 +218,10 @@ var _ = Describe("Shoot Care Control", func() {
 				It("should report a setup failure", func() {
 					operationFunc := opFunc(nil, errors.New("foo"))
 					defer test.WithVars(&NewOperation, operationFunc)()
-					careControl = NewDefaultCareControl(clientMapBuilder.Build(), gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
+					careControl = NewCareReconciler(clientMapBuilder.Build(), gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
 
-					Expect(careControl.Care(shoot, key)).To(MatchError("error reading Garden secrets: need an internal domain secret but found none"))
+					_, err := careControl.Reconcile(ctx, req)
+					Expect(err).To(MatchError("error reading Garden secrets: need an internal domain secret but found none"))
 				})
 			})
 
@@ -221,8 +239,8 @@ var _ = Describe("Shoot Care Control", func() {
 				})
 
 				It("should report a setup failure", func() {
-					careControl = NewDefaultCareControl(clientMapBuilder.Build(), gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
-					Expect(careControl.Care(shoot, key)).To(Succeed())
+					careControl = NewCareReconciler(clientMapBuilder.Build(), gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
+					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 					updatedShoot, err := gardenCoreClient.CoreV1beta1().Shoots(shootNamespace).Get(context.Background(), shootName, metav1.GetOptions{})
 					Expect(err).To(Not(HaveOccurred()))
 					Expect(updatedShoot.Status.Conditions).To(consistOfConditionsInUnknownStatus("Precondition failed: seed client cannot be constructed"))
@@ -273,7 +291,7 @@ var _ = Describe("Shoot Care Control", func() {
 					test.WithVar(&NewOperation, operationFunc),
 					test.WithVar(&NewGarbageCollector, nopGarbageCollectorFunc()),
 				)
-				careControl = NewDefaultCareControl(clientMap, gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
+				careControl = NewCareReconciler(clientMap, gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
 			})
 
 			BeforeEach(func() {
@@ -311,7 +329,7 @@ var _ = Describe("Shoot Care Control", func() {
 							updatedShoot = shoot
 							return nil
 						})
-					Expect(careControl.Care(shoot, key)).To(Succeed())
+					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 					Expect(updatedShoot.Status.Conditions).To(BeEmpty())
 					Expect(updatedShoot.Status.Constraints).To(BeEmpty())
 					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusHealthy)))
@@ -340,7 +358,7 @@ var _ = Describe("Shoot Care Control", func() {
 							updatedShoot = shoot
 							return nil
 						})
-					Expect(careControl.Care(shoot, key)).To(Succeed())
+					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 					Expect(updatedShoot.Status.Conditions).To(BeEmpty())
 					Expect(updatedShoot.Status.Constraints).To(BeEmpty())
 					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusHealthy)))
@@ -378,7 +396,7 @@ var _ = Describe("Shoot Care Control", func() {
 							updatedShoot = shoot
 							return nil
 						})
-					Expect(careControl.Care(shoot, key)).To(Succeed())
+					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 					Expect(updatedShoot.Status.Conditions).To(BeEmpty())
 					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusHealthy)))
 				})
@@ -406,7 +424,7 @@ var _ = Describe("Shoot Care Control", func() {
 							updatedShoot = shoot
 							return nil
 						})
-					Expect(careControl.Care(shoot, key)).To(Succeed())
+					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 					Expect(updatedShoot.Status.Conditions).To(ConsistOf(apiServerCondition))
 					Expect(updatedShoot.Status.Constraints).To(ConsistOf(hibernationConstraint))
 					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusHealthy)))
@@ -526,7 +544,7 @@ var _ = Describe("Shoot Care Control", func() {
 								updatedShoot = shoot
 								return nil
 							})
-						Expect(careControl.Care(shoot, key)).To(Succeed())
+						Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(append(conditions, seedConditions...)))
 						Expect(updatedShoot.Status.Constraints).To(ConsistOf(constraints))
 						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusHealthy)))
@@ -558,7 +576,7 @@ var _ = Describe("Shoot Care Control", func() {
 								updatedShoot = shoot
 								return nil
 							})
-						Expect(careControl.Care(shoot, key)).To(Succeed())
+						Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
 						Expect(updatedShoot.Status.Constraints).To(ConsistOf(constraints))
 						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusHealthy)))
@@ -581,7 +599,7 @@ var _ = Describe("Shoot Care Control", func() {
 								updatedShoot = shoot
 								return nil
 							})
-						Expect(careControl.Care(shoot, key)).To(Succeed())
+						Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
 						Expect(updatedShoot.Status.Constraints).To(ConsistOf(constraints))
 						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusUnhealthy)))
@@ -670,7 +688,7 @@ var _ = Describe("Shoot Care Control", func() {
 								updatedShoot = shoot
 								return nil
 							})
-						Expect(careControl.Care(shoot, key)).To(Succeed())
+						Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
 						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(common.ShootStatus, string(operationshoot.StatusHealthy)))
 					})
