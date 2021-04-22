@@ -274,6 +274,8 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 			}
 			annotations[v1beta1constants.GardenCreatedBy] = a.GetUserInfo().GetName()
 			shoot.Annotations = annotations
+
+			oldShoot = &core.Shoot{}
 		case admission.Update:
 			// skip verification if spec wasn't changed
 			// this way we make sure, that users can always annotate/label the shoot if the spec doesn't change
@@ -536,15 +538,13 @@ func (r *ReferenceManager) ensureSeedReferences(ctx context.Context, seed *core.
 }
 
 func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes admission.Attributes, oldShoot, shoot *core.Shoot) error {
-	shootCreation := oldShoot == nil
-
-	if shootCreation || !equality.Semantic.DeepEqual(oldShoot.Spec.CloudProfileName, shoot.Spec.CloudProfileName) {
+	if !equality.Semantic.DeepEqual(oldShoot.Spec.CloudProfileName, shoot.Spec.CloudProfileName) {
 		if _, err := r.cloudProfileLister.Get(shoot.Spec.CloudProfileName); err != nil {
 			return err
 		}
 	}
 
-	if shootCreation || !equality.Semantic.DeepEqual(oldShoot.Spec.SeedName, shoot.Spec.SeedName) {
+	if !equality.Semantic.DeepEqual(oldShoot.Spec.SeedName, shoot.Spec.SeedName) {
 		if shoot.Spec.SeedName != nil {
 			if _, err := r.seedLister.Get(*shoot.Spec.SeedName); err != nil {
 				return err
@@ -552,13 +552,13 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 		}
 	}
 
-	if shootCreation || !equality.Semantic.DeepEqual(oldShoot.Spec.SecretBindingName, shoot.Spec.SecretBindingName) {
+	if !equality.Semantic.DeepEqual(oldShoot.Spec.SecretBindingName, shoot.Spec.SecretBindingName) {
 		if _, err := r.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.SecretBindingName); err != nil {
 			return err
 		}
 	}
 
-	if shootCreation || !equality.Semantic.DeepEqual(oldShoot.Spec.Resources, shoot.Spec.Resources) {
+	if !equality.Semantic.DeepEqual(oldShoot.Spec.Resources, shoot.Spec.Resources) {
 		for _, resource := range shoot.Spec.Resources {
 			// Get the APIResource for the current resource
 			apiResource, err := r.getAPIResource(resource.ResourceRef.APIVersion, resource.ResourceRef.Kind)
@@ -603,7 +603,7 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 
 	}
 
-	if (shootCreation && shoot.Spec.DNS != nil) || (oldShoot != nil && !equality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS)) {
+	if !equality.Semantic.DeepEqual(oldShoot.Spec.DNS, shoot.Spec.DNS) && shoot.Spec.DNS != nil {
 		for _, dnsProvider := range shoot.Spec.DNS.Providers {
 			if dnsProvider.SecretName == nil {
 				continue
