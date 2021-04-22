@@ -1,9 +1,9 @@
-{{- if .Values.global.controller.enabled }}
+{{- if .Values.global.apiserver.enabled }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: gardener.cloud:system:gardener-controller-manager
+  name: gardener.cloud:system:gardener-apiserver
   labels:
     app: gardener
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
