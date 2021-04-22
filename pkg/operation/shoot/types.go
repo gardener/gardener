@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/operation/garden"
 
@@ -74,6 +75,7 @@ type Shoot struct {
 	IgnoreAlerts               bool
 	HibernationEnabled         bool
 	KonnectivityTunnelEnabled  bool
+	ReversedVPNEnabled         bool
 	NodeLocalDNSEnabled        bool
 	Networks                   *Networks
 
@@ -102,6 +104,7 @@ type ControlPlane struct {
 	ClusterAutoscaler     clusterautoscaler.ClusterAutoscaler
 	ResourceManager       resourcemanager.ResourceManager
 	KonnectivityServer    konnectivity.KonnectivityServer
+	VPNSeedServer         vpnseedserver.VPNSeedServer
 }
 
 // Extensions contains references to extension resources.

@@ -8,3 +8,4 @@ istioIngressGateway:
   namespace: istio-ingress
   labels:
     istio: ingressgateway
+internalDNSNameApiserver: api.internal

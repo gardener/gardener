@@ -86,6 +86,10 @@ images:
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
   tag: "0.19.0"
+- name: vpn-seed-server
+  sourceRepository: github.com/gardener/vpn2
+  repository: eu.gcr.io/gardener-project/gardener/vpn-seed-server
+  tag: "0.3.0"
 - name: konnectivity-server
   sourceRepository: github.com/gardener/replica-reloader
   repository: eu.gcr.io/gardener-project/gardener/replica-reloader
@@ -130,6 +134,10 @@ images:
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
   tag: "0.19.0"
+- name: vpn-shoot-client
+  sourceRepository: github.com/gardener/vpn2
+  repository: eu.gcr.io/gardener-project/gardener/vpn-shoot-client
+  tag: "0.3.0"
 - name: konnectivity-agent
   sourceRepository: github.com/kubernetes-sigs/apiserver-network-proxy
   repository: k8s.gcr.io/kas-network-proxy/proxy-agent

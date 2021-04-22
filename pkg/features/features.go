@@ -90,4 +90,9 @@ const (
 	// owner: @mvladev
 	// alpha: v1.15.0
 	SeedKubeScheduler featuregate.Feature = "SeedKubeScheduler"
+
+	// ReversedVPN moves the openvpn server to the seed.
+	// owner: @scheererj @docktofuture
+	// alpha: v1.22.0
+	ReversedVPN featuregate.Feature = "ReversedVPN"
 )

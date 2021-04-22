@@ -35,3 +35,31 @@ spec:
           prefix_ranges:
           - address_prefix: {{ .Values.apiserverClusterIP }}
             prefix_len: 32
+  - applyTo: NETWORK_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        name: 0.0.0.0_8132
+        portNumber: 8132
+        filterChain:
+          filter:
+            name: envoy.filters.network.http_connection_manager
+    patch:
+      operation: MERGE
+      value:
+        name: "envoy.filters.network.http_connection_manager"
+        typed_config:
+          "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
+          route_config:
+            virtual_hosts:
+            - name: {{ .Release.Namespace }}
+              domains:
+              - {{ .Values.internalDNSNameApiserver }}:8132
+              routes:
+              - match:
+                  connect_matcher: {}
+                route:
+                  cluster: outbound|1194||vpn-seed-server.{{ .Release.Namespace }}.svc.cluster.local
+                  upgrade_configs:
+                  - upgrade_type: CONNECT
+                    connect_config: {}

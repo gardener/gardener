@@ -48,6 +48,7 @@
 * [Troubleshooting guide](usage/trouble_shooting_guide.md)
 * [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
 * [APIServerSNI environment variable injection](usage/apiserver-sni-injection.md)
+* [Reversed Cluster VPN](usage/reversed-vpn-tunnel.md)
 
 ## Proposals
 

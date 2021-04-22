@@ -45,9 +45,19 @@ spec:
         operator: Exists
       containers:
       - name: vpn-shoot
+      {{- if .Values.reversedVPN.enabled }}
+        image: {{ index .Values.images "vpn-shoot-client" }}
+      {{- else }}
         image: {{ index .Values.images "vpn-shoot" }}
+      {{- end }}
         imagePullPolicy: IfNotPresent
         env:
+      {{- if .Values.reversedVPN.enabled }}
+        - name: ENDPOINT
+          value: {{ .Values.endpoint }}
+        - name: OPENVPN_PORT
+          value: {{ .Values.port | quote }}
+      {{- end }}
         - name: SERVICE_NETWORK
           value: {{ .Values.serviceNetwork }}
         - name: POD_NETWORK
@@ -78,8 +88,10 @@ spec:
           name: vpn-shoot
         - mountPath: /srv/secrets/tlsauth
           name: vpn-shoot-tlsauth
+      {{- if not .Values.reversedVPN.enabled }}
         - mountPath: /srv/secrets/dh
           name: vpn-shoot-dh
+      {{- end }}
       volumes:
       - name: vpn-shoot
         secret:
@@ -87,6 +99,8 @@ spec:
       - name: vpn-shoot-tlsauth
         secret:
           secretName: vpn-shoot-tlsauth
+      {{- if not .Values.reversedVPN.enabled }}
       - name: vpn-shoot-dh
         secret:
           secretName: vpn-shoot-dh
+      {{- end }}

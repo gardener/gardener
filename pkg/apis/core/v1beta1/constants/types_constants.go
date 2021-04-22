@@ -65,6 +65,10 @@ const (
 	// the Gardenlet pod.
 	DeploymentNameGardenlet = "gardenlet"
 
+	// DeploymentNameVPNSeedServer is a constant for the name of a Kubernetes deployment object that contains
+	// the vpn-seed-server pod.
+	DeploymentNameVPNSeedServer = "vpn-seed-server"
+
 	// DeploymentNameKubeScheduler is a constant for the name of a Kubernetes deployment object that contains
 	// the kube-scheduler pod.
 	DeploymentNameKubeScheduler = "kube-scheduler"
@@ -267,6 +271,8 @@ const (
 	// LabelNetworkPolicyToShootAPIServer allows Egress from pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed' to talk to Shoot's
 	// Kubernetes API Server.
 	LabelNetworkPolicyToShootAPIServer = "networking.gardener.cloud/to-shoot-apiserver"
+	// LabelNetworkPolicyToShootNetworks allows Egress from pods labeled with 'networking.gardener.cloud/to-shoot-networks=allowed' to IPv4 blocks belonging to the Shoot network.
+	LabelNetworkPolicyToShootNetworks = "networking.gardener.cloud/to-shoot-networks"
 	// LabelNetworkPolicyFromShootAPIServer allows Egress from Shoot's Kubernetes API Server to talk to pods labeled with
 	// 'networking.gardener.cloud/from-shoot-apiserver=allowed'.
 	LabelNetworkPolicyFromShootAPIServer = "networking.gardener.cloud/from-shoot-apiserver"
@@ -328,6 +334,8 @@ const (
 	// AnnotationShootKonnectivityTunnel is the key for an annotation of a Shoot cluster whose value indicates
 	// if a konnectivity-tunnel should be deployed into the shoot cluster or not.
 	AnnotationShootKonnectivityTunnel = "alpha.featuregates.shoot.gardener.cloud/konnectivity-tunnel"
+	// AnnotationReversedVPN moves the vpn-server to the seed.
+	AnnotationReversedVPN = "alpha.featuregates.shoot.gardener.cloud/reversed-vpn"
 
 	// AnnotationShootAPIServerSNIPodInjector is the key for an annotation of a Shoot cluster whose value indicates
 	// if pod injection of 'KUBERNETES_SERVICE_HOST' environment variable should happen for clusters where APIServerSNI

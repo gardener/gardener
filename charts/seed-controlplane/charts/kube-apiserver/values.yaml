@@ -181,3 +181,6 @@ mountHostCADirectories:
 
 #maxNonMutatingRequestsInflight: 400
 #maxMutatingRequestsInflight: 200
+
+reversedVPN:
+  enabled: false

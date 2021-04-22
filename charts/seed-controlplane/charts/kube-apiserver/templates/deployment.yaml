@@ -34,7 +34,7 @@ spec:
         checksum/configmap-audit-policy: {{ include (print $.Template.BasePath "/configmap-audit-policy.yaml") . | sha256sum }}
         checksum/secret-oidc-cabundle: {{ include (print $.Template.BasePath "/secret-oidc-ca.yaml") . | sha256sum }}
         checksum/configmap-admission-config: {{ include (print $.Template.BasePath "/configmap-admission-config.yaml") . | sha256sum }}
-        {{- if .Values.konnectivityTunnel.enabled }}
+        {{- if or .Values.konnectivityTunnel.enabled .Values.reversedVPN.enabled }}
         checksum/egress-selection-config: {{ include (print $.Template.BasePath "/configmap-egress-selection.yaml") . | sha256sum }}
         {{- end}}
 {{- if .Values.podAnnotations }}
@@ -71,7 +71,7 @@ spec:
                     values:
                     - apiserver
       priorityClassName: {{ .Values.priorityClassName }}
-      {{- if not .Values.konnectivityTunnel.enabled }}
+      {{- if and (not .Values.konnectivityTunnel.enabled) (not .Values.reversedVPN.enabled)}}
       initContainers:
       - name: set-iptable-rules
         image: {{ index .Values.images "alpine-iptables" }}
@@ -96,8 +96,8 @@ spec:
         {{- else }}
         - /usr/local/bin/kube-apiserver
         {{- end }}
-        {{- if .Values.konnectivityTunnel.enabled }}
-        - --egress-selector-config-file=/etc/kubernetes/konnectivity/egress-selector-configuration.yaml
+        {{- if or .Values.konnectivityTunnel.enabled .Values.reversedVPN.enabled }}
+        - --egress-selector-config-file=/etc/kubernetes/egress/egress-selector-configuration.yaml
         {{- end}}
         - --enable-admission-plugins={{ include "kube-apiserver.admissionPlugins" . | trimSuffix "," }}
         - --admission-control-config-file={{ include "kube-apiserver.admissionPluginConfigFileDir" . }}/admission-configuration.yaml
@@ -217,9 +217,15 @@ spec:
 {{ toYaml .Values.apiServerResources | indent 10 }}
         {{- end }}
         volumeMounts:
+        {{- if .Values.reversedVPN.enabled }}
+        - name: kube-apiserver-http-proxy
+          mountPath: /etc/srv/kubernetes/envoy
+        - name: egress-selection-config
+          mountPath: /etc/kubernetes/egress
+        {{- end }}
         {{- if .Values.konnectivityTunnel.enabled }}
         - name: egress-selection-config
-          mountPath: /etc/kubernetes/konnectivity
+          mountPath: /etc/kubernetes/egress
         {{- if .Values.sni.enabled }}
         - name: konnectivity-server-client-tls
           mountPath: /etc/srv/kubernetes/konnectivity-server-client-tls
@@ -385,7 +391,7 @@ spec:
         - name: konnectivity-uds
           mountPath: /etc/srv/kubernetes/konnectivity-server
           readOnly: false
-      {{- else if not .Values.konnectivityTunnel.enabled }}
+      {{- else if and (not .Values.konnectivityTunnel.enabled) (not .Values.reversedVPN.enabled) }}
       - name: vpn-seed
         image: {{ index .Values.images "vpn-seed" }}
         imagePullPolicy: IfNotPresent
@@ -410,10 +416,6 @@ spec:
         - name: NODE_NETWORK
           value: {{ .Values.shootNetworks.nodes }}
         {{- end }}
-        ports:
-        - name: tcp-tunnel
-          containerPort: 1194
-          protocol: TCP
         {{- if .Values.vpnSeedResources }}
         resources:
 {{ toYaml .Values.vpnSeedResources | indent 10 }}
@@ -460,6 +462,11 @@ spec:
       - name: service-account-key
         secret:
           secretName: service-account-key
+      {{- if .Values.reversedVPN.enabled }}
+      - name: kube-apiserver-http-proxy
+        secret:
+          secretName: kube-apiserver-http-proxy
+      {{- end }}
       {{- if .Values.enableBasicAuthentication }}
       - name: kube-apiserver-basic-auth
         secret:
@@ -507,6 +514,10 @@ spec:
       - name: konnectivity-uds
         emptyDir: {}
       {{- end }}
+      {{- else if .Values.reversedVPN.enabled }}
+      - name: egress-selection-config
+        configMap:
+          name: kube-apiserver-egress-selector-configuration
       {{- else }}
       - name: vpn-seed
         secret:

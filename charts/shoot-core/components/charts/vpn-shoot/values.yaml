@@ -10,3 +10,7 @@ vpnShootSecretData:
   ca: ZHVtbXktYjY0LWRhdGE=
   tlsCrt: ZHVtbXktYjY0LWRhdGE=
   tlsKey: ZHVtbXktYjY0LWRhdGE=
+endpoint: 10.0.0.1
+port: 8132
+reversedVPN:
+  enabled: false

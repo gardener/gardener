@@ -35,6 +35,7 @@ import (
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -533,6 +534,9 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 				"name":       konnectivity.ServerName,
 				"serverPort": konnectivity.ServerHTTPSPort,
 			},
+			"reversedVPN": map[string]interface{}{
+				"enabled": b.Shoot.ReversedVPNEnabled,
+			},
 			"hvpa": map[string]interface{}{
 				"enabled": hvpaEnabled,
 			},
@@ -555,6 +559,8 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		} else {
 			podAnnotations["checksum/secret-konnectivity-server"] = b.CheckSums[konnectivity.ServerName]
 		}
+	} else if b.Shoot.ReversedVPNEnabled {
+		podAnnotations["checksum/secret-"+vpnseedserver.VpnSeedServerTLSAuth] = b.CheckSums[vpnseedserver.VpnSeedServerTLSAuth]
 	} else {
 		podAnnotations["checksum/secret-vpn-seed"] = b.CheckSums["vpn-seed"]
 		podAnnotations["checksum/secret-vpn-seed-tlsauth"] = b.CheckSums["vpn-seed-tlsauth"]
@@ -883,6 +889,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 				Namespace: *b.Config.SNI.Ingress.Namespace,
 				Labels:    b.Config.SNI.Ingress.Labels,
 			},
+			InternalDNSNameApiserver: b.outOfClusterAPIServerFQDN(),
 		},
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),
@@ -910,6 +917,7 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 				Namespace: *b.Config.SNI.Ingress.Namespace,
 				Labels:    b.Config.SNI.Ingress.Labels,
 			},
+			InternalDNSNameApiserver: b.outOfClusterAPIServerFQDN(),
 		},
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),

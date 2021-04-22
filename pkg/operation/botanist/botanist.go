@@ -136,6 +136,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
+	o.Shoot.Components.ControlPlane.VPNSeedServer, err = b.DefaultVPNSeedServer()
+	if err != nil {
+		return nil, err
+	}
 
 	// system components
 	o.Shoot.Components.SystemComponents.Namespaces = b.DefaultShootNamespaces()

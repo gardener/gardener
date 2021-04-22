@@ -42,6 +42,16 @@ spec:
       port: {{ required ".securePort is required" .Values.securePort }}
   {{- end }}
   {{- end }}
+  {{- if .Values.reversedVPN.enabled }}
+  - to:
+    - podSelector:
+        matchLabels:
+          gardener.cloud/role: controlplane
+          app: vpn-seed-server
+    ports:
+    - protocol: TCP
+      port: 9443
+  {{- end }}
   ingress:
     # Allow connection from everything which needs to talk to the API server
   - from:

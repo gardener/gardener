@@ -221,6 +221,8 @@ const (
 	// AnnotationShootKonnectivityTunnel is the key for an annotation of a Shoot cluster whose value indicates
 	// if a konnectivity-tunnel should be deployed into the shoot cluster or not.
 	AnnotationShootKonnectivityTunnel = "alpha.featuregates.shoot.gardener.cloud/konnectivity-tunnel"
+	// AnnotationReversedVPN moves the vpn-server to the seed.
+	AnnotationReversedVPN = "alpha.featuregates.shoot.gardener.cloud/reversed-vpn"
 
 	// OperatingSystemConfigUnitNameKubeletService is a constant for a unit in the operating system config that contains the kubelet service.
 	OperatingSystemConfigUnitNameKubeletService = "kubelet.service"

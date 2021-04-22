@@ -30,6 +30,7 @@ import (
 	netpol "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -435,6 +436,40 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 				return nil, err
 			}
 		}
+	} else if b.Shoot.ReversedVPNEnabled {
+		var (
+			vpnTLSAuthSecret = b.Secrets[vpnseedserver.VpnSeedServerTLSAuth]
+			vpnShootSecret   = b.Secrets[vpnseedserver.VpnShootSecretName]
+			vpnShootConfig   = map[string]interface{}{
+				"endpoint":       b.outOfClusterAPIServerFQDN(),
+				"port":           "8132",
+				"podNetwork":     b.Shoot.Networks.Pods.String(),
+				"serviceNetwork": b.Shoot.Networks.Services.String(),
+				"tlsAuth":        vpnTLSAuthSecret.Data["vpn.tlsauth"],
+				"vpnShootSecretData": map[string]interface{}{
+					"ca":     vpnShootSecret.Data["ca.crt"],
+					"tlsCrt": vpnShootSecret.Data["tls.crt"],
+					"tlsKey": vpnShootSecret.Data["tls.key"],
+				},
+				"reversedVPN": map[string]interface{}{
+					"enabled": true,
+				},
+				"podAnnotations": map[string]interface{}{
+					"checksum/secret-vpn-shoot-client": b.CheckSums[vpnseedserver.VpnShootSecretName],
+				},
+			}
+		)
+
+		if nodeNetwork != nil {
+			vpnShootConfig["nodeNetwork"] = *nodeNetwork
+		}
+
+		vpnShoot, err := b.InjectShootShootImages(vpnShootConfig, charts.ImageNameVpnShootClient)
+		if err != nil {
+			return nil, err
+		}
+
+		values["vpn-shoot"] = common.GenerateAddonConfig(vpnShoot, true)
 	} else {
 		var (
 			vpnTLSAuthSecret = b.Secrets["vpn-seed-tlsauth"]
@@ -447,6 +482,9 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 					"ca":     vpnShootSecret.Data["ca.crt"],
 					"tlsCrt": vpnShootSecret.Data["tls.crt"],
 					"tlsKey": vpnShootSecret.Data["tls.key"],
+				},
+				"reversedVPN": map[string]interface{}{
+					"enabled": false,
 				},
 				"podAnnotations": map[string]interface{}{
 					"checksum/secret-vpn-shoot": b.CheckSums["vpn-shoot"],
