@@ -1394,5 +1394,76 @@ var _ = Describe("Seed", func() {
 				Expect(reason).To(BeEmpty())
 			})
 		})
+
+		Context("when requested for ControllerRegistrations", func() {
+			var (
+				name  string
+				attrs *auth.AttributesRecord
+			)
+
+			BeforeEach(func() {
+				name = "foo"
+				attrs = &auth.AttributesRecord{
+					User:            seedUser,
+					Name:            name,
+					APIGroup:        gardencorev1beta1.SchemeGroupVersion.Group,
+					Resource:        "controllerregistrations",
+					ResourceRequest: true,
+					Verb:            "list",
+				}
+			})
+
+			DescribeTable("should allow without consulting the graph because verb is get, list, or watch",
+				func(verb string) {
+					attrs.Verb = verb
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				},
+
+				Entry("get", "get"),
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+			)
+
+			DescribeTable("should deny because verb is not allowed",
+				func(verb string) {
+					attrs.Verb = verb
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch]"))
+
+				},
+
+				Entry("create", "create"),
+				Entry("update", "update"),
+				Entry("patch", "patch"),
+				Entry("delete", "delete"),
+				Entry("deletecollection", "deletecollection"),
+			)
+
+			It("should have no opinion because no allowed subresource", func() {
+				attrs.Subresource = "foo"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+			})
+
+			It("should allow because seed name is ambiguous", func() {
+				attrs.User = ambiguousUser
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+		})
 	})
 })
