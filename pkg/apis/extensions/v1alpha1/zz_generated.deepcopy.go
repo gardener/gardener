@@ -310,6 +310,11 @@ func (in *BastionList) DeepCopyObject() runtime.Object {
 func (in *BastionSpec) DeepCopyInto(out *BastionSpec) {
 	*out = *in
 	in.DefaultSpec.DeepCopyInto(&out.DefaultSpec)
+	if in.UserData != nil {
+		in, out := &in.UserData, &out.UserData
+		*out = make([]byte, len(*in))
+		copy(*out, *in)
+	}
 	if in.Ingress != nil {
 		in, out := &in.Ingress, &out.Ingress
 		*out = make([]BastionIngressPolicy, len(*in))

@@ -62,7 +62,7 @@ type BastionSpec struct {
 	DefaultSpec `json:",inline"`
 	// UserData is the base64-encoded user data for the bastion instance. This should
 	// contain code to provision the SSH key on the bastion instance.
-	UserData string `json:"userData"`
+	UserData []byte `json:"userData"`
 	// Ingress controls from where the creation bastion host should be reachable.
 	Ingress []BastionIngressPolicy `json:"ingress"`
 }

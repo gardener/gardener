@@ -79,6 +79,7 @@ spec:
               type: string
             userData:
               description: UserData is the base64-encoded user data for the bastion instance. This should contain code to provision the SSH key on the bastion instance.
+              format: byte
               type: string
           required:
           - ingress
