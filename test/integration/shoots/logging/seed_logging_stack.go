@@ -17,6 +17,7 @@ package logging
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -80,6 +81,12 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 	lokiPriorityClass := &schedulingv1.PriorityClass{}
 
 	framework.CBeforeEach(func(ctx context.Context) {
+		for _, worker := range f.Shoot.Spec.Provider.Workers {
+			if strings.Contains(worker.Machine.Image.Name, "chost") {
+				ginkgo.Skip("Skipping logging integration test for chost nodes")
+			}
+		}
+
 		checkRequiredResources(ctx, f.SeedClient)
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBit))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitConfigMapName}, fluentBitConfMap))
